@@ -4,9 +4,9 @@
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.monitoring.wizard.generateHTML = function() {
-    // Wizard configuration - shared with init function
-    const wizardConfig = {
+$.fn.zato.monitoring.wizard.configs = {
+    health: {
+        title: 'Is it working?',
         steps: [
             {
                 id: 'step1',
@@ -38,20 +38,28 @@ $.fn.zato.monitoring.wizard.generateHTML = function() {
                 ]
             }
         ]
-    };
+    }
+};
+
+$.fn.zato.monitoring.wizard.generateHTML = function(wizardType) {
+    const wizardConfig = $.fn.zato.monitoring.wizard.configs[wizardType];
+    if (!wizardConfig) {
+        console.error('Unknown wizard type:', wizardType);
+        return;
+    }
 
     // Generate complete stepper structure in original order
     let stepperHTML = '';
-    
+
     // Add step values first
     wizardConfig.steps.forEach((step, index) => {
         const stepNum = index + 1;
         stepperHTML += `<div class="step-value" id="value-${stepNum}"><div class="step-value-text"></div><div class="step-arrow">▶</div></div>`;
     });
-    
+
     // Add title
-    stepperHTML += '<h1 class="wizard-title">Is it working?</h1>';
-    
+    stepperHTML += `<h1 class="wizard-title">${wizardConfig.title}</h1>`;
+
     // Add step numbers with connectors
     wizardConfig.steps.forEach((step, index) => {
         const stepNum = index + 1;
@@ -60,7 +68,7 @@ $.fn.zato.monitoring.wizard.generateHTML = function() {
             stepperHTML += '<div class="step-connector"></div>';
         }
     });
-    
+
     $('#stepper-container').html(stepperHTML);
 
     // Generate wizard steps content
@@ -68,10 +76,10 @@ $.fn.zato.monitoring.wizard.generateHTML = function() {
     wizardConfig.steps.forEach((stepConfig, index) => {
         const stepNum = index + 1;
         const displayStyle = stepNum === 1 ? '' : 'style="display: none;"';
-        
+
         stepsHTML += `<div id="step-${stepNum}" class="wizard-step" ${displayStyle}>`;
         stepsHTML += `<h1 class="question-title">${stepNum}. ${stepConfig.question}</h1>`;
-        
+
         if (stepConfig.type === 'input') {
             stepsHTML += `<div class="input-wrapper">`;
             stepsHTML += `<input type="text" class="input-field" placeholder="${stepConfig.placeholder}" />`;
@@ -86,14 +94,15 @@ $.fn.zato.monitoring.wizard.generateHTML = function() {
             });
             stepsHTML += `</div>`;
         }
-        
+
         stepsHTML += `</div>`;
     });
     $('#wizard-steps-container').html(stepsHTML);
 
-    // Store config in the namespace for use by init function
+    // Store config and type in the namespace for use by init function
     $.fn.zato.monitoring.wizard.config = wizardConfig;
-    
+    $.fn.zato.monitoring.wizard.currentType = wizardType;
+
     // Position step values to align with step numbers after DOM is ready
     setTimeout(() => {
         $('.step-number').each(function(index) {
@@ -110,7 +119,7 @@ $.fn.zato.monitoring.wizard.generateHTML = function() {
 $.fn.zato.monitoring.wizard.init = function() {
     // Use the config stored by generateHTML function
     const wizardConfig = $.fn.zato.monitoring.wizard.config;
-    
+
     let currentStep = 1;
     const totalSteps = wizardConfig.steps.length;
     let wizardData = {};
@@ -120,26 +129,26 @@ $.fn.zato.monitoring.wizard.init = function() {
         const params = {
             step: parseInt(urlParams.get('step')) || 1
         };
-        
+
         wizardConfig.steps.forEach((step, index) => {
             const stepKey = `step${index + 1}`;
             params[stepKey] = urlParams.get(stepKey) || '';
         });
-        
+
         return params;
     }
 
     function updateURL() {
         const params = new URLSearchParams();
         params.set('step', currentStep);
-        
+
         wizardConfig.steps.forEach((step, index) => {
             const stepKey = `step${index + 1}`;
             if (wizardData[stepKey]) {
                 params.set(stepKey, wizardData[stepKey]);
             }
         });
-        
+
         window.history.replaceState({}, '', '?' + params.toString());
     }
 
@@ -149,7 +158,7 @@ $.fn.zato.monitoring.wizard.init = function() {
             const stepKey = `step${stepNum}`;
             const valueElement = $(`#value-${stepNum}`);
             const textElement = $(`#value-${stepNum} .step-value-text`);
-            
+
             if (wizardData[stepKey]) {
                 if (stepConfig.type === 'input') {
                     textElement.text(wizardData[stepKey]);
@@ -167,11 +176,11 @@ $.fn.zato.monitoring.wizard.init = function() {
     function loadFromURL() {
         const urlData = getURLParams();
         currentStep = Math.min(Math.max(urlData.step, 1), totalSteps);
-        
+
         wizardConfig.steps.forEach((stepConfig, index) => {
             const stepKey = `step${index + 1}`;
             wizardData[stepKey] = urlData[stepKey];
-            
+
             if (wizardData[stepKey]) {
                 if (stepConfig.type === 'input') {
                     $(`#step-${index + 1} input`).val(wizardData[stepKey]);
@@ -180,7 +189,7 @@ $.fn.zato.monitoring.wizard.init = function() {
                 }
             }
         });
-        
+
         updateStepValues();
     }
 
@@ -265,11 +274,11 @@ $.fn.zato.monitoring.wizard.init = function() {
                 showStep(currentStep);
             } else {
                 const missingSteps = [];
-                
+
                 wizardConfig.steps.forEach((stepConfig, index) => {
                     const stepNum = index + 1;
                     const stepKey = `step${stepNum}`;
-                    
+
                     if (stepConfig.type === 'input') {
                         const value = $(`#step-${stepNum} input`).val()?.trim() || '';
                         if (!value) {
@@ -312,10 +321,10 @@ $.fn.zato.monitoring.wizard.init = function() {
         } else {
             if (currentStep === totalSteps) {
                 const missingSteps = [];
-                
+
                 wizardConfig.steps.forEach((stepConfig, index) => {
                     const stepNum = index + 1;
-                    
+
                     if (stepConfig.type === 'input') {
                         const value = $(`#step-${stepNum} input`).val()?.trim() || '';
                         if (!value) {
@@ -389,7 +398,7 @@ $.fn.zato.monitoring.wizard.init = function() {
         const stepNumber = parseInt(stepId.replace('step-', ''));
         const stepKey = `step${stepNumber}`;
         const value = $(this).val().trim();
-        
+
         if (value) {
             wizardData[stepKey] = value;
             updateStepValues();
