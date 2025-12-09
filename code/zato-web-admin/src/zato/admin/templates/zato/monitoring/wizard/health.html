@@ -13,6 +13,45 @@
         const totalSteps = 3;
         let wizardData = {};
 
+        function getURLParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                step: parseInt(urlParams.get('step')) || 1,
+                step1: urlParams.get('step1') || '',
+                step2: urlParams.get('step2') || '',
+                step3: urlParams.get('step3') || ''
+            };
+        }
+
+        function updateURL() {
+            const params = new URLSearchParams();
+            params.set('step', currentStep);
+            if (wizardData.step1) params.set('step1', wizardData.step1);
+            if (wizardData.step2) params.set('step2', wizardData.step2);
+            if (wizardData.step3) params.set('step3', wizardData.step3);
+            window.history.replaceState({}, '', '?' + params.toString());
+        }
+
+        function loadFromURL() {
+            const urlData = getURLParams();
+            currentStep = Math.min(Math.max(urlData.step, 1), totalSteps);
+            wizardData = {
+                step1: urlData.step1,
+                step2: urlData.step2,
+                step3: urlData.step3
+            };
+            
+            if (wizardData.step1) {
+                $('#step-1 input').val(wizardData.step1);
+            }
+            if (wizardData.step2) {
+                $('#step-2 .option-item[data-value="' + wizardData.step2 + '"]').addClass('selected');
+            }
+            if (wizardData.step3) {
+                $('#step-3 .option-item[data-value="' + wizardData.step3 + '"]').addClass('selected');
+            }
+        }
+
         function updateStepper() {
             $('.step').each(function(index) {
                 const stepNum = index + 1;
@@ -30,6 +69,7 @@
             $('.wizard-step').hide();
             $('#step-' + step).show();
             updateStepper();
+            updateURL();
 
             if (step === 1) {
                 $('#prev-button').hide();
@@ -72,6 +112,8 @@
                 return;
             }
 
+            updateURL();
+
             if (currentStep < totalSteps) {
                 currentStep++;
                 showStep(currentStep);
@@ -97,7 +139,8 @@
             }
         });
 
-        showStep(1);
+        loadFromURL();
+        showStep(currentStep);
     });
 </script>
 {% endblock %}
