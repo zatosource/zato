@@ -217,14 +217,13 @@ body {
     max-width: 600px !important;
     padding: 4px 8px !important;
     font-size: 18px !important;
-    border: 3px solid #012845 !important;
+    border: 3px solid #012845;
     border-radius: 6px !important;
-    background: #ffffff !important;
+    background: #ffffff;
     margin-bottom: 60px !important;
     font-family: monospace !important;
     font-weight: 600 !important;
     color: #012845 !important;
-    transition: all 0.2s ease !important;
     height: 2.4rem !important;
     min-height: 2.4rem !important;
     max-height: 2.4rem !important;
@@ -233,22 +232,22 @@ body {
 
 .input-field:focus {
     outline: none !important;
-    background: #ffffff !important;
-    border-color: #012845 !important;
+    background: #ffffff;
+    border-color: #012845;
 }
 
 @keyframes flashPulse {
-    0%, 100% { 
-        border: 3px solid #012845; 
-        background: #ffffff; 
-        transform: scale(1); 
-        box-shadow: 0 0 0 rgba(255, 99, 99, 0); 
+    0%, 100% {
+        border: 3px solid #012845;
+        background: #ffffff;
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(255, 99, 99, 0);
     }
-    50% { 
-        border: 3px dotted #ff6b6b; 
-        background: #ffe6e6; 
-        transform: scale(1.01); 
-        box-shadow: 0 0 15px rgba(255, 99, 99, 0.5); 
+    50% {
+        border: 3px dotted #ff6b6b;
+        background: #ffe6e6;
+        transform: scale(1.01);
+        box-shadow: 0 0 15px rgba(255, 99, 99, 0.5);
     }
 }
 
