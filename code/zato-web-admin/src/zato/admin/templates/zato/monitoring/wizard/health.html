@@ -118,13 +118,61 @@
         font-weight: 400;
         font-size: 0.9rem;
     }
-    .input-field option {
-        padding: 8px !important;
-        font-size: 14px !important;
-        font-weight: normal !important;
-        color: initial !important;
-        background: initial !important;
-        font-family: initial !important;
+    .option-group {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 60px;
+        max-width: 600px;
+        width: 100%;
+    }
+    .option-item {
+        display: flex;
+        align-items: center;
+        padding: 15px 20px;
+        border: 3px solid #012845;
+        border-radius: 6px;
+        background: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: monospace;
+        font-weight: 600;
+        color: #012845;
+    }
+    .option-item:hover {
+        background: #f8f9fa;
+        border-color: #67bfff;
+    }
+    .option-item.selected {
+        background: #012845;
+        color: #ffffff;
+    }
+    .option-radio {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #012845;
+        border-radius: 50%;
+        margin-right: 15px;
+        position: relative;
+        flex-shrink: 0;
+    }
+    .option-item.selected .option-radio {
+        border-color: #ffffff;
+        background: #ffffff;
+    }
+    .option-item.selected .option-radio::after {
+        content: '';
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #012845;
+    }
+    .option-text {
+        font-size: 16px;
+        line-height: 1.3;
     }
     .wizard-buttons {
         display: flex;
@@ -154,10 +202,11 @@
     }
     .wizard-btn:disabled {
         background: #f8f9fa;
-        border-color: #dee2e6;
+        border: 1px solid #dee2e6;
         color: #6c757d;
         cursor: not-allowed;
         opacity: 0.6;
+        box-shadow: none;
     }
     .wizard-btn:disabled:hover {
         background: #f8f9fa;
@@ -204,23 +253,38 @@
             }
         }
 
-        $('#next-btn').click(function() {
-            const stepInput = $('#step-' + currentStep + ' input');
+        $('.option-item').click(function() {
+            const parent = $(this).parent();
+            parent.find('.option-item').removeClass('selected');
+            $(this).addClass('selected');
+        });
 
-            if (stepInput.length && !stepInput.val().trim()) {
-                alert('Please fill in the required field');
-                return;
+        $('#next-btn').click(function() {
+            let isValid = false;
+            
+            if (currentStep === 1) {
+                const stepInput = $('#step-' + currentStep + ' input');
+                if (stepInput.length && stepInput.val().trim()) {
+                    wizardData['step' + currentStep] = stepInput.val().trim();
+                    isValid = true;
+                }
+            } else {
+                const selectedOption = $('#step-' + currentStep + ' .option-item.selected');
+                if (selectedOption.length) {
+                    wizardData['step' + currentStep] = selectedOption.data('value');
+                    isValid = true;
+                }
             }
 
-            if (stepInput.length) {
-                wizardData['step' + currentStep] = stepInput.val().trim();
+            if (!isValid) {
+                alert('Please make a selection');
+                return;
             }
 
             if (currentStep < totalSteps) {
                 currentStep++;
                 showStep(currentStep);
             } else {
-                // Create dashboard
                 console.log('Creating dashboard with data:', wizardData);
                 alert('Dashboard creation not implemented yet');
             }
@@ -265,25 +329,50 @@
 
             <div id="step-2" class="wizard-step" style="display: none;">
                 <h1 class="question-title">What do you want to track?</h1>
-                <select class="input-field">
-                    <option value="">Choose monitoring type...</option>
-                    <option value="current-status">Current status</option>
-                    <option value="error-rate">Error rate</option>
-                    <option value="uptime">Uptime</option>
-                    <option value="activity">Activity</option>
-                </select>
+                <div class="option-group">
+                    <div class="option-item" data-value="current-status">
+                        <div class="option-radio"></div>
+                        <div class="option-text">Current status</div>
+                    </div>
+                    <div class="option-item" data-value="error-rate">
+                        <div class="option-radio"></div>
+                        <div class="option-text">Error rate</div>
+                    </div>
+                    <div class="option-item" data-value="uptime">
+                        <div class="option-radio"></div>
+                        <div class="option-text">Uptime</div>
+                    </div>
+                    <div class="option-item" data-value="activity">
+                        <div class="option-radio"></div>
+                        <div class="option-text">Activity</div>
+                    </div>
+                </div>
             </div>
 
             <div id="step-3" class="wizard-step" style="display: none;">
                 <h1 class="question-title">How far back to look?</h1>
-                <select class="input-field">
-                    <option value="">Choose time period...</option>
-                    <option value="real-time">Right now</option>
-                    <option value="last-hour">Last hour</option>
-                    <option value="last-day">Last day</option>
-                    <option value="last-week">Last week</option>
-                    <option value="last-month">Last month</option>
-                </select>
+                <div class="option-group">
+                    <div class="option-item" data-value="real-time">
+                        <div class="option-radio"></div>
+                        <div class="option-text">Right now</div>
+                    </div>
+                    <div class="option-item" data-value="last-hour">
+                        <div class="option-radio"></div>
+                        <div class="option-text">Last hour</div>
+                    </div>
+                    <div class="option-item" data-value="last-day">
+                        <div class="option-radio"></div>
+                        <div class="option-text">Last day</div>
+                    </div>
+                    <div class="option-item" data-value="last-week">
+                        <div class="option-radio"></div>
+                        <div class="option-text">Last week</div>
+                    </div>
+                    <div class="option-item" data-value="last-month">
+                        <div class="option-radio"></div>
+                        <div class="option-text">Last month</div>
+                    </div>
+                </div>
             </div>
 
             <div class="wizard-buttons">
