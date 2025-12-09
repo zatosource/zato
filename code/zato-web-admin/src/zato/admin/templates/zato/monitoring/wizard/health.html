@@ -43,6 +43,8 @@
         align-items: center;
         gap: 30px;
         flex-shrink: 0;
+        background: #f8f9fa;
+        border-radius: 8px;
     }
     .step {
         display: flex;
@@ -195,10 +197,15 @@
     }
     .wizard-buttons {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-end;
         max-width: 650px;
         margin: 0 auto;
         gap: 30px;
+        position: relative;
+    }
+    .wizard-buttons #prev-button {
+        position: absolute;
+        left: 0;
     }
     .wizard-button {
         padding: 20px 40px;
@@ -260,9 +267,9 @@
             updateStepper();
 
             if (step === 1) {
-                $('#prev-button').prop('disabled', true);
+                $('#prev-button').hide();
             } else {
-                $('#prev-button').prop('disabled', false);
+                $('#prev-button').show();
             }
 
             if (step === totalSteps) {
@@ -278,7 +285,7 @@
             $(this).addClass('selected');
         });
 
-        $('#next-button').click(function() {
+        function goToNextStep() {
             let isValid = false;
 
             if (currentStep === 1) {
@@ -303,9 +310,18 @@
             if (currentStep < totalSteps) {
                 currentStep++;
                 showStep(currentStep);
+                $('#next-button').blur();
             } else {
                 console.log('Creating dashboard with data:', wizardData);
                 alert('Dashboard creation not implemented yet');
+            }
+        }
+
+        $('#next-button').click(goToNextStep);
+
+        $('input.input-field').on('keypress', function(e) {
+            if (e.which === 13) {
+                goToNextStep();
             }
         });
 
