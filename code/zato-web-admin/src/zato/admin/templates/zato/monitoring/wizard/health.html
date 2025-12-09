@@ -156,10 +156,16 @@
         });
 
         function goToNextStep() {
+            console.log('=== CREATE DASHBOARD CLICKED ===');
+            console.log('Current step:', JSON.stringify(currentStep));
+            console.log('Total steps:', JSON.stringify(totalSteps));
             let isValid = false;
             let errorField = null;
 
+            console.log('Checking validation for step:', JSON.stringify(currentStep));
+            
             if (currentStep === 1) {
+                console.log('Validating step 1 (input field)');
                 const stepInput = $('#step-' + currentStep + ' input, #step-' + currentStep + ' textarea');
                 if (stepInput.length && stepInput.val().trim()) {
                     wizardData['step' + currentStep] = stepInput.val().trim();
@@ -168,7 +174,9 @@
                     errorField = $('#step-' + currentStep + ' .input-wrapper');
                 }
             } else {
+                console.log('Validating step 2 or 3 (option selection)');
                 const selectedOption = $('#step-' + currentStep + ' .option-item.selected');
+                console.log('Selected options found:', JSON.stringify(selectedOption.length));
                 if (selectedOption.length) {
                     wizardData['step' + currentStep] = selectedOption.data('value');
                     isValid = true;
@@ -176,29 +184,45 @@
                     errorField = $('#step-' + currentStep + ' .option-item');
                 }
             }
+            
+            console.log('Validation result - isValid:', JSON.stringify(isValid));
+            console.log('Error field:', JSON.stringify(errorField ? 'has error field' : 'no error field'));
 
             if (isValid) {
+                console.log('Current step is valid, updating step values');
                 updateStepValues();
 
                 if (currentStep < totalSteps) {
+                    console.log('Moving to next step');
                     currentStep++;
                     showStep(currentStep);
                 } else {
-                    // Check all steps have values
+                    console.log('On final step and current step valid, checking ALL steps');
+                    // Check all steps have values even if current step is valid
                     const step1Value = $('#step-1 input').val()?.trim() || '';
                     const step2Selected = $('#step-2 .option-item.selected').length > 0;
                     const step3Selected = $('#step-3 .option-item.selected').length > 0;
-
+                    console.log('Final validation - all step values:', JSON.stringify({step1Value, step2Selected, step3Selected}));
+                    
                     const missingSteps = [];
                     if (!step1Value) missingSteps.push('▶ 1. What do you want to monitor?');
                     if (!step2Selected) missingSteps.push('▶ 2. What do you want to track?');
                     if (!step3Selected) missingSteps.push('▶ 3. How far back to look?');
-
+                    
+                    console.log('Final validation - missing steps:', JSON.stringify(missingSteps));
+                    
                     if (missingSteps.length > 0) {
+                        console.log('Some steps still missing, showing tooltip');
                         const tooltipText = 'Please complete the following:<br>' + missingSteps.join('<br>');
+                        console.log('Final tooltip text:', JSON.stringify(tooltipText));
                         
-                        // Override to allow HTML for this tooltip
-                        let _tooltip = tippy('#next-button', {
+                        const button = document.getElementById('next-button');
+                        if (button._tippy) {
+                            console.log('Destroying existing final tooltip');
+                            button._tippy.destroy();
+                        }
+                        
+                        let _tooltip = tippy(button, {
                             content: tooltipText,
                             allowHTML: true,
                             theme: "dark",
@@ -209,24 +233,91 @@
                             inertia: true,
                             role: "tooltip-draw-attention",
                         });
-                        if(_tooltip) {
-                            _tooltip[0].show();
-                        }
                         
+                        console.log('Final tooltip created:', JSON.stringify(_tooltip ? 'success' : 'failed'));
+                        _tooltip.show();
+                        console.log('Final tooltip shown');
                         $('#next-button').blur();
                     } else {
+                        console.log('All steps truly completed');
                         alert('Wizard Complete!');
                     }
                 }
-            } else if (errorField) {
-                $('#next-button').blur();
-                errorField.removeClass('field-error');
-                setTimeout(() => {
-                    errorField.addClass('field-error');
-                }, 10);
-                setTimeout(() => {
+            } else {
+                console.log('Current step invalid, checking what to do');
+                
+                // If we're on the final step, check all steps for completion
+                if (currentStep === totalSteps) {
+                    console.log('On final step, checking all steps for completion');
+                    // Check all steps have values
+                    const step1Value = $('#step-1 input').val()?.trim() || '';
+                    const step2Selected = $('#step-2 .option-item.selected').length > 0;
+                    const step3Selected = $('#step-3 .option-item.selected').length > 0;
+                    console.log('Step values check:', JSON.stringify({step1Value, step2Selected, step3Selected}));
+
+                    console.log('Showing tooltip for any missing steps');
+                    // Show tooltip for any missing steps
+                    const missingSteps = [];
+                    if (!step1Value) missingSteps.push('▶ 1. What do you want to monitor?');
+                    if (!step2Selected) missingSteps.push('▶ 2. What do you want to track?');
+                    if (!step3Selected) missingSteps.push('▶ 3. How far back to look?');
+
+                    if (missingSteps.length > 0) {
+                        console.log('Missing steps detected:', JSON.stringify(missingSteps));
+                        const tooltipText = 'Please complete the following:<br>' + missingSteps.join('<br>');
+                        console.log('Tooltip text:', JSON.stringify(tooltipText));
+                        
+                        // Destroy any existing tooltips first
+                        const button = document.getElementById('next-button');
+                        console.log('Button element:', JSON.stringify(button ? 'found' : 'not found'));
+                        if (button._tippy) {
+                            console.log('Destroying existing tooltip');
+                            button._tippy.destroy();
+                        }
+                        
+                        console.log('Creating new tooltip with tippy function:', JSON.stringify(typeof tippy));
+                        
+                        // Create new tooltip
+                        let _tooltip = tippy(button, {
+                            content: tooltipText,
+                            allowHTML: true,
+                            theme: "dark",
+                            trigger: "manual",
+                            placement: "bottom",
+                            arrow: true,
+                            interactive: false,
+                            inertia: true,
+                            role: "tooltip-draw-attention",
+                        });
+                        
+                        console.log('Tooltip created:', JSON.stringify(_tooltip ? 'success' : 'failed'));
+                        console.log('Calling show() on tooltip');
+                        _tooltip.show();
+                        console.log('Tooltip show() called');
+                        $('#next-button').blur();
+                    }
+                } else if (errorField) {
+                    console.log('Handling validation error for current step');
+                    $('#next-button').blur();
+                    
+                    // Focus on the missing input field
+                    if (currentStep === 1) {
+                        const inputField = $('#step-1 input, #step-1 textarea').first();
+                        if (inputField.length) {
+                            setTimeout(() => {
+                                inputField.focus();
+                            }, 100);
+                        }
+                    }
+                    
                     errorField.removeClass('field-error');
-                }, 1600);
+                    setTimeout(() => {
+                        errorField.addClass('field-error');
+                    }, 10);
+                    setTimeout(() => {
+                        errorField.removeClass('field-error');
+                    }, 1600);
+                }
             }
         }
 
