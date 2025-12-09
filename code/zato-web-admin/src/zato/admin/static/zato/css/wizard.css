@@ -37,6 +37,7 @@ body {
 
 .stepper {
     position: relative;
+    overflow: visible;
 }
 
 .step-value {
@@ -47,49 +48,51 @@ body {
     display: flex;
     align-items: center;
     font-size: 12px;
+    font-family: monospace;
+    width: 333px;
+}
+
+.step-value-text {
     background: rgba(255, 255, 255, 0.95);
     color: #012845;
-    font-family: monospace;
-    min-width: 300px;
-    max-width: 400px;
     text-align: center;
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     border: 1px solid #012845;
     box-shadow: 0 8px 20px rgba(1, 40, 69, 0.2);
     backdrop-filter: blur(8px);
+    width: 300px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.step-value::after {
-    content: '';
-    position: absolute;
-    right: -20px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 20px;
-    height: 3px;
-    background: repeating-linear-gradient(
-        to right,
-        #dc3545 0px,
-        #dc3545 3px,
-        transparent 3px,
-        transparent 6px
-    );
+.step-arrow {
+    background: transparent;
+    color: #dc3545;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
 
 #value-1 {
-    top: 143px;
+    top: 149px;
 }
 
 #value-2 {
-    top: 304px;
+    top: 310px;
 }
 
 #value-3 {
-    top: 466px;
+    top: 472px;
 }
 
 .stepper {
