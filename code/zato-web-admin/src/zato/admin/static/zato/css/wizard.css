@@ -47,15 +47,19 @@ body {
     display: flex;
     align-items: center;
     font-size: 12px;
-    background: rgba(40, 167, 69, 0.8);
+    background: rgba(1, 40, 69, 0.85);
     color: #ffffff;
     font-family: monospace;
-    max-width: 200px;
+    min-width: 300px;
+    max-width: 400px;
     text-align: center;
-    padding: 8px 12px;
-    border-radius: 4px;
-    word-wrap: break-word;
+    padding: 8px 16px;
+    border-radius: 6px;
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid rgba(103, 191, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(1, 40, 69, 0.4);
 }
 
 #value-1 {
