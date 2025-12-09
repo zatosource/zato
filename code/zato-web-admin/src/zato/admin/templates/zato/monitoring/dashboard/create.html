@@ -336,6 +336,13 @@
 
 .links-section {
     margin-top: 52px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    position: relative;
+}
+
+.links-section.show {
+    opacity: 1;
 }
 
 .links-panel {
@@ -495,6 +502,7 @@
         if (completed === total) {
             setTimeout(() => {
                 $('#code-section').addClass('show');
+                $('.links-section').addClass('show');
             }, 500);
         }
     }
