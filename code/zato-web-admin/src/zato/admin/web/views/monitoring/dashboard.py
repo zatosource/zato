@@ -81,7 +81,7 @@ def create_grafana_dashboard(req):
     """Create a Grafana dashboard."""
 
     # Sleep for testing purposes
-    time.sleep(0.01)
+    time.sleep(1.21)
 
     wizard_type = req.POST.get('type', '')
     step1 = req.POST.get('step1', '')
@@ -107,7 +107,7 @@ def create_datadog_dashboard(req):
     """Create a Datadog dashboard."""
 
     # Sleep for testing purposes
-    time.sleep(0.01)
+    time.sleep(1.21)
 
     wizard_type = req.POST.get('type', '')
     step1 = req.POST.get('step1', '')
