@@ -5,62 +5,71 @@
 {% block "extra_css" %}
 <style type="text/css">
     .monitoring-container {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background: #ffffff;
         min-height: calc(100vh - 200px);
         padding: 40px;
         margin: -20px;
     }
     .dashboard-grid {
         display: flex;
-        gap: 20px;
+        gap: 24px;
         max-width: 1200px;
         margin: 0 auto;
         justify-content: center;
     }
     .dashboard-card {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(10px);
-        border-radius: 16px;
-        padding: 30px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #ffffff;
+        border: 3px solid #000000;
+        padding: 32px;
+        box-shadow: 8px 8px 0px #1a73e8;
+        transition: all 0.2s ease;
         cursor: pointer;
         flex: 1;
-        min-width: 220px;
+        min-width: 240px;
+        position: relative;
     }
     .dashboard-card:hover {
-        background: rgba(255, 248, 230, 0.95);
-        border: 1px solid rgba(255, 215, 0, 0.3);
-        box-shadow: 0 8px 32px rgba(255, 215, 0, 0.1);
+        background: #1a73e8;
+        color: #ffffff;
+        transform: translate(-4px, -4px);
+        box-shadow: 12px 12px 0px #ff6900;
     }
     .card-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: #2c3e50;
+        font-size: 28px;
+        font-weight: 900;
+        color: #000000;
         margin-bottom: 16px;
-        letter-spacing: -0.5px;
+        letter-spacing: -1px;
+        text-transform: uppercase;
+    }
+    .dashboard-card:hover .card-title {
+        color: #ffffff;
     }
     .card-description {
-        color: #64748b;
+        color: #333333;
         font-size: 16px;
-        line-height: 1.6;
+        line-height: 1.5;
         margin: 0;
+        font-weight: 500;
+    }
+    .dashboard-card:hover .card-description {
+        color: #ffffff;
     }
     .page-title {
         text-align: center;
-        font-size: 48px;
-        font-weight: 300;
-        color: #2c3e50;
-        margin-bottom: 60px;
-        letter-spacing: -1px;
+        font-size: 56px;
+        font-weight: 900;
+        color: #000000;
+        margin-bottom: 24px;
+        letter-spacing: -2px;
+        text-transform: uppercase;
     }
     .page-subtitle {
         text-align: center;
-        font-size: 18px;
-        color: #64748b;
+        font-size: 20px;
+        color: #333333;
         margin-bottom: 80px;
-        font-weight: 400;
+        font-weight: 600;
     }
 </style>
 {% endblock %}
