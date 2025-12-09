@@ -64,15 +64,15 @@ body {
 }
 
 #value-1 {
-    top: 141px;
+    top: 143px;
 }
 
 #value-2 {
-    top: 286px;
+    top: 304px;
 }
 
 #value-3 {
-    top: 432px;
+    top: 466px;
 }
 
 .stepper {
@@ -120,15 +120,35 @@ body {
 }
 
 .step-connector {
-    width: 3px;
     height: 40px;
-    background: linear-gradient(180deg, #e9ecef 0%, #dee2e6 100%);
-    border-radius: 2px;
+    width: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
     transition: all 0.3s ease;
+    margin: 8px 0;
 }
 
-.step.completed .step-connector {
-    background: linear-gradient(180deg, #e8f4ff 0%, #f0f8ff 100%);
+.step-connector::before {
+    content: '';
+    width: 2px;
+    height: 2px;
+    background: #dc3545;
+    border-radius: 1px;
+}
+
+.step-connector::after {
+    content: '';
+    width: 2px;
+    height: 2px;
+    background: #dc3545;
+    border-radius: 1px;
+}
+
+.step.completed .step-connector::before,
+.step.completed .step-connector::after {
+    background: #dc3545;
 }
 
 .wizard-content {
