@@ -47,8 +47,8 @@ body {
     display: flex;
     align-items: center;
     font-size: 12px;
-    background: linear-gradient(135deg, rgba(13, 13, 13, 0.95), rgba(20, 20, 20, 0.95));
-    color: #ffffff;
+    background: rgba(255, 255, 255, 0.95);
+    color: #012845;
     font-family: monospace;
     min-width: 300px;
     max-width: 400px;
@@ -58,8 +58,8 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    border: 1px solid rgba(0, 0, 0, 0.9);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(64, 64, 64, 0.3);
+    border: 1px solid #012845;
+    box-shadow: 0 8px 20px rgba(1, 40, 69, 0.2);
     backdrop-filter: blur(8px);
 }
 
