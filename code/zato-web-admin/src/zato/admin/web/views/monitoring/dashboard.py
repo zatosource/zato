@@ -30,10 +30,18 @@ def dashboard_create_page(req):
     """Display the dashboard creation progress page."""
     
     # Get wizard parameters
-    wizard_type = req.GET.get('type', 'health')
+    wizard_type_raw = req.GET.get('type', 'health')
     step1 = req.GET.get('step1', '')
     step2 = req.GET.get('step2', '')
     step3 = req.GET.get('step3', '')
+    
+    # Map wizard types to user-friendly names
+    type_map = {
+        'health': 'Health monitoring',
+        'performance': 'Performance monitoring',
+        'security': 'Security monitoring',
+        'business': 'Business metrics'
+    }
     
     # Map step2 values to readable text
     step2_map = {
@@ -52,6 +60,7 @@ def dashboard_create_page(req):
         'last-month': 'Last month'
     }
     
+    wizard_type = type_map.get(wizard_type_raw, wizard_type_raw.title())
     step2_text = step2_map.get(step2, step2)
     step3_text = step3_map.get(step3, step3)
     
