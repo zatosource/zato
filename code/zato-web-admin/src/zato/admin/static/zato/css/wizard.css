@@ -1,9 +1,21 @@
+:root {
+    --primary-dark: #012845;
+    --accent-light: #82ccff;
+    --background-light: #f8f9fa;
+    --white: #ffffff;
+    --border-light: #e9ecef;
+    --text-muted: #6c757d;
+    --yellow-highlight: rgba(254, 219, 136, 0.95);
+    --light-blue: #e8f4ff;
+    --shadow-dark: #063c65;
+}
+
 body {
     overflow-x: hidden;
 }
 
 .wizard-container {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 50%, #e9ecef 100%);
+    background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
     min-height: 100vh;
     padding: 60px 20px 60px 40px;
     margin: 0;
@@ -17,7 +29,7 @@ body {
 }
 
 .wizard-panel {
-    background: #ffffff;
+    background: var(--white);
     border-radius: 8px;
     box-shadow: 0 15px 30px rgba(1, 40, 69, 0.2);
     padding: 40px 60px;
@@ -58,8 +70,8 @@ body {
 }
 
 .step-value-text {
-    background: rgba(254, 219, 136, 0.95);
-    color: #012845;
+    background: var(--yellow-highlight);
+    color: var(--primary-dark);
     text-align: center;
     padding: 8px 16px;
     border-radius: 4px 0 0 4px;
@@ -80,7 +92,7 @@ body {
 
 .step-arrow {
     background: transparent;
-    color: #012845;
+    color: var(--primary-dark);
     font-size: 20px;
     font-weight: bold;
     padding: 8px;
@@ -112,9 +124,9 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    border: 2px solid #e9ecef;
-    background: #ffffff;
-    color: #012845;
+    border: 2px solid var(--border-light);
+    background: var(--white);
+    color: var(--primary-dark);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -125,21 +137,21 @@ body {
 }
 
 .step.active .step-number {
-    background: #012845;
-    color: #ffffff;
-    border-color: #012845;
+    background: var(--primary-dark);
+    color: var(--white);
+    border-color: var(--primary-dark);
 }
 
 .step.completed .step-number {
-    background: #e8f4ff;
-    color: #012845;
-    border-color: #e8f4ff;
+    background: var(--light-blue);
+    color: var(--primary-dark);
+    border-color: var(--light-blue);
 }
 
 .step-number.active {
-    background: #012845;
-    color: #ffffff;
-    border-color: #012845;
+    background: var(--primary-dark);
+    color: var(--white);
+    border-color: var(--primary-dark);
 }
 
 .step-connector {
@@ -173,7 +185,7 @@ body {
 .wizard-content {
     flex: 1;
     text-align: center;
-    background: #f8f9fa;
+    background: var(--background-light);
     border-radius: 8px;
     padding: 40px 20px;
 }
@@ -181,8 +193,8 @@ body {
 .wizard-title {
     font-size: 18px;
     font-weight: 900;
-    background: #012845;
-    color: #ffffff;
+    background: var(--primary-dark);
+    color: var(--white);
     text-align: center;
     margin-bottom: 30px;
     text-transform: none;
@@ -194,7 +206,7 @@ body {
 .question-title {
     font-size: 36px;
     font-weight: 700;
-    color: #012845;
+    color: var(--primary-dark);
     margin-bottom: 50px;
     text-transform: none;
     letter-spacing: -0.5px;
@@ -205,7 +217,7 @@ body {
 .help-tag:focus
  {
     display: inline-block;
-    background: #012845;
+    background: var(--primary-dark);
     color: #fff;
     font-size: 11px;
     font-weight: 600;
@@ -223,8 +235,8 @@ body {
 }
 
 .help-tag:hover {
-    background: #012845;
-    color: #ffffff;
+    background: var(--primary-dark);
+    color: var(--white);
 }
 
 .input-wrapper {
@@ -259,8 +271,8 @@ body {
 
 @keyframes flashPulse {
     0%, 100% {
-        border: 3px solid #012845;
-        background: #ffffff;
+        border: 3px solid var(--primary-dark);
+        background: var(--white);
         transform: scale(1);
         box-shadow: 0 0 0 rgba(255, 99, 99, 0);
     }
@@ -304,23 +316,28 @@ body {
     transition: all 0.2s ease;
     font-family: monospace;
     font-weight: 600;
-    color: #012845;
+    color: var(--primary-dark);
 }
 
 .option-item:hover {
-    background: #f8f9fa;
-    border-color: #82ccff;
+    background: var(--background-light);
+    border-color: var(--accent-light);
+}
+
+.option-item.selected:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
 }
 
 .option-item.selected {
-    background: #012845;
-    color: #ffffff;
+    background: var(--primary-dark);
+    color: var(--white);
 }
 
 .option-radio {
     width: 20px;
     height: 20px;
-    border: 2px solid #012845;
+    border: 2px solid var(--primary-dark);
     border-radius: 50%;
     margin-right: 15px;
     position: relative;
@@ -328,8 +345,8 @@ body {
 }
 
 .option-item.selected .option-radio {
-    border-color: #ffffff;
-    background: #ffffff;
+    border-color: var(--white);
+    background: var(--white);
 }
 
 .option-item.selected .option-radio::after {
@@ -341,7 +358,7 @@ body {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #012845;
+    background: var(--primary-dark);
 }
 
 .option-text {
@@ -370,32 +387,32 @@ body {
     font-size: 16px;
     font-weight: 900;
     text-transform: uppercase;
-    border: 3px solid #012845;
+    border: 3px solid var(--primary-dark);
     border-radius: 0;
-    background: #ffffff;
-    color: #012845;
+    background: var(--white);
+    color: var(--primary-dark);
     cursor: pointer;
     transition: all 0.2s ease;
     letter-spacing: 0.5px;
-    box-shadow: 8px 8px 0px #063c65;
+    box-shadow: 8px 8px 0px var(--shadow-dark);
 }
 
 .wizard-button:hover {
-    background: #012845;
-    color: #ffffff;
-    box-shadow: 8px 8px 0px #82ccff;
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: 8px 8px 0px var(--accent-light);
 }
 
 .wizard-button:disabled {
-    background: #f8f9fa;
+    background: var(--background-light);
     border: 1px solid #dee2e6;
-    color: #6c757d;
+    color: var(--text-muted);
     cursor: not-allowed;
     opacity: 0.6;
     box-shadow: none;
 }
 
 .wizard-button:disabled:hover {
-    background: #f8f9fa;
-    color: #6c757d;
+    background: var(--background-light);
+    color: var(--text-muted);
 }
