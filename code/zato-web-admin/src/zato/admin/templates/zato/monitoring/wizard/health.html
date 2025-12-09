@@ -154,36 +154,43 @@
 
         function goToNextStep() {
             let isValid = false;
+            let errorField = null;
 
             if (currentStep === 1) {
-                const stepInput = $('#step-' + currentStep + ' input');
+                const stepInput = $('#step-' + currentStep + ' input, #step-' + currentStep + ' textarea');
                 if (stepInput.length && stepInput.val().trim()) {
                     wizardData['step' + currentStep] = stepInput.val().trim();
                     isValid = true;
+                } else {
+                    errorField = stepInput;
                 }
             } else {
                 const selectedOption = $('#step-' + currentStep + ' .option-item.selected');
                 if (selectedOption.length) {
                     wizardData['step' + currentStep] = selectedOption.data('value');
                     isValid = true;
+                } else {
+                    errorField = $('#step-' + currentStep + ' .option-item');
                 }
             }
 
-            if (!isValid) {
-                alert('Please make a selection');
-                return;
-            }
-
-            updateURL();
-            updateStepValues();
-
-            if (currentStep < totalSteps) {
-                currentStep++;
-                showStep(currentStep);
-                $('#next-button').blur();
-            } else {
-                console.log('Creating dashboard with data:', wizardData);
-                alert('Dashboard creation not implemented yet');
+            if (isValid) {
+                updateStepValues();
+                
+                if (currentStep < totalSteps) {
+                    currentStep++;
+                    showStep(currentStep);
+                } else {
+                    alert('Wizard Complete!');
+                }
+            } else if (errorField) {
+                errorField.removeClass('field-error');
+                setTimeout(() => {
+                    errorField.addClass('field-error');
+                }, 10);
+                setTimeout(() => {
+                    errorField.removeClass('field-error');
+                }, 1600);
             }
         }
 
