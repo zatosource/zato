@@ -9,86 +9,141 @@
 .creation-container {
     background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
     min-height: 100vh;
-    padding: 60px 20px;
+    padding: 60px 20px 60px 40px;
+    margin: 0;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    width: 100vw;
+    max-width: 100%;
 }
 
 .creation-panel {
     background: var(--white);
     border-radius: 8px;
     box-shadow: 0 15px 30px rgba(1, 40, 69, 0.2);
-    padding: 60px 80px;
-    max-width: 800px;
+    padding: 40px 60px;
+    max-width: 1000px;
     width: 100%;
+    margin-top: -30px;
+    margin-left: -10%;
+}
+
+.creation-layout {
+    display: flex;
+    gap: 60px;
+    align-items: flex-start;
+}
+
+.creation-main {
+    flex: 2;
+}
+
+.creation-sidebar {
+    flex: 1;
+    padding: 40px 30px;
 }
 
 .creation-title {
-    font-size: 28px;
+    font-size: 36px;
     font-weight: 700;
     color: var(--primary-dark);
-    text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 50px;
+    text-transform: none;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
 }
 
 .progress-section {
-    margin-bottom: 30px;
+    margin-bottom: 40px;
 }
 
 .progress-item {
     display: flex;
     align-items: center;
-    padding: 20px;
-    margin-bottom: 15px;
-    border: 2px solid var(--border-light);
-    border-radius: 8px;
-    background: var(--background-light);
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    border: 3px solid var(--border-light);
+    border-radius: 6px;
+    background: var(--white);
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(130, 204, 255, 0.1), transparent);
+    transition: left 0.6s ease;
 }
 
 .progress-item.processing {
     border-color: var(--accent-light);
-    background: #f0f8ff;
+    background: linear-gradient(135deg, var(--white) 0%, #f0f8ff 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(130, 204, 255, 0.2);
+}
+
+.progress-item.processing::before {
+    left: 100%;
 }
 
 .progress-item.completed {
     border-color: #28a745;
-    background: #f8fff8;
+    background: linear-gradient(135deg, var(--white) 0%, #f8fff8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.2);
 }
 
 .progress-item.error {
     border-color: #dc3545;
-    background: #fff8f8;
+    background: linear-gradient(135deg, var(--white) 0%, #fff8f8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.2);
 }
 
 .progress-icon {
-    width: 40px;
-    height: 40px;
-    margin-right: 20px;
+    width: 50px;
+    height: 50px;
+    margin-right: 25px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    font-size: 18px;
+    font-size: 24px;
     font-weight: bold;
+    transition: all 0.3s ease;
+    border: 3px solid var(--border-light);
+    background: var(--background-light);
+    color: var(--primary-dark);
 }
 
 .progress-icon.spinner {
     background: var(--accent-light);
     color: var(--white);
-    animation: spin 1s linear infinite;
+    border-color: var(--accent-light);
+    animation: spin 1s linear infinite, pulse 2s ease-in-out infinite alternate;
 }
 
 .progress-icon.completed {
     background: #28a745;
     color: var(--white);
+    border-color: #28a745;
+    animation: bounceIn 0.6s ease;
 }
 
 .progress-icon.error {
     background: #dc3545;
     color: var(--white);
+    border-color: #dc3545;
+    animation: shake 0.6s ease;
 }
 
 @keyframes spin {
@@ -96,40 +151,164 @@
     100% { transform: rotate(360deg); }
 }
 
-.progress-text {
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(130, 204, 255, 0.7); }
+    100% { box-shadow: 0 0 0 20px rgba(130, 204, 255, 0); }
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.05); }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.progress-content {
     flex: 1;
-    font-size: 16px;
-    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+}
+
+.progress-platform {
+    font-size: 20px;
+    font-weight: 700;
     color: var(--primary-dark);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.progress-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+.progress-item.processing .progress-text {
+    color: var(--accent-light);
+    animation: textGlow 1.5s ease-in-out infinite alternate;
+}
+
+.progress-item.completed .progress-text {
+    color: #28a745;
+}
+
+.progress-item.error .progress-text {
+    color: #dc3545;
+}
+
+@keyframes textGlow {
+    0% { opacity: 0.7; }
+    100% { opacity: 1; }
 }
 
 .wizard-summary {
-    background: var(--background-light);
+    background: var(--white);
+    border: 2px solid var(--border-light);
     border-radius: 8px;
     padding: 30px;
-    margin: 30px 0;
+    position: sticky;
+    top: 30px;
 }
 
 .wizard-summary h3 {
     color: var(--primary-dark);
-    margin-bottom: 20px;
-    font-size: 18px;
+    margin-bottom: 25px;
+    font-size: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border-light);
+    padding-bottom: 10px;
 }
 
 .summary-item {
     display: flex;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    align-items: center;
 }
 
 .summary-label {
     font-weight: 600;
-    color: var(--primary-dark);
-    min-width: 120px;
+    color: var(--text-muted);
+    min-width: 80px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .summary-value {
     color: var(--primary-dark);
     font-family: monospace;
+    font-weight: 600;
+    font-size: 14px;
+    background: var(--background-light);
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+}
+
+.completion-section {
+    margin-top: 40px;
+    padding: 30px;
+    background: linear-gradient(135deg, #f8fff8 0%, var(--white) 100%);
+    border: 3px solid #28a745;
+    border-radius: 8px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease;
+}
+
+.completion-section.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.completion-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #28a745;
+    margin-bottom: 15px;
+}
+
+.completion-text {
+    color: var(--primary-dark);
+    font-size: 16px;
+    margin-bottom: 25px;
+}
+
+.dashboard-links {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.dashboard-link {
+    padding: 12px 24px;
+    background: var(--primary-dark);
+    color: var(--white);
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+    border: 3px solid var(--primary-dark);
+}
+
+.dashboard-link:hover {
+    background: var(--white);
+    color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(1, 40, 69, 0.2);
 }
 </style>
 {% endblock %}
@@ -145,7 +324,7 @@
     function createDashboards() {
         // Update Grafana status to processing
         updateStatus('grafana', 'processing', 'Creating Grafana dashboard...');
-        
+
         // Create Grafana dashboard
         $.ajax({
             url: '/zato/monitoring/dashboard/create/grafana/',
@@ -158,11 +337,11 @@
                 csrfmiddlewaretoken: '{{ csrf_token }}'
             },
             success: function(response) {
-                updateStatus('grafana', 'completed', 'Grafana dashboard created');
-                
+                updateStatus('grafana', 'completed', 'Dashboard created successfully');
+
                 // Start Datadog creation
                 updateStatus('datadog', 'processing', 'Creating Datadog dashboard...');
-                
+
                 $.ajax({
                     url: '/zato/monitoring/dashboard/create/datadog/',
                     method: 'POST',
@@ -174,15 +353,16 @@
                         csrfmiddlewaretoken: '{{ csrf_token }}'
                     },
                     success: function(response) {
-                        updateStatus('datadog', 'completed', 'Datadog dashboard created');
+                        updateStatus('datadog', 'completed', 'Dashboard created successfully');
+                        checkCompletion();
                     },
                     error: function() {
-                        updateStatus('datadog', 'error', 'Failed to create Datadog dashboard');
+                        updateStatus('datadog', 'error', 'Creation failed - please try again');
                     }
                 });
             },
             error: function() {
-                updateStatus('grafana', 'error', 'Failed to create Grafana dashboard');
+                updateStatus('grafana', 'error', 'Creation failed - please try again');
             }
         });
     }
@@ -191,14 +371,14 @@
         const item = $('#' + platform + '-progress');
         const icon = item.find('.progress-icon');
         const text = item.find('.progress-text');
-        
+
         // Remove all status classes
         item.removeClass('processing completed error');
         icon.removeClass('spinner completed error');
-        
+
         // Add new status
         item.addClass(status);
-        
+
         if (status === 'processing') {
             icon.addClass('spinner').text('⟳');
         } else if (status === 'completed') {
@@ -206,8 +386,19 @@
         } else if (status === 'error') {
             icon.addClass('error').text('✗');
         }
-        
+
         text.text(message);
+    }
+
+    function checkCompletion() {
+        const completed = $('.progress-item.completed').length;
+        const total = $('.progress-item').length;
+
+        if (completed === total) {
+            setTimeout(() => {
+                $('.completion-section').addClass('show');
+            }, 500);
+        }
     }
 </script>
 {% endblock %}
@@ -216,44 +407,63 @@
 
 <div class="creation-container">
     <div class="creation-panel">
-        <h1 class="creation-title">Creating dashboards</h1>
-        
-        <div class="progress-section">
-            <div class="progress-item" id="grafana-progress">
-                <div class="progress-icon">⟳</div>
-                <div class="progress-text">Grafana dashboard pending...</div>
+        <div class="creation-layout">
+            <div class="creation-main">
+
+                <div class="progress-section">
+                    <div class="progress-item" id="grafana-progress">
+                        <div class="progress-icon">⟳</div>
+                        <div class="progress-content">
+                            <div class="progress-platform">Grafana</div>
+                            <div class="progress-text">Dashboard pending...</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-item" id="datadog-progress">
+                        <div class="progress-icon">⟳</div>
+                        <div class="progress-content">
+                            <div class="progress-platform">Datadog</div>
+                            <div class="progress-text">Dashboard pending...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="completion-section">
+                    <div class="completion-title">Dashboards Created Successfully!</div>
+                    <div class="completion-text">Your monitoring dashboards are now ready to use.</div>
+                    <div class="dashboard-links">
+                        <a href="#" class="dashboard-link">View Grafana</a>
+                        <a href="#" class="dashboard-link">View Datadog</a>
+                    </div>
+                </div>
             </div>
-            
-            <div class="progress-item" id="datadog-progress">
-                <div class="progress-icon">⟳</div>
-                <div class="progress-text">Datadog dashboard pending...</div>
+
+            <div class="creation-sidebar">
+                <div class="wizard-summary">
+                    <div class="summary-item">
+                        <div class="summary-label">Type</div>
+                        <div class="summary-value">{{ wizard_type }}</div>
+                    </div>
+                    {% if step1 %}
+                    <div class="summary-item">
+                        <div class="summary-label">Monitor</div>
+                        <div class="summary-value">{{ step1 }}</div>
+                    </div>
+                    {% endif %}
+                    {% if step2 %}
+                    <div class="summary-item">
+                        <div class="summary-label">Track</div>
+                        <div class="summary-value">{{ step2_text }}</div>
+                    </div>
+                    {% endif %}
+                    {% if step3 %}
+                    <div class="summary-item">
+                        <div class="summary-label">Range</div>
+                        <div class="summary-value">{{ step3_text }}</div>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-        </div>
-        
-        <div class="wizard-summary">
-            <h3>Configuration</h3>
-            <div class="summary-item">
-                <div class="summary-label">Type:</div>
-                <div class="summary-value">{{ wizard_type }}</div>
-            </div>
-            {% if step1 %}
-            <div class="summary-item">
-                <div class="summary-label">Monitor:</div>
-                <div class="summary-value">{{ step1 }}</div>
-            </div>
-            {% endif %}
-            {% if step2 %}
-            <div class="summary-item">
-                <div class="summary-label">Track:</div>
-                <div class="summary-value">{{ step2_text }}</div>
-            </div>
-            {% endif %}
-            {% if step3 %}
-            <div class="summary-item">
-                <div class="summary-label">Time range:</div>
-                <div class="summary-value">{{ step3_text }}</div>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
