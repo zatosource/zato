@@ -33,29 +33,27 @@
         }
 
         function updateStepValues() {
-            // Show current step value even if empty
-            for (let i = 1; i <= currentStep; i++) {
-                $('#value-' + i).addClass('show');
-            }
-            
             if (wizardData.step1) {
                 $('#value-1 .step-value-text').text(wizardData.step1);
+                $('#value-1').addClass('show');
             } else {
-                $('#value-1 .step-value-text').text('');
+                $('#value-1').removeClass('show');
             }
             
             if (wizardData.step2) {
                 const step2Text = $('#step-2 .option-item[data-value="' + wizardData.step2 + '"] .option-text').text();
                 $('#value-2 .step-value-text').text(step2Text);
+                $('#value-2').addClass('show');
             } else {
-                $('#value-2 .step-value-text').text('');
+                $('#value-2').removeClass('show');
             }
             
             if (wizardData.step3) {
                 const step3Text = $('#step-3 .option-item[data-value="' + wizardData.step3 + '"] .option-text').text();
                 $('#value-3 .step-value-text').text(step3Text);
+                $('#value-3').addClass('show');
             } else {
-                $('#value-3 .step-value-text').text('');
+                $('#value-3').removeClass('show');
             }
         }
 
