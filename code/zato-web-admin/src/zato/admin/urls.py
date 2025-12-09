@@ -38,6 +38,7 @@ from zato.admin.web.views.security import apikey, basic_auth, ntlm
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
 from zato.admin.web.views.stats import user as stats_user
 from zato.admin.web.views.monitoring import config as monitoring_config
+from zato.admin.web.views.monitoring.wizard import health as monitoring_wizard_health
 from zato.admin.web.views.vendors import keysight_vision
 from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import client
@@ -664,6 +665,10 @@ urlpatterns += [
     # Monitoring - configuration
     url(r'^zato/monitoring/config/$',
         login_required(monitoring_config.config), name='monitoring-config'),
+
+    # Monitoring - wizard - health
+    url(r'^zato/monitoring/wizard/health/$',
+        login_required(monitoring_wizard_health.health), name='monitoring-wizard-health'),
     ]
 
 # ################################################################################################################################
