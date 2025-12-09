@@ -4,6 +4,12 @@
 
 {% block "extra_css" %}
 <style type="text/css">
+    :root {
+        --ocean-blue-1: #b8e6ff;
+        --ocean-blue-2: #9dd9ff;
+        --ocean-blue-3: #82ccff;
+        --ocean-blue-4: #67bfff;
+    }
     .monitoring-container {
         background: #ffffff;
         min-height: 100vh;
@@ -34,18 +40,7 @@
     .dashboard-card:hover {
         background: #012845;
         color: #ffffff;
-    }
-    .dashboard-card:nth-child(1):hover {
-        box-shadow: 8px 8px 0px #1a4c73;
-    }
-    .dashboard-card:nth-child(2):hover {
-        box-shadow: 8px 8px 0px #2c2c2c;
-    }
-    .dashboard-card:nth-child(3):hover {
-        box-shadow: 8px 8px 0px #4682b4;
-    }
-    .dashboard-card:nth-child(4):hover {
-        box-shadow: 8px 8px 0px #2f4f4f;
+        box-shadow: 8px 8px 0px #82ccff;
     }
     .card-title {
         font-size: 28px;
