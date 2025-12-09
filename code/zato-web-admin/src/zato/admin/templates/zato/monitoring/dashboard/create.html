@@ -361,7 +361,7 @@
     gap: 8px;
     width: 100%;
     padding: 12px 20px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 900;
     text-transform: uppercase;
     border: 3px solid var(--primary-dark);
@@ -569,7 +569,7 @@
         
         // Show tooltip with spinner
         const _tooltip = tippy(button[0], {
-            content: '<span style="display: inline-flex; align-items: center; gap: 6px; line-height: 1;"><span style="animation: spin 1s linear infinite; font-size: 14px; display: inline-flex; align-items: center;">⟳</span><span style="display: inline-flex; align-items: center;">Invoking...</span></span>',
+            content: '<span style="display: inline-flex; align-items: flex-start; gap: 4px; line-height: 1;"><span style="animation: spin 1s linear infinite; font-size: 16px; display: inline-flex; align-items: center; margin-top: 1px;">⟳</span><span style="display: inline-flex; align-items: center;">Invoking...</span></span>',
             trigger: "manual",
             hideOnClick: false,
             placement: "top",
