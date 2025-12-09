@@ -14,7 +14,7 @@
     .dashboard-grid {
         display: flex;
         gap: 24px;
-        max-width: 1000px;
+        max-width: 1200px;
         margin: 0 auto;
         justify-content: center;
     }
@@ -25,14 +25,27 @@
         box-shadow: 8px 8px 0px #063c65;
         transition: all 0.2s ease;
         cursor: pointer;
-        flex: 1;
-        min-width: 220px;
+        width: 400px !important;
+        min-width: 400px !important;
+        max-width: 400px !important;
+        box-sizing: border-box !important;
         position: relative;
     }
     .dashboard-card:hover {
         background: #012845;
         color: #ffffff;
-        box-shadow: 8px 8px 0px #ff6900;
+    }
+    .dashboard-card:nth-child(1):hover {
+        box-shadow: 8px 8px 0px #1a4c73;
+    }
+    .dashboard-card:nth-child(2):hover {
+        box-shadow: 8px 8px 0px #2c2c2c;
+    }
+    .dashboard-card:nth-child(3):hover {
+        box-shadow: 8px 8px 0px #4682b4;
+    }
+    .dashboard-card:nth-child(4):hover {
+        box-shadow: 8px 8px 0px #2f4f4f;
     }
     .card-title {
         font-size: 28px;
