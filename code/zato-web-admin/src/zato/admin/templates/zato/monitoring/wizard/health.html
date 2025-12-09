@@ -27,7 +27,8 @@
         padding: 80px 60px;
         max-width: 1000px;
         width: 100%;
-        margin-top: 20px;
+        margin-top: 10px;
+        margin-left: -80px;
     }
     .stepper {
         display: flex;
@@ -60,9 +61,9 @@
         border-color: #012845;
     }
     .step.completed .step-number {
-        background: #67bfff;
+        background: #e8f4ff;
         color: #012845;
-        border-color: #67bfff;
+        border-color: #e8f4ff;
     }
     .step-connector {
         width: 120px;
@@ -73,7 +74,7 @@
         transition: all 0.3s ease;
     }
     .step.completed + .step .step-connector {
-        background: linear-gradient(90deg, #67bfff 0%, #82ccff 100%);
+        background: linear-gradient(90deg, #e8f4ff 0%, #f0f8ff 100%);
     }
     .wizard-content {
         max-width: 800px;
@@ -92,17 +93,17 @@
     .input-field {
         width: 100%;
         max-width: 600px;
-        padding: 30px 25px;
+        padding: 15px 25px;
         font-size: 18px;
         border: 3px solid #012845;
         border-radius: 6px;
         background: #ffffff;
         margin-bottom: 60px;
         font-family: monospace;
-        font-weight: 600;
+        font-weight: normal;
         color: #012845;
         transition: all 0.2s ease;
-        min-height: 60px;
+        min-height: auto;
     }
     .input-field:focus {
         outline: none;
