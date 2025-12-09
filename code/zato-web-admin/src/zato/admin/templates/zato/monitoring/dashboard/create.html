@@ -476,7 +476,7 @@
         item.addClass(status);
 
         if (status === 'processing') {
-            icon.addClass('spinner').text('⟳');
+            icon.addClass('spinner').html('<img src="/static/gfx/spinner.svg" style="animation: spin 0.8s linear infinite; width: 18px; height: 18px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');
         } else if (status === 'completed') {
             icon.addClass('completed').text('✓');
         } else if (status === 'error') {
