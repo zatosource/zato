@@ -87,6 +87,18 @@
         flex: 1;
         text-align: center;
     }
+    .wizard-title {
+        font-size: 18px;
+        font-weight: 900;
+        background: #012845;
+        color: #ffffff;
+        text-align: center;
+        margin-bottom: 30px;
+        text-transform: none;
+        letter-spacing: -1px;
+        padding: 12px 20px;
+        border-radius: 4px;
+    }
     .question-title {
         font-size: 36px;
         font-weight: 700;
@@ -188,7 +200,7 @@
         margin: 0 auto;
         gap: 30px;
     }
-    .wizard-btn {
+    .wizard-button {
         padding: 20px 40px;
         font-size: 16px;
         font-weight: 900;
@@ -202,12 +214,12 @@
         letter-spacing: 0.5px;
         box-shadow: 8px 8px 0px #063c65;
     }
-    .wizard-btn:hover {
+    .wizard-button:hover {
         background: #012845;
         color: #ffffff;
         box-shadow: 8px 8px 0px #82ccff;
     }
-    .wizard-btn:disabled {
+    .wizard-button:disabled {
         background: #f8f9fa;
         border: 1px solid #dee2e6;
         color: #6c757d;
@@ -215,7 +227,7 @@
         opacity: 0.6;
         box-shadow: none;
     }
-    .wizard-btn:disabled:hover {
+    .wizard-button:disabled:hover {
         background: #f8f9fa;
         color: #6c757d;
     }
@@ -248,15 +260,15 @@
             updateStepper();
 
             if (step === 1) {
-                $('#prev-btn').prop('disabled', true);
+                $('#prev-button').prop('disabled', true);
             } else {
-                $('#prev-btn').prop('disabled', false);
+                $('#prev-button').prop('disabled', false);
             }
 
             if (step === totalSteps) {
-                $('#next-btn').text('Create Dashboard');
+                $('#next-button').text('Create Dashboard');
             } else {
-                $('#next-btn').text('Next');
+                $('#next-button').text('Next');
             }
         }
 
@@ -266,7 +278,7 @@
             $(this).addClass('selected');
         });
 
-        $('#next-btn').click(function() {
+        $('#next-button').click(function() {
             let isValid = false;
 
             if (currentStep === 1) {
@@ -297,7 +309,7 @@
             }
         });
 
-        $('#prev-btn').click(function() {
+        $('#prev-button').click(function() {
             if (currentStep > 1) {
                 currentStep--;
                 showStep(currentStep);
@@ -315,7 +327,7 @@
     <div class="wizard-panel">
         <div class="wizard-layout">
             <div class="stepper">
-                <h1 style="font-size: 18px; font-weight: 900; background: #012845; color: #ffffff; text-align: center; margin-bottom: 30px; text-transform: none; letter-spacing: -1px; padding: 12px 20px; border-radius: 4px;">Is it working?</h1>
+                <h1 class="wizard-title">Is it working?</h1>
                 <div class="step">
                     <div class="step-number">1</div>
                 </div>
@@ -384,8 +396,8 @@
             </div>
 
             <div class="wizard-buttons">
-                <button id="prev-btn" class="wizard-btn">Previous</button>
-                <button id="next-btn" class="wizard-btn">Next</button>
+                <button id="prev-button" class="wizard-button">Previous</button>
+                <button id="next-button" class="wizard-button">Next</button>
             </div>
             </div>
         </div>
