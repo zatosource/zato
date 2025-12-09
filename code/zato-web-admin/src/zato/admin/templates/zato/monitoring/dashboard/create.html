@@ -5,9 +5,10 @@
 
 {% block "extra_css" %}
 <link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
+<link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
 <style>
 .creation-container {
-    background: #fafafa;
+    background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
     min-height: 100vh;
     padding: 40px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -16,26 +17,27 @@
 .creation-panel {
     max-width: 1200px;
     margin: 0 auto;
-    background: white;
-    border: 1px solid #e1e5e9;
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    box-shadow: 8px 8px 0px var(--shadow-dark);
 }
 
 .creation-header {
     padding: 32px 40px;
-    border-bottom: 1px solid #e1e5e9;
-    background: white;
+    border-bottom: 3px solid var(--primary-dark);
+    background: var(--white);
 }
 
 .creation-title {
     font-size: 24px;
     font-weight: 600;
-    color: #232f3e;
+    color: var(--primary-dark);
     margin: 0 0 8px 0;
     letter-spacing: -0.02em;
 }
 
 .creation-subtitle {
-    color: #5a6c7d;
+    color: var(--text-muted);
     font-size: 14px;
     margin: 0;
 }
@@ -51,8 +53,8 @@
 
 .creation-sidebar {
     width: 300px;
-    background: #f7f8fa;
-    border-left: 1px solid #e1e5e9;
+    background: var(--background-light);
+    border-left: 3px solid var(--primary-dark);
     padding: 40px 32px;
 }
 
@@ -64,7 +66,7 @@
     display: flex;
     align-items: center;
     padding: 16px 0;
-    border-bottom: 1px solid #f0f2f4;
+    border-bottom: 1px solid var(--border-light);
 }
 
 .progress-item:last-child {
@@ -84,16 +86,16 @@
 }
 
 .progress-icon.spinner {
-    color: #232f3e;
+    color: var(--primary-dark);
     animation: spin 1s linear infinite;
 }
 
 .progress-icon.completed {
-    color: #067f39;
+    color: var(--primary-dark);
 }
 
 .progress-icon.error {
-    color: #d13212;
+    color: #ff4444;
 }
 
 @keyframes spin {
@@ -108,44 +110,47 @@
 
 .progress-platform {
     font-size: 16px;
-    font-weight: 500;
-    color: #232f3e;
+    font-weight: 600;
+    color: var(--primary-dark);
     margin: 0 0 4px 0;
     line-height: 1.3;
 }
 
 .progress-text {
     font-size: 14px;
-    color: #5a6c7d;
+    color: var(--text-muted);
     margin: 0;
     line-height: 1.4;
+    font-family: monospace;
 }
 
 .progress-item.processing .progress-text {
-    color: #0073bb;
+    color: var(--accent-light);
 }
 
 .progress-item.completed .progress-text {
-    color: #067f39;
+    color: var(--primary-dark);
 }
 
 .progress-item.error .progress-text {
-    color: #d13212;
+    color: #ff4444;
 }
 
 .wizard-summary {
-    background: white;
-    border: 1px solid #e1e5e9;
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
     padding: 24px;
 }
 
 .summary-title {
     font-size: 16px;
-    font-weight: 600;
-    color: #232f3e;
+    font-weight: 700;
+    color: var(--primary-dark);
     margin: 0 0 16px 0;
     padding-bottom: 8px;
-    border-bottom: 1px solid #e1e5e9;
+    border-bottom: 2px solid var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .summary-item {
@@ -162,27 +167,54 @@
 }
 
 .summary-label {
-    color: #5a6c7d;
-    font-weight: 400;
+    color: var(--text-muted);
+    font-weight: 600;
     margin-right: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
 }
 
 .summary-value {
-    color: #232f3e;
-    font-weight: 500;
+    color: var(--primary-dark);
+    font-weight: 600;
     text-align: right;
     flex-shrink: 0;
     max-width: 60%;
     word-break: break-word;
+    font-family: monospace;
 }
 
-.completion-section {
-    margin-top: 40px;
-    padding: 32px;
-    background: #f0f9ff;
-    border: 1px solid #0073bb;
+.code-section {
+    margin-top: 32px;
     opacity: 0;
     transition: opacity 0.3s ease;
+}
+
+.code-section.show {
+    opacity: 1;
+}
+
+.code-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.code-section .highlight {
+    border: 3px solid var(--primary-dark);
+    background: var(--white);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.code-section .highlight pre {
+    padding: 20px;
+    margin: 0;
+    overflow-x: auto;
 }
 
 .completion-section.show {
@@ -328,7 +360,14 @@
     }
 
     function checkCompletion() {
-        // No overall status update needed since panel was removed
+        const completed = $('.progress-item.completed').length;
+        const total = $('.progress-item').length;
+        
+        if (completed === total) {
+            setTimeout(() => {
+                $('#code-section').addClass('show');
+            }, 500);
+        }
     }
 </script>
 {% endblock %}
@@ -355,6 +394,35 @@
                             <div class="progress-text">Waiting...</div>
                         </div>
                     </div>
+                </div>
+
+                <div class="code-section" id="code-section">
+                    <h3>Service template</h3>
+                    <div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+
+
+<span class="c1"># Zato</span>
+<span class="kn">from</span> <span class="nn">zato.server.service</span> <span class="kn">import</span> <span class="n">Service</span>
+
+<span class="k">class</span> <span class="nc">MyService</span><span class="p">(</span><span class="n">Service</span><span class="p">):</span>
+
+    <span class="c1"># I/O definition</span>
+    <span class="n">input</span> <span class="o">=</span> <span class="s1">'-name'</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="s1">'salutation'</span>
+
+    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="c1"># Local variables</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="s1">'partner'</span>
+
+        <span class="c1"># Our response to produce</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'Hello </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">'</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'Hello!'</span><span class="p">)</span>
+
+        <span class="c1"># Reply to our caller</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">salutation</span> <span class="o">=</span> <span class="n">data</span>
+</pre></div>
                 </div>
 
             </div>
