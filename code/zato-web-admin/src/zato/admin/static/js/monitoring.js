@@ -233,6 +233,7 @@ $.fn.zato.monitoring.wizard.init = function() {
             const stepKey = `step${stepNumber}`;
             delete wizardData[stepKey];
             updateStepValues();
+            updateURL();
         } else {
             parent.find('.option-item').removeClass('selected');
             $(this).addClass('selected');
@@ -241,6 +242,7 @@ $.fn.zato.monitoring.wizard.init = function() {
             const stepKey = `step${stepNumber}`;
             wizardData[stepKey] = selectedValue;
             updateStepValues();
+            updateURL();
         }
     });
 
