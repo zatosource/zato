@@ -6,14 +6,15 @@
 <style type="text/css">
     .monitoring-container {
         background: #ffffff;
-        min-height: calc(100vh - 200px);
-        padding: 40px;
-        margin: -20px;
+        min-height: 100vh;
+        padding: 40px 20px;
+        margin: 0;
+        overflow-x: hidden;
     }
     .dashboard-grid {
         display: flex;
         gap: 24px;
-        max-width: 1200px;
+        max-width: 1000px;
         margin: 0 auto;
         justify-content: center;
     }
@@ -25,14 +26,13 @@
         transition: all 0.2s ease;
         cursor: pointer;
         flex: 1;
-        min-width: 240px;
+        min-width: 220px;
         position: relative;
     }
     .dashboard-card:hover {
         background: #1a73e8;
         color: #ffffff;
-        transform: translate(-4px, -4px);
-        box-shadow: 12px 12px 0px #ff6900;
+        box-shadow: 8px 8px 0px #ff6900;
     }
     .card-title {
         font-size: 28px;
