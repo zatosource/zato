@@ -32,6 +32,22 @@
             window.history.replaceState({}, '', '?' + params.toString());
         }
 
+        function updateStepValues() {
+            $('#value-1').text(wizardData.step1 || '');
+            if (wizardData.step2) {
+                const step2Text = $('#step-2 .option-item[data-value="' + wizardData.step2 + '"] .option-text').text();
+                $('#value-2').text(step2Text);
+            } else {
+                $('#value-2').text('');
+            }
+            if (wizardData.step3) {
+                const step3Text = $('#step-3 .option-item[data-value="' + wizardData.step3 + '"] .option-text').text();
+                $('#value-3').text(step3Text);
+            } else {
+                $('#value-3').text('');
+            }
+        }
+
         function loadFromURL() {
             const urlData = getURLParams();
             currentStep = Math.min(Math.max(urlData.step, 1), totalSteps);
@@ -50,6 +66,7 @@
             if (wizardData.step3) {
                 $('#step-3 .option-item[data-value="' + wizardData.step3 + '"]').addClass('selected');
             }
+            updateStepValues();
         }
 
         function updateStepper() {
@@ -113,6 +130,7 @@
             }
 
             updateURL();
+            updateStepValues();
 
             if (currentStep < totalSteps) {
                 currentStep++;
@@ -151,6 +169,9 @@
     <div class="wizard-panel">
         <div class="wizard-layout">
             <div class="stepper">
+                <div class="step-value" id="value-1"></div>
+                <div class="step-value" id="value-2"></div>
+                <div class="step-value" id="value-3"></div>
                 <h1 class="wizard-title">Is it working?</h1>
                 <div class="step">
                     <div class="step-number">1</div>

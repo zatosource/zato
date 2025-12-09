@@ -30,9 +30,44 @@ body {
 .wizard-layout {
     display: flex;
     align-items: flex-start;
-    gap: 60px;
+    gap: 30px;
     width: 100%;
-    max-width: 1100px;
+    max-width: 1200px;
+}
+
+.stepper {
+    position: relative;
+}
+
+.step-value {
+    position: absolute;
+    right: 100%;
+    margin-right: 20px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    background: #dc3545;
+    color: #ffffff;
+    font-family: monospace;
+    max-width: 200px;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 4px;
+    word-wrap: break-word;
+    overflow: hidden;
+}
+
+#value-1 {
+    top: 70px;
+}
+
+#value-2 {
+    top: 140px;
+}
+
+#value-3 {
+    top: 210px;
 }
 
 .stepper {
