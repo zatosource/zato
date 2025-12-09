@@ -1,0 +1,243 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Health monitoring wizard{% endblock %}
+
+{% block "extra_css" %}
+<style type="text/css">
+    .wizard-container {
+        background: #ffffff;
+        min-height: 100vh;
+        padding: 40px 20px;
+        margin: 0;
+        overflow-x: hidden;
+    }
+    .stepper {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 60px;
+        align-items: center;
+    }
+    .step {
+        display: flex;
+        align-items: center;
+    }
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e0e0e0;
+        color: #666;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        margin-right: 12px;
+    }
+    .step.active .step-number {
+        background: #012845;
+        color: #ffffff;
+    }
+    .step.completed .step-number {
+        background: #82ccff;
+        color: #012845;
+    }
+    .step-connector {
+        width: 80px;
+        height: 2px;
+        background: #e0e0e0;
+        margin: 0 20px;
+    }
+    .step.completed + .step .step-connector {
+        background: #82ccff;
+    }
+    .wizard-content {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+    }
+    .question-title {
+        font-size: 36px;
+        font-weight: 900;
+        color: #012845;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+    }
+    .question-subtitle {
+        font-size: 18px;
+        color: #063c65;
+        margin-bottom: 60px;
+        font-family: monospace;
+    }
+    .input-field {
+        width: 100%;
+        max-width: 500px;
+        padding: 20px;
+        font-size: 18px;
+        border: 3px solid #012845;
+        background: #ffffff;
+        margin-bottom: 40px;
+        font-family: monospace;
+    }
+    .wizard-buttons {
+        display: flex;
+        justify-content: space-between;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    .wizard-btn {
+        padding: 15px 30px;
+        font-size: 16px;
+        font-weight: 900;
+        text-transform: uppercase;
+        border: 3px solid #012845;
+        background: #ffffff;
+        color: #012845;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .wizard-btn:hover {
+        background: #012845;
+        color: #ffffff;
+    }
+    .wizard-btn:disabled {
+        background: #e0e0e0;
+        border-color: #e0e0e0;
+        color: #666;
+        cursor: not-allowed;
+    }
+    .wizard-btn:disabled:hover {
+        background: #e0e0e0;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block "extra_js" %}
+<script type="text/javascript" nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        let currentStep = 1;
+        const totalSteps = 3;
+        let wizardData = {};
+        
+        function updateStepper() {
+            $('.step').each(function(index) {
+                const stepNum = index + 1;
+                $(this).removeClass('active completed');
+                
+                if (stepNum < currentStep) {
+                    $(this).addClass('completed');
+                } else if (stepNum === currentStep) {
+                    $(this).addClass('active');
+                }
+            });
+        }
+        
+        function showStep(step) {
+            $('.wizard-step').hide();
+            $('#step-' + step).show();
+            updateStepper();
+            
+            if (step === 1) {
+                $('#prev-btn').prop('disabled', true);
+            } else {
+                $('#prev-btn').prop('disabled', false);
+            }
+            
+            if (step === totalSteps) {
+                $('#next-btn').text('Create Dashboard');
+            } else {
+                $('#next-btn').text('Next');
+            }
+        }
+        
+        $('#next-btn').click(function() {
+            const stepInput = $('#step-' + currentStep + ' input');
+            
+            if (stepInput.length && !stepInput.val().trim()) {
+                alert('Please fill in the required field');
+                return;
+            }
+            
+            if (stepInput.length) {
+                wizardData['step' + currentStep] = stepInput.val().trim();
+            }
+            
+            if (currentStep < totalSteps) {
+                currentStep++;
+                showStep(currentStep);
+            } else {
+                // Create dashboard
+                console.log('Creating dashboard with data:', wizardData);
+                alert('Dashboard creation not implemented yet');
+            }
+        });
+        
+        $('#prev-btn').click(function() {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        });
+        
+        showStep(1);
+    });
+</script>
+{% endblock %}
+
+{% block "content" %}
+
+<div class="wizard-container">
+    <div class="stepper">
+        <div class="step">
+            <div class="step-number">1</div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+            <div class="step-number">2</div>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step">
+            <div class="step-number">3</div>
+        </div>
+    </div>
+    
+    <div class="wizard-content">
+        <div id="step-1" class="wizard-step">
+            <h1 class="question-title">Question 1 of 3</h1>
+            <p class="question-subtitle">What do you want to monitor?</p>
+            <input type="text" class="input-field" placeholder="Enter what you want to monitor..." />
+        </div>
+        
+        <div id="step-2" class="wizard-step" style="display: none;">
+            <h1 class="question-title">Question 2 of 3</h1>
+            <p class="question-subtitle">What aspect of health do you want to track?</p>
+            <select class="input-field">
+                <option value="">Select monitoring type...</option>
+                <option value="current-status">Current status</option>
+                <option value="error-rate">Error rate</option>
+                <option value="service-uptime">Service uptime</option>
+                <option value="activity-monitoring">Activity monitoring</option>
+            </select>
+        </div>
+        
+        <div id="step-3" class="wizard-step" style="display: none;">
+            <h1 class="question-title">Question 3 of 3</h1>
+            <p class="question-subtitle">What time range do you want to see data for?</p>
+            <select class="input-field">
+                <option value="">Select time range...</option>
+                <option value="real-time">Real-time</option>
+                <option value="last-hour">Last hour</option>
+                <option value="last-day">Last 24 hours</option>
+                <option value="last-week">Last 7 days</option>
+                <option value="last-month">Last 30 days</option>
+            </select>
+        </div>
+        
+        <div class="wizard-buttons">
+            <button id="prev-btn" class="wizard-btn">Previous</button>
+            <button id="next-btn" class="wizard-btn">Next</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
