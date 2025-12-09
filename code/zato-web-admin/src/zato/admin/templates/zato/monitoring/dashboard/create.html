@@ -360,21 +360,26 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 12px 16px;
-    background: var(--primary-dark);
-    color: var(--white);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 600;
+    padding: 20px 40px;
+    font-size: 16px;
+    font-weight: 900;
+    text-transform: uppercase;
     border: 3px solid var(--primary-dark);
+    border-radius: 0;
+    background: var(--white);
+    color: var(--primary-dark);
+    text-decoration: none;
+    cursor: pointer;
     transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+    box-shadow: 8px 8px 0px var(--shadow-dark);
     box-sizing: border-box;
 }
 
 .links-panel .dashboard-link:hover {
-    background: var(--white);
-    color: var(--primary-dark);
-    border-color: var(--primary-dark);
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: 8px 8px 0px var(--accent-light);
 }
 
 .external-icon {
