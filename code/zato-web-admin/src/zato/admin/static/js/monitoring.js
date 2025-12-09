@@ -317,7 +317,16 @@ $.fn.zato.monitoring.wizard.init = function() {
                     _tooltip.show();
                     $('#next-button').blur();
                 } else {
-                    alert('Wizard Complete!');
+                    // Redirect to dashboard creation page with wizard data
+                    const params = new URLSearchParams();
+                    params.set('type', $.fn.zato.monitoring.wizard.currentType);
+                    wizardConfig.steps.forEach((step, index) => {
+                        const stepKey = `step${index + 1}`;
+                        if (wizardData[stepKey]) {
+                            params.set(stepKey, wizardData[stepKey]);
+                        }
+                    });
+                    window.location.href = `/zato/monitoring/dashboard/create/?${params.toString()}`;
                 }
             }
         } else {

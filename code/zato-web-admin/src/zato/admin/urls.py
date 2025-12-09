@@ -38,6 +38,7 @@ from zato.admin.web.views.security import apikey, basic_auth, ntlm
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
 from zato.admin.web.views.stats import user as stats_user
 from zato.admin.web.views.monitoring import config as monitoring_config
+from zato.admin.web.views.monitoring import dashboard as monitoring_dashboard
 from zato.admin.web.views.monitoring.wizard import health as monitoring_wizard_health
 from zato.admin.web.views.vendors import keysight_vision
 from zato.admin.web.views.pubsub import topic
@@ -669,6 +670,14 @@ urlpatterns += [
     # Monitoring - wizard - health
     url(r'^zato/monitoring/wizard/health/$',
         login_required(monitoring_wizard_health.health), name='monitoring-wizard-health'),
+
+    # Monitoring - dashboard creation
+    url(r'^zato/monitoring/dashboard/create/$',
+        login_required(monitoring_dashboard.dashboard_create_page), name='monitoring-dashboard-create'),
+    url(r'^zato/monitoring/dashboard/create/grafana/$',
+        monitoring_dashboard.create_grafana_dashboard, name='monitoring-dashboard-create-grafana'),
+    url(r'^zato/monitoring/dashboard/create/datadog/$',
+        monitoring_dashboard.create_datadog_dashboard, name='monitoring-dashboard-create-datadog'),
     ]
 
 # ################################################################################################################################
