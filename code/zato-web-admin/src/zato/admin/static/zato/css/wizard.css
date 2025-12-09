@@ -57,7 +57,7 @@ body {
     color: #012845;
     text-align: center;
     padding: 8px 16px;
-    border-radius: 0;
+    border-radius: 8px 0 0 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -67,11 +67,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    font-weight: bold;
+    font-family: Arial, sans-serif;
 }
 
 .step-arrow {
     background: transparent;
-    color: #dc3545;
+    color: #012845;
     font-size: 20px;
     font-weight: bold;
     padding: 8px;
