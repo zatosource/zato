@@ -90,17 +90,6 @@ body {
     height: 100%;
 }
 
-#value-1 {
-    top: 149px;
-}
-
-#value-2 {
-    top: 310px;
-}
-
-#value-3 {
-    top: 472px;
-}
 
 .stepper {
     display: flex;

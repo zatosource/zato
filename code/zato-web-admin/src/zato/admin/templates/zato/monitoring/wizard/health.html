@@ -15,6 +15,8 @@
 <script src="/static/js/monitoring.js?nocache={{ build_id }}" type="text/javascript" charset="utf-8" nonce="{{ csp_nonce }}"></script>
 <script type="text/javascript" nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
+        // Generate wizard structure dynamically
+        $.fn.zato.monitoring.wizard.generateHTML();
         $.fn.zato.monitoring.wizard.init();
     });
 </script>
@@ -25,84 +27,15 @@
 <div class="wizard-container">
     <div class="wizard-panel">
         <div class="wizard-layout">
-            <div class="stepper">
-                <div class="step-value" id="value-1"><div class="step-value-text"></div><div class="step-arrow">▶</div></div>
-                <div class="step-value" id="value-2"><div class="step-value-text"></div><div class="step-arrow">▶</div></div>
-                <div class="step-value" id="value-3"><div class="step-value-text"></div><div class="step-arrow">▶</div></div>
-                <h1 class="wizard-title">Is it working?</h1>
-                <div class="step">
-                    <div class="step-number">1</div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                </div>
-                <div class="step-connector"></div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                </div>
+            <div class="stepper" id="stepper-container">
             </div>
 
             <div class="wizard-content">
-            <div id="step-1" class="wizard-step">
-                <h1 class="question-title">1. What do you want to monitor?</h1>
-                <div class="input-wrapper">
-                    <input type="text" class="input-field" placeholder="Enter what you want to monitor..." />
+                <div id="wizard-steps-container"></div>
+                <div class="wizard-buttons">
+                    <button id="prev-button" class="wizard-button">Previous</button>
+                    <button id="next-button" class="wizard-button">Next</button>
                 </div>
-            </div>
-
-            <div id="step-2" class="wizard-step" style="display: none;">
-                <h1 class="question-title">2. What do you want to track?</h1>
-                <div class="option-group">
-                    <div class="option-item" data-value="current-status">
-                        <div class="option-radio"></div>
-                        <div class="option-text">Current status</div>
-                    </div>
-                    <div class="option-item" data-value="error-rate">
-                        <div class="option-radio"></div>
-                        <div class="option-text">Error rate</div>
-                    </div>
-                    <div class="option-item" data-value="uptime">
-                        <div class="option-radio"></div>
-                        <div class="option-text">Uptime</div>
-                    </div>
-                    <div class="option-item" data-value="activity">
-                        <div class="option-radio"></div>
-                        <div class="option-text">Activity</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="step-3" class="wizard-step" style="display: none;">
-                <h1 class="question-title">3. How far back to look?</h1>
-                <div class="option-group">
-                    <div class="option-item" data-value="real-time">
-                        <div class="option-radio"></div>
-                        <div class="option-text">Right now</div>
-                    </div>
-                    <div class="option-item" data-value="last-hour">
-                        <div class="option-radio"></div>
-                        <div class="option-text">Last hour</div>
-                    </div>
-                    <div class="option-item" data-value="last-day">
-                        <div class="option-radio"></div>
-                        <div class="option-text">Last day</div>
-                    </div>
-                    <div class="option-item" data-value="last-week">
-                        <div class="option-radio"></div>
-                        <div class="option-text">Last week</div>
-                    </div>
-                    <div class="option-item" data-value="last-month">
-                        <div class="option-radio"></div>
-                        <div class="option-text">Last month</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="wizard-buttons">
-                <button id="prev-button" class="wizard-button">Previous</button>
-                <button id="next-button" class="wizard-button">Next</button>
-            </div>
             </div>
         </div>
     </div>
