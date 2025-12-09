@@ -212,28 +212,34 @@ body {
     line-height: 1.2;
 }
 
-.input-field {
-    width: 100% !important;
-    max-width: 600px !important;
-    padding: 4px 8px !important;
-    font-size: 18px !important;
+.input-wrapper {
+    width: 100%;
+    max-width: 600px;
+    padding: 4px 8px;
     border: 3px solid #012845;
-    border-radius: 6px !important;
+    border-radius: 6px;
     background: #ffffff;
-    margin-bottom: 60px !important;
+    margin: 0 auto 60px auto;
+    box-sizing: border-box;
+}
+
+.input-wrapper .input-field {
+    width: 100% !important;
+    padding: 0 !important;
+    font-size: 18px !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
     font-family: monospace !important;
     font-weight: 600 !important;
     color: #012845 !important;
+    outline: none !important;
     height: 2.4rem !important;
-    min-height: 2.4rem !important;
-    max-height: 2.4rem !important;
-    box-sizing: border-box !important;
 }
 
-.input-field:focus {
+.input-wrapper .input-field:focus {
     outline: none !important;
-    background: #ffffff;
-    border-color: #012845;
+    box-shadow: none !important;
 }
 
 @keyframes flashPulse {
@@ -254,6 +260,7 @@ body {
 .field-error {
     animation: flashPulse 0.8s ease-in-out 2;
 }
+
 
 .input-field::placeholder {
     color: #6c757d;
