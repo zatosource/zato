@@ -50,6 +50,7 @@ body {
     font-size: 12px;
     font-family: monospace;
     width: 333px;
+    cursor: pointer;
 }
 
 .step-value.show {
@@ -76,9 +77,6 @@ body {
     border: 1px solid transparent;
 }
 
-.step-value.current .step-value-text {
-    border: 1px solid #012845;
-}
 
 .step-arrow {
     background: transparent;
@@ -122,18 +120,19 @@ body {
 }
 
 .step-number {
-    width: 50px;
+    width: 40px;
     height: 40px;
-    border-radius: 4px;
+    border-radius: 50%;
+    border: 2px solid #e9ecef;
     background: #ffffff;
-    border: 3px solid #012845;
     color: #012845;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 900;
-    font-size: 18px;
-    transition: all 0.2s ease;
+    font-size: 16px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .step.active .step-number {
