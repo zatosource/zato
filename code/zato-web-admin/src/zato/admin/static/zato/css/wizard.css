@@ -201,6 +201,32 @@ body {
     line-height: 1.2;
 }
 
+.help-tag,
+.help-tag:focus
+ {
+    display: inline-block;
+    background: #012845;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    margin-left: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-transform: uppercase;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.help-tag:hover {
+    background: #012845;
+    color: #ffffff;
+}
+
 .input-wrapper {
     width: 100%;
     max-width: 600px;
@@ -283,7 +309,7 @@ body {
 
 .option-item:hover {
     background: #f8f9fa;
-    border-color: #67bfff;
+    border-color: #82ccff;
 }
 
 .option-item.selected {
