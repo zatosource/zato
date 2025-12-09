@@ -45,11 +45,15 @@ body {
     right: 100%;
     margin-right: -55px;
     height: 40px;
-    display: flex;
+    display: none;
     align-items: center;
     font-size: 12px;
     font-family: monospace;
     width: 333px;
+}
+
+.step-value.show {
+    display: flex;
 }
 
 .step-value-text {
@@ -69,6 +73,11 @@ body {
     font-weight: bold;
     font-family: monospace;
     font-size: 0.9rem;
+    border: 1px solid transparent;
+}
+
+.step-value.current .step-value-text {
+    border: 1px solid #012845;
 }
 
 .step-arrow {

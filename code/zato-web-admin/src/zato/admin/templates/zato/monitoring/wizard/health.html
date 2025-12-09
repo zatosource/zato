@@ -33,18 +33,27 @@
         }
 
         function updateStepValues() {
-            $('#value-1 .step-value-text').text(wizardData.step1 || '');
+            if (wizardData.step1) {
+                $('#value-1 .step-value-text').text(wizardData.step1);
+                $('#value-1').addClass('show');
+            } else {
+                $('#value-1').removeClass('show');
+            }
+            
             if (wizardData.step2) {
                 const step2Text = $('#step-2 .option-item[data-value="' + wizardData.step2 + '"] .option-text').text();
                 $('#value-2 .step-value-text').text(step2Text);
+                $('#value-2').addClass('show');
             } else {
-                $('#value-2 .step-value-text').text('');
+                $('#value-2').removeClass('show');
             }
+            
             if (wizardData.step3) {
                 const step3Text = $('#step-3 .option-item[data-value="' + wizardData.step3 + '"] .option-text').text();
                 $('#value-3 .step-value-text').text(step3Text);
+                $('#value-3').addClass('show');
             } else {
-                $('#value-3 .step-value-text').text('');
+                $('#value-3').removeClass('show');
             }
         }
 
@@ -85,8 +94,12 @@
         function showStep(step) {
             $('.wizard-step').hide();
             $('#step-' + step).show();
-            updateStepper();
-            updateURL();
+
+            $('.step-number').removeClass('active');
+            $('.step:nth-child(' + (step * 2 - 1) + ') .step-number').addClass('active');
+
+            $('.step-value').removeClass('current');
+            $('#value-' + step).addClass('current');
 
             if (step === 1) {
                 $('#prev-button').hide();
@@ -94,11 +107,7 @@
                 $('#prev-button').show();
             }
 
-            if (step === totalSteps) {
-                $('#next-button').text('Create Dashboard');
-            } else {
-                $('#next-button').text('Next');
-            }
+            updateURL();
         }
 
         $('.option-item').click(function() {
@@ -147,6 +156,17 @@
         $('input.input-field').on('keypress', function(e) {
             if (e.which === 13) {
                 goToNextStep();
+            }
+        });
+
+        $('#step-1 input').on('input', function() {
+            const value = $(this).val().trim();
+            if (value) {
+                wizardData.step1 = value;
+                updateStepValues();
+            } else {
+                delete wizardData.step1;
+                updateStepValues();
             }
         });
 
