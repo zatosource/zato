@@ -402,7 +402,7 @@
     $(document).ready(function() {
         // Start dashboard creation process
         createDashboards();
-        
+
         // Close tooltips when clicking anywhere on page
         $(document).on('click', function(e) {
             // Don't close if clicking on copy or try buttons
@@ -489,22 +489,22 @@
     function checkCompletion() {
         const completed = $('.progress-item.completed').length;
         const total = $('.progress-item').length;
-        
+
         if (completed === total) {
             setTimeout(() => {
                 $('#code-section').addClass('show');
             }, 500);
         }
     }
-    
+
     // Copy code functionality
     $(document).on('click', '#copy-code-button', function() {
         const button = $(this);
-        
+
         try {
             const codeElement = document.getElementById('code-content');
             const codeText = codeElement.innerText || codeElement.textContent;
-            
+
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(codeText).then(() => {
                     showCopyTooltip(button[0]);
@@ -518,7 +518,7 @@
             console.error('Copy failed:', err);
         }
     });
-    
+
     function fallbackCopyTextToClipboard(text, buttonElement) {
         const textArea = document.createElement('textarea');
         textArea.value = text;
@@ -528,7 +528,7 @@
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        
+
         try {
             const successful = document.execCommand('copy');
             if (successful) {
@@ -537,10 +537,10 @@
         } catch (err) {
             console.error('Fallback copy failed:', err);
         }
-        
+
         document.body.removeChild(textArea);
     }
-    
+
     function showCopyTooltip(buttonElement) {
         const _tooltip = tippy(buttonElement, {
             content: "Copied to clipboard",
@@ -552,9 +552,9 @@
             inertia: true,
             role: "tooltip",
         });
-        
+
         _tooltip.show();
-        
+
         setTimeout(() => {
             _tooltip.hide();
             setTimeout(() => {
@@ -562,14 +562,14 @@
             }, 500);
         }, 1500);
     }
-    
+
     // Try it out functionality
     $(document).on('click', '#try-code-button', function() {
         const button = $(this);
-        
+
         // Show tooltip with spinner
         const _tooltip = tippy(button[0], {
-            content: '<span style="display: inline-flex; align-items: center; gap: 4px; line-height: 1;"><img src="/static/gfx/spinner.svg" style="animation: spin 0.8s linear infinite; width: 20px; height: 20px; filter: brightness(0) saturate(100%) invert(100%);"><span style="display: inline-flex; align-items: center;">Invoking...</span></span>',
+            content: '<span style="display: inline-flex; align-items: center; gap: 4px; line-height: 1;"><img src="/static/gfx/spinner.svg" style="animation: spin 0.8s linear infinite; width: 20px; height: 20px; margin-top: 2px; filter: brightness(0) saturate(100%) invert(100%);"><span style="display: inline-flex; align-items: center;">Invoking ...</span></span>',
             trigger: "manual",
             hideOnClick: false,
             placement: "top",
@@ -579,9 +579,9 @@
             role: "tooltip",
             allowHTML: true
         });
-        
+
         _tooltip.show();
-        
+
         // Make request to try endpoint
         $.ajax({
             url: '/zato/monitoring/dashboard/try/',
@@ -660,7 +660,7 @@
 
         <span class="c1"># Our response to produce</span>
         <span class="n">data</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'Hello </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">'</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'Hello!'</span><span class="p">)</span>
 
         <span class="c1"># Reply to our caller</span>
