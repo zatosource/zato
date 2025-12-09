@@ -5,11 +5,23 @@
 {% block "extra_css" %}
 <style type="text/css">
     .wizard-container {
-        background: #ffffff;
+        background: #82ccff;
         min-height: 100vh;
         padding: 40px 20px;
         margin: 0;
         overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .wizard-panel {
+        background: #ffffff;
+        border: 5px solid #012845;
+        box-shadow: 15px 15px 0px #063c65;
+        padding: 60px;
+        max-width: 900px;
+        width: 100%;
+        margin-top: 40px;
     }
     .stepper {
         display: flex;
@@ -22,15 +34,17 @@
         align-items: center;
     }
     .step-number {
-        width: 40px;
-        height: 40px;
+        width: 50px;
+        height: 50px;
         border-radius: 50%;
-        background: #e0e0e0;
-        color: #666;
+        background: #ffffff;
+        border: 4px solid #012845;
+        color: #012845;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 900;
+        font-size: 18px;
         margin-right: 12px;
     }
     .step.active .step-number {
@@ -38,17 +52,20 @@
         color: #ffffff;
     }
     .step.completed .step-number {
-        background: #82ccff;
+        background: #67bfff;
         color: #012845;
+        border-color: #67bfff;
     }
     .step-connector {
-        width: 80px;
-        height: 2px;
-        background: #e0e0e0;
-        margin: 0 20px;
+        width: 100px;
+        height: 4px;
+        background: #ffffff;
+        border: 2px solid #012845;
+        margin: 0 30px;
     }
     .step.completed + .step .step-connector {
-        background: #82ccff;
+        background: #67bfff;
+        border-color: #67bfff;
     }
     .wizard-content {
         max-width: 800px;
@@ -56,58 +73,76 @@
         text-align: center;
     }
     .question-title {
-        font-size: 36px;
+        font-size: 42px;
         font-weight: 900;
         color: #012845;
-        margin-bottom: 20px;
+        margin-bottom: 40px;
         text-transform: uppercase;
-    }
-    .question-subtitle {
-        font-size: 18px;
-        color: #063c65;
-        margin-bottom: 60px;
-        font-family: monospace;
+        letter-spacing: -1px;
     }
     .input-field {
         width: 100%;
-        max-width: 500px;
-        padding: 20px;
-        font-size: 18px;
-        border: 3px solid #012845;
+        max-width: 600px;
+        padding: 25px 30px;
+        font-size: 20px;
+        border: 4px solid #012845;
         background: #ffffff;
-        margin-bottom: 40px;
+        margin-bottom: 50px;
         font-family: monospace;
+        box-shadow: 8px 8px 0px #063c65;
+        transition: all 0.2s ease;
+        font-weight: 600;
+        color: #012845;
+    }
+    .input-field:focus {
+        outline: none;
+        box-shadow: 8px 8px 0px #67bfff;
+        transform: translateY(-2px);
+    }
+    .input-field option {
+        padding: 15px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #012845;
+        background: #ffffff;
     }
     .wizard-buttons {
         display: flex;
         justify-content: space-between;
-        max-width: 500px;
+        max-width: 600px;
         margin: 0 auto;
     }
     .wizard-btn {
-        padding: 15px 30px;
-        font-size: 16px;
+        padding: 20px 40px;
+        font-size: 18px;
         font-weight: 900;
         text-transform: uppercase;
-        border: 3px solid #012845;
+        border: 4px solid #012845;
         background: #ffffff;
         color: #012845;
         cursor: pointer;
         transition: all 0.2s ease;
+        box-shadow: 6px 6px 0px #063c65;
+        letter-spacing: 0.5px;
     }
     .wizard-btn:hover {
         background: #012845;
         color: #ffffff;
+        box-shadow: 6px 6px 0px #67bfff;
+        transform: translateY(-2px);
     }
     .wizard-btn:disabled {
-        background: #e0e0e0;
-        border-color: #e0e0e0;
-        color: #666;
+        background: #ffffff;
+        border-color: #063c65;
+        color: #063c65;
         cursor: not-allowed;
+        box-shadow: 6px 6px 0px #b8e6ff;
     }
     .wizard-btn:disabled:hover {
-        background: #e0e0e0;
-        color: #666;
+        background: #ffffff;
+        color: #063c65;
+        transform: none;
+        box-shadow: 6px 6px 0px #b8e6ff;
     }
 </style>
 {% endblock %}
@@ -187,55 +222,55 @@
 {% block "content" %}
 
 <div class="wizard-container">
-    <div class="stepper">
-        <div class="step">
-            <div class="step-number">1</div>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step">
-            <div class="step-number">2</div>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step">
-            <div class="step-number">3</div>
-        </div>
-    </div>
-    
-    <div class="wizard-content">
-        <div id="step-1" class="wizard-step">
-            <h1 class="question-title">Question 1 of 3</h1>
-            <p class="question-subtitle">What do you want to monitor?</p>
-            <input type="text" class="input-field" placeholder="Enter what you want to monitor..." />
+    <div class="wizard-panel">
+        <h1 style="font-size: 48px; font-weight: 900; color: #012845; text-align: center; margin-bottom: 40px; text-transform: none; letter-spacing: -2px;">Is it working?</h1>
+        <div class="stepper">
+            <div class="step">
+                <div class="step-number">1</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step">
+                <div class="step-number">2</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step">
+                <div class="step-number">3</div>
+            </div>
         </div>
         
-        <div id="step-2" class="wizard-step" style="display: none;">
-            <h1 class="question-title">Question 2 of 3</h1>
-            <p class="question-subtitle">What aspect of health do you want to track?</p>
-            <select class="input-field">
-                <option value="">Select monitoring type...</option>
-                <option value="current-status">Current status</option>
-                <option value="error-rate">Error rate</option>
-                <option value="service-uptime">Service uptime</option>
-                <option value="activity-monitoring">Activity monitoring</option>
-            </select>
-        </div>
-        
-        <div id="step-3" class="wizard-step" style="display: none;">
-            <h1 class="question-title">Question 3 of 3</h1>
-            <p class="question-subtitle">What time range do you want to see data for?</p>
-            <select class="input-field">
-                <option value="">Select time range...</option>
-                <option value="real-time">Real-time</option>
-                <option value="last-hour">Last hour</option>
-                <option value="last-day">Last 24 hours</option>
-                <option value="last-week">Last 7 days</option>
-                <option value="last-month">Last 30 days</option>
-            </select>
-        </div>
-        
-        <div class="wizard-buttons">
-            <button id="prev-btn" class="wizard-btn">Previous</button>
-            <button id="next-btn" class="wizard-btn">Next</button>
+        <div class="wizard-content">
+            <div id="step-1" class="wizard-step">
+                <h1 class="question-title">What do you want to monitor?</h1>
+                <input type="text" class="input-field" placeholder="Enter what you want to monitor..." />
+            </div>
+            
+            <div id="step-2" class="wizard-step" style="display: none;">
+                <h1 class="question-title">What do you want to track?</h1>
+                <select class="input-field">
+                    <option value="">Choose monitoring type...</option>
+                    <option value="current-status">Current status</option>
+                    <option value="error-rate">Error rate</option>
+                    <option value="uptime">Uptime</option>
+                    <option value="activity">Activity</option>
+                </select>
+            </div>
+            
+            <div id="step-3" class="wizard-step" style="display: none;">
+                <h1 class="question-title">How far back to look?</h1>
+                <select class="input-field">
+                    <option value="">Choose time period...</option>
+                    <option value="real-time">Right now</option>
+                    <option value="last-hour">Last hour</option>
+                    <option value="last-day">Last day</option>
+                    <option value="last-week">Last week</option>
+                    <option value="last-month">Last month</option>
+                </select>
+            </div>
+            
+            <div class="wizard-buttons">
+                <button id="prev-btn" class="wizard-btn">Previous</button>
+                <button id="next-btn" class="wizard-btn">Next</button>
+            </div>
         </div>
     </div>
 </div>
