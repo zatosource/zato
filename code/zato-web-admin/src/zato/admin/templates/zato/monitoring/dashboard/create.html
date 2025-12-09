@@ -244,11 +244,15 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     text-transform: uppercase;
     z-index: 5;
+    box-shadow: none;
+    text-shadow: none;
 }
 
 .copy-button:hover {
     background: var(--primary-dark);
     color: var(--white);
+    box-shadow: none;
+    text-shadow: none;
 }
 
 /* Lively syntax highlighting colors */
@@ -486,6 +490,42 @@
             }, 500);
         }, 1500);
     }
+    
+    // Try it out functionality
+    $(document).on('click', '#try-code-button', function() {
+        const button = $(this);
+        
+        // Show tooltip with spinner
+        const _tooltip = tippy(button[0], {
+            content: '<span style="display: inline-flex; align-items: center; gap: 6px; line-height: 1;"><span style="animation: spin 1s linear infinite; font-size: 14px; display: inline-flex; align-items: center;">⟳</span><span style="display: inline-flex; align-items: center;">Invoking...</span></span>',
+            trigger: "manual",
+            hideOnClick: false,
+            placement: "top",
+            arrow: true,
+            interactive: false,
+            inertia: true,
+            role: "tooltip",
+            allowHTML: true
+        });
+        
+        _tooltip.show();
+        
+        // Make request to try endpoint
+        $.ajax({
+            url: '/zato/monitoring/dashboard/try/',
+            method: 'POST',
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                // Update tooltip content and keep it visible
+                _tooltip.setContent('OK, invoked');
+            },
+            error: function() {
+                _tooltip.setContent('Invocation failed');
+            }
+        });
+    });
 </script>
 {% endblock %}
 
@@ -518,8 +558,8 @@
                 <div class="code-section" id="code-section">
                     <h3>Service template</h3>
                     <div class="highlight">
-                        <button class="copy-button" id="copy-code-button">Copy</button>
-                        <button class="copy-button" id="try-code-button" style="right: 70px;">Try it out</button>
+                        <button class="copy-button" id="try-code-button" style="right: 10px;">Try it out</button>
+                        <button class="copy-button" id="copy-code-button" style="right: 110px;">Copy</button>
                         <pre id="code-content"><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
 
 

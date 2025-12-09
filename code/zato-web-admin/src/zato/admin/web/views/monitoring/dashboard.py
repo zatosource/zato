@@ -126,4 +126,21 @@ def create_datadog_dashboard(req):
     })
 
 # ################################################################################################################################
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def try_service_code(req):
+    """Try out the service code."""
+    
+    # Sleep for testing purposes
+    time.sleep(0.3)
+    
+    logger.info('Service code invoked successfully')
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Service invoked successfully'
+    })
+
+# ################################################################################################################################
 # ################################################################################################################################
