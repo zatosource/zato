@@ -109,25 +109,44 @@
                 $('#prev-button').show();
             }
 
+            // Update button text based on step
+            if (step === totalSteps) {
+                $('#next-button').text('Create Dashboard');
+            } else {
+                $('#next-button').text('Next');
+            }
+
             updateURL();
         }
 
         $('.option-item').click(function() {
             const parent = $(this).parent();
-            parent.find('.option-item').removeClass('selected');
-            $(this).addClass('selected');
-            
             const stepDiv = $(this).closest('.wizard-step');
             const stepId = stepDiv.attr('id');
             const selectedValue = $(this).data('value');
-            const selectedText = $(this).find('.option-text').text();
             
-            if (stepId === 'step-2') {
-                wizardData.step2 = selectedValue;
-                updateStepValues();
-            } else if (stepId === 'step-3') {
-                wizardData.step3 = selectedValue;
-                updateStepValues();
+            if ($(this).hasClass('selected')) {
+                // Unselect if already selected
+                $(this).removeClass('selected');
+                if (stepId === 'step-2') {
+                    delete wizardData.step2;
+                    updateStepValues();
+                } else if (stepId === 'step-3') {
+                    delete wizardData.step3;
+                    updateStepValues();
+                }
+            } else {
+                // Select new item
+                parent.find('.option-item').removeClass('selected');
+                $(this).addClass('selected');
+                
+                if (stepId === 'step-2') {
+                    wizardData.step2 = selectedValue;
+                    updateStepValues();
+                } else if (stepId === 'step-3') {
+                    wizardData.step3 = selectedValue;
+                    updateStepValues();
+                }
             }
         });
 
@@ -192,10 +211,19 @@
             }
         });
 
+        function focusStepInput(stepNumber) {
+            if (stepNumber === 1) {
+                $('#step-1 input').focus();
+            } else if (stepNumber === 2 || stepNumber === 3) {
+                $('#step-' + stepNumber + ' .option-group').focus();
+            }
+        }
+
         $('.step-number').click(function() {
             const stepIndex = $('.step-number').index(this) + 1;
             currentStep = stepIndex;
             showStep(currentStep);
+            focusStepInput(currentStep);
         });
 
         $('.step-value').click(function() {
@@ -203,6 +231,7 @@
             const stepNumber = parseInt(stepId.split('-')[1]);
             currentStep = stepNumber;
             showStep(currentStep);
+            focusStepInput(currentStep);
         });
 
         loadFromURL();

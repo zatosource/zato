@@ -234,7 +234,7 @@ body {
 .input-field:focus {
     outline: none !important;
     background: #ffffff !important;
-    border-color: #67bfff !important;
+    border-color: #012845 !important;
 }
 
 .input-field::placeholder {
@@ -247,7 +247,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    margin: 0 auto 60px auto;
+    margin: 20px auto;
+    outline: none;
     max-width: 600px;
     width: 100%;
 }
