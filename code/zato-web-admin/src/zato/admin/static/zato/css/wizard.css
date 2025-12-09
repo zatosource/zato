@@ -47,19 +47,20 @@ body {
     display: flex;
     align-items: center;
     font-size: 12px;
-    background: rgba(1, 40, 69, 0.85);
+    background: linear-gradient(135deg, rgba(13, 13, 13, 0.95), rgba(20, 20, 20, 0.95));
     color: #ffffff;
     font-family: monospace;
     min-width: 300px;
     max-width: 400px;
     text-align: center;
     padding: 8px 16px;
-    border-radius: 6px;
+    border-radius: 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    border: 1px solid rgba(103, 191, 255, 0.3);
-    box-shadow: 0 4px 12px rgba(1, 40, 69, 0.4);
+    border: 1px solid rgba(0, 0, 0, 0.9);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(64, 64, 64, 0.3);
+    backdrop-filter: blur(8px);
 }
 
 #value-1 {
