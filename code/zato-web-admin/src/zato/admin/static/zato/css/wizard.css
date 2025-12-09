@@ -47,7 +47,7 @@ body {
     display: flex;
     align-items: center;
     font-size: 12px;
-    background: #dc3545;
+    background: rgba(40, 167, 69, 0.8);
     color: #ffffff;
     font-family: monospace;
     max-width: 200px;
@@ -59,15 +59,15 @@ body {
 }
 
 #value-1 {
-    top: 70px;
+    top: 141px;
 }
 
 #value-2 {
-    top: 140px;
+    top: 286px;
 }
 
 #value-3 {
-    top: 210px;
+    top: 432px;
 }
 
 .stepper {
