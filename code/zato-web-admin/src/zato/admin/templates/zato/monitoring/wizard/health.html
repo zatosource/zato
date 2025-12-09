@@ -91,19 +91,22 @@
         line-height: 1.2;
     }
     .input-field {
-        width: 100%;
-        max-width: 600px;
-        padding: 15px 25px;
-        font-size: 18px;
-        border: 3px solid #012845;
-        border-radius: 6px;
-        background: #ffffff;
-        margin-bottom: 60px;
-        font-family: monospace;
-        font-weight: normal;
-        color: #012845;
-        transition: all 0.2s ease;
-        min-height: auto;
+        width: 100% !important;
+        max-width: 600px !important;
+        padding: 4px 8px !important;
+        font-size: 18px !important;
+        border: 3px solid #012845 !important;
+        border-radius: 6px !important;
+        background: #ffffff !important;
+        margin-bottom: 60px !important;
+        font-family: monospace !important;
+        font-weight: 600 !important;
+        color: #012845 !important;
+        transition: all 0.2s ease !important;
+        height: 2.4rem !important;
+        min-height: 2.4rem !important;
+        max-height: 2.4rem !important;
+        box-sizing: border-box !important;
     }
     .input-field:focus {
         outline: none;
@@ -114,7 +117,6 @@
     .input-field::placeholder {
         color: #6c757d;
         font-weight: 400;
-        padding-left: 15px;
     }
     .input-field option {
         padding: 15px;
@@ -166,12 +168,12 @@
         let currentStep = 1;
         const totalSteps = 3;
         let wizardData = {};
-        
+
         function updateStepper() {
             $('.step').each(function(index) {
                 const stepNum = index + 1;
                 $(this).removeClass('active completed');
-                
+
                 if (stepNum < currentStep) {
                     $(this).addClass('completed');
                 } else if (stepNum === currentStep) {
@@ -179,37 +181,37 @@
                 }
             });
         }
-        
+
         function showStep(step) {
             $('.wizard-step').hide();
             $('#step-' + step).show();
             updateStepper();
-            
+
             if (step === 1) {
                 $('#prev-btn').prop('disabled', true);
             } else {
                 $('#prev-btn').prop('disabled', false);
             }
-            
+
             if (step === totalSteps) {
                 $('#next-btn').text('Create Dashboard');
             } else {
                 $('#next-btn').text('Next');
             }
         }
-        
+
         $('#next-btn').click(function() {
             const stepInput = $('#step-' + currentStep + ' input');
-            
+
             if (stepInput.length && !stepInput.val().trim()) {
                 alert('Please fill in the required field');
                 return;
             }
-            
+
             if (stepInput.length) {
                 wizardData['step' + currentStep] = stepInput.val().trim();
             }
-            
+
             if (currentStep < totalSteps) {
                 currentStep++;
                 showStep(currentStep);
@@ -219,14 +221,14 @@
                 alert('Dashboard creation not implemented yet');
             }
         });
-        
+
         $('#prev-btn').click(function() {
             if (currentStep > 1) {
                 currentStep--;
                 showStep(currentStep);
             }
         });
-        
+
         showStep(1);
     });
 </script>
@@ -250,13 +252,13 @@
                 <div class="step-number">3</div>
             </div>
         </div>
-        
+
         <div class="wizard-content">
             <div id="step-1" class="wizard-step">
                 <h1 class="question-title">What do you want to monitor?</h1>
                 <input type="text" class="input-field" placeholder="Enter what you want to monitor..." />
             </div>
-            
+
             <div id="step-2" class="wizard-step" style="display: none;">
                 <h1 class="question-title">What do you want to track?</h1>
                 <select class="input-field">
@@ -267,7 +269,7 @@
                     <option value="activity">Activity</option>
                 </select>
             </div>
-            
+
             <div id="step-3" class="wizard-step" style="display: none;">
                 <h1 class="question-title">How far back to look?</h1>
                 <select class="input-field">
@@ -279,7 +281,7 @@
                     <option value="last-month">Last month</option>
                 </select>
             </div>
-            
+
             <div class="wizard-buttons">
                 <button id="prev-btn" class="wizard-btn">Previous</button>
                 <button id="next-btn" class="wizard-btn">Next</button>
