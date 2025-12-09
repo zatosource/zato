@@ -347,7 +347,7 @@
 .links-row {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 20px;
 }
 
 .dashboard-link-item {
@@ -360,8 +360,8 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 20px 40px;
-    font-size: 16px;
+    padding: 12px 20px;
+    font-size: 11px;
     font-weight: 900;
     text-transform: uppercase;
     border: 3px solid var(--primary-dark);
@@ -386,6 +386,11 @@
     width: 16px;
     height: 16px;
     vertical-align: middle;
+    filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
+}
+
+.links-panel .dashboard-link:hover .external-icon {
+    filter: brightness(0) saturate(100%) invert(100%);
 }
 </style>
 {% endblock %}
