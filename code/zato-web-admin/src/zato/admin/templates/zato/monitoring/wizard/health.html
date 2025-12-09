@@ -3,10 +3,13 @@
 {% block html_title %}Health monitoring wizard{% endblock %}
 
 {% block "extra_css" %}
+<script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+<script type="text/javascript" src="/static/tippy/tippy.js"></script>
 <link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
 {% endblock %}
 
 {% block "extra_js" %}
+<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
 <script type="text/javascript" nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
         let currentStep = 1;
@@ -39,7 +42,7 @@
             } else {
                 $('#value-1').removeClass('show');
             }
-            
+
             if (wizardData.step2) {
                 const step2Text = $('#step-2 .option-item[data-value="' + wizardData.step2 + '"] .option-text').text();
                 $('#value-2 .step-value-text').text(step2Text);
@@ -47,7 +50,7 @@
             } else {
                 $('#value-2').removeClass('show');
             }
-            
+
             if (wizardData.step3) {
                 const step3Text = $('#step-3 .option-item[data-value="' + wizardData.step3 + '"] .option-text').text();
                 $('#value-3 .step-value-text').text(step3Text);
@@ -65,7 +68,7 @@
                 step2: urlData.step2,
                 step3: urlData.step3
             };
-            
+
             if (wizardData.step1) {
                 $('#step-1 input').val(wizardData.step1);
             }
@@ -126,7 +129,7 @@
             const stepDiv = $(this).closest('.wizard-step');
             const stepId = stepDiv.attr('id');
             const selectedValue = $(this).data('value');
-            
+
             if ($(this).hasClass('selected')) {
                 // Unselect if already selected
                 $(this).removeClass('selected');
@@ -141,7 +144,7 @@
                 // Select new item
                 parent.find('.option-item').removeClass('selected');
                 $(this).addClass('selected');
-                
+
                 if (stepId === 'step-2') {
                     wizardData.step2 = selectedValue;
                     updateStepValues();
@@ -181,7 +184,39 @@
                     currentStep++;
                     showStep(currentStep);
                 } else {
-                    alert('Wizard Complete!');
+                    // Check all steps have values
+                    const step1Value = $('#step-1 input').val()?.trim() || '';
+                    const step2Selected = $('#step-2 .option-item.selected').length > 0;
+                    const step3Selected = $('#step-3 .option-item.selected').length > 0;
+
+                    const missingSteps = [];
+                    if (!step1Value) missingSteps.push('▶ 1. What do you want to monitor?');
+                    if (!step2Selected) missingSteps.push('▶ 2. What do you want to track?');
+                    if (!step3Selected) missingSteps.push('▶ 3. How far back to look?');
+
+                    if (missingSteps.length > 0) {
+                        const tooltipText = 'Please complete the following:<br>' + missingSteps.join('<br>');
+                        
+                        // Override to allow HTML for this tooltip
+                        let _tooltip = tippy('#next-button', {
+                            content: tooltipText,
+                            allowHTML: true,
+                            theme: "dark",
+                            trigger: "manual",
+                            placement: "bottom",
+                            arrow: true,
+                            interactive: false,
+                            inertia: true,
+                            role: "tooltip-draw-attention",
+                        });
+                        if(_tooltip) {
+                            _tooltip[0].show();
+                        }
+                        
+                        $('#next-button').blur();
+                    } else {
+                        alert('Wizard Complete!');
+                    }
                 }
             } else if (errorField) {
                 $('#next-button').blur();

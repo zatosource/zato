@@ -348,7 +348,9 @@ body {
     left: 0;
 }
 
-.wizard-button {
+.wizard-button,
+.wizard-button:focus
+ {
     padding: 20px 40px;
     font-size: 16px;
     font-weight: 900;
