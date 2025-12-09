@@ -30,14 +30,23 @@
         margin-top: 10px;
         margin-left: -80px;
     }
+    .wizard-layout {
+        display: flex;
+        align-items: flex-start;
+        gap: 60px;
+        width: 100%;
+        max-width: 1100px;
+    }
     .stepper {
         display: flex;
-        justify-content: center;
-        margin-bottom: 60px;
+        flex-direction: column;
         align-items: center;
+        gap: 30px;
+        flex-shrink: 0;
     }
     .step {
         display: flex;
+        flex-direction: column;
         align-items: center;
     }
     .step-number {
@@ -52,7 +61,6 @@
         justify-content: center;
         font-weight: 900;
         font-size: 18px;
-        margin-right: 12px;
         transition: all 0.2s ease;
     }
     .step.active .step-number {
@@ -66,19 +74,17 @@
         border-color: #e8f4ff;
     }
     .step-connector {
-        width: 120px;
-        height: 3px;
-        background: linear-gradient(90deg, #e9ecef 0%, #dee2e6 100%);
-        margin: 0 40px;
+        width: 3px;
+        height: 40px;
+        background: linear-gradient(180deg, #e9ecef 0%, #dee2e6 100%);
         border-radius: 2px;
         transition: all 0.3s ease;
     }
-    .step.completed + .step .step-connector {
-        background: linear-gradient(90deg, #e8f4ff 0%, #f0f8ff 100%);
+    .step.completed .step-connector {
+        background: linear-gradient(180deg, #e8f4ff 0%, #f0f8ff 100%);
     }
     .wizard-content {
-        max-width: 800px;
-        margin: 0 auto;
+        flex: 1;
         text-align: center;
     }
     .question-title {
@@ -122,7 +128,7 @@
         display: flex;
         flex-direction: column;
         gap: 15px;
-        margin-bottom: 60px;
+        margin: 0 auto 60px auto;
         max-width: 600px;
         width: 100%;
     }
@@ -307,22 +313,23 @@
 
 <div class="wizard-container">
     <div class="wizard-panel">
-        <h1 style="font-size: 48px; font-weight: 900; color: #012845; text-align: center; margin-bottom: 40px; text-transform: none; letter-spacing: -2px;">Is it working?</h1>
-        <div class="stepper">
-            <div class="step">
-                <div class="step-number">1</div>
+        <div class="wizard-layout">
+            <div class="stepper">
+                <h1 style="font-size: 24px; font-weight: 900; color: #012845; text-align: center; margin-bottom: 30px; text-transform: none; letter-spacing: -1px;">Is it working?</h1>
+                <div class="step">
+                    <div class="step-number">1</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                </div>
             </div>
-            <div class="step-connector"></div>
-            <div class="step">
-                <div class="step-number">2</div>
-            </div>
-            <div class="step-connector"></div>
-            <div class="step">
-                <div class="step-number">3</div>
-            </div>
-        </div>
 
-        <div class="wizard-content">
+            <div class="wizard-content">
             <div id="step-1" class="wizard-step">
                 <h1 class="question-title">What do you want to monitor?</h1>
                 <input type="text" class="input-field" placeholder="Enter what you want to monitor..." />
@@ -379,6 +386,7 @@
             <div class="wizard-buttons">
                 <button id="prev-btn" class="wizard-btn">Previous</button>
                 <button id="next-btn" class="wizard-btn">Next</button>
+            </div>
             </div>
         </div>
     </div>
