@@ -53,22 +53,22 @@ body {
 }
 
 .step-value-text {
-    background: rgba(255, 255, 255, 0.65);
+    background: rgba(254, 219, 136, 0.95);
     color: #012845;
     text-align: center;
     padding: 8px 16px;
-    border-radius: 8px 0 0 8px;
+    border-radius: 4px 0 0 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    border: 1px solid #012845;
     width: 300px;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-family: Arial, sans-serif;
+    font-family: monospace;
+    font-size: 0.9rem;
 }
 
 .step-arrow {
@@ -150,8 +150,8 @@ body {
     margin: 8px 0;
     background: repeating-linear-gradient(
         to bottom,
-        #dc3545 0px,
-        #dc3545 2px,
+        #012845 0px,
+        #012845 2px,
         transparent 2px,
         transparent 6px
     );
@@ -160,8 +160,8 @@ body {
 .step.completed .step-connector {
     background: repeating-linear-gradient(
         to bottom,
-        #dc3545 0px,
-        #dc3545 2px,
+        #012845 0px,
+        #012845 2px,
         transparent 2px,
         transparent 6px
     );
