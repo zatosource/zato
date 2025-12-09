@@ -4,6 +4,8 @@
 {% block html_title %}Creating dashboard{% endblock %}
 
 {% block "extra_css" %}
+<script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+<script type="text/javascript" src="/static/tippy/tippy.js"></script>
 <link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
 <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
 <style>
@@ -189,6 +191,7 @@
     margin-top: 32px;
     opacity: 0;
     transition: opacity 0.3s ease;
+    position: relative;
 }
 
 .code-section.show {
@@ -209,13 +212,53 @@
     background: var(--white);
     font-size: 13px;
     line-height: 1.4;
+    position: relative;
 }
 
 .code-section .highlight pre {
-    padding: 20px;
+    padding: 20px 60px 20px 20px;
     margin: 0;
     overflow-x: auto;
 }
+
+.copy-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--primary-dark);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-transform: uppercase;
+    z-index: 5;
+}
+
+.copy-button:hover {
+    background: var(--primary-dark);
+    color: var(--white);
+}
+
+/* Lively syntax highlighting colors */
+.code-section .highlight .c1 { color: #22863a; font-style: italic; }
+.code-section .highlight .kn { color: #d73a49; font-weight: bold; }
+.code-section .highlight .nn { color: #6f42c1; font-weight: bold; }
+.code-section .highlight .k { color: #d73a49; font-weight: bold; }
+.code-section .highlight .nc { color: #6f42c1; font-weight: bold; }
+.code-section .highlight .p { color: #24292e; }
+.code-section .highlight .n { color: #24292e; }
+.code-section .highlight .o { color: #d73a49; }
+.code-section .highlight .s1 { color: #032f62; }
+.code-section .highlight .nf { color: #6f42c1; font-weight: bold; }
+.code-section .highlight .bp { color: #005cc5; font-weight: bold; }
+.code-section .highlight .ow { color: #d73a49; font-weight: bold; }
+.code-section .highlight .sa { color: #032f62; }
+.code-section .highlight .si { color: #e36209; }
 
 .completion-section.show {
     opacity: 1;
@@ -283,6 +326,7 @@
 {% endblock %}
 
 {% block "extra_js" %}
+<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
 <script src="/static/js/common.js?nocache={{ build_id }}" type="text/javascript" charset="utf-8" nonce="{{ csp_nonce }}"></script>
 <script type="text/javascript" nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
@@ -369,6 +413,72 @@
             }, 500);
         }
     }
+    
+    // Copy code functionality
+    $(document).on('click', '#copy-code-button', function() {
+        const button = $(this);
+        
+        try {
+            const codeElement = document.getElementById('code-content');
+            const codeText = codeElement.innerText || codeElement.textContent;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(codeText).then(() => {
+                    showCopyTooltip(button[0]);
+                }).catch(() => {
+                    fallbackCopyTextToClipboard(codeText, button[0]);
+                });
+            } else {
+                fallbackCopyTextToClipboard(codeText, button[0]);
+            }
+        } catch (err) {
+            console.error('Copy failed:', err);
+        }
+    });
+    
+    function fallbackCopyTextToClipboard(text, buttonElement) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showCopyTooltip(buttonElement);
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+        }
+        
+        document.body.removeChild(textArea);
+    }
+    
+    function showCopyTooltip(buttonElement) {
+        const _tooltip = tippy(buttonElement, {
+            content: "Copied to clipboard",
+            trigger: "manual",
+            hideOnClick: false,
+            placement: "top",
+            arrow: true,
+            interactive: false,
+            inertia: true,
+            role: "tooltip",
+        });
+        
+        _tooltip.show();
+        
+        setTimeout(() => {
+            _tooltip.hide();
+            setTimeout(() => {
+                _tooltip.destroy();
+            }, 500);
+        }, 1500);
+    }
 </script>
 {% endblock %}
 
@@ -398,7 +508,9 @@
 
                 <div class="code-section" id="code-section">
                     <h3>Service template</h3>
-                    <div class="highlight"><pre><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+                    <div class="highlight">
+                        <button class="copy-button" id="copy-code-button">Copy</button>
+                        <pre id="code-content"><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
 
 
 <span class="c1"># Zato</span>
