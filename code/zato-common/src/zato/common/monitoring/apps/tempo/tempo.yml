@@ -25,3 +25,21 @@ storage:
       path: ./data/tempo/blocks
     wal:
       path: ./data/tempo/wal
+
+metrics_generator:
+  processor:
+    span_metrics:
+      dimensions:
+        - process_name
+        - process_version
+  registry:
+    collection_interval: 15s
+  storage:
+    path: ./data/tempo/generator/wal
+    remote_write:
+      - url: http://localhost:9090/api/v1/write
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [span-metrics]
