@@ -1,13 +1,15 @@
 PROMETHEUS_PORT := 9090
 GRAFANA_PORT := 3000
 LOKI_PORT := 3101
+TEMPO_PORT := 3200
 GRAFANA_LOG_LEVEL := warn
 
 PROMETHEUS_DATA_DIR := ./data/prometheus
 GRAFANA_DATA_DIR := ./data/grafana
 LOKI_DATA_DIR := ./data/loki
+TEMPO_DATA_DIR := ./data/tempo
 
-.PHONY: clean prometheus grafana loki test-server dashboards status
+.PHONY: clean prometheus grafana loki tempo test-server dashboards status
 
 prometheus:
 	@rm -rf $(PROMETHEUS_DATA_DIR)
@@ -26,6 +28,10 @@ grafana:
 loki:
 	@mkdir -p $(LOKI_DATA_DIR)
 	loki --config.file=./loki/loki.yml
+
+tempo:
+	@mkdir -p $(TEMPO_DATA_DIR) $(TEMPO_DATA_DIR)/blocks $(TEMPO_DATA_DIR)/wal
+	tempo --config.file=./tempo/tempo.yml
 
 test-server:
 	py test_server.py --port 8080
