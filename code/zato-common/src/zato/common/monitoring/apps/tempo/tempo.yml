@@ -25,13 +25,3 @@ storage:
       path: ./data/tempo/blocks
     wal:
       path: ./data/tempo/wal
-
-search:
-  default_result_limit: 20
-  max_duration: 0
-  query_timeout: 30s
-
-index:
-  tags:
-    process_name: null
-    process_version: null
