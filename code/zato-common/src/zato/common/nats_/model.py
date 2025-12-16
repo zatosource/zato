@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import dataclass, field
 
 # Zato
-from zato.common.typing_ import any_, anydict, anylist, boolnone, intnone, optional, strnone
+from zato.common.typing_ import any_, anydict, anydictnone, anylist, boolnone, intnone, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,11 +114,11 @@ class Msg:
     subject: str = ''
     reply: str = ''
     data: bytes = b''
-    headers: 'optional[anydict]' = None
+    headers: 'anydictnone' = None
     sid: int = 0
 
     @property
-    def header(self) -> 'optional[anydict]':
+    def header(self) -> 'anydictnone':
         return self.headers
 
 # ################################################################################################################################
@@ -217,8 +217,8 @@ class StreamState:
 class StreamInfo:
     """ Information about a JetStream stream.
     """
-    config: 'optional[StreamConfig]' = None
-    state: 'optional[StreamState]' = None
+    config: 'StreamConfig | None' = None
+    state: 'StreamState | None' = None
 
     @staticmethod
     def from_dict(data:'anydict') -> 'StreamInfo':
@@ -292,7 +292,7 @@ class ConsumerInfo:
     """
     name: str = ''
     stream_name: str = ''
-    config: 'optional[ConsumerConfig]' = None
+    config: 'ConsumerConfig | None' = None
     num_ack_pending: int = 0
     num_redelivered: int = 0
     num_waiting: int = 0

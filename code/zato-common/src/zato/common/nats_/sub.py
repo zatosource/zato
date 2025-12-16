@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from typing import TYPE_CHECKING
 
 # Zato
-from zato.common.typing_ import callable_, optional
+from zato.common.typing_ import callnone, floatnone
 
 # Local
 from .exc import NATSError
@@ -31,7 +31,7 @@ class Subscription:
         sid:'int',
         subject:'str',
         queue:'str'='',
-        callback:'optional[callable_]'=None,
+        callback:'callnone'=None,
         max_msgs:'int'=0,
     ) -> None:
         self._client = client
@@ -55,7 +55,7 @@ class Subscription:
     def delivered(self) -> 'int':
         return self._received
 
-    def next_msg(self, timeout:'optional[float]'=None) -> 'Msg':
+    def next_msg(self, timeout:'floatnone'=None) -> 'Msg':
         """ Waits for the next message on this subscription.
         """
         if self._closed:

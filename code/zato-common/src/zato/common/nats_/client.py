@@ -16,7 +16,7 @@ import threading
 from io import BytesIO
 
 # Zato
-from zato.common.typing_ import any_, anydict, callable_, optional, strnone
+from zato.common.typing_ import any_, anydict, anydictnone, callable_, callnone, floatnone, strnone
 
 # Local
 from .const import CRLF, CRLF_LEN, CONNECT_OP, Default_Buffer_Size, Default_Host, Default_Inbox_Prefix, \
@@ -46,10 +46,10 @@ class NATSClient:
     """ Synchronous TCP NATS client.
     """
     def __init__(self) -> None:
-        self._sock: 'optional[socket.socket]' = None
-        self._ssl_context: 'optional[ssl.SSLContext]' = None
-        self._server_info: 'optional[ServerInfo]' = None
-        self._options: 'optional[ConnectOptions]' = None
+        self._sock: 'socket.socket | None' = None
+        self._ssl_context: 'ssl.SSLContext | None' = None
+        self._server_info: 'ServerInfo | None' = None
+        self._options: 'ConnectOptions | None' = None
         self._buffer = BytesIO()
         self._nuid = NUID()
 
@@ -57,7 +57,7 @@ class NATSClient:
         self._subscriptions: 'anydict' = {}
         self._pending_msgs: 'anydict' = {}
         self._resp_map: 'anydict' = {}
-        self._resp_sub_prefix: 'optional[bytearray]' = None
+        self._resp_sub_prefix: 'bytearray | None' = None
 
         self._max_payload = Default_Max_Payload
         self._connected = False
@@ -74,7 +74,7 @@ class NATSClient:
         return self._connected
 
     @property
-    def server_info(self) -> 'optional[ServerInfo]':
+    def server_info(self) -> 'ServerInfo | None':
         return self._server_info
 
     @property
@@ -94,8 +94,8 @@ class NATSClient:
         token:'strnone'=None,
         verbose:'bool'=False,
         pedantic:'bool'=False,
-        ssl_context:'optional[ssl.SSLContext]'=None,
-        connect_timeout:'optional[float]'=None,
+        ssl_context:'ssl.SSLContext | None'=None,
+        connect_timeout:'floatnone'=None,
     ) -> None:
         """ Connects to a NATS server.
         """
@@ -246,7 +246,7 @@ class NATSClient:
         subject:'str',
         payload:'bytes'=b'',
         reply:'str'='',
-        headers:'optional[anydict]'=None,
+        headers:'anydictnone'=None,
     ) -> None:
         if not self._connected:
             raise NATSConnectionError('Not connected')
@@ -290,7 +290,7 @@ class NATSClient:
         self,
         subject:'str',
         queue:'str'='',
-        callback:'optional[callable_]'=None,
+        callback:'callnone'=None,
         max_msgs:'int'=0,
     ) -> 'Subscription':
         if not self._connected:
@@ -346,8 +346,8 @@ class NATSClient:
         self,
         subject:'str',
         payload:'bytes'=b'',
-        timeout:'optional[float]'=None,
-        headers:'optional[anydict]'=None,
+        timeout:'floatnone'=None,
+        headers:'anydictnone'=None,
     ) -> 'Msg':
         """ Sends a request and waits for a response.
         """
@@ -376,7 +376,7 @@ class NATSClient:
 
     # ############################################################################################################################
 
-    def _wait_for_msg(self, sid:'int', timeout:'optional[float]'=None) -> 'Msg':
+    def _wait_for_msg(self, sid:'int', timeout:'floatnone'=None) -> 'Msg':
         if timeout is None:
             timeout = self._timeout
 
@@ -415,7 +415,7 @@ class NATSClient:
 
     # ############################################################################################################################
 
-    def _read_msg(self) -> 'optional[Msg]':
+    def _read_msg(self) -> 'Msg | None':
         line = self._read_line()
 
         # Handle PING
@@ -508,7 +508,7 @@ class NATSClient:
 
     # ############################################################################################################################
 
-    def flush(self, timeout:'optional[float]'=None) -> None:
+    def flush(self, timeout:'floatnone'=None) -> None:
         """ Flushes pending data to the server.
         """
         if timeout is None:

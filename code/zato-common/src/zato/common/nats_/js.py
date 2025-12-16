@@ -11,7 +11,7 @@ import json
 from typing import TYPE_CHECKING
 
 # Zato
-from zato.common.typing_ import anydict, anylist, intnone, optional, strnone
+from zato.common.typing_ import anydict, anydictnone, anylist, floatnone, intnone, strnone
 
 # Local
 from .const import JS_Ack, JS_API_Consumer_Create, JS_API_Consumer_Create_Durable, JS_API_Consumer_Delete, \
@@ -38,8 +38,8 @@ class JetStream:
         self,
         subject:'str',
         payload:'bytes'=b'',
-        timeout:'optional[float]'=None,
-        headers:'optional[anydict]'=None,
+        timeout:'floatnone'=None,
+        headers:'anydictnone'=None,
         msg_id:'strnone'=None,
         expected_stream:'strnone'=None,
         expected_last_seq:'intnone'=None,
@@ -72,7 +72,7 @@ class JetStream:
 
     # ############################################################################################################################
 
-    def create_stream(self, config:'StreamConfig', timeout:'optional[float]'=None) -> 'StreamInfo':
+    def create_stream(self, config:'StreamConfig', timeout:'floatnone'=None) -> 'StreamInfo':
         """ Creates a JetStream stream.
         """
         if not config.name:
@@ -97,7 +97,7 @@ class JetStream:
 
     # ############################################################################################################################
 
-    def delete_stream(self, stream:'str', timeout:'optional[float]'=None) -> 'bool':
+    def delete_stream(self, stream:'str', timeout:'floatnone'=None) -> 'bool':
         """ Deletes a JetStream stream.
         """
         subject = JS_API_Stream_Delete.format(stream=stream)
@@ -116,7 +116,7 @@ class JetStream:
 
     # ############################################################################################################################
 
-    def stream_info(self, stream:'str', timeout:'optional[float]'=None) -> 'StreamInfo':
+    def stream_info(self, stream:'str', timeout:'floatnone'=None) -> 'StreamInfo':
         """ Returns information about a JetStream stream.
         """
         subject = JS_API_Stream_Info.format(stream=stream)
@@ -135,7 +135,7 @@ class JetStream:
 
     # ############################################################################################################################
 
-    def purge_stream(self, stream:'str', timeout:'optional[float]'=None) -> 'int':
+    def purge_stream(self, stream:'str', timeout:'floatnone'=None) -> 'int':
         """ Purges messages from a JetStream stream. Returns the number of purged messages.
         """
         subject = JS_API_Stream_Purge.format(stream=stream)
@@ -158,7 +158,7 @@ class JetStream:
         self,
         stream:'str',
         config:'ConsumerConfig',
-        timeout:'optional[float]'=None,
+        timeout:'floatnone'=None,
     ) -> 'ConsumerInfo':
         """ Creates a JetStream consumer.
         """
@@ -188,7 +188,7 @@ class JetStream:
 
     # ############################################################################################################################
 
-    def delete_consumer(self, stream:'str', consumer:'str', timeout:'optional[float]'=None) -> 'bool':
+    def delete_consumer(self, stream:'str', consumer:'str', timeout:'floatnone'=None) -> 'bool':
         """ Deletes a JetStream consumer.
         """
         subject = JS_API_Consumer_Delete.format(stream=stream, consumer=consumer)
@@ -207,7 +207,7 @@ class JetStream:
 
     # ############################################################################################################################
 
-    def consumer_info(self, stream:'str', consumer:'str', timeout:'optional[float]'=None) -> 'ConsumerInfo':
+    def consumer_info(self, stream:'str', consumer:'str', timeout:'floatnone'=None) -> 'ConsumerInfo':
         """ Returns information about a JetStream consumer.
         """
         subject = JS_API_Consumer_Info.format(stream=stream, consumer=consumer)
@@ -231,7 +231,7 @@ class JetStream:
         stream:'str',
         consumer:'str',
         batch:'int'=1,
-        timeout:'optional[float]'=None,
+        timeout:'floatnone'=None,
         no_wait:'bool'=False,
     ) -> 'anylist':
         """ Fetches messages from a JetStream consumer.
@@ -299,7 +299,7 @@ class JetStream:
 
     # ############################################################################################################################
 
-    def nak(self, msg:'Msg', delay:'optional[float]'=None) -> None:
+    def nak(self, msg:'Msg', delay:'floatnone'=None) -> None:
         """ Negatively acknowledges a JetStream message.
         """
         if not msg.reply:
