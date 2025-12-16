@@ -10,21 +10,33 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 class NATSError(Exception):
+    """ Base exception for NATS errors.
+    """
     pass
 
 class NATSConnectionError(NATSError):
+    """ Connection error.
+    """
     pass
 
 class NATSTimeoutError(NATSError):
+    """ Timeout error.
+    """
     pass
 
 class NATSProtocolError(NATSError):
+    """ Protocol error.
+    """
     pass
 
 class NATSNoRespondersError(NATSError):
+    """ No responders available for the request.
+    """
     pass
 
 class NATSJetStreamError(NATSError):
+    """ JetStream API error.
+    """
     def __init__(self, code:'int'=0, err_code:'int'=0, description:'str'='') -> None:
         self.code = code
         self.err_code = err_code

@@ -23,7 +23,8 @@ if TYPE_CHECKING:
 # ################################################################################################################################
 
 class Subscription:
-
+    """ Represents a subscription to a NATS subject.
+    """
     def __init__(
         self,
         client:'NATSClient',
@@ -55,17 +56,23 @@ class Subscription:
         return self._received
 
     def next_msg(self, timeout:'optional[float]'=None) -> 'Msg':
+        """ Waits for the next message on this subscription.
+        """
         if self._closed:
             raise NATSError('Subscription is closed')
         return self._client._wait_for_msg(self._sid, timeout=timeout)
 
     def unsubscribe(self, max_msgs:'int'=0) -> None:
+        """ Unsubscribes from the subject.
+        """
         self._client._send_unsubscribe(self._sid, max_msgs)
         if max_msgs == 0:
             self._closed = True
             self._client._remove_subscription(self._sid)
 
     def drain(self) -> None:
+        """ Drains the subscription.
+        """
         self.unsubscribe()
 
 # ################################################################################################################################

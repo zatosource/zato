@@ -22,6 +22,8 @@ from .model import ConsumerConfig, StreamConfig
 # ################################################################################################################################
 
 def format_msg(msg, show_headers=True):
+    """ Formats a message for display.
+    """
     output = []
     output.append(f'Subject: {msg.subject}')
     if msg.reply:
@@ -35,6 +37,8 @@ def format_msg(msg, show_headers=True):
 # ################################################################################################################################
 
 def cmd_pub(args):
+    """ Publishes a message to a subject.
+    """
     client = NATSClient()
 
     try:
@@ -71,6 +75,8 @@ def cmd_pub(args):
 # ################################################################################################################################
 
 def cmd_sub(args):
+    """ Subscribes to a subject and prints messages.
+    """
     client = NATSClient()
     running = True
 
@@ -122,6 +128,8 @@ def cmd_sub(args):
 # ################################################################################################################################
 
 def cmd_request(args):
+    """ Sends a request and waits for a response.
+    """
     client = NATSClient()
 
     try:
@@ -164,6 +172,8 @@ def cmd_request(args):
 # ################################################################################################################################
 
 def cmd_js_pub(args):
+    """ Publishes a message to JetStream.
+    """
     client = NATSClient()
 
     try:
@@ -210,6 +220,8 @@ def cmd_js_pub(args):
 # ################################################################################################################################
 
 def cmd_js_sub(args):
+    """ Subscribes to a JetStream stream and prints messages.
+    """
     client = NATSClient()
     running = True
 
@@ -295,6 +307,8 @@ def cmd_js_sub(args):
 # ################################################################################################################################
 
 def cmd_js_stream_create(args):
+    """ Creates a JetStream stream.
+    """
     client = NATSClient()
 
     try:
@@ -339,6 +353,8 @@ def cmd_js_stream_create(args):
 # ################################################################################################################################
 
 def cmd_js_stream_delete(args):
+    """ Deletes a JetStream stream.
+    """
     client = NATSClient()
 
     try:
@@ -378,6 +394,8 @@ def cmd_js_stream_delete(args):
 # ################################################################################################################################
 
 def cmd_js_stream_info(args):
+    """ Returns information about a JetStream stream.
+    """
     client = NATSClient()
 
     try:
@@ -418,6 +436,8 @@ def cmd_js_stream_info(args):
 # ################################################################################################################################
 
 def cmd_js_stream_purge(args):
+    """ Purges messages from a JetStream stream.
+    """
     client = NATSClient()
 
     try:
@@ -452,6 +472,8 @@ def cmd_js_stream_purge(args):
 # ################################################################################################################################
 
 def add_common_args(parser):
+    """ Adds common connection arguments to a parser.
+    """
     parser.add_argument('-s', '--host', default='127.0.0.1', help='NATS server host (default: 127.0.0.1)')
     parser.add_argument('-p', '--port', type=int, default=4222, help='NATS server port (default: 4222)')
     parser.add_argument('-t', '--timeout', type=float, default=5.0, help='Connection timeout (default: 5.0)')
@@ -464,6 +486,8 @@ def add_common_args(parser):
 # ################################################################################################################################
 
 def main():
+    """ Main entry point for the CLI.
+    """
     parser = argparse.ArgumentParser(
         prog='nats',
         description='NATS Client CLI',

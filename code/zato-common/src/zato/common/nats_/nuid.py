@@ -14,7 +14,8 @@ import threading
 # ################################################################################################################################
 
 class NUID:
-
+    """ Fast unique identifier generator, compatible with NATS NUIDs.
+    """
     DIGITS = b'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
     BASE = 62
     PREFIX_LENGTH = 12

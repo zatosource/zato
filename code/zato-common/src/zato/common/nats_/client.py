@@ -46,7 +46,8 @@ HMSG_RE = re.compile(rb'^HMSG\s+([^\s]+)\s+([^\s]+)\s+(([^\s]+)\s+)?(\d+)\s+(\d+
 # ################################################################################################################################
 
 class NATSClient:
-
+    """ Synchronous TCP NATS client.
+    """
     def __init__(self) -> None:
         self._sock: 'optional[socket.socket]' = None
         self._ssl_context: 'optional[ssl.SSLContext]' = None
@@ -99,6 +100,8 @@ class NATSClient:
         ssl_context:'optional[ssl.SSLContext]'=None,
         connect_timeout:'optional[float]'=None,
     ) -> None:
+        """ Connects to a NATS server.
+        """
         self._host = host
         self._port = port
         self._timeout = timeout
@@ -168,6 +171,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def close(self) -> None:
+        """ Closes the connection.
+        """
         if self._sock:
             try:
                 self._sock.close()
@@ -327,6 +332,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def new_inbox(self) -> 'str':
+        """ Generates a new unique inbox subject.
+        """
         inbox = bytearray(Default_Inbox_Prefix)
         inbox.extend(b'.')
         inbox.extend(self._nuid.next())
@@ -341,6 +348,8 @@ class NATSClient:
         timeout:'optional[float]'=None,
         headers:'optional[anydict]'=None,
     ) -> 'Msg':
+        """ Sends a request and waits for a response.
+        """
         if timeout is None:
             timeout = self._timeout
 
@@ -494,6 +503,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def flush(self, timeout:'optional[float]'=None) -> None:
+        """ Flushes pending data to the server.
+        """
         if timeout is None:
             timeout = self._timeout
 
@@ -536,6 +547,8 @@ class NATSClient:
         expected_stream:'strnone'=None,
         expected_last_seq:'intnone'=None,
     ) -> 'PubAck':
+        """ Publishes a message to JetStream and waits for an acknowledgment.
+        """
         if timeout is None:
             timeout = self._timeout
 
@@ -563,6 +576,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_create_stream(self, config:'StreamConfig', timeout:'optional[float]'=None) -> 'StreamInfo':
+        """ Creates a JetStream stream.
+        """
         if not config.name:
             raise NATSError('Stream name is required')
 
@@ -585,6 +600,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_delete_stream(self, stream:'str', timeout:'optional[float]'=None) -> 'bool':
+        """ Deletes a JetStream stream.
+        """
         subject = JS_API_Stream_Delete.format(stream=stream)
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
@@ -602,6 +619,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_stream_info(self, stream:'str', timeout:'optional[float]'=None) -> 'StreamInfo':
+        """ Returns information about a JetStream stream.
+        """
         subject = JS_API_Stream_Info.format(stream=stream)
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
@@ -619,6 +638,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_purge_stream(self, stream:'str', timeout:'optional[float]'=None) -> 'int':
+        """ Purges messages from a JetStream stream. Returns the number of purged messages.
+        """
         subject = JS_API_Stream_Purge.format(stream=stream)
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
@@ -641,6 +662,8 @@ class NATSClient:
         config:'ConsumerConfig',
         timeout:'optional[float]'=None,
     ) -> 'ConsumerInfo':
+        """ Creates a JetStream consumer.
+        """
         if config.durable_name:
             subject = JS_API_Consumer_Create_Durable.format(stream=stream, consumer=config.durable_name)
         else:
@@ -667,6 +690,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_delete_consumer(self, stream:'str', consumer:'str', timeout:'optional[float]'=None) -> 'bool':
+        """ Deletes a JetStream consumer.
+        """
         subject = JS_API_Consumer_Delete.format(stream=stream, consumer=consumer)
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
@@ -684,6 +709,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_consumer_info(self, stream:'str', consumer:'str', timeout:'optional[float]'=None) -> 'ConsumerInfo':
+        """ Returns information about a JetStream consumer.
+        """
         subject = JS_API_Consumer_Info.format(stream=stream, consumer=consumer)
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
@@ -708,6 +735,8 @@ class NATSClient:
         timeout:'optional[float]'=None,
         no_wait:'bool'=False,
     ) -> 'anylist':
+        """ Fetches messages from a JetStream consumer.
+        """
         if timeout is None:
             timeout = self._timeout
 
@@ -761,6 +790,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_ack(self, msg:'Msg') -> None:
+        """ Acknowledges a JetStream message.
+        """
         if not msg.reply:
             raise NATSError('Message has no reply subject for acknowledgment')
         self.publish(msg.reply, JS_Ack)
@@ -768,6 +799,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_nak(self, msg:'Msg', delay:'optional[float]'=None) -> None:
+        """ Negatively acknowledges a JetStream message.
+        """
         if not msg.reply:
             raise NATSError('Message has no reply subject for acknowledgment')
 
@@ -780,6 +813,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_in_progress(self, msg:'Msg') -> None:
+        """ Marks a JetStream message as in progress, extending the ack deadline.
+        """
         if not msg.reply:
             raise NATSError('Message has no reply subject for acknowledgment')
         self.publish(msg.reply, JS_Progress)
@@ -787,6 +822,8 @@ class NATSClient:
     # ############################################################################################################################
 
     def js_term(self, msg:'Msg') -> None:
+        """ Terminates a JetStream message - it will not be redelivered.
+        """
         if not msg.reply:
             raise NATSError('Message has no reply subject for acknowledgment')
         self.publish(msg.reply, JS_Term)

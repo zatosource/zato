@@ -17,6 +17,8 @@ from zato.common.typing_ import any_, anydict, anylist, boolnone, intnone, optio
 
 @dataclass
 class ServerInfo:
+    """ Information received from NATS server in the INFO message.
+    """
     server_id: str = ''
     server_name: str = ''
     version: str = ''
@@ -55,6 +57,8 @@ class ServerInfo:
 
 @dataclass
 class ConnectOptions:
+    """ Options sent to NATS server in the CONNECT message.
+    """
     verbose: bool = False
     pedantic: bool = False
     tls_required: bool = False
@@ -105,6 +109,8 @@ class ConnectOptions:
 
 @dataclass
 class Msg:
+    """ A message received from NATS.
+    """
     subject: str = ''
     reply: str = ''
     data: bytes = b''
@@ -120,6 +126,8 @@ class Msg:
 
 @dataclass
 class PubAck:
+    """ Acknowledgment received after publishing to JetStream.
+    """
     stream: str = ''
     seq: int = 0
     domain: 'strnone' = None
@@ -139,6 +147,8 @@ class PubAck:
 
 @dataclass
 class StreamConfig:
+    """ Configuration for a JetStream stream.
+    """
     name: 'strnone' = None
     description: 'strnone' = None
     subjects: 'anylist' = field(default_factory=list)
@@ -182,6 +192,8 @@ class StreamConfig:
 
 @dataclass
 class StreamState:
+    """ State of a JetStream stream.
+    """
     messages: int = 0
     bytes: int = 0
     first_seq: int = 0
@@ -203,6 +215,8 @@ class StreamState:
 
 @dataclass
 class StreamInfo:
+    """ Information about a JetStream stream.
+    """
     config: 'optional[StreamConfig]' = None
     state: 'optional[StreamState]' = None
 
@@ -224,6 +238,8 @@ class StreamInfo:
 
 @dataclass
 class ConsumerConfig:
+    """ Configuration for a JetStream consumer.
+    """
     name: 'strnone' = None
     durable_name: 'strnone' = None
     description: 'strnone' = None
@@ -272,6 +288,8 @@ class ConsumerConfig:
 
 @dataclass
 class ConsumerInfo:
+    """ Information about a JetStream consumer.
+    """
     name: str = ''
     stream_name: str = ''
     config: 'optional[ConsumerConfig]' = None
