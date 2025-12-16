@@ -227,7 +227,8 @@ class NATSClient:
         remaining = n
         while remaining > 0:
             try:
-                chunk = self._sock.recv(min(remaining, Default_Buffer_Size))
+                recv_size = min(remaining, Default_Buffer_Size)
+                chunk = self._sock.recv(recv_size)
                 if not chunk:
                     raise NATSConnectionError('Connection closed by server')
                 data.extend(chunk)
@@ -417,6 +418,10 @@ class NATSClient:
 
     def _read_msg(self) -> 'Msg | None':
         line = self._read_line()
+
+        # Handle INFO (server may send updated info at any time)
+        if line.startswith(INFO_OP):
+            return None
 
         # Handle PING
         if line.startswith(PING_OP):

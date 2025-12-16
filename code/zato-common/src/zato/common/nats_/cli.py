@@ -14,6 +14,7 @@ import shlex
 import signal
 import sys
 from datetime import datetime
+from pathlib import Path
 
 # Zato
 from zato.common.typing_ import any_
@@ -38,6 +39,8 @@ class NATSCLI:
         'js-stream-create', 'js-stream-delete', 'js-stream-info', 'js-stream-purge',
         'help', 'exit', 'quit',
     ]
+
+    history_file = Path.home() / '.nats_cli_history'
 
     def __init__(self) -> None:
         self.running = True
@@ -350,6 +353,9 @@ class NATSCLI:
             if ack.duplicate:
                 print('(duplicate message)')
 
+        except NATSNoRespondersError:
+            print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
+            sys.exit(1)
         except NATSJetStreamError as e:
             print(f'JetStream error: {e.description}', file=sys.stderr)
             sys.exit(1)
@@ -438,6 +444,9 @@ class NATSCLI:
                 except NATSTimeoutError:
                     continue
 
+        except NATSNoRespondersError:
+            print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
+            sys.exit(1)
         except NATSJetStreamError as e:
             print(f'JetStream error: {e.description}', file=sys.stderr)
             sys.exit(1)
@@ -485,6 +494,9 @@ class NATSCLI:
             print(f'  Retention: {info.config.retention}')
             print(f'  Replicas: {info.config.num_replicas}')
 
+        except NATSNoRespondersError:
+            print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
+            sys.exit(1)
         except NATSJetStreamError as e:
             print(f'JetStream error: {e.description}', file=sys.stderr)
             sys.exit(1)
@@ -527,6 +539,9 @@ class NATSCLI:
                 print(f'Failed to delete stream "{args.name}"', file=sys.stderr)
                 sys.exit(1)
 
+        except NATSNoRespondersError:
+            print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
+            sys.exit(1)
         except NATSJetStreamError as e:
             print(f'JetStream error: {e.description}', file=sys.stderr)
             sys.exit(1)
@@ -570,6 +585,9 @@ class NATSCLI:
             print(f'  Last sequence: {info.state.last_seq}')
             print(f'  Consumers: {info.state.consumer_count}')
 
+        except NATSNoRespondersError:
+            print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
+            sys.exit(1)
         except NATSJetStreamError as e:
             print(f'JetStream error: {e.description}', file=sys.stderr)
             sys.exit(1)
@@ -607,6 +625,9 @@ class NATSCLI:
             purged = js.purge_stream(args.name, timeout=args.request_timeout)
             print(f'Purged {purged} messages from stream "{args.name}"')
 
+        except NATSNoRespondersError:
+            print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
+            sys.exit(1)
         except NATSJetStreamError as e:
             print(f'JetStream error: {e.description}', file=sys.stderr)
             sys.exit(1)
@@ -631,9 +652,14 @@ class NATSCLI:
     def interactive_loop(self) -> 'None':
         """ Runs an interactive command loop.
         """
-        _ = readline.set_completer(self._completer)
         _ = readline.parse_and_bind('tab: complete')
+        _ = readline.set_completer(self._completer)
+        _ = readline.set_completer_delims(' ')
         _ = readline.set_auto_history(False)
+
+        # Load history for this session
+        if self.history_file.exists():
+            readline.read_history_file(self.history_file)
 
         print('NATS Client')
         print('Type "help" for available commands, "exit" or "quit" to exit.\n')
@@ -652,6 +678,10 @@ class NATSCLI:
                 if line != last_command:
                     readline.add_history(line)
                     last_command = line
+
+                    # Append to history file immediately
+                    with open(self.history_file, 'a') as f:
+                        _ = f.write(line + '\n')
 
                 if line in ('exit', 'quit'):
                     print('Bye.')
