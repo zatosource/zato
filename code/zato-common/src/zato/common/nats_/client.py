@@ -10,11 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import re
+import socket
 import ssl
 from traceback import format_exc
 
 # gevent
-from gevent import sleep as gsleep, spawn, socket
+from gevent import sleep as gsleep, spawn
 from gevent.event import Event
 from gevent.lock import RLock
 from gevent.queue import Queue
