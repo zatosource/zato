@@ -12,6 +12,7 @@ import logging
 import re
 import socket
 import ssl
+from traceback import format_exc
 
 # gevent
 from gevent import spawn
@@ -219,8 +220,8 @@ class NATSClient:
                 continue
             except NATSConnectionError:
                 break
-            except Exception as e:
-                logger.error(f'Reader error: {e}')
+            except Exception:
+                logger.error(f'Reader error: {format_exc()}')
                 break
 
     # ############################################################################################################################

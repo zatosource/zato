@@ -561,8 +561,8 @@ class NATSCLI:
 
             except NATSNoRespondersError:
                 self._cprint(gid, "Error: No responders available. Is JetStream enabled? Run 'nats-server -js'")
-            except NATSJetStreamError as e:
-                self._cprint(gid, f'JetStream error: {e.description}')
+            except NATSJetStreamError:
+                self._cprint(gid, f'JetStream error: {format_exc()}')
             except NATSError:
                 self._cprint(gid, f'Error: {format_exc()}')
 
@@ -753,8 +753,8 @@ class NATSCLI:
 
                 try:
                     argv = shlex.split(line)
-                except ValueError as e:
-                    print(f'Error parsing command: {e}')
+                except ValueError:
+                    print(f'Error parsing command: {format_exc()}')
                     continue
 
                 try:
