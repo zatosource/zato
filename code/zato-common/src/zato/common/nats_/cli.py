@@ -85,16 +85,18 @@ class NATSCLI:
         parser = argparse.ArgumentParser(
             prog='nats',
             description='NATS Client CLI',
+            add_help=False,
         )
+        _ = parser.add_argument('--help', action='help', help='Show this help message and exit')
 
         subparsers = parser.add_subparsers(dest='command', help='Commands')
 
         # pub command
-        pub_parser = subparsers.add_parser('pub', help='Publish a message')
+        pub_parser = subparsers.add_parser('pub', help='Publish a message', add_help=False)
         self._add_common_args(pub_parser)
         _ = pub_parser.add_argument('subject', help='Subject to publish to')
         _ = pub_parser.add_argument('data', nargs='?', default='', help='Message data')
-        _ = pub_parser.add_argument('-H', '--header', action='append', help='Header in Key:Value format')
+        _ = pub_parser.add_argument('-h', '--header', action='append', help='Header in Key:Value format')
         _ = pub_parser.set_defaults(func=self.cmd_pub)
 
         # sub command
@@ -107,20 +109,20 @@ class NATSCLI:
         _ = sub_parser.set_defaults(func=self.cmd_sub)
 
         # request command
-        req_parser = subparsers.add_parser('request', help='Send a request')
+        req_parser = subparsers.add_parser('request', help='Send a request', add_help=False)
         self._add_common_args(req_parser)
         _ = req_parser.add_argument('subject', help='Subject to send request to')
         _ = req_parser.add_argument('data', nargs='?', default='', help='Request data')
-        _ = req_parser.add_argument('-H', '--header', action='append', help='Header in Key:Value format')
+        _ = req_parser.add_argument('-h', '--header', action='append', help='Header in Key:Value format')
         _ = req_parser.add_argument('--no-headers', action='store_true', help='Do not display headers')
         _ = req_parser.set_defaults(func=self.cmd_request)
 
         # js pub command
-        js_pub_parser = subparsers.add_parser('js-pub', help='Publish to JetStream')
+        js_pub_parser = subparsers.add_parser('js-pub', help='Publish to JetStream', add_help=False)
         self._add_common_args(js_pub_parser)
         _ = js_pub_parser.add_argument('subject', help='Subject to publish to')
         _ = js_pub_parser.add_argument('data', nargs='?', default='', help='Message data')
-        _ = js_pub_parser.add_argument('-H', '--header', action='append', help='Header in Key:Value format')
+        _ = js_pub_parser.add_argument('-h', '--header', action='append', help='Header in Key:Value format')
         _ = js_pub_parser.add_argument('--msg-id', help='Message ID for deduplication')
         _ = js_pub_parser.set_defaults(func=self.cmd_js_pub)
 
@@ -631,9 +633,12 @@ class NATSCLI:
         """
         _ = readline.set_completer(self._completer)
         _ = readline.parse_and_bind('tab: complete')
+        _ = readline.set_auto_history(False)
 
         print('NATS Client')
         print('Type "help" for available commands, "exit" or "quit" to exit.\n')
+
+        last_command = ''
 
         while True:
             try:
@@ -642,6 +647,11 @@ class NATSCLI:
 
                 if not line:
                     continue
+
+                # Add to history only if different from last command
+                if line != last_command:
+                    readline.add_history(line)
+                    last_command = line
 
                 if line in ('exit', 'quit'):
                     print('Bye.')
