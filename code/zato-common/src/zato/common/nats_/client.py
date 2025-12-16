@@ -566,9 +566,9 @@ class NATSClient:
         if 'error' in resp:
             err = resp['error']
             raise NATSJetStreamError(
-                code=err.get('code', 0),
-                err_code=err.get('err_code', 0),
-                description=err.get('description', ''),
+                code=err['code'],
+                err_code=err['err_code'],
+                description=err['description'],
             )
 
         return PubAck.from_dict(resp)
@@ -590,9 +590,9 @@ class NATSClient:
         if 'error' in resp:
             err = resp['error']
             raise NATSJetStreamError(
-                code=err.get('code', 0),
-                err_code=err.get('err_code', 0),
-                description=err.get('description', ''),
+                code=err['code'],
+                err_code=err['err_code'],
+                description=err['description'],
             )
 
         return StreamInfo.from_dict(resp)
@@ -609,12 +609,12 @@ class NATSClient:
         if 'error' in resp:
             err = resp['error']
             raise NATSJetStreamError(
-                code=err.get('code', 0),
-                err_code=err.get('err_code', 0),
-                description=err.get('description', ''),
+                code=err['code'],
+                err_code=err['err_code'],
+                description=err['description'],
             )
 
-        return resp.get('success', False)
+        return resp['success']
 
     # ############################################################################################################################
 
@@ -628,9 +628,9 @@ class NATSClient:
         if 'error' in resp:
             err = resp['error']
             raise NATSJetStreamError(
-                code=err.get('code', 0),
-                err_code=err.get('err_code', 0),
-                description=err.get('description', ''),
+                code=err['code'],
+                err_code=err['err_code'],
+                description=err['description'],
             )
 
         return StreamInfo.from_dict(resp)
@@ -647,12 +647,12 @@ class NATSClient:
         if 'error' in resp:
             err = resp['error']
             raise NATSJetStreamError(
-                code=err.get('code', 0),
-                err_code=err.get('err_code', 0),
-                description=err.get('description', ''),
+                code=err['code'],
+                err_code=err['err_code'],
+                description=err['description'],
             )
 
-        return resp.get('purged', 0)
+        return resp['purged']
 
     # ############################################################################################################################
 
@@ -680,9 +680,9 @@ class NATSClient:
         if 'error' in resp:
             err = resp['error']
             raise NATSJetStreamError(
-                code=err.get('code', 0),
-                err_code=err.get('err_code', 0),
-                description=err.get('description', ''),
+                code=err['code'],
+                err_code=err['err_code'],
+                description=err['description'],
             )
 
         return ConsumerInfo.from_dict(resp)
@@ -699,12 +699,12 @@ class NATSClient:
         if 'error' in resp:
             err = resp['error']
             raise NATSJetStreamError(
-                code=err.get('code', 0),
-                err_code=err.get('err_code', 0),
-                description=err.get('description', ''),
+                code=err['code'],
+                err_code=err['err_code'],
+                description=err['description'],
             )
 
-        return resp.get('success', False)
+        return resp['success']
 
     # ############################################################################################################################
 
@@ -718,9 +718,9 @@ class NATSClient:
         if 'error' in resp:
             err = resp['error']
             raise NATSJetStreamError(
-                code=err.get('code', 0),
-                err_code=err.get('err_code', 0),
-                description=err.get('description', ''),
+                code=err['code'],
+                err_code=err['err_code'],
+                description=err['description'],
             )
 
         return ConsumerInfo.from_dict(resp)

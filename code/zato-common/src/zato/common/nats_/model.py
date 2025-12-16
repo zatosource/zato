@@ -136,8 +136,8 @@ class PubAck:
     @staticmethod
     def from_dict(data:'anydict') -> 'PubAck':
         return PubAck(
-            stream=data.get('stream', ''),
-            seq=data.get('seq', 0),
+            stream=data['stream'],
+            seq=data['seq'],
             domain=data.get('domain'),
             duplicate=data.get('duplicate'),
         )
@@ -203,11 +203,11 @@ class StreamState:
     @staticmethod
     def from_dict(data:'anydict') -> 'StreamState':
         return StreamState(
-            messages=data.get('messages', 0),
-            bytes=data.get('bytes', 0),
-            first_seq=data.get('first_seq', 0),
-            last_seq=data.get('last_seq', 0),
-            consumer_count=data.get('consumer_count', 0),
+            messages=data['messages'],
+            bytes=data['bytes'],
+            first_seq=data['first_seq'],
+            last_seq=data['last_seq'],
+            consumer_count=data['consumer_count'],
         )
 
 # ################################################################################################################################
@@ -307,13 +307,13 @@ class ConsumerInfo:
                 if hasattr(config, key):
                     setattr(config, key, value)
         return ConsumerInfo(
-            name=data.get('name', ''),
-            stream_name=data.get('stream_name', ''),
+            name=data['name'],
+            stream_name=data['stream_name'],
             config=config,
-            num_ack_pending=data.get('num_ack_pending', 0),
-            num_redelivered=data.get('num_redelivered', 0),
-            num_waiting=data.get('num_waiting', 0),
-            num_pending=data.get('num_pending', 0),
+            num_ack_pending=data['num_ack_pending'],
+            num_redelivered=data['num_redelivered'],
+            num_waiting=data['num_waiting'],
+            num_pending=data['num_pending'],
         )
 
 # ################################################################################################################################
