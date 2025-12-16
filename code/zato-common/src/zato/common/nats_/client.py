@@ -12,7 +12,12 @@ import logging
 import re
 import socket
 import ssl
-import threading
+
+# gevent
+from gevent import spawn
+from gevent.event import Event
+from gevent.lock import RLock
+from gevent.queue import Queue
 
 # Zato
 from zato.common.typing_ import any_, anydict, anydictnone, callable_, callnone, floatnone, strnone
@@ -60,7 +65,9 @@ class NATSClient:
 
         self._max_payload = Default_Max_Payload
         self._connected = False
-        self._lock = threading.Lock()
+        self._lock = RLock()
+        self._msg_queues: 'anydict' = {}  # sid -> Queue for multiplexing
+        self._reader_greenlet = None
 
         self._host = Default_Host
         self._port = Default_Port
@@ -166,6 +173,7 @@ class NATSClient:
                 raise NATSProtocolError(f'Unexpected response: {line!r}')
 
         self._connected = True
+        self._reader_greenlet = spawn(self._reader_loop)
         logger.info(f'Connected to NATS server at {host}:{port}')
 
     # ############################################################################################################################
@@ -173,16 +181,46 @@ class NATSClient:
     def close(self) -> None:
         """ Closes the connection.
         """
+        self._connected = False
+        if self._reader_greenlet:
+            self._reader_greenlet.kill()
+            self._reader_greenlet = None
         if self._sock:
             try:
                 self._sock.close()
             except Exception:
                 pass
             self._sock = None
-        self._connected = False
         self._subscriptions.clear()
         self._pending_msgs.clear()
+        self._msg_queues.clear()
         logger.info('Disconnected from NATS server')
+
+    # ############################################################################################################################
+
+    def _reader_loop(self) -> None:
+        """ Background greenlet that reads messages and routes them to queues.
+        """
+        while self._connected:
+            try:
+                msg = self._read_msg()
+                if msg is None:
+                    continue
+                sid = msg.sid
+                if sid in self._msg_queues:
+                    self._msg_queues[sid].put(msg)
+                elif sid in self._subscriptions:
+                    # Store in pending for next_msg calls
+                    if sid not in self._pending_msgs:
+                        self._pending_msgs[sid] = []
+                    self._pending_msgs[sid].append(msg)
+            except NATSTimeoutError:
+                continue
+            except NATSConnectionError:
+                break
+            except Exception as e:
+                logger.error(f'Reader error: {e}')
+                break
 
     # ############################################################################################################################
 
@@ -304,6 +342,7 @@ class NATSClient:
         sub = Subscription(self, sid, subject, queue, callback, max_msgs)
         self._subscriptions[sid] = sub
         self._pending_msgs[sid] = []
+        self._msg_queues[sid] = Queue()
 
         if queue:
             cmd = f'SUB {subject} {queue} {sid}\r\n'.encode('utf-8')
@@ -331,6 +370,7 @@ class NATSClient:
     def _remove_subscription(self, sid:'int') -> None:
         self._subscriptions.pop(sid, None)
         self._pending_msgs.pop(sid, None)
+        self._msg_queues.pop(sid, None)
 
     # ############################################################################################################################
 
@@ -382,38 +422,21 @@ class NATSClient:
         if timeout is None:
             timeout = self._timeout
 
-        if not self._sock:
+        if not self._connected:
             raise NATSConnectionError('Not connected')
 
-        original_timeout = self._sock.gettimeout()
-        if timeout:
-            self._sock.settimeout(timeout)
+        q = self._msg_queues.get(sid)
+        if not q:
+            raise NATSError(f'No queue for subscription {sid}')
 
         try:
-            # Check if there are pending messages
-            pending = self._pending_msgs.get(sid, [])
-            if pending:
-                return pending.pop(0)
-
-            # Read messages until we get one for this subscription
-            while True:
-                msg = self._read_msg()
-                if msg is None:
-                    continue
-
-                if msg.sid == sid:
-                    sub = self._subscriptions.get(sid)
-                    if sub:
-                        sub._received += 1
-                    return msg
-                else:
-                    # Queue message for different subscription
-                    if msg.sid in self._pending_msgs:
-                        self._pending_msgs[msg.sid].append(msg)
-
-        finally:
-            if timeout:
-                self._sock.settimeout(original_timeout)
+            msg = q.get(timeout=timeout)
+            sub = self._subscriptions.get(sid)
+            if sub:
+                sub._received += 1
+            return msg
+        except Exception:
+            raise NATSTimeoutError('Timeout waiting for message')
 
     # ############################################################################################################################
 

@@ -6,6 +6,10 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# gevent monkey patching must be first
+from gevent import monkey
+monkey.patch_all()
+
 # stdlib
 import argparse
 import json
@@ -15,6 +19,13 @@ import signal
 import sys
 from datetime import datetime
 from pathlib import Path
+
+# gevent
+from gevent import spawn, sleep as gsleep
+from gevent.lock import RLock
+
+# colorama
+from colorama import init as colorama_init, Fore, Style
 
 # Zato
 from zato.common.typing_ import any_
@@ -37,20 +48,97 @@ class NATSCLI:
         'pub', 'sub', 'request',
         'js-pub', 'js-sub',
         'js-stream-create', 'js-stream-delete', 'js-stream-info', 'js-stream-purge',
-        'help', 'exit', 'quit',
+        'greenlets', 'help', 'exit', 'quit',
+    ]
+
+    colors = [
+        Fore.GREEN, Fore.YELLOW, Fore.CYAN, Fore.MAGENTA,
+        Fore.BLUE, Fore.RED, Fore.WHITE,
     ]
 
     history_file = Path.home() / '.nats_cli_history'
 
     def __init__(self) -> None:
+        colorama_init()
         self.running = True
         self.parser = self._build_parser()
+        self.greenlets: 'list' = []
+        self.greenlet_id = 0
+        self.print_lock = RLock()
+        self.shared_client: 'NATSClient | None' = None
 
     # ############################################################################################################################
 
     def _signal_handler(self, sig:'int', frame:'any_') -> 'None':
         self.running = False
         print('\nInterrupted')
+
+    # ############################################################################################################################
+
+    def _get_color(self, gid:'int') -> 'str':
+        """ Returns a color for the given greenlet ID.
+        """
+        return self.colors[gid % len(self.colors)]
+
+    # ############################################################################################################################
+
+    def _cprint(self, gid:'int', msg:'str') -> 'None':
+        """ Prints a message with color based on greenlet ID.
+        """
+        color = self._get_color(gid)
+        with self.print_lock:
+            print(f'{color}[G{gid}]{Style.RESET_ALL} {msg}')
+
+    # ############################################################################################################################
+
+    def _get_shared_client(self, args:'argparse.Namespace') -> 'NATSClient':
+        """ Returns a shared client connection, creating if needed.
+        """
+        if self.shared_client is None or not self.shared_client.is_connected:
+            self.shared_client = NATSClient()
+            self.shared_client.connect(
+                host=args.host,
+                port=args.port,
+                timeout=args.timeout,
+                user=args.user,
+                password=args.password,
+                token=args.token,
+                verbose=args.verbose,
+            )
+        return self.shared_client
+
+    # ############################################################################################################################
+
+    def _list_greenlets(self) -> 'None':
+        """ Lists active greenlets.
+        """
+        # Remove dead greenlets
+        self.greenlets = [g for g in self.greenlets if not g.dead]
+
+        if not self.greenlets:
+            print('No active greenlets.')
+            return
+
+        print(f'Active greenlets: {len(self.greenlets)}')
+        for i, g in enumerate(self.greenlets):
+            color = self._get_color(i + 1)
+            status = 'running' if not g.dead else 'dead'
+            print(f'  {color}[G{i + 1}]{Style.RESET_ALL} {status}')
+
+    # ############################################################################################################################
+
+    def _cleanup_greenlets(self) -> 'None':
+        """ Kills all greenlets and closes shared client.
+        """
+        self.running = False
+        for g in self.greenlets:
+            if not g.dead:
+                g.kill()
+        self.greenlets.clear()
+
+        if self.shared_client:
+            self.shared_client.close()
+            self.shared_client = None
 
     # ############################################################################################################################
 
@@ -249,50 +337,41 @@ class NATSCLI:
     # ############################################################################################################################
 
     def cmd_sub(self, args:'argparse.Namespace') -> 'None':
-        """ Subscribes to a subject and prints messages.
+        """ Subscribes to a subject and prints messages. Runs as a greenlet.
         """
-        client = NATSClient()
-        self.running = True
+        self.greenlet_id += 1
+        gid = self.greenlet_id
 
-        _ = signal.signal(signal.SIGINT, self._signal_handler)
-        _ = signal.signal(signal.SIGTERM, self._signal_handler)
+        def sub_worker():
+            try:
+                client = self._get_shared_client(args)
 
-        try:
-            client.connect(
-                host=args.host,
-                port=args.port,
-                timeout=args.timeout,
-                user=args.user,
-                password=args.password,
-                token=args.token,
-                verbose=args.verbose,
-            )
+                sub = client.subscribe(args.subject, queue=args.queue or '')
+                self._cprint(gid, f'Subscribed to "{args.subject}"' + (f' (queue: {args.queue})' if args.queue else ''))
+                self._cprint(gid, 'Waiting for messages...')
 
-            sub = client.subscribe(args.subject, queue=args.queue or '')
-            print(f'Subscribed to "{args.subject}"' + (f' (queue: {args.queue})' if args.queue else ''))
-            print('Waiting for messages... (Ctrl+C to quit)\n')
+                count = 0
+                while self.running:
+                    try:
+                        msg = sub.next_msg(timeout=1.0)
+                        count += 1
+                        self._cprint(gid, f'[{datetime.now().isoformat()}] Message #{count}')
+                        self._cprint(gid, self._format_msg(msg, show_headers=not args.no_headers))
+                        self._cprint(gid, '-' * 40)
 
-            count = 0
-            while self.running:
-                try:
-                    msg = sub.next_msg(timeout=1.0)
-                    count += 1
-                    print(f'[{datetime.now().isoformat()}] Message #{count}')
-                    print(self._format_msg(msg, show_headers=not args.no_headers))
-                    print('-' * 40)
+                        if args.max_msgs and count >= args.max_msgs:
+                            self._cprint(gid, f'Received {args.max_msgs} messages, exiting.')
+                            break
 
-                    if args.max_msgs and count >= args.max_msgs:
-                        print(f'Received {args.max_msgs} messages, exiting.')
-                        break
+                    except NATSTimeoutError:
+                        continue
 
-                except NATSTimeoutError:
-                    continue
+            except NATSError as e:
+                self._cprint(gid, f'Error: {e}')
 
-        except NATSError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
-        finally:
-            client.close()
+        g = spawn(sub_worker)
+        self.greenlets.append(g)
+        self._cprint(gid, f'Started subscription greenlet for "{args.subject}"')
 
     # ############################################################################################################################
 
@@ -415,93 +494,81 @@ class NATSCLI:
     # ############################################################################################################################
 
     def cmd_js_sub(self, args:'argparse.Namespace') -> 'None':
-        """ Subscribes to a JetStream stream and prints messages.
+        """ Subscribes to a JetStream stream and prints messages. Runs as a greenlet.
         """
-        client = NATSClient()
-        self.running = True
+        self.greenlet_id += 1
+        gid = self.greenlet_id
 
-        _ = signal.signal(signal.SIGINT, self._signal_handler)
-        _ = signal.signal(signal.SIGTERM, self._signal_handler)
-
-        try:
-            client.connect(
-                host=args.host,
-                port=args.port,
-                timeout=args.timeout,
-                user=args.user,
-                password=args.password,
-                token=args.token,
-                verbose=args.verbose,
-            )
-
-            # Ensure consumer exists
-            if args.consumer:
-                consumer_name = args.consumer
-            else:
-                nuid = client._nuid.next()
-                nuid = nuid.decode()
-                consumer_name = f'cli-consumer-{nuid}'
-
-            consumer_config = ConsumerConfig(
-                name=consumer_name,
-                durable_name=args.durable,
-                deliver_policy=args.deliver_policy,
-                ack_policy=Consumer_Ack_Explicit,
-                filter_subject=args.filter_subject,
-            )
-
+        def js_sub_worker():
             try:
-                js = client.jetstream()
-                _ = js.create_consumer(args.stream, consumer_config, timeout=args.request_timeout)
-                print(f'Created consumer "{consumer_name}" on stream "{args.stream}"')
-            except NATSJetStreamError as e:
-                if e.err_code == Err_Consumer_Already_Exists:
-                    print(f'Using existing consumer "{consumer_name}" on stream "{args.stream}"')
+                client = self._get_shared_client(args)
+
+                # Ensure consumer exists
+                if args.consumer:
+                    consumer_name = args.consumer
                 else:
-                    raise
+                    nuid = client._nuid.next()
+                    nuid = nuid.decode()
+                    consumer_name = f'cli-consumer-{nuid}'
 
-            print('Waiting for messages... (Ctrl+C to quit)\n')
+                consumer_config = ConsumerConfig(
+                    name=consumer_name,
+                    durable_name=args.durable,
+                    deliver_policy=args.deliver_policy,
+                    ack_policy=Consumer_Ack_Explicit,
+                    filter_subject=args.filter_subject,
+                )
 
-            count = 0
-            while self.running:
                 try:
-                    msgs = js.fetch(
-                        args.stream,
-                        consumer_name,
-                        batch=args.batch,
-                        timeout=args.fetch_timeout,
-                    )
+                    js = client.jetstream()
+                    _ = js.create_consumer(args.stream, consumer_config, timeout=args.request_timeout)
+                    self._cprint(gid, f'Created consumer "{consumer_name}" on stream "{args.stream}"')
+                except NATSJetStreamError as e:
+                    if e.err_code == Err_Consumer_Already_Exists:
+                        self._cprint(gid, f'Using existing consumer "{consumer_name}" on stream "{args.stream}"')
+                    else:
+                        raise
 
-                    for msg in msgs:
-                        count += 1
-                        print(f'[{datetime.now().isoformat()}] Message #{count}')
-                        print(self._format_msg(msg, show_headers=not args.no_headers))
+                self._cprint(gid, 'Waiting for messages...')
 
-                        if args.ack:
-                            js.ack(msg)
-                            print('(acknowledged)')
+                count = 0
+                while self.running:
+                    try:
+                        msgs = js.fetch(
+                            args.stream,
+                            consumer_name,
+                            batch=args.batch,
+                            timeout=args.fetch_timeout,
+                        )
 
-                        print('-' * 40)
+                        for msg in msgs:
+                            count += 1
+                            self._cprint(gid, f'[{datetime.now().isoformat()}] Message #{count}')
+                            self._cprint(gid, self._format_msg(msg, show_headers=not args.no_headers))
 
-                        if args.max_msgs and count >= args.max_msgs:
-                            print(f'Received {args.max_msgs} messages, exiting.')
-                            self.running = False
-                            break
+                            if args.ack:
+                                js.ack(msg)
+                                self._cprint(gid, '(acknowledged)')
 
-                except NATSTimeoutError:
-                    continue
+                            self._cprint(gid, '-' * 40)
 
-        except NATSNoRespondersError:
-            print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
-            sys.exit(1)
-        except NATSJetStreamError as e:
-            print(f'JetStream error: {e.description}', file=sys.stderr)
-            sys.exit(1)
-        except NATSError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
-        finally:
-            client.close()
+                            if args.max_msgs and count >= args.max_msgs:
+                                self._cprint(gid, f'Received {args.max_msgs} messages, exiting.')
+                                return
+
+                    except NATSTimeoutError:
+                        continue
+
+            except NATSNoRespondersError:
+                self._cprint(gid, "Error: No responders available. Is JetStream enabled? Run 'nats-server -js'")
+            except NATSJetStreamError as e:
+                self._cprint(gid, f'JetStream error: {e.description}')
+            except NATSError as e:
+                self._cprint(gid, f'Error: {e}')
+
+        g = spawn(js_sub_worker)
+        self.greenlets.append(g)
+        self._cprint(gid, f'Started JetStream subscription greenlet for stream "{args.stream}"')
 
     # ############################################################################################################################
 
@@ -731,12 +798,17 @@ class NATSCLI:
                         _ = f.write(line + '\n')
 
                 if line in ('exit', 'quit'):
+                    self._cleanup_greenlets()
                     print('Bye.')
                     break
 
                 if line == 'help':
                     self.parser.print_help()
                     print()
+                    continue
+
+                if line == 'greenlets':
+                    self._list_greenlets()
                     continue
 
                 try:
@@ -756,13 +828,16 @@ class NATSCLI:
 
                 try:
                     args.func(args)
+                    gsleep(0)  # Yield to greenlets
                 except SystemExit:
                     pass
 
             except KeyboardInterrupt:
+                self._cleanup_greenlets()
                 print('\nBye.')
                 break
             except EOFError:
+                self._cleanup_greenlets()
                 print('\nBye.')
                 break
 
