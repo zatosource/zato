@@ -10,12 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import json
 import logging
 import re
-import socket
 import ssl
 from traceback import format_exc
 
 # gevent
-from gevent import spawn
+from gevent import sleep as gsleep, spawn, socket
 from gevent.event import Event
 from gevent.lock import RLock
 from gevent.queue import Queue
@@ -119,9 +118,11 @@ class NATSClient:
 
         # Create socket
         logger.info(f'Creating socket connection to {host}:{port} with timeout={connect_timeout}')
+        gsleep(0)  # Yield to allow other greenlets to run
         self._sock = socket.create_connection((host, port), timeout=connect_timeout)
         logger.info('Socket created, setting timeout')
         self._sock.settimeout(timeout)
+        gsleep(0)  # Yield after socket creation
 
         # Read INFO from server
         logger.info('Reading INFO from server')

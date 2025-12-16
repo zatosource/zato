@@ -24,6 +24,7 @@ from traceback import format_exc
 
 # gevent
 from gevent import spawn, sleep as gsleep
+from gevent.fileobject import FileObject
 from gevent.lock import RLock
 
 # colorama (optional)
@@ -813,9 +814,15 @@ class NATSCLI:
                 if lines:
                     last_command = lines[-1].strip()
 
+        stdin_wrapped = FileObject(sys.stdin)
+
         while True:
             try:
-                line = input('nats> ')
+                sys.stdout.write('nats> ')
+                sys.stdout.flush()
+                line = stdin_wrapped.readline()
+                if not line:
+                    break
                 line = line.strip()
 
                 if not line:
