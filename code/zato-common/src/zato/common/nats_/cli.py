@@ -13,6 +13,7 @@ monkey.patch_all()
 # stdlib
 import argparse
 import json
+import logging
 import readline
 import shlex
 import signal
@@ -76,7 +77,8 @@ class NATSCLI:
         self.greenlet_info: 'dict' = {}  # gid -> {'subject': str, 'started': datetime}
         self.greenlet_id = 0
         self.print_lock = RLock()
-        self.shared_client: 'NATSClient | None' = None
+        self.reader_client: 'NATSClient | None' = None
+        self.writer_client: 'NATSClient | None' = None
 
     # ############################################################################################################################
 
@@ -97,17 +99,25 @@ class NATSCLI:
         """ Prints a message with color based on greenlet ID.
         """
         color = self._get_color(gid)
+        ts = datetime.now().isoformat()
         with self.print_lock:
-            print(f'{color}[G{gid}]{Style.RESET_ALL} {msg}')
+            print(f'{ts} {color}[G{gid}]{Style.RESET_ALL} {msg}')
 
     # ############################################################################################################################
 
-    def _get_shared_client(self, args:'argparse.Namespace') -> 'NATSClient':
-        """ Returns a shared client connection, creating if needed.
+    def _get_reader_client(self, args:'argparse.Namespace') -> 'NATSClient':
+        """ Returns the reader client connection for subscriptions.
         """
-        if self.shared_client is None or not self.shared_client.is_connected:
-            self.shared_client = NATSClient()
-            self.shared_client.connect(
+        needs_connect = False
+
+        if self.reader_client is None:
+            needs_connect = True
+        elif not self.reader_client.is_connected:
+            needs_connect = True
+
+        if needs_connect:
+            self.reader_client = NATSClient()
+            self.reader_client.connect(
                 host=args.host,
                 port=args.port,
                 timeout=args.timeout,
@@ -116,7 +126,33 @@ class NATSCLI:
                 token=args.token,
                 verbose=args.verbose,
             )
-        return self.shared_client
+            self.reader_client.start_reader()
+        return self.reader_client
+
+    # ############################################################################################################################
+
+    def _get_writer_client(self, args:'argparse.Namespace') -> 'NATSClient':
+        """ Returns the writer client connection for publishing.
+        """
+        needs_connect = False
+
+        if self.writer_client is None:
+            needs_connect = True
+        elif not self.writer_client.is_connected:
+            needs_connect = True
+
+        if needs_connect:
+            self.writer_client = NATSClient()
+            self.writer_client.connect(
+                host=args.host,
+                port=args.port,
+                timeout=args.timeout,
+                user=args.user,
+                password=args.password,
+                token=args.token,
+                verbose=args.verbose,
+            )
+        return self.writer_client
 
     # ############################################################################################################################
 
@@ -169,7 +205,7 @@ class NATSCLI:
     # ############################################################################################################################
 
     def _cleanup_greenlets(self) -> 'None':
-        """ Kills all greenlets and closes shared client.
+        """ Kills all greenlets and closes clients.
         """
         self.running = False
         for g, gid in self.greenlets:
@@ -178,9 +214,12 @@ class NATSCLI:
         self.greenlets.clear()
         self.greenlet_info.clear()
 
-        if self.shared_client:
-            self.shared_client.close()
-            self.shared_client = None
+        if self.reader_client:
+            self.reader_client.close()
+            self.reader_client = None
+        if self.writer_client:
+            self.writer_client.close()
+            self.writer_client = None
 
     # ############################################################################################################################
 
@@ -329,7 +368,7 @@ class NATSCLI:
         """ Publishes a message to a subject.
         """
         try:
-            client = self._get_shared_client(args)
+            client = self._get_writer_client(args)
 
             headers = None
             if args.header:
@@ -373,10 +412,15 @@ class NATSCLI:
 
         def sub_worker():
             try:
-                client = self._get_shared_client(args)
+                client = self._get_reader_client(args)
 
-                sub = client.subscribe(args.subject, queue=args.queue or '')
-                self._cprint(gid, f'Subscribed to "{args.subject}"' + (f' (queue: {args.queue})' if args.queue else ''))
+                queue = args.queue if args.queue else ''
+                sub = client.subscribe(args.subject, queue=queue)
+
+                msg = f'Subscribed to "{args.subject}"'
+                if args.queue:
+                    msg += f' (queue: {args.queue})'
+                self._cprint(gid, msg)
                 self._cprint(gid, 'Waiting for messages...')
 
                 count = 0
@@ -409,7 +453,7 @@ class NATSCLI:
         """ Sends a request and waits for a response.
         """
         try:
-            client = self._get_shared_client(args)
+            client = self._get_writer_client(args)
 
             headers = None
             if args.header:
@@ -440,7 +484,7 @@ class NATSCLI:
         """ Publishes a message to JetStream.
         """
         try:
-            client = self._get_shared_client(args)
+            client = self._get_writer_client(args)
 
             headers = None
             if args.header:
@@ -501,7 +545,7 @@ class NATSCLI:
 
         def js_sub_worker():
             try:
-                client = self._get_shared_client(args)
+                client = self._get_reader_client(args)
 
                 # Ensure consumer exists
                 if args.consumer:
@@ -580,7 +624,7 @@ class NATSCLI:
         """ Creates a JetStream stream.
         """
         try:
-            client = self._get_shared_client(args)
+            client = self._get_writer_client(args)
 
             config = StreamConfig(
                 name=args.name,
@@ -621,7 +665,7 @@ class NATSCLI:
                     print('Cancelled')
                     return
 
-            client = self._get_shared_client(args)
+            client = self._get_writer_client(args)
             js = client.jetstream()
             success = js.delete_stream(args.name, timeout=args.request_timeout)
 
@@ -643,12 +687,13 @@ class NATSCLI:
         """ Returns information about a JetStream stream.
         """
         try:
-            client = self._get_shared_client(args)
+            client = self._get_writer_client(args)
             js = client.jetstream()
             info = js.stream_info(args.name, timeout=args.request_timeout)
 
             print(f'Stream: {info.config.name}')
-            print(f'  Description: {info.config.description or "(none)"}')
+            description = info.config.description if info.config.description else '(none)'
+            print(f'  Description: {description}')
             print(f'  Subjects: {info.config.subjects}')
             print(f'  Storage: {info.config.storage}')
             print(f'  Retention: {info.config.retention}')
@@ -679,7 +724,7 @@ class NATSCLI:
                     print('Cancelled')
                     return
 
-            client = self._get_shared_client(args)
+            client = self._get_writer_client(args)
             js = client.jetstream()
             purged = js.purge_stream(args.name, timeout=args.request_timeout)
             print(f'Purged {purged} messages from stream "{args.name}"')
@@ -711,14 +756,35 @@ class NATSCLI:
         _ = readline.set_completer_delims(' ')
         _ = readline.set_auto_history(False)
 
-        # Load history for this session
+        # Load history for this session, deduplicated
         if self.history_file.exists():
-            readline.read_history_file(self.history_file)
+            seen = set()
+            unique_lines = []
+            with open(self.history_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and line not in seen:
+                        seen.add(line)
+                        unique_lines.append(line)
+
+            # Add unique lines to readline history
+            for line in unique_lines:
+                readline.add_history(line)
+
+            # Rewrite file with deduplicated history
+            with open(self.history_file, 'w') as f:
+                for line in unique_lines:
+                    f.write(line + '\n')
 
         print('NATS Client')
         print('Type "help" for available commands, "exit" or "quit" to exit.\n')
 
         last_command = ''
+        if self.history_file.exists():
+            with open(self.history_file, 'r') as f:
+                lines = f.readlines()
+                if lines:
+                    last_command = lines[-1].strip()
 
         while True:
             try:
@@ -799,6 +865,10 @@ class NATSCLI:
 def main() -> 'None':
     """ Main entry point for the CLI.
     """
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s %(name)s: %(message)s'
+    )
     cli = NATSCLI()
     cli.run()
 

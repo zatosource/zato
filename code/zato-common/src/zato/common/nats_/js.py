@@ -50,7 +50,11 @@ class JetStream:
         if timeout is None:
             timeout = self._client._timeout
 
-        hdr = headers or {}
+        if headers:
+            hdr = headers
+        else:
+            hdr = {}
+
         if msg_id:
             hdr['Nats-Msg-Id'] = msg_id
         if expected_stream:
@@ -58,7 +62,12 @@ class JetStream:
         if expected_last_seq is not None:
             hdr['Nats-Expected-Last-Sequence'] = str(expected_last_seq)
 
-        msg = self._client.request(subject, payload, timeout=timeout, headers=hdr if hdr else None)
+        if hdr:
+            headers_to_send = hdr
+        else:
+            headers_to_send = None
+
+        msg = self._client.request(subject, payload, timeout=timeout, headers=headers_to_send)
 
         data = msg.data.decode('utf-8')
         resp = json.loads(data)

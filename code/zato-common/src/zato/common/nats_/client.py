@@ -112,7 +112,8 @@ class NATSClient:
         self._timeout = timeout
         self._ssl_context = ssl_context
 
-        connect_timeout = connect_timeout or timeout
+        if not connect_timeout:
+            connect_timeout = timeout
 
         # Create socket
         self._sock = socket.create_connection((host, port), timeout=connect_timeout)
@@ -130,7 +131,13 @@ class NATSClient:
         self._max_payload = self._server_info.max_payload
 
         # Upgrade to TLS if required
-        if self._server_info.tls_required or ssl_context:
+        needs_tls = False
+        if self._server_info.tls_required:
+            needs_tls = True
+        elif ssl_context:
+            needs_tls = True
+
+        if needs_tls:
             if ssl_context is None:
                 ssl_context = ssl.create_default_context()
             self._sock = ssl_context.wrap_socket(self._sock, server_hostname=host)
@@ -175,8 +182,16 @@ class NATSClient:
                 raise NATSProtocolError(f'Unexpected response: {line!r}')
 
         self._connected = True
-        self._reader_greenlet = spawn(self._reader_loop)
         logger.info(f'Connected to NATS server at {host}:{port}')
+
+    # ############################################################################################################################
+
+    def start_reader(self) -> None:
+        """ Starts the reader greenlet for receiving messages.
+        """
+        if self._reader_greenlet is None:
+            logger.info('Starting reader greenlet')
+            self._reader_greenlet = spawn(self._reader_loop)
 
     # ############################################################################################################################
 
@@ -203,13 +218,16 @@ class NATSClient:
     def _reader_loop(self) -> None:
         """ Background greenlet that reads messages and routes them to queues.
         """
+        logger.info('Reader loop started')
         while self._connected:
             try:
                 msg = self._read_msg()
                 if msg is None:
                     continue
                 sid = msg.sid
+                logger.info(f'Reader got message for sid={sid}, subject={msg.subject}')
                 if sid in self._msg_queues:
+                    logger.info(f'Putting message in queue for sid={sid}')
                     self._msg_queues[sid].put(msg)
                 elif sid in self._subscriptions:
                     # Store in pending for next_msg calls
@@ -352,6 +370,7 @@ class NATSClient:
         else:
             cmd = f'SUB {subject} {sid}\r\n'.encode('utf-8')
 
+        logger.info(f'Subscribing to {subject} with sid={sid}, cmd={cmd!r}')
         self._send(cmd)
 
         if max_msgs > 0:
@@ -535,7 +554,9 @@ class NATSClient:
 
         # Parse remaining headers
         for line in lines[1:]:
-            if not line or line == b'':
+            if not line:
+                continue
+            if line == b'':
                 continue
             if b':' in line:
                 key, value = line.split(b':', 1)
