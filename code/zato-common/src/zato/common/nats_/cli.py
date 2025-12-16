@@ -695,11 +695,11 @@ class NATSCLI:
                     pass
 
             except KeyboardInterrupt:
-                self._cleanup_greenlets()
+                self._cleanup()
                 print('\nBye.')
                 break
             except EOFError:
-                self._cleanup_greenlets()
+                self._cleanup()
                 print('\nBye.')
                 break
 
