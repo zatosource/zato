@@ -9,22 +9,25 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import argparse
 import json
+import shlex
 import signal
 import sys
 from datetime import datetime
 
 # Zato
+from zato.common.typing_ import any_
+
 from zato.common.nats_.client import NATSClient
 from zato.common.nats_.const import Consumer_Ack_Explicit, Consumer_Deliver_All, Default_Host, \
      Default_Num_Replicas, Default_Port, Default_Timeout, Err_Consumer_Already_Exists, No_Limit, \
      Stream_Retention_Limits, Stream_Storage_File
 from zato.common.nats_.exc import NATSError, NATSJetStreamError, NATSNoRespondersError, NATSTimeoutError
-from zato.common.nats_.model import ConsumerConfig, StreamConfig
+from zato.common.nats_.model import ConsumerConfig, Msg, StreamConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def format_msg(msg, show_headers=True):
+def format_msg(msg:'Msg', show_headers:'bool'=True) -> 'str':
     """ Formats a message for display.
     """
     output = []
@@ -39,7 +42,7 @@ def format_msg(msg, show_headers=True):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cmd_pub(args):
+def cmd_pub(args:'argparse.Namespace') -> 'None':
     """ Publishes a message to a subject.
     """
     client = NATSClient()
@@ -77,13 +80,13 @@ def cmd_pub(args):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cmd_sub(args):
+def cmd_sub(args:'argparse.Namespace') -> 'None':
     """ Subscribes to a subject and prints messages.
     """
     client = NATSClient()
     running = True
 
-    def signal_handler(sig, frame):
+    def signal_handler(sig:'int', frame:'any_') -> 'None':
         nonlocal running
         running = False
         print('\nInterrupted')
@@ -130,7 +133,7 @@ def cmd_sub(args):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cmd_request(args):
+def cmd_request(args:'argparse.Namespace') -> 'None':
     """ Sends a request and waits for a response.
     """
     client = NATSClient()
@@ -174,7 +177,7 @@ def cmd_request(args):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cmd_js_pub(args):
+def cmd_js_pub(args:'argparse.Namespace') -> 'None':
     """ Publishes a message to JetStream.
     """
     client = NATSClient()
@@ -223,13 +226,13 @@ def cmd_js_pub(args):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cmd_js_sub(args):
+def cmd_js_sub(args:'argparse.Namespace') -> 'None':
     """ Subscribes to a JetStream stream and prints messages.
     """
     client = NATSClient()
     running = True
 
-    def signal_handler(sig, frame):
+    def signal_handler(sig:'int', frame:'any_') -> 'None':
         nonlocal running
         running = False
         print('\nInterrupted')
@@ -316,7 +319,7 @@ def cmd_js_sub(args):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cmd_js_stream_create(args):
+def cmd_js_stream_create(args:'argparse.Namespace') -> 'None':
     """ Creates a JetStream stream.
     """
     client = NATSClient()
@@ -363,7 +366,7 @@ def cmd_js_stream_create(args):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cmd_js_stream_delete(args):
+def cmd_js_stream_delete(args:'argparse.Namespace') -> 'None':
     """ Deletes a JetStream stream.
     """
     client = NATSClient()
@@ -405,7 +408,7 @@ def cmd_js_stream_delete(args):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cmd_js_stream_info(args):
+def cmd_js_stream_info(args:'argparse.Namespace') -> 'None':
     """ Returns information about a JetStream stream.
     """
     client = NATSClient()
@@ -448,7 +451,7 @@ def cmd_js_stream_info(args):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def cmd_js_stream_purge(args):
+def cmd_js_stream_purge(args:'argparse.Namespace') -> 'None':
     """ Purges messages from a JetStream stream.
     """
     client = NATSClient()
@@ -485,7 +488,7 @@ def cmd_js_stream_purge(args):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def add_common_args(parser):
+def add_common_args(parser:'argparse.ArgumentParser') -> 'None':
     """ Adds common connection arguments to a parser.
     """
     _ = parser.add_argument('-s', '--host', default=Default_Host, help='NATS server host')
@@ -499,7 +502,7 @@ def add_common_args(parser):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def main():
+def main() -> 'None':
     """ Main entry point for the CLI.
     """
     parser = argparse.ArgumentParser(
@@ -593,13 +596,74 @@ def main():
     _ = js_stream_purge_parser.add_argument('-f', '--force', action='store_true', help='Skip confirmation')
     _ = js_stream_purge_parser.set_defaults(func=cmd_js_stream_purge)
 
+    return parser
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def interactive_loop(parser:'argparse.ArgumentParser') -> 'None':
+    """ Runs an interactive command loop.
+    """
+    print('NATS Client CLI - Interactive Mode')
+    print('Type "help" for available commands, "exit" or "quit" to exit.\n')
+
+    while True:
+        try:
+            line = input('nats> ')
+            line = line.strip()
+
+            if not line:
+                continue
+
+            if line in ('exit', 'quit'):
+                print('Bye.')
+                break
+
+            if line == 'help':
+                parser.print_help()
+                print()
+                continue
+
+            try:
+                argv = shlex.split(line)
+            except ValueError as e:
+                print(f'Error parsing command: {e}')
+                continue
+
+            try:
+                args = parser.parse_args(argv)
+            except SystemExit:
+                continue
+
+            if args.command is None:
+                parser.print_help()
+                continue
+
+            try:
+                args.func(args)
+            except SystemExit:
+                pass
+
+        except KeyboardInterrupt:
+            print('\nBye.')
+            break
+        except EOFError:
+            print('\nBye.')
+            break
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def main() -> 'None':
+    """ Main entry point for the CLI.
+    """
+    parser = build_parser()
     args = parser.parse_args()
 
     if args.command is None:
-        parser.print_help()
-        sys.exit(1)
-
-    args.func(args)
+        interactive_loop(parser)
+    else:
+        args.func(args)
 
 # ################################################################################################################################
 # ################################################################################################################################
