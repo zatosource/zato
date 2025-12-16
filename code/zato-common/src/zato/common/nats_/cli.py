@@ -19,13 +19,23 @@ import signal
 import sys
 from datetime import datetime
 from pathlib import Path
+from traceback import format_exc
 
 # gevent
 from gevent import spawn, sleep as gsleep
 from gevent.lock import RLock
 
-# colorama
-from colorama import init as colorama_init, Fore, Style
+# colorama (optional)
+try:
+    from colorama import init as colorama_init, Fore, Style
+    has_colorama = True
+except ImportError:
+    has_colorama = False
+    colorama_init = lambda: None
+    class Fore:
+        GREEN = YELLOW = CYAN = MAGENTA = BLUE = RED = WHITE = ''
+    class Style:
+        RESET_ALL = ''
 
 # Zato
 from zato.common.typing_ import any_
@@ -63,6 +73,7 @@ class NATSCLI:
         self.running = True
         self.parser = self._build_parser()
         self.greenlets: 'list' = []
+        self.greenlet_info: 'dict' = {}  # gid -> {'subject': str, 'started': datetime}
         self.greenlet_id = 0
         self.print_lock = RLock()
         self.shared_client: 'NATSClient | None' = None
@@ -109,21 +120,51 @@ class NATSCLI:
 
     # ############################################################################################################################
 
+    def _format_time_ago(self, dt:'datetime') -> 'str':
+        """ Formats a datetime as time ago string.
+        """
+        delta = datetime.now() - dt
+        seconds = int(delta.total_seconds())
+
+        if seconds < 60:
+            unit = 'second' if seconds == 1 else 'seconds'
+            return f'{seconds} {unit} ago'
+
+        minutes = seconds // 60
+        if minutes < 60:
+            unit = 'minute' if minutes == 1 else 'minutes'
+            return f'{minutes} {unit} ago'
+
+        hours = minutes // 60
+        unit = 'hour' if hours == 1 else 'hours'
+        return f'{hours} {unit} ago'
+
+    # ############################################################################################################################
+
     def _list_greenlets(self) -> 'None':
         """ Lists active greenlets.
         """
-        # Remove dead greenlets
-        self.greenlets = [g for g in self.greenlets if not g.dead]
+        # Remove dead greenlets and their info
+        alive = []
+        for g, gid in self.greenlets:
+            if not g.dead:
+                alive.append((g, gid))
+            else:
+                self.greenlet_info.pop(gid, None)
+        self.greenlets = alive
 
         if not self.greenlets:
             print('No active greenlets.')
             return
 
         print(f'Active greenlets: {len(self.greenlets)}')
-        for i, g in enumerate(self.greenlets):
-            color = self._get_color(i + 1)
-            status = 'running' if not g.dead else 'dead'
-            print(f'  {color}[G{i + 1}]{Style.RESET_ALL} {status}')
+        for g, gid in self.greenlets:
+            color = self._get_color(gid)
+            info = self.greenlet_info.get(gid, {})
+            subject = info.get('subject', '?')
+            started = info.get('started')
+            time_ago = self._format_time_ago(started) if started else '?'
+            print(f'  {color}[G{gid}]{Style.RESET_ALL} {subject} (started {time_ago})')
 
     # ############################################################################################################################
 
@@ -131,10 +172,11 @@ class NATSCLI:
         """ Kills all greenlets and closes shared client.
         """
         self.running = False
-        for g in self.greenlets:
+        for g, gid in self.greenlets:
             if not g.dead:
                 g.kill()
         self.greenlets.clear()
+        self.greenlet_info.clear()
 
         if self.shared_client:
             self.shared_client.close()
@@ -286,18 +328,8 @@ class NATSCLI:
     def cmd_pub(self, args:'argparse.Namespace') -> 'None':
         """ Publishes a message to a subject.
         """
-        client = NATSClient()
-
         try:
-            client.connect(
-                host=args.host,
-                port=args.port,
-                timeout=args.timeout,
-                user=args.user,
-                password=args.password,
-                token=args.token,
-                verbose=args.verbose,
-            )
+            client = self._get_shared_client(args)
 
             headers = None
             if args.header:
@@ -318,21 +350,18 @@ class NATSCLI:
 
             repeat = args.repeat if args.multiplier == '*' else 1
 
-            for _ in range(repeat):
-                client.publish(args.subject, data, headers=headers)
-
-            client.flush()
+            with self.print_lock:
+                for _ in range(repeat):
+                    client.publish(args.subject, data, headers=headers)
+                client.flush()
 
             if repeat > 1:
                 print(f'Published {len(data)} bytes to "{args.subject}" x {repeat}')
             else:
                 print(f'Published {len(data)} bytes to "{args.subject}"')
 
-        except NATSError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
-        finally:
-            client.close()
+        except NATSError:
+            print(f'Error: {format_exc()}', file=sys.stderr)
 
     # ############################################################################################################################
 
@@ -366,11 +395,12 @@ class NATSCLI:
                     except NATSTimeoutError:
                         continue
 
-            except NATSError as e:
-                self._cprint(gid, f'Error: {e}')
+            except NATSError:
+                self._cprint(gid, f'Error: {format_exc()}')
 
         g = spawn(sub_worker)
-        self.greenlets.append(g)
+        self.greenlets.append((g, gid))
+        self.greenlet_info[gid] = {'subject': args.subject, 'started': datetime.now()}
         self._cprint(gid, f'Started subscription greenlet for "{args.subject}"')
 
     # ############################################################################################################################
@@ -378,18 +408,8 @@ class NATSCLI:
     def cmd_request(self, args:'argparse.Namespace') -> 'None':
         """ Sends a request and waits for a response.
         """
-        client = NATSClient()
-
         try:
-            client.connect(
-                host=args.host,
-                port=args.port,
-                timeout=args.timeout,
-                user=args.user,
-                password=args.password,
-                token=args.token,
-                verbose=args.verbose,
-            )
+            client = self._get_shared_client(args)
 
             headers = None
             if args.header:
@@ -409,33 +429,18 @@ class NATSCLI:
 
         except NATSNoRespondersError:
             print('Error: No responders available', file=sys.stderr)
-            sys.exit(1)
         except NATSTimeoutError:
             print('Error: Request timed out', file=sys.stderr)
-            sys.exit(1)
-        except NATSError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
-        finally:
-            client.close()
+        except NATSError:
+            print(f'Error: {format_exc()}', file=sys.stderr)
 
     # ############################################################################################################################
 
     def cmd_js_pub(self, args:'argparse.Namespace') -> 'None':
         """ Publishes a message to JetStream.
         """
-        client = NATSClient()
-
         try:
-            client.connect(
-                host=args.host,
-                port=args.port,
-                timeout=args.timeout,
-                user=args.user,
-                password=args.password,
-                token=args.token,
-                verbose=args.verbose,
-            )
+            client = self._get_shared_client(args)
 
             headers = None
             if args.header:
@@ -481,15 +486,10 @@ class NATSCLI:
 
         except NATSNoRespondersError:
             print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
-            sys.exit(1)
-        except NATSJetStreamError as e:
-            print(f'JetStream error: {e.description}', file=sys.stderr)
-            sys.exit(1)
-        except NATSError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
-        finally:
-            client.close()
+        except NATSJetStreamError:
+            print(f'JetStream error: {format_exc()}', file=sys.stderr)
+        except NATSError:
+            print(f'Error: {format_exc()}', file=sys.stderr)
 
     # ############################################################################################################################
 
@@ -563,11 +563,15 @@ class NATSCLI:
                 self._cprint(gid, "Error: No responders available. Is JetStream enabled? Run 'nats-server -js'")
             except NATSJetStreamError as e:
                 self._cprint(gid, f'JetStream error: {e.description}')
-            except NATSError as e:
-                self._cprint(gid, f'Error: {e}')
+            except NATSError:
+                self._cprint(gid, f'Error: {format_exc()}')
 
         g = spawn(js_sub_worker)
-        self.greenlets.append(g)
+        self.greenlets.append((g, gid))
+        subject = f'stream:{args.stream}'
+        if args.filter_subject:
+            subject += f' filter:{args.filter_subject}'
+        self.greenlet_info[gid] = {'subject': subject, 'started': datetime.now()}
         self._cprint(gid, f'Started JetStream subscription greenlet for stream "{args.stream}"')
 
     # ############################################################################################################################
@@ -575,18 +579,8 @@ class NATSCLI:
     def cmd_js_stream_create(self, args:'argparse.Namespace') -> 'None':
         """ Creates a JetStream stream.
         """
-        client = NATSClient()
-
         try:
-            client.connect(
-                host=args.host,
-                port=args.port,
-                timeout=args.timeout,
-                user=args.user,
-                password=args.password,
-                token=args.token,
-                verbose=args.verbose,
-            )
+            client = self._get_shared_client(args)
 
             config = StreamConfig(
                 name=args.name,
@@ -610,40 +604,24 @@ class NATSCLI:
 
         except NATSNoRespondersError:
             print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
-            sys.exit(1)
-        except NATSJetStreamError as e:
-            print(f'JetStream error: {e.description}', file=sys.stderr)
-            sys.exit(1)
-        except NATSError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
-        finally:
-            client.close()
+        except NATSJetStreamError:
+            print(f'JetStream error: {format_exc()}', file=sys.stderr)
+        except NATSError:
+            print(f'Error: {format_exc()}', file=sys.stderr)
 
     # ############################################################################################################################
 
     def cmd_js_stream_delete(self, args:'argparse.Namespace') -> 'None':
         """ Deletes a JetStream stream.
         """
-        client = NATSClient()
-
         try:
-            client.connect(
-                host=args.host,
-                port=args.port,
-                timeout=args.timeout,
-                user=args.user,
-                password=args.password,
-                token=args.token,
-                verbose=args.verbose,
-            )
-
             if not args.force:
                 confirm = input(f'Delete stream "{args.name}"? [y/N]: ')
                 if confirm.lower() != 'y':
                     print('Cancelled')
                     return
 
+            client = self._get_shared_client(args)
             js = client.jetstream()
             success = js.delete_stream(args.name, timeout=args.request_timeout)
 
@@ -651,38 +629,21 @@ class NATSCLI:
                 print(f'Deleted stream "{args.name}"')
             else:
                 print(f'Failed to delete stream "{args.name}"', file=sys.stderr)
-                sys.exit(1)
 
         except NATSNoRespondersError:
             print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
-            sys.exit(1)
-        except NATSJetStreamError as e:
-            print(f'JetStream error: {e.description}', file=sys.stderr)
-            sys.exit(1)
-        except NATSError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
-        finally:
-            client.close()
+        except NATSJetStreamError:
+            print(f'JetStream error: {format_exc()}', file=sys.stderr)
+        except NATSError:
+            print(f'Error: {format_exc()}', file=sys.stderr)
 
     # ############################################################################################################################
 
     def cmd_js_stream_info(self, args:'argparse.Namespace') -> 'None':
         """ Returns information about a JetStream stream.
         """
-        client = NATSClient()
-
         try:
-            client.connect(
-                host=args.host,
-                port=args.port,
-                timeout=args.timeout,
-                user=args.user,
-                password=args.password,
-                token=args.token,
-                verbose=args.verbose,
-            )
-
+            client = self._get_shared_client(args)
             js = client.jetstream()
             info = js.stream_info(args.name, timeout=args.request_timeout)
 
@@ -701,55 +662,34 @@ class NATSCLI:
 
         except NATSNoRespondersError:
             print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
-            sys.exit(1)
-        except NATSJetStreamError as e:
-            print(f'JetStream error: {e.description}', file=sys.stderr)
-            sys.exit(1)
-        except NATSError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
-        finally:
-            client.close()
+        except NATSJetStreamError:
+            print(f'JetStream error: {format_exc()}', file=sys.stderr)
+        except NATSError:
+            print(f'Error: {format_exc()}', file=sys.stderr)
 
     # ############################################################################################################################
 
     def cmd_js_stream_purge(self, args:'argparse.Namespace') -> 'None':
         """ Purges messages from a JetStream stream.
         """
-        client = NATSClient()
-
         try:
-            client.connect(
-                host=args.host,
-                port=args.port,
-                timeout=args.timeout,
-                user=args.user,
-                password=args.password,
-                token=args.token,
-                verbose=args.verbose,
-            )
-
             if not args.force:
                 confirm = input(f'Purge all messages from stream "{args.name}"? [y/N]: ')
                 if confirm.lower() != 'y':
                     print('Cancelled')
                     return
 
+            client = self._get_shared_client(args)
             js = client.jetstream()
             purged = js.purge_stream(args.name, timeout=args.request_timeout)
             print(f'Purged {purged} messages from stream "{args.name}"')
 
         except NATSNoRespondersError:
             print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
-            sys.exit(1)
-        except NATSJetStreamError as e:
-            print(f'JetStream error: {e.description}', file=sys.stderr)
-            sys.exit(1)
-        except NATSError as e:
-            print(f'Error: {e}', file=sys.stderr)
-            sys.exit(1)
-        finally:
-            client.close()
+        except NATSJetStreamError:
+            print(f'JetStream error: {format_exc()}', file=sys.stderr)
+        except NATSError:
+            print(f'Error: {format_exc()}', file=sys.stderr)
 
     # ############################################################################################################################
 

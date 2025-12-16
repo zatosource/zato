@@ -66,6 +66,7 @@ class NATSClient:
         self._max_payload = Default_Max_Payload
         self._connected = False
         self._lock = RLock()
+        self._write_lock = RLock()
         self._msg_queues: 'anydict' = {}  # sid -> Queue for multiplexing
         self._reader_greenlet = None
 
@@ -227,11 +228,12 @@ class NATSClient:
     def _send(self, data:'bytes') -> None:
         if not self._sock:
             raise NATSConnectionError('Not connected')
-        try:
-            self._sock.sendall(data)
-        except socket.error as e:
-            self._connected = False
-            raise NATSConnectionError(f'Send failed: {e}') from e
+        with self._write_lock:
+            try:
+                self._sock.sendall(data)
+            except socket.error as e:
+                self._connected = False
+                raise NATSConnectionError(f'Send failed: {e}') from e
 
     # ############################################################################################################################
 
