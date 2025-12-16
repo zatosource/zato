@@ -21,7 +21,7 @@ from zato.common.typing_ import any_, anydict, anydictnone, callable_, callnone,
 # Local
 from .const import CRLF, CRLF_LEN, CONNECT_OP, Default_Buffer_Size, Default_Host, Default_Inbox_Prefix, \
      Default_Max_Payload, Default_Port, Default_Timeout, ERR_OP, INFO_OP, NATS_HDR_Line, NATS_HDR_Line_Size, \
-     OK_OP, PING_CMD, PING_OP, PONG_CMD, PONG_OP, SPC
+     OK_OP, PING_CMD, PING_OP, PONG_CMD, PONG_OP, SPC, Status_No_Responders
 from .exc import NATSConnectionError, NATSError, NATSNoRespondersError, NATSProtocolError, NATSTimeoutError
 from .model import ConnectOptions, Msg, ServerInfo
 from .nuid import NUID
@@ -364,7 +364,7 @@ class NATSClient:
             # Check for no responders
             if msg.headers:
                 status = msg.headers.get('Status')
-                if status == '503':
+                if status == Status_No_Responders:
                     raise NATSNoRespondersError('No responders available')
 
             return msg

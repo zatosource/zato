@@ -16,7 +16,8 @@ from zato.common.typing_ import anydict, anydictnone, anylist, floatnone, intnon
 # Local
 from .const import JS_Ack, JS_API_Consumer_Create, JS_API_Consumer_Create_Durable, JS_API_Consumer_Delete, \
      JS_API_Consumer_Info, JS_API_Consumer_Msg_Next, JS_API_Stream_Create, JS_API_Stream_Delete, \
-     JS_API_Stream_Info, JS_API_Stream_Purge, JS_Nak, JS_Progress, JS_Term
+     JS_API_Stream_Info, JS_API_Stream_Purge, JS_Nak, JS_Progress, JS_Term, Nanoseconds_Per_Second, \
+     Status_Conflict, Status_Control, Status_No_Messages, Status_Timeout
 from .exc import NATSError, NATSJetStreamError, NATSTimeoutError
 from .model import ConsumerConfig, ConsumerInfo, Msg, PubAck, StreamConfig, StreamInfo
 
@@ -248,7 +249,7 @@ class JetStream:
             # Build fetch request
             req = {'batch': batch}
             if timeout:
-                req['expires'] = int(timeout * 1_000_000_000)
+                req['expires'] = int(timeout * Nanoseconds_Per_Second)
             if no_wait:
                 req['no_wait'] = True
 
@@ -264,16 +265,13 @@ class JetStream:
                     # Check for status message
                     if msg.headers:
                         status = msg.headers.get('Status')
-                        if status == '404':
-                            # No messages
+                        if status == Status_No_Messages:
                             break
-                        elif status == '408':
-                            # Timeout
+                        elif status == Status_Timeout:
                             break
-                        elif status == '409':
-                            # Conflict
+                        elif status == Status_Conflict:
                             continue
-                        elif status == '100':
+                        elif status == Status_Control:
                             # Heartbeat
                             continue
 
@@ -306,7 +304,7 @@ class JetStream:
             raise NATSError('Message has no reply subject for acknowledgment')
 
         if delay:
-            delay_data = json.dumps({'delay': int(delay * 1_000_000_000)})
+            delay_data = json.dumps({'delay': int(delay * Nanoseconds_Per_Second)})
             delay_data = delay_data.encode('utf-8')
             self._client.publish(msg.reply, JS_Nak + b' ' + delay_data)
         else:

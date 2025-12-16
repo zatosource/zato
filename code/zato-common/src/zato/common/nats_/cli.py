@@ -15,6 +15,9 @@ from datetime import datetime
 
 # Local
 from .client import NATSClient
+from .const import Consumer_Ack_Explicit, Consumer_Deliver_All, Default_Host, Default_Num_Replicas, \
+     Default_Port, Default_Timeout, Err_Consumer_Already_Exists, No_Limit, Stream_Retention_Limits, \
+     Stream_Storage_File
 from .exc import NATSError, NATSJetStreamError, NATSNoRespondersError, NATSTimeoutError
 from .model import ConsumerConfig, StreamConfig
 
@@ -256,7 +259,7 @@ def cmd_js_sub(args):
             name=consumer_name,
             durable_name=args.durable,
             deliver_policy=args.deliver_policy,
-            ack_policy='explicit',
+            ack_policy=Consumer_Ack_Explicit,
             filter_subject=args.filter_subject,
         )
 
@@ -265,7 +268,7 @@ def cmd_js_sub(args):
             js.create_consumer(args.stream, consumer_config, timeout=args.request_timeout)
             print(f'Created consumer "{consumer_name}" on stream "{args.stream}"')
         except NATSJetStreamError as e:
-            if e.err_code == 10148:  # Consumer already exists
+            if e.err_code == Err_Consumer_Already_Exists:
                 print(f'Using existing consumer "{consumer_name}" on stream "{args.stream}"')
             else:
                 raise
@@ -485,13 +488,13 @@ def cmd_js_stream_purge(args):
 def add_common_args(parser):
     """ Adds common connection arguments to a parser.
     """
-    parser.add_argument('-s', '--host', default='127.0.0.1', help='NATS server host (default: 127.0.0.1)')
-    parser.add_argument('-p', '--port', type=int, default=4222, help='NATS server port (default: 4222)')
-    parser.add_argument('-t', '--timeout', type=float, default=5.0, help='Connection timeout (default: 5.0)')
+    parser.add_argument('-s', '--host', default=Default_Host, help='NATS server host')
+    parser.add_argument('-p', '--port', type=int, default=Default_Port, help='NATS server port')
+    parser.add_argument('-t', '--timeout', type=float, default=Default_Timeout, help='Connection timeout')
     parser.add_argument('--user', help='Username for authentication')
     parser.add_argument('--password', help='Password for authentication')
     parser.add_argument('--token', help='Token for authentication')
-    parser.add_argument('--request-timeout', type=float, default=5.0, help='Request timeout (default: 5.0)')
+    parser.add_argument('--request-timeout', type=float, default=Default_Timeout, help='Request timeout')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -548,9 +551,9 @@ def main():
     js_sub_parser.add_argument('--consumer', help='Consumer name')
     js_sub_parser.add_argument('--durable', help='Durable consumer name')
     js_sub_parser.add_argument('--filter-subject', help='Filter subject')
-    js_sub_parser.add_argument('--deliver-policy', default='all', choices=['all', 'last', 'new'], help='Delivery policy')
+    js_sub_parser.add_argument('--deliver-policy', default=Consumer_Deliver_All, choices=['all', 'last', 'new'], help='Delivery policy')
     js_sub_parser.add_argument('--batch', type=int, default=1, help='Batch size (default: 1)')
-    js_sub_parser.add_argument('--fetch-timeout', type=float, default=5.0, help='Fetch timeout (default: 5.0)')
+    js_sub_parser.add_argument('--fetch-timeout', type=float, default=Default_Timeout, help='Fetch timeout')
     js_sub_parser.add_argument('--max-msgs', type=int, help='Maximum messages to receive')
     js_sub_parser.add_argument('--ack', action='store_true', help='Acknowledge messages')
     js_sub_parser.add_argument('--no-headers', action='store_true', help='Do not display headers')
@@ -561,13 +564,13 @@ def main():
     add_common_args(js_stream_create_parser)
     js_stream_create_parser.add_argument('name', help='Stream name')
     js_stream_create_parser.add_argument('--subjects', help='Comma-separated list of subjects')
-    js_stream_create_parser.add_argument('--storage', default='file', choices=['file', 'memory'], help='Storage type')
-    js_stream_create_parser.add_argument('--retention', default='limits', choices=['limits', 'interest', 'workqueue'],
+    js_stream_create_parser.add_argument('--storage', default=Stream_Storage_File, choices=['file', 'memory'], help='Storage type')
+    js_stream_create_parser.add_argument('--retention', default=Stream_Retention_Limits, choices=['limits', 'interest', 'workqueue'],
                                          help='Retention policy')
-    js_stream_create_parser.add_argument('--max-msgs-limit', type=int, default=-1, help='Maximum messages')
-    js_stream_create_parser.add_argument('--max-bytes', type=int, default=-1, help='Maximum bytes')
+    js_stream_create_parser.add_argument('--max-msgs-limit', type=int, default=No_Limit, help='Maximum messages')
+    js_stream_create_parser.add_argument('--max-bytes', type=int, default=No_Limit, help='Maximum bytes')
     js_stream_create_parser.add_argument('--max-age', type=int, default=0, help='Maximum age in nanoseconds')
-    js_stream_create_parser.add_argument('--replicas', type=int, default=1, help='Number of replicas')
+    js_stream_create_parser.add_argument('--replicas', type=int, default=Default_Num_Replicas, help='Number of replicas')
     js_stream_create_parser.set_defaults(func=cmd_js_stream_create)
 
     # js stream delete command

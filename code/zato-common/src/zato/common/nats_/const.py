@@ -39,12 +39,61 @@ Default_Timeout = 5.0
 Default_Buffer_Size = 32768
 Default_Max_Payload = 1048576
 Default_Inbox_Prefix = b'_INBOX'
+Default_Protocol_Version = 1
+Default_Num_Replicas = 1
+Default_Max_Waiting = 512
+Default_Max_Ack_Pending = 1000
+
+# Time values (in nanoseconds)
+Nanoseconds_Per_Second = 1_000_000_000
+Default_Ack_Wait_Ns = 30_000_000_000       # 30 seconds
+Default_Duplicate_Window_Ns = 120_000_000_000  # 2 minutes
+
+# Limit markers
+No_Limit = -1
+
+# Client info
+Client_Lang = 'python3'
+Client_Version = '1.0.0'
+
+# Stream configuration defaults
+Stream_Retention_Limits = 'limits'
+Stream_Retention_Interest = 'interest'
+Stream_Retention_WorkQueue = 'workqueue'
+
+Stream_Storage_File = 'file'
+Stream_Storage_Memory = 'memory'
+
+Stream_Discard_Old = 'old'
+Stream_Discard_New = 'new'
+
+# Consumer configuration defaults
+Consumer_Deliver_All = 'all'
+Consumer_Deliver_Last = 'last'
+Consumer_Deliver_New = 'new'
+Consumer_Deliver_ByStartSeq = 'by_start_sequence'
+Consumer_Deliver_ByStartTime = 'by_start_time'
+
+Consumer_Ack_None = 'none'
+Consumer_Ack_All = 'all'
+Consumer_Ack_Explicit = 'explicit'
+
+Consumer_Replay_Instant = 'instant'
+Consumer_Replay_Original = 'original'
 
 # Header constants
 NATS_HDR_Line = b'NATS/1.0'
 NATS_HDR_Line_Size = len(NATS_HDR_Line)
-No_Responders_Status = '503'
-Ctrl_Status = '100'
+
+# Status codes
+Status_No_Messages = '404'
+Status_Timeout = '408'
+Status_Conflict = '409'
+Status_Control = '100'
+Status_No_Responders = '503'
+
+# JetStream error codes
+Err_Consumer_Already_Exists = 10148
 
 # JetStream API prefix
 JS_API_Prefix = '$JS.API'

@@ -12,6 +12,12 @@ from dataclasses import dataclass, field
 # Zato
 from zato.common.typing_ import any_, anydict, anydictnone, anylist, boolnone, intnone, strnone
 
+# Local
+from .const import Client_Lang, Client_Version, Consumer_Ack_Explicit, Consumer_Deliver_All, \
+     Consumer_Replay_Instant, Default_Ack_Wait_Ns, Default_Duplicate_Window_Ns, Default_Max_Ack_Pending, \
+     Default_Max_Payload, Default_Max_Waiting, Default_Num_Replicas, Default_Protocol_Version, No_Limit, \
+     Stream_Discard_Old, Stream_Retention_Limits, Stream_Storage_File
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -27,7 +33,7 @@ class ServerInfo:
     host: str = ''
     port: int = 0
     headers: bool = False
-    max_payload: int = 1048576
+    max_payload: int = Default_Max_Payload
     jetstream: bool = False
     auth_required: bool = False
     tls_required: bool = False
@@ -63,9 +69,9 @@ class ConnectOptions:
     pedantic: bool = False
     tls_required: bool = False
     name: 'strnone' = None
-    lang: str = 'python3'
-    version: str = '1.0.0'
-    protocol: int = 1
+    lang: str = Client_Lang
+    version: str = Client_Version
+    protocol: int = Default_Protocol_Version
     echo: bool = True
     no_responders: bool = True
     headers: bool = True
@@ -152,16 +158,16 @@ class StreamConfig:
     name: 'strnone' = None
     description: 'strnone' = None
     subjects: 'anylist' = field(default_factory=list)
-    retention: str = 'limits'
-    max_consumers: int = -1
-    max_msgs: int = -1
-    max_bytes: int = -1
+    retention: str = Stream_Retention_Limits
+    max_consumers: int = No_Limit
+    max_msgs: int = No_Limit
+    max_bytes: int = No_Limit
     max_age: int = 0
-    max_msg_size: int = -1
-    storage: str = 'file'
-    num_replicas: int = 1
-    duplicate_window: int = 120000000000
-    discard: str = 'old'
+    max_msg_size: int = No_Limit
+    storage: str = Stream_Storage_File
+    num_replicas: int = Default_Num_Replicas
+    duplicate_window: int = Default_Duplicate_Window_Ns
+    discard: str = Stream_Discard_Old
     deny_delete: bool = False
     deny_purge: bool = False
 
@@ -243,15 +249,15 @@ class ConsumerConfig:
     name: 'strnone' = None
     durable_name: 'strnone' = None
     description: 'strnone' = None
-    deliver_policy: str = 'all'
+    deliver_policy: str = Consumer_Deliver_All
     opt_start_seq: 'intnone' = None
-    ack_policy: str = 'explicit'
-    ack_wait: int = 30000000000  # 30 seconds in nanoseconds
-    max_deliver: int = -1
+    ack_policy: str = Consumer_Ack_Explicit
+    ack_wait: int = Default_Ack_Wait_Ns
+    max_deliver: int = No_Limit
     filter_subject: 'strnone' = None
-    replay_policy: str = 'instant'
-    max_waiting: int = 512
-    max_ack_pending: int = 1000
+    replay_policy: str = Consumer_Replay_Instant
+    max_waiting: int = Default_Max_Waiting
+    max_ack_pending: int = Default_Max_Ack_Pending
     deliver_subject: 'strnone' = None
     deliver_group: 'strnone' = None
     inactive_threshold: int = 0
