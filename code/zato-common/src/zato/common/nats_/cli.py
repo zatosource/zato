@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import argparse
 import json
+import readline
 import shlex
 import signal
 import sys
@@ -30,6 +31,14 @@ from zato.common.nats_.model import ConsumerConfig, Msg, StreamConfig
 class NATSCLI:
     """ NATS command-line interface.
     """
+
+    commands = [
+        'pub', 'sub', 'request',
+        'js-pub', 'js-sub',
+        'js-stream-create', 'js-stream-delete', 'js-stream-info', 'js-stream-purge',
+        'help', 'exit', 'quit',
+    ]
+
     def __init__(self) -> None:
         self.running = True
         self.parser = self._build_parser()
@@ -66,6 +75,7 @@ class NATSCLI:
         _ = parser.add_argument('--password', help='Password for authentication')
         _ = parser.add_argument('--token', help='Token for authentication')
         _ = parser.add_argument('--request-timeout', type=float, default=Default_Timeout, help='Request timeout')
+        _ = parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode')
 
     # ############################################################################################################################
 
@@ -183,6 +193,7 @@ class NATSCLI:
                 user=args.user,
                 password=args.password,
                 token=args.token,
+                verbose=args.verbose,
             )
 
             headers = None
@@ -224,6 +235,7 @@ class NATSCLI:
                 user=args.user,
                 password=args.password,
                 token=args.token,
+                verbose=args.verbose,
             )
 
             sub = client.subscribe(args.subject, queue=args.queue or '')
@@ -267,6 +279,7 @@ class NATSCLI:
                 user=args.user,
                 password=args.password,
                 token=args.token,
+                verbose=args.verbose,
             )
 
             headers = None
@@ -310,6 +323,7 @@ class NATSCLI:
                 user=args.user,
                 password=args.password,
                 token=args.token,
+                verbose=args.verbose,
             )
 
             headers = None
@@ -362,6 +376,7 @@ class NATSCLI:
                 user=args.user,
                 password=args.password,
                 token=args.token,
+                verbose=args.verbose,
             )
 
             # Ensure consumer exists
@@ -445,6 +460,7 @@ class NATSCLI:
                 user=args.user,
                 password=args.password,
                 token=args.token,
+                verbose=args.verbose,
             )
 
             config = StreamConfig(
@@ -491,6 +507,7 @@ class NATSCLI:
                 user=args.user,
                 password=args.password,
                 token=args.token,
+                verbose=args.verbose,
             )
 
             if not args.force:
@@ -532,6 +549,7 @@ class NATSCLI:
                 user=args.user,
                 password=args.password,
                 token=args.token,
+                verbose=args.verbose,
             )
 
             js = client.jetstream()
@@ -574,6 +592,7 @@ class NATSCLI:
                 user=args.user,
                 password=args.password,
                 token=args.token,
+                verbose=args.verbose,
             )
 
             if not args.force:
@@ -597,9 +616,22 @@ class NATSCLI:
 
     # ############################################################################################################################
 
+    def _completer(self, text:'str', state:'int') -> 'str | None':
+        """ Tab completion for commands.
+        """
+        options = [cmd for cmd in self.commands if cmd.startswith(text)]
+        if state < len(options):
+            return options[state]
+        return None
+
+    # ############################################################################################################################
+
     def interactive_loop(self) -> 'None':
         """ Runs an interactive command loop.
         """
+        _ = readline.set_completer(self._completer)
+        _ = readline.parse_and_bind('tab: complete')
+
         print('NATS Client')
         print('Type "help" for available commands, "exit" or "quit" to exit.\n')
 
