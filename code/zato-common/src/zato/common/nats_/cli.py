@@ -9,17 +9,24 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import argparse
 import json
+import os
 import signal
 import sys
 from datetime import datetime
 
+# Handle direct script invocation
+if __name__ == '__main__' and __package__ is None:
+    parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+    sys.path.insert(0, parent_dir)
+    __package__ = 'zato.common.nats_'
+
 # Local
-from .client import NATSClient
-from .const import Consumer_Ack_Explicit, Consumer_Deliver_All, Default_Host, Default_Num_Replicas, \
-     Default_Port, Default_Timeout, Err_Consumer_Already_Exists, No_Limit, Stream_Retention_Limits, \
-     Stream_Storage_File
-from .exc import NATSError, NATSJetStreamError, NATSNoRespondersError, NATSTimeoutError
-from .model import ConsumerConfig, StreamConfig
+from zato.common.nats_.client import NATSClient
+from zato.common.nats_.const import Consumer_Ack_Explicit, Consumer_Deliver_All, Default_Host, \
+     Default_Num_Replicas, Default_Port, Default_Timeout, Err_Consumer_Already_Exists, No_Limit, \
+     Stream_Retention_Limits, Stream_Storage_File
+from zato.common.nats_.exc import NATSError, NATSJetStreamError, NATSNoRespondersError, NATSTimeoutError
+from zato.common.nats_.model import ConsumerConfig, StreamConfig
 
 # ################################################################################################################################
 # ################################################################################################################################
