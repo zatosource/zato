@@ -195,7 +195,8 @@ def cmd_js_pub(args):
 
         data = args.data.encode('utf-8') if args.data else b''
 
-        ack = client.js_publish(
+        js = client.jetstream()
+        ack = js.publish(
             args.subject,
             data,
             timeout=args.request_timeout,
@@ -244,7 +245,12 @@ def cmd_js_sub(args):
         )
 
         # Ensure consumer exists
-        consumer_name = args.consumer or f'cli-consumer-{client._nuid.next().decode()}'
+        if args.consumer:
+            consumer_name = args.consumer
+        else:
+            nuid = client._nuid.next()
+            nuid = nuid.decode()
+            consumer_name = f'cli-consumer-{nuid}'
 
         consumer_config = ConsumerConfig(
             name=consumer_name,
@@ -255,7 +261,8 @@ def cmd_js_sub(args):
         )
 
         try:
-            client.js_create_consumer(args.stream, consumer_config, timeout=args.request_timeout)
+            js = client.jetstream()
+            js.create_consumer(args.stream, consumer_config, timeout=args.request_timeout)
             print(f'Created consumer "{consumer_name}" on stream "{args.stream}"')
         except NATSJetStreamError as e:
             if e.err_code == 10148:  # Consumer already exists
@@ -268,7 +275,7 @@ def cmd_js_sub(args):
         count = 0
         while running:
             try:
-                msgs = client.js_fetch(
+                msgs = js.fetch(
                     args.stream,
                     consumer_name,
                     batch=args.batch,
@@ -281,7 +288,7 @@ def cmd_js_sub(args):
                     print(format_msg(msg, show_headers=not args.no_headers))
 
                     if args.ack:
-                        client.js_ack(msg)
+                        js.ack(msg)
                         print('(acknowledged)')
 
                     print('-' * 40)
@@ -332,7 +339,8 @@ def cmd_js_stream_create(args):
             num_replicas=args.replicas,
         )
 
-        info = client.js_create_stream(config, timeout=args.request_timeout)
+        js = client.jetstream()
+        info = js.create_stream(config, timeout=args.request_timeout)
 
         print(f'Created stream "{args.name}"')
         print(f'  Subjects: {info.config.subjects}')
@@ -373,7 +381,8 @@ def cmd_js_stream_delete(args):
                 print('Cancelled')
                 return
 
-        success = client.js_delete_stream(args.name, timeout=args.request_timeout)
+        js = client.jetstream()
+        success = js.delete_stream(args.name, timeout=args.request_timeout)
 
         if success:
             print(f'Deleted stream "{args.name}"')
@@ -408,7 +417,8 @@ def cmd_js_stream_info(args):
             token=args.token,
         )
 
-        info = client.js_stream_info(args.name, timeout=args.request_timeout)
+        js = client.jetstream()
+        info = js.stream_info(args.name, timeout=args.request_timeout)
 
         print(f'Stream: {info.config.name}')
         print(f'  Description: {info.config.description or "(none)"}')
@@ -456,7 +466,8 @@ def cmd_js_stream_purge(args):
                 print('Cancelled')
                 return
 
-        purged = client.js_purge_stream(args.name, timeout=args.request_timeout)
+        js = client.jetstream()
+        purged = js.purge_stream(args.name, timeout=args.request_timeout)
         print(f'Purged {purged} messages from stream "{args.name}"')
 
     except NATSJetStreamError as e:

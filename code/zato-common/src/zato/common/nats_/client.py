@@ -16,17 +16,14 @@ import threading
 from io import BytesIO
 
 # Zato
-from zato.common.typing_ import any_, anydict, callable_, intnone, optional, strnone
+from zato.common.typing_ import any_, anydict, callable_, optional, strnone
 
 # Local
 from .const import CRLF, CRLF_LEN, CONNECT_OP, Default_Buffer_Size, Default_Host, Default_Inbox_Prefix, \
-     Default_Max_Payload, Default_Port, Default_Timeout, ERR_OP, INFO_OP, JS_Ack, JS_API_Consumer_Create, \
-     JS_API_Consumer_Create_Durable, JS_API_Consumer_Delete, JS_API_Consumer_Info, JS_API_Consumer_Msg_Next, \
-     JS_API_Stream_Create, JS_API_Stream_Delete, JS_API_Stream_Info, JS_API_Stream_Purge, JS_Nak, JS_Progress, \
-     JS_Term, NATS_HDR_Line, NATS_HDR_Line_Size, OK_OP, PING_CMD, PING_OP, PONG_CMD, PONG_OP, SPC
-from .exc import NATSConnectionError, NATSError, NATSJetStreamError, NATSNoRespondersError, \
-     NATSProtocolError, NATSTimeoutError
-from .model import ConnectOptions, ConsumerConfig, ConsumerInfo, Msg, PubAck, ServerInfo, StreamConfig, StreamInfo
+     Default_Max_Payload, Default_Port, Default_Timeout, ERR_OP, INFO_OP, NATS_HDR_Line, NATS_HDR_Line_Size, \
+     OK_OP, PING_CMD, PING_OP, PONG_CMD, PONG_OP, SPC
+from .exc import NATSConnectionError, NATSError, NATSNoRespondersError, NATSProtocolError, NATSTimeoutError
+from .model import ConnectOptions, Msg, ServerInfo
 from .nuid import NUID
 from .sub import Subscription
 
@@ -119,7 +116,8 @@ class NATSClient:
             raise NATSProtocolError(f'Expected INFO, got: {info_line!r}')
 
         info_json = info_line[len(INFO_OP) + 1:].strip()
-        info_data = json.loads(info_json.decode('utf-8'))
+        info_json = info_json.decode('utf-8')
+        info_data = json.loads(info_json)
         self._server_info = ServerInfo.from_dict(info_data)
         self._max_payload = self._server_info.max_payload
 
@@ -146,7 +144,9 @@ class NATSClient:
             self._options.auth_token = token
 
         # Send CONNECT
-        connect_cmd = CONNECT_OP + SPC + json.dumps(self._options.to_dict()).encode('utf-8') + CRLF
+        connect_data = json.dumps(self._options.to_dict())
+        connect_data = connect_data.encode('utf-8')
+        connect_cmd = CONNECT_OP + SPC + connect_data + CRLF
         self._send(connect_cmd)
 
         # Send PING and wait for PONG to confirm connection
@@ -160,7 +160,8 @@ class NATSClient:
             elif line.startswith(OK_OP):
                 continue
             elif line.startswith(ERR_OP):
-                err_msg = line[len(ERR_OP):].strip().decode('utf-8')
+                err_msg = line[len(ERR_OP):].strip()
+                err_msg = err_msg.decode('utf-8')
                 raise NATSConnectionError(f'Server error: {err_msg}')
             else:
                 raise NATSProtocolError(f'Unexpected response: {line!r}')
@@ -432,7 +433,8 @@ class NATSClient:
 
         # Handle -ERR
         if line.startswith(ERR_OP):
-            err_msg = line[len(ERR_OP):].strip().decode('utf-8')
+            err_msg = line[len(ERR_OP):].strip()
+            err_msg = err_msg.decode('utf-8')
             raise NATSProtocolError(f'Server error: {err_msg}')
 
         # Handle MSG
@@ -496,7 +498,11 @@ class NATSClient:
                 continue
             if b':' in line:
                 key, value = line.split(b':', 1)
-                headers[key.decode('utf-8').strip()] = value.decode('utf-8').strip()
+                key = key.decode('utf-8')
+                key = key.strip()
+                value = value.decode('utf-8')
+                value = value.strip()
+                headers[key] = value
 
         return headers
 
@@ -527,298 +533,20 @@ class NATSClient:
                 elif line.startswith(OK_OP):
                     continue
                 elif line.startswith(ERR_OP):
-                    err_msg = line[len(ERR_OP):].strip().decode('utf-8')
+                    err_msg = line[len(ERR_OP):].strip()
+                    err_msg = err_msg.decode('utf-8')
                     raise NATSProtocolError(f'Server error: {err_msg}')
         finally:
             if timeout:
                 self._sock.settimeout(original_timeout)
 
     # ############################################################################################################################
-    # JetStream Methods
-    # ############################################################################################################################
 
-    def js_publish(
-        self,
-        subject:'str',
-        payload:'bytes'=b'',
-        timeout:'optional[float]'=None,
-        headers:'optional[anydict]'=None,
-        msg_id:'strnone'=None,
-        expected_stream:'strnone'=None,
-        expected_last_seq:'intnone'=None,
-    ) -> 'PubAck':
-        """ Publishes a message to JetStream and waits for an acknowledgment.
+    def jetstream(self) -> 'JetStream':
+        """ Returns a JetStream context for this client.
         """
-        if timeout is None:
-            timeout = self._timeout
-
-        hdr = headers or {}
-        if msg_id:
-            hdr['Nats-Msg-Id'] = msg_id
-        if expected_stream:
-            hdr['Nats-Expected-Stream'] = expected_stream
-        if expected_last_seq is not None:
-            hdr['Nats-Expected-Last-Sequence'] = str(expected_last_seq)
-
-        msg = self.request(subject, payload, timeout=timeout, headers=hdr if hdr else None)
-
-        resp = json.loads(msg.data.decode('utf-8'))
-        if err := resp.get('error'):
-            raise NATSJetStreamError(
-                code=err['code'],
-                err_code=err['err_code'],
-                description=err['description'],
-            )
-
-        return PubAck.from_dict(resp)
-
-    # ############################################################################################################################
-
-    def js_create_stream(self, config:'StreamConfig', timeout:'optional[float]'=None) -> 'StreamInfo':
-        """ Creates a JetStream stream.
-        """
-        if not config.name:
-            raise NATSError('Stream name is required')
-
-        subject = JS_API_Stream_Create.format(stream=config.name)
-        payload = json.dumps(config.to_dict()).encode('utf-8')
-
-        msg = self.request(subject, payload, timeout=timeout)
-        resp = json.loads(msg.data.decode('utf-8'))
-
-        if err := resp.get('error'):
-            raise NATSJetStreamError(
-                code=err['code'],
-                err_code=err['err_code'],
-                description=err['description'],
-            )
-
-        return StreamInfo.from_dict(resp)
-
-    # ############################################################################################################################
-
-    def js_delete_stream(self, stream:'str', timeout:'optional[float]'=None) -> 'bool':
-        """ Deletes a JetStream stream.
-        """
-        subject = JS_API_Stream_Delete.format(stream=stream)
-        msg = self.request(subject, b'', timeout=timeout)
-        resp = json.loads(msg.data.decode('utf-8'))
-
-        if err := resp.get('error'):
-            raise NATSJetStreamError(
-                code=err['code'],
-                err_code=err['err_code'],
-                description=err['description'],
-            )
-
-        return resp['success']
-
-    # ############################################################################################################################
-
-    def js_stream_info(self, stream:'str', timeout:'optional[float]'=None) -> 'StreamInfo':
-        """ Returns information about a JetStream stream.
-        """
-        subject = JS_API_Stream_Info.format(stream=stream)
-        msg = self.request(subject, b'', timeout=timeout)
-        resp = json.loads(msg.data.decode('utf-8'))
-
-        if err := resp.get('error'):
-            raise NATSJetStreamError(
-                code=err['code'],
-                err_code=err['err_code'],
-                description=err['description'],
-            )
-
-        return StreamInfo.from_dict(resp)
-
-    # ############################################################################################################################
-
-    def js_purge_stream(self, stream:'str', timeout:'optional[float]'=None) -> 'int':
-        """ Purges messages from a JetStream stream. Returns the number of purged messages.
-        """
-        subject = JS_API_Stream_Purge.format(stream=stream)
-        msg = self.request(subject, b'', timeout=timeout)
-        resp = json.loads(msg.data.decode('utf-8'))
-
-        if err := resp.get('error'):
-            raise NATSJetStreamError(
-                code=err['code'],
-                err_code=err['err_code'],
-                description=err['description'],
-            )
-
-        return resp['purged']
-
-    # ############################################################################################################################
-
-    def js_create_consumer(
-        self,
-        stream:'str',
-        config:'ConsumerConfig',
-        timeout:'optional[float]'=None,
-    ) -> 'ConsumerInfo':
-        """ Creates a JetStream consumer.
-        """
-        if config.durable_name:
-            subject = JS_API_Consumer_Create_Durable.format(stream=stream, consumer=config.durable_name)
-        else:
-            subject = JS_API_Consumer_Create.format(stream=stream)
-
-        payload = json.dumps({
-            'stream_name': stream,
-            'config': config.to_dict(),
-        }).encode('utf-8')
-
-        msg = self.request(subject, payload, timeout=timeout)
-        resp = json.loads(msg.data.decode('utf-8'))
-
-        if err := resp.get('error'):
-            raise NATSJetStreamError(
-                code=err['code'],
-                err_code=err['err_code'],
-                description=err['description'],
-            )
-
-        return ConsumerInfo.from_dict(resp)
-
-    # ############################################################################################################################
-
-    def js_delete_consumer(self, stream:'str', consumer:'str', timeout:'optional[float]'=None) -> 'bool':
-        """ Deletes a JetStream consumer.
-        """
-        subject = JS_API_Consumer_Delete.format(stream=stream, consumer=consumer)
-        msg = self.request(subject, b'', timeout=timeout)
-        resp = json.loads(msg.data.decode('utf-8'))
-
-        if err := resp.get('error'):
-            raise NATSJetStreamError(
-                code=err['code'],
-                err_code=err['err_code'],
-                description=err['description'],
-            )
-
-        return resp['success']
-
-    # ############################################################################################################################
-
-    def js_consumer_info(self, stream:'str', consumer:'str', timeout:'optional[float]'=None) -> 'ConsumerInfo':
-        """ Returns information about a JetStream consumer.
-        """
-        subject = JS_API_Consumer_Info.format(stream=stream, consumer=consumer)
-        msg = self.request(subject, b'', timeout=timeout)
-        resp = json.loads(msg.data.decode('utf-8'))
-
-        if err := resp.get('error'):
-            raise NATSJetStreamError(
-                code=err['code'],
-                err_code=err['err_code'],
-                description=err['description'],
-            )
-
-        return ConsumerInfo.from_dict(resp)
-
-    # ############################################################################################################################
-
-    def js_fetch(
-        self,
-        stream:'str',
-        consumer:'str',
-        batch:'int'=1,
-        timeout:'optional[float]'=None,
-        no_wait:'bool'=False,
-    ) -> 'anylist':
-        """ Fetches messages from a JetStream consumer.
-        """
-        if timeout is None:
-            timeout = self._timeout
-
-        subject = JS_API_Consumer_Msg_Next.format(stream=stream, consumer=consumer)
-
-        inbox = self.new_inbox()
-        sub = self.subscribe(inbox, max_msgs=batch)
-
-        try:
-            # Build fetch request
-            req = {'batch': batch}
-            if timeout:
-                req['expires'] = int(timeout * 1_000_000_000)
-            if no_wait:
-                req['no_wait'] = True
-
-            self.publish(subject, json.dumps(req).encode('utf-8'), reply=inbox)
-
-            msgs = []
-            while len(msgs) < batch:
-                try:
-                    msg = sub.next_msg(timeout=timeout)
-
-                    # Check for status message
-                    if msg.headers:
-                        status = msg.headers.get('Status')
-                        if status == '404':
-                            # No messages
-                            break
-                        elif status == '408':
-                            # Timeout
-                            break
-                        elif status == '409':
-                            # Conflict
-                            continue
-                        elif status == '100':
-                            # Heartbeat
-                            continue
-
-                    msgs.append(msg)
-                except NATSTimeoutError:
-                    break
-
-            return msgs
-        finally:
-            try:
-                sub.unsubscribe()
-            except Exception:
-                pass
-
-    # ############################################################################################################################
-
-    def js_ack(self, msg:'Msg') -> None:
-        """ Acknowledges a JetStream message.
-        """
-        if not msg.reply:
-            raise NATSError('Message has no reply subject for acknowledgment')
-        self.publish(msg.reply, JS_Ack)
-
-    # ############################################################################################################################
-
-    def js_nak(self, msg:'Msg', delay:'optional[float]'=None) -> None:
-        """ Negatively acknowledges a JetStream message.
-        """
-        if not msg.reply:
-            raise NATSError('Message has no reply subject for acknowledgment')
-
-        if delay:
-            payload = json.dumps({'delay': int(delay * 1_000_000_000)}).encode('utf-8')
-            self.publish(msg.reply, JS_Nak + b' ' + payload)
-        else:
-            self.publish(msg.reply, JS_Nak)
-
-    # ############################################################################################################################
-
-    def js_in_progress(self, msg:'Msg') -> None:
-        """ Marks a JetStream message as in progress, extending the ack deadline.
-        """
-        if not msg.reply:
-            raise NATSError('Message has no reply subject for acknowledgment')
-        self.publish(msg.reply, JS_Progress)
-
-    # ############################################################################################################################
-
-    def js_term(self, msg:'Msg') -> None:
-        """ Terminates a JetStream message - it will not be redelivered.
-        """
-        if not msg.reply:
-            raise NATSError('Message has no reply subject for acknowledgment')
-        self.publish(msg.reply, JS_Term)
+        from .js import JetStream
+        return JetStream(self)
 
     # ############################################################################################################################
 
