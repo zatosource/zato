@@ -9,18 +9,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import argparse
 import json
-import os
 import signal
 import sys
 from datetime import datetime
 
-# Handle direct script invocation
-if __name__ == '__main__' and __package__ is None:
-    parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-    sys.path.insert(0, parent_dir)
-    __package__ = 'zato.common.nats_'
-
-# Local
+# Zato
 from zato.common.nats_.client import NATSClient
 from zato.common.nats_.const import Consumer_Ack_Explicit, Consumer_Deliver_All, Default_Host, \
      Default_Num_Replicas, Default_Port, Default_Timeout, Err_Consumer_Already_Exists, No_Limit, \
@@ -95,8 +88,8 @@ def cmd_sub(args):
         running = False
         print('\nInterrupted')
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    _ = signal.signal(signal.SIGINT, signal_handler)
+    _ = signal.signal(signal.SIGTERM, signal_handler)
 
     try:
         client.connect(
@@ -241,8 +234,8 @@ def cmd_js_sub(args):
         running = False
         print('\nInterrupted')
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    _ = signal.signal(signal.SIGINT, signal_handler)
+    _ = signal.signal(signal.SIGTERM, signal_handler)
 
     try:
         client.connect(
@@ -272,7 +265,7 @@ def cmd_js_sub(args):
 
         try:
             js = client.jetstream()
-            js.create_consumer(args.stream, consumer_config, timeout=args.request_timeout)
+            _ = js.create_consumer(args.stream, consumer_config, timeout=args.request_timeout)
             print(f'Created consumer "{consumer_name}" on stream "{args.stream}"')
         except NATSJetStreamError as e:
             if e.err_code == Err_Consumer_Already_Exists:
@@ -495,13 +488,13 @@ def cmd_js_stream_purge(args):
 def add_common_args(parser):
     """ Adds common connection arguments to a parser.
     """
-    parser.add_argument('-s', '--host', default=Default_Host, help='NATS server host')
-    parser.add_argument('-p', '--port', type=int, default=Default_Port, help='NATS server port')
-    parser.add_argument('-t', '--timeout', type=float, default=Default_Timeout, help='Connection timeout')
-    parser.add_argument('--user', help='Username for authentication')
-    parser.add_argument('--password', help='Password for authentication')
-    parser.add_argument('--token', help='Token for authentication')
-    parser.add_argument('--request-timeout', type=float, default=Default_Timeout, help='Request timeout')
+    _ = parser.add_argument('-s', '--host', default=Default_Host, help='NATS server host')
+    _ = parser.add_argument('-p', '--port', type=int, default=Default_Port, help='NATS server port')
+    _ = parser.add_argument('-t', '--timeout', type=float, default=Default_Timeout, help='Connection timeout')
+    _ = parser.add_argument('--user', help='Username for authentication')
+    _ = parser.add_argument('--password', help='Password for authentication')
+    _ = parser.add_argument('--token', help='Token for authentication')
+    _ = parser.add_argument('--request-timeout', type=float, default=Default_Timeout, help='Request timeout')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -519,86 +512,86 @@ def main():
     # pub command
     pub_parser = subparsers.add_parser('pub', help='Publish a message')
     add_common_args(pub_parser)
-    pub_parser.add_argument('subject', help='Subject to publish to')
-    pub_parser.add_argument('data', nargs='?', default='', help='Message data')
-    pub_parser.add_argument('-H', '--header', action='append', help='Header in Key:Value format (can be repeated)')
-    pub_parser.set_defaults(func=cmd_pub)
+    _ = pub_parser.add_argument('subject', help='Subject to publish to')
+    _ = pub_parser.add_argument('data', nargs='?', default='', help='Message data')
+    _ = pub_parser.add_argument('-H', '--header', action='append', help='Header in Key:Value format (can be repeated)')
+    _ = pub_parser.set_defaults(func=cmd_pub)
 
     # sub command
     sub_parser = subparsers.add_parser('sub', help='Subscribe to a subject')
     add_common_args(sub_parser)
-    sub_parser.add_argument('subject', help='Subject to subscribe to')
-    sub_parser.add_argument('-q', '--queue', help='Queue group name')
-    sub_parser.add_argument('--max-msgs', type=int, help='Maximum messages to receive')
-    sub_parser.add_argument('--no-headers', action='store_true', help='Do not display headers')
-    sub_parser.set_defaults(func=cmd_sub)
+    _ = sub_parser.add_argument('subject', help='Subject to subscribe to')
+    _ = sub_parser.add_argument('-q', '--queue', help='Queue group name')
+    _ = sub_parser.add_argument('--max-msgs', type=int, help='Maximum messages to receive')
+    _ = sub_parser.add_argument('--no-headers', action='store_true', help='Do not display headers')
+    _ = sub_parser.set_defaults(func=cmd_sub)
 
     # request command
     req_parser = subparsers.add_parser('request', help='Send a request')
     add_common_args(req_parser)
-    req_parser.add_argument('subject', help='Subject to send request to')
-    req_parser.add_argument('data', nargs='?', default='', help='Request data')
-    req_parser.add_argument('-H', '--header', action='append', help='Header in Key:Value format (can be repeated)')
-    req_parser.add_argument('--no-headers', action='store_true', help='Do not display headers')
-    req_parser.set_defaults(func=cmd_request)
+    _ = req_parser.add_argument('subject', help='Subject to send request to')
+    _ = req_parser.add_argument('data', nargs='?', default='', help='Request data')
+    _ = req_parser.add_argument('-H', '--header', action='append', help='Header in Key:Value format (can be repeated)')
+    _ = req_parser.add_argument('--no-headers', action='store_true', help='Do not display headers')
+    _ = req_parser.set_defaults(func=cmd_request)
 
     # js pub command
     js_pub_parser = subparsers.add_parser('js-pub', help='Publish to JetStream')
     add_common_args(js_pub_parser)
-    js_pub_parser.add_argument('subject', help='Subject to publish to')
-    js_pub_parser.add_argument('data', nargs='?', default='', help='Message data')
-    js_pub_parser.add_argument('-H', '--header', action='append', help='Header in Key:Value format (can be repeated)')
-    js_pub_parser.add_argument('--msg-id', help='Message ID for deduplication')
-    js_pub_parser.set_defaults(func=cmd_js_pub)
+    _ = js_pub_parser.add_argument('subject', help='Subject to publish to')
+    _ = js_pub_parser.add_argument('data', nargs='?', default='', help='Message data')
+    _ = js_pub_parser.add_argument('-H', '--header', action='append', help='Header in Key:Value format (can be repeated)')
+    _ = js_pub_parser.add_argument('--msg-id', help='Message ID for deduplication')
+    _ = js_pub_parser.set_defaults(func=cmd_js_pub)
 
     # js sub command
     js_sub_parser = subparsers.add_parser('js-sub', help='Subscribe to JetStream')
     add_common_args(js_sub_parser)
-    js_sub_parser.add_argument('stream', help='Stream name')
-    js_sub_parser.add_argument('--consumer', help='Consumer name')
-    js_sub_parser.add_argument('--durable', help='Durable consumer name')
-    js_sub_parser.add_argument('--filter-subject', help='Filter subject')
-    js_sub_parser.add_argument('--deliver-policy', default=Consumer_Deliver_All, choices=['all', 'last', 'new'], help='Delivery policy')
-    js_sub_parser.add_argument('--batch', type=int, default=1, help='Batch size (default: 1)')
-    js_sub_parser.add_argument('--fetch-timeout', type=float, default=Default_Timeout, help='Fetch timeout')
-    js_sub_parser.add_argument('--max-msgs', type=int, help='Maximum messages to receive')
-    js_sub_parser.add_argument('--ack', action='store_true', help='Acknowledge messages')
-    js_sub_parser.add_argument('--no-headers', action='store_true', help='Do not display headers')
-    js_sub_parser.set_defaults(func=cmd_js_sub)
+    _ = js_sub_parser.add_argument('stream', help='Stream name')
+    _ = js_sub_parser.add_argument('--consumer', help='Consumer name')
+    _ = js_sub_parser.add_argument('--durable', help='Durable consumer name')
+    _ = js_sub_parser.add_argument('--filter-subject', help='Filter subject')
+    _ = js_sub_parser.add_argument('--deliver-policy', default=Consumer_Deliver_All, choices=['all', 'last', 'new'], help='Delivery policy')
+    _ = js_sub_parser.add_argument('--batch', type=int, default=1, help='Batch size (default: 1)')
+    _ = js_sub_parser.add_argument('--fetch-timeout', type=float, default=Default_Timeout, help='Fetch timeout')
+    _ = js_sub_parser.add_argument('--max-msgs', type=int, help='Maximum messages to receive')
+    _ = js_sub_parser.add_argument('--ack', action='store_true', help='Acknowledge messages')
+    _ = js_sub_parser.add_argument('--no-headers', action='store_true', help='Do not display headers')
+    _ = js_sub_parser.set_defaults(func=cmd_js_sub)
 
     # js stream create command
     js_stream_create_parser = subparsers.add_parser('js-stream-create', help='Create a JetStream stream')
     add_common_args(js_stream_create_parser)
-    js_stream_create_parser.add_argument('name', help='Stream name')
-    js_stream_create_parser.add_argument('--subjects', help='Comma-separated list of subjects')
-    js_stream_create_parser.add_argument('--storage', default=Stream_Storage_File, choices=['file', 'memory'], help='Storage type')
-    js_stream_create_parser.add_argument('--retention', default=Stream_Retention_Limits, choices=['limits', 'interest', 'workqueue'],
-                                         help='Retention policy')
-    js_stream_create_parser.add_argument('--max-msgs-limit', type=int, default=No_Limit, help='Maximum messages')
-    js_stream_create_parser.add_argument('--max-bytes', type=int, default=No_Limit, help='Maximum bytes')
-    js_stream_create_parser.add_argument('--max-age', type=int, default=0, help='Maximum age in nanoseconds')
-    js_stream_create_parser.add_argument('--replicas', type=int, default=Default_Num_Replicas, help='Number of replicas')
-    js_stream_create_parser.set_defaults(func=cmd_js_stream_create)
+    _ = js_stream_create_parser.add_argument('name', help='Stream name')
+    _ = js_stream_create_parser.add_argument('--subjects', help='Comma-separated list of subjects')
+    _ = js_stream_create_parser.add_argument('--storage', default=Stream_Storage_File, choices=['file', 'memory'], help='Storage type')
+    _ = js_stream_create_parser.add_argument('--retention', default=Stream_Retention_Limits, choices=['limits', 'interest', 'workqueue'], \
+        help='Retention policy')
+    _ = js_stream_create_parser.add_argument('--max-msgs-limit', type=int, default=No_Limit, help='Maximum messages')
+    _ = js_stream_create_parser.add_argument('--max-bytes', type=int, default=No_Limit, help='Maximum bytes')
+    _ = js_stream_create_parser.add_argument('--max-age', type=int, default=0, help='Maximum age in nanoseconds')
+    _ = js_stream_create_parser.add_argument('--replicas', type=int, default=Default_Num_Replicas, help='Number of replicas')
+    _ = js_stream_create_parser.set_defaults(func=cmd_js_stream_create)
 
     # js stream delete command
     js_stream_delete_parser = subparsers.add_parser('js-stream-delete', help='Delete a JetStream stream')
     add_common_args(js_stream_delete_parser)
-    js_stream_delete_parser.add_argument('name', help='Stream name')
-    js_stream_delete_parser.add_argument('-f', '--force', action='store_true', help='Skip confirmation')
-    js_stream_delete_parser.set_defaults(func=cmd_js_stream_delete)
+    _ = js_stream_delete_parser.add_argument('name', help='Stream name')
+    _ = js_stream_delete_parser.add_argument('-f', '--force', action='store_true', help='Skip confirmation')
+    _ = js_stream_delete_parser.set_defaults(func=cmd_js_stream_delete)
 
     # js stream info command
     js_stream_info_parser = subparsers.add_parser('js-stream-info', help='Get stream information')
     add_common_args(js_stream_info_parser)
-    js_stream_info_parser.add_argument('name', help='Stream name')
-    js_stream_info_parser.set_defaults(func=cmd_js_stream_info)
+    _ = js_stream_info_parser.add_argument('name', help='Stream name')
+    _ = js_stream_info_parser.set_defaults(func=cmd_js_stream_info)
 
     # js stream purge command
     js_stream_purge_parser = subparsers.add_parser('js-stream-purge', help='Purge stream messages')
     add_common_args(js_stream_purge_parser)
-    js_stream_purge_parser.add_argument('name', help='Stream name')
-    js_stream_purge_parser.add_argument('-f', '--force', action='store_true', help='Skip confirmation')
-    js_stream_purge_parser.set_defaults(func=cmd_js_stream_purge)
+    _ = js_stream_purge_parser.add_argument('name', help='Stream name')
+    _ = js_stream_purge_parser.add_argument('-f', '--force', action='store_true', help='Skip confirmation')
+    _ = js_stream_purge_parser.set_defaults(func=cmd_js_stream_purge)
 
     args = parser.parse_args()
 
