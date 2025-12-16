@@ -563,8 +563,7 @@ class NATSClient:
         msg = self.request(subject, payload, timeout=timeout, headers=hdr if hdr else None)
 
         resp = json.loads(msg.data.decode('utf-8'))
-        if 'error' in resp:
-            err = resp['error']
+        if err := resp.get('error'):
             raise NATSJetStreamError(
                 code=err['code'],
                 err_code=err['err_code'],
@@ -587,8 +586,7 @@ class NATSClient:
         msg = self.request(subject, payload, timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
 
-        if 'error' in resp:
-            err = resp['error']
+        if err := resp.get('error'):
             raise NATSJetStreamError(
                 code=err['code'],
                 err_code=err['err_code'],
@@ -606,8 +604,7 @@ class NATSClient:
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
 
-        if 'error' in resp:
-            err = resp['error']
+        if err := resp.get('error'):
             raise NATSJetStreamError(
                 code=err['code'],
                 err_code=err['err_code'],
@@ -625,8 +622,7 @@ class NATSClient:
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
 
-        if 'error' in resp:
-            err = resp['error']
+        if err := resp.get('error'):
             raise NATSJetStreamError(
                 code=err['code'],
                 err_code=err['err_code'],
@@ -644,8 +640,7 @@ class NATSClient:
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
 
-        if 'error' in resp:
-            err = resp['error']
+        if err := resp.get('error'):
             raise NATSJetStreamError(
                 code=err['code'],
                 err_code=err['err_code'],
@@ -677,8 +672,7 @@ class NATSClient:
         msg = self.request(subject, payload, timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
 
-        if 'error' in resp:
-            err = resp['error']
+        if err := resp.get('error'):
             raise NATSJetStreamError(
                 code=err['code'],
                 err_code=err['err_code'],
@@ -696,8 +690,7 @@ class NATSClient:
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
 
-        if 'error' in resp:
-            err = resp['error']
+        if err := resp.get('error'):
             raise NATSJetStreamError(
                 code=err['code'],
                 err_code=err['err_code'],
@@ -715,8 +708,7 @@ class NATSClient:
         msg = self.request(subject, b'', timeout=timeout)
         resp = json.loads(msg.data.decode('utf-8'))
 
-        if 'error' in resp:
-            err = resp['error']
+        if err := resp.get('error'):
             raise NATSJetStreamError(
                 code=err['code'],
                 err_code=err['err_code'],
