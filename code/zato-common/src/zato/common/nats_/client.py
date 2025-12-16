@@ -13,7 +13,6 @@ import re
 import socket
 import ssl
 import threading
-from io import BytesIO
 
 # Zato
 from zato.common.typing_ import any_, anydict, anydictnone, callable_, callnone, floatnone, strnone
@@ -50,7 +49,7 @@ class NATSClient:
         self._ssl_context: 'ssl.SSLContext | None' = None
         self._server_info: 'ServerInfo | None' = None
         self._options: 'ConnectOptions | None' = None
-        self._buffer = BytesIO()
+        self._read_buffer = bytearray()
         self._nuid = NUID()
 
         self._sid = 0
@@ -198,24 +197,36 @@ class NATSClient:
 
     # ############################################################################################################################
 
+    def _fill_buffer(self) -> None:
+        """ Fills the read buffer from the socket.
+        """
+        try:
+            chunk = self._sock.recv(Default_Buffer_Size)
+            if not chunk:
+                raise NATSConnectionError('Connection closed by server')
+            self._read_buffer.extend(chunk)
+        except socket.timeout:
+            raise NATSTimeoutError('Read timeout')
+        except socket.error as e:
+            self._connected = False
+            raise NATSConnectionError(f'Read failed: {e}') from e
+
+    # ############################################################################################################################
+
     def _read_line(self) -> 'bytes':
         if not self._sock:
             raise NATSConnectionError('Not connected')
 
-        data = bytearray()
         while True:
-            try:
-                chunk = self._sock.recv(1)
-                if not chunk:
-                    raise NATSConnectionError('Connection closed by server')
-                data.extend(chunk)
-                if data.endswith(CRLF):
-                    return bytes(data)
-            except socket.timeout:
-                raise NATSTimeoutError('Read timeout')
-            except socket.error as e:
-                self._connected = False
-                raise NATSConnectionError(f'Read failed: {e}') from e
+            # Check if we have a complete line in buffer
+            idx = self._read_buffer.find(CRLF)
+            if idx >= 0:
+                line = bytes(self._read_buffer[:idx + CRLF_LEN])
+                del self._read_buffer[:idx + CRLF_LEN]
+                return line
+
+            # Need more data
+            self._fill_buffer()
 
     # ############################################################################################################################
 
@@ -223,22 +234,12 @@ class NATSClient:
         if not self._sock:
             raise NATSConnectionError('Not connected')
 
-        data = bytearray()
-        remaining = n
-        while remaining > 0:
-            try:
-                recv_size = min(remaining, Default_Buffer_Size)
-                chunk = self._sock.recv(recv_size)
-                if not chunk:
-                    raise NATSConnectionError('Connection closed by server')
-                data.extend(chunk)
-                remaining -= len(chunk)
-            except socket.timeout:
-                raise NATSTimeoutError('Read timeout')
-            except socket.error as e:
-                self._connected = False
-                raise NATSConnectionError(f'Read failed: {e}') from e
-        return bytes(data)
+        while len(self._read_buffer) < n:
+            self._fill_buffer()
+
+        data = bytes(self._read_buffer[:n])
+        del self._read_buffer[:n]
+        return data
 
     # ############################################################################################################################
 
@@ -445,27 +446,36 @@ class NATSClient:
         # Handle MSG
         match = MSG_RE.match(line)
         if match:
-            subject = match.group(1).decode('utf-8')
-            sid = int(match.group(2))
-            reply = match.group(4).decode('utf-8') if match.group(4) else ''
-            payload_size = int(match.group(5))
+            subject = match.group(1)
+            subject = subject.decode('utf-8')
+            sid = match.group(2)
+            sid = int(sid)
+            reply = match.group(4)
+            reply = reply.decode('utf-8') if reply else ''
+            payload_size = match.group(5)
+            payload_size = int(payload_size)
 
             payload = self._read_bytes(payload_size)
-            self._read_bytes(CRLF_LEN)  # Read trailing CRLF
+            _ = self._read_bytes(CRLF_LEN)  # Read trailing CRLF
 
             return Msg(subject=subject, reply=reply, data=payload, sid=sid)
 
         # Handle HMSG (with headers)
         match = HMSG_RE.match(line)
         if match:
-            subject = match.group(1).decode('utf-8')
-            sid = int(match.group(2))
-            reply = match.group(4).decode('utf-8') if match.group(4) else ''
-            hdr_size = int(match.group(5))
-            total_size = int(match.group(6))
+            subject = match.group(1)
+            subject = subject.decode('utf-8')
+            sid = match.group(2)
+            sid = int(sid)
+            reply = match.group(4)
+            reply = reply.decode('utf-8') if reply else ''
+            hdr_size = match.group(5)
+            hdr_size = int(hdr_size)
+            total_size = match.group(6)
+            total_size = int(total_size)
 
             total_data = self._read_bytes(total_size)
-            self._read_bytes(CRLF_LEN)  # Read trailing CRLF
+            _ = self._read_bytes(CRLF_LEN)  # Read trailing CRLF
 
             hdr_data = total_data[:hdr_size]
             payload = total_data[hdr_size:]

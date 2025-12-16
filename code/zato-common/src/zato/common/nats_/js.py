@@ -249,7 +249,8 @@ class JetStream:
             # Build fetch request
             req = {'batch': batch}
             if timeout:
-                req['expires'] = int(timeout * Nanoseconds_Per_Second)
+                expires_ns = int(timeout * Nanoseconds_Per_Second)
+                req['expires'] = expires_ns
             if no_wait:
                 req['no_wait'] = True
 
@@ -304,7 +305,8 @@ class JetStream:
             raise NATSError('Message has no reply subject for acknowledgment')
 
         if delay:
-            delay_data = json.dumps({'delay': int(delay * Nanoseconds_Per_Second)})
+            delay_ns = int(delay * Nanoseconds_Per_Second)
+            delay_data = json.dumps({'delay': delay_ns})
             delay_data = delay_data.encode('utf-8')
             self._client.publish(msg.reply, JS_Nak + b' ' + delay_data)
         else:

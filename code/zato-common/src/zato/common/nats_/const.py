@@ -46,7 +46,7 @@ Default_Max_Ack_Pending = 1000
 
 # Time values (in nanoseconds)
 Nanoseconds_Per_Second = 1_000_000_000
-Default_Ack_Wait_Ns = 30_000_000_000       # 30 seconds
+Default_Ack_Wait_Ns = 1_800_000_000_000    # 30 minutes
 Default_Duplicate_Window_Ns = 120_000_000_000  # 2 minutes
 
 # Limit markers

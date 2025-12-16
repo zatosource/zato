@@ -62,8 +62,10 @@ class NATSCLI:
         if msg.reply:
             output.append(f'Reply: {msg.reply}')
         if show_headers and msg.headers:
-            output.append(f'Headers: {json.dumps(msg.headers, indent=2)}')
-        output.append(f'Data: {msg.data.decode("utf-8", errors="replace")}')
+            headers_str = json.dumps(msg.headers, indent=2)
+            output.append(f'Headers: {headers_str}')
+        data_str = msg.data.decode('utf-8', errors='replace')
+        output.append(f'Data: {data_str}')
         return '\n'.join(output)
 
     # ############################################################################################################################
@@ -99,6 +101,10 @@ class NATSCLI:
         self._add_common_args(pub_parser)
         _ = pub_parser.add_argument('subject', help='Subject to publish to')
         _ = pub_parser.add_argument('data', nargs='?', default='', help='Message data')
+        _ = pub_parser.add_argument('multiplier', nargs='?', default=None, help='* for repeat')
+        _ = pub_parser.add_argument('repeat', nargs='?', type=int, default=1, help='Repeat count')
+        _ = pub_parser.add_argument('data_multiplier', nargs='?', default=None, help='* for data multiply')
+        _ = pub_parser.add_argument('data_repeat', nargs='?', type=int, default=1, help='Data multiply count')
         _ = pub_parser.add_argument('-h', '--header', action='append', help='Header in Key:Value format')
         _ = pub_parser.set_defaults(func=self.cmd_pub)
 
@@ -125,6 +131,10 @@ class NATSCLI:
         self._add_common_args(js_pub_parser)
         _ = js_pub_parser.add_argument('subject', help='Subject to publish to')
         _ = js_pub_parser.add_argument('data', nargs='?', default='', help='Message data')
+        _ = js_pub_parser.add_argument('multiplier', nargs='?', default=None, help='* for repeat')
+        _ = js_pub_parser.add_argument('repeat', nargs='?', type=int, default=1, help='Repeat count')
+        _ = js_pub_parser.add_argument('data_multiplier', nargs='?', default=None, help='* for data multiply')
+        _ = js_pub_parser.add_argument('data_repeat', nargs='?', type=int, default=1, help='Data multiply count')
         _ = js_pub_parser.add_argument('-h', '--header', action='append', help='Header in Key:Value format')
         _ = js_pub_parser.add_argument('--msg-id', help='Message ID for deduplication')
         _ = js_pub_parser.set_defaults(func=self.cmd_js_pub)
@@ -206,14 +216,29 @@ class NATSCLI:
                 headers = {}
                 for h in args.header:
                     key, value = h.split(':', 1)
-                    headers[key.strip()] = value.strip()
+                    key = key.strip()
+                    value = value.strip()
+                    headers[key] = value
 
-            data = args.data.encode('utf-8') if args.data else b''
+            data_str = args.data if args.data else ''
 
-            client.publish(args.subject, data, headers=headers)
+            # Multiply data if * N specified
+            if args.data_multiplier == '*':
+                data_str = data_str * args.data_repeat
+
+            data = data_str.encode('utf-8')
+
+            repeat = args.repeat if args.multiplier == '*' else 1
+
+            for _ in range(repeat):
+                client.publish(args.subject, data, headers=headers)
+
             client.flush()
 
-            print(f'Published {len(data)} bytes to "{args.subject}"')
+            if repeat > 1:
+                print(f'Published {len(data)} bytes to "{args.subject}" x {repeat}')
+            else:
+                print(f'Published {len(data)} bytes to "{args.subject}"')
 
         except NATSError as e:
             print(f'Error: {e}', file=sys.stderr)
@@ -292,7 +317,9 @@ class NATSCLI:
                 headers = {}
                 for h in args.header:
                     key, value = h.split(':', 1)
-                    headers[key.strip()] = value.strip()
+                    key = key.strip()
+                    value = value.strip()
+                    headers[key] = value
 
             data = args.data.encode('utf-8') if args.data else b''
 
@@ -336,22 +363,42 @@ class NATSCLI:
                 headers = {}
                 for h in args.header:
                     key, value = h.split(':', 1)
-                    headers[key.strip()] = value.strip()
+                    key = key.strip()
+                    value = value.strip()
+                    headers[key] = value
 
-            data = args.data.encode('utf-8') if args.data else b''
+            data_str = args.data if args.data else ''
+
+            # Multiply data if * N specified
+            if args.data_multiplier == '*':
+                data_str = data_str * args.data_repeat
+
+            data = data_str.encode('utf-8')
 
             js = client.jetstream()
-            ack = js.publish(
-                args.subject,
-                data,
-                timeout=args.request_timeout,
-                headers=headers,
-                msg_id=args.msg_id,
-            )
 
-            print(f'Published to stream "{ack.stream}", sequence: {ack.seq}')
-            if ack.duplicate:
-                print('(duplicate message)')
+            repeat = args.repeat if args.multiplier == '*' else 1
+
+            for i in range(repeat):
+                msg_id = args.msg_id
+                if msg_id and repeat > 1:
+                    msg_id = f'{args.msg_id}-{i}'
+
+                ack = js.publish(
+                    args.subject,
+                    data,
+                    timeout=args.request_timeout,
+                    headers=headers,
+                    msg_id=msg_id,
+                )
+
+                if repeat == 1:
+                    print(f'Published to stream "{ack.stream}", sequence: {ack.seq}')
+                    if ack.duplicate:
+                        print('(duplicate message)')
+
+            if repeat > 1:
+                print(f'Published {repeat} messages to stream "{ack.stream}"')
 
         except NATSNoRespondersError:
             print("Error: No responders available. Is JetStream enabled? Run 'nats-server -js'", file=sys.stderr)
