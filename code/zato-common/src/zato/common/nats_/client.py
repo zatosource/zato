@@ -96,17 +96,19 @@ class NATSClient:
         host:'str'=Default_Host,
         port:'int'=Default_Port,
         timeout:'float'=Default_Timeout,
-        name:'strnone'=None,
         user:'strnone'=None,
         password:'strnone'=None,
         token:'strnone'=None,
         verbose:'bool'=False,
         pedantic:'bool'=False,
+        name:'strnone'=None,
         ssl_context:'ssl.SSLContext | None'=None,
         connect_timeout:'floatnone'=None,
     ) -> None:
         """ Connects to a NATS server.
         """
+        logger.info(f'connect() called for {host}:{port}')
+
         self._host = host
         self._port = port
         self._timeout = timeout
@@ -116,11 +118,15 @@ class NATSClient:
             connect_timeout = timeout
 
         # Create socket
+        logger.info(f'Creating socket connection to {host}:{port} with timeout={connect_timeout}')
         self._sock = socket.create_connection((host, port), timeout=connect_timeout)
+        logger.info('Socket created, setting timeout')
         self._sock.settimeout(timeout)
 
         # Read INFO from server
+        logger.info('Reading INFO from server')
         info_line = self._read_line()
+        logger.info(f'Got INFO line: {info_line[:100]}...')
         if not info_line.startswith(INFO_OP):
             raise NATSProtocolError(f'Expected INFO, got: {info_line!r}')
 
@@ -159,20 +165,28 @@ class NATSClient:
             self._options.auth_token = token
 
         # Send CONNECT
+        logger.info('Sending CONNECT command')
         connect_data = json.dumps(self._options.to_dict())
         connect_data = connect_data.encode('utf-8')
         connect_cmd = CONNECT_OP + SPC + connect_data + CRLF
         self._send(connect_cmd)
+        logger.info('CONNECT sent')
 
         # Send PING and wait for PONG to confirm connection
+        logger.info('Sending PING')
         self._send(PING_CMD)
+        logger.info('PING sent, waiting for PONG')
 
         # Read response (may be +OK if verbose, then PONG)
         while True:
+            logger.info('Reading response line')
             line = self._read_line()
+            logger.info(f'Got response: {line}')
             if line.startswith(PONG_OP):
+                logger.info('Got PONG, connection confirmed')
                 break
             elif line.startswith(OK_OP):
+                logger.info('Got OK, continuing')
                 continue
             elif line.startswith(ERR_OP):
                 err_msg = line[len(ERR_OP):].strip()
@@ -260,13 +274,17 @@ class NATSClient:
         """ Fills the read buffer from the socket.
         """
         try:
+            logger.debug('_fill_buffer: calling recv')
             chunk = self._sock.recv(Default_Buffer_Size)
+            logger.debug(f'_fill_buffer: recv returned {len(chunk)} bytes')
             if not chunk:
                 raise NATSConnectionError('Connection closed by server')
             self._read_buffer.extend(chunk)
         except socket.timeout:
+            logger.debug('_fill_buffer: socket timeout')
             raise NATSTimeoutError('Read timeout')
         except socket.error as e:
+            logger.error(f'_fill_buffer: socket error: {e}')
             self._connected = False
             raise NATSConnectionError(f'Read failed: {e}') from e
 

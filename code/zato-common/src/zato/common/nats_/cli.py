@@ -42,6 +42,8 @@ except ImportError:
 from zato.common.typing_ import any_
 
 from zato.common.nats_.client import NATSClient
+
+logger = logging.getLogger(__name__)
 from zato.common.nats_.const import Consumer_Ack_Explicit, Consumer_Deliver_All, Default_Host, \
      Default_Num_Replicas, Default_Port, Default_Timeout, Err_Consumer_Already_Exists, No_Limit, \
      Stream_Retention_Limits, Stream_Storage_File
@@ -108,15 +110,23 @@ class NATSCLI:
     def _get_reader_client(self, args:'argparse.Namespace') -> 'NATSClient':
         """ Returns the reader client connection for subscriptions.
         """
+        logger.info('_get_reader_client called')
+
         needs_connect = False
 
         if self.reader_client is None:
+            logger.info('reader_client is None, need to connect')
             needs_connect = True
         elif not self.reader_client.is_connected:
+            logger.info('reader_client exists but not connected, need to reconnect')
             needs_connect = True
+        else:
+            logger.info('reader_client already connected')
 
         if needs_connect:
+            logger.info('Creating new reader_client')
             self.reader_client = NATSClient()
+            logger.info(f'Connecting reader_client to {args.host}:{args.port}')
             self.reader_client.connect(
                 host=args.host,
                 port=args.port,
@@ -126,7 +136,10 @@ class NATSCLI:
                 token=args.token,
                 verbose=args.verbose,
             )
+            logger.info('Calling start_reader on reader_client')
             self.reader_client.start_reader()
+            logger.info('start_reader called')
+
         return self.reader_client
 
     # ############################################################################################################################
@@ -407,15 +420,23 @@ class NATSCLI:
     def cmd_sub(self, args:'argparse.Namespace') -> 'None':
         """ Subscribes to a subject and prints messages. Runs as a greenlet.
         """
+        logger.info(f'cmd_sub called for subject={args.subject}')
+
         self.greenlet_id += 1
         gid = self.greenlet_id
+        logger.info(f'Assigned greenlet id={gid}')
 
         def sub_worker():
+            logger.info(f'sub_worker greenlet started for gid={gid}')
             try:
+                logger.info(f'Calling _get_reader_client from greenlet gid={gid}')
                 client = self._get_reader_client(args)
+                logger.info(f'Got reader_client in greenlet gid={gid}')
 
                 queue = args.queue if args.queue else ''
+                logger.info(f'Calling client.subscribe for subject={args.subject}, queue={queue}')
                 sub = client.subscribe(args.subject, queue=queue)
+                logger.info(f'Subscription created, sid={sub._sid}')
 
                 msg = f'Subscribed to "{args.subject}"'
                 if args.queue:
@@ -426,7 +447,9 @@ class NATSCLI:
                 count = 0
                 while self.running:
                     try:
+                        logger.debug(f'Calling next_msg for gid={gid}')
                         msg = sub.next_msg(timeout=1.0)
+                        logger.info(f'Got message in gid={gid}: subject={msg.subject}')
                         count += 1
                         self._cprint(gid, f'[{datetime.now().isoformat()}] Message #{count}')
                         self._cprint(gid, self._format_msg(msg, show_headers=not args.no_headers))
@@ -440,12 +463,16 @@ class NATSCLI:
                         continue
 
             except NATSError:
+                logger.error(f'NATSError in sub_worker gid={gid}: {format_exc()}')
                 self._cprint(gid, f'Error: {format_exc()}')
 
+        logger.info(f'Spawning sub_worker greenlet for gid={gid}')
         g = spawn(sub_worker)
+        logger.info(f'Greenlet spawned for gid={gid}, greenlet={g}')
         self.greenlets.append((g, gid))
         self.greenlet_info[gid] = {'subject': args.subject, 'started': datetime.now()}
         self._cprint(gid, f'Started subscription greenlet for "{args.subject}"')
+        logger.info(f'cmd_sub finished for gid={gid}')
 
     # ############################################################################################################################
 
@@ -866,7 +893,7 @@ def main() -> 'None':
     """ Main entry point for the CLI.
     """
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format='%(asctime)s %(levelname)s %(name)s: %(message)s'
     )
     cli = NATSCLI()
