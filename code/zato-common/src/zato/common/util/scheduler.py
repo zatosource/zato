@@ -77,12 +77,12 @@ def wait_for_odb_service_by_api(api:'SchedulerAPI', service_name:'str') -> 'None
     while not is_deployed:
 
         # Try to look it up ..
-        response = api.invoke_service('zato.service.is-deployed', {
+        is_deployed = api.invoke_service('zato.service.is-deployed', {
             'name': service_name
         })
 
         # .. we can return if we have a response that indicates that the service is deployed ..
-        if response and response.get('is_deployed'):
+        if is_deployed:
             return
 
         # .. otherwise, we sleep for a moment before the next iteration ..
