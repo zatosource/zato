@@ -267,11 +267,15 @@ class BrokerClient:
     def publish_to_queue(self, queue_name:'str', msg:'any_', correlation_id:'str'='') -> 'None':
         """ Publishes a message directly to a specific queue.
         """
-        logger.debug(f'Pub to queue -> cid:`{correlation_id}` -> queue=`{queue_name}` -> msg:`{msg}`')
+        logger.info(f'[PUBLISH_TO_QUEUE] Starting -> cid:`{correlation_id}` -> queue=`{queue_name}` -> msg_type:`{type(msg).__name__}`')
+        logger.info(f'[PUBLISH_TO_QUEUE] Message content -> {msg}')
 
         if not isinstance(msg, str):
+            original_msg = msg
             msg = dumps(msg)
-            logger.debug(f'Converted message to string: {msg[:100]}...' if len(msg) > 100 else msg)
+            logger.info(f'[PUBLISH_TO_QUEUE] Converted to JSON -> original_type:`{type(original_msg).__name__}` -> json_length:`{len(msg)}` -> json:`{msg}`')
+        else:
+            logger.info(f'[PUBLISH_TO_QUEUE] Message already string -> length:`{len(msg)}` -> content:`{msg}`')
 
         # Prepare publish parameters
         publish_kwargs = {
@@ -285,12 +289,48 @@ class BrokerClient:
         # Add correlation ID if provided
         if correlation_id:
             publish_kwargs['correlation_id'] = correlation_id
+            logger.info(f'[PUBLISH_TO_QUEUE] Added correlation_id -> `{correlation_id}`')
+
+        logger.info(f'[PUBLISH_TO_QUEUE] Publish kwargs -> {publish_kwargs}')
 
         # Publish the message
-        with self.producer.acquire() as client:
-            logger.debug(f'Producer connection acquired: {client}')
-            # logger.warning('PUBLISH %s %s', msg, publish_kwargs)
-            _ = client.publish(msg, **publish_kwargs)
+        try:
+            logger.info(f'[PUBLISH_TO_QUEUE] Acquiring producer connection')
+            with self.producer.acquire() as client:
+                logger.info(f'[PUBLISH_TO_QUEUE] Producer acquired -> client:`{client}` -> connection:`{client.connection}` -> channel:`{client.channel}`')
+
+                # Check connection state
+                try:
+                    connection_info = {
+                        'connected': client.connection.connected,
+                        'transport': getattr(client.connection, 'transport', 'unknown'),
+                        'channels': getattr(client.connection, 'channels', 'unknown')
+                    }
+                    logger.info(f'[PUBLISH_TO_QUEUE] Connection state -> {connection_info}')
+                except Exception as conn_check_e:
+                    logger.warning(f'[PUBLISH_TO_QUEUE] Connection state check failed -> {conn_check_e}')
+
+                # Check channel state
+                try:
+                    channel_info = {
+                        'channel_id': getattr(client.channel, 'channel_id', 'unknown'),
+                        'is_open': getattr(client.channel, 'is_open', 'unknown')
+                    }
+                    logger.info(f'[PUBLISH_TO_QUEUE] Channel state -> {channel_info}')
+                except Exception as chan_check_e:
+                    logger.warning(f'[PUBLISH_TO_QUEUE] Channel state check failed -> {chan_check_e}')
+
+                logger.info(f'[PUBLISH_TO_QUEUE] About to publish -> msg_length:`{len(msg)}` -> kwargs:`{publish_kwargs}`')
+
+                result = client.publish(msg, **publish_kwargs)
+
+                logger.info(f'[PUBLISH_TO_QUEUE] Publish completed successfully -> result:`{result}` -> cid:`{correlation_id}` -> queue:`{queue_name}`')
+
+        except Exception as publish_e:
+            logger.error(f'[PUBLISH_TO_QUEUE] Publish failed -> cid:`{correlation_id}` -> queue:`{queue_name}` -> error:`{publish_e}` -> error_type:`{type(publish_e).__name__}`')
+            logger.error(f'[PUBLISH_TO_QUEUE] Publish kwargs at error -> {publish_kwargs}')
+            logger.error(f'[PUBLISH_TO_QUEUE] Message at error -> length:`{len(msg)}` -> content:`{msg}`')
+            raise
 
 # ################################################################################################################################
 
@@ -305,20 +345,28 @@ class BrokerClient:
 
             # Check if this is a reply to a previous request
             correlation_id = msg.properties.get('correlation_id')
+            logger.info(f'[ON_MESSAGE] Processing message -> correlation_id:`{correlation_id}` -> body_type:`{type(body).__name__}`')
 
             if correlation_id and correlation_id in self._callbacks:
                 # Invoke callback registered for this correlation ID
+                logger.info(f'[ON_MESSAGE] Found callback for correlation_id:`{correlation_id}`')
                 callback = self._callbacks.pop(correlation_id)
                 callback(body)
+                logger.info(f'[ON_MESSAGE] Callback invoked for correlation_id:`{correlation_id}`')
             else:
+                logger.info(f'[ON_MESSAGE] No callback found, handling via broker msg handler -> correlation_id:`{correlation_id}`')
                 # Handle the message using the shared handler
                 result = handle_broker_msg(body, self.context)
+                logger.info(f'[ON_MESSAGE] Broker msg handled -> was_handled:`{result.was_handled}` -> action_code:`{result.action_code}`')
 
                 # If the message was handled and needs a reply
                 if result.was_handled and result.action_code == SERVICE.INVOKE.value:
                     if reply_to := body.get('reply_to'):
                         correlation_id = body.get('cid', '')
+                        logger.info(f'[ON_MESSAGE] Sending reply -> reply_to:`{reply_to}` -> correlation_id:`{correlation_id}` -> response_type:`{type(result.response).__name__}`')
                         self.publish_to_queue(reply_to, result.response, correlation_id=correlation_id)
+                    else:
+                        logger.info(f'[ON_MESSAGE] No reply_to field found in message -> body_keys:`{list(body.keys()) if isinstance(body, dict) else "not_dict"}`')
 
             # Always acknowledge the message
             msg.ack()
