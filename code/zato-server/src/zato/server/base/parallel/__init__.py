@@ -1261,16 +1261,26 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         import logging
         from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
         from opentelemetry.sdk.resources import Resource
+        from opentelemetry.trace import SpanKind
 
         logger = logging.getLogger('zato.tracing')
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())
 
-        resource = Resource.create({'service.name': 'zato3'})
+        resource = Resource.create({
+            'service.name': 'zato4',
+            'service.instance.id': 'dev4',
+            'service.namespace': 'api4',
+            'deployment.environment': 'dev',
+        })
+
+        from opentelemetry import propagate
+        # propagate.inject(headers)
+
         provider = TracerProvider(resource=resource)
 
         exporter = OTLPSpanExporter()
@@ -1284,7 +1294,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         cid = new_cid_server()
 
-        with self.tracer.start_as_current_span('my-process') as span:
+        with self.tracer.start_as_current_span('my-process', kind=SpanKind.SERVER) as span:
             span.set_attribute('key', 'value')
             span.set_attribute('cid', cid)
 
