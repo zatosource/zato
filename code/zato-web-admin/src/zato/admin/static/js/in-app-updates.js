@@ -55,7 +55,8 @@ $.fn.zato.in_app_updates.init = function() {
         showProgress: true,
         showButtons: ['next', 'previous', 'close'],
         overlayColor: 'rgba(0, 0, 0, 0.5)',
-        popoverClass: 'driver-popover-custom'
+        popoverClass: 'driver-popover-custom',
+        animate: false
     });
     console.log('Driver instance created');
 
