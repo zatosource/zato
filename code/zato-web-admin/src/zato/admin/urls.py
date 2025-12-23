@@ -835,6 +835,8 @@ urlpatterns += [
         login_required(updates.load_schedule), name='updates-load-schedule'),
     url(r'^zato/updates/delete-schedule$',
         login_required(updates.delete_schedule), name='updates-delete-schedule'),
+    url(r'^zato/updates/download-logs$',
+        login_required(updates.download_logs), name='updates-download-logs'),
 ]
 
 # ################################################################################################################################
