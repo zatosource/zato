@@ -524,10 +524,19 @@ input:checked + .toggle-slider:before {
     color: var(--primary-dark) !important;
     font-size: 24px !important;
     opacity: 0.7 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    font-weight: 400 !important;
 }
 
 .driver-popover-close-btn:hover {
     opacity: 1 !important;
+    color: var(--primary-dark) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
 }
 
 .driver-overlay {
