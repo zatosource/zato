@@ -245,6 +245,8 @@ $.fn.zato.in_app_updates.handleSaveSchedule = function() {
     $('.config-saved-message').css('display', 'none');
     $('#config-save-button').prop('disabled', true);
     
+    const startTime = Date.now();
+    
     $.ajax({
         url: '/zato/updates/save-schedule',
         type: 'POST',
@@ -254,13 +256,19 @@ $.fn.zato.in_app_updates.handleSaveSchedule = function() {
         data: JSON.stringify(scheduleData),
         contentType: 'application/json',
         success: function(response) {
-            $('.config-save-spinner').css('display', 'none');
-            $('.config-saved-message').css('display', 'block');
+            const elapsed = Date.now() - startTime;
+            const minDelay = 500;
+            const remainingDelay = Math.max(0, minDelay - elapsed);
             
             setTimeout(function() {
-                $('.config-saved-message').css('display', 'none');
-                $('#config-save-button').prop('disabled', false);
-            }, 1500);
+                $('.config-save-spinner').css('display', 'none');
+                $('.config-saved-message').css('display', 'inline-block');
+                
+                setTimeout(function() {
+                    $('.config-saved-message').css('display', 'none');
+                    $('#config-save-button').prop('disabled', false);
+                }, 1500);
+            }, remainingDelay);
         },
         error: function() {
             $('.config-save-spinner').css('display', 'none');
