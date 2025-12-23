@@ -2164,6 +2164,9 @@ class CySimpleIO:
             out = self._convert_to_dicts(data, DATA_FORMAT_DICT)
             return out
 
+        #elif data_format == '':
+        #    return self._get_output_json(data, serialise)
+
         else:
             raise ValueError('Unrecognised output data format `{}`'.format(data_format))
 

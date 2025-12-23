@@ -1510,24 +1510,24 @@ cdef class Cache:
         """ Deletes all entries expired as of now. Also, deletes all entries possibly found to have expired by .get or .set calls.
         """
         cdef list deleted
+        cdef list to_delete
         cdef double _now = self._get_timestamp()
         cdef double expires_at
-
-        # Collects all keys to be deleted and in another pass, delete them all.
-        # It's performed it two steps so as to be able to hold self._lock only once.
 
         with self._lock:
 
             deleted = self._expired_on_op[:]
+            to_delete = []
 
-            # Collect keys still in cache
             for key, value in self._data.items():
                 expires_at = value.expires_at
                 if expires_at and _now > expires_at:
-                    self._delete(key)
-                    deleted.append(key)
+                    to_delete.append(key)
 
-            # Collect keys deleted by .get operations
+            for key in to_delete:
+                self._delete(key)
+                deleted.append(key)
+
             self._expired_on_op[:] = []
 
         return deleted

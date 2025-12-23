@@ -10,6 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from dataclasses import asdict, _FIELDS, make_dataclass, MISSING, _PARAMS # type: ignore
 from http.client import BAD_REQUEST
 from inspect import isclass
+from sys import exc_info
+from traceback import extract_stack, extract_tb
 from typing import Any
 
 try:
@@ -36,6 +38,7 @@ from typing_utils import issubtype
 
 # Zato
 from zato.common.api import ZatoNotGiven
+from zato.common.exception import BackendInvocationError
 from zato.common.marshal_.model import BaseModel
 from zato.common.typing_ import cast_, date_, datetime_, datetimez, extract_from_union, isotimestamp, is_union, type_
 
@@ -135,7 +138,36 @@ class Model(BaseModel):
     from_dict = _zato_from_dict
 
     def to_dict(self):
-        return asdict(self)
+        try:
+            return asdict(self)
+        except TypeError as e:
+            if 'asdict() should be called on dataclass instances' in str(e):
+                stack = extract_stack()
+
+                for frame in reversed(stack):
+                    if '/opt/' in frame.filename and '/zato/' not in frame.filename:
+                        line_len = len(frame.line)
+                        msg = f'Class {self.__class__.__name__} is not a dataclass. Add "@dataclass(init=False)" so it looks like below:\n\n'
+                        msg += f'@dataclass(init=False)\n'
+                        msg += f'class {self.__class__.__name__}(Model):\n'
+                        msg += f'  ..\n\n'
+                        msg += f'File "{frame.filename}", line {frame.lineno}, in {frame.name}\n'
+                        msg += f'  {frame.line}\n'
+                        msg += f'  {"^" * line_len}'
+                        break
+                else:
+                    msg = f'Class {self.__class__.__name__} is not a dataclass. Add "@dataclass(init=False)" so it looks like below:\n\n'
+                    msg += f'@dataclass(init=False)\n'
+                    msg += f'class {self.__class__.__name__}(Model):\n'
+                    msg += f'  ..'
+
+                raise BackendInvocationError(
+                    None,
+                    msg,
+                    needs_msg=True
+                )
+            else:
+                raise
 
     def _json_default_serializer(self, value):
 

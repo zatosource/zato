@@ -18,7 +18,7 @@ from urllib.parse import urlencode
 # requests
 from requests import Response as _RequestsResponse
 from requests.adapters import HTTPAdapter
-from requests.exceptions import Timeout as RequestsTimeout
+from requests.exceptions import ConnectionError as RequestsConnectionError, Timeout as RequestsTimeout
 from requests.sessions import Session as RequestsSession
 
 # requests-ntlm
@@ -32,7 +32,7 @@ from prometheus_client import Counter, Histogram
 
 # Zato
 from zato.common.api import ContentType, CONTENT_TYPE, DATA_FORMAT, NotGiven, SEC_DEF_TYPE, URL_TYPE
-from zato.common.exception import Inactive, TimeoutException
+from zato.common.exception import BadRequest, Inactive, BackendInvocationError
 from zato.common.json_ import dumps, loads
 from zato.common.marshal_.api import extract_model_class, is_list, Model
 from zato.common.typing_ import cast_
@@ -91,6 +91,9 @@ _OAuth = SEC_DEF_TYPE.OAUTH
 
 class Response(_RequestsResponse):
     data: 'strdictnone'
+    zato_method: 'str'
+    zato_address: 'str'
+    zato_qs_params: 'strdictnone' = None
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -204,7 +207,10 @@ class BaseHTTPSOAPWrapper:
             username = self.config.get('orig_username')
             if not username:
                 username = self.config['username']
-            self.base_headers[username] = self.config['password']
+            password = self.config['password']
+            if isinstance(password, str) and password.startswith('Missing_'):
+                password = ''
+            self.base_headers[username] = password
 
         # #######################################
         #
@@ -212,6 +218,10 @@ class BaseHTTPSOAPWrapper:
         #
         # #######################################
         elif self.sec_type in {_Basic_Auth}:
+            password = self.config['password']
+            if isinstance(password, str) and password.startswith('Missing_'):
+                password = ''
+                self.config['password'] = password
             self.requests_auth = self.auth
             self.username = self.requests_auth[0]
 
@@ -222,6 +232,9 @@ class BaseHTTPSOAPWrapper:
         # #######################################
         elif self.sec_type == _NTLM:
             _username, _password = self.auth
+            if isinstance(_password, str) and _password.startswith('Missing_'):
+                _password = ''
+                self.config['password'] = _password
             _requests_auth = HttpNtlmAuth(_username, _password)
             self.requests_auth = _requests_auth
             self.username = _username
@@ -261,7 +274,7 @@ class BaseHTTPSOAPWrapper:
         params = kwargs.get('params')
         json = kwargs.pop('json', None)
 
-        if ('ZATO_SKIP_TLS_VERIFY' in os.environ) or ('Zato_Skip_TLS_Verify' in os.environ):
+        if ('Zato_Skip_SSL_Verify' in os.environ) or ('ZATO_SKIP_TLS_VERIFY' in os.environ) or ('Zato_Skip_TLS_Verify' in os.environ):
             tls_verify = False
         else:
             tls_verify = self.config.get('validate_tls', True)
@@ -340,6 +353,11 @@ class BaseHTTPSOAPWrapper:
             # .. log the information about our request ..
             logger.info(msg)
 
+            # .. drop extra kwargs ..
+            _ = kwargs.pop('max_retries', None)
+            _ = kwargs.pop('retry_sleep_time', None)
+            _ = kwargs.pop('retry_backoff_threshold', None)
+
             # .. do send it ..
             response = self.session.request(
                 method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
@@ -355,10 +373,15 @@ class BaseHTTPSOAPWrapper:
             # .. and return it.
             return response
 
-        except RequestsTimeout:
+        except RequestsTimeout as e:
             self._push_metrics(start_time, 'timeout')
-            raise TimeoutException(cid, format_exc())
-        except Exception:
+            msg = f'Timeout error: {e}'
+            raise BackendInvocationError(cid, msg, needs_msg=True)
+        except RequestsConnectionError as e:
+            self._push_metrics(start_time, 'connection_error')
+            msg = f'Connection error: {e}'
+            raise BackendInvocationError(cid, msg, needs_msg=True)
+        except Exception as e:
             self._push_metrics(start_time, 'error')
             raise
 
@@ -507,8 +530,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         sensitive data from leaking to clients.
         """
         if not params:
-            logger.warning('CID:`%s` No parameters given for URL path:`%r`', cid, self.config['address_url_path'])
-            raise ValueError('CID:`{}` No parameters given for URL path'.format(cid))
+            msg = 'No parameters given for URL path template `{}`, missing parameters: {}'.format(
+                self.config['address_url_path'],
+                self.path_params
+            )
+            raise BadRequest(cid, msg, needs_msg=True)
 
         path_params = {}
         try:
@@ -517,10 +543,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             return (self.address.format(**path_params), dict(params))
         except(KeyError, ValueError):
-            logger.warning('CID:`%s` Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`',
-                cid, self.address, self.config['address_url_path'], params, format_exc())
-
-            raise ValueError('CID:`{}` Could not build URL path'.format(cid))
+            msg = 'Could not build URL path template `{}`, missing parameters: {}'.format(
+                self.config['address_url_path'],
+                self.path_params
+            )
+            raise BadRequest(cid, msg, needs_msg=True)
 
 # ################################################################################################################################
 
@@ -644,10 +671,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # .. do invoke the connection ..
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
+        response = cast_('Response', response)
 
         # .. by default, we have no parsed response at all, ..
         # .. which means that we can assume it will be the same as the raw, text response ..
         response.data = response.text # type: ignore
+        response.zato_method = method
+        response.zato_address = address
+        response.zato_qs_params = qs_params
 
         # .. check if we are explicitly told that we handle JSON ..
         _has_data_format_json = self.config['data_format'] == DATA_FORMAT.JSON
@@ -663,14 +694,15 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             try:
                 response.data = loads(response.text or '""') # type: ignore
             except ValueError as e:
-                raise Exception('Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0]))
+                msg = 'Could not parse JSON response `{}`; e:`{}`'.format(response.text, e.args[0])
+                raise BadRequest(cid, msg, needs_msg=True)
 
         # .. if we have a model class on input, deserialize the received response into one ..
         if model:
             response.data = self.server.marshal_api.from_dict(None, response.data, model) # type: ignore
 
         # .. now, return the response to the caller.
-        return cast_('Response', response)
+        return response
 
 # ################################################################################################################################
 
@@ -779,7 +811,15 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 logger.info('REST call response received -> %s', response.text)
 
             if not response.ok:
-                raise Exception(response.text)
+                if response.zato_qs_params:
+                    qs_path = '?' + urlencode(response.zato_qs_params)
+                else:
+                    qs_path = ''
+                msg =  f'Error calling outgoing connection: {self.config["name"]} -> {response.zato_method}'
+                msg += f' {response.zato_address}{qs_path} -> {response.data}'
+                msg_log = msg + f' -> Request headers: {response.request.headers} -> Request body: {response.request.body}'
+                logger.info(msg_log)
+                raise BackendInvocationError(cid, msg, needs_msg=True)
 
             # .. extract the underlying data ..
             response_data = response.data # type: ignore

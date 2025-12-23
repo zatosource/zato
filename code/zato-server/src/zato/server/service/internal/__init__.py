@@ -198,8 +198,6 @@ class Ping(AdminService):
         pub_cid = make_cid_public(self.cid)
         self.response.payload = f'{{"is_ok":true, "cid":"{pub_cid}"}}'
 
-        self.publish('demo.1', 'Hello!')
-
 # ################################################################################################################################
 
 class ServerInvoker(AdminService):
@@ -207,8 +205,16 @@ class ServerInvoker(AdminService):
     name = 'zato.server.invoker'
 
     def handle(self):
-        func = getattr(self.server, self.request.raw_request['func_name'])
-        response = func()
+        func_name = self.request.raw_request['func_name']
+        func = getattr(self.server, func_name)
+
+        if func_name == 'import_enmasse':
+            file_content = self.request.raw_request.get('file_content', '')
+            file_name = self.request.raw_request.get('file_name', 'enmasse.yaml')
+            response = func(file_content, file_name)
+        else:
+            response = func()
+
         self.response.payload = response
 
 # ################################################################################################################################
@@ -295,6 +301,7 @@ class ChangePasswordBase(AdminService):
                     if action == SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value:
                         self.request.input.cid = self.cid
                         self.request.input.username = instance.username
+
                         self.broker_client.publish_to_pubsub(self.request.input)
 
             except Exception:

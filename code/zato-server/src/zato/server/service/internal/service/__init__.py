@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import subprocess
 from base64 import b64decode, b64encode
 from contextlib import closing
 from operator import attrgetter
@@ -738,6 +739,13 @@ class UploadPackage(AdminService):
             body = uuid4().hex
             file_name_full = get_tmp_path(prefix, suffix, body)
             needs_default_hot_deploy = True
+
+        current_user = os.environ.get('USER')
+        if current_user == 'zato':
+            try:
+                _ = subprocess.run(['sudo', 'chmod', '664', file_name_full], check=False, capture_output=True)
+            except Exception:
+                pass
 
         with open(file_name_full, 'wb') as tf:
             _ = tf.write(input_payload)

@@ -96,12 +96,13 @@ class _SearchWrapper:
 
                 # We need to use "or" if we filter by more then one column
                 # to let the filters match all of them independently.
-                if len_filter_by > 1:
-                    combine_criteria_using = or_
-                else:
-                    combine_criteria_using = and_
+                if filters:
+                    if len_filter_by > 1:
+                        combine_criteria_using = or_
+                    else:
+                        combine_criteria_using = and_
 
-                q = q.filter(combine_criteria_using(*filters))
+                    q = q.filter(combine_criteria_using(*filters))
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()]).order_by(None)
