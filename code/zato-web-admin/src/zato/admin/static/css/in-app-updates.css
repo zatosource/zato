@@ -483,11 +483,14 @@ input:checked + .toggle-slider:before {
 }
 
 .help-icon {
+    width: 16px;
+    height: 16px;
     margin-left: 6px;
     cursor: pointer;
     opacity: 0.7;
     transition: opacity 0.2s;
-    font-size: 14px;
+    vertical-align: middle;
+    fill: var(--primary-dark);
 }
 
 .help-icon:hover {
