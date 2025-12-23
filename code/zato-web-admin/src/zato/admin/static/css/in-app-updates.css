@@ -1,0 +1,71 @@
+.updates-available-button {
+    display: inline-block;
+    padding: 3px 8px;
+    margin-left: 8px;
+    margin-right: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #ffd700 !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    font-size: 12.32px;
+    font-weight: 400;
+    font-family: arial, helvetica, clean, sans-serif;
+    text-decoration: none !important;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    vertical-align: baseline;
+}
+
+.updates-available-button::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -150%;
+    width: 50%;
+    height: 200%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.15),
+        transparent
+    );
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% {
+        left: -150%;
+    }
+    100% {
+        left: 150%;
+    }
+}
+
+.updates-available-button:hover {
+    background: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 215, 0, 0.3);
+}
+
+.updates-available-button .update-badge {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.4rem;
+    background: #00ff88;
+    color: #1a1a2e;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
