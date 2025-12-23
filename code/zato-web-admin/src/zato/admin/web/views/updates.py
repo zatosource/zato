@@ -115,3 +115,93 @@ def download_updates(req):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@method_allowed('POST')
+def install_updates(req):
+    """
+    Installs updates. Dummy command for now.
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    return run_command(
+        req,
+        command=['git', 'pull'],
+        cwd=current_dir,
+        timeout=999_999,
+        log_prefix='install_updates'
+    )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def restart_scheduler(req):
+    """
+    Restarts scheduler. Dummy command for now.
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    return run_command(
+        req,
+        command=['git', 'pull'],
+        cwd=current_dir,
+        timeout=999_999,
+        log_prefix='restart_scheduler'
+    )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def restart_server(req):
+    """
+    Restarts server. Dummy command for now.
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    return run_command(
+        req,
+        command=['git', 'pull'],
+        cwd=current_dir,
+        timeout=999_999,
+        log_prefix='restart_server'
+    )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def restart_proxy(req):
+    """
+    Restarts proxy. Dummy command for now.
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    return run_command(
+        req,
+        command=['git', 'pull'],
+        cwd=current_dir,
+        timeout=999_999,
+        log_prefix='restart_proxy'
+    )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def restart_dashboard(req):
+    """
+    Restarts dashboard. Dummy command for now.
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    return run_command(
+        req,
+        command=['git', 'pull'],
+        cwd=current_dir,
+        timeout=999_999,
+        log_prefix='restart_dashboard'
+    )
+
+# ################################################################################################################################
+# ################################################################################################################################
