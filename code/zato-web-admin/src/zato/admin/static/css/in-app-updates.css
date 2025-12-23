@@ -236,7 +236,7 @@
 }
 
 .status-badge.with-shine {
-    background: 
+    background:
         linear-gradient(
             90deg,
             transparent 0%,
@@ -261,7 +261,7 @@
 }
 
 .status-badge.with-shine:hover {
-    background: 
+    background:
         linear-gradient(
             90deg,
             transparent 0%,
@@ -485,12 +485,14 @@ input:checked + .toggle-slider:before {
 .help-icon {
     width: 16px;
     height: 16px;
-    margin-left: 6px;
+    margin-left: 1px;
     cursor: pointer;
     opacity: 0.7;
     transition: opacity 0.2s;
     vertical-align: middle;
     fill: var(--primary-dark);
+    position: relative;
+    top: -1px;
 }
 
 .help-icon:hover {
