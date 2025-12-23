@@ -321,10 +321,10 @@
     display: flex;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid var(--border-light);
-    border-left: 2px solid transparent;
-    border-right: 2px solid transparent;
-    border-top: 2px solid transparent;
+    border-bottom: 4px solid var(--border-light);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid transparent;
     transition: all 0.3s ease;
 }
 
@@ -341,11 +341,11 @@
 }
 
 .progress-item:last-child {
-    border-bottom: 1px solid var(--border-light);
+    border-bottom: 4px solid var(--border-light);
 }
 
 .progress-item:last-child.error-state {
-    border-bottom: 2px dotted #cc0000;
+    border-bottom: 4px dotted #cc0000;
 }
 
 .progress-item.hidden {
@@ -402,7 +402,8 @@
 }
 
 .progress-item.error-state .progress-text {
-    margin-top: 12px;
+    margin-top: 19px;
+    color: #000;
 }
 
 .wizard-summary {
