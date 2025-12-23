@@ -10,21 +10,31 @@ $.fn.zato.in_app_updates.init = function() {
     $('.copy-icon').on('click', $.fn.zato.in_app_updates.handleCopyIcon);
     $(document).on('click', '.upgrade-info', $.fn.zato.in_app_updates.handleCopyUpgradeInfo);
     $('#update-button').on('click', $.fn.zato.in_app_updates.handleUpdateClick);
-    $('#auto-update-help').on('click', $.fn.zato.in_app_updates.showHelpOverlay);
-    $('.help-overlay-close').on('click', $.fn.zato.in_app_updates.hideHelpOverlay);
-    $('#auto-update-help-overlay').on('click', function(e) {
-        if (e.target === this) {
-            $.fn.zato.in_app_updates.hideHelpOverlay();
-        }
+    
+    $.fn.zato.in_app_updates.driverObj = window.driver.js.driver({
+        showProgress: false,
+        showButtons: [],
+        overlayColor: 'rgba(0, 0, 0, 0.5)',
+        popoverClass: 'driver-popover-custom'
     });
-};
 
-$.fn.zato.in_app_updates.showHelpOverlay = function() {
-    $('#auto-update-help-overlay').fadeIn(200);
-};
+    $('#auto-update-help').on('click', function() {
+        $.fn.zato.in_app_updates.driverObj.highlight({
+            popover: {
+                title: 'Auto-update Information',
+                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
+            }
+        });
+    });
 
-$.fn.zato.in_app_updates.hideHelpOverlay = function() {
-    $('#auto-update-help-overlay').fadeOut(200);
+    $('#version-info-help').on('click', function() {
+        $.fn.zato.in_app_updates.driverObj.highlight({
+            popover: {
+                title: 'Version Information',
+                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+            }
+        });
+    });
 };
 
 $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
@@ -121,17 +131,6 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
                     headerBadge.classList.add('white');
                     headerBadge.textContent = 'Up to date';
                 }
-
-                confetti({
-                    particleCount: 40,
-                    spread: 50,
-                    origin: { y: 0.5 },
-                    colors: ['#0073bb', '#067f39', '#ffd700', '#ff8c00'],
-                    scalar: 0.7,
-                    gravity: 1,
-                    drift: 0,
-                    ticks: 150
-                });
             }, 300);
         }, 100);
     }, 100);

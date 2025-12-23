@@ -499,62 +499,37 @@ input:checked + .toggle-slider:before {
     opacity: 1;
 }
 
-.help-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+
+.driver-popover {
+    background: #fff !important;
+    border: 3px solid var(--primary-dark) !important;
+    box-shadow: 8px 8px 0px var(--shadow-dark) !important;
+    border-radius: 0 !important;
+    max-width: 500px !important;
 }
 
-.help-overlay-content {
-    background: #fff;
-    border: 3px solid var(--primary-dark);
-    padding: 24px;
-    max-width: 500px;
-    width: 90%;
-    position: relative;
-    box-shadow: 8px 8px 0px var(--shadow-dark);
+.driver-popover-title {
+    color: var(--primary-dark) !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    margin: 0 0 16px 0 !important;
 }
 
-.help-overlay-content h3 {
-    margin: 0 0 16px 0;
-    color: var(--primary-dark);
-    font-size: 18px;
-    font-weight: 600;
+.driver-popover-description {
+    color: #333 !important;
+    line-height: 1.6 !important;
 }
 
-.help-overlay-content p {
-    margin: 0 0 12px 0;
-    line-height: 1.6;
-    color: #333;
+.driver-popover-close-btn {
+    color: var(--primary-dark) !important;
+    font-size: 24px !important;
+    opacity: 0.7 !important;
 }
 
-.help-overlay-content p:last-of-type {
-    margin-bottom: 0;
+.driver-popover-close-btn:hover {
+    opacity: 1 !important;
 }
 
-.help-overlay-close {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    font-size: 24px;
-    cursor: pointer;
-    color: var(--primary-dark);
-    line-height: 1;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-}
-
-.help-overlay-close:hover {
-    opacity: 1;
-}
-
-canvas {
-    z-index: 99999 !important;
+.driver-overlay {
+    background: rgba(0, 0, 0, 0.5) !important;
 }
