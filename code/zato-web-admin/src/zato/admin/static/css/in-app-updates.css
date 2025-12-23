@@ -19,21 +19,21 @@
 
 .creation-main {
     flex: 1;
-    padding: 40px;
+    padding: 24px 40px 40px 40px;
 }
 
 .creation-sidebar {
     width: 280px;
     background: var(--background-light);
     border-left: 3px solid var(--primary-dark);
-    padding: 40px 32px;
+    padding: 24px 32px 40px 32px;
 }
 
 .creation-main h3, .creation-sidebar h3 {
     font-size: 16px;
     font-weight: 600;
     color: var(--primary-dark);
-    margin: 0 0 16px 0;
+    margin: 0 0 12px 0;
     letter-spacing: 0.5px;
 }
 
@@ -628,7 +628,7 @@ input:checked + .toggle-slider:before {
 }
 
 .links-section {
-    margin-top: 52px;
+    margin-top: 32px;
     opacity: 0;
     transition: opacity 0.3s ease;
     position: relative;

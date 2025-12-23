@@ -55,6 +55,22 @@ $.fn.zato.in_app_updates.init = function() {
         }
     ];
 
+    $.fn.zato.in_app_updates.linksSteps = [
+        {
+            popover: {
+                title: 'Links',
+                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+            }
+        },
+        {
+            element: '.dashboard-link-item',
+            popover: {
+                title: 'Download logs',
+                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
+            }
+        }
+    ];
+
     console.log('Creating single driver instance');
     $.fn.zato.in_app_updates.driverObj = window.driver.js.driver({
         showProgress: true,
@@ -75,6 +91,13 @@ $.fn.zato.in_app_updates.init = function() {
     $('#auto-update-help').on('click', function() {
         console.log('Auto-update help clicked, setting config steps:', JSON.stringify($.fn.zato.in_app_updates.configSteps.map(s => s.popover ? s.popover.title : 'no title'), null, 2));
         $.fn.zato.in_app_updates.driverObj.setSteps($.fn.zato.in_app_updates.configSteps);
+        console.log('Steps set, now driving from step 0');
+        $.fn.zato.in_app_updates.driverObj.drive(0);
+    });
+
+    $('#links-help').on('click', function() {
+        console.log('Links help clicked, setting links steps:', JSON.stringify($.fn.zato.in_app_updates.linksSteps.map(s => s.popover ? s.popover.title : 'no title'), null, 2));
+        $.fn.zato.in_app_updates.driverObj.setSteps($.fn.zato.in_app_updates.linksSteps);
         console.log('Steps set, now driving from step 0');
         $.fn.zato.in_app_updates.driverObj.drive(0);
     });
