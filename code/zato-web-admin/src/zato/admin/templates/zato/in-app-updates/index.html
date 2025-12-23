@@ -104,6 +104,15 @@
                             <option value="monthly">Monthly</option>
                         </select>
                     </div>
+                    <div class="summary-item hidden" id="schedule-position">
+                        <div class="summary-label">Position</div>
+                        <select class="schedule-select" id="update-position">
+                            <option value="first">First of</option>
+                            <option value="second">Second of</option>
+                            <option value="third">Third of</option>
+                            <option value="last">Last of</option>
+                        </select>
+                    </div>
                     <div class="summary-item hidden" id="schedule-day">
                         <div class="summary-label">Day</div>
                         <select class="schedule-select" id="update-day">
@@ -114,15 +123,6 @@
                             <option value="friday">Friday</option>
                             <option value="saturday">Saturday</option>
                             <option value="sunday">Sunday</option>
-                        </select>
-                    </div>
-                    <div class="summary-item hidden" id="schedule-position">
-                        <div class="summary-label">Position</div>
-                        <select class="schedule-select" id="update-position">
-                            <option value="first">First of</option>
-                            <option value="second">Second of</option>
-                            <option value="third">Third of</option>
-                            <option value="last">Last of</option>
                         </select>
                     </div>
                     <div class="summary-item hidden" id="schedule-time">
@@ -154,7 +154,9 @@
                             <option value="23:00">23:00</option>
                         </select>
                     </div>
-                    <div class="save-button-container">
+                    <div class="save-button-container" style="display: none;">
+                        <img src="/static/gfx/spinner.svg" class="config-save-spinner" style="display: none; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">
+                        <span class="config-saved-message" style="display: none;">Saved</span>
                         <button class="config-save-button" id="config-save-button">
                             Save
                         </button>
