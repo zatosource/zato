@@ -263,10 +263,10 @@ $.fn.zato.in_app_updates.handleSaveSchedule = function() {
             setTimeout(function() {
                 $('.config-save-spinner').css('display', 'none');
                 $('.config-saved-message').css('display', 'inline-block');
+                $('#config-save-button').prop('disabled', false);
 
                 setTimeout(function() {
                     $('.config-saved-message').css('display', 'none');
-                    $('#config-save-button').prop('disabled', false);
                 }, 1500);
             }, remainingDelay);
         },
