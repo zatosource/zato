@@ -88,15 +88,15 @@
             <div class="creation-sidebar">
                 <h3>Config <img src="/static/gfx/info.svg" class="help-icon" id="auto-update-help" alt="info" /></h3>
                 <div class="config-panel">
-                    <div class="summary-item">
-                        <div class="summary-label">Auto-update</div>
+                    <div class="config-item">
+                        <div class="config-label">Auto-update</div>
                         <label class="toggle-switch">
                             <input type="checkbox" id="auto-restart">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    <div class="summary-item hidden" id="schedule-frequency">
-                        <div class="summary-label">How often?</div>
+                    <div class="config-item hidden" id="schedule-frequency">
+                        <div class="config-label">How often?</div>
                         <select class="schedule-select" id="update-frequency">
                             <option value="hourly">Hourly</option>
                             <option value="daily">Daily</option>
@@ -104,17 +104,17 @@
                             <option value="monthly">Monthly</option>
                         </select>
                     </div>
-                    <div class="summary-item hidden" id="schedule-position">
-                        <div class="summary-label">Week</div>
-                        <select class="schedule-select" id="update-position">
+                    <div class="config-item hidden" id="schedule-week">
+                        <div class="config-label">Week</div>
+                        <select class="schedule-select" id="update-week">
                             <option value="first">First week of month</option>
                             <option value="second">Second week of month</option>
                             <option value="third">Third week of month</option>
                             <option value="last">Last week of month</option>
                         </select>
                     </div>
-                    <div class="summary-item hidden" id="schedule-day">
-                        <div class="summary-label">Day</div>
+                    <div class="config-item hidden" id="schedule-day">
+                        <div class="config-label">Day</div>
                         <select class="schedule-select" id="update-day">
                             <option value="monday">Monday</option>
                             <option value="tuesday">Tuesday</option>
@@ -125,8 +125,8 @@
                             <option value="sunday">Sunday</option>
                         </select>
                     </div>
-                    <div class="summary-item hidden" id="schedule-time">
-                        <div class="summary-label">Time</div>
+                    <div class="config-item hidden" id="schedule-time">
+                        <div class="config-label">Time</div>
                         <select class="schedule-select" id="update-time">
                             <option value="00:00">00:00</option>
                             <option value="01:00">01:00</option>
