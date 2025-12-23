@@ -6,7 +6,7 @@
 }
 
 .creation-panel {
-    max-width: 1063px;
+    max-width: 957px;
     margin: 0 auto;
     background: var(--white);
     border: 3px solid var(--primary-dark);
@@ -521,22 +521,25 @@ input:checked + .toggle-slider:before {
 }
 
 .driver-popover-close-btn {
-    color: var(--primary-dark) !important;
+    color: #494949 !important;
     font-size: 24px !important;
-    opacity: 0.7 !important;
     background: transparent !important;
-    border: none !important;
+    border: 1px solid transparent !important;
     box-shadow: none !important;
     text-shadow: none !important;
     font-weight: 400 !important;
+    border-radius: 3px !important;
+    padding: 0px 2px !important;
+    width: auto !important;
+    height: auto !important;
+    line-height: 1 !important;
+    margin: 4px !important;
 }
 
 .driver-popover-close-btn:hover {
-    opacity: 1 !important;
-    color: var(--primary-dark) !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
+    background: #e9e9e9 !important;
+    border-radius: 5px !important;
+    padding: 0px 2px !important;
 }
 
 .driver-overlay {
