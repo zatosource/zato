@@ -14,7 +14,7 @@ $.fn.zato.in_app_updates.init = function() {
     $.fn.zato.in_app_updates.versionSteps = [
         {
             popover: {
-                title: 'Version Information',
+                title: 'Version info',
                 description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
             }
         },
@@ -37,7 +37,7 @@ $.fn.zato.in_app_updates.init = function() {
     $.fn.zato.in_app_updates.configSteps = [
         {
             popover: {
-                title: 'Config Information',
+                title: 'Config',
                 description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
             }
         },
