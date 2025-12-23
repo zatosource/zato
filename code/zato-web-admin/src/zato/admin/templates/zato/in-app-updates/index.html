@@ -83,11 +83,23 @@
                 <h3>Config</h3>
                 <div class="wizard-summary">
                     <div class="summary-item">
-                        <div class="summary-label">Auto-update</div>
+                        <div class="summary-label">
+                            Auto-update
+                            <span class="help-icon" id="auto-update-help">❓</span>
+                        </div>
                         <label class="toggle-switch">
                             <input type="checkbox" id="auto-restart">
                             <span class="toggle-slider"></span>
                         </label>
+                    </div>
+                    <div id="auto-update-help-overlay" class="help-overlay" style="display: none;">
+                        <div class="help-overlay-content">
+                            <span class="help-overlay-close">✕</span>
+                            <h3>Auto-update Information</h3>
+                            <p>Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                            <p>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+                        </div>
                     </div>
                     <div class="save-button-container">
                         <button class="config-save-button" id="config-save-button">
