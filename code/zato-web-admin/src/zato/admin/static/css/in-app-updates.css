@@ -627,6 +627,71 @@ input:checked + .toggle-slider:before {
     padding: 0px 2px !important;
 }
 
+.links-section {
+    margin-top: 52px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    position: relative;
+}
+
+.links-section.show {
+    opacity: 1;
+}
+
+.links-panel {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
+}
+
+.links-row {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dashboard-link-item {
+    width: 100%;
+}
+
+.links-panel .dashboard-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 12px;
+    font-weight: 900;
+    border: 3px solid var(--primary-dark);
+    border-radius: 0;
+    background: var(--white);
+    color: var(--primary-dark);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+    box-shadow: 8px 8px 0px var(--shadow-dark);
+    box-sizing: border-box;
+}
+
+.links-panel .dashboard-link:hover {
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: 8px 8px 0px var(--accent-light);
+}
+
+.external-icon {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
+}
+
+.links-panel .dashboard-link:hover .external-icon {
+    filter: brightness(0) saturate(100%) invert(100%);
+}
+
 .driver-overlay {
     background: rgba(0, 0, 0, 0.5) !important;
 }
