@@ -13,7 +13,7 @@ $.fn.zato.in_app_updates.init = function() {
     $('#auto-restart').on('change', $.fn.zato.in_app_updates.handleAutoUpdateToggle);
     $('#update-frequency').on('change', $.fn.zato.in_app_updates.handleFrequencyChange);
     $('#config-save-button').on('click', $.fn.zato.in_app_updates.handleSaveSchedule);
-    
+
     $.fn.zato.in_app_updates.loadSchedule();
 
     $.fn.zato.in_app_updates.versionSteps = [
@@ -151,9 +151,9 @@ $.fn.zato.in_app_updates.handleCopyUpgradeInfo = function(e) {
 
 $.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
     const isEnabled = $(this).is(':checked');
-    
+
     console.log('Auto-update toggle changed, enabled:', isEnabled);
-    
+
     if (isEnabled) {
         console.log('Showing schedule frequency');
         $('#schedule-frequency').removeClass('hidden');
@@ -166,7 +166,7 @@ $.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
         $('#schedule-position').addClass('hidden');
         $('#schedule-time').addClass('hidden');
         $('.save-button-container').css('display', 'none');
-        
+
         $.ajax({
             url: '/zato/updates/delete-schedule',
             type: 'POST',
@@ -183,15 +183,15 @@ $.fn.zato.in_app_updates.handleFrequencyChange = function() {
 
 $.fn.zato.in_app_updates.updateScheduleOptions = function() {
     const frequency = $('#update-frequency').val();
-    
+
     console.log('updateScheduleOptions called, frequency:', frequency);
-    
+
     $('#schedule-day').addClass('hidden');
     $('#schedule-position').addClass('hidden');
     $('#schedule-time').addClass('hidden');
-    
+
     console.log('All schedule fields hidden');
-    
+
     if (frequency === 'hourly') {
         console.log('Hourly selected - no additional fields shown');
     } else if (frequency === 'daily') {
@@ -207,7 +207,7 @@ $.fn.zato.in_app_updates.updateScheduleOptions = function() {
         $('#schedule-day').removeClass('hidden');
         $('#schedule-time').removeClass('hidden');
     }
-    
+
     console.log('schedule-day hidden:', $('#schedule-day').hasClass('hidden'));
     console.log('schedule-position hidden:', $('#schedule-position').hasClass('hidden'));
     console.log('schedule-time hidden:', $('#schedule-time').hasClass('hidden'));
@@ -224,7 +224,7 @@ $.fn.zato.in_app_updates.loadSchedule = function() {
                 $('#update-day').val(response.schedule.day);
                 $('#update-position').val(response.schedule.position);
                 $('#update-time').val(response.schedule.time);
-                
+
                 $('#schedule-frequency').removeClass('hidden');
                 $('.save-button-container').css('display', 'flex');
                 $.fn.zato.in_app_updates.updateScheduleOptions();
@@ -240,13 +240,13 @@ $.fn.zato.in_app_updates.handleSaveSchedule = function() {
         position: $('#update-position').val(),
         time: $('#update-time').val()
     };
-    
+
     $('.config-save-spinner').css('display', 'block');
     $('.config-saved-message').css('display', 'none');
     $('#config-save-button').prop('disabled', true);
-    
+
     const startTime = Date.now();
-    
+
     $.ajax({
         url: '/zato/updates/save-schedule',
         type: 'POST',
@@ -259,11 +259,11 @@ $.fn.zato.in_app_updates.handleSaveSchedule = function() {
             const elapsed = Date.now() - startTime;
             const minDelay = 500;
             const remainingDelay = Math.max(0, minDelay - elapsed);
-            
+
             setTimeout(function() {
                 $('.config-save-spinner').css('display', 'none');
                 $('.config-saved-message').css('display', 'inline-block');
-                
+
                 setTimeout(function() {
                     $('.config-saved-message').css('display', 'none');
                     $('#config-save-button').prop('disabled', false);
@@ -294,7 +294,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
         },
         success: function(response) {
             $.fn.zato.in_app_updates.updateProgress('download', 'completed', 'Download complete');
-            
+
             $('#progress-install').removeClass('hidden');
             $.fn.zato.in_app_updates.runInstallSteps(button);
         },
@@ -321,22 +321,22 @@ $.fn.zato.in_app_updates.runInstallSteps = function(button) {
         {url: '/zato/updates/restart-proxy', text: 'Restarting proxy'},
         {url: '/zato/updates/restart-dashboard', text: 'Restarting dashboard'}
     ];
-    
+
     let currentStep = 0;
     const totalSteps = steps.length;
-    
+
     const runNextStep = function() {
         if (currentStep >= totalSteps) {
             $.fn.zato.in_app_updates.updateProgress('install', 'completed', 'Installation complete');
-            
+
             $('#progress-install .upgrade-info').addClass('show');
             const latestVersion = $('#latest-version').data('base-version');
             $('#current-version').text(latestVersion);
             button.prop('disabled', false);
-            
+
             const upToDateBadge = $('#up-to-date-badge');
             upToDateBadge.removeClass('no').addClass('yes').text('Yes');
-            
+
             const headerBadge = window.parent.document.getElementById('update-status-badge');
             if (headerBadge) {
                 headerBadge.classList.remove('with-shine');
@@ -345,14 +345,14 @@ $.fn.zato.in_app_updates.runInstallSteps = function(button) {
             }
             return;
         }
-        
+
         const step = steps[currentStep];
         const stepNumber = currentStep + 1;
         const progressText = stepNumber + ' / ' + totalSteps;
         const statusText = step.text + '...';
-        
+
         $.fn.zato.in_app_updates.updateProgress('install', 'processing', progressText, statusText);
-        
+
         $.ajax({
             url: step.url,
             type: 'POST',
@@ -371,13 +371,13 @@ $.fn.zato.in_app_updates.runInstallSteps = function(button) {
                 } catch(e) {
                     errorMsg = xhr.responseText || errorMsg;
                 }
-                
+
                 $.fn.zato.in_app_updates.updateProgress('install', 'error', progressText, errorMsg);
                 button.prop('disabled', false);
             }
         });
     };
-    
+
     runNextStep();
 };
 
@@ -386,7 +386,7 @@ $.fn.zato.in_app_updates.updateProgress = function(step, status, message, status
     const icon = item.find('.progress-icon');
     const text = item.find('.progress-text');
     const copyButton = item.find('.download-error-copy');
-    
+
     const displayMessage = statusText ? '<span style="color: #000; font-weight: 600;">' + message + '</span> <span style="color: var(--text-muted);">' + statusText + '</span>' : message;
 
     if (status === 'processing') {
