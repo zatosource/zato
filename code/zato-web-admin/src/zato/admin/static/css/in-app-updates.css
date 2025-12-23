@@ -413,14 +413,18 @@
     color: #000;
 }
 
-.config-summary {
+.config-panel {
     background: var(--white);
     border: 3px solid var(--primary-dark);
     padding: 24px 24px 20px 24px;
 }
 
-.config-summary .summary-item:first-child:last-child {
-    margin-bottom: 4px;
+.config-panel .summary-item:first-child:last-child {
+    margin-bottom: 0;
+}
+
+.config-panel:has(.summary-item:first-child:last-child) {
+    padding-bottom: 12px;
 }
 
 .summary-title {
