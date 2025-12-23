@@ -313,6 +313,7 @@
 
 .upgrade-info.show {
     display: inline-block;
+    padding: 6px;
     margin-top: 8px;
 }
 
