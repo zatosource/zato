@@ -125,7 +125,7 @@ def install_updates(req):
     Installs updates. Dummy command for now.
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
+
     return run_command(
         req,
         command=['sleep', '0.2'],
@@ -143,7 +143,7 @@ def restart_scheduler(req):
     Restarts scheduler. Dummy command for now.
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
+
     return run_command(
         req,
         command=['sleep', '0.2'],
@@ -161,7 +161,7 @@ def restart_server(req):
     Restarts server. Dummy command for now.
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
+
     return run_command(
         req,
         command=['sleep', '0.2'],
@@ -179,7 +179,7 @@ def restart_proxy(req):
     Restarts proxy. Dummy command for now.
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
+
     return run_command(
         req,
         command=['sleep', '0.2'],
@@ -197,7 +197,7 @@ def restart_dashboard(req):
     Restarts dashboard. Dummy command for now.
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
+
     return run_command(
         req,
         command=['sleep', '0.2'],
@@ -217,21 +217,21 @@ def save_schedule(req):
     try:
         body = req.body.decode('utf-8')
         schedule_data = loads(body)
-        
+
         logger.info('save_schedule: received data: {}'.format(schedule_data))
-        
+
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-        r.set('zato:autoupdate:schedule', dumps(schedule_data))
-        
+        _ = r.set('zato:autoupdate:schedule', dumps(schedule_data))
+
         logger.info('save_schedule: schedule saved to Redis')
-        
+
         response_data = {'success': True}
         response_json = dumps(response_data)
         return HttpResponse(response_json, content_type='application/json')
-        
+
     except Exception:
         logger.error('save_schedule: exception: {}'.format(format_exc()))
-        
+
         response_data = {
             'success': False,
             'error': 'Failed to save schedule'
@@ -249,8 +249,8 @@ def load_schedule(req):
     """
     try:
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-        schedule_json = r.get('zato:autoupdate:schedule')
-        
+        _ = schedule_json = r.get('zato:autoupdate:schedule')
+
         if schedule_json:
             logger.info('load_schedule: found schedule in Redis')
             schedule_data = loads(schedule_json)
@@ -264,13 +264,13 @@ def load_schedule(req):
                 'success': True,
                 'schedule': None
             }
-        
+
         response_json = dumps(response_data)
         return HttpResponse(response_json, content_type='application/json')
-        
+
     except Exception:
         logger.error('load_schedule: exception: {}'.format(format_exc()))
-        
+
         response_data = {
             'success': False,
             'error': 'Failed to load schedule'
@@ -288,17 +288,17 @@ def delete_schedule(req):
     """
     try:
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-        r.delete('zato:autoupdate:schedule')
-        
+        _ = r.delete('zato:autoupdate:schedule')
+
         logger.info('delete_schedule: schedule deleted from Redis')
-        
+
         response_data = {'success': True}
         response_json = dumps(response_data)
         return HttpResponse(response_json, content_type='application/json')
-        
+
     except Exception:
         logger.error('delete_schedule: exception: {}'.format(format_exc()))
-        
+
         response_data = {
             'success': False,
             'error': 'Failed to delete schedule'
@@ -325,7 +325,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor i
 Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
 Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."""
-    
+
     response = HttpResponse(lorem_ipsum, content_type='text/plain')
     response['Content-Disposition'] = 'attachment; filename="update.log"'
     return response
