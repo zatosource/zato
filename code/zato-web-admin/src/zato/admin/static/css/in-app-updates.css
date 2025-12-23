@@ -23,7 +23,7 @@
 }
 
 .creation-sidebar {
-    width: 296px;
+    width: 328px;
     background: var(--background-light);
     border-left: 3px solid var(--primary-dark);
     padding: 24px 32px 40px 32px;
@@ -475,7 +475,7 @@
     color: var(--primary-dark);
     font-weight: 600;
     cursor: pointer;
-    width: 140px;
+    width: 148px;
 }
 
 .config-save-button {
