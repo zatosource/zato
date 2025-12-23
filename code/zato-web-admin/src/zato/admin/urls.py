@@ -829,6 +829,12 @@ urlpatterns += [
         login_required(updates.restart_proxy), name='updates-restart-proxy'),
     url(r'^zato/updates/restart-dashboard$',
         login_required(updates.restart_dashboard), name='updates-restart-dashboard'),
+    url(r'^zato/updates/save-schedule$',
+        login_required(updates.save_schedule), name='updates-save-schedule'),
+    url(r'^zato/updates/load-schedule$',
+        login_required(updates.load_schedule), name='updates-load-schedule'),
+    url(r'^zato/updates/delete-schedule$',
+        login_required(updates.delete_schedule), name='updates-delete-schedule'),
 ]
 
 # ################################################################################################################################

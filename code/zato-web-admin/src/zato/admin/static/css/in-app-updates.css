@@ -437,6 +437,10 @@
     margin-bottom: 16px;
 }
 
+.summary-item.hidden {
+    display: none;
+}
+
 .summary-item:last-child {
     margin-bottom: 0;
 }
@@ -477,8 +481,22 @@
 
 .save-button-container {
     display: none;
+    align-items: center;
     justify-content: flex-end;
-    margin-top: 16px;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.config-save-spinner {
+    width: 16px;
+    height: 16px;
+    animation: spin 0.5s linear infinite;
+}
+
+.config-saved-message {
+    color: #067f39;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .config-save-button:hover {
