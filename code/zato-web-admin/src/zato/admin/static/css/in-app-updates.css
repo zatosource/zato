@@ -416,7 +416,10 @@
 .config-panel {
     background: var(--white);
     border: 3px solid var(--primary-dark);
-    padding: 24px 24px 20px 24px;
+    padding-top: 24px;
+    padding-right: 24px;
+    padding-bottom: 20px;
+    padding-left: 24px;
 }
 
 .config-panel .summary-item:first-child:last-child {
