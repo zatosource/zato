@@ -217,7 +217,7 @@
     opacity: 1;
 }
 
-.status-badge {
+a.status-badge {
     background: rgba(16, 25, 40, 0.95);
     color: #ffd700;
     font-size: 12px;
@@ -293,7 +293,6 @@
 
 .upgrade-info.show {
     display: inline-block;
-    padding: 6px;
     margin-top: 8px;
 }
 
