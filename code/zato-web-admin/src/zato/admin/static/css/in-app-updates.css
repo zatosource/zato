@@ -217,52 +217,72 @@
     opacity: 1;
 }
 
-a.status-badge {
-    background: rgba(16, 25, 40, 0.95);
-    color: #ffd700;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    display: inline-block;
+.status-badge {
+    display: inline;
     padding: 3px;
-    position: relative;
-    overflow: hidden;
+    background: rgb(1, 40, 69);
+    color: #ffd700 !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    font-size: 12.32px;
+    font-weight: 400;
+    font-family: arial, helvetica, clean, sans-serif;
+    text-decoration: none !important;
+    vertical-align: baseline;
 }
 
-.status-badge.header-badge {
-    margin-right: 16px;
-    border-radius: 0;
+.status-badge::before {
+    display: none;
+}
+
+.status-badge.with-shine {
+    background: 
+        linear-gradient(
+            90deg,
+            transparent 0%,
+            transparent 40%,
+            rgba(255, 255, 255, 0.15) 50%,
+            transparent 60%,
+            transparent 100%
+        ),
+        rgb(1, 40, 69);
+    background-size: 200% 100%, 100% 100%;
+    transition: all 0.25s ease;
+    animation: shine 3s infinite;
 }
 
 @keyframes shine {
     0% {
-        background-position: -200% center;
+        background-position: 200% 0, 0 0;
     }
     100% {
-        background-position: 200% center;
+        background-position: -200% 0, 0 0;
     }
-}
-
-.status-badge.with-shine {
-    background: linear-gradient(
-        90deg,
-        rgba(16, 25, 40, 0.95) 0%,
-        rgba(16, 25, 40, 0.95) 40%,
-        rgba(255, 215, 0, 0.3) 50%,
-        rgba(16, 25, 40, 0.95) 60%,
-        rgba(16, 25, 40, 0.95) 100%
-    );
-    background-size: 200% 100%;
-    animation: shine 3s linear infinite;
 }
 
 .status-badge.with-shine:hover {
-    color: #ffd700;
+    background: 
+        linear-gradient(
+            90deg,
+            transparent 0%,
+            transparent 40%,
+            rgba(255, 255, 255, 0.15) 50%,
+            transparent 60%,
+            transparent 100%
+        ),
+        rgb(1, 50, 85);
+    background-size: 200% 100%, 100% 100%;
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #ffd700 !important;
+}
+
+.status-badge.header-badge {
+    margin-left: 8px;
+    margin-right: 8px;
 }
 
 .status-badge.white {
-    background: rgba(16, 25, 40, 0.95);
-    color: #fff;
+    color: #fff !important;
 }
 
 .up-to-date-badge {
