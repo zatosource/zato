@@ -1,8 +1,22 @@
-.updates-available-button {
+.status-badge {
     display: inline;
-    padding: 3px 8px;
-    margin-left: 8px;
-    margin-right: 8px;
+    padding: 3px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #ffd700 !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    font-size: 12.32px;
+    font-weight: 400;
+    font-family: arial, helvetica, clean, sans-serif;
+    text-decoration: none !important;
+    vertical-align: baseline;
+}
+
+.status-badge::before {
+    display: none;
+}
+
+.status-badge.with-shine {
     background: 
         linear-gradient(
             90deg,
@@ -14,20 +28,8 @@
         ),
         rgba(0, 0, 0, 0.3);
     background-size: 200% 100%, 100% 100%;
-    color: #ffd700 !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-    font-size: 12.32px;
-    font-weight: 400;
-    font-family: arial, helvetica, clean, sans-serif;
-    text-decoration: none !important;
     transition: all 0.25s ease;
-    vertical-align: baseline;
     animation: shine 3s infinite;
-}
-
-.updates-available-button::before {
-    display: none;
 }
 
 @keyframes shine {
@@ -39,7 +41,7 @@
     }
 }
 
-.updates-available-button:hover {
+.status-badge.with-shine:hover {
     background: 
         linear-gradient(
             90deg,
@@ -52,6 +54,15 @@
         rgba(0, 0, 0, 0.35);
     background-size: 200% 100%, 100% 100%;
     border-color: rgba(255, 255, 255, 0.25);
+}
+
+.status-badge.header-badge {
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+.status-badge.white {
+    color: #fff !important;
 }
 
 .updates-available-button .update-badge {

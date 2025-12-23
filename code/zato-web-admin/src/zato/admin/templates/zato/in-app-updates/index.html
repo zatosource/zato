@@ -1,99 +1,478 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Updates available{% endblock %}
+{% block html_title %}In-app updates{% endblock %}
 
 {% block "extra_css" %}
-    <link rel="stylesheet" type="text/css" href="/static/css/in-app-updates.css">
-    <style type="text/css">
-        .updates-container {
-            max-width: 600px;
-            margin: 60px auto;
-            padding: 40px;
-            text-align: center;
-        }
-        
-        .updates-header {
-            font-size: 2rem;
-            color: #ffd700;
-            margin-bottom: 30px;
-        }
-        
-        .updates-version {
-            font-size: 1.2rem;
-            color: #fff;
-            margin-bottom: 40px;
-        }
-        
-        .install-button {
-            display: inline-block;
-            padding: 15px 40px;
-            background: rgba(0, 0, 0, 0.3);
-            color: #ffd700;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.25s ease;
-        }
-        
-        .install-button:hover {
-            background: rgba(0, 0, 0, 0.4);
-            border-color: rgba(255, 215, 0, 0.3);
-        }
-        
-        .spinner-container {
-            display: none;
-            margin-top: 30px;
-        }
-        
-        .spinner-container.active {
-            display: block;
-        }
-        
-        .spinner-container img {
-            width: 64px;
-            height: 64px;
-        }
-        
-        .status-message {
-            margin-top: 20px;
-            font-size: 1rem;
-            color: #fff;
-        }
-    </style>
+<link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
+<style>
+.creation-container {
+    background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
+    min-height: 100vh;
+    padding: 40px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.creation-panel {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    box-shadow: 8px 8px 0px var(--shadow-dark);
+}
+
+.creation-content {
+    display: flex;
+}
+
+.creation-main {
+    flex: 1;
+    padding: 40px;
+}
+
+.creation-sidebar {
+    width: 300px;
+    background: var(--background-light);
+    border-left: 3px solid var(--primary-dark);
+    padding: 40px 32px;
+}
+
+.creation-main h3, .creation-sidebar h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.progress-panel {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.version-info {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.version-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.version-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+}
+
+.version-value {
+    color: var(--primary-dark);
+    font-weight: 600;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.update-button {
+    background: var(--primary-dark);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-transform: uppercase;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.update-button:hover {
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.update-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.check-button {
+    background: #fff;
+    color: var(--primary-dark);
+    border: 1px solid var(--primary-dark);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-transform: uppercase;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.check-button:hover {
+    background: #fff;
+    color: var(--primary-dark);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.check-button-spinner {
+    display: none;
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    animation: spin 0.8s linear infinite;
+}
+
+.check-button-spinner.active {
+    display: inline-block;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.progress-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.progress-item:last-child {
+    border-bottom: none;
+}
+
+.progress-item.hidden {
+    display: none;
+}
+
+.progress-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.progress-icon.spinner {
+    color: var(--primary-dark);
+}
+
+.progress-icon.completed {
+    color: var(--primary-dark);
+}
+
+.progress-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.progress-platform {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 0 0 4px 0;
+    line-height: 1.3;
+}
+
+.progress-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.4;
+    font-family: monospace;
+}
+
+.wizard-summary {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
+}
+
+.summary-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.summary-item:last-child {
+    margin-bottom: 0;
+}
+
+.summary-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary-dark);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+.upgrade-info {
+    display: none;
+    margin-top: 8px;
+}
+
+.upgrade-info.show {
+    display: inline;
+}
+
+.upgrade-wrapper {
+    display: none;
+    margin-top: 8px;
+    padding: 4px;
+    background: rgb(1, 40, 69);
+    border-radius: 3px;
+}
+
+.upgrade-wrapper.show {
+    display: inline-block;
+}
+</style>
 {% endblock %}
 
 {% block "extra_js" %}
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/in-app-updates.js"></script>
+<script type="text/javascript" src="/static/js/confetti.browser.min.js" nonce="{{ CSP_NONCE }}"></script>
+<script type="text/javascript" nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $('#check-button').on('click', function() {
+            const spinner = $(this).find('.check-button-spinner');
+            spinner.addClass('active');
+            
+            setTimeout(() => {
+                spinner.removeClass('active');
+            }, 2000);
+        });
+        
+        $('#update-button').on('click', function() {
+            const button = $(this);
+            button.prop('disabled', true);
+            
+            $('.progress-item').removeClass('hidden');
+            
+            updateProgress('download', 'processing', 'Downloading update package...');
+            
+            setTimeout(() => {
+                updateProgress('download', 'completed', 'Download complete');
+                updateProgress('verify', 'processing', 'Verifying package integrity...');
+                
+                setTimeout(() => {
+                    updateProgress('verify', 'completed', 'Verification complete');
+                    updateProgress('install', 'processing', 'Installing updates...');
+                    
+                    setTimeout(() => {
+                        updateProgress('install', 'completed', 'Installation complete');
+                        
+                        setTimeout(() => {
+                            $('#progress-install .upgrade-wrapper').addClass('show');
+                            $('#progress-install .upgrade-info').addClass('show');
+                            $('#current-version').text('{{ latest_version }}');
+                            button.prop('disabled', false);
+                            
+                            const headerBadge = window.parent.document.getElementById('update-status-badge');
+                            if (headerBadge) {
+                                headerBadge.classList.remove('with-shine');
+                                headerBadge.classList.add('white');
+                                headerBadge.textContent = 'Up to date';
+                            }
+                            
+                            confetti({
+                                particleCount: 40,
+                                spread: 50,
+                                origin: { y: 0.5 },
+                                colors: ['#0073bb', '#067f39', '#ffd700', '#ff8c00'],
+                                scalar: 0.7,
+                                gravity: 1,
+                                drift: 0,
+                                ticks: 150
+                            });
+                        }, 300);
+                    }, 100);
+                }, 100);
+            }, 100);
+        });
+    });
+    
+    function updateProgress(step, status, message) {
+        const item = $('#progress-' + step);
+        const icon = item.find('.progress-icon');
+        const text = item.find('.progress-text');
+        
+        if (status === 'processing') {
+            icon.addClass('spinner').html('<img src="/static/gfx/spinner.svg" style="animation: spin 0.5s linear infinite; width: 28px; height: 28px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');
+        } else if (status === 'completed') {
+            icon.removeClass('spinner').addClass('completed').text('✓');
+        }
+        
+        text.text(message);
+    }
+</script>
 {% endblock %}
 
 {% block "content" %}
 
-<div class="updates-container">
-    <h2 class="updates-header">⭐ Updates available</h2>
-    
-    {% if update_available %}
-    <div class="updates-version">
-        Version {{ update_version }} is ready to install
-    </div>
-    
-    <button class="install-button" id="install-updates-button">
-        Install updates
-    </button>
-    
-    <div class="spinner-container" id="spinner-container">
-        <img src="/static/gfx/ajax-loader.gif" alt="Installing updates" />
-        <div class="status-message" id="status-message">
-            Preparing installation...
+<div class="creation-container">
+    <div class="creation-panel">
+        <div class="creation-content">
+            <div class="creation-main">
+                <h3>Version info</h3>
+                <div class="progress-panel">
+                    <div class="version-info">
+                        <div class="version-row">
+                            <div class="version-label">Your version</div>
+                            <div class="version-value" id="current-version">{{ current_version }}</div>
+                        </div>
+                        <div class="version-row">
+                            <div class="version-label">Latest version</div>
+                            <div class="version-value">{{ latest_version }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="button-container">
+                        <button class="check-button" id="check-button">
+                            <img src="/static/gfx/spinner.svg" class="check-button-spinner" style="filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">
+                            Check for updates
+                        </button>
+                        <button class="update-button" id="update-button">
+                            Click to update
+                        </button>
+                    </div>
+                    
+                    <div class="progress-item hidden" id="progress-download">
+                        <div class="progress-icon"></div>
+                        <div class="progress-content">
+                            <div class="progress-platform">Download</div>
+                            <div class="progress-text">Waiting...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-item hidden" id="progress-verify">
+                        <div class="progress-icon"></div>
+                        <div class="progress-content">
+                            <div class="progress-platform">Verify</div>
+                            <div class="progress-text">Waiting...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-item hidden" id="progress-install">
+                        <div class="progress-icon"></div>
+                        <div class="progress-content">
+                            <div class="progress-platform">Install</div>
+                            <div class="progress-text">Waiting...</div>
+                            <span class="upgrade-wrapper">
+                                <span class="upgrade-info status-badge with-shine">
+                                    ⭐ Upgraded to {{ latest_version }}
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="creation-sidebar">
+                <h3>Config</h3>
+                <div class="wizard-summary">
+                    <div class="summary-item">
+                        <div class="summary-label">Auto-download</div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="auto-download" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Auto-restart</div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="auto-restart">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    {% else %}
-    <div class="updates-version">
-        No updates available at this time
-    </div>
-    {% endif %}
 </div>
 
 {% endblock %}
