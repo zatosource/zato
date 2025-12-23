@@ -23,7 +23,7 @@
 }
 
 .creation-sidebar {
-    width: 280px;
+    width: 296px;
     background: var(--background-light);
     border-left: 3px solid var(--primary-dark);
     padding: 24px 32px 40px 32px;
@@ -422,15 +422,15 @@
     padding-left: 24px;
 }
 
-.config-panel .summary-item:first-child:last-child {
+.config-panel .config-item:first-child:last-child {
     margin-bottom: 0;
 }
 
-.config-panel:has(.summary-item:first-child:last-child) {
+.config-panel:has(.config-item:first-child:last-child) {
     padding-bottom: 12px;
 }
 
-.summary-title {
+.config-title {
     font-size: 16px;
     font-weight: 700;
     color: var(--primary-dark);
@@ -441,18 +441,18 @@
     letter-spacing: 0.5px;
 }
 
-.summary-item {
+.config-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
 }
 
-.summary-item.hidden {
+.config-item.hidden {
     display: none;
 }
 
-.summary-item:last-child {
+.config-item:last-child {
     margin-bottom: 0;
 }
 
@@ -460,7 +460,7 @@
     margin-bottom: 0;
 }
 
-.summary-label {
+.config-label {
     color: #000;
     font-weight: 600;
     letter-spacing: 0.5px;

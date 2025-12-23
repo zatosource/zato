@@ -47,7 +47,7 @@ $.fn.zato.in_app_updates.init = function() {
             }
         },
         {
-            element: '.summary-item',
+            element: '.config-item',
             popover: {
                 title: 'Auto-update',
                 description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
@@ -102,7 +102,7 @@ $.fn.zato.in_app_updates.init = function() {
         $.fn.zato.in_app_updates.driverObj.drive(0);
     });
 
-    $('.summary-label').on('click', function() {
+    $('.config-label').on('click', function() {
         const checkbox = $('#auto-restart');
         checkbox.prop('checked', !checkbox.prop('checked'));
     });
@@ -186,7 +186,7 @@ $.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
         console.log('Hiding all schedule fields');
         $('#schedule-frequency').addClass('hidden');
         $('#schedule-day').addClass('hidden');
-        $('#schedule-position').addClass('hidden');
+        $('#schedule-week').addClass('hidden');
         $('#schedule-time').addClass('hidden');
         $('.save-button-container').css('display', 'none');
 
@@ -210,7 +210,7 @@ $.fn.zato.in_app_updates.updateScheduleOptions = function() {
     console.log('updateScheduleOptions called, frequency:', frequency);
 
     $('#schedule-day').addClass('hidden');
-    $('#schedule-position').addClass('hidden');
+    $('#schedule-week').addClass('hidden');
     $('#schedule-time').addClass('hidden');
 
     console.log('All schedule fields hidden');
@@ -225,14 +225,14 @@ $.fn.zato.in_app_updates.updateScheduleOptions = function() {
         $('#schedule-day').removeClass('hidden');
         $('#schedule-time').removeClass('hidden');
     } else if (frequency === 'monthly') {
-        console.log('Monthly selected - showing position, day, and time');
-        $('#schedule-position').removeClass('hidden');
+        console.log('Monthly selected - showing week, day, and time');
+        $('#schedule-week').removeClass('hidden');
         $('#schedule-day').removeClass('hidden');
         $('#schedule-time').removeClass('hidden');
     }
 
     console.log('schedule-day hidden:', $('#schedule-day').hasClass('hidden'));
-    console.log('schedule-position hidden:', $('#schedule-position').hasClass('hidden'));
+    console.log('schedule-week hidden:', $('#schedule-week').hasClass('hidden'));
     console.log('schedule-time hidden:', $('#schedule-time').hasClass('hidden'));
 };
 
@@ -245,7 +245,7 @@ $.fn.zato.in_app_updates.loadSchedule = function() {
                 $('#auto-restart').prop('checked', true);
                 $('#update-frequency').val(response.schedule.frequency);
                 $('#update-day').val(response.schedule.day);
-                $('#update-position').val(response.schedule.position);
+                $('#update-week').val(response.schedule.week);
                 $('#update-time').val(response.schedule.time);
 
                 $('#schedule-frequency').removeClass('hidden');
@@ -260,7 +260,7 @@ $.fn.zato.in_app_updates.handleSaveSchedule = function() {
     const scheduleData = {
         frequency: $('#update-frequency').val(),
         day: $('#update-day').val(),
-        position: $('#update-position').val(),
+        week: $('#update-week').val(),
         time: $('#update-time').val()
     };
 
