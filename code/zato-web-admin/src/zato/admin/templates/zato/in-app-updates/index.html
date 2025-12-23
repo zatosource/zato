@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}In-app updates{% endblock %}
+{% block html_title %}Version info{% endblock %}
 
 {% block "extra_css" %}
 <link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
@@ -13,7 +13,7 @@
 }
 
 .creation-panel {
-    max-width: 924px;
+    max-width: 1063px;
     margin: 0 auto;
     background: var(--white);
     border: 3px solid var(--primary-dark);
@@ -264,7 +264,7 @@
 
 .progress-icon.completed {
     color: var(--primary-dark);
-    align-items: flex-start;
+    align-self: flex-start;
 }
 
 .progress-content {
@@ -402,7 +402,9 @@ input:checked + .toggle-slider:before {
 }
 
 .upgrade-info.show {
-    display: inline;
+    display: inline-block;
+    padding: 6px;
+    margin-top: 8px;
 }
 </style>
 {% endblock %}
@@ -411,132 +413,132 @@ input:checked + .toggle-slider:before {
 <script type="text/javascript" src="/static/js/confetti.browser.min.js" nonce="{{ CSP_NONCE }}"></script>
 <script type="text/javascript" nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
+        const headerBadge = window.parent.document.getElementById('update-status-badge');
+        if (headerBadge) {
+            headerBadge.style.animation = 'none';
+        }
+
         $('#check-button').on('click', function() {
             const spinner = $(this).siblings('.check-button-spinner');
             const updatesFound = $(this).siblings('.updates-found');
-            
+
             spinner.addClass('active');
-            
+
             setTimeout(() => {
                 spinner.removeClass('active');
                 updatesFound.addClass('show');
-                
+
                 const timestamp = Date.now();
                 const newVersion = '{{ latest_version }}.' + timestamp;
                 const latestVersionEl = $('#latest-version');
                 latestVersionEl.text(newVersion);
-                
+
                 setTimeout(() => {
                     latestVersionEl.addClass('pulsate');
                 }, 50);
-                
+
                 setTimeout(() => {
                     updatesFound.addClass('fade');
                     setTimeout(() => {
                         updatesFound.removeClass('show fade');
                     }, 500);
                 }, 1500);
-                
+
                 setTimeout(() => {
                     latestVersionEl.removeClass('pulsate');
                 }, 1600);
             }, 2000);
         });
-        
+
         function copyToClipboard(text, event) {
             navigator.clipboard.writeText(text).then(function() {
                 const tooltip = $('<div class="copy-tooltip">Copied to clipboard</div>');
                 $('body').append(tooltip);
-                
+
                 const rect = event.target.getBoundingClientRect();
                 tooltip.css({
                     left: rect.left + rect.width / 2 - tooltip.outerWidth() / 2 + 'px',
                     top: rect.top - tooltip.outerHeight() - 8 + 'px'
                 });
-                
+
                 setTimeout(() => tooltip.addClass('show'), 10);
-                
+
                 setTimeout(() => {
                     tooltip.removeClass('show');
                     setTimeout(() => tooltip.remove(), 200);
                 }, 1500);
             });
         }
-        
+
         $('.copy-icon').on('click', function(e) {
             e.stopPropagation();
             const targetId = $(this).data('copy');
             const text = $('#' + targetId).text();
             copyToClipboard(text, e);
         });
-        
+
         $(document).on('click', '.upgrade-info', function(e) {
             const text = $(this).text().trim();
             copyToClipboard(text, e);
         });
-        
+
         $('#update-button').on('click', function() {
             const button = $(this);
             button.prop('disabled', true);
-            
+
             $('.progress-item').removeClass('hidden');
-            
+
             updateProgress('download', 'processing', 'Downloading update package...');
-            
+
             setTimeout(() => {
                 updateProgress('download', 'completed', 'Download complete');
-                updateProgress('verify', 'processing', 'Verifying package integrity...');
-                
+                updateProgress('install', 'processing', 'Installing updates...');
+
                 setTimeout(() => {
-                    updateProgress('verify', 'completed', 'Verification complete');
-                    updateProgress('install', 'processing', 'Installing updates...');
-                    
+                    updateProgress('install', 'completed', 'Installation complete');
+
                     setTimeout(() => {
-                        updateProgress('install', 'completed', 'Installation complete');
-                        
-                        setTimeout(() => {
-                            $('#progress-install .upgrade-info').addClass('show');
-                            $('#current-version').text('{{ latest_version }}');
-                            button.prop('disabled', false);
-                            
-                            const upToDateBadge = $('#up-to-date-badge');
-                            upToDateBadge.removeClass('no').addClass('yes').text('Yes');
-                            
-                            const headerBadge = window.parent.document.getElementById('update-status-badge');
-                            if (headerBadge) {
-                                headerBadge.classList.remove('with-shine');
-                                headerBadge.classList.add('white');
-                                headerBadge.textContent = 'Up to date';
-                            }
-                            
-                            confetti({
-                                particleCount: 40,
-                                spread: 50,
-                                origin: { y: 0.5 },
-                                colors: ['#0073bb', '#067f39', '#ffd700', '#ff8c00'],
-                                scalar: 0.7,
-                                gravity: 1,
-                                drift: 0,
-                                ticks: 150
-                            });
-                        }, 300);
-                    }, 100);
+                        $('#progress-install .upgrade-info').addClass('show');
+                        $('#current-version').text('{{ latest_version }}');
+                        button.prop('disabled', false);
+
+                        const upToDateBadge = $('#up-to-date-badge');
+                        upToDateBadge.removeClass('no').addClass('yes').text('Yes');
+
+                        const headerBadge = window.parent.document.getElementById('update-status-badge');
+                        if (headerBadge) {
+                            headerBadge.classList.remove('with-shine');
+                            headerBadge.classList.add('white');
+                            headerBadge.textContent = 'Up to date';
+                        }
+
+                        confetti({
+                            particleCount: 40,
+                            spread: 50,
+                            origin: { y: 0.5 },
+                            colors: ['#0073bb', '#067f39', '#ffd700', '#ff8c00'],
+                            scalar: 0.7,
+                            gravity: 1,
+                            drift: 0,
+                            ticks: 150
+                        });
+                    }, 300);
                 }, 100);
             }, 100);
         });
     });
-    
+
     function updateProgress(step, status, message) {
         const item = $('#progress-' + step);
         const icon = item.find('.progress-icon');
         const text = item.find('.progress-text');
-        
+
         if (status === 'processing') {
             icon.addClass('spinner').html('<img src="/static/gfx/spinner.svg" style="animation: spin 0.5s linear infinite; width: 28px; height: 28px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');
         } else if (status === 'completed') {
             icon.removeClass('spinner').addClass('completed').text('✓');
         }
-        
+
         text.text(message);
     }
 </script>
@@ -574,7 +576,7 @@ input:checked + .toggle-slider:before {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="button-container">
                         <div class="check-button-wrapper">
                             <img src="/static/gfx/spinner.svg" class="check-button-spinner" style="filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">
@@ -587,7 +589,7 @@ input:checked + .toggle-slider:before {
                             Click to update
                         </button>
                     </div>
-                    
+
                     <div class="progress-item hidden" id="progress-download">
                         <div class="progress-icon"></div>
                         <div class="progress-content">
@@ -595,33 +597,25 @@ input:checked + .toggle-slider:before {
                             <div class="progress-text">Waiting...</div>
                         </div>
                     </div>
-                    
-                    <div class="progress-item hidden" id="progress-verify">
-                        <div class="progress-icon"></div>
-                        <div class="progress-content">
-                            <div class="progress-platform">Verify</div>
-                            <div class="progress-text">Waiting...</div>
-                        </div>
-                    </div>
-                    
+
                     <div class="progress-item hidden" id="progress-install">
                         <div class="progress-icon"></div>
                         <div class="progress-content">
                             <div class="progress-platform">Install</div>
                             <div class="progress-text">Waiting...</div>
                             <span class="upgrade-info status-badge with-shine">
-                                ⭐ Upgraded to {{ latest_version }}
+                                ⭐ Updated to {{ latest_version }}
                             </span>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="creation-sidebar">
                 <h3>Config</h3>
                 <div class="wizard-summary">
                     <div class="summary-item">
-                        <div class="summary-label">Auto-restart</div>
+                        <div class="summary-label">Auto-update</div>
                         <label class="toggle-switch">
                             <input type="checkbox" id="auto-restart">
                             <span class="toggle-slider"></span>
