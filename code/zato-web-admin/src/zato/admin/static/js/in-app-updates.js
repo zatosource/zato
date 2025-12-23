@@ -10,6 +10,8 @@ $.fn.zato.in_app_updates.init = function() {
     $('.copy-icon').on('click', $.fn.zato.in_app_updates.handleCopyIcon);
     $(document).on('click', '.upgrade-info', $.fn.zato.in_app_updates.handleCopyUpgradeInfo);
     $('#update-button').on('click', $.fn.zato.in_app_updates.handleUpdateClick);
+    $('#auto-restart').on('change', $.fn.zato.in_app_updates.handleAutoUpdateToggle);
+    $('#update-frequency').on('change', $.fn.zato.in_app_updates.handleFrequencyChange);
 
     $.fn.zato.in_app_updates.versionSteps = [
         {
@@ -142,6 +144,60 @@ $.fn.zato.in_app_updates.handleCopyIcon = function(e) {
 $.fn.zato.in_app_updates.handleCopyUpgradeInfo = function(e) {
     const text = $(this).text().trim();
     $.fn.zato.in_app_updates.copyToClipboard(text, e);
+};
+
+$.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
+    const isEnabled = $(this).is(':checked');
+    
+    console.log('Auto-update toggle changed, enabled:', isEnabled);
+    
+    if (isEnabled) {
+        console.log('Showing schedule frequency');
+        $('#schedule-frequency').removeClass('hidden');
+        $.fn.zato.in_app_updates.updateScheduleOptions();
+    } else {
+        console.log('Hiding all schedule fields');
+        $('#schedule-frequency').addClass('hidden');
+        $('#schedule-day').addClass('hidden');
+        $('#schedule-position').addClass('hidden');
+        $('#schedule-time').addClass('hidden');
+    }
+};
+
+$.fn.zato.in_app_updates.handleFrequencyChange = function() {
+    $.fn.zato.in_app_updates.updateScheduleOptions();
+};
+
+$.fn.zato.in_app_updates.updateScheduleOptions = function() {
+    const frequency = $('#update-frequency').val();
+    
+    console.log('updateScheduleOptions called, frequency:', frequency);
+    
+    $('#schedule-day').addClass('hidden');
+    $('#schedule-position').addClass('hidden');
+    $('#schedule-time').addClass('hidden');
+    
+    console.log('All schedule fields hidden');
+    
+    if (frequency === 'hourly') {
+        console.log('Hourly selected - no additional fields shown');
+    } else if (frequency === 'daily') {
+        console.log('Daily selected - showing time');
+        $('#schedule-time').removeClass('hidden');
+    } else if (frequency === 'weekly') {
+        console.log('Weekly selected - showing day and time');
+        $('#schedule-day').removeClass('hidden');
+        $('#schedule-time').removeClass('hidden');
+    } else if (frequency === 'monthly') {
+        console.log('Monthly selected - showing position, day, and time');
+        $('#schedule-position').removeClass('hidden');
+        $('#schedule-day').removeClass('hidden');
+        $('#schedule-time').removeClass('hidden');
+    }
+    
+    console.log('schedule-day hidden:', $('#schedule-day').hasClass('hidden'));
+    console.log('schedule-position hidden:', $('#schedule-position').hasClass('hidden'));
+    console.log('schedule-time hidden:', $('#schedule-time').hasClass('hidden'));
 };
 
 $.fn.zato.in_app_updates.handleUpdateClick = function() {

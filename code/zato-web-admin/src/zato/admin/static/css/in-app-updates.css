@@ -23,7 +23,7 @@
 }
 
 .creation-sidebar {
-    width: 210px;
+    width: 280px;
     background: var(--background-light);
     border-left: 3px solid var(--primary-dark);
     padding: 40px 32px;
@@ -446,6 +446,17 @@
     font-weight: 600;
     letter-spacing: 0.5px;
     font-size: 12px;
+}
+
+.schedule-select {
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid var(--primary-dark);
+    background: #fff;
+    color: var(--primary-dark);
+    font-weight: 600;
+    cursor: pointer;
+    width: 140px;
 }
 
 .config-save-button {
