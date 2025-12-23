@@ -375,6 +375,7 @@
 .progress-icon.error {
     color: #cc0000;
     align-self: flex-start;
+    margin-top: -2px;
 }
 
 .progress-content {

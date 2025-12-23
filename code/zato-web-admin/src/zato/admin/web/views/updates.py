@@ -107,7 +107,7 @@ def download_updates(req):
 
     return run_command(
         req,
-        command=['git', 'pull2'],
+        command=['git', 'pull'],
         cwd=current_dir,
         timeout=999_999,
         log_prefix='download_updates'
