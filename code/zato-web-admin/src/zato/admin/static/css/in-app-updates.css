@@ -1,5 +1,5 @@
 .updates-available-button {
-    display: inline-block;
+    display: inline;
     padding: 3px 8px;
     margin-left: 8px;
     margin-right: 8px;
@@ -11,35 +11,30 @@
     font-weight: 400;
     font-family: arial, helvetica, clean, sans-serif;
     text-decoration: none !important;
-    position: relative;
-    overflow: hidden;
     transition: all 0.25s ease;
-    vertical-align: middle;
+    vertical-align: baseline;
+    background-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 40%,
+        rgba(255, 255, 255, 0.15) 50%,
+        transparent 60%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shine 3s infinite;
 }
 
 .updates-available-button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.1),
-        transparent
-    );
-    animation: shine 3s infinite;
-    pointer-events: none;
+    display: none;
 }
 
 @keyframes shine {
     0% {
-        left: -100%;
+        background-position: -200% 0;
     }
     100% {
-        left: 100%;
+        background-position: 200% 0;
     }
 }
 
