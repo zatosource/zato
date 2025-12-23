@@ -196,30 +196,27 @@ $.fn.zato.in_app_updates.runInstallSteps = function(button) {
         if (currentStep >= totalSteps) {
             $.fn.zato.in_app_updates.updateProgress('install', 'completed', 'Installation complete');
             
-            setTimeout(() => {
-                $('#progress-install .upgrade-info').addClass('show');
-                const latestVersion = $('#latest-version').data('base-version');
-                $('#current-version').text(latestVersion);
-                button.prop('disabled', false);
-                
-                const upToDateBadge = $('#up-to-date-badge');
-                upToDateBadge.removeClass('no').addClass('yes').text('Yes');
-                
-                const headerBadge = window.parent.document.getElementById('update-status-badge');
-                if (headerBadge) {
-                    headerBadge.classList.remove('with-shine');
-                    headerBadge.classList.add('white');
-                    headerBadge.textContent = 'Up to date';
-                }
-            }, 300);
+            $('#progress-install .upgrade-info').addClass('show');
+            const latestVersion = $('#latest-version').data('base-version');
+            $('#current-version').text(latestVersion);
+            button.prop('disabled', false);
+            
+            const upToDateBadge = $('#up-to-date-badge');
+            upToDateBadge.removeClass('no').addClass('yes').text('Yes');
+            
+            const headerBadge = window.parent.document.getElementById('update-status-badge');
+            if (headerBadge) {
+                headerBadge.classList.remove('with-shine');
+                headerBadge.classList.add('white');
+                headerBadge.textContent = 'Up to date';
+            }
             return;
         }
         
         const step = steps[currentStep];
         const stepNumber = currentStep + 1;
         const progressText = stepNumber + ' / ' + totalSteps;
-        const ellipsis = stepNumber < totalSteps ? '...' : '';
-        const statusText = step.text + ellipsis;
+        const statusText = step.text + '...';
         
         $.fn.zato.in_app_updates.updateProgress('install', 'processing', progressText, statusText);
         

@@ -107,7 +107,7 @@ def download_updates(req):
 
     return run_command(
         req,
-        command=['git', 'pull'],
+        command=['sleep', '0.2'],
         cwd=current_dir,
         timeout=999_999,
         log_prefix='download_updates'
@@ -125,7 +125,7 @@ def install_updates(req):
     
     return run_command(
         req,
-        command=['git', 'pull'],
+        command=['sleep', '0.2'],
         cwd=current_dir,
         timeout=999_999,
         log_prefix='install_updates'
@@ -143,7 +143,7 @@ def restart_scheduler(req):
     
     return run_command(
         req,
-        command=['git', 'pull'],
+        command=['sleep', '0.2'],
         cwd=current_dir,
         timeout=999_999,
         log_prefix='restart_scheduler'
@@ -161,7 +161,7 @@ def restart_server(req):
     
     return run_command(
         req,
-        command=['git', 'pull'],
+        command=['sleep', '0.2'],
         cwd=current_dir,
         timeout=999_999,
         log_prefix='restart_server'
@@ -179,7 +179,7 @@ def restart_proxy(req):
     
     return run_command(
         req,
-        command=['git', 'pull'],
+        command=['sleep', '0.2'],
         cwd=current_dir,
         timeout=999_999,
         log_prefix='restart_proxy'
@@ -197,7 +197,7 @@ def restart_dashboard(req):
     
     return run_command(
         req,
-        command=['git', 'pull'],
+        command=['sleep', '0.2'],
         cwd=current_dir,
         timeout=999_999,
         log_prefix='restart_dashboard'
