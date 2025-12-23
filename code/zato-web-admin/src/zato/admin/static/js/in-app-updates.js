@@ -55,10 +55,10 @@ $.fn.zato.in_app_updates.init = function() {
         }
     ];
 
-    $.fn.zato.in_app_updates.linksSteps = [
+    $.fn.zato.in_app_updates.logsSteps = [
         {
             popover: {
-                title: 'Links',
+                title: 'Logs',
                 description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
             }
         },
@@ -95,9 +95,9 @@ $.fn.zato.in_app_updates.init = function() {
         $.fn.zato.in_app_updates.driverObj.drive(0);
     });
 
-    $('#links-help').on('click', function() {
-        console.log('Links help clicked, setting links steps:', JSON.stringify($.fn.zato.in_app_updates.linksSteps.map(s => s.popover ? s.popover.title : 'no title'), null, 2));
-        $.fn.zato.in_app_updates.driverObj.setSteps($.fn.zato.in_app_updates.linksSteps);
+    $('#logs-help').on('click', function() {
+        console.log('Logs help clicked, setting logs steps:', JSON.stringify($.fn.zato.in_app_updates.logsSteps.map(s => s.popover ? s.popover.title : 'no title'), null, 2));
+        $.fn.zato.in_app_updates.driverObj.setSteps($.fn.zato.in_app_updates.logsSteps);
         console.log('Steps set, now driving from step 0');
         $.fn.zato.in_app_updates.driverObj.drive(0);
     });
