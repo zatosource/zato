@@ -1,7 +1,7 @@
 .status-badge {
     display: inline;
     padding: 3px;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgb(1, 40, 69);
     color: #ffd700 !important;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 3px;
@@ -26,7 +26,7 @@
             transparent 60%,
             transparent 100%
         ),
-        rgba(0, 0, 0, 0.3);
+        rgb(1, 40, 69);
     background-size: 200% 100%, 100% 100%;
     transition: all 0.25s ease;
     animation: shine 3s infinite;
@@ -51,7 +51,7 @@
             transparent 60%,
             transparent 100%
         ),
-        rgba(0, 0, 0, 0.35);
+        rgb(1, 50, 85);
     background-size: 200% 100%, 100% 100%;
     border-color: rgba(255, 255, 255, 0.25);
 }
