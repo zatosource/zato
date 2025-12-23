@@ -150,6 +150,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
 
     $('#progress-download').removeClass('hidden error-state');
     $('#progress-install').addClass('hidden').removeClass('error-state');
+    $('#progress-install .upgrade-info').removeClass('show');
     $.fn.zato.in_app_updates.updateProgress('download', 'processing', 'Downloading latest updates...');
 
     $.ajax({
@@ -160,30 +161,9 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
         },
         success: function(response) {
             $.fn.zato.in_app_updates.updateProgress('download', 'completed', 'Download complete');
-
+            
             $('#progress-install').removeClass('hidden');
-            $.fn.zato.in_app_updates.updateProgress('install', 'processing', 'Installing updates...');
-
-            setTimeout(() => {
-                $.fn.zato.in_app_updates.updateProgress('install', 'completed', 'Installation complete');
-
-                setTimeout(() => {
-                    $('#progress-install .upgrade-info').addClass('show');
-                    const latestVersion = $('#latest-version').data('base-version');
-                    $('#current-version').text(latestVersion);
-                    button.prop('disabled', false);
-
-                    const upToDateBadge = $('#up-to-date-badge');
-                    upToDateBadge.removeClass('no').addClass('yes').text('Yes');
-
-                    const headerBadge = window.parent.document.getElementById('update-status-badge');
-                    if (headerBadge) {
-                        headerBadge.classList.remove('with-shine');
-                        headerBadge.classList.add('white');
-                        headerBadge.textContent = 'Up to date';
-                    }
-                }, 300);
-            }, 100);
+            $.fn.zato.in_app_updates.runInstallSteps(button);
         },
         error: function(xhr) {
             let errorMsg = 'Download failed';
@@ -200,11 +180,84 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
     });
 };
 
-$.fn.zato.in_app_updates.updateProgress = function(step, status, message) {
+$.fn.zato.in_app_updates.runInstallSteps = function(button) {
+    const steps = [
+        {url: '/zato/updates/install', text: 'Installing updates'},
+        {url: '/zato/updates/restart-scheduler', text: 'Restarting scheduler'},
+        {url: '/zato/updates/restart-server', text: 'Restarting server'},
+        {url: '/zato/updates/restart-proxy', text: 'Restarting proxy'},
+        {url: '/zato/updates/restart-dashboard', text: 'Restarting dashboard'}
+    ];
+    
+    let currentStep = 0;
+    const totalSteps = steps.length;
+    
+    const runNextStep = function() {
+        if (currentStep >= totalSteps) {
+            $.fn.zato.in_app_updates.updateProgress('install', 'completed', 'Installation complete');
+            
+            setTimeout(() => {
+                $('#progress-install .upgrade-info').addClass('show');
+                const latestVersion = $('#latest-version').data('base-version');
+                $('#current-version').text(latestVersion);
+                button.prop('disabled', false);
+                
+                const upToDateBadge = $('#up-to-date-badge');
+                upToDateBadge.removeClass('no').addClass('yes').text('Yes');
+                
+                const headerBadge = window.parent.document.getElementById('update-status-badge');
+                if (headerBadge) {
+                    headerBadge.classList.remove('with-shine');
+                    headerBadge.classList.add('white');
+                    headerBadge.textContent = 'Up to date';
+                }
+            }, 300);
+            return;
+        }
+        
+        const step = steps[currentStep];
+        const stepNumber = currentStep + 1;
+        const progressText = stepNumber + ' / ' + totalSteps;
+        const ellipsis = stepNumber < totalSteps ? '...' : '';
+        const statusText = step.text + ellipsis;
+        
+        $.fn.zato.in_app_updates.updateProgress('install', 'processing', progressText, statusText);
+        
+        $.ajax({
+            url: step.url,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $.cookie('csrftoken')
+            },
+            success: function(response) {
+                currentStep++;
+                runNextStep();
+            },
+            error: function(xhr) {
+                let errorMsg = step.text + ' failed';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    errorMsg = response.error || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.responseText || errorMsg;
+                }
+                
+                $.fn.zato.in_app_updates.updateProgress('install', 'error', progressText, errorMsg);
+                button.prop('disabled', false);
+            }
+        });
+    };
+    
+    runNextStep();
+};
+
+$.fn.zato.in_app_updates.updateProgress = function(step, status, message, statusText) {
     const item = $('#progress-' + step);
     const icon = item.find('.progress-icon');
     const text = item.find('.progress-text');
     const copyButton = item.find('.download-error-copy');
+    
+    const displayMessage = statusText ? '<span style="color: #000; font-weight: 600;">' + message + '</span> <span style="color: var(--text-muted);">' + statusText + '</span>' : message;
 
     if (status === 'processing') {
         icon.addClass('spinner').removeClass('completed error').html('<img src="/static/gfx/spinner.svg" style="animation: spin 0.5s linear infinite; width: 28px; height: 28px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');
@@ -226,7 +279,7 @@ $.fn.zato.in_app_updates.updateProgress = function(step, status, message) {
         }
     }
 
-    text.text(message);
+    text.html(displayMessage);
 };
 
 $(document).ready(function() {
