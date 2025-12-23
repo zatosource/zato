@@ -12,6 +12,9 @@ $.fn.zato.in_app_updates.init = function() {
     $('#update-button').on('click', $.fn.zato.in_app_updates.handleUpdateClick);
     $('#auto-restart').on('change', $.fn.zato.in_app_updates.handleAutoUpdateToggle);
     $('#update-frequency').on('change', $.fn.zato.in_app_updates.handleFrequencyChange);
+    $('#config-save-button').on('click', $.fn.zato.in_app_updates.handleSaveSchedule);
+    
+    $.fn.zato.in_app_updates.loadSchedule();
 
     $.fn.zato.in_app_updates.versionSteps = [
         {
@@ -154,6 +157,7 @@ $.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
     if (isEnabled) {
         console.log('Showing schedule frequency');
         $('#schedule-frequency').removeClass('hidden');
+        $('.save-button-container').css('display', 'flex');
         $.fn.zato.in_app_updates.updateScheduleOptions();
     } else {
         console.log('Hiding all schedule fields');
@@ -161,6 +165,15 @@ $.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
         $('#schedule-day').addClass('hidden');
         $('#schedule-position').addClass('hidden');
         $('#schedule-time').addClass('hidden');
+        $('.save-button-container').css('display', 'none');
+        
+        $.ajax({
+            url: '/zato/updates/delete-schedule',
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $.cookie('csrftoken')
+            }
+        });
     }
 };
 
@@ -198,6 +211,62 @@ $.fn.zato.in_app_updates.updateScheduleOptions = function() {
     console.log('schedule-day hidden:', $('#schedule-day').hasClass('hidden'));
     console.log('schedule-position hidden:', $('#schedule-position').hasClass('hidden'));
     console.log('schedule-time hidden:', $('#schedule-time').hasClass('hidden'));
+};
+
+$.fn.zato.in_app_updates.loadSchedule = function() {
+    $.ajax({
+        url: '/zato/updates/load-schedule',
+        type: 'GET',
+        success: function(response) {
+            if (response.success && response.schedule) {
+                $('#auto-restart').prop('checked', true);
+                $('#update-frequency').val(response.schedule.frequency);
+                $('#update-day').val(response.schedule.day);
+                $('#update-position').val(response.schedule.position);
+                $('#update-time').val(response.schedule.time);
+                
+                $('#schedule-frequency').removeClass('hidden');
+                $('.save-button-container').css('display', 'flex');
+                $.fn.zato.in_app_updates.updateScheduleOptions();
+            }
+        }
+    });
+};
+
+$.fn.zato.in_app_updates.handleSaveSchedule = function() {
+    const scheduleData = {
+        frequency: $('#update-frequency').val(),
+        day: $('#update-day').val(),
+        position: $('#update-position').val(),
+        time: $('#update-time').val()
+    };
+    
+    $('.config-save-spinner').css('display', 'block');
+    $('.config-saved-message').css('display', 'none');
+    $('#config-save-button').prop('disabled', true);
+    
+    $.ajax({
+        url: '/zato/updates/save-schedule',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $.cookie('csrftoken')
+        },
+        data: JSON.stringify(scheduleData),
+        contentType: 'application/json',
+        success: function(response) {
+            $('.config-save-spinner').css('display', 'none');
+            $('.config-saved-message').css('display', 'block');
+            
+            setTimeout(function() {
+                $('.config-saved-message').css('display', 'none');
+                $('#config-save-button').prop('disabled', false);
+            }, 1500);
+        },
+        error: function() {
+            $('.config-save-spinner').css('display', 'none');
+            $('#config-save-button').prop('disabled', false);
+        }
+    });
 };
 
 $.fn.zato.in_app_updates.handleUpdateClick = function() {

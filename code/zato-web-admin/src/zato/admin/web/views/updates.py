@@ -16,9 +16,12 @@ from traceback import format_exc
 from django.http import HttpResponse
 from django.http.response import HttpResponseServerError
 
+# Redis
+import redis
+
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.json_internal import dumps
+from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -202,6 +205,106 @@ def restart_dashboard(req):
         timeout=999_999,
         log_prefix='restart_dashboard'
     )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def save_schedule(req):
+    """
+    Saves auto-update schedule to Redis.
+    """
+    try:
+        body = req.body.decode('utf-8')
+        schedule_data = loads(body)
+        
+        logger.info('save_schedule: received data: {}'.format(schedule_data))
+        
+        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r.set('zato:autoupdate:schedule', dumps(schedule_data))
+        
+        logger.info('save_schedule: schedule saved to Redis')
+        
+        response_data = {'success': True}
+        response_json = dumps(response_data)
+        return HttpResponse(response_json, content_type='application/json')
+        
+    except Exception:
+        logger.error('save_schedule: exception: {}'.format(format_exc()))
+        
+        response_data = {
+            'success': False,
+            'error': 'Failed to save schedule'
+        }
+        response_json = dumps(response_data)
+        return HttpResponseServerError(response_json, content_type='application/json')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def load_schedule(req):
+    """
+    Loads auto-update schedule from Redis.
+    """
+    try:
+        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        schedule_json = r.get('zato:autoupdate:schedule')
+        
+        if schedule_json:
+            logger.info('load_schedule: found schedule in Redis')
+            schedule_data = loads(schedule_json)
+            response_data = {
+                'success': True,
+                'schedule': schedule_data
+            }
+        else:
+            logger.info('load_schedule: no schedule found in Redis')
+            response_data = {
+                'success': True,
+                'schedule': None
+            }
+        
+        response_json = dumps(response_data)
+        return HttpResponse(response_json, content_type='application/json')
+        
+    except Exception:
+        logger.error('load_schedule: exception: {}'.format(format_exc()))
+        
+        response_data = {
+            'success': False,
+            'error': 'Failed to load schedule'
+        }
+        response_json = dumps(response_data)
+        return HttpResponseServerError(response_json, content_type='application/json')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def delete_schedule(req):
+    """
+    Deletes auto-update schedule from Redis.
+    """
+    try:
+        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r.delete('zato:autoupdate:schedule')
+        
+        logger.info('delete_schedule: schedule deleted from Redis')
+        
+        response_data = {'success': True}
+        response_json = dumps(response_data)
+        return HttpResponse(response_json, content_type='application/json')
+        
+    except Exception:
+        logger.error('delete_schedule: exception: {}'.format(format_exc()))
+        
+        response_data = {
+            'success': False,
+            'error': 'Failed to delete schedule'
+        }
+        response_json = dumps(response_data)
+        return HttpResponseServerError(response_json, content_type='application/json')
 
 # ################################################################################################################################
 # ################################################################################################################################
