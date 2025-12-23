@@ -413,10 +413,14 @@
     color: #000;
 }
 
-.wizard-summary {
+.config-summary {
     background: var(--white);
     border: 3px solid var(--primary-dark);
     padding: 24px 24px 20px 24px;
+}
+
+.config-summary .summary-item:first-child:last-child {
+    margin-bottom: 4px;
 }
 
 .summary-title {
@@ -627,14 +631,14 @@ input:checked + .toggle-slider:before {
     padding: 0px 2px !important;
 }
 
-.links-section {
+.logs-section {
     margin-top: 32px;
     opacity: 0;
     transition: opacity 0.3s ease;
     position: relative;
 }
 
-.links-section.show {
+.logs-section.show {
     opacity: 1;
 }
 
