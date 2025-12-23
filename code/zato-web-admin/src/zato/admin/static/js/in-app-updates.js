@@ -109,7 +109,7 @@ $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
         setTimeout(() => {
             latestVersionEl.removeClass('pulsate');
         }, 1600);
-    }, 2000);
+    }, 200);
 };
 
 $.fn.zato.in_app_updates.copyToClipboard = function(text, event) {
@@ -149,34 +149,52 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
     button.prop('disabled', true);
 
     $('.progress-item').removeClass('hidden');
-
     $.fn.zato.in_app_updates.updateProgress('download', 'processing', 'Downloading update package...');
 
-    setTimeout(() => {
-        $.fn.zato.in_app_updates.updateProgress('download', 'completed', 'Download complete');
-        $.fn.zato.in_app_updates.updateProgress('install', 'processing', 'Installing updates...');
-
-        setTimeout(() => {
-            $.fn.zato.in_app_updates.updateProgress('install', 'completed', 'Installation complete');
+    $.ajax({
+        url: '/zato/updates/download',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $.cookie('csrftoken')
+        },
+        success: function(response) {
+            $.fn.zato.in_app_updates.updateProgress('download', 'completed', 'Download complete');
+            $.fn.zato.in_app_updates.updateProgress('install', 'processing', 'Installing updates...');
 
             setTimeout(() => {
-                $('#progress-install .upgrade-info').addClass('show');
-                const latestVersion = $('#latest-version').data('base-version');
-                $('#current-version').text(latestVersion);
-                button.prop('disabled', false);
+                $.fn.zato.in_app_updates.updateProgress('install', 'completed', 'Installation complete');
 
-                const upToDateBadge = $('#up-to-date-badge');
-                upToDateBadge.removeClass('no').addClass('yes').text('Yes');
+                setTimeout(() => {
+                    $('#progress-install .upgrade-info').addClass('show');
+                    const latestVersion = $('#latest-version').data('base-version');
+                    $('#current-version').text(latestVersion);
+                    button.prop('disabled', false);
 
-                const headerBadge = window.parent.document.getElementById('update-status-badge');
-                if (headerBadge) {
-                    headerBadge.classList.remove('with-shine');
-                    headerBadge.classList.add('white');
-                    headerBadge.textContent = 'Up to date';
-                }
-            }, 300);
-        }, 100);
-    }, 100);
+                    const upToDateBadge = $('#up-to-date-badge');
+                    upToDateBadge.removeClass('no').addClass('yes').text('Yes');
+
+                    const headerBadge = window.parent.document.getElementById('update-status-badge');
+                    if (headerBadge) {
+                        headerBadge.classList.remove('with-shine');
+                        headerBadge.classList.add('white');
+                        headerBadge.textContent = 'Up to date';
+                    }
+                }, 300);
+            }, 100);
+        },
+        error: function(xhr) {
+            let errorMsg = 'Download failed';
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMsg = response.error || errorMsg;
+            } catch(e) {
+                errorMsg = xhr.responseText || errorMsg;
+            }
+            
+            $.fn.zato.in_app_updates.updateProgress('download', 'error', errorMsg);
+            button.prop('disabled', false);
+        }
+    });
 };
 
 $.fn.zato.in_app_updates.updateProgress = function(step, status, message) {
@@ -185,9 +203,11 @@ $.fn.zato.in_app_updates.updateProgress = function(step, status, message) {
     const text = item.find('.progress-text');
 
     if (status === 'processing') {
-        icon.addClass('spinner').html('<img src="/static/gfx/spinner.svg" style="animation: spin 0.5s linear infinite; width: 28px; height: 28px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');  
+        icon.addClass('spinner').removeClass('completed error').html('<img src="/static/gfx/spinner.svg" style="animation: spin 0.5s linear infinite; width: 28px; height: 28px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');  
     } else if (status === 'completed') {
-        icon.removeClass('spinner').addClass('completed').text('✓');
+        icon.removeClass('spinner error').addClass('completed').text('✓');
+    } else if (status === 'error') {
+        icon.removeClass('spinner completed').addClass('error').text('✗');
     }
 
     text.text(message);
