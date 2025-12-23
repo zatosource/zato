@@ -54,6 +54,7 @@
         rgb(1, 50, 85);
     background-size: 200% 100%, 100% 100%;
     border-color: rgba(255, 255, 255, 0.25);
+    color: #ffd700 !important;
 }
 
 .status-badge.header-badge {
@@ -63,6 +64,23 @@
 
 .status-badge.white {
     color: #fff !important;
+}
+
+.up-to-date-badge {
+    display: inline;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.up-to-date-badge.yes {
+    background: #067f39;
+}
+
+.up-to-date-badge.no {
+    background: #cc0000;
 }
 
 .updates-available-button .update-badge {
