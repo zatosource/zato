@@ -1,0 +1,99 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Updates available{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/in-app-updates.css">
+    <style type="text/css">
+        .updates-container {
+            max-width: 600px;
+            margin: 60px auto;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .updates-header {
+            font-size: 2rem;
+            color: #ffd700;
+            margin-bottom: 30px;
+        }
+        
+        .updates-version {
+            font-size: 1.2rem;
+            color: #fff;
+            margin-bottom: 40px;
+        }
+        
+        .install-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #ffd700;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        
+        .install-button:hover {
+            background: rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+        
+        .spinner-container {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .spinner-container.active {
+            display: block;
+        }
+        
+        .spinner-container img {
+            width: 64px;
+            height: 64px;
+        }
+        
+        .status-message {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: #fff;
+        }
+    </style>
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/in-app-updates.js"></script>
+{% endblock %}
+
+{% block "content" %}
+
+<div class="updates-container">
+    <h2 class="updates-header">⭐ Updates available</h2>
+    
+    {% if update_available %}
+    <div class="updates-version">
+        Version {{ update_version }} is ready to install
+    </div>
+    
+    <button class="install-button" id="install-updates-button">
+        Install updates
+    </button>
+    
+    <div class="spinner-container" id="spinner-container">
+        <img src="/static/gfx/ajax-loader.gif" alt="Installing updates" />
+        <div class="status-message" id="status-message">
+            Preparing installation...
+        </div>
+    </div>
+    {% else %}
+    <div class="updates-version">
+        No updates available at this time
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

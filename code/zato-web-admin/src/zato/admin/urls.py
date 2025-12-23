@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, http_soap, main, scheduler, service
+from zato.admin.web.views import account, http_soap, in_app_updates, main, scheduler, service
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -775,6 +775,16 @@ urlpatterns += [
 ]
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # In-app updates
+
+    url(r'^zato/in-app-updates/$',
+        login_required(in_app_updates.index), name='in-app-updates'),
+]
+
 # ################################################################################################################################
 
 urlpatterns += [
