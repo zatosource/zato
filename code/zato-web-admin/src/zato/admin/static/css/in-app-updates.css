@@ -554,3 +554,7 @@ input:checked + .toggle-slider:before {
 .help-overlay-close:hover {
     opacity: 1;
 }
+
+canvas {
+    z-index: 99999 !important;
+}
