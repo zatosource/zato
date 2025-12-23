@@ -183,6 +183,53 @@
     opacity: 0;
 }
 
+.copy-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-left: 6px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    vertical-align: middle;
+}
+
+.copy-icon:hover {
+    opacity: 1;
+}
+
+.copy-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: var(--primary-dark);
+}
+
+.copy-tooltip {
+    position: fixed;
+    background: #333;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.copy-tooltip.show {
+    opacity: 1;
+}
+
+.upgrade-info {
+    cursor: pointer;
+}
+
+.upgrade-info:hover {
+    opacity: 0.8;
+}
+
 .progress-item {
     display: flex;
     align-items: center;
@@ -391,6 +438,38 @@ input:checked + .toggle-slider:before {
             }, 2000);
         });
         
+        function copyToClipboard(text, event) {
+            navigator.clipboard.writeText(text).then(function() {
+                const tooltip = $('<div class="copy-tooltip">Copied to clipboard</div>');
+                $('body').append(tooltip);
+                
+                const rect = event.target.getBoundingClientRect();
+                tooltip.css({
+                    left: rect.left + rect.width / 2 - tooltip.outerWidth() / 2 + 'px',
+                    top: rect.top - tooltip.outerHeight() - 8 + 'px'
+                });
+                
+                setTimeout(() => tooltip.addClass('show'), 10);
+                
+                setTimeout(() => {
+                    tooltip.removeClass('show');
+                    setTimeout(() => tooltip.remove(), 200);
+                }, 1500);
+            });
+        }
+        
+        $('.copy-icon').on('click', function(e) {
+            e.stopPropagation();
+            const targetId = $(this).data('copy');
+            const text = $('#' + targetId).text();
+            copyToClipboard(text, e);
+        });
+        
+        $(document).on('click', '.upgrade-info', function(e) {
+            const text = $(this).text().trim();
+            copyToClipboard(text, e);
+        });
+        
         $('#update-button').on('click', function() {
             const button = $(this);
             button.prop('disabled', true);
@@ -473,11 +552,21 @@ input:checked + .toggle-slider:before {
                         </div>
                         <div class="version-row">
                             <div class="version-label">Your version</div>
-                            <div class="version-value" id="current-version">{{ current_version }}</div>
+                            <div class="version-value">
+                                <span id="current-version">{{ current_version }}</span>
+                                <span class="copy-icon" data-copy="current-version" title="Copy to clipboard">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                                </span>
+                            </div>
                         </div>
                         <div class="version-row">
                             <div class="version-label">Latest version</div>
-                            <div class="version-value">{{ latest_version }}</div>
+                            <div class="version-value">
+                                <span id="latest-version">{{ latest_version }}</span>
+                                <span class="copy-icon" data-copy="latest-version" title="Copy to clipboard">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                                </span>
+                            </div>
                         </div>
                     </div>
                     
