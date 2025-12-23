@@ -13,7 +13,7 @@
 }
 
 .creation-panel {
-    max-width: 1200px;
+    max-width: 924px;
     margin: 0 auto;
     background: var(--white);
     border: 3px solid var(--primary-dark);
@@ -30,7 +30,7 @@
 }
 
 .creation-sidebar {
-    width: 300px;
+    width: 210px;
     background: var(--background-light);
     border-left: 3px solid var(--primary-dark);
     padding: 40px 32px;
@@ -41,7 +41,6 @@
     font-weight: 600;
     color: var(--primary-dark);
     margin: 0 0 16px 0;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
@@ -144,8 +143,8 @@
 
 .check-button-spinner {
     display: none;
-    width: 20px;
-    height: 20px;
+    width: 25px;
+    height: 25px;
     animation: spin 0.8s linear infinite;
 }
 
@@ -156,6 +155,32 @@
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+@keyframes pulsate {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.pulsate {
+    animation: pulsate 0.5s ease-in-out 3;
+}
+
+.updates-found {
+    display: none;
+    color: #067f39;
+    font-weight: 600;
+    font-size: 12px;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+.updates-found.show {
+    display: inline-block;
+}
+
+.updates-found.fade {
+    opacity: 0;
 }
 
 .progress-item {
@@ -243,7 +268,7 @@
 }
 
 .summary-label {
-    color: var(--text-muted);
+    color: #000;
     font-weight: 600;
     letter-spacing: 0.5px;
     font-size: 12px;
@@ -266,7 +291,7 @@
 }
 
 .save-button-container {
-    display: flex;
+    display: none;
     justify-content: flex-end;
     margin-top: 16px;
 }
@@ -338,11 +363,31 @@ input:checked + .toggle-slider:before {
 <script type="text/javascript" nonce="{{ CSP_NONCE }}">
     $(document).ready(function() {
         $('#check-button').on('click', function() {
-            const spinner = $(this).find('.check-button-spinner');
+            const spinner = $(this).siblings('.check-button-spinner');
+            const updatesFound = $(this).siblings('.updates-found');
+            
             spinner.addClass('active');
             
             setTimeout(() => {
                 spinner.removeClass('active');
+                updatesFound.addClass('show');
+                
+                const timestamp = Date.now();
+                const newVersion = '{{ latest_version }}.' + timestamp;
+                const latestVersionEl = $('.version-row').eq(2).find('.version-value');
+                latestVersionEl.text(newVersion);
+                latestVersionEl.addClass('pulsate');
+                
+                setTimeout(() => {
+                    updatesFound.addClass('fade');
+                    setTimeout(() => {
+                        updatesFound.removeClass('show fade');
+                    }, 500);
+                }, 1500);
+                
+                setTimeout(() => {
+                    latestVersionEl.removeClass('pulsate');
+                }, 1500);
             }, 2000);
         });
         
@@ -439,6 +484,7 @@ input:checked + .toggle-slider:before {
                     <div class="button-container">
                         <div class="check-button-wrapper">
                             <img src="/static/gfx/spinner.svg" class="check-button-spinner" style="filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">
+                            <span class="updates-found">Updates found</span>
                             <button class="check-button" id="check-button">
                                 Check for updates
                             </button>
