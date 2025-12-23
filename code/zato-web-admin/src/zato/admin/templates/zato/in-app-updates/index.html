@@ -187,7 +187,7 @@
     display: inline-block;
     width: 14px;
     height: 14px;
-    margin-left: 6px;
+    margin-left: 3px;
     cursor: pointer;
     opacity: 0.6;
     transition: opacity 0.2s;
@@ -211,7 +211,6 @@
     padding: 6px 12px;
     border-radius: 3px;
     font-size: 12px;
-    font-weight: 600;
     pointer-events: none;
     z-index: 9999;
     opacity: 0;
@@ -421,7 +420,7 @@ input:checked + .toggle-slider:before {
                 
                 const timestamp = Date.now();
                 const newVersion = '{{ latest_version }}.' + timestamp;
-                const latestVersionEl = $('.version-row').eq(2).find('.version-value');
+                const latestVersionEl = $('#latest-version');
                 latestVersionEl.text(newVersion);
                 latestVersionEl.addClass('pulsate');
                 
