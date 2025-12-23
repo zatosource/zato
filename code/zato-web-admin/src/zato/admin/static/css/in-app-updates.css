@@ -1,107 +1,463 @@
-.status-badge {
-    display: inline;
-    padding: 3px;
-    background: rgb(1, 40, 69);
-    color: #ffd700 !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-    font-size: 12.32px;
-    font-weight: 400;
-    font-family: arial, helvetica, clean, sans-serif;
-    text-decoration: none !important;
-    vertical-align: baseline;
+.creation-container {
+    background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
+    min-height: 100vh;
+    padding: 40px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.status-badge::before {
+.creation-panel {
+    max-width: 1063px;
+    margin: 0 auto;
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    box-shadow: 8px 8px 0px var(--shadow-dark);
+}
+
+.creation-content {
+    display: flex;
+}
+
+.creation-main {
+    flex: 1;
+    padding: 40px;
+}
+
+.creation-sidebar {
+    width: 210px;
+    background: var(--background-light);
+    border-left: 3px solid var(--primary-dark);
+    padding: 40px 32px;
+}
+
+.creation-main h3, .creation-sidebar h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 0 0 16px 0;
+    letter-spacing: 0.5px;
+}
+
+.progress-panel {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.version-info {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.version-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.version-label {
+    color: #000;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+}
+
+.version-value {
+    color: var(--primary-dark);
+    font-weight: 600;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.update-button {
+    background: var(--primary-dark);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.update-button:hover {
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.update-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.check-button {
+    background: #fff;
+    color: var(--primary-dark);
+    border: 1px solid var(--primary-dark);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.check-button-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.check-button:hover {
+    background: #fff;
+    color: var(--primary-dark);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.check-button-spinner {
     display: none;
+    width: 25px;
+    height: 25px;
+    animation: spin 0.8s linear infinite;
 }
 
-.status-badge.with-shine {
-    background: 
-        linear-gradient(
-            90deg,
-            transparent 0%,
-            transparent 40%,
-            rgba(255, 255, 255, 0.15) 50%,
-            transparent 60%,
-            transparent 100%
-        ),
-        rgb(1, 40, 69);
-    background-size: 200% 100%, 100% 100%;
-    transition: all 0.25s ease;
-    animation: shine 3s infinite;
+.check-button-spinner.active {
+    display: inline-block;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulsate {
+    0%, 100% { transform: scale(1); background-color: transparent; }
+    50% { transform: scale(1.1); background-color: #fffacd; }
+}
+
+.pulsate {
+    animation: pulsate 0.5s ease-in-out 3;
+    display: inline-block;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.updates-found {
+    display: none;
+    color: #067f39;
+    font-weight: 600;
+    font-size: 12px;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+.updates-found.show {
+    display: inline-block;
+}
+
+.updates-found.fade {
+    opacity: 0;
+}
+
+.copy-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-left: 1px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    vertical-align: -2px;
+}
+
+.copy-icon:hover {
+    opacity: 1;
+}
+
+.copy-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: var(--primary-dark);
+}
+
+.copy-tooltip {
+    position: fixed;
+    background: #333;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.copy-tooltip.show {
+    opacity: 1;
+}
+
+.status-badge {
+    background: rgba(16, 25, 40, 0.95);
+    color: #ffd700;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    display: inline-block;
+    padding: 3px;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-badge.header-badge {
+    margin-right: 16px;
+    border-radius: 0;
 }
 
 @keyframes shine {
     0% {
-        background-position: 200% 0, 0 0;
+        background-position: -200% center;
     }
     100% {
-        background-position: -200% 0, 0 0;
+        background-position: 200% center;
     }
+}
+
+.status-badge.with-shine {
+    background: linear-gradient(
+        90deg,
+        rgba(16, 25, 40, 0.95) 0%,
+        rgba(16, 25, 40, 0.95) 40%,
+        rgba(255, 215, 0, 0.3) 50%,
+        rgba(16, 25, 40, 0.95) 60%,
+        rgba(16, 25, 40, 0.95) 100%
+    );
+    background-size: 200% 100%;
+    animation: shine 3s linear infinite;
 }
 
 .status-badge.with-shine:hover {
-    background: 
-        linear-gradient(
-            90deg,
-            transparent 0%,
-            transparent 40%,
-            rgba(255, 255, 255, 0.15) 50%,
-            transparent 60%,
-            transparent 100%
-        ),
-        rgb(1, 50, 85);
-    background-size: 200% 100%, 100% 100%;
-    border-color: rgba(255, 255, 255, 0.25);
-    color: #ffd700 !important;
-}
-
-.status-badge.header-badge {
-    margin-left: 8px;
-    margin-right: 8px;
+    color: #ffd700;
 }
 
 .status-badge.white {
-    color: #fff !important;
+    background: rgba(16, 25, 40, 0.95);
+    color: #fff;
 }
 
 .up-to-date-badge {
-    display: inline;
-    padding: 3px 8px;
-    border-radius: 3px;
     font-size: 12px;
     font-weight: 600;
-    color: #fff;
+    padding: 3px 8px;
+    border-radius: 3px;
 }
 
 .up-to-date-badge.yes {
     background: #067f39;
+    color: #fff;
 }
 
 .up-to-date-badge.no {
     background: #cc0000;
+    color: #fff;
 }
 
-.updates-available-button .update-badge {
+.upgrade-info {
+    cursor: pointer;
+    display: none;
+}
+
+.upgrade-info:hover {
+    opacity: 0.8;
+}
+
+.upgrade-info.show {
     display: inline-block;
-    margin-left: 0.4rem;
-    padding: 0.1rem 0.4rem;
-    background: #00ff88;
-    color: #1a1a2e;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    animation: pulse 2s infinite;
+    padding: 6px;
+    margin-top: 8px;
 }
 
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.8;
-        transform: scale(1.05);
-    }
+.progress-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.progress-item:last-child {
+    border-bottom: none;
+}
+
+.progress-item.hidden {
+    display: none;
+}
+
+.progress-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.progress-icon.spinner {
+    color: var(--primary-dark);
+}
+
+.progress-icon.completed {
+    color: var(--primary-dark);
+    align-self: flex-start;
+}
+
+.progress-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.progress-platform {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 0 0 4px 0;
+    line-height: 1.3;
+}
+
+.progress-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.4;
+    font-family: monospace;
+}
+
+.wizard-summary {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px 24px 8px 24px;
+}
+
+.summary-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.summary-item:last-child {
+    margin-bottom: 0;
+}
+
+.summary-label {
+    color: #000;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+}
+
+.config-save-button {
+    margin-top: 16px;
+    background: var(--primary-dark);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.save-button-container {
+    display: none;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.config-save-button:hover {
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--primary-dark);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(24px);
 }
