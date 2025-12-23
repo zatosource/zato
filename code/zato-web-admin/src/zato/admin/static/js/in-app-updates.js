@@ -10,7 +10,7 @@ $.fn.zato.in_app_updates.init = function() {
     $('.copy-icon').on('click', $.fn.zato.in_app_updates.handleCopyIcon);
     $(document).on('click', '.upgrade-info', $.fn.zato.in_app_updates.handleCopyUpgradeInfo);
     $('#update-button').on('click', $.fn.zato.in_app_updates.handleUpdateClick);
-    
+
     $.fn.zato.in_app_updates.versionSteps = [
         {
             popover: {
@@ -150,7 +150,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
 
     $('#progress-download').removeClass('hidden error-state');
     $('#progress-install').addClass('hidden').removeClass('error-state');
-    $.fn.zato.in_app_updates.updateProgress('download', 'processing', 'Downloading update package...');
+    $.fn.zato.in_app_updates.updateProgress('download', 'processing', 'Downloading latest updates...');
 
     $.ajax({
         url: '/zato/updates/download',
@@ -160,7 +160,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
         },
         success: function(response) {
             $.fn.zato.in_app_updates.updateProgress('download', 'completed', 'Download complete');
-            
+
             $('#progress-install').removeClass('hidden');
             $.fn.zato.in_app_updates.updateProgress('install', 'processing', 'Installing updates...');
 
@@ -193,7 +193,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
             } catch(e) {
                 errorMsg = xhr.responseText || errorMsg;
             }
-            
+
             $.fn.zato.in_app_updates.updateProgress('download', 'error', errorMsg);
             button.prop('disabled', false);
         }
