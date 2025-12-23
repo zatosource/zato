@@ -110,7 +110,7 @@ class RuleLoader:
             result = self.load_parsed_rules(parsed, file_name, all_rules, containers, cached_rules)
 
             # .. log what was loaded ...
-            logger.info(f'Loaded rules: {result}')
+            logger.info(f'Loaded rules (loader.py): {result}')
 
             # .. and tell the caller what we loaded.
             return result

@@ -63,9 +63,12 @@ class SecurityExporter:
             # Create base security entry
             security_entry = {
                 'name': item['name'],
-                'type': sec_type,
-                'username': item['username']
+                'type': sec_type
             }
+
+            # Add username only if not apikey type
+            if sec_type != 'apikey':
+                security_entry['username'] = item['username']
 
             # Add is_active if present
             if 'is_active' in item:
@@ -95,12 +98,11 @@ class SecurityExporter:
             if self._should_skip_item(item, excluded_names, excluded_prefixes):
                 continue
 
-            # Log fields for debugging
-            logger.info('Fields for bearer_token %s: %s', item['name'], sorted(item.keys()))
+            name = item['name']
 
             # Create base token entry
             oauth = {
-                'name': item['name'],
+                'name': name,
                 'type': 'bearer_token',
                 'username': item['username']
             }
@@ -120,7 +122,7 @@ class SecurityExporter:
                     if data:
                         opaque_data.update(data)
                 except Exception as e:
-                    logger.warning('Error parsing opaque1 attribute for %s: %s', item['name'], e)
+                    logger.warning('Error parsing opaque1 attribute for %s: %s', name, e)
 
             # Try to access as opaque1 dict key (JSON objects)
             if not opaque_data and 'opaque1' in item and item['opaque1']:
@@ -129,16 +131,18 @@ class SecurityExporter:
                     if data:
                         opaque_data.update(data)
                 except Exception as e:
-                    logger.warning('Error parsing opaque1 key for %s: %s', item['name'], e)
+                    logger.warning('Error parsing opaque1 key for %s: %s', name, e)
 
             # Check for direct attributes in the item that match our needed fields
-            # This handles the case where fields are directly on the model
             for field in possible_fields:
                 if field in item and item[field]:
                     opaque_data[field] = item[field]
 
             # Update OAuth definition with the collected opaque data
             if opaque_data:
+                # Rename auth_server_url back to auth_endpoint for export
+                if 'auth_server_url' in opaque_data:
+                    opaque_data['auth_endpoint'] = opaque_data.pop('auth_server_url')
                 oauth.update(opaque_data)
 
             # Check for missing required fields
@@ -161,7 +165,7 @@ class SecurityExporter:
         logger.info('Exporting security definitions with exclusions')
 
         # Names to exclude completely
-        excluded_names = {'Rule engine default user', 'admin.invoke', 'ide_publisher'}
+        excluded_names = {'Rule engine default user', 'admin.invoke', 'ide_publisher', 'metrics'}
 
         # Prefixes to exclude
         excluded_prefixes = ['zato', 'pub.zato', 'demo']

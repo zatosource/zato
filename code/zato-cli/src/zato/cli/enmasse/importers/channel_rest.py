@@ -14,7 +14,7 @@ import logging
 from zato.cli.enmasse.util import preprocess_item, security_needs_update
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.odb.model import HTTPSOAP, Service, to_json
-from zato.common.util.sql import set_instance_opaque_attrs
+from zato.common.util.sql import get_security_by_id, set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -166,10 +166,24 @@ class ChannelImporter:
     def create_channel_rest(self, channel_def:'anydict', session:'SASession') -> 'any_':
         name = channel_def['name']
         logger.info('Creating REST channel: %s', name)
+        logger.info('Channel definition: %s', channel_def)
 
         service_name = channel_def['service']
         service = session.query(Service).filter_by(name=service_name, cluster_id=self.importer.cluster_id).one()
         cluster = self.importer.get_cluster(session)
+
+        security_item = None
+        if security_name := channel_def.get('security'):
+            logger.info('Security name found: %s', security_name)
+            if security_name not in self.importer.sec_defs:
+                logger.error('Security definition "%s" not found in sec_defs', security_name)
+                raise Exception(f'Security definition "{security_name}" not found for REST channel "{name}"')
+            sec_def = self.importer.sec_defs[security_name]
+            logger.info('Found security definition: %s', sec_def)
+            security_item = get_security_by_id(session, sec_def['id'])
+            logger.info('Retrieved security object with id %s for channel %s', sec_def['id'], name)
+        else:
+            logger.info('No security definition specified for channel %s', name)
 
         channel = HTTPSOAP(cluster=cluster, service=service)
         channel.name = name
@@ -179,20 +193,18 @@ class ChannelImporter:
         channel.method = channel_def.get('method', '') or ''
         channel.is_active = True
         channel.is_internal = False
-        channel.soap_action = 'not-used'
+        channel.soap_action = '' # Must be an empty string
 
         # Process standard attributes
         for key, value in channel_def.items():
             if key not in ['service', 'security', 'groups']:
                 setattr(channel, key, value)
 
-        # Handle security definition
-        if security_name := channel_def.get('security'):
-            if security_name not in self.importer.sec_defs:
-                raise Exception(f'Security definition "{security_name}" not found for REST channel "{name}"')
+        if security_item:
+            channel.security = security_item
+            logger.info('Assigned security object to channel %s', name)
 
-            sec_def = self.importer.sec_defs[security_name]
-            channel.security_id = sec_def['id']
+        logger.info('Channel created with security_id=%s', channel.security_id)
 
         # Handle security groups
         if channel_def.get('groups'):
@@ -210,7 +222,12 @@ class ChannelImporter:
     def update_channel_rest(self, channel_def:'anydict', session:'SASession') -> 'any_':
 
         channel_id = channel_def['id']
+        logger.info('Updating REST channel with id=%s', channel_id)
+        logger.info('Channel definition: %s', channel_def)
+
         channel = session.query(HTTPSOAP).filter_by(id=channel_id).one()
+        logger.info('Current channel security_id before update: %s', channel.security_id)
+
         channel.url_path = channel_def['url_path']
 
         service_name = channel_def['service']
@@ -225,12 +242,22 @@ class ChannelImporter:
                 setattr(channel, key, value)
 
         # Handle security definition
+        logger.info('Checking for security in channel_def: %s', channel_def.get('security'))
+        logger.info('Available security definitions: %s', list(self.importer.sec_defs.keys()))
         if (security_name := channel_def.get('security')) is not None:
+            logger.info('Security name found: %s', security_name)
             if security_name not in self.importer.sec_defs:
+                logger.error('Security definition "%s" not found in sec_defs', security_name)
                 raise Exception(f'Security definition "{security_name}" not found for REST channel "{channel_def["name"]}"')
 
             sec_def = self.importer.sec_defs[security_name]
-            channel.security_id = sec_def['id']
+            logger.info('Found security definition: %s', sec_def)
+            security_item = get_security_by_id(session, sec_def['id'])
+            channel.security = security_item
+            logger.info('Set security object for channel %s with id %s', channel_def['name'], sec_def['id'])
+            logger.info('Channel security_id after assignment: %s', channel.security_id)
+        else:
+            logger.info('No security definition specified for channel %s', channel_def['name'])
 
         # Handle security groups
         if (groups := channel_def.get('groups')) is not None and groups:
@@ -258,19 +285,30 @@ class ChannelImporter:
             for item in to_create:
                 logger.info('Creating channel: name=%s', item['name'])
                 instance = self.create_channel_rest(item, session)
-                logger.info('Created channel: name=%s id=%s', instance.name, instance.id)
+                logger.info('Created channel: name=%s id=%s security_id=%s', instance.name, instance.id, instance.security_id)
                 out_created.append(instance)
 
             logger.info('Updating %d existing REST channels', len(to_update))
             for item in to_update:
                 logger.info('Updating channel: name=%s id=%s', item['name'], item['id'])
                 instance = self.update_channel_rest(item, session)
-                logger.info('Updated channel: name=%s id=%s', instance.name, instance.id)
+                logger.info('Updated channel: name=%s id=%s security_id=%s', instance.name, instance.id, instance.security_id)
                 out_updated.append(instance)
+
+            logger.info('Flushing session before commit')
+            session.flush()
+            logger.info('After flush, checking instances')
+            for instance in out_created + out_updated:
+                logger.info('After flush - channel: name=%s id=%s security_id=%s', instance.name, instance.id, instance.security_id)
 
             logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
             session.commit()
             logger.info('Successfully committed all changes')
+
+            logger.info('Verifying channels in database after commit')
+            for instance in out_created + out_updated:
+                session.refresh(instance)
+                logger.info('Verified channel: name=%s id=%s security_id=%s', instance.name, instance.id, instance.security_id)
 
         except Exception as e:
             logger.error('Error syncing REST channels: %s', e)

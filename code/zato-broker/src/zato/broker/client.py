@@ -154,7 +154,6 @@ class BrokerClient:
 # ################################################################################################################################
 
     def publish_to_pubsub(self, msg:'any_', *ignored_args:'any_', **kwargs:'any_') -> 'any_':
-
         self.publish(msg, routing_key='pubsub.publish.1')
         self.publish(msg, routing_key='pubsub.pull.1')
 
@@ -232,24 +231,34 @@ class BrokerClient:
             # Enable confirm mode on the channel
             client.channel.confirm_select()
 
-            # .. and publish the message now.
-            _ = client.publish(
-                msg,
-                exchange=exchange,
-                routing_key=routing_key,
-                content_type='application/json',
-                delivery_mode=PERSISTENT_DELIVERY_MODE,
-                retry=True,
-                priority=priority,
-                expiration=expiration,
-                mandatory=mandatory,
-                timeout=publish_timeout,
-                confirm_timeout=3600 * 24,
-                headers={
-                    'zato_msg_id': new_msg_id(),
-                    'zato_pub_time': utcnow().isoformat()
-                }
-            ) # type: ignore
+            # logger.info('*' * 80)
+            # logger.info('Publishing')
+            # logger.info('111 %s', msg)
+            # logger.info('222 %s', exchange)
+            # logger.info('333 %s', routing_key)
+            # logger.info('444 %s', expiration)
+            # logger.info('555 %s', publish_timeout)
+
+            try:
+                _ = client.publish(
+                    msg,
+                    exchange=exchange,
+                    routing_key=routing_key,
+                    content_type='application/json',
+                    delivery_mode=PERSISTENT_DELIVERY_MODE,
+                    retry=True,
+                    priority=priority,
+                    expiration=expiration,
+                    mandatory=mandatory,
+                    timeout=publish_timeout,
+                    confirm_timeout=3600 * 24,
+                    headers={
+                        'zato_msg_id': new_msg_id(),
+                        'zato_pub_time': utcnow().isoformat()
+                    }
+                ) # type: ignore
+            except Exception as e:
+                raise
 
     invoke_async = publish
 

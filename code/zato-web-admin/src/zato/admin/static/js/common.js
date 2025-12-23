@@ -80,6 +80,8 @@ $.namespace('zato.http_soap.details');
 $.namespace('zato.ide');
 $.namespace('zato.invoker');
 $.namespace('zato.message');
+$.namespace('zato.monitoring');
+$.namespace('zato.monitoring.wizard');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
@@ -108,6 +110,7 @@ $.namespace('zato.service');
 $.namespace('zato.sms');
 $.namespace('zato.stats');
 $.namespace('zato.stats.custom');
+$.namespace('zato.system');
 $.namespace('zato.vendors');
 $.namespace('zato.vendors.keysight');
 $.namespace('zato.vendors.keysight.vision');
@@ -1859,7 +1862,7 @@ $.fn.zato.service.export_config = function() {
             var url = window.URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = 'config.yaml';
+            a.download = 'enmasse.yaml';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1868,6 +1871,285 @@ $.fn.zato.service.export_config = function() {
         error: function() {
             $('#export-spinner').remove();
             alert('Export failed. Check server logs.');
+        }
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.service.import_config = function() {
+    var cluster_id = $(document).getUrlParam('cluster') || '1';
+
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '*';
+
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            var fileContent = event.target.result;
+
+            var spinner_html = '<div id="import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 9999;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Importing config ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
+            $('body').append(spinner_html);
+
+            $.ajax({
+                url: '/zato/service/enmasse-import?cluster=' + cluster_id,
+                method: 'POST',
+                data: {
+                    file_content: fileContent,
+                    file_name: file.name
+                },
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                success: function(data) {
+                    $('#import-spinner').remove();
+
+                    var result;
+                    if (typeof data === 'object') {
+                        result = data;
+                    } else {
+                        try {
+                            result = JSON.parse(data);
+                        } catch (e) {
+                            result = {
+                                is_ok: false,
+                                exit_code: -1,
+                                stdout: '',
+                                stderr: String(data),
+                                is_timeout: false,
+                                timeout_msg: '',
+                                total_time: '',
+                                len_stdout_human: '',
+                                len_stderr_human: ''
+                            };
+                        }
+                    }
+
+                    if (result.is_ok) {
+                        $.fn.zato.show_import_result_popup(result, true, file);
+                    } else {
+                        $.fn.zato.show_import_result_popup(result, false, file);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#import-spinner').remove();
+                    $.fn.zato.show_import_result_popup({
+                        is_ok: false,
+                        exit_code: -1,
+                        stdout: '',
+                        stderr: xhr.responseText || error,
+                        is_timeout: false,
+                        timeout_msg: '',
+                        total_time: '',
+                        len_stdout_human: '',
+                        len_stderr_human: ''
+                    }, false, file);
+                }
+            });
+        };
+        reader.readAsText(file);
+    };
+
+    input.click();
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.show_import_result_popup = function(result, is_success, file) {
+    var overlay = $('<div/>', {
+        id: 'import-result-overlay',
+        css: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }
+    });
+
+    var popup = $('<div/>', {
+        css: {
+            backgroundColor: '#1e1e1e',
+            color: '#d4d4d4',
+            borderRadius: '8px',
+            padding: '0',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+            fontFamily: 'monospace'
+        }
+    });
+
+    var header = $('<div/>', {
+        css: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px 24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            background: '#1f1f1f'
+        }
+    });
+
+    var title = $('<h2/>', {
+        text: 'Import result',
+        css: {
+            margin: '0',
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#ffffff',
+            letterSpacing: '0.3px'
+        }
+    });
+
+    var closeButton = $('<button/>', {
+        text: '\u2715',
+        css: {
+            background: 'transparent',
+            border: 'none',
+            color: '#999',
+            fontSize: '24px',
+            cursor: 'pointer',
+            padding: '0',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            transition: 'all 0.2s ease'
+        }
+    });
+
+    closeButton.hover(
+        function() { $(this).css({background: 'rgba(255, 255, 255, 0.1)', color: '#fff'}); },
+        function() { $(this).css({background: 'transparent', color: '#999'}); }
+    );
+
+    closeButton.click(function() {
+        overlay.remove();
+        $(document).off('keydown.import-overlay');
+        if (is_success) {
+            var currentPath = window.location.pathname;
+            if (currentPath !== '/zato/' && currentPath.indexOf('service/ide') === -1) {
+                window.location.reload();
+            }
+        }
+    });
+
+    header.append(title);
+    header.append(closeButton);
+    popup.append(header);
+
+    var contentArea = $('<div/>', {
+        css: {
+            padding: '24px',
+            maxHeight: 'calc(80vh - 60px)',
+            overflow: 'auto'
+        }
+    });
+
+    if (result.stderr && String(result.stderr).trim() && !result.is_ok) {
+        var stderrArea = $('<textarea/>', {
+            val: String(result.stderr),
+            readonly: true,
+            css: {
+                width: '100%',
+                minHeight: '150px',
+                backgroundColor: '#2d2d2d',
+                color: '#f48771',
+                border: '1px solid #3e3e3e',
+                borderRadius: '4px',
+                padding: '8px',
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                resize: 'vertical'
+            }
+        });
+        contentArea.append(stderrArea);
+
+        var fileSize = file ? file.size : 0;
+        var fileSizeHuman = fileSize < 1024 ? fileSize + ' B' :
+                            fileSize < 1048576 ? (fileSize / 1024).toFixed(1) + ' KB' :
+                            (fileSize / 1048576).toFixed(1) + ' MB';
+        var fileName = file ? file.name : 'unknown';
+        var mimeType = file ? (file.type || 'unknown') : 'unknown';
+
+        var errorMsg = $('<div/>', {
+            text: 'File ' + fileName + ' (' + fileSizeHuman + '; ' + mimeType + ') could not be imported',
+            css: {
+                marginTop: '12px',
+                color: '#f48771',
+                fontSize: '16px',
+                fontWeight: 'bold'
+            }
+        });
+        contentArea.append(errorMsg);
+    } else if (result.stdout && String(result.stdout).trim()) {
+        var stdoutArea = $('<textarea/>', {
+            val: String(result.stdout),
+            readonly: true,
+            css: {
+                width: '100%',
+                minHeight: '150px',
+                backgroundColor: '#2d2d2d',
+                color: '#d4d4d4',
+                border: '1px solid #3e3e3e',
+                borderRadius: '4px',
+                padding: '8px',
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                resize: 'vertical'
+            }
+        });
+        contentArea.append(stdoutArea);
+
+        if (String(result.stdout).indexOf('⭐ Enmasse OK') !== -1) {
+            var successMsg = $('<div/>', {
+                text: '⭐ Config imported OK',
+                css: {
+                    marginTop: '24px',
+                    color: '#4ec9b0',
+                    fontSize: '16px',
+                    fontWeight: 'bold'
+                }
+            });
+            contentArea.append(successMsg);
+        }
+    }
+
+    popup.append(contentArea);
+    overlay.append(popup);
+    $('body').append(overlay);
+
+    overlay.click(function(e) {
+        if (e.target === overlay[0]) {
+            overlay.remove();
+            $(document).off('keydown.import-overlay');
+        }
+    });
+
+    $(document).on('keydown.import-overlay', function(e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            overlay.remove();
+            $(document).off('keydown.import-overlay');
+            if (is_success) {
+                var currentPath = window.location.pathname;
+                if (currentPath !== '/zato/' && currentPath.indexOf('service/ide') === -1) {
+                    window.location.reload();
+                }
+            }
         }
     });
 }
@@ -1900,6 +2182,132 @@ $.fn.zato.pubsub.import_test_config = function() {
         error: function() {
             $('#import-spinner').remove();
             alert('Import failed. Check server logs.');
+        }
+    });
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.system.show_version = function() {
+    var version = $('meta[name="generator"]').attr('content') || 'Unknown';
+
+    var overlay = $('<div/>', {
+        id: 'version-overlay',
+        css: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }
+    });
+
+    var popup = $('<div/>', {
+        css: {
+            backgroundColor: '#1e1e1e',
+            color: '#d4d4d4',
+            borderRadius: '8px',
+            padding: '0',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+            fontFamily: 'monospace'
+        }
+    });
+
+    var header = $('<div/>', {
+        css: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px 24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            background: '#1f1f1f'
+        }
+    });
+
+    var title = $('<h2/>', {
+        text: 'Version',
+        css: {
+            margin: '0',
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#ffffff',
+            letterSpacing: '0.3px'
+        }
+    });
+
+    var closeButton = $('<button/>', {
+        text: '\u2715',
+        css: {
+            background: 'transparent',
+            border: 'none',
+            color: '#999',
+            fontSize: '24px',
+            cursor: 'pointer',
+            padding: '0',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '6px',
+            transition: 'all 0.2s ease'
+        }
+    });
+
+    closeButton.hover(
+        function() { $(this).css({background: 'rgba(255, 255, 255, 0.1)', color: '#fff'}); },
+        function() { $(this).css({background: 'transparent', color: '#999'}); }
+    );
+
+    closeButton.click(function() {
+        overlay.remove();
+        $(document).off('keydown.version-overlay');
+    });
+
+    header.append(title);
+    header.append(closeButton);
+    popup.append(header);
+
+    var contentArea = $('<div/>', {
+        css: {
+            padding: '24px'
+        }
+    });
+
+    var versionText = $('<div/>', {
+        text: version,
+        css: {
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: '#4ec9b0'
+        }
+    });
+
+    contentArea.append(versionText);
+    popup.append(contentArea);
+    overlay.append(popup);
+    $('body').append(overlay);
+
+    overlay.click(function(e) {
+        if (e.target === overlay[0]) {
+            overlay.remove();
+            $(document).off('keydown.version-overlay');
+        }
+    });
+
+    $(document).on('keydown.version-overlay', function(e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            overlay.remove();
+            $(document).off('keydown.version-overlay');
         }
     });
 }

@@ -38,6 +38,7 @@ from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
+from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
@@ -179,7 +180,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.deployment_lock_timeout = -1
         self.deployment_key = ''
         self.has_gevent = True
-        self.request_dispatcher_dispatch = cast_('callable_', None)
         self.delivery_store = None
         self.static_config = Bunch()
         self.component_enabled = Bunch()
@@ -248,6 +248,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # The main config store
         self.config = ConfigStore()
+
+        # Log streaming manager
+        self.log_streaming_manager = LogStreamingManager()
 
 # ################################################################################################################################
 
@@ -849,7 +852,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Initializes worker store, including connectors
         self.worker_store.init()
-        self.request_dispatcher_dispatch = self.worker_store.request_dispatcher.dispatch
 
         # Security facade wrapper
         self.security_facade = SecurityFacade(self)
@@ -969,6 +971,59 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def import_enmasse(self, file_content:'str', file_name:'str') -> 'str':
+
+        # stdlib
+        import json
+        import tempfile
+
+        # Zato
+        from zato.server.commands import CommandsFacade
+
+        # Local aliases
+        commands = CommandsFacade()
+        commands.init(self)
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+            _ = temp_file.write(file_content)
+            temp_file_path = temp_file.name
+
+        try:
+            result = commands.run_enmasse_sync_import(temp_file_path)
+
+            response = {
+                'is_ok': result.is_ok,
+                'exit_code': result.exit_code,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'is_timeout': result.is_timeout,
+                'timeout_msg': result.timeout_msg if result.is_timeout else '',
+                'total_time': result.total_time,
+                'len_stdout_human': result.len_stdout_human,
+                'len_stderr_human': result.len_stderr_human,
+            }
+
+            return json.dumps(response)
+
+        except Exception:
+            exc = format_exc()
+            logger.warning('Could not import enmasse: %s', exc)
+            return json.dumps({
+                'is_ok': False,
+                'exit_code': -1,
+                'stdout': '',
+                'stderr': exc,
+                'is_timeout': False,
+                'timeout_msg': '',
+                'total_time': '',
+                'len_stdout_human': '',
+                'len_stderr_human': '',
+            })
+        finally:
+            os.unlink(temp_file_path)
+
+# ################################################################################################################################
+
     def export_enmasse(self):
 
         # Zato
@@ -994,7 +1049,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         from zato.server.commands import CommandsFacade
         import zato.common.pubsub.server
 
-        config_path = os.path.join(os.path.dirname(zato.common.pubsub.server.__file__), 'config.yaml')
+        config_path = os.path.join(os.path.dirname(zato.common.pubsub.server.__file__), 'enmasse.yaml')
 
         facade = CommandsFacade()
         facade.init(self)
@@ -1206,7 +1261,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. indicate the message has not been processed
         except Exception:
-            logger.warning('Rejecting pub/sub message: %s', format_exc())
+            log_msg = f'Rejecting pub/sub message: body={body}, amqp_msg={amqp_msg}, e={format_exc()}'
+            logger.warning(log_msg)
             amqp_msg.reject(requeue=True)
 
         # .. otherwise, confirm it's been consumed.

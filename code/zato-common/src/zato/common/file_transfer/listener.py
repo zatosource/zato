@@ -23,7 +23,7 @@ from watchdog.observers.inotify import InotifyObserver
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common.util.api import new_cid, publish_file
+from zato.common.util.api import new_cid, publish_file, publish_enmasse, publish_user_conf
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -52,6 +52,10 @@ pickup_order_patterns = [
     'adapter*/**',
     'api*/**',
     'services*/**',
+    'user-conf/**',
+    '**/config.yaml',
+    '**/enmasse.yaml',
+    '**/config*.y*ml',
     '**/enmasse*.y*ml',
 ]
 
@@ -72,6 +76,20 @@ ignored_suffixes = [
 # ################################################################################################################################
 # ################################################################################################################################
 
+def find_base_directories(directory_path:'str', pattern:'str') -> 'strlist':
+    """ Finds all directories matching the given pattern under directory_path.
+    """
+    out = []
+    full_pattern = os.path.join(directory_path, pattern)
+    directories = glob.glob(full_pattern, recursive=True)
+    for d in directories:
+        if os.path.isdir(d):
+            out.append(d)
+    return out
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def find_matching_items(directory_path:'str') -> 'strlist':
     """ Finds all files and directories matching pickup_order_patterns in the given directory.
     For non-enmasse patterns, returns only the directories containing matches (under "src").
@@ -85,15 +103,14 @@ def find_matching_items(directory_path:'str') -> 'strlist':
     if not os.path.isdir(directory_path):
         raise ValueError(f'Directory does not exist: {directory_path}')
 
-    # Determine the base directories for searching by looking for 'src'
+    # Determine the base directories for searching by looking for 'src' and 'config'
     base_dirs = []
-    src_pattern = os.path.join(directory_path, '**/src')
-    src_directories = glob.glob(src_pattern, recursive=True)
 
-    # Filter to ensure we only match exact 'src' directories
-    for d in src_directories:
-        if os.path.basename(d) == 'src' and os.path.isdir(d):
-            base_dirs.append(d)
+    src_dirs = find_base_directories(directory_path, '**/src')
+    base_dirs.extend(src_dirs)
+
+    config_dirs = find_base_directories(directory_path, '**/config')
+    base_dirs.extend(config_dirs)
 
     # Store enmasse matches (full paths) and non-enmasse matches (will be directories)
     enmasse_matches = set()
@@ -223,7 +240,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         self.event_types = event_types or ['created', 'deleted', 'modified', 'closed', 'closed_no_write']
 
         # File patterns to match (e.g. ['*.py', '*.txt'])
-        self.file_patterns = file_patterns or ['*.py']
+        self.file_patterns = file_patterns or ['*.py', '*.yaml', '*.yml',  '*.ini']
 
         # For tracking file size stability
         self.file_sizes = {}
@@ -349,7 +366,16 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         """ Publish file-ready event to the broker.
         """
         try:
-            msg = publish_file(self.broker_client, new_cid(), event_path)
+            cid = new_cid()
+            is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
+            is_static = event_path.endswith('.ini') or event_path.endswith('.zrules')
+
+            if is_enmasse:
+                msg = publish_enmasse(self.broker_client, cid, event_path)
+            elif is_static:
+                msg = publish_user_conf(self.broker_client, cid, event_path)
+            else:
+                msg = publish_file(self.broker_client, cid, event_path)
             logger.info('Sent msg -> %s', msg)
         except Exception as e:
             logger.warning('Could not publish event to broker: %s -> %s', e, event_path)
@@ -446,12 +472,7 @@ def watch_directory(
 
     # Find the deepest common directory to watch
     # This optimizes the observer to watch from the appropriate level
-    non_enmasse_dirs = [d for d in matching_items if 'enmasse' not in d]
-    if non_enmasse_dirs:
-        watch_directory = find_deepest_common_directory(non_enmasse_dirs)
-    else:
-        # If there are no non-enmasse directories, watch the base directory
-        watch_directory = directory_path
+    watch_directory = find_deepest_common_directory(matching_items)
 
     # Create event handler
     event_handler = ZatoFileSystemEventHandler(matching_items, event_types, file_patterns)
@@ -482,7 +503,14 @@ if __name__ == '__main__':
         help='Observer type to use for file monitoring (default: inotify)'
     )
 
-    _ = parser.add_argument('--patterns', nargs='*', default=['*.py'], help='File patterns to monitor (default: *.py)')
+    default_patterns = ['*.py', '*.yaml', '*.yml', '*.ini', '*.zrules']
+
+    _ = parser.add_argument(
+        '--patterns',
+        nargs='*',
+        default=default_patterns,
+        help=f'File patterns to monitor (default: {default_patterns})'
+    )
 
     # Parse arguments
     args = parser.parse_args()

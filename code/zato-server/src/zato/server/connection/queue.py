@@ -22,6 +22,7 @@ from zato.common.api import GENERIC as COMMON_GENERIC
 from zato.common.typing_ import cast_
 from zato.common.util.config import resolve_name, replace_query_string_items
 from zato.common.util.python_ import get_python_id
+from zato.common.util.time_ import utcnow
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -200,7 +201,7 @@ class ConnectionQueue:
 
     def _build_queue(self) -> 'None':
 
-        start = datetime.utcnow()
+        start = utcnow()
         build_until = start + timedelta(seconds=self.queue_build_cap)
         suffix = 's ' if self.queue_max_size > 1 else ' '
 
@@ -228,7 +229,7 @@ class ConnectionQueue:
                     return
 
                 gevent.sleep(1)
-                now = datetime.utcnow()
+                now = utcnow()
 
                 self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
                     self.queue.qsize(), self.queue_max_size,
@@ -239,7 +240,7 @@ class ConnectionQueue:
                     # Log the fact that the queue is not full yet
                     self.logger.info('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s (UTC)',
                         self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address_masked, self.queue_build_cap,
-                        datetime.utcnow() + timedelta(seconds=self.queue_build_cap))
+                        utcnow() + timedelta(seconds=self.queue_build_cap))
 
                     # Sleep for a predetermined time
                     gevent.sleep(self.queue_build_cap)
@@ -250,7 +251,7 @@ class ConnectionQueue:
                         if self.in_progress_count < self.queue_max_size:
                             self._spawn_add_client_func(self.queue_max_size - self.in_progress_count)
 
-                    start = datetime.utcnow()
+                    start = utcnow()
                     build_until = start + timedelta(seconds=self.queue_build_cap)
 
             if self.should_keep_connecting():

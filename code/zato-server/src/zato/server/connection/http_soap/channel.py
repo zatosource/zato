@@ -22,8 +22,9 @@ from regex import compile as regex_compile
 from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, SEC_DEF_TYPE, SIMPLE_IO, \
     TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
 from zato.common.const import ServiceConst
-from zato.common.exception import HTTP_RESPONSES, ServiceMissingException
-from zato.common.json_internal import dumps, loads
+from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
+from zato.common.json_ import dumps
+from zato.common.json_internal import loads
 from zato.common.marshal_.api import Model, ModelValidationError
 from zato.common.typing_ import cast_
 from zato.common.util.api import as_bool, utcnow
@@ -411,7 +412,7 @@ class RequestDispatcher:
                         if e.challenge:
                             wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
 
-                    elif isinstance(e, (BadRequest, ModelValidationError)):
+                    elif isinstance(e, (BadRequest, ModelValidationError, BackendInvocationError)):
                         status = _status_bad_request
 
                         # This is the channel that Dashboard uses and we want to return
