@@ -481,3 +481,71 @@ input:checked + .toggle-slider {
 input:checked + .toggle-slider:before {
     transform: translateX(24px);
 }
+
+.help-icon {
+    margin-left: 6px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    font-size: 14px;
+}
+
+.help-icon:hover {
+    opacity: 1;
+}
+
+.help-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-overlay-content {
+    background: #fff;
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    position: relative;
+    box-shadow: 8px 8px 0px var(--shadow-dark);
+}
+
+.help-overlay-content h3 {
+    margin: 0 0 16px 0;
+    color: var(--primary-dark);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.help-overlay-content p {
+    margin: 0 0 12px 0;
+    line-height: 1.6;
+    color: #333;
+}
+
+.help-overlay-content p:last-of-type {
+    margin-bottom: 0;
+}
+
+.help-overlay-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--primary-dark);
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.help-overlay-close:hover {
+    opacity: 1;
+}

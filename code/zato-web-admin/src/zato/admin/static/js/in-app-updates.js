@@ -10,6 +10,21 @@ $.fn.zato.in_app_updates.init = function() {
     $('.copy-icon').on('click', $.fn.zato.in_app_updates.handleCopyIcon);
     $(document).on('click', '.upgrade-info', $.fn.zato.in_app_updates.handleCopyUpgradeInfo);
     $('#update-button').on('click', $.fn.zato.in_app_updates.handleUpdateClick);
+    $('#auto-update-help').on('click', $.fn.zato.in_app_updates.showHelpOverlay);
+    $('.help-overlay-close').on('click', $.fn.zato.in_app_updates.hideHelpOverlay);
+    $('#auto-update-help-overlay').on('click', function(e) {
+        if (e.target === this) {
+            $.fn.zato.in_app_updates.hideHelpOverlay();
+        }
+    });
+};
+
+$.fn.zato.in_app_updates.showHelpOverlay = function() {
+    $('#auto-update-help-overlay').fadeIn(200);
+};
+
+$.fn.zato.in_app_updates.hideHelpOverlay = function() {
+    $('#auto-update-help-overlay').fadeOut(200);
 };
 
 $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
