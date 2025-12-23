@@ -11,40 +11,66 @@ $.fn.zato.in_app_updates.init = function() {
     $(document).on('click', '.upgrade-info', $.fn.zato.in_app_updates.handleCopyUpgradeInfo);
     $('#update-button').on('click', $.fn.zato.in_app_updates.handleUpdateClick);
     
+    $.fn.zato.in_app_updates.versionSteps = [
+        {
+            popover: {
+                title: 'Version Information',
+                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+            }
+        },
+        {
+            element: '#check-button',
+            popover: {
+                title: 'Check for updates',
+                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+            }
+        },
+        {
+            element: '#update-button',
+            popover: {
+                title: 'Install updates',
+                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
+            }
+        }
+    ];
+
+    $.fn.zato.in_app_updates.configSteps = [
+        {
+            popover: {
+                title: 'Config Information',
+                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+            }
+        },
+        {
+            element: '.summary-item',
+            popover: {
+                title: 'Auto-update',
+                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
+            }
+        }
+    ];
+
+    console.log('Creating single driver instance');
     $.fn.zato.in_app_updates.driverObj = window.driver.js.driver({
         showProgress: true,
         showButtons: ['next', 'previous', 'close'],
         overlayColor: 'rgba(0, 0, 0, 0.5)',
-        popoverClass: 'driver-popover-custom',
-        steps: [
-            {
-                popover: {
-                    title: 'Version Information',
-                    description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
-                }
-            },
-            {
-                popover: {
-                    title: 'Config Information',
-                    description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
-                }
-            },
-            {
-                element: '.summary-item',
-                popover: {
-                    title: 'Auto-update',
-                    description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
-                }
-            }
-        ]
+        popoverClass: 'driver-popover-custom'
     });
+    console.log('Driver instance created');
 
     $('#version-info-help').on('click', function() {
+        console.log('Version info help clicked, setting version steps:', JSON.stringify($.fn.zato.in_app_updates.versionSteps.map(s => s.popover ? s.popover.title : 'no title'), null, 2));
+        $.fn.zato.in_app_updates.driverObj.setSteps($.fn.zato.in_app_updates.versionSteps);
+        console.log('Steps set, now driving from step 0');
         $.fn.zato.in_app_updates.driverObj.drive(0);
     });
 
     $('#auto-update-help').on('click', function() {
-        $.fn.zato.in_app_updates.driverObj.drive(1);
+        console.log('Auto-update help clicked, setting config steps:', JSON.stringify($.fn.zato.in_app_updates.configSteps.map(s => s.popover ? s.popover.title : 'no title'), null, 2));
+        $.fn.zato.in_app_updates.driverObj.setSteps($.fn.zato.in_app_updates.configSteps);
+        console.log('Steps set, now driving from step 0');
+        $.fn.zato.in_app_updates.driverObj.drive(0);
     });
 
     $('.summary-label').on('click', function() {
