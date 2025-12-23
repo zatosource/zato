@@ -88,8 +88,16 @@ class Create(ZatoCommand):
             ide_publisher_sec = HTTPBasicAuth(
                 None, IDEDeploy.Username, True, IDEDeploy.Username, 'IDE Publishers', self.generate_password(), cluster)
 
+            streaming_password = os.environ.get('Zato_Log_Streaming_Password')
+            if not streaming_password:
+                streaming_password = self.generate_password()
+
+            streaming_sec = HTTPBasicAuth(
+                None, 'zato.log.streaming', True, 'zato.log.streaming', 'Log streaming API', streaming_password, cluster)
+
             session.add(admin_invoke_sec)
             session.add(ide_publisher_sec)
+            session.add(streaming_sec)
 
             session.flush()
 
@@ -112,6 +120,7 @@ class Create(ZatoCommand):
             self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
             self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
             self.add_metrics_channel(session, cluster, metrics_service)
+            self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
 
             # Add other configurations
             self.add_default_caches(session, cluster)
@@ -334,5 +343,28 @@ class Create(ZatoCommand):
 
         session.add(rule_engine_channel)
 
+# ################################################################################################################################
+
+    def add_streaming_channels(self, session, cluster, service, security):
+        """ Adds channels for log streaming API.
+        """
+
+        # Zato
+        from zato.common.api import DATA_FORMAT
+        from zato.common.odb.model import HTTPSOAP
+
+        # Toggle log streaming on/off
+        toggle_channel = HTTPSOAP(
+            None, 'zato.log.streaming.toggle', True, True, 'channel',
+            'plain_http', None, '/api/log/streaming/toggle', None, '', None, DATA_FORMAT.JSON,
+            service=service, cluster=cluster, security=security)
+        session.add(toggle_channel)
+
+        # Get log streaming status
+        status_channel = HTTPSOAP(
+            None, 'zato.log.streaming.status', True, True, 'channel',
+            'plain_http', None, '/api/log/streaming/status', None, '', None, DATA_FORMAT.JSON,
+            service=service, cluster=cluster, security=security)
+        session.add(status_channel)
 
 # ################################################################################################################################

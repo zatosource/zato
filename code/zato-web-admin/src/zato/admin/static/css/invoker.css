@@ -47,6 +47,28 @@ input {
     xcolor: #999 !important;
 }
 
+textarea {
+    overflow-x: hidden;
+}
+
+#data-request {
+    resize: vertical;
+    border-bottom: 3px solid #ccc;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+#data-request::-webkit-resizer {
+    background: linear-gradient(135deg, transparent 50%, #999 50%);
+}
+
+#data-response {
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    resize: none;
+}
+
+
 .tippy-box[role="tooltip-draw-attention"]
 {
     background: linear-gradient(to right, #33f, #036 , #090, #c06, #660);

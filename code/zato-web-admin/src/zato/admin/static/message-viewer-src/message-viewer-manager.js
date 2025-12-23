@@ -1,0 +1,550 @@
+import { getModuleLogger, LOG_LEVEL } from './debug-utils.js';
+
+const logger = getModuleLogger('message-viewer');
+logger.setLevel(LOG_LEVEL.INFO);
+
+export class MessageViewerManager {
+    constructor() {
+        this.searchDebounceTimer = null;
+        this.lastSearchTerm = null;
+        this.currentMatchIndex = undefined;
+        this.messageData = null;
+        this.rawMessageData = null;
+        this.isPlainText = false;
+        this.isFormatted = false;
+        this.boundSetDynamicHeight = this.setDynamicHeight.bind(this);
+    }
+
+    initialize(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            logger.error(`MessageViewerManager.initialize: container ${containerId} not found`);
+            return;
+        }
+
+        const existingViewer = document.getElementById('message-viewer-panel');
+        if (existingViewer) {
+            return;
+        }
+
+        const viewerPanel = document.createElement('div');
+        viewerPanel.id = 'message-viewer-panel';
+        viewerPanel.style.display = 'none';
+        viewerPanel.style.flexDirection = 'column';
+        viewerPanel.style.flex = '1';
+        viewerPanel.style.minHeight = '0';
+        viewerPanel.innerHTML = `
+            <div id="message-viewer-header">
+                <div class="invoker-search-wrapper">
+                    <input type="text" id="message-viewer-search" placeholder="Search message" class="invoker-message-search-input">
+                    <span id="message-viewer-search-counter" class="invoker-search-counter"></span>
+                </div>
+                <input type="button" id="message-viewer-copy-btn" value="Copy" title="Copy to clipboard">
+            </div>
+            <div id="message-viewer-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column;"></div>
+        `;
+
+        container.appendChild(viewerPanel);
+        this.initializeControls();
+        requestAnimationFrame(() => {
+            this.setDynamicHeight();
+        });
+        window.addEventListener('resize', this.boundSetDynamicHeight);
+
+        const textarea = document.getElementById('data-request');
+        if (textarea) {
+            const resizeObserver = new ResizeObserver(() => {
+                this.setDynamicHeight();
+            });
+            resizeObserver.observe(textarea);
+        }
+
+    }
+
+    setDynamicHeight() {
+        const wrapper = document.getElementById('message-viewer-wrapper');
+        if (!wrapper) return;
+
+        const rect = wrapper.getBoundingClientRect();
+        const scrollbarMargin = 50;
+        const maxHeight = window.innerHeight - rect.top - scrollbarMargin;
+
+        wrapper.style.maxHeight = `${maxHeight}px`;
+    }
+
+    initializeControls() {
+        const copyBtn = document.getElementById('message-viewer-copy-btn');
+        const searchInput = document.getElementById('message-viewer-search');
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                if (!this.messageData) return;
+                let textToCopy;
+                if (this.isPlainText) {
+                    textToCopy = this.isFormatted ? this.rawMessageData.replace(/`/g, '') : this.messageData;
+                } else {
+                    textToCopy = JSON.stringify(this.messageData, null, 2);
+                }
+                navigator.clipboard.writeText(textToCopy).then(() => {
+
+                    const btnRect = copyBtn.getBoundingClientRect();
+                    const tooltip = document.createElement('span');
+                    tooltip.className = 'invoker-copy-tooltip';
+                    tooltip.textContent = 'Message copied';
+                    tooltip.style.position = 'fixed';
+                    tooltip.style.top = `${btnRect.top - 32}px`;
+                    tooltip.style.right = `${window.innerWidth - btnRect.right}px`;
+                    document.body.appendChild(tooltip);
+
+                    setTimeout(() => {
+                        tooltip.remove();
+                    }, 800);
+                }).catch(err => {
+                    logger.error(`MessageViewerManager.initializeControls: copy failed - ${err.message}`);
+                });
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (event) => {
+                const currentValue = event.target.value.trim();
+
+                const counter = document.getElementById('message-viewer-search-counter');
+                if (counter) {
+                    counter.textContent = '';
+                    counter.style.left = '';
+                }
+
+                if (this.searchDebounceTimer) {
+                    clearTimeout(this.searchDebounceTimer);
+                }
+
+                this.searchDebounceTimer = setTimeout(() => {
+                    this.updateMatchCounter(currentValue);
+                    this.renderMessage();
+                }, 300);
+            });
+
+            searchInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    const searchTerm = searchInput.value.trim();
+                    if (searchTerm) {
+                        this.scrollToNextMatch();
+                    }
+                }
+
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    searchInput.value = '';
+                    this.lastSearchTerm = null;
+                    this.currentMatchIndex = undefined;
+                    this.updateMatchCounter('');
+                    this.renderMessage();
+                }
+            });
+        }
+    }
+
+    setMessage(data) {
+        this.messageData = data;
+        this.rawMessageData = null;
+        this.isPlainText = false;
+        this.isFormatted = false;
+        this.clearSearch();
+        this.showPanel();
+        this.renderMessage();
+        requestAnimationFrame(() => {
+            this.setDynamicHeight();
+        });
+    }
+
+    setMessagePlainText(text) {
+        this.messageData = text;
+        this.rawMessageData = null;
+        this.isPlainText = true;
+        this.isFormatted = false;
+        this.clearSearch();
+        this.showPanel();
+        this.renderMessage();
+        requestAnimationFrame(() => {
+            this.setDynamicHeight();
+        });
+    }
+
+    setMessageFormatted(text) {
+        this.rawMessageData = text;
+
+        const parts = text.split(/(`[^`]+`)/g);
+        const formatted = parts.map((part, index) => {
+            if (index % 2 === 1) {
+                return `<strong>${this.escapeHtml(part.slice(1, -1))}</strong>`;
+            }
+            return this.escapeHtml(part);
+        }).join('');
+
+        this.messageData = formatted;
+        this.isPlainText = true;
+        this.isFormatted = true;
+        this.clearSearch();
+        this.showPanel();
+        this.renderMessage();
+        requestAnimationFrame(() => {
+            this.setDynamicHeight();
+        });
+    }
+
+    clearSearch() {
+        const searchInput = document.getElementById('message-viewer-search');
+        const counter = document.getElementById('message-viewer-search-counter');
+
+        if (searchInput) {
+            searchInput.value = '';
+        }
+
+        if (counter) {
+            counter.textContent = '';
+            counter.style.left = '';
+        }
+
+        this.lastSearchTerm = null;
+        this.currentMatchIndex = undefined;
+    }
+
+    showPanel() {
+        const panel = document.getElementById('message-viewer-panel');
+        if (panel && panel.style.display === 'none') {
+            panel.style.display = 'flex';
+        }
+    }
+
+    hidePanel() {
+        const panel = document.getElementById('message-viewer-panel');
+        if (panel) {
+            panel.style.display = 'none';
+        }
+        this.clearSearch();
+        this.messageData = null;
+        this.rawMessageData = null;
+        const container = document.getElementById('message-viewer-container');
+        if (container) {
+            container.innerHTML = '';
+        }
+    }
+
+    renderMessage() {
+        const container = document.getElementById('message-viewer-container');
+        const searchInput = document.getElementById('message-viewer-search');
+        if (!container) {
+            return;
+        }
+
+        if (!this.messageData) {
+            return;
+        }
+
+        const jsonText = this.isPlainText ? this.messageData : JSON.stringify(this.messageData, null, 2);
+        const searchTerm = searchInput ? searchInput.value.trim() : '';
+
+        this.currentMatchIndex = undefined;
+        this.lastSearchTerm = searchTerm;
+        let displayText;
+
+        if (this.isPlainText) {
+            if (this.isFormatted && !searchTerm) {
+                displayText = jsonText;
+            } else if (searchTerm) {
+                const textForSearch = this.isFormatted ? this.rawMessageData : jsonText;
+                displayText = this.highlightSearchTermPlainText(textForSearch, searchTerm);
+            } else {
+                displayText = this.escapeHtml(jsonText);
+            }
+        } else {
+            if (searchTerm) {
+                displayText = this.highlightSearchTerm(jsonText, searchTerm);
+            } else {
+                displayText = this.applySyntaxHighlighting(jsonText);
+            }
+        }
+
+        let display = document.getElementById('message-viewer-json-display');
+        const preserveScroll = display ? display.scrollTop : 0;
+
+        if (!display) {
+            container.innerHTML = `<pre id="message-viewer-json-display">${displayText}</pre>`;
+        } else {
+            display.innerHTML = displayText;
+            if (!searchTerm) {
+                display.scrollTop = preserveScroll;
+            }
+        }
+
+        if (searchTerm) {
+            this.scrollToFirstMatch();
+        }
+    }
+
+    updateMatchCounter(searchTerm) {
+        const counter = document.getElementById('message-viewer-search-counter');
+        const searchInput = document.getElementById('message-viewer-search');
+        if (!counter) return;
+
+        if (!searchTerm) {
+            counter.textContent = '';
+            counter.style.left = '';
+            return;
+        }
+
+        let matchCount = 0;
+        let currentIndex = undefined;
+
+        let textToSearch;
+        if (this.isPlainText) {
+            textToSearch = this.isFormatted ? this.rawMessageData : this.messageData;
+        } else {
+            textToSearch = JSON.stringify(this.messageData, null, 2);
+        }
+        let searchRegex;
+
+        if (this.isPlainText) {
+            const escapedSearchForRegex = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            searchRegex = new RegExp(`(${escapedSearchForRegex})`, 'gi');
+        } else {
+            if (searchTerm.includes('=')) {
+                const [key, value] = searchTerm.split('=');
+                const trimmedKey = key.trim();
+                const trimmedValue = value ? value.trim() : '';
+
+                if (trimmedKey && trimmedValue) {
+                    const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const escapedValue = trimmedValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+                    const patterns = [
+                        `"${escapedKey}"\\s*:\\s*"[^"]*${escapedValue}[^"]*"`,
+                        `"${escapedKey}"\\s*:\\s*[^,\\n\\}]*${escapedValue}[^,\\n\\}]*`
+                    ];
+
+                    searchRegex = new RegExp(`(${patterns.join('|')})`, 'gi');
+                } else if (trimmedKey) {
+                    const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    searchRegex = new RegExp(`("${escapedKey}")`, 'gi');
+                }
+            } else {
+                const escapedSearchForRegex = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                searchRegex = new RegExp(`(${escapedSearchForRegex})`, 'gi');
+            }
+        }
+
+        if (searchRegex) {
+            const matches = textToSearch.match(searchRegex);
+            matchCount = matches ? matches.length : 0;
+        }
+
+        currentIndex = this.currentMatchIndex;
+
+        let counterText;
+        if (matchCount === 0) {
+            counterText = '0 matches';
+        } else if (matchCount === 1) {
+            counterText = '1 match';
+        } else if (currentIndex !== undefined) {
+            counterText = `${currentIndex + 1} of ${matchCount} matches`;
+        } else {
+            counterText = `${matchCount} matches`;
+        }
+
+        counter.textContent = counterText;
+
+        if (searchInput && searchTerm) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const computedStyle = window.getComputedStyle(searchInput);
+            context.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+            const textWidth = context.measureText(searchTerm).width;
+            const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+            counter.style.left = `${paddingLeft + textWidth + 10}px`;
+        } else {
+            counter.style.left = '';
+        }
+    }
+
+    scrollToFirstMatch() {
+        const container = document.getElementById('message-viewer-container');
+        const display = document.getElementById('message-viewer-json-display');
+        const firstMatch = display?.querySelector('.search-highlight');
+        const searchInput = document.getElementById('message-viewer-search');
+        const searchTerm = searchInput ? searchInput.value.trim() : '';
+
+        if (firstMatch && container && display) {
+            this.currentMatchIndex = 0;
+            const displayRect = display.getBoundingClientRect();
+            const matchRect = firstMatch.getBoundingClientRect();
+            const lineHeight = parseFloat(getComputedStyle(display).lineHeight) || 20;
+            const offset = lineHeight * 8;
+
+            const relativeTop = matchRect.top - displayRect.top + display.scrollTop;
+            const scrollPosition = Math.max(0, relativeTop - offset);
+
+            display.scrollTop = scrollPosition;
+            this.updateMatchCounter(searchTerm);
+        }
+    }
+
+    scrollToNextMatch() {
+        const searchInput = document.getElementById('message-viewer-search');
+        const searchTerm = searchInput ? searchInput.value.trim() : '';
+
+        const display = document.getElementById('message-viewer-json-display');
+        const matches = display?.querySelectorAll('.search-highlight');
+
+        if (!matches || matches.length === 0) return;
+
+        if (this.currentMatchIndex === undefined) {
+            this.currentMatchIndex = 0;
+        } else {
+            this.currentMatchIndex = (this.currentMatchIndex + 1) % matches.length;
+        }
+
+        const currentMatch = matches[this.currentMatchIndex];
+        const displayRect = display.getBoundingClientRect();
+        const matchRect = currentMatch.getBoundingClientRect();
+        const lineHeight = parseFloat(getComputedStyle(display).lineHeight) || 20;
+        const offset = lineHeight * 8;
+
+        const relativeTop = matchRect.top - displayRect.top + display.scrollTop;
+        const scrollPosition = Math.max(0, relativeTop - offset);
+
+        display.scrollTop = scrollPosition;
+
+        this.updateMatchCounter(searchTerm);
+    }
+
+    applySyntaxHighlighting(text, wrapMatchLines = false, matchIndices = []) {
+        const lines = text.split('\n');
+
+        return lines.map((line, index) => {
+            let highlighted = this.escapeHtml(line);
+
+            highlighted = highlighted.replace(/"([^"]+)"(\s*):/g, '<span class="json-key">"$1"</span>$2:');
+
+            const stringPattern = /:\s*"([^"]*)"/g;
+            highlighted = highlighted.replace(stringPattern, ': <span class="json-string">"$1"</span>');
+
+            if (!highlighted.includes('json-string')) {
+                highlighted = highlighted.replace(/:\s*(-?\d+\.?\d*)([,\s\r}]|$)/g, ': <span class="json-number">$1</span>$2');
+                highlighted = highlighted.replace(/:\s*(true|false)([,\s\r}]|$)/g, ': <span class="json-boolean">$1</span>$2');
+                highlighted = highlighted.replace(/:\s*(null)([,\s\r}]|$)/g, ': <span class="json-null">$1</span>$2');
+            }
+
+            if (wrapMatchLines && matchIndices.includes(index)) {
+                highlighted = `<span class="match-line">${highlighted}</span>`;
+            }
+
+            return highlighted;
+        }).join('\n');
+    }
+
+    highlightSearchTerm(text, searchTerm) {
+        if (!searchTerm) return this.applySyntaxHighlighting(text);
+
+        const lines = text.split('\n');
+        const matchingLineIndices = [];
+        let searchRegex;
+
+        if (searchTerm.includes('=')) {
+            const [key, value] = searchTerm.split('=');
+            const trimmedKey = key.trim();
+            const trimmedValue = value ? value.trim() : '';
+
+            if (trimmedKey && trimmedValue) {
+                const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const escapedValue = trimmedValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+                const patterns = [
+                    `"${escapedKey}"\\s*:\\s*"[^"]*${escapedValue}[^"]*"`,
+                    `"${escapedKey}"\\s*:\\s*[^,\\n\\}]*${escapedValue}[^,\\n\\}]*`
+                ];
+
+                searchRegex = new RegExp(`(${patterns.join('|')})`, 'gi');
+            } else if (trimmedKey) {
+                const escapedKey = trimmedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                searchRegex = new RegExp(`("${escapedKey}")`, 'gi');
+            }
+        } else {
+            const escapedSearchForRegex = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            searchRegex = new RegExp(`(${escapedSearchForRegex})`, 'gi');
+        }
+
+        if (!searchRegex) return this.applySyntaxHighlighting(text);
+
+        lines.forEach((line, index) => {
+            if (searchRegex.test(line)) {
+                matchingLineIndices.push(index);
+            }
+            searchRegex.lastIndex = 0;
+        });
+
+        const highlightedLines = lines.map((line, index) => {
+            const parts = line.split(searchRegex);
+
+            const highlighted = parts.map((part, partIndex) => {
+                if (partIndex % 2 === 1) {
+                    return `<span class="search-highlight">${this.applySyntaxHighlighting(part)}</span>`;
+                }
+                return this.applySyntaxHighlighting(part);
+            }).join('');
+
+            if (matchingLineIndices.includes(index)) {
+                return `<span class="match-line">${highlighted}</span>`;
+            }
+
+            return highlighted;
+        });
+
+        return highlightedLines.join('\n');
+    }
+
+    highlightSearchTermPlainText(text, searchTerm) {
+        if (!searchTerm) return this.escapeHtml(text);
+
+        const escapedSearchForRegex = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const searchRegex = new RegExp(`(${escapedSearchForRegex})`, 'gi');
+
+        const lines = text.split('\n');
+        const highlightedLines = lines.map(line => {
+            const hasMatch = searchRegex.test(line);
+            searchRegex.lastIndex = 0;
+
+            const parts = line.split(searchRegex);
+            const highlighted = parts.map((part, partIndex) => {
+                if (partIndex % 2 === 1) {
+                    return `<span class="search-highlight">${this.escapeHtml(part)}</span>`;
+                }
+                if (this.isFormatted) {
+                    const backtickParts = part.split(/(`[^`]+`)/g);
+                    return backtickParts.map((bp, bpIndex) => {
+                        if (bpIndex % 2 === 1) {
+                            return `<strong>${this.escapeHtml(bp.slice(1, -1))}</strong>`;
+                        }
+                        return this.escapeHtml(bp);
+                    }).join('');
+                }
+                return this.escapeHtml(part);
+            }).join('');
+
+            if (hasMatch) {
+                return `<span class="match-line">${highlighted}</span>`;
+            }
+            return highlighted;
+        });
+
+        return highlightedLines.join('\n');
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+}

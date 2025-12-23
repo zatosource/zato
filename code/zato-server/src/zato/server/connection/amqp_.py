@@ -47,7 +47,7 @@ if 0:
 # ################################################################################################################################
 
 version = get_version()
-logger = getLogger(__name__)
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
@@ -287,15 +287,12 @@ class Consumer:
 
     def _on_amqp_message(self, body, msg):
 
-        '''
-        print()
-        print(111, body)
-        print(222, msg)
-        print(333, self.name)
-        print(444, self.config)
-        print(555, self.on_amqp_message)
-        print()
-        '''
+        # logger.info('-' * 80)
+        # logger.info('AAA-1 %s', body)
+        # logger.info('AAA-2 %s', msg)
+        # logger.info('AAA-3 %s', self.name)
+        # logger.info('AAA-4 %s', self.config)
+        # logger.info('AAA-5 %s', self.on_amqp_message)
 
         try:
             return self.on_amqp_message(body, msg, self.name, self.config)

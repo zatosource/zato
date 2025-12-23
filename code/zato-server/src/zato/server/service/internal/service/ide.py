@@ -242,11 +242,22 @@ class _IDEBase(Service):
 # ################################################################################################################################
 
     def get_deployment_info_list(self):
-        service_list_response = self.invoke('zato.service.get-deployment-info-list', **{
+
+        # Local variables
+        invoke_params = {
             'needs_details': True,
             'include_internal': False,
             'skip_response_elem': True,
-        })
+        }
+
+        # Invoke the service
+        service_list_response = self.invoke('zato.service.get-deployment-info-list', **invoke_params)
+
+        # Check if the response is None
+        if service_list_response is None:
+            return
+
+        # Iterate and yield items
         for item in service_list_response:
             yield item
 
@@ -721,16 +732,17 @@ class DeleteFile(_GetBase):
         # .. turn the pickup location into a work directory one ..
         work_dir_fs_location = self._convert_pickup_to_work_dir(fs_location)
 
-        # .. validate both locations ..
+        # .. validate the pickup location ..
         self._validate_fs_location(fs_location)
-        self._validate_fs_location(work_dir_fs_location)
 
-        # .. if we're here, it means that we can actually delete both locations ..
+        # .. delete the pickup location ..
         os.remove(fs_location)
         self.logger.info('Deleted path %s', fs_location)
 
-        os.remove(work_dir_fs_location)
-        self.logger.info('Deleted path %s', work_dir_fs_location)
+        # .. delete the work directory location only if it exists ..
+        if os.path.exists(work_dir_fs_location):
+            os.remove(work_dir_fs_location)
+            self.logger.info('Deleted path %s', work_dir_fs_location)
 
         # .. now, delete it from our in-RAM service store ..
         self.server.service_store.delete_objects_by_file_path(work_dir_fs_location, delete_from_odb=True)
@@ -761,7 +773,7 @@ class RenameFile(_GetBase):
         current_file_path = self._normalize_fs_location(current_file_path)
 
         new_file_path = os.path.join(input.root_directory, input.new_file_name)
-        new_file_path = self._normalize_fs_location(current_file_path)
+        new_file_path = self._normalize_fs_location(new_file_path)
 
         # Make sure that both paths are allowed
         self._validate_path(current_file_path)

@@ -6,6 +6,10 @@ Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Silence warnings before any imports
+import warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-threaded.*fork.*')
+
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.
 from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
@@ -57,7 +61,6 @@ from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.simpleio_ import get_sio_server_config
-from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, get_config, is_encrypted, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile
 from zato.common.util.env import populate_environment_from_file
@@ -82,7 +85,6 @@ if 0:
 # ################################################################################################################################
 
 # Silence out SQLAlchemy warnings
-import warnings
 from sqlalchemy import exc as sa_exc
 warnings.filterwarnings('ignore',  category=sa_exc.SAWarning, message='.*')
 

@@ -32,6 +32,13 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+connection_extra_field_defaults = {
+    'validate_tls': True,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class OutgoingRESTImporter:
 
     def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
@@ -67,6 +74,11 @@ class OutgoingRESTImporter:
 
         for item in yaml_defs:
             item = preprocess_item(item)
+
+            # Handle the previous tls_verify key which now is called validate_tls
+            if 'tls_verify' in item:
+                item['validate_tls'] = item.pop('tls_verify')
+
             name = item['name']
             logger.info('Checking YAML outgoing REST connection: name=%s', name)
 
@@ -82,10 +94,12 @@ class OutgoingRESTImporter:
 
                 # Compare standard attributes (excluding security)
                 for key, value in item.items():
-                    if key != 'security' and key in db_def and db_def[key] != value:
-                        logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
-                        needs_update = True
-                        break
+                    if key != 'security':
+                        db_value = db_def.get(key)
+                        if db_value != value:
+                            logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_value)
+                            needs_update = True
+                            break
 
                 # Check security definition
                 if security_needs_update(item, db_def, self.importer):
@@ -105,10 +119,6 @@ class OutgoingRESTImporter:
 
     def create_outgoing_rest(self, outgoing_def:'anydict', session:'SASession') -> 'any_':
 
-        connection_extra_field_defaults = {
-            'validate_tls': True,
-        }
-
         name = outgoing_def['name']
         logger.info('Creating new outgoing REST connection: %s', name)
 
@@ -119,7 +129,7 @@ class OutgoingRESTImporter:
         outgoing.cluster = self.importer.get_cluster(session)
         outgoing.is_active = True
         outgoing.is_internal = False
-        outgoing.soap_action = 'not-used'
+        outgoing.soap_action = '' # Must be an empty string
 
         # Set default values that may not be provided
         outgoing.ping_method = outgoing_def.get('ping_method', 'GET')
@@ -134,8 +144,9 @@ class OutgoingRESTImporter:
         assign_security(outgoing, outgoing_def, self.importer, session)
 
         outgoing_def = deepcopy(outgoing_def)
-        outgoing_def.update(connection_extra_field_defaults)
-
+        for key, value in connection_extra_field_defaults.items():
+            if key not in outgoing_def:
+                outgoing_def[key] = value
         set_instance_opaque_attrs(outgoing, outgoing_def)
 
         session.add(outgoing)
@@ -156,6 +167,12 @@ class OutgoingRESTImporter:
                 setattr(outgoing, key, value)
 
         assign_security(outgoing, outgoing_def, self.importer, session)
+
+        outgoing_def = deepcopy(outgoing_def)
+        for key, value in connection_extra_field_defaults.items():
+            if key not in outgoing_def:
+                outgoing_def[key] = value
+        set_instance_opaque_attrs(outgoing, outgoing_def)
 
         session.add(outgoing)
         self.connection_defs[name] = outgoing
