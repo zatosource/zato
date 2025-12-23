@@ -253,7 +253,7 @@ def load_schedule(req):
 
         if schedule_json:
             logger.info('load_schedule: found schedule in Redis')
-            schedule_data = loads(schedule_json)
+            schedule_data = loads(schedule_json) # type: ignore
             response_data = {
                 'success': True,
                 'schedule': schedule_data
