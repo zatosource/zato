@@ -293,23 +293,10 @@ input:checked + .toggle-slider:before {
 
 .upgrade-info {
     display: none;
-    margin-top: 8px;
 }
 
 .upgrade-info.show {
     display: inline;
-}
-
-.upgrade-wrapper {
-    display: none;
-    margin-top: 8px;
-    padding: 4px;
-    background: rgb(1, 40, 69);
-    border-radius: 3px;
-}
-
-.upgrade-wrapper.show {
-    display: inline-block;
 }
 </style>
 {% endblock %}
@@ -347,7 +334,6 @@ input:checked + .toggle-slider:before {
                         updateProgress('install', 'completed', 'Installation complete');
                         
                         setTimeout(() => {
-                            $('#progress-install .upgrade-wrapper').addClass('show');
                             $('#progress-install .upgrade-info').addClass('show');
                             $('#current-version').text('{{ latest_version }}');
                             button.prop('disabled', false);
@@ -442,10 +428,8 @@ input:checked + .toggle-slider:before {
                         <div class="progress-content">
                             <div class="progress-platform">Install</div>
                             <div class="progress-text">Waiting...</div>
-                            <span class="upgrade-wrapper">
-                                <span class="upgrade-info status-badge with-shine">
-                                    ⭐ Upgraded to {{ latest_version }}
-                                </span>
+                            <span class="upgrade-info status-badge with-shine">
+                                ⭐ Upgraded to {{ latest_version }}
                             </span>
                         </div>
                     </div>
