@@ -25,7 +25,14 @@ $.fn.zato.in_app_updates.init = function() {
             },
             {
                 popover: {
-                    title: 'Auto-update Information',
+                    title: 'Config Information',
+                    description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+                }
+            },
+            {
+                element: '.summary-item',
+                popover: {
+                    title: 'Auto-update',
                     description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
                 }
             }
@@ -38,6 +45,11 @@ $.fn.zato.in_app_updates.init = function() {
 
     $('#auto-update-help').on('click', function() {
         $.fn.zato.in_app_updates.driverObj.drive(1);
+    });
+
+    $('.summary-label').on('click', function() {
+        const checkbox = $('#auto-restart');
+        checkbox.prop('checked', !checkbox.prop('checked'));
     });
 };
 
