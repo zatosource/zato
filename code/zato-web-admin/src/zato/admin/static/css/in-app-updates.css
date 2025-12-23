@@ -434,7 +434,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
 }
 
 .summary-item.hidden {
@@ -442,6 +442,10 @@
 }
 
 .summary-item:last-child {
+    margin-bottom: 0;
+}
+
+#schedule-time {
     margin-bottom: 0;
 }
 
@@ -484,12 +488,12 @@
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    margin-top: 8px;
+    margin-top: -4px;
 }
 
 .config-save-spinner {
-    width: 16px;
-    height: 16px;
+    width: 24px;
+    height: 24px;
     animation: spin 0.5s linear infinite;
 }
 
@@ -497,6 +501,7 @@
     color: #067f39;
     font-size: 11px;
     font-weight: 600;
+    line-height: 1;
 }
 
 .config-save-button:hover {
