@@ -492,16 +492,27 @@
 }
 
 .config-save-spinner {
-    width: 24px;
-    height: 24px;
+    display: none;
+    width: 26px;
+    height: 26px;
+    margin-top: 1rem;
     animation: spin 0.5s linear infinite;
 }
 
+.config-save-spinner.active {
+    display: inline-block;
+}
+
 .config-saved-message {
+    display: none;
     color: #067f39;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    line-height: 1;
+    margin-top: 1rem;
+}
+
+.config-saved-message.active {
+    display: inline-block;
 }
 
 .config-save-button:hover {
