@@ -815,7 +815,7 @@ urlpatterns += [
 
     # In-app updates
 
-    url(r'^zato/in-app-updates/$',
+    url(r'^zato/updates/$',
         login_required(in_app_updates.index), name='in-app-updates'),
 ]
 
