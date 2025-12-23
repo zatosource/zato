@@ -158,12 +158,15 @@
 }
 
 @keyframes pulsate {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+    0%, 100% { transform: scale(1); background-color: transparent; }
+    50% { transform: scale(1.1); background-color: #fffacd; }
 }
 
 .pulsate {
     animation: pulsate 0.5s ease-in-out 3;
+    display: inline-block;
+    border-radius: 3px;
+    transition: background-color 0.2s;
 }
 
 .updates-found {
@@ -191,7 +194,7 @@
     cursor: pointer;
     opacity: 0.6;
     transition: opacity 0.2s;
-    vertical-align: middle;
+    vertical-align: -2px;
 }
 
 .copy-icon:hover {
@@ -422,7 +425,10 @@ input:checked + .toggle-slider:before {
                 const newVersion = '{{ latest_version }}.' + timestamp;
                 const latestVersionEl = $('#latest-version');
                 latestVersionEl.text(newVersion);
-                latestVersionEl.addClass('pulsate');
+                
+                setTimeout(() => {
+                    latestVersionEl.addClass('pulsate');
+                }, 50);
                 
                 setTimeout(() => {
                     updatesFound.addClass('fade');
@@ -433,7 +439,7 @@ input:checked + .toggle-slider:before {
                 
                 setTimeout(() => {
                     latestVersionEl.removeClass('pulsate');
-                }, 1500);
+                }, 1600);
             }, 2000);
         });
         
