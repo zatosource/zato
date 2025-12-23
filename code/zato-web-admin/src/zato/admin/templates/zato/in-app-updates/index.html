@@ -67,7 +67,7 @@
 }
 
 .version-label {
-    color: var(--text-muted);
+    color: #000;
     font-weight: 600;
     letter-spacing: 0.5px;
     font-size: 12px;
@@ -187,6 +187,8 @@
 
 .progress-icon.completed {
     color: var(--primary-dark);
+    vertical-align: top;
+    line-height: 1;
 }
 
 .progress-content {
@@ -338,6 +340,9 @@ input:checked + .toggle-slider:before {
                             $('#current-version').text('{{ latest_version }}');
                             button.prop('disabled', false);
                             
+                            const upToDateBadge = $('#up-to-date-badge');
+                            upToDateBadge.removeClass('no').addClass('yes').text('Yes');
+                            
                             const headerBadge = window.parent.document.getElementById('update-status-badge');
                             if (headerBadge) {
                                 headerBadge.classList.remove('with-shine');
@@ -387,6 +392,10 @@ input:checked + .toggle-slider:before {
                 <h3>Version info</h3>
                 <div class="progress-panel">
                     <div class="version-info">
+                        <div class="version-row">
+                            <div class="version-label">Up to date?</div>
+                            <span class="up-to-date-badge no" id="up-to-date-badge">No</span>
+                        </div>
                         <div class="version-row">
                             <div class="version-label">Your version</div>
                             <div class="version-value" id="current-version">{{ current_version }}</div>
