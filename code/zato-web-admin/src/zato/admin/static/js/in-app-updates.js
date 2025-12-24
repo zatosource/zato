@@ -17,6 +17,7 @@ $.fn.zato.in_app_updates.init = function() {
     $.fn.zato.in_app_updates.loadSchedule();
     $.fn.zato.in_app_updates.fetchLatestVersion();
     $.fn.zato.in_app_updates.startAuditLogRefresh();
+    $.fn.zato.in_app_updates.initTimestampTooltips();
 
     $.fn.zato.in_app_updates.versionSteps = [
         {
@@ -480,7 +481,7 @@ $.fn.zato.in_app_updates.renderAuditLogEntry = function(entry, extraClass) {
     return `
         <div ${classAttr}>
             <div class="audit-log-header">
-                <span class="audit-log-time">${entry.time_ago}</span>
+                <span class="audit-log-time" data-timestamp="${entry.timestamp}">${entry.time_ago}</span>
                 <span class="audit-log-type">${entry.type}</span>
             </div>
             <div class="audit-log-version-row">
@@ -493,6 +494,29 @@ $.fn.zato.in_app_updates.renderAuditLogEntry = function(entry, extraClass) {
             </div>
         </div>
     `;
+};
+
+$.fn.zato.in_app_updates.initTimestampTooltips = function() {
+    $('.audit-log-time').each(function() {
+        const elem = this;
+        const timestamp = $(elem).data('timestamp');
+        if (timestamp) {
+            const date = new Date(timestamp);
+            const formattedDate = date.toLocaleString();
+            
+            tippy(elem, {
+                content: formattedDate,
+                allowHTML: false,
+                theme: 'dark',
+                trigger: 'mouseenter',
+                placement: 'top',
+                arrow: true,
+                interactive: false,
+                inertia: true,
+                role: 'tooltip'
+            });
+        }
+    });
 };
 
 $.fn.zato.in_app_updates.startAuditLogRefresh = function() {
@@ -509,6 +533,7 @@ $.fn.zato.in_app_updates.startAuditLogRefresh = function() {
                             entriesHtml += $.fn.zato.in_app_updates.renderAuditLogEntry(entry);
                         }
                         auditLogList.html(entriesHtml);
+                        $.fn.zato.in_app_updates.initTimestampTooltips();
                     }
                 }
             }
