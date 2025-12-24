@@ -430,19 +430,19 @@ $.fn.zato.in_app_updates.updateProgress = function(step, status, message, status
 
     if (status === 'processing') {
         icon.addClass('spinner').removeClass('completed error').html('<img src="/static/gfx/spinner.svg">');
-        item.removeClass('error-state');
+        item.removeClass('error-state').addClass('processing-state');
         if (copyButton.length) {
             copyButton.addClass('hidden');
         }
     } else if (status === 'completed') {
         icon.removeClass('spinner error').addClass('completed').text('✓');
-        item.removeClass('error-state');
+        item.removeClass('error-state processing-state');
         if (copyButton.length) {
             copyButton.addClass('hidden');
         }
     } else if (status === 'error') {
         icon.removeClass('spinner completed').addClass('error').text('✗');
-        item.addClass('error-state');
+        item.addClass('error-state').removeClass('processing-state');
         if (copyButton.length) {
             copyButton.removeClass('hidden');
         }
