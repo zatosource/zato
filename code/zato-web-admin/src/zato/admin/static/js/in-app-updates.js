@@ -307,22 +307,22 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
     $('#progress-download').removeClass('hidden error-state');
     $('#progress-install').addClass('hidden').removeClass('error-state');
     $('#progress-install .upgrade-info').removeClass('show');
-    $.fn.zato.in_app_updates.updateProgress('download', 'processing', 'Downloading latest updates...');
+    $.fn.zato.in_app_updates.updateProgress('download', 'processing', 'Downloading and installing updates...');
 
     $.ajax({
-        url: '/zato/updates/download',
+        url: '/zato/updates/download-and-install',
         type: 'POST',
         headers: {
             'X-CSRFToken': $.cookie('csrftoken')
         },
         success: function(response) {
-            $.fn.zato.in_app_updates.updateProgress('download', 'completed', 'Download complete');
+            $.fn.zato.in_app_updates.updateProgress('download', 'completed', 'Download and install complete');
 
             $('#progress-install').removeClass('hidden');
-            $.fn.zato.in_app_updates.runInstallSteps(button);
+            $.fn.zato.in_app_updates.runRestartSteps(button);
         },
         error: function(xhr) {
-            let errorMsg = 'Download failed';
+            let errorMsg = 'Download and install failed';
             try {
                 const response = JSON.parse(xhr.responseText);
                 errorMsg = response.error || errorMsg;
@@ -336,9 +336,8 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
     });
 };
 
-$.fn.zato.in_app_updates.runInstallSteps = function(button) {
+$.fn.zato.in_app_updates.runRestartSteps = function(button) {
     const steps = [
-        {url: '/zato/updates/install', text: 'Installing updates'},
         {url: '/zato/updates/restart-scheduler', text: 'Restarting scheduler'},
         {url: '/zato/updates/restart-server', text: 'Restarting server'},
         {url: '/zato/updates/restart-proxy', text: 'Restarting proxy'},
