@@ -15,6 +15,7 @@ $.fn.zato.in_app_updates.init = function() {
     $('#config-save-button').on('click', $.fn.zato.in_app_updates.handleSaveSchedule);
 
     $.fn.zato.in_app_updates.loadSchedule();
+    $.fn.zato.in_app_updates.fetchLatestVersion();
 
     $.fn.zato.in_app_updates.versionSteps = [
         {
@@ -108,6 +109,39 @@ $.fn.zato.in_app_updates.init = function() {
     });
 };
 
+$.fn.zato.in_app_updates.fetchLatestVersion = function() {
+    const latestVersionEl = $('#latest-version');
+    const copyIcon = latestVersionEl.siblings('.copy-icon');
+    const currentVersion = $('#current-version').text();
+
+    latestVersionEl.html('<img src="/static/gfx/spinner.svg" class="version-spinner" style="width: 20px; height: 20px; animation: spin 0.5s linear infinite; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');
+    copyIcon.hide();
+
+    $.ajax({
+        url: '/zato/updates/check-latest-version',
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                latestVersionEl.text(response.version);
+                copyIcon.show();
+
+                if (response.version !== currentVersion) {
+                    setTimeout(() => {
+                        latestVersionEl.addClass('pulsate');
+                    }, 50);
+
+                    setTimeout(() => {
+                        latestVersionEl.removeClass('pulsate');
+                    }, 1600);
+                }
+            }
+        },
+        error: function() {
+            latestVersionEl.text('Error loading version');
+        }
+    });
+};
+
 $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
     const spinner = $(this).siblings('.check-button-spinner');
     const updatesFound = $(this).siblings('.updates-found');
@@ -118,14 +152,7 @@ $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
         spinner.removeClass('active');
         updatesFound.addClass('show');
 
-        const timestamp = Date.now();
-        const newVersion = $('#latest-version').data('base-version') + '.' + timestamp;
-        const latestVersionEl = $('#latest-version');
-        latestVersionEl.text(newVersion);
-
-        setTimeout(() => {
-            latestVersionEl.addClass('pulsate');
-        }, 50);
+        $.fn.zato.in_app_updates.fetchLatestVersion();
 
         setTimeout(() => {
             updatesFound.addClass('fade');
@@ -133,10 +160,6 @@ $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
                 updatesFound.removeClass('show fade');
             }, 500);
         }, 1500);
-
-        setTimeout(() => {
-            latestVersionEl.removeClass('pulsate');
-        }, 1600);
     }, 200);
 };
 

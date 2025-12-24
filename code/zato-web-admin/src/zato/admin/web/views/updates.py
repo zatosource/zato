@@ -9,8 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import os
 import subprocess
+from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
+from urllib.request import urlopen, Request
 
 # Django
 from django.http import HttpResponse
@@ -378,9 +380,47 @@ def delete_schedule(req):
 @method_allowed('GET')
 def index(req):
     return TemplateResponse(req, 'zato/in-app-updates/index.html', {
-        'current_version': get_zato_version(),
-        'latest_version': '4.2.0'
+        'current_version': get_zato_version()
     })
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def check_latest_version(req):
+    try:
+        url = 'https://api.github.com/repos/zatosource/zato/commits/support/4.1'
+        request = Request(url)
+        request.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0')
+
+        with urlopen(request, timeout=10) as response:
+            data = loads(response.read().decode('utf-8'))
+
+        commit_sha = data['sha'][:9]
+        commit_date = data['commit']['committer']['date']
+
+        dt = datetime.fromisoformat(commit_date.replace('Z', '+00:00'))
+        year = dt.year
+        month = str(dt.month).zfill(2)
+        day = str(dt.day).zfill(2)
+
+        version = 'Zato 4.1.{}.{}.{}.{}'.format(year, month, day, commit_sha)
+
+        response_data = {
+            'success': True,
+            'version': version
+        }
+        response_json = dumps(response_data)
+        return HttpResponse(response_json, content_type='application/json')
+
+    except Exception:
+        logger.error('check_latest_version: exception: {}'.format(format_exc()))
+        response_data = {
+            'success': False,
+            'error': 'Failed to check latest version'
+        }
+        response_json = dumps(response_data)
+        return HttpResponseServerError(response_json, content_type='application/json')
 
 # ################################################################################################################################
 # ################################################################################################################################
