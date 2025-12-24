@@ -31,10 +31,8 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def run_command(req, command, cwd=None, timeout=30, log_prefix='command'):
-    """
-    Reusable function to run shell commands and return result.
-    Only returns output if command fails.
+def run_command(req, command, cwd=None, timeout=999_999, log_prefix='command'):
+    """ Function to run shell commands and return result. Only returns output if command fails.
     """
 
     logger.info('{}: called from client: {}'.format(log_prefix, req.META.get('REMOTE_ADDR')))
@@ -112,7 +110,6 @@ def download_updates(req):
         req,
         command=['sleep', '0.2'],
         cwd=current_dir,
-        timeout=999_999,
         log_prefix='download_updates'
     )
 
@@ -130,7 +127,6 @@ def install_updates(req):
         req,
         command=['sleep', '0.2'],
         cwd=current_dir,
-        timeout=999_999,
         log_prefix='install_updates'
     )
 
@@ -148,7 +144,6 @@ def restart_scheduler(req):
         req,
         command=['sleep', '0.2'],
         cwd=current_dir,
-        timeout=999_999,
         log_prefix='restart_scheduler'
     )
 
@@ -166,7 +161,6 @@ def restart_server(req):
         req,
         command=['sleep', '0.2'],
         cwd=current_dir,
-        timeout=999_999,
         log_prefix='restart_server'
     )
 
@@ -184,7 +178,6 @@ def restart_proxy(req):
         req,
         command=['sleep', '0.2'],
         cwd=current_dir,
-        timeout=999_999,
         log_prefix='restart_proxy'
     )
 
@@ -202,7 +195,6 @@ def restart_dashboard(req):
         req,
         command=['sleep', '0.2'],
         cwd=current_dir,
-        timeout=999_999,
         log_prefix='restart_dashboard'
     )
 
