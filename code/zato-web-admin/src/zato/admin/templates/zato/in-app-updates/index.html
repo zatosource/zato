@@ -3,12 +3,15 @@
 {% block html_title %}Version info{% endblock %}
 
 {% block "extra_css" %}
+<script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+<script type="text/javascript" src="/static/tippy/tippy.js"></script>
 <link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
 <link rel="stylesheet" type="text/css" href="/static/css/driver.css">
 <link rel="stylesheet" type="text/css" href="/static/css/in-app-updates.css">
 {% endblock %}
 
 {% block "extra_js" %}
+<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
 <script type="text/javascript" src="/static/js/driver.js" nonce="{{ CSP_NONCE }}"></script>
 <script type="text/javascript" src="/static/js/in-app-updates.js" nonce="{{ CSP_NONCE }}"></script>
 {% endblock %}
@@ -171,7 +174,7 @@
                             {% for entry in audit_log %}
                             <div class="audit-log-entry">
                                 <div class="audit-log-header">
-                                    <span class="audit-log-time">{{ entry.time_ago }}</span>
+                                    <span class="audit-log-time" data-timestamp="{{ entry.timestamp }}">{{ entry.time_ago }}</span>
                                     <span class="audit-log-type">{{ entry.type }}</span>
                                 </div>
                                 <div class="audit-log-version-row">

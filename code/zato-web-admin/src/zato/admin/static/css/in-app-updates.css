@@ -793,6 +793,7 @@ input:checked + .toggle-slider:before {
     text-align: left;
     font-weight: 600;
     flex: 1;
+    cursor: help;
 }
 
 .audit-log-type {
