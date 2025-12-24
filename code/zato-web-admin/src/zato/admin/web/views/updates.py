@@ -118,14 +118,18 @@ def download_and_install(req):
     update_script = None
 
     while True:
+
         candidate = os.path.join(search_dir, file_name)
+
         if os.path.isfile(candidate):
             update_script = candidate
             break
 
         parent_dir = os.path.dirname(search_dir)
+
         if parent_dir == search_dir:
             break
+
         search_dir = parent_dir
 
     if not update_script:
