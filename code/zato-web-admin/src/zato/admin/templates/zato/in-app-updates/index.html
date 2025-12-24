@@ -165,6 +165,22 @@
 
                 <div class="logs-section show">
                     <h3>Logs <img src="/static/gfx/info.svg" class="help-icon" id="logs-help" alt="info" /></h3>
+                    <div class="audit-log-panel">
+                        {% if audit_log %}
+                        <div class="audit-log-list">
+                            {% for entry in audit_log %}
+                            <div class="audit-log-entry">
+                                <span class="audit-log-number">{{ entry.number }}.</span>
+                                <span class="audit-log-type">{{ entry.type }}</span>
+                                <span class="audit-log-versions">{{ entry.version_from }} → {{ entry.version_to }}</span>
+                                <span class="audit-log-time">{{ entry.time_ago }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="audit-log-empty">No updates yet</div>
+                        {% endif %}
+                    </div>
                     <div class="links-panel">
                         <div class="links-row">
                             <div class="dashboard-link-item">
