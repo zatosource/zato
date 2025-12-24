@@ -39,7 +39,7 @@
                             <div class="version-label">Latest version</div>
                             <div class="version-value">
                                 <span id="latest-version"><img src="/static/gfx/spinner.svg" class="version-spinner">Checking...</span>
-                                <span class="copy-icon" data-copy="latest-version" title="Copy to clipboard" style="display: none;">
+                                <span class="copy-icon hidden" data-copy="latest-version" title="Copy to clipboard">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                                 </span>
                             </div>
@@ -48,7 +48,7 @@
 
                     <div class="button-container">
                         <div class="check-button-wrapper">
-                            <img src="/static/gfx/spinner.svg" class="check-button-spinner" style="filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">
+                            <img src="/static/gfx/spinner.svg" class="check-button-spinner">
                             <span class="updates-found">Updates found</span>
                             <button class="check-button" id="check-button">
                                 Check for updates
@@ -64,7 +64,7 @@
                         <div class="progress-content">
                             <div class="progress-platform">
                                 Download
-                                <span class="copy-icon download-error-copy" data-copy="download-error" title="Copy to clipboard" style="display: none;">
+                                <span class="copy-icon download-error-copy hidden" data-copy="download-error" title="Copy to clipboard">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                                 </span>
                             </div>
@@ -154,9 +154,9 @@
                             <option value="23:00">23:00</option>
                         </select>
                     </div>
-                    <div class="save-button-container" style="display: none;">
-                        <img src="/static/gfx/spinner.svg" class="config-save-spinner" style="display: none; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">
-                        <span class="config-saved-message" style="display: none;">Saved</span>
+                    <div class="save-button-container">
+                        <img src="/static/gfx/spinner.svg" class="config-save-spinner">
+                        <span class="config-saved-message">Saved</span>
                         <button class="config-save-button" id="config-save-button">
                             Save
                         </button>

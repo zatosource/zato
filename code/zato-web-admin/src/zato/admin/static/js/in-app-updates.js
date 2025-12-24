@@ -115,7 +115,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function() {
     const currentVersion = $('#current-version').text();
 
     latestVersionEl.html('<img src="/static/gfx/spinner.svg" class="version-spinner">Checking...');
-    copyIcon.hide();
+    copyIcon.addClass('hidden');
 
     $.ajax({
         url: '/zato/updates/check-latest-version',
@@ -123,7 +123,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function() {
         success: function(response) {
             if (response.success) {
                 latestVersionEl.text(response.version);
-                copyIcon.show();
+                copyIcon.removeClass('hidden');
 
                 if (response.version !== currentVersion) {
                     setTimeout(() => {
@@ -432,25 +432,25 @@ $.fn.zato.in_app_updates.updateProgress = function(step, status, message, status
     const text = item.find('.progress-text');
     const copyButton = item.find('.download-error-copy');
 
-    const displayMessage = statusText ? '<span style="color: #000; font-weight: 600;">' + message + '</span> <span style="color: var(--text-muted);">' + statusText + '</span>' : message;
+    const displayMessage = statusText ? '<span class="progress-count">' + message + '</span> <span class="progress-status">' + statusText + '</span>' : message;
 
     if (status === 'processing') {
-        icon.addClass('spinner').removeClass('completed error').html('<img src="/static/gfx/spinner.svg" style="animation: spin 0.5s linear infinite; width: 28px; height: 28px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');
+        icon.addClass('spinner').removeClass('completed error').html('<img src="/static/gfx/spinner.svg">');
         item.removeClass('error-state');
         if (copyButton.length) {
-            copyButton.hide();
+            copyButton.addClass('hidden');
         }
     } else if (status === 'completed') {
         icon.removeClass('spinner error').addClass('completed').text('✓');
         item.removeClass('error-state');
         if (copyButton.length) {
-            copyButton.hide();
+            copyButton.addClass('hidden');
         }
     } else if (status === 'error') {
         icon.removeClass('spinner completed').addClass('error').text('✗');
         item.addClass('error-state');
         if (copyButton.length) {
-            copyButton.show();
+            copyButton.removeClass('hidden');
         }
     }
 
