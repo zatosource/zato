@@ -758,7 +758,10 @@ input:checked + .toggle-slider:before {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 12px 60px 12px 12px;
+    padding-top: 12px;
+    padding-right: 100px;
+    padding-bottom: 12px;
+    padding-left: 12px;
     background: var(--background-light);
 }
 
@@ -794,9 +797,9 @@ input:checked + .toggle-slider:before {
     font-weight: 600;
     color: var(--primary-dark);
     padding: 4px 8px;
-    padding-right: 60px;
     background: var(--white);
     font-size: 12px;
+    margin-left: auto;
 }
 
 .audit-log-version-row {
