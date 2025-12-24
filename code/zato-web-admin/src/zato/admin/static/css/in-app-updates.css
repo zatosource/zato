@@ -377,6 +377,10 @@
     display: none;
 }
 
+.progress-item.processing-state {
+    border-bottom: 4px solid transparent;
+}
+
 .progress-icon {
     width: 24px;
     height: 24px;
