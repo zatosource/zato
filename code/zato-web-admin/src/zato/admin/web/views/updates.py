@@ -102,13 +102,16 @@ def get_audit_log_entries(count=10):
 
             time_ago = humanize.naturaltime(end_time)
             time_ago = time_ago[0].upper() + time_ago[1:] if time_ago else ''
+            if time_ago == 'A second ago':
+                time_ago = 'A moment ago'
 
             result.append({
                 'number': idx,
                 'type': entry['type'],
                 'version_from': entry['version_from'],
                 'version_to': entry['version_to'],
-                'time_ago': time_ago
+                'time_ago': time_ago,
+                'timestamp': entry['end_time']
             })
 
         return result
