@@ -109,7 +109,7 @@ $.fn.zato.in_app_updates.init = function() {
     });
 };
 
-$.fn.zato.in_app_updates.fetchLatestVersion = function() {
+$.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
     const latestVersionEl = $('#latest-version');
     const copyIcon = latestVersionEl.siblings('.copy-icon');
     const currentVersion = $('#current-version').text();
@@ -124,6 +124,17 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function() {
             if (response.success) {
                 latestVersionEl.text(response.version);
                 copyIcon.removeClass('hidden');
+
+                if (showUpdatesFound) {
+                    const updatesFound = $('.updates-found');
+                    updatesFound.addClass('show');
+                    setTimeout(() => {
+                        updatesFound.addClass('fade');
+                        setTimeout(() => {
+                            updatesFound.removeClass('show fade');
+                        }, 500);
+                    }, 1500);
+                }
 
                 if (response.version !== currentVersion) {
                     setTimeout(() => {
@@ -143,24 +154,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function() {
 };
 
 $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
-    const spinner = $(this).siblings('.check-button-spinner');
-    const updatesFound = $(this).siblings('.updates-found');
-
-    spinner.addClass('active');
-
-    setTimeout(() => {
-        spinner.removeClass('active');
-        updatesFound.addClass('show');
-
-        $.fn.zato.in_app_updates.fetchLatestVersion();
-
-        setTimeout(() => {
-            updatesFound.addClass('fade');
-            setTimeout(() => {
-                updatesFound.removeClass('show fade');
-            }, 500);
-        }, 1500);
-    }, 200);
+    $.fn.zato.in_app_updates.fetchLatestVersion(false);
 };
 
 $.fn.zato.in_app_updates.copyToClipboard = function(text, event) {
