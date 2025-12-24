@@ -32,12 +32,32 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
+zato_path = os.path.sep.join(['code', 'bin', 'zato'])
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 def get_redis_connection():
     return redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def find_file_in_parents(target_path):
+    search_dir = current_dir
+    
+    while True:
+        candidate = os.path.join(search_dir, target_path)
+        
+        if os.path.isfile(candidate):
+            return candidate
+        
+        parent_dir = os.path.dirname(search_dir)
+        
+        if parent_dir == search_dir:
+            return None
+        
+        search_dir = parent_dir
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -73,8 +93,8 @@ def run_command(req, command, cwd=None, timeout=999_999, log_prefix='command'):
             return response
 
         logger.info('{}: command succeeded'.format(log_prefix))
-        command_output = result.stdout + result.stderr
-        if command_output:
+        command_output = 'stdout: {}\nstderr: {}'.format(result.stdout, result.stderr)
+        if result.stdout or result.stderr:
             logger.info('{}: output: {}'.format(log_prefix, command_output))
 
         success_data = {'success': True}
@@ -114,23 +134,7 @@ def run_command(req, command, cwd=None, timeout=999_999, log_prefix='command'):
 def download_and_install(req):
 
     file_name = 'update.sh'
-    search_dir = current_dir
-    update_script = None
-
-    while True:
-
-        candidate = os.path.join(search_dir, file_name)
-
-        if os.path.isfile(candidate):
-            update_script = candidate
-            break
-
-        parent_dir = os.path.dirname(search_dir)
-
-        if parent_dir == search_dir:
-            break
-
-        search_dir = parent_dir
+    update_script = find_file_in_parents(file_name)
 
     if not update_script:
         error_msg = '{} not found in parent directories'.format(file_name)
@@ -156,9 +160,21 @@ def download_and_install(req):
 @method_allowed('POST')
 def restart_scheduler(req):
 
+    zato_binary = find_file_in_parents(zato_path)
+    
+    if not zato_binary:
+        error_msg = '{} not found in parent directories'.format(zato_path)
+        logger.error('restart_scheduler: {}'.format(error_msg))
+        response_data = {
+            'success': False,
+            'error': error_msg
+        }
+        response_json = dumps(response_data)
+        return HttpResponseServerError(response_json, content_type='application/json')
+    
     return run_command(
         req,
-        command=['sleep', '0.2'],
+        command=[zato_binary, '--version'],
         cwd=current_dir,
         log_prefix='restart_scheduler'
     )
@@ -169,9 +185,21 @@ def restart_scheduler(req):
 @method_allowed('POST')
 def restart_server(req):
 
+    zato_binary = find_file_in_parents(zato_path)
+    
+    if not zato_binary:
+        error_msg = '{} not found in parent directories'.format(zato_path)
+        logger.error('restart_server: {}'.format(error_msg))
+        response_data = {
+            'success': False,
+            'error': error_msg
+        }
+        response_json = dumps(response_data)
+        return HttpResponseServerError(response_json, content_type='application/json')
+    
     return run_command(
         req,
-        command=['sleep', '0.2'],
+        command=[zato_binary, '--version'],
         cwd=current_dir,
         log_prefix='restart_server'
     )
@@ -182,9 +210,21 @@ def restart_server(req):
 @method_allowed('POST')
 def restart_proxy(req):
 
+    zato_binary = find_file_in_parents(zato_path)
+    
+    if not zato_binary:
+        error_msg = '{} not found in parent directories'.format(zato_path)
+        logger.error('restart_proxy: {}'.format(error_msg))
+        response_data = {
+            'success': False,
+            'error': error_msg
+        }
+        response_json = dumps(response_data)
+        return HttpResponseServerError(response_json, content_type='application/json')
+    
     return run_command(
         req,
-        command=['sleep', '0.2'],
+        command=[zato_binary, '--version'],
         cwd=current_dir,
         log_prefix='restart_proxy'
     )
@@ -195,9 +235,21 @@ def restart_proxy(req):
 @method_allowed('POST')
 def restart_dashboard(req):
 
+    zato_binary = find_file_in_parents(zato_path)
+    
+    if not zato_binary:
+        error_msg = '{} not found in parent directories'.format(zato_path)
+        logger.error('restart_dashboard: {}'.format(error_msg))
+        response_data = {
+            'success': False,
+            'error': error_msg
+        }
+        response_json = dumps(response_data)
+        return HttpResponseServerError(response_json, content_type='application/json')
+    
     return run_command(
         req,
-        command=['sleep', '0.2'],
+        command=[zato_binary, '--version'],
         cwd=current_dir,
         log_prefix='restart_dashboard'
     )
