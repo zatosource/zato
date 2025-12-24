@@ -73,6 +73,9 @@ def run_command(req, command, cwd=None, timeout=999_999, log_prefix='command'):
             return response
 
         logger.info('{}: command succeeded'.format(log_prefix))
+        command_output = result.stdout + result.stderr
+        if command_output:
+            logger.info('{}: output: {}'.format(log_prefix, command_output))
 
         success_data = {'success': True}
         success_json = dumps(success_data)
@@ -110,27 +113,23 @@ def run_command(req, command, cwd=None, timeout=999_999, log_prefix='command'):
 @method_allowed('POST')
 def download_and_install(req):
 
+    file_name = 'update.sh'
     search_dir = current_dir
     update_script = None
 
     while True:
-
-        candidate = os.path.join(search_dir, 'update.sh')
-
+        candidate = os.path.join(search_dir, file_name)
         if os.path.isfile(candidate):
             update_script = candidate
             break
 
         parent_dir = os.path.dirname(search_dir)
-
         if parent_dir == search_dir:
             break
-
         search_dir = parent_dir
 
     if not update_script:
-
-        error_msg = 'update.sh not found in parent directories'
+        error_msg = '{} not found in parent directories'.format(file_name)
         logger.error('download_and_install: {}'.format(error_msg))
         response_data = {
             'success': False,
