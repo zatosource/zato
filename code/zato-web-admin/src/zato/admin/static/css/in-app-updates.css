@@ -708,26 +708,28 @@ input:checked + .toggle-slider:before {
 }
 
 .links-panel .dashboard-link {
-    display: inline-block;
-    padding: 10px 20px;
-    font-size: 12px;
-    font-weight: 900;
-    border: 3px solid var(--primary-dark);
-    border-radius: 0;
+    margin-top: 0;
     background: var(--primary-dark);
-    color: var(--white);
-    text-decoration: none;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
     cursor: pointer;
     transition: all 0.2s ease;
-    letter-spacing: 0.5px;
-    box-shadow: 8px 8px 0px var(--shadow-dark);
-    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    text-decoration: none;
+    display: inline-block;
 }
 
 .links-panel .dashboard-link:hover {
-    background: var(--white);
-    color: var(--primary-dark);
-    box-shadow: 8px 8px 0px var(--accent-light);
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: none;
+    text-shadow: none;
 }
 
 .external-icon {
@@ -749,15 +751,30 @@ input:checked + .toggle-slider:before {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .audit-log-entry {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 12px;
+    padding: 12px 60px 12px 12px;
     background: var(--background-light);
+}
+
+.audit-log-entry.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .audit-log-header {
@@ -770,12 +787,14 @@ input:checked + .toggle-slider:before {
     color: #333;
     font-size: 13px;
     text-align: left;
+    font-weight: 600;
 }
 
 .audit-log-type {
     font-weight: 600;
     color: var(--primary-dark);
     padding: 4px 8px;
+    padding-right: 60px;
     background: var(--white);
     font-size: 12px;
 }
@@ -788,7 +807,7 @@ input:checked + .toggle-slider:before {
 
 .audit-log-label {
     min-width: 50px;
-    font-weight: 600;
+    font-weight: 400;
     color: #333;
 }
 
