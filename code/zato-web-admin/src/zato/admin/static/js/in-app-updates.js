@@ -124,6 +124,8 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
             if (response.success) {
                 latestVersionEl.text(response.version);
                 copyIcon.removeClass('hidden');
+                
+                $('.upgrade-info').text('⭐ Updated to ' + response.version);
 
                 if (showUpdatesFound) {
                     const updatesFound = $('.updates-found');
@@ -136,6 +138,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                     }, 1500);
                 }
 
+                
                 if (response.version !== currentVersion) {
                     setTimeout(() => {
                         latestVersionEl.addClass('pulsate');
