@@ -108,26 +108,13 @@ def run_command(req, command, cwd=None, timeout=999_999, log_prefix='command'):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def download_updates(req):
+def download_and_install(req):
 
     return run_command(
         req,
         command=['sleep', '0.2'],
         cwd=current_dir,
-        log_prefix='download_updates'
-    )
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def install_updates(req):
-
-    return run_command(
-        req,
-        command=['sleep', '0.2'],
-        cwd=current_dir,
-        log_prefix='install_updates'
+        log_prefix='download_and_install'
     )
 
 # ################################################################################################################################

@@ -817,10 +817,8 @@ urlpatterns += [
 
     url(r'^zato/updates/$',
         login_required(in_app_updates.index), name='in-app-updates'),
-    url(r'^zato/updates/download$',
-        login_required(updates.download_updates), name='updates-download'),
-    url(r'^zato/updates/install$',
-        login_required(updates.install_updates), name='updates-install'),
+    url(r'^zato/updates/download-and-install$',
+        login_required(updates.download_and_install), name='updates-download-and-install'),
     url(r'^zato/updates/restart-scheduler$',
         login_required(updates.restart_scheduler), name='updates-restart-scheduler'),
     url(r'^zato/updates/restart-server$',
