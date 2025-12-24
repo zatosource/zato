@@ -13,7 +13,6 @@ from Cython.Build import cythonize # type: ignore
 
 version = '4.1'
 
-
 is_windows = 'windows' in platform_system().lower()
 
 if is_windows:
