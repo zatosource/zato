@@ -102,7 +102,7 @@ def get_audit_log_entries(count=10):
 
             time_ago = humanize.naturaltime(end_time)
             time_ago = time_ago[0].upper() + time_ago[1:] if time_ago else ''
-            
+
             result.append({
                 'number': idx,
                 'type': entry['type'],
@@ -360,6 +360,18 @@ def get_latest_audit_entry(req):
     except Exception:
         logger.error(f'get_latest_audit_entry: exception: {format_exc()}')
         return error_response('Failed to get latest audit entry')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def get_audit_log_refresh(req):
+    try:
+        entries = get_audit_log_entries(5)
+        return json_response({'success': True, 'entries': entries})
+    except Exception:
+        logger.error(f'get_audit_log_refresh: exception: {format_exc()}')
+        return error_response('Failed to refresh audit log')
 
 # ################################################################################################################################
 # ################################################################################################################################

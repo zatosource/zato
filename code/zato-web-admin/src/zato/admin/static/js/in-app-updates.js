@@ -16,6 +16,7 @@ $.fn.zato.in_app_updates.init = function() {
 
     $.fn.zato.in_app_updates.loadSchedule();
     $.fn.zato.in_app_updates.fetchLatestVersion();
+    $.fn.zato.in_app_updates.startAuditLogRefresh();
 
     $.fn.zato.in_app_updates.versionSteps = [
         {
@@ -488,6 +489,44 @@ $.fn.zato.in_app_updates.updateProgress = function(step, status, message, status
     }
 
     text.html(displayMessage);
+};
+
+$.fn.zato.in_app_updates.startAuditLogRefresh = function() {
+    const refreshAuditLog = function() {
+        $.ajax({
+            url: '/zato/updates/get-audit-log-refresh',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.entries && response.entries.length > 0) {
+                    const auditLogList = $('.audit-log-list');
+                    if (auditLogList.length) {
+                        let entriesHtml = '';
+                        for (const entry of response.entries) {
+                            entriesHtml += `
+                                <div class="audit-log-entry">
+                                    <div class="audit-log-header">
+                                        <span class="audit-log-time">${entry.time_ago}</span>
+                                        <span class="audit-log-type">${entry.type}</span>
+                                    </div>
+                                    <div class="audit-log-version-row">
+                                        <span class="audit-log-label">From:</span>
+                                        <span class="audit-log-version">${entry.version_from}</span>
+                                    </div>
+                                    <div class="audit-log-version-row">
+                                        <span class="audit-log-label">To:</span>
+                                        <span class="audit-log-version">${entry.version_to}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        auditLogList.html(entriesHtml);
+                    }
+                }
+            }
+        });
+    };
+
+    setInterval(refreshAuditLog, 60000);
 };
 
 $(document).ready(function() {
