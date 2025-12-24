@@ -15,6 +15,7 @@ from traceback import format_exc
 # Django
 from django.http import HttpResponse
 from django.http.response import HttpResponseServerError
+from django.template.response import TemplateResponse
 
 # Redis
 import redis
@@ -45,19 +46,42 @@ def get_redis_connection():
 
 def find_file_in_parents(target_path):
     search_dir = current_dir
-    
+
     while True:
         candidate = os.path.join(search_dir, target_path)
-        
+
         if os.path.isfile(candidate):
             return candidate
-        
+
         parent_dir = os.path.dirname(search_dir)
-        
+
         if parent_dir == search_dir:
             return None
-        
+
         search_dir = parent_dir
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_zato_version():
+    zato_binary = find_file_in_parents(zato_path)
+
+    if not zato_binary:
+        return '4.1.0'
+
+    try:
+        result = subprocess.run(
+            [zato_binary, '--version'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+
+    return '4.1.0'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,7 +185,7 @@ def download_and_install(req):
 def restart_scheduler(req):
 
     zato_binary = find_file_in_parents(zato_path)
-    
+
     if not zato_binary:
         error_msg = '{} not found in parent directories'.format(zato_path)
         logger.error('restart_scheduler: {}'.format(error_msg))
@@ -171,7 +195,7 @@ def restart_scheduler(req):
         }
         response_json = dumps(response_data)
         return HttpResponseServerError(response_json, content_type='application/json')
-    
+
     return run_command(
         req,
         command=[zato_binary, '--version'],
@@ -186,7 +210,7 @@ def restart_scheduler(req):
 def restart_server(req):
 
     zato_binary = find_file_in_parents(zato_path)
-    
+
     if not zato_binary:
         error_msg = '{} not found in parent directories'.format(zato_path)
         logger.error('restart_server: {}'.format(error_msg))
@@ -196,7 +220,7 @@ def restart_server(req):
         }
         response_json = dumps(response_data)
         return HttpResponseServerError(response_json, content_type='application/json')
-    
+
     return run_command(
         req,
         command=[zato_binary, '--version'],
@@ -211,7 +235,7 @@ def restart_server(req):
 def restart_proxy(req):
 
     zato_binary = find_file_in_parents(zato_path)
-    
+
     if not zato_binary:
         error_msg = '{} not found in parent directories'.format(zato_path)
         logger.error('restart_proxy: {}'.format(error_msg))
@@ -221,7 +245,7 @@ def restart_proxy(req):
         }
         response_json = dumps(response_data)
         return HttpResponseServerError(response_json, content_type='application/json')
-    
+
     return run_command(
         req,
         command=[zato_binary, '--version'],
@@ -236,7 +260,7 @@ def restart_proxy(req):
 def restart_dashboard(req):
 
     zato_binary = find_file_in_parents(zato_path)
-    
+
     if not zato_binary:
         error_msg = '{} not found in parent directories'.format(zato_path)
         logger.error('restart_dashboard: {}'.format(error_msg))
@@ -246,7 +270,7 @@ def restart_dashboard(req):
         }
         response_json = dumps(response_data)
         return HttpResponseServerError(response_json, content_type='application/json')
-    
+
     return run_command(
         req,
         command=[zato_binary, '--version'],
@@ -347,6 +371,16 @@ def delete_schedule(req):
         }
         response_json = dumps(response_data)
         return HttpResponseServerError(response_json, content_type='application/json')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def index(req):
+    return TemplateResponse(req, 'zato/in-app-updates/index.html', {
+        'current_version': get_zato_version(),
+        'latest_version': '4.2.0'
+    })
 
 # ################################################################################################################################
 # ################################################################################################################################
