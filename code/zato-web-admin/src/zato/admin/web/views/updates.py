@@ -409,7 +409,7 @@ def check_latest_version(req):
         hour = str(dt.hour).zfill(2)
         minute = str(dt.minute).zfill(2)
 
-        version = '4.1.{}.{}.{}.{}.{}.{}'.format(year, month, day, hour, minute, commit_sha)
+        version = f'4.1.{year}.{month}.{day}.{hour}.{minute}.{commit_sha}'
 
         import time
         time.sleep(1)
