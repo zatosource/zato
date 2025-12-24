@@ -114,7 +114,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function() {
     const copyIcon = latestVersionEl.siblings('.copy-icon');
     const currentVersion = $('#current-version').text();
 
-    latestVersionEl.html('<img src="/static/gfx/spinner.svg" class="version-spinner" style="width: 20px; height: 20px; animation: spin 0.5s linear infinite; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');
+    latestVersionEl.text('Loading...');
     copyIcon.hide();
 
     $.ajax({
