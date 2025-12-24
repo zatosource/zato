@@ -747,3 +747,64 @@ input:checked + .toggle-slider:before {
 .driver-overlay {
     background: rgba(0, 0, 0, 0.5) !important;
 }
+
+.audit-log-panel {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 16px;
+    margin-bottom: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.audit-log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.audit-log-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--background-light);
+    border-left: 3px solid var(--primary-dark);
+    font-size: 11px;
+}
+
+.audit-log-number {
+    font-weight: 700;
+    color: var(--primary-dark);
+    min-width: 20px;
+}
+
+.audit-log-type {
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--primary-dark);
+    padding: 2px 6px;
+    background: var(--accent-light);
+    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+.audit-log-versions {
+    font-family: monospace;
+    color: #333;
+    flex: 1;
+}
+
+.audit-log-time {
+    color: #666;
+    font-style: italic;
+    white-space: nowrap;
+}
+
+.audit-log-empty {
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 16px;
+}
