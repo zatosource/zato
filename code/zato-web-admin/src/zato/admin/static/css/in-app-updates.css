@@ -23,7 +23,6 @@
 }
 
 .creation-sidebar {
-    width: calc(312px + 2rem);
     background: var(--background-light);
     border-left: 3px solid var(--primary-dark);
     padding: 24px 32px 40px 32px;
@@ -763,7 +762,7 @@ input:checked + .toggle-slider:before {
     padding-bottom: 12px;
     padding-left: 12px;
     background: var(--background-light);
-    min-width: 400px;
+    width: fit-content;
 }
 
 .audit-log-entry.fade-in {
@@ -809,6 +808,7 @@ input:checked + .toggle-slider:before {
     display: flex;
     gap: 8px;
     font-size: 13px;
+    padding-right: 1rem;
 }
 
 .audit-log-label {
@@ -820,4 +820,5 @@ input:checked + .toggle-slider:before {
 .audit-log-version {
     font-family: monospace;
     color: #333;
+    padding-right: 1rem;
 }
