@@ -8,10 +8,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import shutil
 import subprocess
+import tempfile
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
+from urllib.error import HTTPError
 from urllib.request import urlopen, Request
 
 # Django
@@ -391,6 +394,9 @@ def index(req):
 
 @method_allowed('GET')
 def check_latest_version(req):
+    commit_sha = None
+    commit_date = None
+
     try:
         url = 'https://api.github.com/repos/zatosource/zato/commits/support/4.1'
         request = Request(url)
@@ -402,6 +408,66 @@ def check_latest_version(req):
         commit_sha = data['sha'][:9]
         commit_date = data['commit']['committer']['date']
 
+    except HTTPError as e:
+        logger.warning(f'check_latest_version: GitHub API error: {e}, using git clone')
+        
+        temp_dir = tempfile.mkdtemp()
+        try:
+            result = subprocess.run(
+                ['git', 'clone', '--depth=1', '--branch=support/4.1', 'https://github.com/zatosource/zato.git', temp_dir],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode != 0:
+                raise Exception(f'Git clone failed: {result.stderr}')
+            
+            logger.info(f'check_latest_version: git clone succeeded')
+            if result.stdout:
+                logger.info(f'check_latest_version: git clone stdout: {result.stdout}')
+            if result.stderr:
+                logger.info(f'check_latest_version: git clone stderr: {result.stderr}')
+            
+            result = subprocess.run(
+                ['git', 'log', '-1', '--format=%H|%cI'],
+                cwd=temp_dir,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode != 0:
+                raise Exception(f'Git log failed: {result.stderr}')
+            
+            commit_sha, commit_date = result.stdout.strip().split('|')
+            commit_sha = commit_sha[:9]
+            logger.info(f'check_latest_version: obtained commit {commit_sha} from git')
+            logger.info(f'check_latest_version: git log stdout: {result.stdout.strip()}')
+            
+        except Exception:
+            logger.error(f'check_latest_version: git method failed: {format_exc()}')
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            response_data = {
+                'success': False,
+                'error': 'Failed to check latest version'
+            }
+            response_json = dumps(response_data)
+            return HttpResponseServerError(response_json, content_type='application/json')
+        
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+    
+    except Exception:
+        logger.error(f'check_latest_version: exception: {format_exc()}')
+        response_data = {
+            'success': False,
+            'error': 'Failed to check latest version'
+        }
+        response_json = dumps(response_data)
+        return HttpResponseServerError(response_json, content_type='application/json')
+    
+    try:
         dt = datetime.fromisoformat(commit_date.replace('Z', '+00:00'))
         year = str(dt.year % 100).zfill(2)
         month = str(dt.month).zfill(2)
@@ -422,7 +488,7 @@ def check_latest_version(req):
         return HttpResponse(response_json, content_type='application/json')
 
     except Exception:
-        logger.error('check_latest_version: exception: {}'.format(format_exc()))
+        logger.error(f'check_latest_version: exception: {format_exc()}')
         response_data = {
             'success': False,
             'error': 'Failed to check latest version'
