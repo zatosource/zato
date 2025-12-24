@@ -31,9 +31,18 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_redis_connection():
+    return redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def run_command(req, command, cwd=None, timeout=999_999, log_prefix='command'):
-    """ Function to run shell commands and return result. Only returns output if command fails.
-    """
 
     logger.info('{}: called from client: {}'.format(log_prefix, req.META.get('REMOTE_ADDR')))
     logger.info('{}: command: {}'.format(log_prefix, command))
@@ -100,11 +109,6 @@ def run_command(req, command, cwd=None, timeout=999_999, log_prefix='command'):
 
 @method_allowed('POST')
 def download_updates(req):
-    """
-    Downloads updates and returns result. Only returns output if download fails.
-    """
-
-    current_dir = os.path.dirname(os.path.abspath(__file__))
 
     return run_command(
         req,
@@ -118,10 +122,6 @@ def download_updates(req):
 
 @method_allowed('POST')
 def install_updates(req):
-    """
-    Installs updates. Dummy command for now.
-    """
-    current_dir = os.path.dirname(os.path.abspath(__file__))
 
     return run_command(
         req,
@@ -135,10 +135,6 @@ def install_updates(req):
 
 @method_allowed('POST')
 def restart_scheduler(req):
-    """
-    Restarts scheduler. Dummy command for now.
-    """
-    current_dir = os.path.dirname(os.path.abspath(__file__))
 
     return run_command(
         req,
@@ -152,10 +148,6 @@ def restart_scheduler(req):
 
 @method_allowed('POST')
 def restart_server(req):
-    """
-    Restarts server. Dummy command for now.
-    """
-    current_dir = os.path.dirname(os.path.abspath(__file__))
 
     return run_command(
         req,
@@ -169,10 +161,6 @@ def restart_server(req):
 
 @method_allowed('POST')
 def restart_proxy(req):
-    """
-    Restarts proxy. Dummy command for now.
-    """
-    current_dir = os.path.dirname(os.path.abspath(__file__))
 
     return run_command(
         req,
@@ -186,10 +174,6 @@ def restart_proxy(req):
 
 @method_allowed('POST')
 def restart_dashboard(req):
-    """
-    Restarts dashboard. Dummy command for now.
-    """
-    current_dir = os.path.dirname(os.path.abspath(__file__))
 
     return run_command(
         req,
@@ -203,16 +187,14 @@ def restart_dashboard(req):
 
 @method_allowed('POST')
 def save_schedule(req):
-    """
-    Saves auto-update schedule to Redis.
-    """
+
     try:
         body = req.body.decode('utf-8')
         schedule_data = loads(body)
 
         logger.info('save_schedule: received data: {}'.format(schedule_data))
 
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r = get_redis_connection()
         _ = r.set('zato:autoupdate:schedule', dumps(schedule_data))
 
         logger.info('save_schedule: schedule saved to Redis')
@@ -236,11 +218,9 @@ def save_schedule(req):
 
 @method_allowed('GET')
 def load_schedule(req):
-    """
-    Loads auto-update schedule from Redis.
-    """
+
     try:
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r = get_redis_connection()
         _ = schedule_json = r.get('zato:autoupdate:schedule')
 
         if schedule_json:
@@ -275,11 +255,9 @@ def load_schedule(req):
 
 @method_allowed('POST')
 def delete_schedule(req):
-    """
-    Deletes auto-update schedule from Redis.
-    """
+
     try:
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        r = get_redis_connection()
         _ = r.delete('zato:autoupdate:schedule')
 
         logger.info('delete_schedule: schedule deleted from Redis')
