@@ -802,7 +802,6 @@ input:checked + .toggle-slider:before {
     background: var(--white);
     font-size: 12px;
     flex: 0 0 auto;
-    margin-right: 1rem;
 }
 
 .audit-log-version-row {
@@ -820,5 +819,4 @@ input:checked + .toggle-slider:before {
 .audit-log-version {
     font-family: monospace;
     color: #333;
-    padding-right: 1rem;
 }
