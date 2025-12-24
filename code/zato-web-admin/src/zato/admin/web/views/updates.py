@@ -410,7 +410,7 @@ def check_latest_version(req):
 
     except HTTPError as e:
         logger.warning(f'check_latest_version: GitHub API error: {e}, using git clone')
-        
+
         temp_dir = tempfile.mkdtemp()
         try:
             result = subprocess.run(
@@ -419,16 +419,16 @@ def check_latest_version(req):
                 text=True,
                 timeout=30
             )
-            
+
             if result.returncode != 0:
                 raise Exception(f'Git clone failed: {result.stderr}')
-            
+
             logger.info(f'check_latest_version: git clone succeeded')
             if result.stdout:
                 logger.info(f'check_latest_version: git clone stdout: {result.stdout}')
             if result.stderr:
                 logger.info(f'check_latest_version: git clone stderr: {result.stderr}')
-            
+
             result = subprocess.run(
                 ['git', 'log', '-1', '--format=%H|%cI'],
                 cwd=temp_dir,
@@ -436,15 +436,15 @@ def check_latest_version(req):
                 text=True,
                 timeout=5
             )
-            
+
             if result.returncode != 0:
                 raise Exception(f'Git log failed: {result.stderr}')
-            
+
             commit_sha, commit_date = result.stdout.strip().split('|')
             commit_sha = commit_sha[:9]
             logger.info(f'check_latest_version: obtained commit {commit_sha} from git')
             logger.info(f'check_latest_version: git log stdout: {result.stdout.strip()}')
-            
+
         except Exception:
             logger.error(f'check_latest_version: git method failed: {format_exc()}')
             shutil.rmtree(temp_dir, ignore_errors=True)
@@ -454,10 +454,10 @@ def check_latest_version(req):
             }
             response_json = dumps(response_data)
             return HttpResponseServerError(response_json, content_type='application/json')
-        
+
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
-    
+
     except Exception:
         logger.error(f'check_latest_version: exception: {format_exc()}')
         response_data = {
@@ -466,7 +466,7 @@ def check_latest_version(req):
         }
         response_json = dumps(response_data)
         return HttpResponseServerError(response_json, content_type='application/json')
-    
+
     try:
         dt = datetime.fromisoformat(commit_date.replace('Z', '+00:00'))
         year = str(dt.year % 100).zfill(2)
@@ -476,9 +476,6 @@ def check_latest_version(req):
         minute = str(dt.minute).zfill(2)
 
         version = f'4.1.{year}.{month}.{day}.{hour}.{minute}.{commit_sha}'
-
-        import time
-        time.sleep(1)
 
         response_data = {
             'success': True,
