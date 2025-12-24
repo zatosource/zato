@@ -165,23 +165,27 @@
 
                 <div class="logs-section show">
                     <h3>Logs <img src="/static/gfx/info.svg" class="help-icon" id="logs-help" alt="info" /></h3>
-                    <div class="audit-log-panel">
+                    <div class="links-panel">
                         {% if audit_log %}
                         <div class="audit-log-list">
                             {% for entry in audit_log %}
                             <div class="audit-log-entry">
-                                <span class="audit-log-number">{{ entry.number }}.</span>
-                                <span class="audit-log-type">{{ entry.type }}</span>
-                                <span class="audit-log-versions">{{ entry.version_from }} → {{ entry.version_to }}</span>
-                                <span class="audit-log-time">{{ entry.time_ago }}</span>
+                                <div class="audit-log-header">
+                                    <span class="audit-log-time">{{ entry.time_ago }}</span>
+                                    <span class="audit-log-type">{{ entry.type }}</span>
+                                </div>
+                                <div class="audit-log-version-row">
+                                    <span class="audit-log-label">From:</span>
+                                    <span class="audit-log-version">{{ entry.version_from }}</span>
+                                </div>
+                                <div class="audit-log-version-row">
+                                    <span class="audit-log-label">To:</span>
+                                    <span class="audit-log-version">{{ entry.version_to }}</span>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
-                        {% else %}
-                        <div class="audit-log-empty">No updates yet</div>
                         {% endif %}
-                    </div>
-                    <div class="links-panel">
                         <div class="links-row">
                             <div class="dashboard-link-item">
                                 <a href="/zato/updates/download-logs" class="dashboard-link">
