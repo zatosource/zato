@@ -343,8 +343,23 @@ def delete_schedule(req):
 def index(req):
     return TemplateResponse(req, 'zato/in-app-updates/index.html', {
         'current_version': get_zato_version(),
-        'audit_log': get_audit_log_entries(10)
+        'audit_log': get_audit_log_entries(5)
     })
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def get_latest_audit_entry(req):
+    try:
+        entries = get_audit_log_entries(1)
+        if entries:
+            return json_response({'success': True, 'entry': entries[0]})
+        else:
+            return json_response({'success': True, 'entry': None})
+    except Exception:
+        logger.error(f'get_latest_audit_entry: exception: {format_exc()}')
+        return error_response('Failed to get latest audit entry')
 
 # ################################################################################################################################
 # ################################################################################################################################

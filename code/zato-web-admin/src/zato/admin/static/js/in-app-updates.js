@@ -385,6 +385,42 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                 headerBadge.classList.add('white');
                 headerBadge.textContent = 'Up to date';
             }
+
+            $.ajax({
+                url: '/zato/updates/get-latest-audit-entry',
+                type: 'GET',
+                success: function(response) {
+                    if (response.success && response.entry) {
+                        const entry = response.entry;
+                        const newEntryHtml = `
+                            <div class="audit-log-entry fade-in">
+                                <div class="audit-log-header">
+                                    <span class="audit-log-time">${entry.time_ago}</span>
+                                    <span class="audit-log-type">${entry.type}</span>
+                                </div>
+                                <div class="audit-log-version-row">
+                                    <span class="audit-log-label">From:</span>
+                                    <span class="audit-log-version">${entry.version_from}</span>
+                                </div>
+                                <div class="audit-log-version-row">
+                                    <span class="audit-log-label">To:</span>
+                                    <span class="audit-log-version">${entry.version_to}</span>
+                                </div>
+                            </div>
+                        `;
+                        
+                        const auditLogList = $('.audit-log-list');
+                        if (auditLogList.length) {
+                            auditLogList.prepend(newEntryHtml);
+                            const entries = auditLogList.children('.audit-log-entry');
+                            if (entries.length > 5) {
+                                entries.last().remove();
+                            }
+                        }
+                    }
+                }
+            });
+
             return;
         }
 
