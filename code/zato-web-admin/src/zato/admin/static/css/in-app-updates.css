@@ -763,6 +763,7 @@ input:checked + .toggle-slider:before {
     padding-bottom: 12px;
     padding-left: 12px;
     background: var(--background-light);
+    min-width: 400px;
 }
 
 .audit-log-entry.fade-in {
