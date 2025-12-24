@@ -79,7 +79,10 @@ def get_zato_version():
             timeout=5
         )
         if result.returncode == 0:
-            return result.stdout.strip()
+            version = result.stdout.strip()
+            if version.startswith('Zato '):
+                version = version[5:]
+            return version
     except Exception:
         pass
 
@@ -400,11 +403,13 @@ def check_latest_version(req):
         commit_date = data['commit']['committer']['date']
 
         dt = datetime.fromisoformat(commit_date.replace('Z', '+00:00'))
-        year = dt.year
+        year = str(dt.year % 100).zfill(2)
         month = str(dt.month).zfill(2)
         day = str(dt.day).zfill(2)
+        hour = str(dt.hour).zfill(2)
+        minute = str(dt.minute).zfill(2)
 
-        version = 'Zato 4.1.{}.{}.{}.{}'.format(year, month, day, commit_sha)
+        version = '4.1.{}.{}.{}.{}.{}.{}'.format(year, month, day, hour, minute, commit_sha)
 
         import time
         time.sleep(1)
