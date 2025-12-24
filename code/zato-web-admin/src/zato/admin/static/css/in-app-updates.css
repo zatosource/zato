@@ -70,6 +70,10 @@
     font-weight: 600;
     font-family: monospace;
     font-size: 14px;
+    min-width: 280px;
+    text-align: right;
+    line-height: 17px;
+    height: 17px;
 }
 
 .button-container {
