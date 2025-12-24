@@ -11,11 +11,14 @@ import os
 import shutil
 import subprocess
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from logging import getLogger
 from traceback import format_exc
 from urllib.error import HTTPError
 from urllib.request import urlopen, Request
+
+# humanize
+import humanize
 
 # Django
 from django.http import HttpResponse
@@ -61,6 +64,54 @@ def error_response(error_msg, log_prefix=None):
     if log_prefix:
         logger.error(f'{log_prefix}: {error_msg}')
     return json_response({'success': False, 'error': error_msg}, success=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def add_audit_log_entry(update_type, version_from, version_to, start_time, end_time):
+    try:
+        r = get_redis_connection()
+
+        entry = {
+            'type': update_type,
+            'version_from': version_from,
+            'version_to': version_to,
+            'start_time': start_time.isoformat(),
+            'end_time': end_time.isoformat()
+        }
+
+        _ = r.lpush('zato:autoupdate:audit_log', dumps(entry))
+        _ = r.ltrim('zato:autoupdate:audit_log', 0, 99)
+
+        logger.info(f'add_audit_log_entry: added {update_type} update from {version_from} to {version_to}')
+    except Exception:
+        logger.error(f'add_audit_log_entry: exception: {format_exc()}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_audit_log_entries(count=10):
+    try:
+        r = get_redis_connection()
+        entries = r.lrange('zato:autoupdate:audit_log', 0, count - 1)
+
+        result = []
+        for idx, entry_json in enumerate(entries, 1): # type: ignore
+            entry = loads(entry_json)
+            end_time = datetime.fromisoformat(entry['end_time'])
+
+            result.append({
+                'number': idx,
+                'type': entry['type'],
+                'version_from': entry['version_from'],
+                'version_to': entry['version_to'],
+                'time_ago': humanize.naturaltime(end_time)
+            })
+
+        return result
+    except Exception:
+        logger.error(f'get_audit_log_entries: exception: {format_exc()}')
+        return []
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -163,13 +214,23 @@ def download_and_install(req):
     if not update_script:
         return error_response(f'{file_name} not found in parent directories', 'download_and_install')
 
+    version_from = get_zato_version()
+    start_time = datetime.now(timezone.utc)
+
     script_dir = os.path.dirname(update_script)
-    return run_command(
+    result = run_command(
         req,
         command=['bash', update_script],
         cwd=script_dir,
         log_prefix='download_and_install'
     )
+
+    if result.status_code == 200:
+        end_time = datetime.now(timezone.utc)
+        version_to = get_zato_version()
+        add_audit_log_entry('manual', version_from, version_to, start_time, end_time)
+
+    return result
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -278,7 +339,8 @@ def delete_schedule(req):
 @method_allowed('GET')
 def index(req):
     return TemplateResponse(req, 'zato/in-app-updates/index.html', {
-        'current_version': get_zato_version()
+        'current_version': get_zato_version(),
+        'audit_log': get_audit_log_entries(10)
     })
 
 # ################################################################################################################################
