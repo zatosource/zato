@@ -49,6 +49,22 @@ def get_redis_connection():
 # ################################################################################################################################
 # ################################################################################################################################
 
+def json_response(data, success=True):
+    response_json = dumps(data)
+    response_class = HttpResponse if success else HttpResponseServerError
+    return response_class(response_json, content_type='application/json')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def error_response(error_msg, log_prefix=None):
+    if log_prefix:
+        logger.error(f'{log_prefix}: {error_msg}')
+    return json_response({'success': False, 'error': error_msg}, success=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def find_file_in_parents(target_path):
     search_dir = current_dir
 
@@ -114,50 +130,26 @@ def run_command(req, command, cwd=None, timeout=999_999, log_prefix='command'):
             error_output = result.stdout + result.stderr
             logger.error('{}: error output: {}'.format(log_prefix, error_output))
 
-            response_data = {
+            return json_response({
                 'success': False,
                 'error': error_output,
                 'exit_code': result.returncode
-            }
-
-            response_json = dumps(response_data)
-            response = HttpResponseServerError(response_json, content_type='application/json')
-            return response
+            }, success=False)
 
         logger.info('{}: command succeeded'.format(log_prefix))
         command_output = 'stdout: {}\nstderr: {}'.format(result.stdout, result.stderr)
         if result.stdout or result.stderr:
             logger.info('{}: output: {}'.format(log_prefix, command_output))
 
-        success_data = {'success': True}
-        success_json = dumps(success_data)
-        response = HttpResponse(success_json, content_type='application/json')
-        return response
+        return json_response({'success': True})
 
     except subprocess.TimeoutExpired:
         logger.error('{}: command timed out after {} seconds'.format(log_prefix, timeout))
-
-        timeout_msg = 'Command timed out after {} seconds'.format(timeout)
-        response_data = {
-            'success': False,
-            'error': timeout_msg
-        }
-
-        response_json = dumps(response_data)
-        response = HttpResponseServerError(response_json, content_type='application/json')
-        return response
+        return error_response('Command timed out after {} seconds'.format(timeout))
 
     except Exception:
         logger.error('{}: exception: {}'.format(log_prefix, format_exc()))
-
-        response_data = {
-            'success': False,
-            'error': 'Internal error occurred'
-        }
-
-        response_json = dumps(response_data)
-        response = HttpResponseServerError(response_json, content_type='application/json')
-        return response
+        return error_response('Internal error occurred')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -169,14 +161,7 @@ def download_and_install(req):
     update_script = find_file_in_parents(file_name)
 
     if not update_script:
-        error_msg = '{} not found in parent directories'.format(file_name)
-        logger.error('download_and_install: {}'.format(error_msg))
-        response_data = {
-            'success': False,
-            'error': error_msg
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
+        return error_response(f'{file_name} not found in parent directories', 'download_and_install')
 
     script_dir = os.path.dirname(update_script)
     return run_command(
@@ -189,196 +174,103 @@ def download_and_install(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('POST')
-def restart_scheduler(req):
-
+def restart_component(req, component_name):
     zato_binary = find_file_in_parents(zato_path)
 
     if not zato_binary:
-        error_msg = '{} not found in parent directories'.format(zato_path)
-        logger.error('restart_scheduler: {}'.format(error_msg))
-        response_data = {
-            'success': False,
-            'error': error_msg
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
+        return error_response(f'{zato_path} not found in parent directories', f'restart_{component_name}')
 
     return run_command(
         req,
         command=[zato_binary, '--version'],
         cwd=current_dir,
-        log_prefix='restart_scheduler'
+        log_prefix=f'restart_{component_name}'
     )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def restart_scheduler(req):
+    return restart_component(req, 'scheduler')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_server(req):
-
-    zato_binary = find_file_in_parents(zato_path)
-
-    if not zato_binary:
-        error_msg = '{} not found in parent directories'.format(zato_path)
-        logger.error('restart_server: {}'.format(error_msg))
-        response_data = {
-            'success': False,
-            'error': error_msg
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
-
-    return run_command(
-        req,
-        command=[zato_binary, '--version'],
-        cwd=current_dir,
-        log_prefix='restart_server'
-    )
+    return restart_component(req, 'server')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_proxy(req):
-
-    zato_binary = find_file_in_parents(zato_path)
-
-    if not zato_binary:
-        error_msg = '{} not found in parent directories'.format(zato_path)
-        logger.error('restart_proxy: {}'.format(error_msg))
-        response_data = {
-            'success': False,
-            'error': error_msg
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
-
-    return run_command(
-        req,
-        command=[zato_binary, '--version'],
-        cwd=current_dir,
-        log_prefix='restart_proxy'
-    )
+    return restart_component(req, 'proxy')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_dashboard(req):
-
-    zato_binary = find_file_in_parents(zato_path)
-
-    if not zato_binary:
-        error_msg = '{} not found in parent directories'.format(zato_path)
-        logger.error('restart_dashboard: {}'.format(error_msg))
-        response_data = {
-            'success': False,
-            'error': error_msg
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
-
-    return run_command(
-        req,
-        command=[zato_binary, '--version'],
-        cwd=current_dir,
-        log_prefix='restart_dashboard'
-    )
+    return restart_component(req, 'dashboard')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def save_schedule(req):
-
     try:
         body = req.body.decode('utf-8')
         schedule_data = loads(body)
-
         logger.info('save_schedule: received data: {}'.format(schedule_data))
 
         r = get_redis_connection()
         _ = r.set('zato:autoupdate:schedule', dumps(schedule_data))
-
         logger.info('save_schedule: schedule saved to Redis')
 
-        response_data = {'success': True}
-        response_json = dumps(response_data)
-        return HttpResponse(response_json, content_type='application/json')
+        return json_response({'success': True})
 
     except Exception:
         logger.error('save_schedule: exception: {}'.format(format_exc()))
-
-        response_data = {
-            'success': False,
-            'error': 'Failed to save schedule'
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
+        return error_response('Failed to save schedule')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
 def load_schedule(req):
-
     try:
         r = get_redis_connection()
-        _ = schedule_json = r.get('zato:autoupdate:schedule')
+        schedule_json = r.get('zato:autoupdate:schedule')
 
         if schedule_json:
             logger.info('load_schedule: found schedule in Redis')
-            schedule_data = loads(schedule_json) # type: ignore
-            response_data = {
-                'success': True,
-                'schedule': schedule_data
-            }
+            _ = schedule_data = loads(schedule_json) # type: ignore
+            return json_response({'success': True, 'schedule': schedule_data})
         else:
             logger.info('load_schedule: no schedule found in Redis')
-            response_data = {
-                'success': True,
-                'schedule': None
-            }
-
-        response_json = dumps(response_data)
-        return HttpResponse(response_json, content_type='application/json')
+            return json_response({'success': True, 'schedule': None})
 
     except Exception:
         logger.error('load_schedule: exception: {}'.format(format_exc()))
-
-        response_data = {
-            'success': False,
-            'error': 'Failed to load schedule'
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
+        return error_response('Failed to load schedule')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def delete_schedule(req):
-
     try:
         r = get_redis_connection()
         _ = r.delete('zato:autoupdate:schedule')
-
         logger.info('delete_schedule: schedule deleted from Redis')
 
-        response_data = {'success': True}
-        response_json = dumps(response_data)
-        return HttpResponse(response_json, content_type='application/json')
+        return json_response({'success': True})
 
     except Exception:
         logger.error('delete_schedule: exception: {}'.format(format_exc()))
-
-        response_data = {
-            'success': False,
-            'error': 'Failed to delete schedule'
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
+        return error_response('Failed to delete schedule')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -424,9 +316,11 @@ def check_latest_version(req):
                 raise Exception(f'Git clone failed: {result.stderr}')
 
             logger.info(f'check_latest_version: git clone succeeded')
+
             if result.stdout:
                 logger.info(f'check_latest_version: git clone stdout: {result.stdout}')
             if result.stderr:
+
                 logger.info(f'check_latest_version: git clone stderr: {result.stderr}')
 
             result = subprocess.run(
@@ -448,24 +342,14 @@ def check_latest_version(req):
         except Exception:
             logger.error(f'check_latest_version: git method failed: {format_exc()}')
             shutil.rmtree(temp_dir, ignore_errors=True)
-            response_data = {
-                'success': False,
-                'error': 'Failed to check latest version'
-            }
-            response_json = dumps(response_data)
-            return HttpResponseServerError(response_json, content_type='application/json')
+            return error_response('Failed to check latest version')
 
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     except Exception:
         logger.error(f'check_latest_version: exception: {format_exc()}')
-        response_data = {
-            'success': False,
-            'error': 'Failed to check latest version'
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
+        return error_response('Failed to check latest version')
 
     try:
         dt = datetime.fromisoformat(commit_date.replace('Z', '+00:00'))
@@ -476,22 +360,11 @@ def check_latest_version(req):
         minute = str(dt.minute).zfill(2)
 
         version = f'4.1.{year}.{month}.{day}.{hour}.{minute}.{commit_sha}'
-
-        response_data = {
-            'success': True,
-            'version': version
-        }
-        response_json = dumps(response_data)
-        return HttpResponse(response_json, content_type='application/json')
+        return json_response({'success': True, 'version': version})
 
     except Exception:
         logger.error(f'check_latest_version: exception: {format_exc()}')
-        response_data = {
-            'success': False,
-            'error': 'Failed to check latest version'
-        }
-        response_json = dumps(response_data)
-        return HttpResponseServerError(response_json, content_type='application/json')
+        return error_response('Failed to check latest version')
 
 # ################################################################################################################################
 # ################################################################################################################################
