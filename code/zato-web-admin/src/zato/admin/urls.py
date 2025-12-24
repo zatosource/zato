@@ -821,6 +821,8 @@ urlpatterns += [
         login_required(updates.check_latest_version), name='updates-check-latest-version'),
     url(r'^zato/updates/get-latest-audit-entry$',
         login_required(updates.get_latest_audit_entry), name='updates-get-latest-audit-entry'),
+    url(r'^zato/updates/get-audit-log-refresh$',
+        login_required(updates.get_audit_log_refresh), name='updates-get-audit-log-refresh'),
     url(r'^zato/updates/download-and-install$',
         login_required(updates.download_and_install), name='updates-download-and-install'),
     url(r'^zato/updates/restart-scheduler$',
