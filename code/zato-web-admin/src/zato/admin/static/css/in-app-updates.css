@@ -748,63 +748,55 @@ input:checked + .toggle-slider:before {
     background: rgba(0, 0, 0, 0.5) !important;
 }
 
-.audit-log-panel {
-    background: var(--white);
-    border: 3px solid var(--primary-dark);
-    padding: 16px;
-    margin-bottom: 16px;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
 .audit-log-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 16px;
+    margin-bottom: 20px;
 }
 
 .audit-log-entry {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
     background: var(--background-light);
-    border-left: 3px solid var(--primary-dark);
-    font-size: 11px;
 }
 
-.audit-log-number {
-    font-weight: 700;
-    color: var(--primary-dark);
-    min-width: 20px;
+.audit-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.audit-log-time {
+    color: #333;
+    font-size: 13px;
+    text-align: left;
 }
 
 .audit-log-type {
     font-weight: 600;
-    text-transform: uppercase;
     color: var(--primary-dark);
-    padding: 2px 6px;
-    background: var(--accent-light);
-    border-radius: 3px;
-    font-size: 10px;
-    letter-spacing: 0.5px;
+    padding: 4px 8px;
+    background: var(--white);
+    border: 2px solid var(--primary-dark);
+    font-size: 12px;
 }
 
-.audit-log-versions {
+.audit-log-version-row {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.audit-log-label {
+    min-width: 50px;
+    font-weight: 600;
+    color: #333;
+}
+
+.audit-log-version {
     font-family: monospace;
     color: #333;
-    flex: 1;
-}
-
-.audit-log-time {
-    color: #666;
-    font-style: italic;
-    white-space: nowrap;
-}
-
-.audit-log-empty {
-    color: #666;
-    font-style: italic;
-    text-align: center;
-    padding: 16px;
 }

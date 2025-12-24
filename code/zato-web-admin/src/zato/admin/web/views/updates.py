@@ -100,12 +100,15 @@ def get_audit_log_entries(count=10):
             entry = loads(entry_json)
             end_time = datetime.fromisoformat(entry['end_time'])
 
+            time_ago = humanize.naturaltime(end_time)
+            time_ago = time_ago[0].upper() + time_ago[1:] if time_ago else ''
+            
             result.append({
                 'number': idx,
                 'type': entry['type'],
                 'version_from': entry['version_from'],
                 'version_to': entry['version_to'],
-                'time_ago': humanize.naturaltime(end_time)
+                'time_ago': time_ago
             })
 
         return result
