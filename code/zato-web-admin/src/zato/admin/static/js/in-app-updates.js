@@ -307,7 +307,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
     $('#progress-download').removeClass('hidden error-state');
     $('#progress-install').addClass('hidden').removeClass('error-state');
     $('#progress-install .upgrade-info').removeClass('show');
-    $.fn.zato.in_app_updates.updateProgress('download', 'processing', 'Downloading and installing updates...');
+    $.fn.zato.in_app_updates.updateProgress('download', 'processing', 'Downloading updates...');
 
     $.ajax({
         url: '/zato/updates/download-and-install',
@@ -316,7 +316,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
             'X-CSRFToken': $.cookie('csrftoken')
         },
         success: function(response) {
-            $.fn.zato.in_app_updates.updateProgress('download', 'completed', 'Download and install complete');
+            $.fn.zato.in_app_updates.updateProgress('download', 'completed', 'Download complete');
 
             $('#progress-install').removeClass('hidden');
             $.fn.zato.in_app_updates.runRestartSteps(button);
