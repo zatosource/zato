@@ -759,7 +759,7 @@ input:checked + .toggle-slider:before {
     flex-direction: column;
     gap: 6px;
     padding-top: 12px;
-    padding-right: 100px;
+    padding-right: 12px;
     padding-bottom: 12px;
     padding-left: 12px;
     background: var(--background-light);
@@ -784,6 +784,7 @@ input:checked + .toggle-slider:before {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
 }
 
 .audit-log-time {
@@ -791,6 +792,7 @@ input:checked + .toggle-slider:before {
     font-size: 13px;
     text-align: left;
     font-weight: 600;
+    flex: 1;
 }
 
 .audit-log-type {
@@ -799,7 +801,7 @@ input:checked + .toggle-slider:before {
     padding: 4px 8px;
     background: var(--white);
     font-size: 12px;
-    margin-left: auto;
+    flex: 0 0 auto;
 }
 
 .audit-log-version-row {
