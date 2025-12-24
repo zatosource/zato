@@ -406,6 +406,9 @@ def check_latest_version(req):
 
         version = 'Zato 4.1.{}.{}.{}.{}'.format(year, month, day, commit_sha)
 
+        import time
+        time.sleep(3)
+
         response_data = {
             'success': True,
             'version': version
