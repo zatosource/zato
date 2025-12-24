@@ -392,23 +392,7 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                 type: 'GET',
                 success: function(response) {
                     if (response.success && response.entry) {
-                        const entry = response.entry;
-                        const newEntryHtml = `
-                            <div class="audit-log-entry fade-in">
-                                <div class="audit-log-header">
-                                    <span class="audit-log-time">${entry.time_ago}</span>
-                                    <span class="audit-log-type">${entry.type}</span>
-                                </div>
-                                <div class="audit-log-version-row">
-                                    <span class="audit-log-label">From:</span>
-                                    <span class="audit-log-version">${entry.version_from}</span>
-                                </div>
-                                <div class="audit-log-version-row">
-                                    <span class="audit-log-label">To:</span>
-                                    <span class="audit-log-version">${entry.version_to}</span>
-                                </div>
-                            </div>
-                        `;
+                        const newEntryHtml = $.fn.zato.in_app_updates.renderAuditLogEntry(response.entry, 'fade-in');
                         
                         const auditLogList = $('.audit-log-list');
                         if (auditLogList.length) {
@@ -491,6 +475,26 @@ $.fn.zato.in_app_updates.updateProgress = function(step, status, message, status
     text.html(displayMessage);
 };
 
+$.fn.zato.in_app_updates.renderAuditLogEntry = function(entry, extraClass) {
+    const classAttr = extraClass ? `class="audit-log-entry ${extraClass}"` : 'class="audit-log-entry"';
+    return `
+        <div ${classAttr}>
+            <div class="audit-log-header">
+                <span class="audit-log-time">${entry.time_ago}</span>
+                <span class="audit-log-type">${entry.type}</span>
+            </div>
+            <div class="audit-log-version-row">
+                <span class="audit-log-label">From:</span>
+                <span class="audit-log-version">${entry.version_from}</span>
+            </div>
+            <div class="audit-log-version-row">
+                <span class="audit-log-label">To:</span>
+                <span class="audit-log-version">${entry.version_to}</span>
+            </div>
+        </div>
+    `;
+};
+
 $.fn.zato.in_app_updates.startAuditLogRefresh = function() {
     const refreshAuditLog = function() {
         $.ajax({
@@ -502,22 +506,7 @@ $.fn.zato.in_app_updates.startAuditLogRefresh = function() {
                     if (auditLogList.length) {
                         let entriesHtml = '';
                         for (const entry of response.entries) {
-                            entriesHtml += `
-                                <div class="audit-log-entry">
-                                    <div class="audit-log-header">
-                                        <span class="audit-log-time">${entry.time_ago}</span>
-                                        <span class="audit-log-type">${entry.type}</span>
-                                    </div>
-                                    <div class="audit-log-version-row">
-                                        <span class="audit-log-label">From:</span>
-                                        <span class="audit-log-version">${entry.version_from}</span>
-                                    </div>
-                                    <div class="audit-log-version-row">
-                                        <span class="audit-log-label">To:</span>
-                                        <span class="audit-log-version">${entry.version_to}</span>
-                                    </div>
-                                </div>
-                            `;
+                            entriesHtml += $.fn.zato.in_app_updates.renderAuditLogEntry(entry);
                         }
                         auditLogList.html(entriesHtml);
                     }
