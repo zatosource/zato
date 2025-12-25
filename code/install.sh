@@ -5,7 +5,11 @@ set -o pipefail
 shopt -s compat31
 
 # Default python binary
-PY_BINARY="${PY_BINARY:-python3}"
+if [ "$(uname -s)" = "Darwin" ]; then
+    PY_BINARY="${PY_BINARY:-python3.12}"
+else
+    PY_BINARY="${PY_BINARY:-python3}"
+fi
 INSTALL_PYTHON="y"
 
 # Taken from https://stackoverflow.com/a/14203146
