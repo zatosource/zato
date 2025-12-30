@@ -434,8 +434,11 @@
     font-size: 14px;
     color: var(--text-muted);
     margin: 0;
-    line-height: 1.4;
+    overflow-wrap: break-word;
     font-family: monospace;
+    white-space: pre-wrap;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 .progress-text .progress-count {
