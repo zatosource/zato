@@ -188,24 +188,22 @@ def check_latest_version(req):
 
 @method_allowed('GET')
 def download_logs(req):
-    lorem_ipsum = """Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."""
-
-    response = HttpResponse(lorem_ipsum, content_type='text/plain')
-    response['Content-Disposition'] = 'attachment; filename="update.log"'
-    return response
+    import os
+    from django.http import FileResponse, HttpResponse
+    
+    base_dir = os.path.expanduser('~/env/qs-1')
+    update_log_path = os.path.join(base_dir, 'server1', 'logs', 'update.log')
+    
+    if not os.path.exists(update_log_path):
+        return HttpResponse('Update log file not found', status=404)
+    
+    try:
+        response = FileResponse(open(update_log_path, 'rb'), content_type='text/plain')
+        response['Content-Disposition'] = 'attachment; filename="update.log"'
+        return response
+    except Exception as e:
+        logger.error('download_logs: failed to read update.log: {}'.format(e))
+        return HttpResponse('Error reading update log: {}'.format(e), status=500)
 
 # ################################################################################################################################
 # ################################################################################################################################
