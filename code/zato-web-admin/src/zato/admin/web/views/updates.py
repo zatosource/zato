@@ -47,8 +47,8 @@ def json_response(data, success=True):
 @method_allowed('POST')
 def download_and_install(req):
     logger.info('download_and_install: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
-    result = updater.download_and_install(exclude_from_restart=['dashboard'])
-    return json_response(result, success=result['success'])
+    result = {'success': True, 'message': 'Update skipped for dev'}
+    return json_response(result, success=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,32 +63,65 @@ def restart_component(req, component_name, component_path, port=0):
 
 @method_allowed('POST')
 def restart_scheduler(req):
-    return restart_component(req, 'scheduler', updater.get_component_path('scheduler'), updater.get_component_port('scheduler'))
+    logger.info('restart_scheduler: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
+    result = {'success': True, 'message': 'Scheduler restart skipped for dev'}
+    return json_response(result, success=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_server(req):
-    return restart_component(req, 'server', updater.get_component_path('server'), updater.get_component_port('server'))
+    logger.info('restart_server: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
+    result = {'success': True, 'message': 'Server restart skipped for dev'}
+    return json_response(result, success=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_proxy(req):
-    return restart_component(req, 'proxy', updater.get_component_path('proxy'), updater.get_component_port('proxy'))
+    logger.info('restart_proxy: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
+    result = {'success': True, 'message': 'Proxy restart skipped for dev'}
+    return json_response(result, success=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_dashboard(req):
+    import subprocess
+    import threading
+    import os
+    
     logger.info('restart_dashboard: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
-    logger.info('restart_dashboard: cannot restart dashboard from within itself, returning success')
+    
+    def restart_after_delay():
+        import time
+        time.sleep(1)
+        logger.info('restart_dashboard: executing make restart-dashboard')
+        try:
+            makefile_dir = os.path.expanduser('~/projects/zatosource-zato/4.1')
+            logger.info('restart_dashboard: makefile_dir={}'.format(makefile_dir))
+            result = subprocess.run(
+                ['make', 'restart-dashboard'],
+                cwd=makefile_dir,
+                capture_output=True,
+                text=True
+            )
+            logger.info('restart_dashboard: returncode={}'.format(result.returncode))
+            logger.info('restart_dashboard: stdout={}'.format(result.stdout))
+            if result.stderr:
+                logger.error('restart_dashboard: stderr={}'.format(result.stderr))
+        except Exception as e:
+            logger.error('restart_dashboard: failed to execute make: {}'.format(e))
+    
+    thread = threading.Thread(target=restart_after_delay, daemon=True)
+    thread.start()
+    
     result = {
         'success': True,
-        'message': 'Dashboard restart skipped (cannot restart from within itself)'
+        'message': 'Dashboard restarting'
     }
     return json_response(result, success=True)
 
