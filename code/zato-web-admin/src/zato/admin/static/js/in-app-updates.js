@@ -480,8 +480,9 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
         if (currentStep >= totalSteps) {
             $.fn.zato.in_app_updates.updateProgress('install', 'completed', 'Installation complete');
 
-            $('#progress-install .upgrade-info').addClass('show');
-            const latestVersion = $('#latest-version').data('base-version');
+            const latestVersion = $('#latest-version').text();
+            const upgradeBadge = $('#progress-install .upgrade-info');
+            upgradeBadge.text('⭐ Updated to ' + latestVersion).addClass('show').css('visibility', 'visible');
             $('#current-version').text(latestVersion);
             button.prop('disabled', false);
 
@@ -502,6 +503,7 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                 type: 'GET',
                 success: function(response) {
                     if (response.success && response.entry) {
+                        response.entry.time_ago = 'A moment ago';
                         const newEntryHtml = $.fn.zato.in_app_updates.renderAuditLogEntry(response.entry, 'fade-in');
                         
                         const auditLogList = $('.audit-log-list');
