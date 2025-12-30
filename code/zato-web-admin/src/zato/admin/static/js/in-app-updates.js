@@ -185,7 +185,11 @@ $.fn.zato.in_app_updates.copyToClipboard = function(text, event) {
 $.fn.zato.in_app_updates.handleCopyIcon = function(e) {
     e.stopPropagation();
     const targetId = $(this).data('copy');
-    const text = $('#' + targetId).text();
+    const targetElement = $('#' + targetId);
+    
+    const fullError = targetElement.closest('#progress-download').data('full-error');
+    const text = fullError || targetElement.text();
+    
     $.fn.zato.in_app_updates.copyToClipboard(text, e);
 };
 
@@ -345,14 +349,37 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
             $.fn.zato.in_app_updates.runRestartSteps(button);
         },
         error: function(xhr) {
+            console.error('Update error, status:', xhr.status);
+            console.error('Response text:', xhr.responseText);
+            
             let errorMsg = 'Download and install failed';
+            let fullError = errorMsg;
             try {
                 const response = JSON.parse(xhr.responseText);
+                console.error('Parsed response:', JSON.stringify(response, null, 2));
+                
                 errorMsg = response.error || errorMsg;
+                fullError = errorMsg;
+                
+                if (response.stdout) {
+                    fullError += '\n\nStdout:\n' + response.stdout;
+                }
+                if (response.stderr) {
+                    fullError += '\n\nStderr:\n' + response.stderr;
+                }
+                if (response.restart_results) {
+                    fullError += '\n\nRestart results:\n' + JSON.stringify(response.restart_results, null, 2);
+                }
             } catch(e) {
+                console.error('Failed to parse response:', JSON.stringify(e));
                 errorMsg = xhr.responseText || errorMsg;
+                fullError = errorMsg;
             }
 
+            console.error('Final error message:', errorMsg);
+            console.error('Full error:', fullError);
+            
+            $('#progress-download').data('full-error', fullError);
             $.fn.zato.in_app_updates.updateProgress('download', 'error', errorMsg);
             button.prop('disabled', false);
         }
