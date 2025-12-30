@@ -285,7 +285,7 @@ $.fn.zato.in_app_updates.loadSchedule = function() {
 
 $.fn.zato.in_app_updates.displayTimezone = function() {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    $('#timezone-display').text('(' + timezone + ' - ' + timezone + ')');
+    $('#timezone-display').text('(' + timezone + ')');
 };
 
 $.fn.zato.in_app_updates.handleSaveSchedule = function() {
