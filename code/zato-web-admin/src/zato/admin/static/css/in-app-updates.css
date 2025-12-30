@@ -518,6 +518,7 @@
     font-weight: 600;
     cursor: pointer;
     width: 148px;
+    flex-shrink: 0;
 }
 
 .config-save-button {
