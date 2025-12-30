@@ -452,8 +452,36 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                 'X-CSRFToken': $.cookie('csrftoken')
             },
             success: function(response) {
-                currentStep++;
-                runNextStep();
+                if (step.url === '/zato/updates/restart-dashboard') {
+                    let pollAttempts = 0;
+                    const maxPollAttempts = 60;
+                    
+                    const pollDashboard = function() {
+                        pollAttempts++;
+                        $.ajax({
+                            url: '/zato/updates/',
+                            type: 'GET',
+                            timeout: 2000,
+                            success: function() {
+                                currentStep++;
+                                runNextStep();
+                            },
+                            error: function() {
+                                if (pollAttempts < maxPollAttempts) {
+                                    setTimeout(pollDashboard, 1000);
+                                } else {
+                                    $.fn.zato.in_app_updates.updateProgress('install', 'error', progressText, 'Dashboard did not restart');
+                                    button.prop('disabled', false);
+                                }
+                            }
+                        });
+                    };
+                    
+                    setTimeout(pollDashboard, 2000);
+                } else {
+                    currentStep++;
+                    setTimeout(runNextStep, 500);
+                }
             },
             error: function(xhr) {
                 let errorMsg = step.text + ' failed';
