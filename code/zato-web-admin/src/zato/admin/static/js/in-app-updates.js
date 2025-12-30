@@ -280,6 +280,7 @@ $.fn.zato.in_app_updates.loadSchedule = function() {
 
 $.fn.zato.in_app_updates.handleSaveSchedule = function() {
     const scheduleData = {
+        enabled: true,
         frequency: $('#update-frequency').val(),
         day: $('#update-day').val(),
         week: $('#update-week').val(),

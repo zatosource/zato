@@ -115,3 +115,6 @@ grafana:
 
 update:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cli.py
+
+cron-update:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cron.py
