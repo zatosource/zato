@@ -417,6 +417,8 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
             const upToDateBadge = $('#up-to-date-badge');
             upToDateBadge.removeClass('no').addClass('yes').text('Yes');
 
+            localStorage.setItem('zato_updates_available', 'false');
+
             const headerBadge = window.parent.document.getElementById('update-status-badge');
             if (headerBadge) {
                 headerBadge.classList.remove('with-shine');

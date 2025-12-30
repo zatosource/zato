@@ -149,42 +149,80 @@
                 }
             });
 
+            // Check for updates on page load
+            console.log('[UPDATE-CHECK] Script loaded, about to call checkUpdateAvailability(true)');
+            checkUpdateAvailability(true);
+            console.log('[UPDATE-CHECK] checkUpdateAvailability(true) called');
+
+            // Check every hour (3600000 ms)
+            setInterval(function() {
+                checkUpdateAvailability(false);
+            }, 3600000);
+
         });
 
-        // Check for updates availability every hour
-        function checkUpdateAvailability() {
+        // Apply update status to badge
+        function applyUpdateStatus(updatesAvailable) {
+            console.log('[UPDATE-BADGE] applyUpdateStatus called with updatesAvailable:', updatesAvailable);
+            
+            const badge = $('#update-status-badge');
+            const text = $('#update-status-text');
+            
+            console.log('[UPDATE-BADGE] badge element:', badge.length > 0 ? 'found' : 'NOT FOUND');
+            console.log('[UPDATE-BADGE] text element:', text.length > 0 ? 'found' : 'NOT FOUND');
+            
+            if (updatesAvailable) {
+                console.log('[UPDATE-BADGE] Setting to "Updates available" with shine');
+                text.text('⭐ Updates available');
+                badge.addClass('with-shine');
+            } else {
+                console.log('[UPDATE-BADGE] Setting to "Up to date" without shine');
+                text.text('Up to date');
+                badge.removeClass('with-shine');
+            }
+            
+            badge.addClass('loaded');
+            console.log('[UPDATE-BADGE] Added "loaded" class, badge should now be visible');
+            console.log('[UPDATE-BADGE] Final badge classes:', badge.attr('class'));
+            console.log('[UPDATE-BADGE] Final text content:', text.text());
+        }
+
+        // Check for updates availability
+        function checkUpdateAvailability(isInitialLoad) {
+            console.log('[UPDATE-CHECK] checkUpdateAvailability called, isInitialLoad:', isInitialLoad);
+            
+            const cached = localStorage.getItem('zato_updates_available');
+            console.log('[UPDATE-CHECK] localStorage value:', cached);
+            
+            if (isInitialLoad && cached !== null) {
+                console.log('[UPDATE-CHECK] Using cached value, skipping AJAX call');
+                const cachedBool = cached === 'true';
+                console.log('[UPDATE-CHECK] Cached boolean value:', cachedBool);
+                applyUpdateStatus(cachedBool);
+                return;
+            }
+            
+            console.log('[UPDATE-CHECK] Making AJAX call to check-availability endpoint');
+            
             $.ajax({
                 url: '/zato/updates/check-availability',
                 type: 'GET',
                 success: function(response) {
-                    const badge = $('#update-status-badge');
-                    const text = $('#update-status-text');
-                    
-                    if (response.updates_available) {
-                        text.text('⭐ Updates available');
-                        badge.addClass('with-shine');
-                    } else {
-                        text.text('Up to date');
-                        badge.removeClass('with-shine');
-                    }
-                    
-                    badge.addClass('loaded');
+                    console.log('[UPDATE-CHECK] AJAX success, response:', response);
+                    const updatesAvailable = response.updates_available;
+                    console.log('[UPDATE-CHECK] Updates available:', updatesAvailable);
+                    localStorage.setItem('zato_updates_available', updatesAvailable);
+                    console.log('[UPDATE-CHECK] Saved to localStorage');
+                    applyUpdateStatus(updatesAvailable);
                 },
-                error: function() {
-                    const badge = $('#update-status-badge');
-                    const text = $('#update-status-text');
-                    text.text('Up to date');
-                    badge.removeClass('with-shine');
-                    badge.addClass('loaded');
+                error: function(xhr, status, error) {
+                    console.log('[UPDATE-CHECK] AJAX error, xhr:', xhr, 'status:', status, 'error:', error);
+                    localStorage.setItem('zato_updates_available', 'false');
+                    console.log('[UPDATE-CHECK] Set localStorage to false due to error');
+                    applyUpdateStatus(false);
                 }
             });
         }
-
-        // Check on page load
-        checkUpdateAvailability();
-        
-        // Check every hour (3600000 ms)
-        setInterval(checkUpdateAvailability, 3600000);
 
     </script>
 
@@ -393,6 +431,7 @@
                         </ul>
                         <ul class="first-level right">
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/docs/3.2/index.html?v={{ zato_version|cut:"Zato " }}">Docs</a></li>
+                            <li class="first-level right"><a class="menu-link" href="https://zato.io/en/blog/">Blog</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://www.linkedin.com/company/zatosource/">LinkedIn</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/services/index.html">Support</a></li>
                         </ul>
