@@ -53,22 +53,9 @@ def download_and_install(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
-def restart_component(req, component_name):
+def restart_component(req, component_name, component_path, port=0):
     logger.info('restart_{}: called from client: {}'.format(component_name, req.META.get('REMOTE_ADDR')))
-    zato_binary = updater.find_file_in_parents(updater_config.zato_path)
-
-    if not zato_binary:
-        result = {
-            'success': False,
-            'error': f'{updater_config.zato_path} not found in parent directories'
-        }
-        return json_response(result, success=False)
-
-    result = updater.run_command(
-        command=[zato_binary, '--version'],
-        cwd=current_dir,
-        log_prefix=f'restart_{component_name}'
-    )
+    result = updater.restart_component(component_name, component_path, port)
     return json_response(result, success=result['success'])
 
 # ################################################################################################################################
@@ -76,28 +63,28 @@ def restart_component(req, component_name):
 
 @method_allowed('POST')
 def restart_scheduler(req):
-    return restart_component(req, 'scheduler')
+    return restart_component(req, 'scheduler', updater.get_component_path('scheduler'), updater.get_component_port('scheduler'))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_server(req):
-    return restart_component(req, 'server')
+    return restart_component(req, 'server', updater.get_component_path('server'), updater.get_component_port('server'))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_proxy(req):
-    return restart_component(req, 'proxy')
+    return restart_component(req, 'proxy', updater.get_component_path('proxy'), updater.get_component_port('proxy'))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_dashboard(req):
-    return restart_component(req, 'dashboard')
+    return restart_component(req, 'dashboard', updater.get_component_path('dashboard'), updater.get_component_port('dashboard'))
 
 # ################################################################################################################################
 # ################################################################################################################################
