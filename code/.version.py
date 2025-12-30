@@ -53,7 +53,7 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # Make sure to use -C to specify the git directory instead of navigating to it directly;
 # the latter may result in spurious pip errors.
 #
-git_command_date = ['git', 'log', '-1', '--pretty=%cd', '--date=format:%y.%m.%d.%H.%M']
+git_command_date = ['git', 'log', '-1', '--pretty=%cd', '--date=format:%Y%m%d.%H%M']
 git_command_revision = ['git', 'rev-parse', '--short', 'HEAD']
 
 try:
