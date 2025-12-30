@@ -63,7 +63,7 @@ class Stop(ManageCommand):
         
         # Zato
         from zato.common.util.updates import setup_update_file_logger
-        setup_update_file_logger()
+        setup_update_file_logger(component_name='server-stop')
 
         self.signal('Server', 'SIGTERM', signal.SIGTERM)
 
@@ -76,7 +76,7 @@ class Stop(ManageCommand):
         
         # Zato
         from zato.common.util.updates import setup_update_file_logger
-        setup_update_file_logger()
+        setup_update_file_logger(component_name='dashboard-stop')
 
         self.signal('Web admin', 'SIGTERM', signal.SIGTERM)
 
@@ -89,7 +89,7 @@ class Stop(ManageCommand):
         
         # Zato
         from zato.common.util.updates import setup_update_file_logger
-        setup_update_file_logger()
+        setup_update_file_logger(component_name='scheduler-stop')
 
         self.signal('Scheduler', 'SIGTERM', signal.SIGTERM)
 
