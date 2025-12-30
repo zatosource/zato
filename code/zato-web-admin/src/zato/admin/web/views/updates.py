@@ -47,7 +47,7 @@ def json_response(data, success=True):
 @method_allowed('POST')
 def download_and_install(req):
     logger.info('download_and_install: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
-    result = updater.download_and_install()
+    result = updater.download_and_install(exclude_from_restart=['dashboard'])
     return json_response(result, success=result['success'])
 
 # ################################################################################################################################
