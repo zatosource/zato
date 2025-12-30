@@ -477,7 +477,8 @@ Examples:
 
     def _on_scheduler(self, *ignored:'any_') -> 'None':
         env_vars = {
-            'Zato_Component_Dir': self.component_dir
+            'Zato_Component_Dir': self.component_dir,
+            'ZATO_SCHEDULER_BASE_DIR': self.component_dir
         }
         self.run_check_config()
         _ = self.check_pidfile()
