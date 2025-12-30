@@ -47,8 +47,8 @@ def json_response(data, success=True):
 @method_allowed('POST')
 def download_and_install(req):
     logger.info('download_and_install: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
-    result = {'success': True, 'message': 'Update skipped for dev'}
-    return json_response(result, success=True)
+    result = updater.download_and_install(exclude_from_restart=['dashboard'])
+    return json_response(result, success=result['success'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,27 +63,21 @@ def restart_component(req, component_name, component_path, port=0):
 
 @method_allowed('POST')
 def restart_scheduler(req):
-    logger.info('restart_scheduler: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
-    result = {'success': True, 'message': 'Scheduler restart skipped for dev'}
-    return json_response(result, success=True)
+    return restart_component(req, 'scheduler', updater.get_component_path('scheduler'), updater.get_component_port('scheduler'))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_server(req):
-    logger.info('restart_server: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
-    result = {'success': True, 'message': 'Server restart skipped for dev'}
-    return json_response(result, success=True)
+    return restart_component(req, 'server', updater.get_component_path('server'), updater.get_component_port('server'))
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def restart_proxy(req):
-    logger.info('restart_proxy: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
-    result = {'success': True, 'message': 'Proxy restart skipped for dev'}
-    return json_response(result, success=True)
+    return restart_component(req, 'proxy', updater.get_component_path('proxy'), updater.get_component_port('proxy'))
 
 # ################################################################################################################################
 # ################################################################################################################################
