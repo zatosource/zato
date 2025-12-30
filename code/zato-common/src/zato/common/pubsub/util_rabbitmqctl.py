@@ -29,9 +29,9 @@ logger = getLogger(__name__)
 # Configure logging format to match Zato format
 def setup_logging():
     formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:0 - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S,%f'
+        '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:0 - %(message)s'
     )
+    formatter.default_msec_format = '%s.%03d'
 
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
