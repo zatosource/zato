@@ -604,13 +604,13 @@ class Updater:
 
         try:
             dt = datetime.fromisoformat(commit_date.replace('Z', '+00:00'))
-            year = str(dt.year % 100).zfill(2)
+            year = str(dt.year).zfill(4)
             month = str(dt.month).zfill(2)
             day = str(dt.day).zfill(2)
             hour = str(dt.hour).zfill(2)
             minute = str(dt.minute).zfill(2)
 
-            version = f'4.1.{year}.{month}.{day}.{hour}.{minute}.{commit_sha}'
+            version = f'4.1.{year}{month}{day}.{hour}{minute}.{commit_sha}'
             return {
                 'success': True,
                 'version': version
