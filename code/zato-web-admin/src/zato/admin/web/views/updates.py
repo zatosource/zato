@@ -84,7 +84,13 @@ def restart_proxy(req):
 
 @method_allowed('POST')
 def restart_dashboard(req):
-    return restart_component(req, 'dashboard', updater.get_component_path('dashboard'), updater.get_component_port('dashboard'))
+    logger.info('restart_dashboard: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
+    logger.info('restart_dashboard: cannot restart dashboard from within itself, returning success')
+    result = {
+        'success': True,
+        'message': 'Dashboard restart skipped (cannot restart from within itself)'
+    }
+    return json_response(result, success=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
