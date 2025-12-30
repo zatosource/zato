@@ -167,12 +167,15 @@
                         text.text('Up to date');
                         badge.removeClass('with-shine');
                     }
+                    
+                    badge.addClass('loaded');
                 },
                 error: function() {
                     const badge = $('#update-status-badge');
                     const text = $('#update-status-text');
                     text.text('Up to date');
                     badge.removeClass('with-shine');
+                    badge.addClass('loaded');
                 }
             });
         }
@@ -194,7 +197,7 @@
             {% if user.is_authenticated %}
                 <span id="logout" style="padding-top:10px">
                     <a class="status-badge header-badge" href="{% url 'in-app-updates' %}" id="update-status-badge">
-                        <span id="update-status-text">Up to date</span>
+                        <span id="update-status-text"></span>
                     </a>
                     <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
                     <a class="top"  href="{% url "logout" %}">Log out ({{ user.username }})</a>

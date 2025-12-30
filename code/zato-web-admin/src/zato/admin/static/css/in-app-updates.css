@@ -254,6 +254,11 @@
     text-decoration: none !important;
     vertical-align: baseline;
     transition: color 0.3s ease, background 0.3s ease;
+    visibility: hidden;
+}
+
+.status-badge.loaded {
+    visibility: visible;
 }
 
 .status-badge::before {
