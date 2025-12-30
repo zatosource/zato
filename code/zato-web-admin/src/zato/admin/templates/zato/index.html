@@ -151,6 +151,38 @@
 
         });
 
+        // Check for updates availability every hour
+        function checkUpdateAvailability() {
+            $.ajax({
+                url: '/zato/updates/check-availability',
+                type: 'GET',
+                success: function(response) {
+                    const badge = $('#update-status-badge');
+                    const text = $('#update-status-text');
+                    
+                    if (response.updates_available) {
+                        text.text('⭐ Updates available');
+                        badge.addClass('with-shine');
+                    } else {
+                        text.text('Up to date');
+                        badge.removeClass('with-shine');
+                    }
+                },
+                error: function() {
+                    const badge = $('#update-status-badge');
+                    const text = $('#update-status-text');
+                    text.text('Up to date');
+                    badge.removeClass('with-shine');
+                }
+            });
+        }
+
+        // Check on page load
+        checkUpdateAvailability();
+        
+        // Check every hour (3600000 ms)
+        setInterval(checkUpdateAvailability, 3600000);
+
     </script>
 
 {% endblock %}
@@ -161,8 +193,8 @@
             <div id="console-header">&nbsp;<a href="https://zato.io/{% if user.is_authenticated %}?v={{ zato_version|cut:"Zato " }} {% endif %}" id="logo-link"><img src="/static/gfx/logo.svg" alt="Zato logo" style="padding-top:3px;padding-bottom:3px;width:60px;margin-left:-0.25rem"/></a>
             {% if user.is_authenticated %}
                 <span id="logout" style="padding-top:10px">
-                    <a class="status-badge header-badge with-shine" href="{% url 'in-app-updates' %}" id="update-status-badge">
-                        ⭐ Updates available
+                    <a class="status-badge header-badge" href="{% url 'in-app-updates' %}" id="update-status-badge">
+                        <span id="update-status-text">Up to date</span>
                     </a>
                     <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
                     <a class="top"  href="{% url "logout" %}">Log out ({{ user.username }})</a>

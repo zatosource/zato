@@ -44,6 +44,31 @@ def json_response(data, success=True):
 # ################################################################################################################################
 # ################################################################################################################################
 
+@method_allowed('GET')
+def check_availability(req):
+    try:
+        result = updater.check_latest_version()
+        
+        if not result['success']:
+            return json_response({'updates_available': False})
+        
+        current_version = updater.get_zato_version()
+        latest_version = result.get('version', '')
+        
+        updates_available = current_version != latest_version
+        
+        return json_response({
+            'updates_available': updates_available,
+            'current_version': current_version,
+            'latest_version': latest_version
+        })
+    except Exception as e:
+        logger.error('check_availability: exception: {}'.format(e))
+        return json_response({'updates_available': False})
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('POST')
 def download_and_install(req):
     logger.info('download_and_install: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
