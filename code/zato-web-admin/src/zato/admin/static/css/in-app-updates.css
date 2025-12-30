@@ -105,13 +105,12 @@
 }
 
 .update-button:disabled {
-    opacity: 0.6;
+    color: #ccc !important;
     cursor: not-allowed;
 }
 
 .update-button:disabled:hover {
-    background: var(--primary-dark);
-    color: #fff;
+    color: #ccc !important;
 }
 
 .check-button {
