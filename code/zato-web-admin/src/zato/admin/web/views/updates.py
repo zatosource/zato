@@ -93,6 +93,15 @@ def restart_dashboard(req):
     def restart_after_delay():
         import time
         time.sleep(1)
+        
+        logger.info('')
+        logger.info('#' * 80)
+        logger.info('##' + ' ' * 76 + '##')
+        logger.info('##' + ' ' * 21 + 'UPDATE COMPLETED' + ' ' * 39 + '##')
+        logger.info('##' + ' ' * 76 + '##')
+        logger.info('#' * 80)
+        logger.info('')
+        
         logger.info('restart_dashboard: executing make restart-dashboard')
         try:
             makefile_dir = os.path.expanduser('~/projects/zatosource-zato/4.1')
