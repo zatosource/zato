@@ -112,3 +112,6 @@ grafana:
 		cfg:default.paths.logs=/tmp/grafana-logs \
 		cfg:default.paths.plugins=/tmp/grafana-plugins \
 		cfg:default.paths.provisioning=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_
+
+update:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cli.py
