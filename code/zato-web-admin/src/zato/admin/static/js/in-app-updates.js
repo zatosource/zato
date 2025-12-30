@@ -141,8 +141,11 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                     }, 1500);
                 }
 
+                const upToDateBadge = $('#up-to-date-badge');
                 
                 if (response.version !== currentVersion) {
+                    upToDateBadge.removeClass('yes').addClass('no').text('No');
+                    
                     localStorage.setItem('zato_updates_available', 'true');
                     
                     const headerBadge = window.parent.document.getElementById('update-status-badge');
@@ -161,6 +164,8 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                         latestVersionEl.removeClass('pulsate');
                     }, 1600);
                 } else {
+                    upToDateBadge.removeClass('no').addClass('yes').text('Yes');
+                    
                     localStorage.setItem('zato_updates_available', 'false');
                     
                     const headerBadge = window.parent.document.getElementById('update-status-badge');
