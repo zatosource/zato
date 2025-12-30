@@ -14,6 +14,7 @@ $.fn.zato.in_app_updates.init = function() {
     $('#update-frequency').on('change', $.fn.zato.in_app_updates.handleFrequencyChange);
     $('#config-save-button').on('click', $.fn.zato.in_app_updates.handleSaveSchedule);
 
+    $.fn.zato.in_app_updates.displayTimezone();
     $.fn.zato.in_app_updates.loadSchedule();
     $.fn.zato.in_app_updates.fetchLatestVersion();
     $.fn.zato.in_app_updates.startAuditLogRefresh();
@@ -105,7 +106,7 @@ $.fn.zato.in_app_updates.init = function() {
         $.fn.zato.in_app_updates.driverObj.drive(0);
     });
 
-    $('.config-label').on('click', function() {
+    $('.config-item:first .config-label').on('click', function() {
         const checkbox = $('#auto-restart');
         checkbox.prop('checked', !checkbox.prop('checked'));
     });
@@ -282,13 +283,20 @@ $.fn.zato.in_app_updates.loadSchedule = function() {
     });
 };
 
+$.fn.zato.in_app_updates.displayTimezone = function() {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    $('#timezone-display').text('(' + timezone + ' - ' + timezone + ')');
+};
+
 $.fn.zato.in_app_updates.handleSaveSchedule = function() {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const scheduleData = {
         enabled: true,
         frequency: $('#update-frequency').val(),
         day: $('#update-day').val(),
         week: $('#update-week').val(),
-        time: $('#update-time').val()
+        time: $('#update-time').val(),
+        timezone: timezone
     };
 
     $('.config-save-spinner').css('display', 'block');
