@@ -518,6 +518,8 @@
 .schedule-select {
     font-size: 12px;
     padding: 4px 8px;
+    padding-top: 3px;
+    padding-left: 6px;
     border: 1px solid var(--primary-dark);
     background: #fff;
     color: var(--primary-dark);
