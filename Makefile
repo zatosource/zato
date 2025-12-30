@@ -119,10 +119,13 @@ update:
 cron-update:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cron.py
 
-restart-dashboard:
+stop-dashboard:
 	-$(CURDIR)/code/bin/zato stop $(HOME)/env/qs-1/web-admin
 	@if [ -f $(HOME)/env/qs-1/web-admin/pidfile ]; then \
 		kill -9 $$(cat $(HOME)/env/qs-1/web-admin/pidfile) 2>/dev/null || true; \
 		rm -f $(HOME)/env/qs-1/web-admin/pidfile; \
 	fi
+
+restart-dashboard:
+	$(MAKE) stop-dashboard
 	$(CURDIR)/code/bin/zato start $(HOME)/env/qs-1/web-admin
