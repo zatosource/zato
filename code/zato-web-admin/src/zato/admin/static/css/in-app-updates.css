@@ -245,7 +245,7 @@
     display: inline;
     padding: 3px;
     background: rgb(1, 40, 69);
-    color: #ffd700 !important;
+    color: #fff !important;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 3px;
     font-size: 12.32px;
@@ -253,6 +253,7 @@
     font-family: arial, helvetica, clean, sans-serif;
     text-decoration: none !important;
     vertical-align: baseline;
+    transition: color 0.3s ease, background 0.3s ease;
 }
 
 .status-badge::before {
@@ -260,6 +261,7 @@
 }
 
 .status-badge.with-shine {
+    color: #ffd700 !important;
     background:
         linear-gradient(
             90deg,
