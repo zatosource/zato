@@ -508,6 +508,10 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                         
                         const auditLogList = $('.audit-log-list');
                         if (auditLogList.length) {
+                            const emptyMessage = auditLogList.find('.audit-log-empty');
+                            if (emptyMessage.length) {
+                                emptyMessage.remove();
+                            }
                             auditLogList.prepend(newEntryHtml);
                             const entries = auditLogList.children('.audit-log-entry');
                             if (entries.length > 3) {
