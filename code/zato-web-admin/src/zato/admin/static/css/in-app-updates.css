@@ -520,6 +520,7 @@
     padding: 4px 8px;
     padding-top: 3px;
     padding-left: 6px;
+    margin-left: 10px;
     border: 1px solid var(--primary-dark);
     background: #fff;
     color: var(--primary-dark);
