@@ -925,12 +925,7 @@ class Updater:
                     if pid_str:
                         pid = int(pid_str)
                         logger.info(f'kill_process_by_port: killing process {pid} using port {port}')
-                        try:
-                            os.kill(pid, signal.SIGKILL)
-                        except ProcessLookupError:
-                            pass
-                        except Exception:
-                            logger.error(f'kill_process_by_port: failed to kill pid {pid}: {format_exc()}')
+                        subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
                 return True
             else:
                 logger.info(f'kill_process_by_port: no process found using port {port}')
@@ -959,13 +954,8 @@ class Updater:
                     parts = line.split()
                     if len(parts) > 1:
                         pid = int(parts[1])
-                        try:
-                            logger.info('kill_orphaned_processes: killing orphaned {} process {} ({})'.format(component_name, pid, process_name))
-                            os.kill(pid, signal.SIGKILL)
-                        except ProcessLookupError:
-                            pass
-                        except Exception:
-                            logger.error('kill_orphaned_processes: failed to kill pid {}: {}'.format(pid, format_exc()))
+                        logger.info('kill_orphaned_processes: killing orphaned {} process {} ({})'.format(component_name, pid, process_name))
+                        subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
         except Exception:
             logger.error('kill_orphaned_processes: exception: {}'.format(format_exc()))
 
@@ -997,13 +987,7 @@ class Updater:
             pid = int(pid_str)
             logger.info('stop_component: sending SIGKILL to {} (pid {})'.format(component_name, pid))
 
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                logger.info('stop_component: process {} not found, removing stale pidfile'.format(pid))
-                os.remove(pidfile)
-                self.kill_orphaned_processes(component_name)
-                return {'success': True, 'message': 'Removed stale pidfile, orphaned processes cleaned'}
+            subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
 
             time.sleep(1)
 
