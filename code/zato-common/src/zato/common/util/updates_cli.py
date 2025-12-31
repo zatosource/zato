@@ -10,6 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import sys
 from logging import basicConfig, getLogger, INFO
 
+# requests
+import requests
+
 # Zato
 from zato.common.util.updates import Updater, UpdaterConfig
 
@@ -40,6 +43,14 @@ def main() -> 'int':
     if not restart_result['success']:
         logger.error('Component restart failed: {}'.format(restart_result.get('error', 'Unknown error')))
         return 1
+    
+    try:
+        version_from = result.get('version_from', '')
+        version_to = result.get('version_to', '')
+        url = f'https://zato.io/support/updates/info-4.1.json?from={version_from}&to={version_to}&mode=cli&schedule=cli'
+        requests.get(url, timeout=2)
+    except Exception:
+        pass
     
     return 0
 
