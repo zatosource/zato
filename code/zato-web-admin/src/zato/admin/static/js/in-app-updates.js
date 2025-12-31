@@ -84,7 +84,6 @@ $.fn.zato.in_app_updates.init = function() {
     });
     console.log('Driver instance created');
 
-
     $('#version-info-help').on('click', function() {
         console.log('Version info help clicked, setting version steps:', JSON.stringify($.fn.zato.in_app_updates.versionSteps.map(s => s.popover ? s.popover.title : 'no title'), null, 2));
         $.fn.zato.in_app_updates.driverObj.setSteps($.fn.zato.in_app_updates.versionSteps);
