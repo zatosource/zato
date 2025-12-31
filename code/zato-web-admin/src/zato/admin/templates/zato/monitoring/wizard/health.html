@@ -1,0 +1,44 @@
+{% extends "zato/index.html" %}
+{% load static %}
+
+{% block html_title %}Health monitoring wizard{% endblock %}
+
+{% block "extra_css" %}
+<script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+<script type="text/javascript" src="/static/tippy/tippy.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
+{% endblock %}
+
+{% block "extra_js" %}
+<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
+<script src="/static/js/common.js?nocache={{ build_id }}" type="text/javascript" charset="utf-8" nonce="{{ csp_nonce }}"></script>
+<script src="/static/js/monitoring.js?nocache={{ build_id }}" type="text/javascript" charset="utf-8" nonce="{{ csp_nonce }}"></script>
+<script type="text/javascript" nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        // Generate wizard structure dynamically for health monitoring
+        $.fn.zato.monitoring.wizard.generateHTML('health');
+        $.fn.zato.monitoring.wizard.init();
+    });
+</script>
+{% endblock %}
+
+{% block "content" %}
+
+<div class="wizard-container">
+    <div class="wizard-panel">
+        <div class="wizard-layout">
+            <div class="stepper" id="stepper-container">
+            </div>
+
+            <div class="wizard-content">
+                <div id="wizard-steps-container"></div>
+                <div class="wizard-buttons">
+                    <button id="prev-button" class="wizard-button">Previous</button>
+                    <button id="next-button" class="wizard-button">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,6 +1,6 @@
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 5s
+  evaluation_interval: 5s
 
 rule_files:
 
@@ -15,20 +15,21 @@ scrape_configs:
 
   - job_name: 'zato-apps'
     metrics_path: '/metrics'
-    scrape_interval: 30s
+    scrape_interval: 5s
     static_configs:
       - targets: ['localhost:17010', 'localhost:17011']
-    scrape_timeout: 10s
+    scrape_timeout: 4s
 
   - job_name: 'zato-server'
     metrics_path: '/metrics'
-    scrape_interval: 30s
+    scrape_interval: 5s
     static_configs:
       - targets: ['localhost:17012']
-    scrape_timeout: 10s
+    scrape_timeout: 4s
 
   - job_name: 'test-server'
     metrics_path: '/metrics'
-    scrape_interval: 15s
+    scrape_interval: 5s
     static_configs:
       - targets: ['localhost:8080']
+    scrape_timeout: 4s
