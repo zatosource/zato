@@ -553,12 +553,14 @@
     justify-content: flex-end;
     gap: 8px;
     margin-top: -4px;
+    height: 40px;
 }
 
 .config-save-spinner {
     display: none;
     width: 26px;
     height: 26px;
+    margin-top: 1rem;
     animation: spin 0.5s linear infinite;
     filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
 }
@@ -572,6 +574,7 @@
     color: #067f39;
     font-size: 12px;
     font-weight: 600;
+    margin-top: 1rem;
 }
 
 .config-saved-message.active {
