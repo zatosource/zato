@@ -84,6 +84,7 @@ $.fn.zato.in_app_updates.init = function() {
     });
     console.log('Driver instance created');
 
+
     $('#version-info-help').on('click', function() {
         console.log('Version info help clicked, setting version steps:', JSON.stringify($.fn.zato.in_app_updates.versionSteps.map(s => s.popover ? s.popover.title : 'no title'), null, 2));
         $.fn.zato.in_app_updates.driverObj.setSteps($.fn.zato.in_app_updates.versionSteps);
@@ -113,11 +114,11 @@ $.fn.zato.in_app_updates.init = function() {
 
 $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
     console.log('[FETCH-VERSION] fetchLatestVersion called, showUpdatesFound:', showUpdatesFound);
-    
+
     const latestVersionEl = $('#latest-version');
     const copyIcon = latestVersionEl.siblings('.copy-icon');
     const currentVersion = $('#current-version').text();
-    
+
     console.log('[FETCH-VERSION] currentVersion:', currentVersion);
 
     latestVersionEl.html('<img src="/static/gfx/spinner.svg" class="version-spinner">Checking...');
@@ -128,13 +129,13 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
         type: 'GET',
         success: function(response) {
             console.log('[FETCH-VERSION] AJAX success, response:', response);
-            
+
             if (response.success) {
                 console.log('[FETCH-VERSION] response.version:', response.version);
-                
+
                 latestVersionEl.text(response.version);
                 copyIcon.removeClass('hidden');
-                
+
                 $('.upgrade-info').text('⭐ Updated to ' + response.version);
 
                 if (showUpdatesFound) {
@@ -149,38 +150,38 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                 }
 
                 const upToDateBadge = $('#up-to-date-badge');
-                
+
                 console.log('[FETCH-VERSION] Comparing versions:', response.version, '!==', currentVersion);
-                
+
                 if (response.version !== currentVersion) {
                     console.log('[FETCH-VERSION] Versions differ - updates available');
-                    
+
                     upToDateBadge.removeClass('yes').addClass('no').text('No');
                     console.log('[FETCH-VERSION] Set up-to-date badge to No');
-                    
+
                     localStorage.setItem('zato_updates_available', 'true');
                     console.log('[FETCH-VERSION] Set localStorage to true');
-                    
+
                     const headerBadge = document.getElementById('update-status-badge');
                     const headerText = document.getElementById('update-status-text');
-                    
+
                     console.log('[FETCH-VERSION] headerBadge found:', !!headerBadge);
                     console.log('[FETCH-VERSION] headerText found:', !!headerText);
-                    
+
                     if (headerBadge && headerText) {
                         console.log('[FETCH-VERSION] Before update - badge classes:', headerBadge.className);
                         console.log('[FETCH-VERSION] Before update - text content:', headerText.textContent);
-                        
+
                         headerText.textContent = '⭐ Updates available';
                         headerBadge.classList.remove('white');
                         headerBadge.classList.add('with-shine', 'loaded');
-                        
+
                         console.log('[FETCH-VERSION] After update - badge classes:', headerBadge.className);
                         console.log('[FETCH-VERSION] After update - text content:', headerText.textContent);
                     } else {
                         console.log('[FETCH-VERSION] ERROR: Could not find header badge elements');
                     }
-                    
+
                     setTimeout(() => {
                         latestVersionEl.addClass('pulsate');
                     }, 50);
@@ -190,27 +191,27 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                     }, 1600);
                 } else {
                     console.log('[FETCH-VERSION] Versions match - up to date');
-                    
+
                     upToDateBadge.removeClass('no').addClass('yes').text('Yes');
                     console.log('[FETCH-VERSION] Set up-to-date badge to Yes');
-                    
+
                     localStorage.setItem('zato_updates_available', 'false');
                     console.log('[FETCH-VERSION] Set localStorage to false');
-                    
+
                     const headerBadge = document.getElementById('update-status-badge');
                     const headerText = document.getElementById('update-status-text');
-                    
+
                     console.log('[FETCH-VERSION] headerBadge found:', !!headerBadge);
                     console.log('[FETCH-VERSION] headerText found:', !!headerText);
-                    
+
                     if (headerBadge && headerText) {
                         console.log('[FETCH-VERSION] Before update - badge classes:', headerBadge.className);
                         console.log('[FETCH-VERSION] Before update - text content:', headerText.textContent);
-                        
+
                         headerText.textContent = 'Up to date';
                         headerBadge.classList.remove('with-shine');
                         headerBadge.classList.add('loaded');
-                        
+
                         console.log('[FETCH-VERSION] After update - badge classes:', headerBadge.className);
                         console.log('[FETCH-VERSION] After update - text content:', headerText.textContent);
                     } else {
@@ -229,7 +230,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
 $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
     const upToDateBadge = $('#up-to-date-badge');
     upToDateBadge.removeClass('yes no').text('Checking...');
-    
+
     $.fn.zato.in_app_updates.fetchLatestVersion(false);
 };
 
@@ -257,10 +258,10 @@ $.fn.zato.in_app_updates.handleCopyIcon = function(e) {
     e.stopPropagation();
     const targetId = $(this).data('copy');
     const targetElement = $('#' + targetId);
-    
+
     const fullError = targetElement.closest('#progress-download').data('full-error');
     const text = fullError || targetElement.text();
-    
+
     $.fn.zato.in_app_updates.copyToClipboard(text, e);
 };
 
@@ -429,16 +430,16 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
         error: function(xhr) {
             console.error('Update error, status:', xhr.status);
             console.error('Response text:', xhr.responseText);
-            
+
             let errorMsg = 'Download and install failed';
             let fullError = errorMsg;
             try {
                 const response = JSON.parse(xhr.responseText);
                 console.error('Parsed response:', JSON.stringify(response, null, 2));
-                
+
                 errorMsg = response.error || errorMsg;
                 fullError = errorMsg;
-                
+
                 if (response.stdout) {
                     fullError += '\n\nStdout:\n' + response.stdout;
                 }
@@ -456,7 +457,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
 
             console.error('Final error message:', errorMsg);
             console.error('Full error:', fullError);
-            
+
             $('#progress-download').data('full-error', fullError);
             $.fn.zato.in_app_updates.updateProgress('download', 'error', errorMsg);
             button.prop('disabled', false);
@@ -504,7 +505,7 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                     if (response.success && response.entry) {
                         response.entry.time_ago = 'A moment ago';
                         const newEntryHtml = $.fn.zato.in_app_updates.renderAuditLogEntry(response.entry, 'fade-in');
-                        
+
                         const auditLogList = $('.audit-log-list');
                         if (auditLogList.length) {
                             const emptyMessage = auditLogList.find('.audit-log-empty');
@@ -541,7 +542,7 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                 if (step.url === '/zato/updates/restart-dashboard') {
                     let pollAttempts = 0;
                     const maxPollAttempts = 60;
-                    
+
                     const pollDashboard = function() {
                         pollAttempts++;
                         $.ajax({
@@ -562,7 +563,7 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                             }
                         });
                     };
-                    
+
                     setTimeout(pollDashboard, 2000);
                 } else {
                     currentStep++;
@@ -645,7 +646,7 @@ $.fn.zato.in_app_updates.initTimestampTooltips = function() {
         if (timestamp) {
             const date = new Date(timestamp);
             const formattedDate = date.toLocaleString();
-            
+
             tippy(elem, {
                 content: formattedDate,
                 allowHTML: false,
