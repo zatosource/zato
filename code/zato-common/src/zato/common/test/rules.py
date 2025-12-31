@@ -66,7 +66,7 @@ class RuleTestHelper:
             raise ValueError('No rules were loaded')
 
         # Log the loaded rules for debugging
-        logger.info(f'Loaded rules: {list(self.rules_manager._all_rules.keys())}')
+        logger.info(f'Loaded rules (rules.py): {list(self.rules_manager._all_rules.keys())}')
 
         # Cache rule conditions for quick lookup
         self.rule_conditions = {}

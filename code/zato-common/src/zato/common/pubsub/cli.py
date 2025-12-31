@@ -188,8 +188,24 @@ class GunicornApplication(BaseApplication):
         address_str = f'{host}:{port}'
         logger.info(f'Setting up PubSub REST server at {address_str}')
 
-
         self.original_app.init_broker_client()
+
+        # Create sentinel file to signal bindings are ready
+        startup_id = os.environ.get('Zato_Startup_ID')
+        logger.info(f'Checking for startup_id: {startup_id}')
+        if startup_id:
+            server_type = self.original_app.server_type
+            sentinel_file = f'/tmp/zato-startup-bindings-{server_type}-{startup_id}'
+            logger.info(f'Creating sentinel file: {sentinel_file}')
+            try:
+                with open(sentinel_file, 'w') as f:
+                    _ = f.write(f'{os.getpid()}\n')
+                logger.info(f'Created sentinel file: {sentinel_file}')
+            except Exception as e:
+                logger.error(f'Failed to create sentinel file {sentinel_file}: {e}')
+        else:
+            logger.warning('No Zato_Startup_ID found in environment')
+
         self.original_app.setup()
 
 # ################################################################################################################################
@@ -263,12 +279,12 @@ def start_server(args:'argparse.Namespace') -> 'OperationResult':
 
         # Pin process to specific CPU core
         available_cores = os.sched_getaffinity(0)
-        max_core = max(available_cores)
-
-        if args.publish:
-            os.sched_setaffinity(0, {max_core - 1})
-        else:
-            os.sched_setaffinity(0, {max_core})
+        if len(available_cores) > 1:
+            max_core = max(available_cores)
+            if args.publish:
+                os.sched_setaffinity(0, {max_core - 1})
+            else:
+                os.sched_setaffinity(0, {max_core})
 
         # Create server application based on mode
         if args.publish:

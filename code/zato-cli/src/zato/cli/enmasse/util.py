@@ -12,6 +12,7 @@ import os
 import uuid
 
 # Zato
+from zato.common.util.api import asbool
 from zato.common.util.sql import get_security_by_id
 
 # ################################################################################################################################
@@ -70,6 +71,9 @@ def security_needs_update(yaml_item:'anydict', db_def:'anydict', importer:'Enmas
     yaml_security = yaml_item.get('security')
     db_security_id = db_def.get('security_id')
 
+    logger.info('Checking security update: yaml_security=%s db_security_id=%s', yaml_security, db_security_id)
+    logger.info('Available sec_defs: %s', list(importer.sec_defs.keys()))
+
     # If security is not defined in YAML but exists in DB - update needed
     if yaml_security is None and db_security_id is not None:
         logger.info('Security removed in YAML but exists in DB')
@@ -87,9 +91,13 @@ def security_needs_update(yaml_item:'anydict', db_def:'anydict', importer:'Enmas
             return False
 
         sec_def = importer.sec_defs[yaml_security]
+        logger.info('Found sec_def: %s', sec_def)
+        logger.info('Comparing sec_def id %s with db_security_id %s', sec_def['id'], db_security_id)
         if sec_def['id'] != db_security_id:
-            logger.info('Security mismatch: YAML=%s DB_ID=%s', yaml_security, db_security_id)
+            logger.info('Security mismatch: YAML=%s (id=%s) DB_ID=%s', yaml_security, sec_def['id'], db_security_id)
             return True
+        else:
+            logger.info('Security matches: YAML=%s (id=%s) DB_ID=%s', yaml_security, sec_def['id'], db_security_id)
 
     return False
 
@@ -110,6 +118,12 @@ def get_value_from_environment(value:'any_') -> 'str':
     default = f'Missing_{env_key}_{uuid.uuid4().hex[:12]}'
 
     value = os.environ.get(env_key, default)
+
+    try:
+        value = asbool(value)
+    except Exception:
+        pass
+
     return value
 
 # ################################################################################################################################

@@ -144,6 +144,7 @@ class HOT_DEPLOY(Constants):
     CREATE_SERVICE = ValueConstant('')
     CREATE_STATIC = ValueConstant('')
     CREATE_USER_CONF = ValueConstant('')
+    UPDATE_ENMASSE = ValueConstant('')
     AFTER_DEPLOY = ValueConstant('')
 
 class SEARCH(Constants):

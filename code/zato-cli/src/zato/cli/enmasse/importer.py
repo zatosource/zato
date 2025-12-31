@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import sys
 
 # PyYAML
 import yaml
@@ -48,6 +49,26 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+for importer_module in ['zato.cli.enmasse.importers.security', 'zato.cli.enmasse.importers.channel_rest',
+                        'zato.cli.enmasse.importers.group', 'zato.cli.enmasse.importers.cache',
+                        'zato.cli.enmasse.importers.email_smtp', 'zato.cli.enmasse.importers.email_imap',
+                        'zato.cli.enmasse.importers.es', 'zato.cli.enmasse.importers.odoo',
+                        'zato.cli.enmasse.importers.scheduler', 'zato.cli.enmasse.importers.sql',
+                        'zato.cli.enmasse.importers.confluence', 'zato.cli.enmasse.importers.jira',
+                        'zato.cli.enmasse.importers.ldap', 'zato.cli.enmasse.importers.microsoft_365',
+                        'zato.cli.enmasse.importers.outgoing_rest', 'zato.cli.enmasse.importers.outgoing_soap',
+                        'zato.cli.enmasse.importers.pubsub_topic', 'zato.cli.enmasse.importers.pubsub_permission',
+                        'zato.cli.enmasse.importers.pubsub_subscription', 'zato.cli.enmasse.util']:
+    importer_logger = logging.getLogger(importer_module)
+    importer_logger.setLevel(logging.INFO)
+    importer_logger.addHandler(handler)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -259,10 +280,14 @@ class EnmasseYAMLImporter:
         if not security_list:
             return [], []
 
-        logger.info('Processing %d security definitions', len(security_list))
+        count = len(security_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} security {noun}')
         security_created, security_updated = self.security_importer.sync_security_definitions(security_list, session)
 
-        logger.info('Processed security definitions: created=%d updated=%d', len(security_created), len(security_updated))
+        created_count = len(security_created)
+        updated_count = len(security_updated)
+        logger.info(f'Processed security definitions: created={created_count} updated={updated_count}')
 
         return security_created, security_updated
 
@@ -274,7 +299,9 @@ class EnmasseYAMLImporter:
         if not group_list:
             return [], []
 
-        logger.info('Processing %d security groups', len(group_list))
+        count = len(group_list)
+        noun = 'group' if count == 1 else 'groups'
+        logger.info(f'Processing {count} security {noun}')
 
         # Process each group item
         for idx, item in enumerate(group_list):
@@ -297,9 +324,13 @@ class EnmasseYAMLImporter:
         if not channel_list:
             return [], []
 
-        logger.info('Processing %d REST channels', len(channel_list))
+        count = len(channel_list)
+        noun = 'channel' if count == 1 else 'channels'
+        logger.info(f'Processing {count} REST {noun}')
         channels_created, channels_updated = self.channel_importer.sync_channel_rest(channel_list, session)
-        logger.info('Processed REST channels: created=%d updated=%d', len(channels_created), len(channels_updated))
+        created_count = len(channels_created)
+        updated_count = len(channels_updated)
+        logger.info(f'Processed REST channels: created={created_count} updated={updated_count}')
 
         return channels_created, channels_updated
 
@@ -334,7 +365,9 @@ class EnmasseYAMLImporter:
         if not odoo_list:
             return [], []
 
-        logger.info('Processing %d Odoo connection definitions', len(odoo_list))
+        count = len(odoo_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Odoo connection {noun}')
 
         # Examine each Odoo item
         for idx, item in enumerate(odoo_list):
@@ -356,7 +389,9 @@ class EnmasseYAMLImporter:
         if not smtp_list:
             return [], []
 
-        logger.info('Processing %d SMTP connection definitions', len(smtp_list))
+        count = len(smtp_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} SMTP connection {noun}')
 
         # Examine each SMTP item
         for idx, item in enumerate(smtp_list):
@@ -378,7 +413,9 @@ class EnmasseYAMLImporter:
         if not imap_list:
             return [], []
 
-        logger.info('Processing %d IMAP connection definitions', len(imap_list))
+        count = len(imap_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} IMAP connection {noun}')
 
         # Examine each IMAP item
         for idx, item in enumerate(imap_list):
@@ -400,7 +437,9 @@ class EnmasseYAMLImporter:
         if not sql_list:
             return [], []
 
-        logger.info('Processing %d SQL connection pool definitions', len(sql_list))
+        count = len(sql_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} SQL connection pool {noun}')
 
         # Examine each SQL connection pool item
         for idx, item in enumerate(sql_list):
@@ -422,7 +461,9 @@ class EnmasseYAMLImporter:
         if not job_list:
             return [], []
 
-        logger.info('Processing %d scheduler job definitions', len(job_list))
+        count = len(job_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} scheduler job {noun}')
 
         # Examine each scheduler job item
         for idx, item in enumerate(job_list):
@@ -444,7 +485,9 @@ class EnmasseYAMLImporter:
         if not confluence_list:
             return [], []
 
-        logger.info('Processing %d Confluence connection definitions', len(confluence_list))
+        count = len(confluence_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Confluence connection {noun}')
 
         # Examine each Confluence connection item
         for idx, item in enumerate(confluence_list):
@@ -466,7 +509,9 @@ class EnmasseYAMLImporter:
         if not jira_list:
             return [], []
 
-        logger.info('Processing %d Jira connection definitions', len(jira_list))
+        count = len(jira_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Jira connection {noun}')
 
         # Examine each Jira connection item
         for idx, item in enumerate(jira_list):
@@ -488,7 +533,9 @@ class EnmasseYAMLImporter:
         if not ldap_list:
             return [], []
 
-        logger.info('Processing %d LDAP connection definitions', len(ldap_list))
+        count = len(ldap_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} LDAP connection {noun}')
 
         # Examine each LDAP connection item
         for idx, item in enumerate(ldap_list):
@@ -510,7 +557,9 @@ class EnmasseYAMLImporter:
         if not microsoft_365_list:
             return [], []
 
-        logger.info('Processing %d Microsoft 365 connection definitions', len(microsoft_365_list))
+        count = len(microsoft_365_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} Microsoft 365 connection {noun}')
 
         # Examine each Microsoft 365 connection item
         for idx, item in enumerate(microsoft_365_list):
@@ -532,7 +581,9 @@ class EnmasseYAMLImporter:
         if not es_list:
             return [], []
 
-        logger.info('Processing %d ElasticSearch connection definitions', len(es_list))
+        count = len(es_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} ElasticSearch connection {noun}')
 
         # Examine each ElasticSearch connection item
         for idx, item in enumerate(es_list):
@@ -554,7 +605,9 @@ class EnmasseYAMLImporter:
         if not topic_list:
             return [], []
 
-        logger.info('Processing %d pubsub topic definitions', len(topic_list))
+        count = len(topic_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} pubsub topic {noun}')
 
         # Examine each pubsub topic item
         for idx, item in enumerate(topic_list):
@@ -590,7 +643,9 @@ class EnmasseYAMLImporter:
         if not permission_list:
             return [], []
 
-        logger.info('Processing %d pubsub permission definitions', len(permission_list))
+        count = len(permission_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} pubsub permission {noun}')
 
         # Examine each pubsub permission item
         for idx, item in enumerate(permission_list):
@@ -612,7 +667,9 @@ class EnmasseYAMLImporter:
         if not subscription_list:
             return [], []
 
-        logger.info('Processing %d pubsub subscription definitions', len(subscription_list))
+        count = len(subscription_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} pubsub subscription {noun}')
 
         # Examine each pubsub subscription item
         for idx, item in enumerate(subscription_list):
@@ -701,7 +758,8 @@ class EnmasseYAMLImporter:
             self.updated_objects['email_imap'] = imap_updated
 
         # Process SQL connection pool definitions
-        sql_created, sql_updated = self.sync_sql(yaml_config.get('sql', []), session)
+        sql_list = yaml_config.get('sql') or yaml_config.get('outconn_sql', [])
+        sql_created, sql_updated = self.sync_sql(sql_list, session)
         if sql_created:
             self.created_objects['sql'] = sql_created
         if sql_updated:
@@ -722,21 +780,36 @@ class EnmasseYAMLImporter:
             self.updated_objects['confluence'] = confluence_updated
 
         # Process Jira connection definitions
-        jira_created, jira_updated = self.sync_jira(yaml_config.get('jira', []), session)
+        jira_list = yaml_config.get('jira', [])
+        generic_list = yaml_config.get('zato_generic_connection')
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'cloud-jira':
+                    jira_list.append(item)
+        jira_created, jira_updated = self.sync_jira(jira_list, session)
         if jira_created:
             self.created_objects['jira'] = jira_created
         if jira_updated:
             self.updated_objects['jira'] = jira_updated
 
         # Process LDAP connection definitions
-        ldap_created, ldap_updated = self.sync_ldap(yaml_config.get('ldap', []), session)
+        ldap_list = yaml_config.get('ldap') or yaml_config.get('outgoing_ldap', [])
+        ldap_created, ldap_updated = self.sync_ldap(ldap_list, session)
         if ldap_created:
             self.created_objects['ldap'] = ldap_created
         if ldap_updated:
             self.updated_objects['ldap'] = ldap_updated
 
         # Process Microsoft 365 connection definitions
-        ms365_created, ms365_updated = self.sync_microsoft_365(yaml_config.get('microsoft_365', []), session)
+        ms365_list = yaml_config.get('microsoft_365', [])
+        generic_list = yaml_config.get('zato_generic_connection')
+        if generic_list:
+            for item in generic_list:
+                item_type = item.get('type_')
+                if item_type == 'cloud-microsoft-365':
+                    ms365_list.append(item)
+        ms365_created, ms365_updated = self.sync_microsoft_365(ms365_list, session)
         if ms365_created:
             self.created_objects['microsoft_365'] = ms365_created
         if ms365_updated:
@@ -757,7 +830,8 @@ class EnmasseYAMLImporter:
             self.updated_objects['outgoing_rest'] = outgoing_rest_updated
 
         # Process outgoing SOAP connection definitions
-        outgoing_soap_created, outgoing_soap_updated = self.sync_outgoing_soap(yaml_config.get('outgoing_soap', []), session)
+        outgoing_soap_list = yaml_config.get('outgoing_soap') or yaml_config.get('outconn_soap', [])
+        outgoing_soap_created, outgoing_soap_updated = self.sync_outgoing_soap(outgoing_soap_list, session)
         if outgoing_soap_created:
             self.created_objects['outgoing_soap'] = outgoing_soap_created
         if outgoing_soap_updated:

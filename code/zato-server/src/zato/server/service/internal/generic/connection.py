@@ -22,6 +22,7 @@ from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
+from zato.common.util.time_ import utcnow
 from zato.server.generic.connection import GenericConnection
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
@@ -511,7 +512,7 @@ class Ping(_BaseService):
             # Most connections use a generic ping function, unless overridden on a case-by-case basis.
             ping_func = custom_ping_func_dict.get(instance.type_, self.server.worker_store.ping_generic_connection)
 
-            start_time = datetime.utcnow()
+            start_time = utcnow()
 
             try:
                 _ = ping_func(self.request.input.id)
@@ -521,7 +522,7 @@ class Ping(_BaseService):
                 self.response.payload.info = exc
                 self.response.payload.is_success = False
             else:
-                response_time = datetime.utcnow() - start_time
+                response_time = utcnow() - start_time
                 info = 'Connection pinged; response time: {}'.format(response_time)
                 self.logger.info(info)
                 self.response.payload.info = info

@@ -28,6 +28,7 @@ from zato.common.util.cli import read_stdin_data
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 # Default timeout = 30 days in seconds
 Default_Service_Wait_Timeout = 30 * 24 * 60 * 60  # 30 days
@@ -286,10 +287,15 @@ def wait_for_services(
 ) -> 'bool_':
     """ Waits for all services defined in the configuration to be available in the database.
     """
+    logger.info('wait_for_services called with server_dir=%s timeout=%s', server_dir, timeout_seconds)
+
     # Get a session from the server directory
+    logger.info('Getting session from server directory')
     session = get_session_from_server_dir(server_dir, stdin_data)
+    logger.info('Session obtained')
 
     # Build list of unique service names from the configuration
+    logger.info('Building list of service names from config')
     service_names = set()
 
     # Extract service names from channel_rest definitions if present

@@ -220,8 +220,11 @@ class _OnUpdate(Service):
             #
             with self.lock('{}-{}-{}'.format(self.name, self.server.name, ctx.full_path)): # type: ignore
 
-                with open(ctx.full_path, 'wb') as f:
-                    _ = f.write(ctx.data.encode('utf8'))
+                should_ignore_write = ctx.full_path.endswith(('.ini', '.zrules'))
+
+                if not should_ignore_write:
+                    with open(ctx.full_path, 'wb') as f:
+                        _ = f.write(ctx.data.encode('utf8'))
 
                 # Reusable
                 update_type = self.get_update_type(ctx.full_path)

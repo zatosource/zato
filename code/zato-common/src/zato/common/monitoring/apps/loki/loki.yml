@@ -1,0 +1,63 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3101
+  grpc_listen_port: 9097
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: ./data/loki
+  storage:
+    filesystem:
+      chunks_directory: ./data/loki/chunks
+      rules_directory: ./data/loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+  alertmanager_url: http://localhost:9093
+
+limits_config:
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  allow_structured_metadata: false
+
+table_manager:
+  retention_deletes_enabled: false
+  retention_period: 0s
+
+compactor:
+  working_directory: ./data/loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+  delete_request_store: filesystem
+
+ingester:
+  max_chunk_age: 1h
+  chunk_idle_period: 3m
+  chunk_block_size: 262144
+  chunk_target_size: 1048576
+  chunk_retain_period: 30s
+  wal:
+    dir: ./data/loki/wal

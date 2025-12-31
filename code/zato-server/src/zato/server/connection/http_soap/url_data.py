@@ -26,8 +26,8 @@ from zato.common.dispatch import dispatcher
 from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
 from zato.common.util.url_dispatcher import get_match_target
-from zato.server.connection.http_soap import Forbidden, Unauthorized
-from zato.url_dispatcher import CyURLData, Matcher
+from zato.server.connection.http_soap import Unauthorized
+from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData
 
 # ################################################################################################################################
 
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-class URLData(CyURLData):
+class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
@@ -495,11 +495,15 @@ class URLData(CyURLData):
         Clears out URL cache for that entry, if it existed at all.
         """
         match_target = get_match_target(msg, http_methods_allowed_re=self.worker.server.http_methods_allowed_re)
+
         channel_item = self._channel_item_from_msg(msg, match_target, old_data)
         self.channel_data.append(channel_item)
-        self.url_sec[match_target] = self._sec_info_from_msg(msg)
+
+        sec_info = self._sec_info_from_msg(msg)
+        self.url_sec[match_target] = sec_info
 
         self._remove_from_cache(match_target)
+
         self.sort_channel_data()
 
 # ################################################################################################################################

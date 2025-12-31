@@ -111,8 +111,8 @@ class ChannelExporter:
             if channel_row.security_name:
                 exported_channel['security'] = channel_row.security_name
 
-            # Add data_format if not None
-            if channel_row.data_format:
+            # Add data_format if not None and not json
+            if channel_row.data_format and channel_row.data_format != 'json':
                 exported_channel['data_format'] = channel_row.data_format
 
             # Export security groups directly assigned to the channel
