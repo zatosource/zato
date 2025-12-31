@@ -27,9 +27,6 @@ import humanize
 # Redis
 import redis
 
-# requests
-import requests
-
 # Zato
 from zato.common.json_internal import dumps, loads
 from zato.common.util.tcp import wait_until_port_free
@@ -502,13 +499,9 @@ class Updater:
             version_to = self.get_zato_version()
             self.add_audit_log_entry(update_type, version_from, version_to, start_time, end_time)
             
-            try:
-                url = f'https://zato.io/support/updates/info-4.1.json?from={version_from}&to={version_to}&mode={update_type}'
-                if schedule:
-                    url += f'&schedule={schedule}'
-                requests.get(url, timeout=2)
-            except Exception:
-                pass
+            result['version_from'] = version_from
+            result['version_to'] = version_to
+            result['schedule'] = schedule
             
             changed_files = self.get_changed_files()
             
@@ -916,6 +909,39 @@ class Updater:
 
 # ################################################################################################################################
 
+    def kill_process_by_port(self, port:'int') -> 'bool':
+        """ Finds and kills the process using a specific port.
+        """
+        try:
+            result = subprocess.run(
+                ['lsof', '-ti', f':{port}'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0 and result.stdout.strip():
+                pids = result.stdout.strip().split('\n')
+                for pid_str in pids:
+                    if pid_str:
+                        pid = int(pid_str)
+                        logger.info(f'kill_process_by_port: killing process {pid} using port {port}')
+                        try:
+                            os.kill(pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                        except Exception:
+                            logger.error(f'kill_process_by_port: failed to kill pid {pid}: {format_exc()}')
+                return True
+            else:
+                logger.info(f'kill_process_by_port: no process found using port {port}')
+                return False
+        except Exception:
+            logger.error(f'kill_process_by_port: exception: {format_exc()}')
+            return False
+
+# ################################################################################################################################
+
     def kill_orphaned_processes(self, component_name:'str') -> 'None':
         """ Kills all orphaned processes for a component.
         """
@@ -927,13 +953,15 @@ class Updater:
                 timeout=5
             )
             
+            process_name = 'zato.web-admin' if component_name == 'dashboard' else 'zato.{}'.format(component_name)
+            
             for line in ps_result.stdout.split('\n'):
-                if 'zato.{}'.format(component_name) in line and 'grep' not in line:
+                if process_name in line and 'grep' not in line:
                     parts = line.split()
                     if len(parts) > 1:
                         pid = int(parts[1])
                         try:
-                            logger.info('kill_orphaned_processes: killing orphaned {} process {}'.format(component_name, pid))
+                            logger.info('kill_orphaned_processes: killing orphaned {} process {} ({})'.format(component_name, pid, process_name))
                             os.kill(pid, signal.SIGKILL)
                         except ProcessLookupError:
                             pass
@@ -944,7 +972,7 @@ class Updater:
 
 # ################################################################################################################################
 
-    def stop_component(self, component_name:'str', component_path:'str') -> 'dict':
+    def stop_component(self, component_name:'str', component_path:'str', port:'int'=0) -> 'dict':
         """ Stops a Zato component.
         """
         try:
@@ -953,6 +981,9 @@ class Updater:
             if not os.path.exists(pidfile):
                 logger.info('stop_component: no pidfile found for {} at {}, checking for orphaned processes'.format(component_name, pidfile))
                 self.kill_orphaned_processes(component_name)
+                if port:
+                    logger.info('stop_component: killing process using port {}'.format(port))
+                    self.kill_process_by_port(port)
                 return {'success': True, 'message': 'Component not running, orphaned processes cleaned'}
             
             with open(pidfile, 'r') as f:
@@ -965,10 +996,10 @@ class Updater:
                 return {'success': True, 'message': 'Empty pidfile removed, orphaned processes cleaned'}
             
             pid = int(pid_str)
-            logger.info('stop_component: sending SIGTERM to {} (pid {})'.format(component_name, pid))
+            logger.info('stop_component: sending SIGKILL to {} (pid {})'.format(component_name, pid))
             
             try:
-                os.kill(pid, signal.SIGTERM)
+                os.kill(pid, signal.SIGKILL)
             except ProcessLookupError:
                 logger.info('stop_component: process {} not found, removing stale pidfile'.format(pid))
                 os.remove(pidfile)
@@ -976,19 +1007,11 @@ class Updater:
                 return {'success': True, 'message': 'Removed stale pidfile, orphaned processes cleaned'}
             
             time.sleep(1)
-            try:
-                os.kill(pid, 0)
-                logger.error('stop_component: {} did not stop after 1 second, force killing'.format(component_name))
-            except ProcessLookupError:
-                logger.info('stop_component: {} stopped successfully'.format(component_name))
-                if os.path.exists(pidfile):
-                    os.remove(pidfile)
-                self.kill_orphaned_processes(component_name)
-                return {'success': True, 'message': 'Component stopped, orphaned processes cleaned'}
-            self.kill_orphaned_processes(component_name)
+            
             if os.path.exists(pidfile):
                 os.remove(pidfile)
-            return {'success': True, 'message': 'Component force killed, orphaned processes cleaned'}
+            self.kill_orphaned_processes(component_name)
+            return {'success': True, 'message': 'Component killed, orphaned processes cleaned'}
             
         except Exception:
             logger.error('stop_component: exception stopping {}: {}'.format(component_name, format_exc()))
@@ -1125,7 +1148,7 @@ class Updater:
             
             logger.info('restart_component: restarting {} at {}'.format(component_name, component_path))
             
-            stop_result = self.stop_component(component_name, component_path)
+            stop_result = self.stop_component(component_name, component_path, port)
             if not stop_result['success']:
                 logger.error('restart_component: failed to stop {}: {}'.format(component_name, stop_result.get('error')))
             
