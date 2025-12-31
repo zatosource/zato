@@ -11,9 +11,11 @@ from gevent import monkey
 _ = monkey.patch_all()
 
 # stdlib
+import random
 import time
 
 # gevent
+from gevent import spawn # type: ignore
 from gevent.pywsgi import WSGIServer # type: ignore
 
 # Zato
@@ -30,6 +32,7 @@ class PrometheusTestServer:
         self.host = host
         self.port = port
         self.server = None
+        self.running = False
 
     def wsgi_app(self, environ, start_response):
         """ WSGI application handler.
@@ -96,7 +99,34 @@ class PrometheusTestServer:
         # Global counters
         incr_global('total_requests')
         incr_global('total_requests')
-        push_global('system_load', 0.65)
+        push_global('system_load', random.uniform(0.3, 1.2))
+
+    def _background_metrics_generator(self) -> 'None':
+        """ Generate metrics automatically every second.
+        """
+        while self.running:
+            time.sleep(1)
+            if not self.running:
+                break
+                
+            # Sample aircraft handling process with varying data
+            aircraft_ctx = create_context('AircraftHandling', 'ABC123')
+            aircraft_ctx.push('bags_loaded', random.randint(100, 200))
+            aircraft_ctx.push('fuel_liters', random.randint(40000, 60000))
+            aircraft_ctx.push('turnaround_minutes', random.randint(25, 45))
+            aircraft_ctx.push_timestamp('gate_assigned')
+
+            # Sample applicant processing with varying data
+            applicant_ctx = create_context('ApplicantProcessing', 'APP456')
+            applicant_ctx.push('courses_assigned', random.randint(1, 5))
+            applicant_ctx.push('courses_completed', random.randint(0, 3))
+            applicant_ctx.timer_start('processing_time')
+            time.sleep(random.uniform(0.0005, 0.003))
+            applicant_ctx.timer_stop('processing_time')
+
+            # Global counters
+            incr_global('total_requests')
+            push_global('system_load', random.uniform(0.3, 1.2))
 
     def start(self) -> 'None':
         """ Start the test server.
@@ -104,12 +134,17 @@ class PrometheusTestServer:
         print(f'Starting Zato Monitoring Test Server on {self.host}:{self.port}')
         print(f'Metrics endpoint: http://{self.host}:{self.port}/metrics')
         print(f'Demo data: http://{self.host}:{self.port}/demo')
+        print('Auto-generating metrics every second...')
+
+        self.running = True
+        spawn(self._background_metrics_generator)
 
         self.server = WSGIServer((self.host, self.port), self.wsgi_app)
         try:
             self.server.serve_forever()
         except KeyboardInterrupt:
             print('\nShutting down server...')
+            self.running = False
             self.server.stop()
 
 # ################################################################################################################################
