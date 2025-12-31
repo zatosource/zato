@@ -1036,12 +1036,14 @@ class Updater:
                 logger.error('start_component: pidfile exists for {}, component may already be running'.format(component_name))
                 return {'success': False, 'error': 'Component already running'}
 
+            env_file = '/opt/hot-deploy/enmasse/env.ini'
+
             logger.info('start_component: starting {} at {}'.format(component_name, component_path))
-            logger.info('start_component: command will be: {} start --verbose {}'.format(zato_binary, component_path))
+            logger.info('start_component: command will be: {} start --fg --env-file {} {}'.format(zato_binary, env_file, component_path))
             logger.info('start_component: cwd: {}'.format(self.config.base_dir))
 
             result = self.run_command(
-                command=[zato_binary, 'start', '--verbose', component_path],
+                command=[zato_binary, 'start', '--fg', '--env-file', env_file, component_path],
                 cwd=self.config.base_dir,
                 log_prefix='start_component'
             )
