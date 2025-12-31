@@ -27,6 +27,9 @@ import humanize
 # Redis
 import redis
 
+# requests
+import requests
+
 # Zato
 from zato.common.json_internal import dumps, loads
 from zato.common.util.tcp import wait_until_port_free
@@ -464,7 +467,7 @@ class Updater:
 
 # ################################################################################################################################
 
-    def download_and_install(self, update_script_name:'str' = 'update.sh', update_type:'str' = 'manual', exclude_from_restart:'list'=None) -> 'dict':
+    def download_and_install(self, update_script_name:'str' = 'update.sh', update_type:'str' = 'manual', schedule:'strnone'=None, exclude_from_restart:'list'=None) -> 'dict':
         """ Downloads and installs an update.
         """
         logger.info('')
@@ -498,6 +501,14 @@ class Updater:
             end_time = datetime.now(timezone.utc)
             version_to = self.get_zato_version()
             self.add_audit_log_entry(update_type, version_from, version_to, start_time, end_time)
+            
+            try:
+                url = f'https://zato.io/support/updates/info-4.1.json?from={version_from}&to={version_to}&mode={update_type}'
+                if schedule:
+                    url += f'&schedule={schedule}'
+                requests.get(url, timeout=2)
+            except Exception:
+                pass
             
             changed_files = self.get_changed_files()
             
