@@ -1054,60 +1054,34 @@ class Updater:
             logger.info('start_component: starting {} using script {}'.format(component_name, startup_script))
             logger.info('start_component: cwd: {}'.format(self.config.base_dir))
 
-            result = self.run_command(
-                command=['bash', startup_script],
+            process = subprocess.Popen(
+                ['bash', startup_script],
                 cwd=self.config.base_dir,
-                log_prefix='start_component'
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
             )
 
-            if result['success']:
-                max_wait = 5
-                time.sleep(max_wait)
+            logger.info('start_component: launched {} with pid {}'.format(component_name, process.pid))
 
+            max_wait = 10
+            for i in range(max_wait):
+                time.sleep(1)
                 if os.path.exists(pidfile):
                     logger.info('start_component: {} started successfully'.format(component_name))
                     return {'success': True, 'message': 'Component started'}
 
-                logger.error('start_component: pidfile not created after {} seconds for {}'.format(max_wait, component_name))
-                logger.error('start_component: expected pidfile at: {}'.format(pidfile))
-                logger.error('start_component: pidfile exists check: {}'.format(os.path.exists(pidfile)))
-                logger.error('start_component: component_path exists check: {}'.format(os.path.exists(component_path)))
+            logger.error('start_component: pidfile not created after {} seconds for {}'.format(max_wait, component_name))
+            logger.error('start_component: expected pidfile at: {}'.format(pidfile))
+            logger.error('start_component: component_path exists check: {}'.format(os.path.exists(component_path)))
 
-                all_files = os.listdir(component_path) if os.path.exists(component_path) else []
-                logger.error('start_component: all files in {}: {}'.format(component_path, all_files))
+            all_files = os.listdir(component_path) if os.path.exists(component_path) else []
+            logger.error('start_component: all files in {}: {}'.format(component_path, all_files))
 
-                try:
-                    ps_result = subprocess.run(
-                        ['ps', 'aux'],
-                        capture_output=True,
-                        text=True,
-                        timeout=5
-                    )
-                    scheduler_procs = [line for line in ps_result.stdout.split('\n') if 'zato.scheduler' in line]
-                    logger.error('start_component: scheduler processes running: {}'.format(scheduler_procs))
-                except Exception:
-                    logger.error('start_component: failed to check running processes: {}'.format(format_exc()))
-
-                logger.error('start_component: command stdout: {}'.format(result.get('stdout', 'No stdout')))
-                logger.error('start_component: command stderr: {}'.format(result.get('stderr', 'No stderr')))
-
-                log_file = os.path.join(component_path, 'logs', 'scheduler.log')
-                if os.path.exists(log_file):
-                    try:
-                        with open(log_file, 'r') as f:
-                            last_lines = f.readlines()[-20:]
-                            logger.error('start_component: last 20 lines of scheduler.log: {}'.format(''.join(last_lines)))
-                    except Exception:
-                        logger.error('start_component: failed to read log file: {}'.format(format_exc()))
-
-                return {
-                    'success': False,
-                    'error': 'Pidfile not created after {} seconds'.format(max_wait),
-                    'stdout': result.get('stdout', ''),
-                    'stderr': result.get('stderr', '')
-                }
-
-            return result
+            return {
+                'success': False,
+                'error': 'Pidfile not created after {} seconds'.format(max_wait)
+            }
 
         except Exception:
             logger.error('start_component: exception starting {}: {}'.format(component_name, format_exc()))
