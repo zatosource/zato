@@ -360,8 +360,7 @@ class Updater:
         command:'list',
         cwd:'strnone' = None,
         timeout:'int' = 999_999,
-        log_prefix:'str' = 'command',
-        env:'dict' = None
+        log_prefix:'str' = 'command'
     ) -> 'dict':
         """ Runs a shell command and returns the result.
         """
@@ -374,8 +373,7 @@ class Updater:
                 cwd=cwd,
                 capture_output=True,
                 text=True,
-                timeout=timeout,
-                env=env
+                timeout=timeout
             )
 
             if result.returncode != 0:
@@ -1021,13 +1019,28 @@ class Updater:
 # ################################################################################################################################
 
     def start_component(self, component_name:'str', component_path:'str') -> 'dict':
-        """ Starts a Zato component.
+        """ Starts a Zato component using the startup scripts.
         """
         try:
-            zato_binary = self.find_file_in_parents(self.config.zato_path)
+            # Map component names to their startup script names
+            script_name_map = {
+                'scheduler': 'start-scheduler-fg.sh',
+                'server': 'start-server1-fg.sh',
+                'dashboard': 'start-web-admin-fg.sh',
+                'proxy': 'start-load-balancer-fg.sh'
+            }
 
-            if not zato_binary:
-                error = '{} not found in parent directories'.format(self.config.zato_path)
+            script_name = script_name_map.get(component_name)
+            if not script_name:
+                error = 'Unknown component name: {}'.format(component_name)
+                logger.error('start_component: {}'.format(error))
+                return {'success': False, 'error': error}
+
+            startup_script = os.path.join(self.config.base_dir, script_name)
+            logger.info('start_component: looking for startup script at {}'.format(startup_script))
+
+            if not os.path.exists(startup_script):
+                error = 'Startup script not found: {}'.format(startup_script)
                 logger.error('start_component: {}'.format(error))
                 return {'success': False, 'error': error}
 
@@ -1038,33 +1051,13 @@ class Updater:
                 logger.error('start_component: pidfile exists for {}, component may already be running'.format(component_name))
                 return {'success': False, 'error': 'Component already running'}
 
-            env_file = '/opt/hot-deploy/enmasse/env.ini'
-
-            logger.info('start_component: starting {} at {}'.format(component_name, component_path))
-            logger.info('start_component: command will be: {} start --fg --env-file {} {}'.format(zato_binary, env_file, component_path))
+            logger.info('start_component: starting {} using script {}'.format(component_name, startup_script))
             logger.info('start_component: cwd: {}'.format(self.config.base_dir))
 
-            # Build environment with variables from env file
-            env = os.environ.copy()
-            if os.path.exists(env_file):
-                logger.info('start_component: reading environment variables from {}'.format(env_file))
-                with open(env_file, 'r') as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith('#') and not line.startswith('[') and '=' in line:
-                            key, value = line.split('=', 1)
-                            key = key.strip()
-                            value = value.strip()
-                            env[key] = value
-                            logger.info('start_component: set env var {} (length: {})'.format(key, len(value)))
-            else:
-                logger.warning('start_component: env file {} does not exist'.format(env_file))
-
             result = self.run_command(
-                command=[zato_binary, 'start', '--fg', '--env-file', env_file, component_path],
+                command=['bash', startup_script],
                 cwd=self.config.base_dir,
-                log_prefix='start_component',
-                env=env
+                log_prefix='start_component'
             )
 
             if result['success']:
