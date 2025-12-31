@@ -303,7 +303,7 @@ Examples:
     def _on_server(self, *ignored:'any_') -> 'int': # show_output was an old param, *ignored is safer for dispatch
         from zato.common.util.updates import setup_update_file_logger
         setup_update_file_logger(component_name='server')
-        
+
         # Potentially sets up the deployment of any assets given on input
         extra_options = self._maybe_set_up_deploy()
 
@@ -331,7 +331,7 @@ Examples:
         import os
 
         setup_update_file_logger(component_name='dashboard')
-        
+
         self.run_check_config() # Keep this: checks basic config and ensures no existing pidfile (important)
 
         # --- Determine Zato code paths for PYTHONPATH ---
@@ -484,7 +484,7 @@ Examples:
     def _on_scheduler(self, *ignored:'any_') -> 'None':
         from zato.common.util.updates import setup_update_file_logger
         setup_update_file_logger(component_name='scheduler')
-        
+
         env_vars = {
             'Zato_Component_Dir': self.component_dir,
             'ZATO_SCHEDULER_BASE_DIR': self.component_dir
