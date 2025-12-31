@@ -17,7 +17,6 @@ $.fn.zato.in_app_updates.init = function() {
     $.fn.zato.in_app_updates.displayTimezone();
     $.fn.zato.in_app_updates.loadSchedule();
     $.fn.zato.in_app_updates.fetchLatestVersion();
-    $.fn.zato.in_app_updates.startAuditLogRefresh();
     $.fn.zato.in_app_updates.initTimestampTooltips();
 
     $.fn.zato.in_app_updates.versionSteps = [
