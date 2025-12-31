@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 import signal
 import shutil
-import socket
 import subprocess
 import tempfile
 import time
@@ -52,24 +51,24 @@ def setup_update_file_logger(base_dir:'str'=None, component_name:'str'='unknown'
     try:
         if not base_dir:
             base_dir = os.path.expanduser('~/env/qs-1')
-        
+
         update_log_path = os.path.join(base_dir, 'server1', 'logs', 'update.log')
         os.makedirs(os.path.dirname(update_log_path), exist_ok=True)
-        
+
         file_handler = RotatingFileHandler(
             update_log_path,
             maxBytes=10 * 1024 * 1024,
             backupCount=100
         )
         file_handler.setLevel(DEBUG)
-        
+
         formatter = Formatter('%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s')
         formatter.converter = time.localtime
         file_handler.setFormatter(formatter)
-        
+
         logger.addHandler(file_handler)
         logger.setLevel(DEBUG)
-        
+
         logger.debug('setup_update_file_logger: update.log configured for component [{}] at {}'.format(component_name, update_log_path))
     except Exception:
         logger.error('setup_update_file_logger: failed to setup update logger for component [{}]: {}'.format(component_name, format_exc()))
@@ -141,7 +140,7 @@ class Updater:
             'proxy': 'load-balancer',
             'dashboard': 'web-admin'
         }
-        
+
         component_dir = component_map.get(component_name, component_name)
         return os.path.join(self.config.base_dir, component_dir)
 
@@ -152,30 +151,30 @@ class Updater:
         """
         results = {}
         failed = []
-        
+
         aux_processes = [
             ('util_rabbitmqctl', 'pubsub/util_rabbitmqctl.py', []),
             ('pubsub_publisher', 'pubsub/cli.py', ['start', '--publish']),
             ('pubsub_pull_consumer', 'pubsub/cli.py', ['start', '--pull']),
             ('file_transfer_listener', 'file_transfer/listener.py', [])
         ]
-        
+
         for process_name, script_path, args in aux_processes:
             logger.info('restart_auxiliary_processes: restarting {}'.format(process_name))
             result = self.restart_auxiliary_process(process_name, script_path, args)
             results[process_name] = result
-            
+
             if not result['success']:
                 failed.append(process_name)
                 logger.error('restart_auxiliary_processes: failed to restart {}'.format(process_name))
-        
+
         if failed:
             return {
                 'success': False,
                 'error': 'Failed to restart: {}'.format(', '.join(failed)),
                 'results': results
             }
-        
+
         return {'success': True, 'results': results}
 
 # ################################################################################################################################
@@ -186,23 +185,23 @@ class Updater:
         try:
             args = args or []
             logger.info('restart_auxiliary_process: restarting {}'.format(process_name))
-            
+
             full_script_path = os.path.join(self.config.base_dir, 'code', 'zato-common', 'src', 'zato', 'common', script_path)
-            
+
             if not os.path.exists(full_script_path):
                 logger.warning('restart_auxiliary_process: {} script not found at {}'.format(process_name, full_script_path))
                 return {'success': True, 'message': 'Script not found, skipped'}
-            
+
             subprocess.run(['pkill', '-f', script_path], capture_output=True)
-            
+
             time.sleep(1)
-            
+
             py_path = os.path.join(self.config.base_dir, 'code', 'bin', 'py')
             log_dir = os.path.join(self.config.base_dir, 'server1', 'logs')
             log_file = os.path.join(log_dir, '{}.log'.format(process_name))
-            
+
             cmd = [py_path, full_script_path] + args
-            
+
             with open(log_file, 'a') as log_f:
                 subprocess.Popen(
                     cmd,
@@ -210,10 +209,10 @@ class Updater:
                     stderr=log_f,
                     start_new_session=True
                 )
-            
+
             logger.info('restart_auxiliary_process: {} restarted successfully'.format(process_name))
             return {'success': True, 'message': 'Restarted'}
-                
+
         except Exception:
             logger.error('restart_auxiliary_process: exception restarting {}: {}'.format(process_name, format_exc()))
             return {'success': False, 'error': format_exc()}
@@ -229,7 +228,7 @@ class Updater:
             'proxy': 11223,
             'dashboard': 8183
         }
-        
+
         return port_map.get(component_name, 0)
 
 # ################################################################################################################################
@@ -381,7 +380,7 @@ class Updater:
                 logger.error('{}: command failed with exit code {}'.format(log_prefix, result.returncode))
                 error_output = result.stdout + result.stderr
                 logger.error('{}: error output: {}'.format(log_prefix, error_output))
-                
+
                 error_msg = error_output.strip() if error_output.strip() else 'Command failed with exit code {}'.format(result.returncode)
 
                 return {
@@ -428,13 +427,13 @@ class Updater:
                 cwd=self.config.current_dir,
                 log_prefix='get_changed_files'
             )
-            
+
             if not git_root_result['success']:
                 logger.warning('get_changed_files: not in a git repository, assuming all components need restart')
                 return []
-            
+
             git_root = git_root_result['stdout'].strip()
-            
+
             result = self.run_command(
                 command=['git', 'diff', '--name-only', 'HEAD@{1}', 'HEAD'],
                 cwd=git_root,
@@ -474,7 +473,7 @@ class Updater:
         logger.info('##' + ' ' * 76 + '##')
         logger.info('#' * 80)
         logger.info('')
-        
+
         update_script = self.find_file_in_parents(update_script_name)
 
         if not update_script:
@@ -498,20 +497,20 @@ class Updater:
             end_time = datetime.now(timezone.utc)
             version_to = self.get_zato_version()
             self.add_audit_log_entry(update_type, version_from, version_to, start_time, end_time)
-            
+
             result['version_from'] = version_from
             result['version_to'] = version_to
             result['schedule'] = schedule
-            
+
             changed_files = self.get_changed_files()
-            
+
             logger.info('download_and_install: storing changed files for component restart checks')
             try:
                 r = self.get_redis_connection()
                 r.set('zato:autoupdate:changed_files', '\n'.join(changed_files), ex=3600)
             except Exception:
                 logger.error('download_and_install: failed to store changed files: {}'.format(format_exc()))
-            
+
             logger.info('')
             logger.info('#' * 80)
             logger.info('##' + ' ' * 76 + '##')
@@ -748,23 +747,23 @@ class Updater:
                 return False
 
             frequency = schedule.get('frequency', 'daily')
-            
+
             if frequency == 'hourly':
                 logger.info('should_run_scheduled_update: hourly schedule, update will run')
                 return True
 
             from zoneinfo import ZoneInfo
-            
+
             schedule_timezone_str = schedule.get('timezone', 'UTC')
             try:
                 schedule_tz = ZoneInfo(schedule_timezone_str)
             except Exception:
                 logger.warning('should_run_scheduled_update: invalid timezone {}, using UTC'.format(schedule_timezone_str))
                 schedule_tz = ZoneInfo('UTC')
-            
+
             now_server = datetime.now(timezone.utc)
             now_user_tz = now_server.astimezone(schedule_tz)
-            
+
             current_hour = now_user_tz.hour
             current_minute = now_user_tz.minute
             current_day = now_user_tz.weekday()
@@ -777,32 +776,32 @@ class Updater:
             else:
                 schedule_hour = schedule.get('hour')
                 schedule_minute = schedule.get('minute')
-            
+
             if schedule_hour is None or schedule_minute is None:
                 logger.info('should_run_scheduled_update: invalid schedule configuration, hour={}, minute={}'.format(
                     schedule_hour, schedule_minute))
                 return False
-            
+
             day_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
             current_day_name = day_names[current_day]
             current_time_str = '{:02d}:{:02d}'.format(current_hour, current_minute)
             schedule_time_str = '{:02d}:{:02d}'.format(schedule_hour, schedule_minute)
-            
+
             current_total_minutes = current_hour * 60 + current_minute
             schedule_total_minutes = schedule_hour * 60 + schedule_minute
             time_diff = abs(current_total_minutes - schedule_total_minutes)
-            
+
             if frequency == 'daily':
                 logger.info('should_run_scheduled_update: daily schedule at {}, current time {} (diff {} min)'.format(
                     schedule_time_str, current_time_str, time_diff))
-                
+
                 if time_diff <= 10:
                     logger.info('should_run_scheduled_update: time matches within 10-minute window, update will run')
                     return True
                 else:
                     logger.info('should_run_scheduled_update: time difference {} minutes exceeds 10-minute window')
                     return False
-            
+
             if frequency == 'weekly':
                 schedule_day_name = schedule.get('day', '')
                 day_map = {
@@ -814,33 +813,33 @@ class Updater:
                     'saturday': 5,
                     'sunday': 6
                 }
-                
+
                 if schedule_day_name and schedule_day_name.lower() in day_map:
                     schedule_days = [day_map[schedule_day_name.lower()]]
                 else:
                     schedule_days = schedule.get('days', [])
-                
+
                 schedule_day_names = [day_names[d] for d in schedule_days] if schedule_days else []
-                
+
                 logger.info('should_run_scheduled_update: weekly schedule at {} on {}, current time {} (day {}, diff {} min)'.format(
                     schedule_time_str, schedule_day_names, current_time_str, current_day_name, time_diff))
-                
+
                 if schedule_days and current_day not in schedule_days:
                     logger.info('should_run_scheduled_update: current day {} not in scheduled days {}'.format(
                         current_day_name, schedule_day_names))
                     return False
-                
+
                 if time_diff <= 10:
                     logger.info('should_run_scheduled_update: time and day match within 10-minute window, update will run')
                     return True
                 else:
                     logger.info('should_run_scheduled_update: time difference {} minutes exceeds 10-minute window'.format(time_diff))
                     return False
-            
+
             if frequency == 'monthly':
                 schedule_day_name = schedule.get('day', '')
                 schedule_week = schedule.get('week', '')
-                
+
                 day_map = {
                     'monday': 0,
                     'tuesday': 1,
@@ -850,19 +849,19 @@ class Updater:
                     'saturday': 5,
                     'sunday': 6
                 }
-                
+
                 if not schedule_day_name or schedule_day_name.lower() not in day_map:
                     logger.info('should_run_scheduled_update: invalid day for monthly schedule')
                     return False
-                
+
                 schedule_weekday = day_map[schedule_day_name.lower()]
-                
+
                 current_month_day = now_user_tz.day
                 import calendar
                 month_days = calendar.monthrange(now_user_tz.year, now_user_tz.month)[1]
-                
+
                 week_of_month = (current_month_day - 1) // 7 + 1
-                
+
                 target_week = None
                 if schedule_week == 'first':
                     target_week = 1
@@ -877,27 +876,27 @@ class Updater:
                 else:
                     logger.info('should_run_scheduled_update: invalid week specification for monthly schedule: {}'.format(schedule_week))
                     return False
-                
+
                 logger.info('should_run_scheduled_update: monthly schedule at {} on {} of {} week, current time {} (day {}, week {}, diff {} min)'.format(
                     schedule_time_str, schedule_day_name, schedule_week, current_time_str, current_day_name, week_of_month, time_diff))
-                
+
                 if current_day != schedule_weekday:
                     logger.info('should_run_scheduled_update: current day {} does not match scheduled day {}'.format(
                         current_day_name, schedule_day_name))
                     return False
-                
+
                 if week_of_month != target_week:
                     logger.info('should_run_scheduled_update: current week {} does not match target week {}'.format(
                         week_of_month, target_week))
                     return False
-                
+
                 if time_diff <= 10:
                     logger.info('should_run_scheduled_update: time, day, and week match within 10-minute window, update will run')
                     return True
                 else:
                     logger.info('should_run_scheduled_update: time difference {} minutes exceeds 10-minute window'.format(time_diff))
                     return False
-            
+
             logger.info('should_run_scheduled_update: unknown frequency {}'.format(frequency))
             return False
 
@@ -919,7 +918,7 @@ class Updater:
                 text=True,
                 timeout=5
             )
-            
+
             if result.returncode == 0 and result.stdout.strip():
                 pids = result.stdout.strip().split('\n')
                 for pid_str in pids:
@@ -952,9 +951,9 @@ class Updater:
                 text=True,
                 timeout=5
             )
-            
+
             process_name = 'zato.web-admin' if component_name == 'dashboard' else 'zato.{}'.format(component_name)
-            
+
             for line in ps_result.stdout.split('\n'):
                 if process_name in line and 'grep' not in line:
                     parts = line.split()
@@ -977,7 +976,7 @@ class Updater:
         """
         try:
             pidfile = os.path.join(component_path, 'pidfile')
-            
+
             if not os.path.exists(pidfile):
                 logger.info('stop_component: no pidfile found for {} at {}, checking for orphaned processes'.format(component_name, pidfile))
                 self.kill_orphaned_processes(component_name)
@@ -985,19 +984,19 @@ class Updater:
                     logger.info('stop_component: killing process using port {}'.format(port))
                     self.kill_process_by_port(port)
                 return {'success': True, 'message': 'Component not running, orphaned processes cleaned'}
-            
+
             with open(pidfile, 'r') as f:
                 pid_str = f.read().strip()
-            
+
             if not pid_str:
                 logger.error('stop_component: empty pidfile for {} at {}'.format(component_name, pidfile))
                 os.remove(pidfile)
                 self.kill_orphaned_processes(component_name)
                 return {'success': True, 'message': 'Empty pidfile removed, orphaned processes cleaned'}
-            
+
             pid = int(pid_str)
             logger.info('stop_component: sending SIGKILL to {} (pid {})'.format(component_name, pid))
-            
+
             try:
                 os.kill(pid, signal.SIGKILL)
             except ProcessLookupError:
@@ -1005,14 +1004,14 @@ class Updater:
                 os.remove(pidfile)
                 self.kill_orphaned_processes(component_name)
                 return {'success': True, 'message': 'Removed stale pidfile, orphaned processes cleaned'}
-            
+
             time.sleep(1)
-            
+
             if os.path.exists(pidfile):
                 os.remove(pidfile)
             self.kill_orphaned_processes(component_name)
             return {'success': True, 'message': 'Component killed, orphaned processes cleaned'}
-            
+
         except Exception:
             logger.error('stop_component: exception stopping {}: {}'.format(component_name, format_exc()))
             return {'success': False, 'error': format_exc()}
@@ -1024,45 +1023,45 @@ class Updater:
         """
         try:
             zato_binary = self.find_file_in_parents(self.config.zato_path)
-            
+
             if not zato_binary:
                 error = '{} not found in parent directories'.format(self.config.zato_path)
                 logger.error('start_component: {}'.format(error))
                 return {'success': False, 'error': error}
-            
+
             pidfile = os.path.join(component_path, 'pidfile')
             logger.info('start_component: checking for pidfile at {}'.format(pidfile))
-            
+
             if os.path.exists(pidfile):
                 logger.error('start_component: pidfile exists for {}, component may already be running'.format(component_name))
                 return {'success': False, 'error': 'Component already running'}
-            
+
             logger.info('start_component: starting {} at {}'.format(component_name, component_path))
             logger.info('start_component: command will be: {} start --verbose {}'.format(zato_binary, component_path))
             logger.info('start_component: cwd: {}'.format(self.config.base_dir))
-            
+
             result = self.run_command(
                 command=[zato_binary, 'start', '--verbose', component_path],
                 cwd=self.config.base_dir,
                 log_prefix='start_component'
             )
-            
+
             if result['success']:
                 max_wait = 5
                 time.sleep(max_wait)
-                
+
                 if os.path.exists(pidfile):
                     logger.info('start_component: {} started successfully'.format(component_name))
                     return {'success': True, 'message': 'Component started'}
-                
+
                 logger.error('start_component: pidfile not created after {} seconds for {}'.format(max_wait, component_name))
                 logger.error('start_component: expected pidfile at: {}'.format(pidfile))
                 logger.error('start_component: pidfile exists check: {}'.format(os.path.exists(pidfile)))
                 logger.error('start_component: component_path exists check: {}'.format(os.path.exists(component_path)))
-                
+
                 all_files = os.listdir(component_path) if os.path.exists(component_path) else []
                 logger.error('start_component: all files in {}: {}'.format(component_path, all_files))
-                
+
                 try:
                     ps_result = subprocess.run(
                         ['ps', 'aux'],
@@ -1074,10 +1073,10 @@ class Updater:
                     logger.error('start_component: scheduler processes running: {}'.format(scheduler_procs))
                 except Exception:
                     logger.error('start_component: failed to check running processes: {}'.format(format_exc()))
-                
+
                 logger.error('start_component: command stdout: {}'.format(result.get('stdout', 'No stdout')))
                 logger.error('start_component: command stderr: {}'.format(result.get('stderr', 'No stderr')))
-                
+
                 log_file = os.path.join(component_path, 'logs', 'scheduler.log')
                 if os.path.exists(log_file):
                     try:
@@ -1086,16 +1085,16 @@ class Updater:
                             logger.error('start_component: last 20 lines of scheduler.log: {}'.format(''.join(last_lines)))
                     except Exception:
                         logger.error('start_component: failed to read log file: {}'.format(format_exc()))
-                
+
                 return {
                     'success': False,
                     'error': 'Pidfile not created after {} seconds'.format(max_wait),
                     'stdout': result.get('stdout', ''),
                     'stderr': result.get('stderr', '')
                 }
-            
+
             return result
-            
+
         except Exception:
             logger.error('start_component: exception starting {}: {}'.format(component_name, format_exc()))
             return {'success': False, 'error': format_exc()}
@@ -1128,7 +1127,7 @@ class Updater:
                 logger.info('restart_component: proxy component not found at {}, current user is {}, skipping'.format(
                     component_path, current_user))
                 return {'success': True, 'message': 'Proxy component not installed, skipped'}
-            
+
             if check_changes:
                 changed_files = self.get_stored_changed_files()
                 if changed_files:
@@ -1137,48 +1136,48 @@ class Updater:
                         'server': 'code/zato-server/',
                         'dashboard': 'code/zato-web-admin/'
                     }
-                    
+
                     has_common_changes = self.has_directory_changes(changed_files, 'code/zato-common/')
                     component_dir = component_dirs.get(component_name, '')
                     has_component_changes = self.has_directory_changes(changed_files, component_dir)
-                    
+
                     if not has_common_changes and not has_component_changes:
                         logger.info('restart_component: {} has no changes, skipping restart'.format(component_name))
                         return {'success': True, 'message': 'No changes detected, restart skipped'}
-            
+
             logger.info('restart_component: restarting {} at {}'.format(component_name, component_path))
-            
+
             stop_result = self.stop_component(component_name, component_path, port)
             if not stop_result['success']:
                 logger.error('restart_component: failed to stop {}: {}'.format(component_name, stop_result.get('error')))
-            
+
             if port:
                 logger.info('restart_component: waiting for port {} to be released'.format(port))
                 if not wait_until_port_free(port, timeout=30):
                     logger.error('restart_component: port {} still in use after stopping {}'.format(
                         port, component_name))
-                    
+
                     pidfile = os.path.join(component_path, 'pidfile')
                     if os.path.exists(pidfile):
                         logger.info('restart_component: removing stale pidfile for {}'.format(component_name))
                         os.remove(pidfile)
-                    
+
                     if not wait_until_port_free(port, timeout=10):
                         return {
                             'success': False,
                             'error': 'Port {} still in use, cannot start {}'.format(port, component_name)
                         }
-            
+
             start_result = self.start_component(component_name, component_path)
-            
+
             if start_result['success']:
                 logger.info('restart_component: {} restarted successfully'.format(component_name))
             else:
                 logger.error('restart_component: failed to start {}: {}'.format(
                     component_name, start_result.get('error')))
-            
+
             return start_result
-            
+
         except Exception:
             logger.error('restart_component: exception restarting {}: {}'.format(component_name, format_exc()))
             return {'success': False, 'error': format_exc()}
@@ -1190,50 +1189,50 @@ class Updater:
         """
         exclude_components = exclude_components or []
         changed_files = changed_files or []
-        
+
         component_dirs = {
             'scheduler': 'code/zato-scheduler/',
             'server': 'code/zato-server/',
             'dashboard': 'code/zato-web-admin/'
         }
-        
+
         has_common_changes = self.has_directory_changes(changed_files, 'code/zato-common/')
-        
+
         if has_common_changes:
             logger.info('restart_all_components: zato-common has changes, restarting all components')
-        
+
         components = ['scheduler', 'server', 'dashboard']
         results = {}
         failed = []
         skipped = []
-        
+
         for component_name in components:
             if component_name in exclude_components:
                 logger.info('restart_all_components: {} excluded from restart'.format(component_name))
                 skipped.append(component_name)
                 results[component_name] = {'success': True, 'message': 'Excluded'}
                 continue
-            
+
             component_dir = component_dirs.get(component_name)
             has_changes = has_common_changes or self.has_directory_changes(changed_files, component_dir)
-            
+
             if not has_changes and changed_files:
                 logger.info('restart_all_components: {} has no changes, skipping restart'.format(component_name))
                 skipped.append(component_name)
                 results[component_name] = {'success': True, 'message': 'No changes detected'}
                 continue
-            
+
             component_path = self.get_component_path(component_name)
             component_port = self.get_component_port(component_name)
-            
+
             logger.info('restart_all_components: restarting {} (changes detected)'.format(component_name))
             result = self.restart_component(component_name, component_path, component_port)
             results[component_name] = result
-            
+
             if not result['success']:
                 failed.append(component_name)
                 logger.error('restart_all_components: failed to restart {}'.format(component_name))
-        
+
         if failed:
             message = 'Failed to restart components: {}. '.format(', '.join(failed))
             if skipped:
@@ -1243,13 +1242,13 @@ class Updater:
                 'error': message,
                 'results': results
             }
-        
+
         message = 'All components restarted successfully'
         if skipped:
             message += '. Skipped: {}'.format(', '.join(skipped))
-        
+
         logger.info('restart_all_components: {}'.format(message))
-        
+
         logger.info('')
         logger.info('#' * 80)
         logger.info('##' + ' ' * 76 + '##')
@@ -1257,7 +1256,7 @@ class Updater:
         logger.info('##' + ' ' * 76 + '##')
         logger.info('#' * 80)
         logger.info('')
-        
+
         return {
             'success': True,
             'message': message,
