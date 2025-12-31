@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
 import logging
 import requests
 import sys
@@ -62,10 +61,44 @@ class GrafanaColor(Model):
     mode: 'str'
 
 @dataclass(init=False)
+class GrafanaStacking(Model):
+    mode: 'str'
+    group: 'str'
+
+@dataclass(init=False)
+class GrafanaScaleDistribution(Model):
+    type: 'str'
+
+@dataclass(init=False)
+class GrafanaThresholdsStyle(Model):
+    mode: 'str'
+
+@dataclass(init=False)
+class GrafanaHideFrom(Model):
+    legend: 'bool'
+    tooltip: 'bool'
+    vis: 'bool'
+
+@dataclass(init=False)
 class GrafanaCustom(Model):
     drawStyle: 'str'
     lineInterpolation: 'str'
+    barAlignment: 'int'
+    lineWidth: 'int'
+    fillOpacity: 'int'
+    gradientMode: 'str'
     spanNulls: 'bool'
+    insertNulls: 'bool'
+    showPoints: 'str'
+    pointSize: 'int'
+    stacking: 'GrafanaStacking'
+    axisPlacement: 'str'
+    axisLabel: 'str'
+    axisColorMode: 'str'
+    scaleDistribution: 'GrafanaScaleDistribution'
+    axisCenteredZero: 'bool'
+    hideFrom: 'GrafanaHideFrom'
+    thresholdsStyle: 'GrafanaThresholdsStyle'
 
 @dataclass(init=False)
 class GrafanaDefaults(Model):
@@ -79,9 +112,22 @@ class GrafanaFieldConfig(Model):
     defaults: 'GrafanaDefaults'
 
 @dataclass(init=False)
+class GrafanaTimepicker(Model):
+    pass
+
+@dataclass(init=False)
+class GrafanaLegend(Model):
+    pass
+
+@dataclass(init=False)
+class GrafanaTooltip(Model):
+    mode: 'str'
+    sort: 'str'
+
+@dataclass(init=False)
 class GrafanaOptions(Model):
-    legend: 'strdict'
-    tooltip: 'strdict'
+    legend: 'GrafanaLegend'
+    tooltip: 'GrafanaTooltip'
 
 @dataclass(init=False)
 class GrafanaPanel(Model):
@@ -106,6 +152,17 @@ class GrafanaTime(Model):
         return data
 
 @dataclass(init=False)
+class GrafanaVariableCurrent(Model):
+    text: 'str'
+    value: 'list_[str]'
+
+@dataclass(init=False)
+class GrafanaVariableOption(Model):
+    text: 'str'
+    value: 'str'
+    selected: 'bool'
+
+@dataclass(init=False)
 class GrafanaVariable(Model):
     name: 'str'
     type: 'str'
@@ -114,11 +171,14 @@ class GrafanaVariable(Model):
     multi: 'bool'
     includeAll: 'bool'
     allValue: 'str'
+    current: 'GrafanaVariableCurrent'
+    options: 'list_[GrafanaVariableOption]'
+    refresh: 'int'
 
 @dataclass(init=False)
 class GrafanaTemplating(Model):
     list_: 'list_[GrafanaVariable]'
-    
+
     def to_dict(self):
         data = super().to_dict()
         # Rename list_ to list for Grafana API
@@ -167,142 +227,199 @@ class GrafanaDashboardBuilder:
         self.auth = (username, password)
         self.headers = {'Content-Type': 'application/json'}
 
-    def create_panel(self, config:'PanelConfig') -> 'anydict':
-        """ Create a panel configuration.
+    def create_panel(self, panel_id:'int', title:'str', query:'str', x:'int'=0, y:'int'=0, w:'int'=12, h:'int'=8) -> 'anydict':
+        """ Create a single panel configuration.
         """
         datasource = GrafanaDatasource()
         datasource.type = 'prometheus'
         datasource.uid = 'prometheus'
 
-        panel = GrafanaPanel()
-        panel.id = config.panel_id
-        panel.title = config.title
-        panel.type = config.panel_type
-
-        panel.gridPos = GrafanaGridPos()
-        panel.gridPos.x = config.x
-        panel.gridPos.y = config.y
-        panel.gridPos.w = config.w
-        panel.gridPos.h = config.h
+        grid_pos = GrafanaGridPos()
+        grid_pos.x = x
+        grid_pos.y = y
+        grid_pos.w = w
+        grid_pos.h = h
 
         target = GrafanaTarget()
-        target.expr = config.query
-        target.refId = 'A'
         target.datasource = datasource
-        panel.targets = [target]
+        target.expr = query
+        target.refId = 'A'
 
-        panel.fieldConfig = GrafanaFieldConfig()
-        panel.fieldConfig.defaults = GrafanaDefaults()
-        panel.fieldConfig.defaults.color = GrafanaColor()
-        panel.fieldConfig.defaults.color.mode = 'palette-classic'
-        panel.fieldConfig.defaults.custom = GrafanaCustom()
-        panel.fieldConfig.defaults.custom.drawStyle = 'line'
-        panel.fieldConfig.defaults.custom.lineInterpolation = 'linear'
-        panel.fieldConfig.defaults.custom.spanNulls = False
-        panel.fieldConfig.defaults.mappings = []
         threshold = GrafanaThreshold()
         threshold.color = 'green'
         threshold.value = None
 
         thresholds = GrafanaThresholds()
         thresholds.steps = [threshold]
-        panel.fieldConfig.defaults.thresholds = thresholds
 
-        panel.options = GrafanaOptions()
-        panel.options.legend = {'displayMode': 'visible'}
-        panel.options.tooltip = {'mode': 'single', 'sort': 'none'}
+        # Field configuration setup
+        field_config = GrafanaFieldConfig()
+        field_config.defaults = GrafanaDefaults()
+
+        # Color configuration
+        color = GrafanaColor()
+        color.mode = 'palette-classic'
+        field_config.defaults.color = color
+
+        # Custom display settings
+        custom = GrafanaCustom()
+        custom.drawStyle = 'line'
+        custom.lineInterpolation = 'linear'
+        custom.barAlignment = 0
+        custom.lineWidth = 1
+        custom.fillOpacity = 0
+        custom.gradientMode = 'none'
+        custom.spanNulls = False
+        custom.insertNulls = False
+        custom.showPoints = 'auto'
+        custom.pointSize = 5
+
+        # Stacking configuration
+        stacking = GrafanaStacking()
+        stacking.mode = 'none'
+        stacking.group = 'A'
+        custom.stacking = stacking
+
+        # Axis configuration
+        custom.axisPlacement = 'auto'
+        custom.axisLabel = ''
+        custom.axisColorMode = 'text'
+
+        # Scale distribution
+        scale_distribution = GrafanaScaleDistribution()
+        scale_distribution.type = 'linear'
+        custom.scaleDistribution = scale_distribution
+
+        custom.axisCenteredZero = False
+
+        # Hide from configuration
+        hide_from = GrafanaHideFrom()
+        hide_from.legend = False
+        hide_from.tooltip = False
+        hide_from.vis = False
+        custom.hideFrom = hide_from
+
+        # Thresholds style
+        thresholds_style = GrafanaThresholdsStyle()
+        thresholds_style.mode = 'off'
+        custom.thresholdsStyle = thresholds_style
+        field_config.defaults.custom = custom
+
+        # Finalize field config
+        field_config.defaults.mappings = []
+        field_config.defaults.thresholds = thresholds
+
+        # Panel creation
+        panel = GrafanaPanel()
+        panel.id = panel_id
+        panel.title = title
+        panel.type = 'timeseries'
+        panel.targets = [target]
+        panel.gridPos = grid_pos
+        panel.fieldConfig = field_config
+
+        # Panel options setup
+        legend = GrafanaLegend()
+
+        tooltip = GrafanaTooltip()
+        tooltip.mode = 'single'
+        tooltip.sort = 'none'
+
+        options = GrafanaOptions()
+        options.legend = legend
+        options.tooltip = tooltip
+        panel.options = options
 
         return panel.to_dict()
 
     def create_process_monitoring_dashboard(self) -> 'anydict':
         """ Create main process monitoring dashboard.
         """
-        config1 = PanelConfig()
-        config1.panel_id = 1
-        config1.title = 'Process metrics by instance'
-        config1.query = 'process_value{ctx_id!=""}'
-        config1.x = 0
-        config1.y = 0
-        config1.w = 12
-        config1.h = 8
+        datasource = GrafanaDatasource()
+        datasource.type = 'prometheus'
+        datasource.uid = 'prometheus'
 
-        config2 = PanelConfig()
-        config2.panel_id = 2
-        config2.title = 'Global metrics'
-        config2.query = 'process_value{process_name="global"}'
-        config2.x = 0
-        config2.y = 8
-        config2.w = 12
-        config2.h = 8
+        var1 = GrafanaVariable()
+        var1.name = 'process_name'
+        var1.type = 'query'
+        var1.datasource = datasource
+        var1.query = 'label_values(process_value, process_name)'
+        var1.multi = True
+        var1.includeAll = True
+        var1.allValue = '.*'
 
-        config3 = PanelConfig()
-        config3.panel_id = 3
-        config3.title = 'Aircraft handling metrics'
-        config3.query = 'process_value{process_name="AircraftHandling"}'
-        config3.x = 0
-        config3.y = 16
-        config3.w = 12
-        config3.h = 8
+        # Variable current value
+        current1 = GrafanaVariableCurrent()
+        current1.text = 'All'
+        current1.value = ['$__all']
+        var1.current = current1
 
-        config4 = PanelConfig()
-        config4.panel_id = 4
-        config4.title = 'Applicant processing metrics'
-        config4.query = 'process_value{process_name="ApplicantProcessing"}'
-        config4.x = 0
-        config4.y = 24
-        config4.w = 12
-        config4.h = 8
+        # Variable options
+        option1 = GrafanaVariableOption()
+        option1.text = 'All'
+        option1.value = '$__all'
+        option1.selected = True
+        var1.options = [option1]
+        var1.refresh = 1
 
-        panel1 = self.create_panel(config1)
-        panel2 = self.create_panel(config2)
-        panel3 = self.create_panel(config3)
-        panel4 = self.create_panel(config4)
-        panels = [panel1, panel2, panel3, panel4]
+        var2 = GrafanaVariable()
+        var2.name = 'ctx_id'
+        var2.type = 'query'
+        var2.datasource = datasource
+        var2.query = 'label_values(process_value{process_name=~"$process_name"}, ctx_id)'
+        var2.multi = True
+        var2.includeAll = True
+        var2.allValue = '.*'
 
-        dashboard = {
-            'dashboard': {
-                'id': None,
-                'uid': None,
-                'title': 'Zato process monitoring',
-                'tags': ['zato', 'monitoring'],
-                'timezone': 'browser',
-                'panels': panels,
-                'time': {'from': 'now-1h', 'to': 'now'},
-                'timepicker': {},
-                'templating': {
-                    'list': [
-                        {
-                            'name': 'process_name',
-                            'type': 'query',
-                            'datasource': {'type': 'prometheus', 'uid': 'prometheus'},
-                            'query': 'label_values(process_value, process_name)',
-                            'multi': True,
-                            'includeAll': True,
-                            'allValue': '.*',
-                            'current': {'text': 'All', 'value': ['$__all']},
-                            'options': [{'text': 'All', 'value': '$__all', 'selected': True}],
-                            'refresh': 1
-                        },
-                        {
-                            'name': 'ctx_id',
-                            'type': 'query',
-                            'datasource': {'type': 'prometheus', 'uid': 'prometheus'},
-                            'query': 'label_values(process_value{process_name=~"$process_name"}, ctx_id)',
-                            'multi': True,
-                            'includeAll': True,
-                            'allValue': '.*',
-                            'current': {'text': 'All', 'value': ['$__all']},
-                            'options': [{'text': 'All', 'value': '$__all', 'selected': True}],
-                            'refresh': 2
-                        }
-                    ]
-                },
-                'refresh': '10s'
-            },
-            'overwrite': True
-        }
+        # Variable current value
+        current2 = GrafanaVariableCurrent()
+        current2.text = 'All'
+        current2.value = ['$__all']
+        var2.current = current2
 
-        return dashboard
+        # Variable options
+        option2 = GrafanaVariableOption()
+        option2.text = 'All'
+        option2.value = '$__all'
+        option2.selected = True
+        var2.options = [option2]
+        var2.refresh = 2
+
+        templating = GrafanaTemplating()
+        templating.list_ = [var1, var2]
+
+        panels = [
+            self.create_panel(1, 'Process metrics by instance', 'process_value{ctx_id=~".+"}', x=0, y=0, w=12, h=8),
+            self.create_panel(2, 'Global metrics', 'process_value{process_name="global"}', x=0, y=8, w=12, h=8),
+            self.create_panel(3, 'Aircraft handling metrics', 'process_value{process_name="AircraftHandling"}', x=0, y=16, w=12, h=8),
+            self.create_panel(4, 'Applicant processing metrics', 'process_value{process_name="ApplicantProcessing"}', x=0, y=24, w=12, h=8)
+        ]
+
+        time = GrafanaTime()
+        time.from_ = 'now-5m'
+        time.to = 'now'
+
+        dashboard = GrafanaDashboard()
+        dashboard.id = None
+        dashboard.uid = None
+        dashboard.title = 'Zato process monitoring'
+        dashboard.tags = ['zato', 'monitoring']
+        dashboard.timezone = 'browser'
+        dashboard.panels = panels
+        dashboard.time = time.to_dict()
+        timepicker = GrafanaTimepicker()
+        dashboard.timepicker = timepicker.to_dict()
+        dashboard.templating = templating.to_dict()
+        dashboard.refresh = '5s'
+
+        dashboard_request = GrafanaDashboardRequest()
+        dashboard_request.dashboard = dashboard
+        dashboard_request.overwrite = True
+
+        result = dashboard_request.to_dict()
+        logger.info(f'Dashboard JSON being sent: {result}')
+
+        return result
 
     def create_dashboard(self, dashboard_config:'anydict') -> 'bool':
         """ Create dashboard via REST API.
@@ -350,6 +467,7 @@ class GrafanaDashboardBuilder:
 def main() -> 'None':
     """ Main entry point.
     """
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     builder = GrafanaDashboardBuilder()
     success = builder.setup_dashboards()
     sys.exit(0 if success else 1)
