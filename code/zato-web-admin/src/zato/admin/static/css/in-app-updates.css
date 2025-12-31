@@ -41,6 +41,7 @@
     border: 3px solid var(--primary-dark);
     padding: 24px;
     margin-bottom: 32px;
+    padding-bottom: 3px;
 }
 
 .version-info {
