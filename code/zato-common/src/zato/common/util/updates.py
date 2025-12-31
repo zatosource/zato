@@ -360,7 +360,8 @@ class Updater:
         command:'list',
         cwd:'strnone' = None,
         timeout:'int' = 999_999,
-        log_prefix:'str' = 'command'
+        log_prefix:'str' = 'command',
+        env:'dict' = None
     ) -> 'dict':
         """ Runs a shell command and returns the result.
         """
@@ -373,7 +374,8 @@ class Updater:
                 cwd=cwd,
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
+                env=env
             )
 
             if result.returncode != 0:
@@ -1042,10 +1044,27 @@ class Updater:
             logger.info('start_component: command will be: {} start --fg --env-file {} {}'.format(zato_binary, env_file, component_path))
             logger.info('start_component: cwd: {}'.format(self.config.base_dir))
 
+            # Build environment with variables from env file
+            env = os.environ.copy()
+            if os.path.exists(env_file):
+                logger.info('start_component: reading environment variables from {}'.format(env_file))
+                with open(env_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and not line.startswith('[') and '=' in line:
+                            key, value = line.split('=', 1)
+                            key = key.strip()
+                            value = value.strip()
+                            env[key] = value
+                            logger.info('start_component: set env var {} (length: {})'.format(key, len(value)))
+            else:
+                logger.warning('start_component: env file {} does not exist'.format(env_file))
+
             result = self.run_command(
                 command=[zato_binary, 'start', '--fg', '--env-file', env_file, component_path],
                 cwd=self.config.base_dir,
-                log_prefix='start_component'
+                log_prefix='start_component',
+                env=env
             )
 
             if result['success']:
