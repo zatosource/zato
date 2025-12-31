@@ -32,9 +32,9 @@ def main() -> 'int':
     config = UpdaterConfig()
     updater = Updater(config)
 
-    #if not updater.should_run_scheduled_update():
-    #    logger.info('No scheduled update needed at this time')
-    #    return 0
+    if not updater.should_run_scheduled_update():
+        logger.info('No scheduled update needed at this time')
+        return 0
 
     if not updater.acquire_lock():
         logger.info('Update already in progress')
