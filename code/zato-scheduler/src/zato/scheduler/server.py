@@ -83,6 +83,7 @@ class SchedulerServer(AuxServer):
         self.scheduler_api = SchedulerAPI(self.config) # type: ignore
         self.scheduler_api.broker_client = BrokerClient(queue_name='scheduler', context=self.scheduler_api)
         self.scheduler_api.broker_client.ping_connection()
+        self.scheduler_api.broker_client.create_internal_queue('scheduler')
         self.scheduler_api.broker_client.start_consumer()
 
 # ################################################################################################################################
@@ -106,18 +107,18 @@ class SchedulerServer(AuxServer):
         logger = getLogger(__name__)
 
         base_dir = os.environ.get('ZATO_SCHEDULER_BASE_DIR') or os.environ.get('Zato_Component_Dir')
-        
+
         if base_dir:
             logger.info('before_config_hook: changing to base_dir={}'.format(base_dir))
             os.chdir(base_dir)
         else:
             logger.warning('before_config_hook: no ZATO_SCHEDULER_BASE_DIR or Zato_Component_Dir found in environment')
-        
+
         current_dir = os.path.abspath('.')
         logger.info('before_config_hook: current directory={}, calling store_pidfile'.format(current_dir))
-        
+
         store_pidfile(current_dir)
-        
+
         logger.info('before_config_hook: store_pidfile returned')
 
         # Capture warnings to log files
