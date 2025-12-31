@@ -1158,6 +1158,8 @@ class Updater:
 
     def restart_all_components(self, exclude_components:'list'=None, changed_files:'list'=None) -> 'dict':
         """ Restarts all Zato components in order based on changed files.
+        Stop order: dashboard -> server -> scheduler (reverse)
+        Start order: scheduler -> server -> dashboard
         """
         exclude_components = exclude_components or []
         changed_files = changed_files or []
@@ -1173,12 +1175,14 @@ class Updater:
         if has_common_changes:
             logger.info('restart_all_components: zato-common has changes, restarting all components')
 
-        components = ['scheduler', 'server', 'dashboard']
+        start_order = ['scheduler', 'server', 'dashboard']
+        stop_order = ['dashboard', 'server', 'scheduler']
         results = {}
         failed = []
         skipped = []
+        to_restart = []
 
-        for component_name in components:
+        for component_name in start_order:
             if component_name in exclude_components:
                 logger.info('restart_all_components: {} excluded from restart'.format(component_name))
                 skipped.append(component_name)
@@ -1194,16 +1198,30 @@ class Updater:
                 results[component_name] = {'success': True, 'message': 'No changes detected'}
                 continue
 
+            to_restart.append(component_name)
+
+        logger.info('restart_all_components: stopping components in order: {}'.format([c for c in stop_order if c in to_restart]))
+        for component_name in stop_order:
+            if component_name not in to_restart:
+                continue
             component_path = self.get_component_path(component_name)
             component_port = self.get_component_port(component_name)
+            logger.info('restart_all_components: stopping {}'.format(component_name))
+            self.stop_component(component_name, component_path, component_port)
 
-            logger.info('restart_all_components: restarting {} (changes detected)'.format(component_name))
-            result = self.restart_component(component_name, component_path, component_port)
+        logger.info('restart_all_components: starting components in order: {}'.format(to_restart))
+        for component_name in start_order:
+            if component_name not in to_restart:
+                continue
+            component_path = self.get_component_path(component_name)
+            component_port = self.get_component_port(component_name)
+            logger.info('restart_all_components: starting {}'.format(component_name))
+            result = self.start_component(component_name, component_path)
             results[component_name] = result
 
             if not result['success']:
                 failed.append(component_name)
-                logger.error('restart_all_components: failed to restart {}'.format(component_name))
+                logger.error('restart_all_components: failed to start {}'.format(component_name))
 
         if failed:
             message = 'Failed to restart components: {}. '.format(', '.join(failed))
