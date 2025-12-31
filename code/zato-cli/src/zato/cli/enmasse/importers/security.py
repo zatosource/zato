@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from uuid import uuid4
 
 # Zato
 from zato.cli.enmasse.util import preprocess_item
@@ -97,8 +98,34 @@ class SecurityImporter:
 
         for item in yaml_defs:
             item = preprocess_item(item)
+
+            logger.debug('Item before auth_endpoint rename: %s', item)
+            if 'auth_endpoint' in item:
+                logger.debug('Renaming auth_endpoint to auth_server_url')
+                item['auth_server_url'] = item.pop('auth_endpoint')
+            logger.debug('Item after auth_endpoint rename: %s', item)
+
             name = item['name']
             sec_type = item['type']
+
+            if sec_type == 'apikey' and 'username' not in item:
+                item['username'] = f'Zato-Not-Used-{uuid4().hex}'
+
+            if sec_type == 'apikey' and 'header' not in item:
+                item['header'] = 'X-API-Key'
+
+            if 'password' not in item:
+                item['password'] = f'Zato-Auto-Password-{uuid4().hex}'
+
+            if sec_type == 'bearer_token':
+                if 'client_id_field' not in item:
+                    item['client_id_field'] = 'client_id'
+                if 'client_secret_field' not in item:
+                    item['client_secret_field'] = 'client_secret'
+                if 'grant_type' not in item:
+                    item['grant_type'] = 'client_credentials'
+                if 'data_format' not in item:
+                    item['data_format'] = 'form'
 
             logger.info('Checking YAML def: name=%s type=%s', name, sec_type)
 
@@ -118,9 +145,12 @@ class SecurityImporter:
                 for key, value in item.items():
                     if key in ('type', 'name', 'password'):
                         continue
+                    if key == 'username' and sec_type == 'apikey':
+                        continue
 
-                    if key in db_def and db_def[key] != value:
-                        logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
+                    db_value = db_def.get(key)
+                    if db_value != value:
+                        logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_value)
                         needs_update = True
                         break
 
@@ -183,6 +213,11 @@ class SecurityImporter:
 # ################################################################################################################################
 
     def _create_bearer_token(self, security_def:'anydict', cluster:'any_') -> 'any_':
+        name = security_def['name']
+        logger.debug('=== Creating bearer_token: name=%s ===', name)
+        logger.debug('Input security_def keys: %s', list(security_def.keys()))
+        logger.debug('Input security_def FULL: %s', security_def)
+
         auth = OAuth(
             None,
             security_def['name'],
@@ -194,8 +229,18 @@ class SecurityImporter:
             0,
             cluster
         )
+        logger.debug('Created OAuth instance for %s', name)
+        logger.debug('OAuth instance attributes before set_instance_opaque_attrs:')
+        logger.debug('  - name: %s', auth.name)
+        logger.debug('  - username: %s', auth.username)
+        logger.debug('  - opaque1 (before): %s', getattr(auth, 'opaque1', None))
 
+        logger.debug('Calling set_instance_opaque_attrs with security_def: %s', security_def)
         set_instance_opaque_attrs(auth, security_def)
+
+        logger.debug('OAuth instance attributes after set_instance_opaque_attrs:')
+        logger.debug('  - opaque1 (after): %s', getattr(auth, 'opaque1', None))
+        logger.debug('=== Finished creating bearer_token: %s ===', name)
         return auth
 
 # ################################################################################################################################
@@ -227,17 +272,16 @@ class SecurityImporter:
 
     def _update_definition(self, definition:'any_', security_def:'anydict') -> 'any_':
 
+        sec_type = security_def.get('type')
+
         for key, value in security_def.items():
             if key in ('type', 'name', 'id'):
+                continue
+            if key == 'username' and sec_type == 'apikey':
                 continue
 
             if hasattr(definition, key):
                 setattr(definition, key, value)
-            else:
-                def_type = security_def['type']
-                def_name = security_def['name']
-                msg = f'Invalid attribute {key!r} for {def_type} security definition {def_name!r}'
-                raise Exception(msg)
 
         set_instance_opaque_attrs(definition, security_def)
         return definition
@@ -259,25 +303,49 @@ class SecurityImporter:
         sec_type = sec_def['type']
         def_id = sec_def['id']
         def_name = sec_def['name']
+        logger.debug('Updating security definition: name=%s type=%s id=%s', def_name, sec_type, def_id)
+        logger.debug('Input sec_def keys: %s', list(sec_def.keys()))
+        logger.debug('Input sec_def: %s', sec_def)
 
         model = self.get_class_by_type(sec_type)
+        logger.debug('Using model class: %s', model)
 
         db_def = db_defs[def_name]
+        logger.debug('DB definition for %s: %s', def_name, db_def)
+
+        from zato.common.json_internal import loads
+        if 'opaque1' in db_def and db_def['opaque1']:
+            logger.debug('Parsing opaque1 from DB: %s', db_def['opaque1'])
+            opaque_data = loads(db_def['opaque1'])
+            logger.debug('Parsed opaque data: %s', opaque_data)
+            for key, value in opaque_data.items():
+                if key not in sec_def:
+                    logger.debug('Adding opaque key %s=%s from DB to sec_def', key, value)
+                    sec_def[key] = value
+
         for item in db_def:
-            if item not in sec_def and item not in ('id', 'type', 'definition'):
+            if item not in sec_def and item not in ('id', 'type', 'definition', 'opaque1'):
+                logger.debug('Adding missing key %s=%s from DB to sec_def', item, db_def[item])
                 sec_def[item] = db_def[item]
+        logger.debug('sec_def after merging DB values: %s', sec_def)
 
         definition = session.query(model).filter_by(id=def_id).one()
+        logger.debug('Retrieved definition instance from DB')
+        logger.debug('Calling _update_definition')
         self._update_definition(definition, sec_def)
+        logger.debug('Finished _update_definition')
 
         session.add(definition)
+        logger.debug('Finished updating security definition: %s', def_name)
         return definition
 
 # ################################################################################################################################
 
     def sync_security_definitions(self, security_list:'anylist', session:'SASession') -> 'listtuple':
 
-        logger.info('Processing %d security definitions from YAML', len(security_list))
+        count = len(security_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} security {noun} from YAML')
 
         valid_types = {'basic_auth', 'ntlm', 'bearer_token', 'apikey'}
 
@@ -327,8 +395,10 @@ class SecurityImporter:
                     'name': name,
                     'type': def_info['type']
                 }
+                logger.info('Added to sec_defs: name=%s id=%s type=%s', name, def_info['id'], def_info['type'])
 
             logger.info('Populated %d security definitions in dictionary', len(self.importer.sec_defs))
+            logger.info('Final sec_defs keys: %s', list(self.importer.sec_defs.keys()))
 
         except Exception as e:
             logger.error('Error syncing security definitions: %s', e)

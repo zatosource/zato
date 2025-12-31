@@ -1,0 +1,123 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Monitoring{% endblock %}
+
+{% block "extra_css" %}
+<style type="text/css">
+    :root {
+        --ocean-blue-1: #b8e6ff;
+        --ocean-blue-2: #9dd9ff;
+        --ocean-blue-3: #82ccff;
+        --ocean-blue-4: #67bfff;
+    }
+    .monitoring-container {
+        background: #ffffff;
+        min-height: 100vh;
+        padding: 40px 20px;
+        margin: 0;
+        overflow-x: hidden;
+    }
+    .dashboard-grid {
+        display: flex;
+        gap: 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+        justify-content: center;
+        align-items: stretch;
+    }
+    .dashboard-card {
+        background: #ffffff !important;
+        border: 3px solid #012845 !important;
+        padding: 32px !important;
+        box-shadow: 8px 8px 0px #063c65 !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+        width: 400px !important;
+        min-width: 400px !important;
+        max-width: 400px !important;
+        min-height: 191px !important;
+        box-sizing: border-box !important;
+        position: relative !important;
+        text-decoration: none !important;
+        color: inherit !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-self: flex-start !important;
+    }
+    .dashboard-card:hover {
+        background: #012845 !important;
+        box-shadow: 8px 8px 0px #82ccff !important;
+    }
+    .card-title {
+        font-size: 28px;
+        font-weight: 900;
+        color: #012845;
+        margin-bottom: 16px;
+        letter-spacing: -1px;
+        text-transform: none;
+    }
+    .dashboard-card:hover .card-title {
+        color: #ffffff !important;
+    }
+    .card-description {
+        color: #063c65;
+        font-family: monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 0;
+        font-weight: 500;
+    }
+    .dashboard-card:hover .card-description {
+        color: #ffffff !important;
+    }
+    .page-title {
+        text-align: center;
+        font-size: 56px;
+        font-weight: 900;
+        color: #012845;
+        margin-top: calc(5vh + 20px);
+        margin-bottom: 24px;
+        letter-spacing: -2px;
+        text-transform: uppercase;
+    }
+    .page-subtitle {
+        text-align: center;
+        font-size: 20px;
+        color: #063c65;
+        margin-bottom: calc(6vh + 30px);
+        font-weight: 600;
+        font-family: monospace;
+    }
+</style>
+{% endblock %}
+
+{% block "content" %}
+
+<div class="monitoring-container">
+    <h1 class="page-title">Data observatory</h1>
+    <p class="page-subtitle">What needs your attention?</p>
+    
+    <div class="dashboard-grid">
+        <a href="{% url "monitoring-wizard-health" %}?cluster={{ cluster_id|default:"1" }}" class="dashboard-card">
+            <h3 class="card-title">Is it working?</h3>
+            <p class="card-description">Health and status dashboards that monitor system availability and operational state</p>
+        </a>
+
+        <div class="dashboard-card">
+            <h3 class="card-title">How fast is it?</h3>
+            <p class="card-description">Performance dashboards that measure duration</p>
+        </div>
+
+        <div class="dashboard-card">
+            <h3 class="card-title">How many of it?</h3>
+            <p class="card-description">Count-based dashboards that show totals, aggregations, and numerical summaries</p>
+        </div>
+
+        <div class="dashboard-card">
+            <h3 class="card-title">What happened to it?</h3>
+            <p class="card-description">Historical and event-based dashboards that analyze incidents and track changes</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

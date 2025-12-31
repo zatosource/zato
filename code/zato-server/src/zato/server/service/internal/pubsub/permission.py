@@ -199,6 +199,7 @@ class Delete(AdminService):
                 self.request.input.sec_base_id = permission.sec_base_id
                 self.request.input.pattern = permission.pattern
                 self.request.input.access_type = permission.access_type
+                self.request.input.username = permission.sec_base.username
 
                 session.delete(permission)
                 session.commit()
@@ -207,7 +208,6 @@ class Delete(AdminService):
                 raise
             else:
                 self.request.input.action = PUBSUB.PERMISSION_DELETE.value
-                self.request.input.username = permission.sec_base.username
 
                 self.broker_client.publish(self.request.input)
                 self.broker_client.publish_to_pubsub(self.request.input)

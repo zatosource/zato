@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from inspect import isclass
@@ -25,6 +26,12 @@ from zato.common.util.platform_ import is_windows
 from zato.common.typing_ import cast_
 from zato.common.util import new_cid
 from zato.common.util.api import get_zato_command
+from zato.common.util.time_ import utcnow
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-threaded.*fork.*')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,7 +109,7 @@ class CommandsFacade:
     def _append_time_details(self, out:'CommandResult') -> 'None':
 
         # .. compute the command's end time ..
-        out.end_time = datetime.utcnow()
+        out.end_time = utcnow()
         out.end_time_iso = out.end_time.isoformat()
 
         total_time = (out.end_time - out.start_time)
@@ -195,7 +202,7 @@ class CommandsFacade:
             logger.info('Invoking command: `%s` (%s)', command, cid)
 
             # .. start measuring the response time ..
-            out.start_time = datetime.utcnow()
+            out.start_time = utcnow()
             out.start_time_iso = out.start_time.isoformat()
 
             # .. this needs to be None if we do not want it

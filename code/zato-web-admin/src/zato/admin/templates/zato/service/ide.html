@@ -14,14 +14,17 @@
 
 <script type="text/javascript" src="/static/js/common.js"></script>
 <script type="text/javascript" src="/static/js/invoker.js"></script>
+<script type="text/javascript" src="/static/js/log_streaming.js"></script>
+<script type="module" src="/static/message-viewer-src/message-viewer-init.js"></script>
 <script type="text/javascript" src="/static/js/service/ide.js"></script>
 
 <link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
 <link rel="stylesheet" media="screen" href="/static/css/service/ide.css" />
 <link rel="stylesheet" media="screen" href="/static/css/invoker.css" />
+<link rel="stylesheet" media="screen" href="/static/message-viewer-src/message-viewer.css" />
 
 <div id="main-area-container">
-    <div class="item">
+    <div class="item" id="editor-container">
         <input type="hidden" id="cluster_name" value="{{ cluster_name }}"/>
         <input type="hidden" id="current_fs_location" value="{{ data.current_fs_location }}"/>
         <input type="hidden" id="current_root_directory" value="{{ data.current_root_directory }}"/>
@@ -29,9 +32,9 @@
         <div id="editor">{{ data.current_file_source_code }}</div>
         <form id="editor-form" class="hidden"><textarea id="data-editor" name="data-editor"></textarea></form>
     </div>
+    <div id="resizer"></div>
     <div id="action-area-container">
         <div id="action-area-header" data-is-expanded="false">
-            <a href="javascript:$.fn.zato.ide.toggle_action_area()" class="img-button"><img src="/static/gfx/editor/resize.png" class="button" title="Resize this area" /></a>
             <select id="object-select" class="default" onchange="$.fn.zato.ide.on_object_select_changed(this);">
                 <optgroup label="Current file" id="optgroup-current-file">
                     {% for service_item in data.current_file_service_list %}
@@ -84,9 +87,6 @@
         <div id="action-area" class="item item-2">
             <table class="file-system-listing">
                 <tr class="header">
-                    <td colspan="2" class="header status">
-                        <span id="header-status" class="dimmed"></span>
-                    </td>
                 </tr>
                 <tr class="header">
                     <td colspan="2" class="header">
@@ -116,34 +116,41 @@
                             <form id="invoke-service-request-form"><textarea id="data-request" name="data-request"
                                 placeholder="Enter parameters as key=value pairs, e.g.:
 key1=value1
-key2=value2"></textarea></form>
-                        </td>
-                    </tr>
+key2=value2
 
-                    <tr colspan="2" class="invoker-tr">
-                        <td class="align-right">
-                            <div>
-                                <input type="button" id="header-left-link-deploy" value="Deploy" class="not-different">
-
-                                <input
-                                    id="invoke-service"
-                                    type="button"
-                                    {% if not data.current_fs_location %}disabled="disabled" class="no-click"{% endif %}
-                                    value="Invoke"/>
-                            </div>
+Ctrl+↑/↓ to browse history
+Ctrl+K for full history"></textarea></form>
                         </td>
                     </tr>
 
                     <tr colspan="2" class="invoker-tr">
                         <td>
-                            <br/>
-                            <div id="singleton-form-parent" class="hidden"></div>
-                            <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
-                            <span id="invoking-please-wait" class="hidden">Invoking ..</span>
-                            <span id="deploying-please-wait" class="hidden">Deploying ..</span>
-                            <span id="getting-info-please-wait" class="hidden">Getting info ..</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="text-align: left;">
+                                    <div id="singleton-form-parent" class="hidden"></div>
+                                    <span id="result-header" class="dimmed zato-not-used">Waiting for request ..</span>
+                                    <span id="invoking-please-wait" class="hidden">Invoking ..</span>
+                                    <span id="deploying-please-wait" class="hidden">Deploying ..</span>
+                                    <span id="getting-info-please-wait" class="hidden">Getting info ..</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <input type="button" id="open-history-overlay" value="History" title="Open full history (Ctrl+K)" onclick="$.fn.zato.ide.open_history_overlay();"/><span style="user-select: none;"></span>
+                                    <input type="button" id="header-left-link-deploy" value="Deploy" class="not-different">
+                                    <input
+                                        id="invoke-service"
+                                        type="button"
+                                        {% if not data.current_fs_location %}disabled="disabled" class="no-click"{% endif %}
+                                        value="Invoke"/>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr colspan="2" class="invoker-tr">
+                        <td style="padding-top: 0;">
                             <form id="invoke-service-form" novalidate="" method="post"></form>
-                                <textarea id="data-response"></textarea>
+                                <div id="message-viewer-wrapper"></div>
+                                <textarea id="data-response" style="display: none;"></textarea>
                             </form>
                         </td>
                     </tr>
@@ -175,11 +182,54 @@ key2=value2"></textarea></form>
     {% endif %}
   </div>
 
+<div id="request-history-overlay" class="history-overlay hidden">
+    <div class="history-overlay-backdrop"></div>
+    <div class="history-overlay-content">
+        <div class="history-overlay-header">
+            <h2>Request history</h2>
+            <button id="history-overlay-close" class="history-close-btn">✕</button>
+        </div>
+        <div class="history-overlay-search">
+            <input type="text" id="history-search-input" placeholder="Search history..." />
+        </div>
+        <div class="history-overlay-list" id="history-overlay-list">
+        </div>
+    </div>
+</div>
+
 <script src="/static/ace-builds/src/ace.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-error_marker.js" type="text/javascript" charset="utf-8"></script>
 <script src="/static/ace-builds/src/ext-language_tools.js" type="text/javascript" charset="utf-8"></script>
 <script type="text/javascript">
     $.fn.zato.ide.init_editor("{{ current_object_name_url_safe }}");
+    $.fn.zato.log_streaming.init();
+
+    window.addEventListener('beforeunload', function() {
+        if ($.fn.zato.log_streaming.eventSource) {
+            $.fn.zato.log_streaming.eventSource.close();
+        }
+    });
+
+    setTimeout(function() {
+        var metaTag = document.querySelector('meta[name="generator"]');
+        var version = 'unknown';
+        if (metaTag) {
+            version = metaTag.getAttribute('content');
+        }
+        console.clear();
+        setTimeout(function() {
+            var now = new Date();
+            var hours = String(now.getHours()).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            var seconds = String(now.getSeconds()).padStart(2, '0');
+            var milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+            var timestamp = hours + ':' + minutes + ':' + seconds + '.' + milliseconds;
+            var isFirefox = navigator.userAgent.indexOf('Firefox') !== -1;
+            var timestampPrefix = isFirefox ? '' : timestamp + ' ';
+            var firefoxExtra = isFirefox ? ' font-family: monospace; display: inline-block; width: 70px; text-align: center;' : '';
+            console.info(timestampPrefix + '%cINFO%c - ✅ IDE ready - ' + version, 'background: #d1ecf1; color: #0c5460; padding: 1px 4px; border-radius: 2px;' + firefoxExtra, '');
+        }, 10);
+    }, 1000);
 </script>
 
 {% endblock %}

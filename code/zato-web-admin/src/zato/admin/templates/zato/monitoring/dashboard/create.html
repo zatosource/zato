@@ -1,0 +1,740 @@
+{% extends "zato/index.html" %}
+{% load static %}
+
+{% block html_title %}Creating dashboard{% endblock %}
+
+{% block "extra_css" %}
+<script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+<script type="text/javascript" src="/static/tippy/tippy.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
+<link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
+<style>
+.creation-container {
+    background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
+    min-height: 100vh;
+    padding: 40px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.creation-panel {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    box-shadow: 8px 8px 0px var(--shadow-dark);
+}
+
+.creation-header {
+    padding: 32px 40px;
+    border-bottom: 3px solid var(--primary-dark);
+    background: var(--white);
+}
+
+.creation-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.02em;
+}
+
+.creation-subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 0;
+}
+
+.creation-content {
+    display: flex;
+}
+
+.creation-main {
+    flex: 1;
+    padding: 40px;
+}
+
+.creation-sidebar {
+    width: 300px;
+    background: var(--background-light);
+    border-left: 3px solid var(--primary-dark);
+    padding: 40px 32px;
+}
+
+.progress-panel {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.progress-section {
+    margin-bottom: 0;
+}
+
+.progress-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.progress-item:last-child {
+    border-bottom: none;
+}
+
+.progress-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 16px;
+    margin-top: 0px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.progress-icon.spinner {
+    color: var(--primary-dark);
+    animation: spin 1s linear infinite;
+}
+
+.progress-icon.completed {
+    color: var(--primary-dark);
+}
+
+.progress-icon.error {
+    color: #ff4444;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.progress-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.progress-platform {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 0 0 4px 0;
+    line-height: 1.3;
+}
+
+.progress-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.4;
+    font-family: monospace;
+}
+
+.progress-item.processing .progress-text {
+    color: var(--accent-light);
+}
+
+.progress-item.completed .progress-text {
+    color: var(--primary-dark);
+}
+
+.progress-item.error .progress-text {
+    color: #ff4444;
+}
+
+.wizard-summary {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
+}
+
+.summary-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin: 0 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.summary-item:last-child {
+    margin-bottom: 0;
+}
+
+.summary-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-right: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+}
+
+.summary-value {
+    color: var(--primary-dark);
+    font-weight: 600;
+    text-align: right;
+    flex-shrink: 0;
+    max-width: 60%;
+    word-break: break-word;
+    font-family: monospace;
+}
+
+.code-section {
+    margin-top: 32px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    position: relative;
+}
+
+.code-section.show {
+    opacity: 1;
+}
+
+.code-section h3, .creation-main h3, .creation-sidebar h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.code-section .highlight {
+    border: 3px solid var(--primary-dark);
+    background: var(--white);
+    font-size: 13px;
+    line-height: 1.4;
+    position: relative;
+}
+
+.code-section .highlight pre {
+    padding: 20px 60px 20px 20px;
+    margin: 0;
+    overflow-x: auto;
+}
+
+.copy-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--primary-dark);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-transform: uppercase;
+    z-index: 5;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.copy-button:hover {
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+/* Lively syntax highlighting colors */
+.code-section .highlight .c1 { color: #22863a; font-style: italic; }
+.code-section .highlight .kn { color: #d73a49; font-weight: bold; }
+.code-section .highlight .nn { color: #6f42c1; font-weight: bold; }
+.code-section .highlight .k { color: #d73a49; font-weight: bold; }
+.code-section .highlight .nc { color: #6f42c1; font-weight: bold; }
+.code-section .highlight .p { color: #24292e; }
+.code-section .highlight .n { color: #24292e; }
+.code-section .highlight .o { color: #d73a49; }
+.code-section .highlight .s1 { color: #032f62; }
+.code-section .highlight .nf { color: #6f42c1; font-weight: bold; }
+.code-section .highlight .bp { color: #005cc5; font-weight: bold; }
+.code-section .highlight .ow { color: #d73a49; font-weight: bold; }
+.code-section .highlight .sa { color: #032f62; }
+.code-section .highlight .si { color: #e36209; }
+
+.completion-section.show {
+    opacity: 1;
+}
+
+.completion-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #067f39;
+    margin: 0 0 8px 0;
+}
+
+.completion-text {
+    color: #232f3e;
+    font-size: 14px;
+    margin: 0 0 24px 0;
+}
+
+.dashboard-links {
+    display: flex;
+    gap: 12px;
+}
+
+.dashboard-link {
+    padding: 8px 16px;
+    background: #0073bb;
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid #0073bb;
+    transition: all 0.15s ease;
+}
+
+.dashboard-link:hover {
+    background: #005a9c;
+    border-color: #005a9c;
+    color: white;
+}
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 12px;
+    background: #f7f8fa;
+    border: 1px solid #e1e5e9;
+    margin-bottom: 24px;
+}
+
+.status-indicator.processing {
+    background: #f0f9ff;
+    border-color: #0073bb;
+    color: #0073bb;
+}
+
+.status-indicator.completed {
+    background: #f0fff4;
+    border-color: #067f39;
+    color: #067f39;
+}
+
+.links-section {
+    margin-top: 52px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    position: relative;
+}
+
+.links-section.show {
+    opacity: 1;
+}
+
+.links-panel {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
+}
+
+.links-row {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dashboard-link-item {
+    width: 100%;
+}
+
+.links-panel .dashboard-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    border: 3px solid var(--primary-dark);
+    border-radius: 0;
+    background: var(--white);
+    color: var(--primary-dark);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+    box-shadow: 8px 8px 0px var(--shadow-dark);
+    box-sizing: border-box;
+}
+
+.links-panel .dashboard-link:hover {
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: 8px 8px 0px var(--accent-light);
+}
+
+.external-icon {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
+}
+
+.links-panel .dashboard-link:hover .external-icon {
+    filter: brightness(0) saturate(100%) invert(100%);
+}
+</style>
+{% endblock %}
+
+{% block "extra_js" %}
+<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
+<script src="/static/js/common.js?nocache={{ build_id }}" type="text/javascript" charset="utf-8" nonce="{{ csp_nonce }}"></script>
+<script type="text/javascript" nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        // Start dashboard creation process
+        createDashboards();
+
+        // Close tooltips when clicking anywhere on page
+        $(document).on('click', function(e) {
+            // Don't close if clicking on copy or try buttons
+            if (!$(e.target).hasClass('copy-button')) {
+                // Hide all visible tippy instances
+                document.querySelectorAll('[data-tippy-root]').forEach(function(tooltip) {
+                    if (tooltip._tippy) {
+                        tooltip._tippy.hide();
+                    }
+                });
+            }
+        });
+    });
+
+    function createDashboards() {
+        // Update Grafana status to processing
+        updateStatus('grafana', 'processing', 'Creating Grafana dashboard...');
+
+        // Create Grafana dashboard
+        $.ajax({
+            url: '/zato/monitoring/dashboard/create/grafana/',
+            method: 'POST',
+            data: {
+                type: '{{ wizard_type }}',
+                step1: '{{ step1 }}',
+                step2: '{{ step2 }}',
+                step3: '{{ step3 }}',
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                updateStatus('grafana', 'completed', 'Dashboard created successfully');
+
+                // Start Datadog creation
+                updateStatus('datadog', 'processing', 'Creating Datadog dashboard...');
+
+                $.ajax({
+                    url: '/zato/monitoring/dashboard/create/datadog/',
+                    method: 'POST',
+                    data: {
+                        type: '{{ wizard_type }}',
+                        step1: '{{ step1 }}',
+                        step2: '{{ step2 }}',
+                        step3: '{{ step3 }}',
+                        csrfmiddlewaretoken: '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        updateStatus('datadog', 'completed', 'Dashboard created successfully');
+                        checkCompletion();
+                    },
+                    error: function() {
+                        updateStatus('datadog', 'error', 'Creation failed - please try again');
+                    }
+                });
+            },
+            error: function() {
+                updateStatus('grafana', 'error', 'Creation failed - please try again');
+            }
+        });
+    }
+
+    function updateStatus(platform, status, message) {
+        const item = $('#' + platform + '-progress');
+        const icon = item.find('.progress-icon');
+        const text = item.find('.progress-text');
+
+        // Remove all status classes
+        item.removeClass('processing completed error');
+
+        // Add new status
+        item.addClass(status);
+
+        if (status === 'processing') {
+            // Don't touch the spinner if it's already there
+            if (icon.find('img[src="/static/gfx/spinner.svg"]').length === 0) {
+                icon.removeClass('completed error').addClass('spinner').html('<img src="/static/gfx/spinner.svg" style="animation: spin 0.5s linear infinite; width: 28px; height: 28px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);">');
+            }
+        } else if (status === 'completed') {
+            icon.addClass('completed').text('✓');
+        } else if (status === 'error') {
+            icon.addClass('error').text('✗');
+        }
+
+        text.text(message);
+    }
+
+    function checkCompletion() {
+        const completed = $('.progress-item.completed').length;
+        const total = $('.progress-item').length;
+
+        if (completed === total) {
+            setTimeout(() => {
+                $('#code-section').addClass('show');
+                $('.links-section').addClass('show');
+            }, 500);
+        }
+    }
+
+    // Copy code functionality
+    $(document).on('click', '#copy-code-button', function() {
+        const button = $(this);
+
+        try {
+            const codeElement = document.getElementById('code-content');
+            const codeText = codeElement.innerText || codeElement.textContent;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(codeText).then(() => {
+                    showCopyTooltip(button[0]);
+                }).catch(() => {
+                    fallbackCopyTextToClipboard(codeText, button[0]);
+                });
+            } else {
+                fallbackCopyTextToClipboard(codeText, button[0]);
+            }
+        } catch (err) {
+            console.error('Copy failed:', err);
+        }
+    });
+
+    function fallbackCopyTextToClipboard(text, buttonElement) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showCopyTooltip(buttonElement);
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+        }
+
+        document.body.removeChild(textArea);
+    }
+
+    function showCopyTooltip(buttonElement) {
+        const _tooltip = tippy(buttonElement, {
+            content: "Copied to clipboard",
+            trigger: "manual",
+            hideOnClick: false,
+            placement: "top",
+            arrow: true,
+            interactive: false,
+            inertia: true,
+            role: "tooltip",
+        });
+
+        _tooltip.show();
+
+        setTimeout(() => {
+            _tooltip.hide();
+            setTimeout(() => {
+                _tooltip.destroy();
+            }, 500);
+        }, 1500);
+    }
+
+    // Try it out functionality
+    $(document).on('click', '#try-code-button', function() {
+        const button = $(this);
+
+        // Show tooltip with spinner
+        const _tooltip = tippy(button[0], {
+            content: '<span style="display: inline-flex; align-items: center; gap: 4px; line-height: 1;"><img src="/static/gfx/spinner.svg" style="animation: spin 0.8s linear infinite; width: 20px; height: 20px; margin-top: 2px; filter: brightness(0) saturate(100%) invert(100%);"><span style="display: inline-flex; align-items: center;">Invoking ...</span></span>',
+            trigger: "manual",
+            hideOnClick: false,
+            placement: "top",
+            arrow: true,
+            interactive: false,
+            inertia: true,
+            role: "tooltip",
+            allowHTML: true
+        });
+
+        _tooltip.show();
+
+        // Make request to try endpoint
+        $.ajax({
+            url: '/zato/monitoring/dashboard/try/',
+            method: 'POST',
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                // Update tooltip content and keep it visible
+                _tooltip.setContent('OK, invoked');
+                // Hide tooltip after 1.6 seconds from success message
+                setTimeout(() => {
+                    _tooltip.hide();
+                }, 1600);
+            },
+            error: function() {
+                _tooltip.setContent('Invocation failed');
+                // Hide tooltip after 1.6 seconds from error message
+                setTimeout(() => {
+                    _tooltip.hide();
+                }, 1600);
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% block "content" %}
+
+<div class="creation-container">
+    <div class="creation-panel">
+        <div class="creation-content">
+            <div class="creation-main">
+                <h3>Status</h3>
+                <div class="progress-panel">
+                    <div class="progress-section">
+                        <div class="progress-item" id="grafana-progress">
+                            <div class="progress-icon"><img src="/static/gfx/spinner.svg" style="animation: spin 0.5s linear infinite; width: 28px; height: 28px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);"></div>
+                            <div class="progress-content">
+                                <div class="progress-platform">Grafana dashboard</div>
+                                <div class="progress-text">Initializing...</div>
+                            </div>
+                        </div>
+
+                        <div class="progress-item" id="datadog-progress">
+                            <div class="progress-icon"><img src="/static/gfx/spinner.svg" style="animation: spin 0.5s linear infinite; width: 28px; height: 28px; filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);"></div>
+                            <div class="progress-content">
+                                <div class="progress-platform">Datadog dashboard</div>
+                                <div class="progress-text">Waiting...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="code-section" id="code-section">
+                    <h3>Service template</h3>
+                    <div class="highlight">
+                        <button class="copy-button" id="try-code-button" style="right: 10px;">Try it out</button>
+                        <button class="copy-button" id="copy-code-button" style="right: 110px;">Copy</button>
+                        <pre id="code-content"><span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+
+
+<span class="c1"># Zato</span>
+<span class="kn">from</span> <span class="nn">zato.server.service</span> <span class="kn">import</span> <span class="n">Service</span>
+
+<span class="k">class</span> <span class="nc">MyService</span><span class="p">(</span><span class="n">Service</span><span class="p">):</span>
+
+    <span class="c1"># I/O definition</span>
+    <span class="n">input</span> <span class="o">=</span> <span class="s1">'-name'</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="s1">'salutation'</span>
+
+    <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="c1"># Local variables</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="s1">'partner'</span>
+
+        <span class="c1"># Our response to produce</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'Hello </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">'</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'Hello!'</span><span class="p">)</span>
+
+        <span class="c1"># Reply to our caller</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">salutation</span> <span class="o">=</span> <span class="n">data</span>
+</pre></div>
+                </div>
+
+            </div>
+
+            <div class="creation-sidebar">
+                <h3>Config summary</h3>
+                <div class="wizard-summary">
+                    <div class="summary-item">
+                        <div class="summary-label">Type</div>
+                        <div class="summary-value">{{ wizard_type }}</div>
+                    </div>
+                    {% if step1 %}
+                    <div class="summary-item">
+                        <div class="summary-label">Topic</div>
+                        <div class="summary-value">{{ step1 }}</div>
+                    </div>
+                    {% endif %}
+                    {% if step2 %}
+                    <div class="summary-item">
+                        <div class="summary-label">Monitor</div>
+                        <div class="summary-value">{{ step2_text }}</div>
+                    </div>
+                    {% endif %}
+                    {% if step3 %}
+                    <div class="summary-item">
+                        <div class="summary-label">Time range</div>
+                        <div class="summary-value">{{ step3_text }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="links-section">
+                    <h3>Links</h3>
+                    <div class="links-panel">
+                        <div class="links-row">
+                            <div class="dashboard-link-item">
+                                <a href="#" class="dashboard-link" target="_blank">
+                                    Grafana
+                                    <img src="/static/gfx/external-link.svg" class="external-icon" alt="External link">
+                                </a>
+                            </div>
+                            <div class="dashboard-link-item">
+                                <a href="#" class="dashboard-link" target="_blank">
+                                    Datadog
+                                    <img src="/static/gfx/external-link.svg" class="external-icon" alt="External link">
+                                </a>
+                            </div>
+                            <div class="dashboard-link-item">
+                                <a href="#" class="dashboard-link" target="_blank">
+                                    Confluence
+                                    <img src="/static/gfx/external-link.svg" class="external-icon" alt="External link">
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
