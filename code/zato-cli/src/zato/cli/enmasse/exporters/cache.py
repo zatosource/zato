@@ -43,6 +43,9 @@ class CacheExporter:
         """
         logger.info('Exporting cache definitions')
 
+        # Names to exclude completely
+        excluded_names = {'default', 'zato.bearer.token'}
+
         db_caches:'db_cache_list' = cache_builtin_list(session, cluster_id, False)
 
         if not db_caches:
@@ -51,12 +54,16 @@ class CacheExporter:
 
         exported_caches:'cache_def_list' = []
 
-        for cache_obj in db_caches.result:
+        for cache_item in db_caches.result:
+
+            # Skip excluded cache definitions
+            if cache_item.name in excluded_names:
+                continue
 
             item = {
-                'name': cache_obj.name,
-                'extend_expiry_on_get': cache_obj.extend_expiry_on_get,
-                'extend_expiry_on_set': cache_obj.extend_expiry_on_set,
+                'name': cache_item.name,
+                'extend_expiry_on_get': cache_item.extend_expiry_on_get,
+                'extend_expiry_on_set': cache_item.extend_expiry_on_set,
             }
 
             exported_caches.append(item)

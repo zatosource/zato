@@ -22,6 +22,7 @@ from requests import post as requests_post
 # Zato
 from zato.cache import KeyExpiredError
 from zato.common.api import CACHE, Data_Format, ZATO_NOT_GIVEN
+from zato.common.exception import BackendInvocationError
 from zato.common.model.security import BearerTokenConfig, BearerTokenInfo, BearerTokenInfoResult
 from zato.common.util.api import parse_extra_into_dict
 
@@ -68,12 +69,14 @@ class BearerTokenManager:
     def _get_bearer_token_config(self, sec_def:'stranydict') -> 'BearerTokenConfig':
 
         # Scopes require preprocessing ..
-        scopes = (sec_def['scopes'] or '').splitlines()
+        scopes = (sec_def.get('scopes') or '').splitlines()
         scopes = [elem.strip() for elem in scopes]
         scopes = ' '.join(scopes)
 
         # .. same goes for extra fields ..
-        extra_fields = sec_def['extra_fields'] or ''
+        extra_fields = sec_def.get('extra_fields') or ''
+        if isinstance(extra_fields, list):
+            extra_fields = '\n'.join(extra_fields)
         extra_fields = parse_extra_into_dict(extra_fields)
 
         # .. build a business object from security definition ..
@@ -191,7 +194,7 @@ class BearerTokenManager:
         if not response.ok:
             msg  = f'Bearer token for `{config.sec_def_name}` could not be obtained from {config.auth_server_url} -> '
             msg += f'{response.status_code} -> {response.text}'
-            raise Exception(msg)
+            raise BackendInvocationError(None, msg, needs_msg=True)
 
         # .. if we are here, it means that we can load the JSON response ..
         data:'stranydict' = loads(response.text)

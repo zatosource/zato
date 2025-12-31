@@ -50,7 +50,10 @@ class Microsoft365Client:
 
         tenant_id = config['tenant_id']
         client_id = config['client_id']
-        secret_value = config.get('secret_value') or config.get('secret') or config['password']
+        secret_value = config.get('secret_value') or config.get('secret') or config.get('password')
+
+        if not secret_value:
+            raise Exception(f'Secret value not found in {dict(config)}')
 
         credentials = (client_id, secret_value)
 
@@ -73,7 +76,7 @@ class Microsoft365Client:
 # ################################################################################################################################
 
     def ping(self):
-        result = self.impl.get_current_user()
+        result = self.impl.get_current_user_data()
         logger.info('Microsoft 365 ping result (%s) -> `%s`', self.config['name'], result)
 
 # ################################################################################################################################

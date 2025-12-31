@@ -17,6 +17,9 @@ from tempfile import gettempdir
 from time import sleep
 from uuid import uuid4
 
+# Zato
+from zato.common.util.time_ import utcnow
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -39,7 +42,7 @@ def fs_safe_name(value:'str') -> 'str':
 
 # ################################################################################################################################
 
-def fs_safe_now(_utcnow:'callable_'=datetime.utcnow) -> 'str':
+def fs_safe_now(_utcnow:'callable_'=utcnow) -> 'str':
     """ Returns a UTC timestamp with any characters unsafe for filesystem names removed.
     """
     return fs_safe_name(_utcnow().isoformat())
@@ -49,16 +52,16 @@ def fs_safe_now(_utcnow:'callable_'=datetime.utcnow) -> 'str':
 def wait_for_file(path:'str', max_wait:'int'=5) -> 'None':
 
     found = False
-    now   = datetime.utcnow()
+    now   = utcnow()
     until = now + timedelta(seconds=max_wait)
 
     while now < until:
-        found = os.path.exists(path)
-        if found:
+        if os.path.exists(path):
+            found = True
             break
         else:
             sleep(0.05)
-            now = datetime.utcnow()
+            now = utcnow()
 
 # ################################################################################################################################
 

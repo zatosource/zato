@@ -16,7 +16,7 @@ import sys
 from errno import ENOENT
 from inspect import isclass
 from threading import RLock
-from traceback import format_exc
+from traceback import format_exc, format_stack
 from uuid import uuid4
 
 # Bunch
@@ -794,7 +794,7 @@ class WorkerStore(_WorkerStoreBase):
             msg.ack()
 
             # .. and let's return explicitly.
-            logger.info('🍀 ACK ACK 111')
+            # logger.info('🍀 ACK ACK 111')
             return
 
         except Exception as e:
@@ -851,11 +851,11 @@ class WorkerStore(_WorkerStoreBase):
                 logger.info(log_msg)
 
                 # .. do sleep now ..
-                logger.info('🕐 REJ REJ 111')
+                # logger.info('🕐 REJ REJ 111')
                 sleep(sleep_time)
 
                 # .. and then reject and enqueue the message, thus ensuring it will be redelivered ..
-                logger.info('🕐 REJ REJ 222')
+                # logger.info('🕐 REJ REJ 222')
                 msg.reject(requeue=True)
 
             # .. if we go here, it means we run out of time, so we need to accept that message ..
@@ -864,7 +864,7 @@ class WorkerStore(_WorkerStoreBase):
                 log_msg = f'Subscriber: `{subscriber}` -> topic: `{topic_name}`' + \
                           f' -> Msg ID: `{msg_id}` -> Max wait time reached (attempts={delivery_count})'
                 logger.info(log_msg)
-                logger.info('🏓 ACK ACK 222')
+                # logger.info('🏓 ACK ACK 222')
                 msg.ack()
 
 # ################################################################################################################################
@@ -1242,13 +1242,14 @@ class WorkerStore(_WorkerStoreBase):
             self.broker_client.invoke_async(cb_msg) # type: ignore
 
         if kwargs.get('needs_response'):
-
             if skip_response_elem:
                 return response
             else:
                 response = service.response.payload
+
                 if hasattr(response, 'getvalue'):
                     response = response.getvalue(serialize=kwargs.get('serialize'))
+
                 return response
 
 # ################################################################################################################################
@@ -1547,6 +1548,14 @@ class WorkerStore(_WorkerStoreBase):
             msg, 'zato.hot-deploy.create', {'payload_name': msg.payload_name, 'payload':msg.payload}, 'CREATE_SERVICE', *args,
             serialize=False, needs_response=True)
 
+
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_UPDATE_ENMASSE(self, msg:'bunch_', *args:'any_') -> 'None':
+
+        # Uploads the service
+        _ = self.server.invoke('zato.pickup.update-enmasse', msg)
+
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg:'bunch_', *args:'any_') -> 'None':
@@ -1554,7 +1563,7 @@ class WorkerStore(_WorkerStoreBase):
             'data': msg.data,
             'file_name': msg.file_name,
             'full_path': msg.full_path,
-            'relative_dir': msg.relative_dir
+            'relative_dir': msg.get('relative_dir'),
         }, 'CREATE_STATIC', *args)
 
 # ################################################################################################################################
@@ -1564,7 +1573,7 @@ class WorkerStore(_WorkerStoreBase):
             'data': msg.data,
             'file_name': msg.file_name,
             'full_path': msg.full_path,
-            'relative_dir': msg.relative_dir
+            'relative_dir': msg.get('relative_dir'),
         }, 'CREATE_USER_CONF', *args)
 
 # ################################################################################################################################

@@ -20,7 +20,7 @@ from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
         method_allowed, parse_response_data, SecurityList
-from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+from zato.common.api import CACHE, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
@@ -90,7 +90,7 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'method': params.get(prefix + 'method'),
         'soap_action': params.get(prefix + 'soap_action', ''),
         'soap_version': params.get(prefix + 'soap_version', None),
-        'data_format': params.get(prefix + 'data_format', None),
+        'data_format': params.get(prefix + 'data_format', None) or DATA_FORMAT.JSON,
         'service': params.get(prefix + 'service'),
         'ping_method': params.get(prefix + 'ping_method'),
         'pool_size': params.get(prefix + 'pool_size'),
@@ -257,7 +257,7 @@ def index(req): # type: ignore
                     security_name=security_name, content_type=item.content_type,
                     cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry,
                     content_encoding=item.content_encoding, match_slash=match_slash, http_accept=http_accept,
-                    validate_tls=item.validate_tls)
+                    validate_tls=item.get('validate_tls', True))
 
             for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))
