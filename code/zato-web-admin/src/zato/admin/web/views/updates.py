@@ -73,6 +73,19 @@ def check_availability(req):
 def download_and_install(req):
     logger.info('download_and_install: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
     result = updater.download_and_install(exclude_from_restart=['dashboard'])
+    
+    if result['success']:
+        import redis
+        try:
+            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            version_from = result.get('version_from', '')
+            version_to = result.get('version_to', '')
+            r.set('zato:update:version_from', version_from)
+            r.set('zato:update:version_to', version_to)
+            r.set('zato:update:schedule', 'manual')
+        except Exception:
+            pass
+    
     return json_response(result, success=result['success'])
 
 # ################################################################################################################################
@@ -117,7 +130,20 @@ def restart_dashboard(req):
     
     def restart_after_delay():
         import time
+        import redis
+        import requests
         time.sleep(1)
+        
+        try:
+            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            version_from = r.get('zato:update:version_from') or ''
+            version_to = r.get('zato:update:version_to') or ''
+            schedule = r.get('zato:update:schedule') or 'manual'
+            if version_from and version_to:
+                url = f'https://zato.io/support/updates/info-4.1.json?from={version_from}&to={version_to}&mode=manual&schedule={schedule}'
+                requests.get(url, timeout=2)
+        except Exception:
+            pass
         
         logger.info('')
         logger.info('#' * 80)
