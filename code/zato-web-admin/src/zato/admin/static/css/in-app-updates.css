@@ -836,3 +836,10 @@ input:checked + .toggle-slider:before {
     font-family: monospace;
     color: #333;
 }
+
+.audit-log-empty {
+    color: #333;
+    font-size: 14px;
+    text-align: center;
+    margin-top: 10px;
+}
