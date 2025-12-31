@@ -1002,6 +1002,85 @@ class Updater:
 
 # ################################################################################################################################
 
+    def stop_pubsub_component(self, component_name:'str') -> 'dict':
+        """ Stops a pubsub component by killing its process.
+        """
+        try:
+            process_patterns = {
+                'util-rabbitmqctl': 'util_rabbitmqctl.py',
+                'pubsub-publisher': 'pubsub/cli.py.*--publish',
+                'pubsub-pull-consumer': 'pubsub/cli.py.*--pull'
+            }
+
+            pattern = process_patterns.get(component_name)
+            if not pattern:
+                logger.error('stop_pubsub_component: unknown component {}'.format(component_name))
+                return {'success': False, 'error': 'Unknown component'}
+
+            result = subprocess.run(
+                ['pgrep', '-f', pattern],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                pids = result.stdout.strip().split('\n')
+                for pid_str in pids:
+                    if pid_str:
+                        pid = int(pid_str)
+                        logger.info('stop_pubsub_component: killing {} (pid {})'.format(component_name, pid))
+                        subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                return {'success': True, 'message': 'Component stopped'}
+            else:
+                logger.info('stop_pubsub_component: {} not running'.format(component_name))
+                return {'success': True, 'message': 'Component not running'}
+
+        except Exception:
+            logger.error('stop_pubsub_component: exception stopping {}: {}'.format(component_name, format_exc()))
+            return {'success': False, 'error': format_exc()}
+
+# ################################################################################################################################
+
+    def start_pubsub_component(self, component_name:'str') -> 'dict':
+        """ Starts a pubsub component using its startup script.
+        """
+        try:
+            script_name_map = {
+                'util-rabbitmqctl': 'start-util-rabbitmqctl.sh',
+                'pubsub-publisher': 'start-pubsub-publisher.sh',
+                'pubsub-pull-consumer': 'start-pubsub-pull-consumer.sh'
+            }
+
+            script_name = script_name_map.get(component_name)
+            if not script_name:
+                logger.error('start_pubsub_component: unknown component {}'.format(component_name))
+                return {'success': False, 'error': 'Unknown component'}
+
+            startup_script = os.path.join(self.config.base_dir, script_name)
+            logger.info('start_pubsub_component: looking for script at {}'.format(startup_script))
+
+            if not os.path.exists(startup_script):
+                logger.error('start_pubsub_component: script not found {}'.format(startup_script))
+                return {'success': False, 'error': 'Script not found'}
+
+            subprocess.Popen(
+                ['bash', startup_script],
+                cwd=self.config.base_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+
+            logger.info('start_pubsub_component: {} started'.format(component_name))
+            time.sleep(2)
+            return {'success': True, 'message': 'Component started'}
+
+        except Exception:
+            logger.error('start_pubsub_component: exception starting {}: {}'.format(component_name, format_exc()))
+            return {'success': False, 'error': format_exc()}
+
+# ################################################################################################################################
+
     def start_component(self, component_name:'str', component_path:'str') -> 'dict':
         """ Starts a Zato component using the startup scripts.
         """
@@ -1158,8 +1237,8 @@ class Updater:
 
     def restart_all_components(self, exclude_components:'list'=None, changed_files:'list'=None) -> 'dict':
         """ Restarts all Zato components in order based on changed files.
-        Stop order: dashboard -> server -> scheduler (reverse)
-        Start order: scheduler -> server -> dashboard
+        Stop order: dashboard -> server -> scheduler -> pubsub-pull-consumer -> pubsub-publisher -> util-rabbitmqctl
+        Start order: util-rabbitmqctl -> pubsub-publisher -> pubsub-pull-consumer -> scheduler -> server -> dashboard
         """
         exclude_components = exclude_components or []
         changed_files = changed_files or []
@@ -1175,14 +1254,18 @@ class Updater:
         if has_common_changes:
             logger.info('restart_all_components: zato-common has changes, restarting all components')
 
-        start_order = ['scheduler', 'server', 'dashboard']
-        stop_order = ['dashboard', 'server', 'scheduler']
+        main_components = ['scheduler', 'server', 'dashboard']
+        pubsub_components = ['util-rabbitmqctl', 'pubsub-publisher', 'pubsub-pull-consumer']
+
+        start_order = pubsub_components + main_components
+        stop_order = ['dashboard', 'server', 'scheduler', 'pubsub-pull-consumer', 'pubsub-publisher', 'util-rabbitmqctl']
+
         results = {}
         failed = []
         skipped = []
         to_restart = []
 
-        for component_name in start_order:
+        for component_name in main_components:
             if component_name in exclude_components:
                 logger.info('restart_all_components: {} excluded from restart'.format(component_name))
                 skipped.append(component_name)
@@ -1200,23 +1283,33 @@ class Updater:
 
             to_restart.append(component_name)
 
+        if 'server' in to_restart or has_common_changes:
+            for comp in pubsub_components:
+                if comp not in to_restart:
+                    to_restart.insert(0, comp)
+
         logger.info('restart_all_components: stopping components in order: {}'.format([c for c in stop_order if c in to_restart]))
         for component_name in stop_order:
             if component_name not in to_restart:
                 continue
-            component_path = self.get_component_path(component_name)
-            component_port = self.get_component_port(component_name)
             logger.info('restart_all_components: stopping {}'.format(component_name))
-            self.stop_component(component_name, component_path, component_port)
+            if component_name in pubsub_components:
+                self.stop_pubsub_component(component_name)
+            else:
+                component_path = self.get_component_path(component_name)
+                component_port = self.get_component_port(component_name)
+                self.stop_component(component_name, component_path, component_port)
 
-        logger.info('restart_all_components: starting components in order: {}'.format(to_restart))
+        logger.info('restart_all_components: starting components in order: {}'.format([c for c in start_order if c in to_restart]))
         for component_name in start_order:
             if component_name not in to_restart:
                 continue
-            component_path = self.get_component_path(component_name)
-            component_port = self.get_component_port(component_name)
             logger.info('restart_all_components: starting {}'.format(component_name))
-            result = self.start_component(component_name, component_path)
+            if component_name in pubsub_components:
+                result = self.start_pubsub_component(component_name)
+            else:
+                component_path = self.get_component_path(component_name)
+                result = self.start_component(component_name, component_path)
             results[component_name] = result
 
             if not result['success']:
