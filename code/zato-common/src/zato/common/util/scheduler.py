@@ -109,7 +109,7 @@ def add_startup_jobs_to_odb_by_odb(cluster_id:'int', odb:'any_', jobs:'any_') ->
     """ Uses a direction ODB connection to add initial startup jobs to the ODB.
     """
     with closing(odb.session()) as session:
-        now = datetime.utcnow()
+        now = datetime.utcnow() # type: ignore
         for item in jobs:
 
             try:
@@ -231,7 +231,7 @@ def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]') -> '
             request.should_ignore_existing = should_ignore_existing
 
         # .. now, we can create a new job, ignoring the fact that it may potentially already exist.
-        api.invoke_service('zato.scheduler.job.create', request)
+        _ = api.invoke_service('zato.scheduler.job.create', request)
 
 # ################################################################################################################################
 
