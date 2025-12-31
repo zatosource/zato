@@ -188,11 +188,6 @@
                             </div>
                             {% endfor %}
                         </div>
-                        {% else %}
-                        <div class="audit-log-list">
-                            <div style="color: #666; font-size: 14px; padding: 8px 0;">No updates yet</div>
-                        </div>
-                        {% endif %}
                         <div class="links-row">
                             <div class="dashboard-link-item">
                                 <a href="/zato/updates/download-logs" class="dashboard-link">
@@ -200,6 +195,11 @@
                                 </a>
                             </div>
                         </div>
+                        {% else %}
+                        <div class="audit-log-list">
+                            <div style="color: #666; font-size: 14px; padding: 8px 0; text-align: center;">No logs yet</div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
