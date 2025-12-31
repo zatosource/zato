@@ -30,10 +30,10 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 # Zato
-from zato.common.api import AMQP, as_bool, PubSub
+from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid_broker_client, new_cid_server, new_msg_id, utcnow
+from zato.common.util.api import as_bool, new_cid_broker_client, new_cid_server, new_msg_id, utcnow
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
 from zato.broker.amqp_layer import AMQP as _AMQP, BrokerConnection
