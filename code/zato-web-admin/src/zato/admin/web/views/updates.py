@@ -132,6 +132,7 @@ def restart_dashboard(req):
         import time
         import redis
         import requests
+        from logging import getLogger
         time.sleep(1)
         
         try:
@@ -145,13 +146,15 @@ def restart_dashboard(req):
         except Exception:
             pass
         
-        logger.info('')
-        logger.info('#' * 80)
-        logger.info('##' + ' ' * 76 + '##')
-        logger.info('##' + ' ' * 21 + 'UPDATE COMPLETED' + ' ' * 39 + '##')
-        logger.info('##' + ' ' * 76 + '##')
-        logger.info('#' * 80)
-        logger.info('')
+        update_logger = getLogger('zato.common.util.updates')
+        
+        update_logger.info('')
+        update_logger.info('#' * 80)
+        update_logger.info('##' + ' ' * 76 + '##')
+        update_logger.info('##' + ' ' * 21 + 'UPDATE COMPLETED' + ' ' * 39 + '##')
+        update_logger.info('##' + ' ' * 76 + '##')
+        update_logger.info('#' * 80)
+        update_logger.info('')
         
         logger.info('restart_dashboard: executing make restart-dashboard')
         try:
