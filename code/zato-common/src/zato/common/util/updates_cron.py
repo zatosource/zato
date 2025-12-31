@@ -38,7 +38,12 @@ def main() -> 'int':
         return 0
 
     try:
-        result = updater.download_and_install(update_type='auto')
+        schedule_result = updater.load_schedule()
+        schedule_frequency = None
+        if schedule_result['success'] and schedule_result.get('schedule'):
+            schedule_frequency = schedule_result['schedule'].get('frequency', 'daily')
+        
+        result = updater.download_and_install(update_type='auto', schedule=schedule_frequency)
 
         if not result['success']:
             logger.error('Scheduled update failed: {}'.format(result.get('error', 'Unknown error')))

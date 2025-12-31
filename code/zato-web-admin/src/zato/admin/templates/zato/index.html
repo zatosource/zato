@@ -154,10 +154,20 @@
             checkUpdateAvailability(true);
             console.log('[UPDATE-CHECK] checkUpdateAvailability(true) called');
 
-            // Check every hour (3600000 ms)
-            setInterval(function() {
+            // Schedule checks to run at half past each hour
+            var now = new Date();
+            var minutesUntilHalfPast = (30 - now.getMinutes() + 60) % 60;
+            if (minutesUntilHalfPast === 0 && now.getSeconds() > 0) {
+                minutesUntilHalfPast = 60;
+            }
+            var msUntilHalfPast = minutesUntilHalfPast * 60 * 1000 - now.getSeconds() * 1000 - now.getMilliseconds();
+            
+            setTimeout(function() {
                 checkUpdateAvailability(false);
-            }, 3600000);
+                setInterval(function() {
+                    checkUpdateAvailability(false);
+                }, 3600000);
+            }, msUntilHalfPast);
 
         });
 
