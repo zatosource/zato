@@ -32,9 +32,9 @@ def main() -> 'int':
     config = UpdaterConfig()
     updater = Updater(config)
 
-    if not updater.should_run_scheduled_update():
-        logger.info('No scheduled update needed at this time')
-        return 0
+    #if not updater.should_run_scheduled_update():
+    #    logger.info('No scheduled update needed at this time')
+    #    return 0
 
     if not updater.acquire_lock():
         logger.info('Update already in progress')
@@ -45,7 +45,7 @@ def main() -> 'int':
         schedule_frequency = None
         if schedule_result['success'] and schedule_result.get('schedule'):
             schedule_frequency = schedule_result['schedule'].get('frequency', 'daily')
-        
+
         result = updater.download_and_install(update_type='auto', schedule=schedule_frequency)
 
         if not result['success']:
