@@ -260,7 +260,7 @@ class BrokerClient:
                         'zato_pub_time': utcnow().isoformat()
                     }
                 ) # type: ignore
-            except Exception as e:
+            except Exception:
                 raise
 
     invoke_async = publish
@@ -312,7 +312,7 @@ class BrokerClient:
                     # Check connection state
                     try:
                         connection_info = {
-                            'connected': client.connection.connected,
+                            'connected': client.connection.connected, # type: ignore
                             'transport': getattr(client.connection, 'transport', 'unknown'),
                             'channels': getattr(client.connection, 'channels', 'unknown')
                         }
