@@ -161,7 +161,7 @@
                 minutesUntilHalfPast = 60;
             }
             var msUntilHalfPast = minutesUntilHalfPast * 60 * 1000 - now.getSeconds() * 1000 - now.getMilliseconds();
-            
+
             setTimeout(function() {
                 checkUpdateAvailability(false);
                 setInterval(function() {
@@ -174,13 +174,13 @@
         // Apply update status to badge
         function applyUpdateStatus(updatesAvailable) {
             console.log('[UPDATE-BADGE] applyUpdateStatus called with updatesAvailable:', updatesAvailable);
-            
+
             const badge = $('#update-status-badge');
             const text = $('#update-status-text');
-            
+
             console.log('[UPDATE-BADGE] badge element:', badge.length > 0 ? 'found' : 'NOT FOUND');
             console.log('[UPDATE-BADGE] text element:', text.length > 0 ? 'found' : 'NOT FOUND');
-            
+
             if (updatesAvailable) {
                 console.log('[UPDATE-BADGE] Setting to "Updates available" with shine');
                 text.text('⭐ Updates available');
@@ -190,7 +190,7 @@
                 text.text('Up to date');
                 badge.removeClass('with-shine');
             }
-            
+
             badge.addClass('loaded');
             console.log('[UPDATE-BADGE] Added "loaded" class, badge should now be visible');
             console.log('[UPDATE-BADGE] Final badge classes:', badge.attr('class'));
@@ -200,10 +200,10 @@
         // Check for updates availability
         function checkUpdateAvailability(isInitialLoad) {
             console.log('[UPDATE-CHECK] checkUpdateAvailability called, isInitialLoad:', isInitialLoad);
-            
+
             const cached = localStorage.getItem('zato_updates_available');
             console.log('[UPDATE-CHECK] localStorage value:', cached);
-            
+
             if (isInitialLoad && cached !== null) {
                 console.log('[UPDATE-CHECK] Using cached value, skipping AJAX call');
                 const cachedBool = cached === 'true';
@@ -211,9 +211,9 @@
                 applyUpdateStatus(cachedBool);
                 return;
             }
-            
+
             console.log('[UPDATE-CHECK] Making AJAX call to check-availability endpoint');
-            
+
             $.ajax({
                 url: '/zato/updates/check-availability',
                 type: 'GET',
@@ -420,6 +420,7 @@
                                         </ul>
                                     </li>
                                     <li class="child"><a class="menu-link" href="/zato/updates/">Install updates</a></li>
+                                    {% if 0 %}
                                     <li class="child">
                                         <a class="menu-link" href="#">Log streaming &rarr;</a>
                                         <ul>
@@ -427,9 +428,11 @@
                                             <li class="child"><a class="menu-link" href="javascript:$.fn.zato.log_streaming.toggle()">Toggle streaming</a></li>
                                         </ul>
                                     </li>
+                                    {% endif %}
                                 </ul>
                             </li>
 
+                            {% if 0 %}
                             <li class="first-level">
                                 <a class="menu-link" href="#">Observability &darr;</a>
                                 <ul>
@@ -438,6 +441,7 @@
                                     <li class="child"><a class="menu-link" href="javascript:alert('Opening Datadog dashboard...')">Datadog</a></li>
                                 </ul>
                             </li>
+                            {% endif %}
                         </ul>
                         <ul class="first-level right">
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/docs/3.2/index.html?v={{ zato_version|cut:"Zato " }}">Docs</a></li>
