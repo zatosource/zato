@@ -803,7 +803,6 @@ class Updater:
                     return False
 
             if frequency == 'hourly':
-                return 1
                 # For hourly, run at the specified minute each hour
                 schedule_time = schedule.get('time', '')
                 if schedule_time and ':' in schedule_time:
