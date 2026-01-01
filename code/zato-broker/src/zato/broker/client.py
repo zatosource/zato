@@ -393,7 +393,7 @@ class BrokerClient:
         """ Specific handler for replies to the temporary reply queue.
         The name and config parameters are required by the Consumer callback signature but not used.
         """
-        if not isinstance(body, dict):
+        if not isinstance(body, (dict, list, int, float)):
             body = loads(body)
 
         # Get correlation ID
@@ -562,6 +562,7 @@ class BrokerClient:
         expiration = msg.get('expiration') or _default_expiration
 
         with self.producer.acquire() as client:
+
             _ = client.publish(
                 msg_str,
                 exchange='components',
@@ -657,9 +658,9 @@ class BrokerClient:
             def set_response(self, response):
                 self.data = response
                 self.ready = True
-                # reply_queue_info = f', reply-to: `{self.reply_queue_name}`' if self.reply_queue_name else ''
-                # logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{response}`{reply_queue_info}')
-                logger.info(f'Rsp 🠈 {cid} - `{self.service}`')
+                reply_queue_info = f', reply-to: `{self.reply_queue_name}`' if self.reply_queue_name else ''
+                logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{reply_queue_info}`')
+                # logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{reply_queue_info}` - `{response}`')
 
         # Initialize response holder
         response = ResponseHolder()
@@ -687,7 +688,7 @@ class BrokerClient:
 
         # Log service invocation with reply queue and CID in the same line
         reply_queue_info = f', reply-to: `{response.reply_queue_name}`' if response.reply_queue_name else ''
-        logger.info(f'Req 🠊 {cid} - `{service}` - `{request}`{reply_queue_info}`')
+        # logger.info(f'Req 🠊 {cid} - `{service}` - `{request}`{reply_queue_info}`')
 
         # Wait for response
         self._wait_for_response(ctx, response, timeout, sleep_time, cid)
