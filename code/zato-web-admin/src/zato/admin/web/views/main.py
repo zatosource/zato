@@ -127,6 +127,15 @@ def login(req):
             if not is_safe_url(url=redirect_to, allowed_hosts=req.get_host()):
                 redirect_to = resolve_url(LOGIN_REDIRECT_URL)
 
+            # Set timezone from browser if not already set
+            browser_timezone = req.POST.get('browser_timezone', '').strip()
+            if browser_timezone:
+                user_profile = get_user_profile(req.user)
+                if user_profile.timezone in (None, ''):
+                    user_profile.timezone = browser_timezone
+                    user_profile.save()
+                    logger.info('Set timezone to %s for user %s', browser_timezone, username)
+
             # At this point we know that all the possible credentials are valid
             # so we can log the user in and redirect the person further.
             logger.info('User credentials are valid, redirecting `%s` to `%s`', username, redirect_to)
