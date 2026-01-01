@@ -46,6 +46,18 @@ def main() -> 'int':
         if schedule_result['success'] and schedule_result.get('schedule'):
             schedule_frequency = schedule_result['schedule'].get('frequency', 'daily')
 
+        current_version = updater.get_zato_version()
+        latest_result = updater.check_latest_version()
+
+        if latest_result['success']:
+            latest_version = latest_result['version']
+            logger.info('Version check: current={}, latest={}'.format(current_version, latest_version))
+            if current_version == latest_version:
+                logger.info('Already running latest version, skipping update')
+                return 0
+        else:
+            logger.warning('Failed to check latest version: {}'.format(latest_result.get('error', 'Unknown error')))
+
         result = updater.download_and_install(update_type='auto', schedule=schedule_frequency)
 
         if not result['success']:
