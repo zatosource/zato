@@ -196,7 +196,7 @@ def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]') -> '
     """
 
     # This can be static for all the jobs because the backend will calculate the actual start time itself
-    start_date = '2023-01-02T11:22:33'
+    start_date = '2025-01-02T11:22:33'
 
     # Jobs that we are creating will be active unless the configuration says otherwise
     is_active = True
@@ -239,7 +239,7 @@ def load_scheduler_jobs_by_api(api:'SchedulerAPI', spawn:'bool') -> 'None':
     """ Uses server API calls to obtain a list of all jobs that the scheduler should run.
     """
     # Get a list of all the jobs we are to run ..
-    response = api.invoke_service('zato.scheduler.job.get-list')
+    response = api.invoke_service('zato.scheduler.job.get-list', needs_root_elem=True)
 
     # .. we have some jobs to schedule ..
     if response:
