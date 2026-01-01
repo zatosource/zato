@@ -1094,9 +1094,16 @@ class Updater:
             pid = int(pid_str)
             logger.info('stop_component: sending SIGKILL to {} (pid {})'.format(component_name, pid))
 
-            kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+            kill_args = ['-9', str(pid)]
+            kill_result = subprocess.run(['sudo', 'kill'] + kill_args, capture_output=True)
             logger.info('stop_component: kill result for {} (pid {}): returncode={}, stdout={}, stderr={}'.format(
                 component_name, pid, kill_result.returncode, kill_result.stdout, kill_result.stderr))
+
+            if kill_result.returncode != 0:
+                logger.info('stop_component: sudo kill failed, trying without sudo')
+                kill_result = subprocess.run(['kill'] + kill_args, capture_output=True)
+                logger.info('stop_component: non-sudo kill result for {} (pid {}): returncode={}, stdout={}, stderr={}'.format(
+                    component_name, pid, kill_result.returncode, kill_result.stdout, kill_result.stderr))
 
             logger.info('stop_component: sleeping 1 second after kill for {}'.format(component_name))
             time.sleep(1)
@@ -1280,9 +1287,9 @@ class Updater:
             )
 
             logger.info('start_component: launched {} with pid {}'.format(component_name, process.pid))
-            logger.info('start_component: waiting for pidfile to appear for {} (max_wait=10s)'.format(component_name))
+            logger.info('start_component: waiting for pidfile to appear for {} (max_wait=40s)'.format(component_name))
 
-            max_wait = 10
+            max_wait = 40
             for i in range(max_wait):
                 time.sleep(1)
                 if os.path.exists(pidfile):
