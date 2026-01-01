@@ -726,6 +726,46 @@ class Updater:
 
 # ################################################################################################################################
 
+    def _get_last_update_time(self) -> 'datetime | None':
+        """ Gets the last update run time from Redis.
+        """
+        try:
+            r = self.get_redis_connection()
+            last_run = r.get('zato:autoupdate:last_run')
+            if last_run:
+                return datetime.fromisoformat(last_run)
+            return None
+        except Exception:
+            logger.error('_get_last_update_time: exception: {}'.format(format_exc()))
+            return None
+
+# ################################################################################################################################
+
+    def _set_last_update_time(self) -> 'None':
+        """ Sets the last update run time in Redis.
+        """
+        try:
+            r = self.get_redis_connection()
+            r.set('zato:autoupdate:last_run', datetime.now(timezone.utc).isoformat())
+            logger.info('_set_last_update_time: recorded update time')
+        except Exception:
+            logger.error('_set_last_update_time: exception: {}'.format(format_exc()))
+
+# ################################################################################################################################
+
+    def _get_min_interval_minutes(self, frequency:'str') -> 'int':
+        """ Returns minimum minutes between updates for a given frequency.
+        """
+        intervals = {
+            'hourly': 50,
+            'daily': 23 * 60,
+            'weekly': 6 * 24 * 60,
+            'monthly': 27 * 24 * 60
+        }
+        return intervals.get(frequency, 23 * 60)
+
+# ################################################################################################################################
+
     def should_run_scheduled_update(self) -> 'bool':
         """ Checks if a scheduled update should run now.
         """
@@ -748,9 +788,53 @@ class Updater:
 
             frequency = schedule.get('frequency', 'daily')
 
+            # Check if enough time has passed since last update
+            last_run = self._get_last_update_time()
+            if last_run:
+                min_interval = self._get_min_interval_minutes(frequency)
+                minutes_since_last = (datetime.now(timezone.utc) - last_run).total_seconds() / 60
+                minutes_since_last_int = int(minutes_since_last)
+                minutes_word = 'minute' if minutes_since_last_int == 1 else 'minutes'
+                interval_word = 'minute' if min_interval == 1 else 'minutes'
+                logger.info('should_run_scheduled_update: last run was {} {} ago, min interval is {} {}'.format(
+                    minutes_since_last_int, minutes_word, min_interval, interval_word))
+                if minutes_since_last < min_interval:
+                    logger.info('should_run_scheduled_update: not enough time since last update, skipping')
+                    return False
+
             if frequency == 'hourly':
-                logger.info('should_run_scheduled_update: hourly schedule, update will run')
-                return True
+                # For hourly, run at the specified minute each hour
+                schedule_time = schedule.get('time', '')
+                if schedule_time and ':' in schedule_time:
+                    time_parts = schedule_time.split(':')
+                    schedule_minute = int(time_parts[1])
+                else:
+                    schedule_minute = schedule.get('minute', 0)
+
+                from zoneinfo import ZoneInfo
+
+                schedule_timezone_str = schedule.get('timezone', 'UTC')
+                try:
+                    schedule_tz = ZoneInfo(schedule_timezone_str)
+                except Exception:
+                    logger.warning('should_run_scheduled_update: invalid timezone {}, using UTC'.format(schedule_timezone_str))
+                    schedule_tz = ZoneInfo('UTC')
+
+                now_server = datetime.now(timezone.utc)
+                now_user_tz = now_server.astimezone(schedule_tz)
+                current_minute = now_user_tz.minute
+
+                minute_diff = current_minute - schedule_minute
+
+                logger.info('should_run_scheduled_update: hourly schedule at minute {}, current minute {} (diff {} min)'.format(
+                    schedule_minute, current_minute, minute_diff))
+
+                if 0 <= minute_diff <= 10:
+                    logger.info('should_run_scheduled_update: minute matches within 10-minute window after schedule, update will run')
+                    return True
+                else:
+                    logger.info('should_run_scheduled_update: minute not within 0-10 minutes after scheduled minute')
+                    return False
 
             from zoneinfo import ZoneInfo
 
@@ -789,17 +873,17 @@ class Updater:
 
             current_total_minutes = current_hour * 60 + current_minute
             schedule_total_minutes = schedule_hour * 60 + schedule_minute
-            time_diff = abs(current_total_minutes - schedule_total_minutes)
+            time_diff = current_total_minutes - schedule_total_minutes
 
             if frequency == 'daily':
                 logger.info('should_run_scheduled_update: daily schedule at {}, current time {} (diff {} min)'.format(
                     schedule_time_str, current_time_str, time_diff))
 
-                if time_diff <= 10:
-                    logger.info('should_run_scheduled_update: time matches within 10-minute window, update will run')
+                if 0 <= time_diff <= 10:
+                    logger.info('should_run_scheduled_update: time matches within 10-minute window after schedule, update will run')
                     return True
                 else:
-                    logger.info('should_run_scheduled_update: time difference {} minutes exceeds 10-minute window')
+                    logger.info('should_run_scheduled_update: time not within 0-10 minutes after scheduled time')
                     return False
 
             if frequency == 'weekly':
@@ -829,11 +913,11 @@ class Updater:
                         current_day_name, schedule_day_names))
                     return False
 
-                if time_diff <= 10:
-                    logger.info('should_run_scheduled_update: time and day match within 10-minute window, update will run')
+                if 0 <= time_diff <= 10:
+                    logger.info('should_run_scheduled_update: time and day match within 10-minute window after schedule, update will run')
                     return True
                 else:
-                    logger.info('should_run_scheduled_update: time difference {} minutes exceeds 10-minute window'.format(time_diff))
+                    logger.info('should_run_scheduled_update: time not within 0-10 minutes after scheduled time')
                     return False
 
             if frequency == 'monthly':
@@ -890,11 +974,11 @@ class Updater:
                         week_of_month, target_week))
                     return False
 
-                if time_diff <= 10:
-                    logger.info('should_run_scheduled_update: time, day, and week match within 10-minute window, update will run')
+                if 0 <= time_diff <= 10:
+                    logger.info('should_run_scheduled_update: time, day, and week match within 10-minute window after schedule, update will run')
                     return True
                 else:
-                    logger.info('should_run_scheduled_update: time difference {} minutes exceeds 10-minute window'.format(time_diff))
+                    logger.info('should_run_scheduled_update: time not within 0-10 minutes after scheduled time')
                     return False
 
             logger.info('should_run_scheduled_update: unknown frequency {}'.format(frequency))
@@ -925,12 +1009,7 @@ class Updater:
                     if pid_str:
                         pid = int(pid_str)
                         logger.info(f'kill_process_by_port: killing process {pid} using port {port}')
-                        try:
-                            os.kill(pid, signal.SIGKILL)
-                        except ProcessLookupError:
-                            pass
-                        except Exception:
-                            logger.error(f'kill_process_by_port: failed to kill pid {pid}: {format_exc()}')
+                        subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
                 return True
             else:
                 logger.info(f'kill_process_by_port: no process found using port {port}')
@@ -954,20 +1033,34 @@ class Updater:
 
             process_name = 'zato.web-admin' if component_name == 'dashboard' else 'zato.{}'.format(component_name)
 
+            current_pid = os.getpid()
+            logger.info('kill_orphaned_processes: current process pid is {}'.format(current_pid))
+
             for line in ps_result.stdout.split('\n'):
-                if process_name in line and 'grep' not in line:
+                if process_name in line and 'grep' not in line and 'start-' not in line and 'Zato_' not in line:
                     parts = line.split()
                     if len(parts) > 1:
                         pid = int(parts[1])
-                        try:
-                            logger.info('kill_orphaned_processes: killing orphaned {} process {} ({})'.format(component_name, pid, process_name))
-                            os.kill(pid, signal.SIGKILL)
-                        except ProcessLookupError:
-                            pass
-                        except Exception:
-                            logger.error('kill_orphaned_processes: failed to kill pid {}: {}'.format(pid, format_exc()))
+
+                        if pid == current_pid:
+                            logger.warning('kill_orphaned_processes: SKIPPING pid {} - this is our own process!'.format(pid))
+                            continue
+
+                        logger.info('kill_orphaned_processes: about to kill orphaned {} process {} ({})'.format(component_name, pid, process_name))
+                        logger.info('kill_orphaned_processes: full ps line for pid {}: {}'.format(pid, line.strip()))
+                        for handler in logger.handlers:
+                            handler.flush()
+
+                        orphan_kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+
+                        logger.info('kill_orphaned_processes: kill result for pid {}: returncode={}, stdout={}, stderr={}'.format(
+                            pid, orphan_kill_result.returncode, orphan_kill_result.stdout, orphan_kill_result.stderr))
+                        for handler in logger.handlers:
+                            handler.flush()
         except Exception:
-            logger.error('kill_orphaned_processes: exception: {}'.format(format_exc()))
+            logger.error('kill_orphaned_processes: EXCEPTION: {}'.format(format_exc()))
+            for handler in logger.handlers:
+                handler.flush()
 
 # ################################################################################################################################
 
@@ -975,6 +1068,10 @@ class Updater:
         """ Stops a Zato component.
         """
         try:
+            # Handle proxy component separately - it uses haproxy which runs without pidfile
+            if component_name == 'proxy':
+                return self._stop_proxy_component()
+
             pidfile = os.path.join(component_path, 'pidfile')
 
             if not os.path.exists(pidfile):
@@ -997,35 +1094,169 @@ class Updater:
             pid = int(pid_str)
             logger.info('stop_component: sending SIGKILL to {} (pid {})'.format(component_name, pid))
 
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                logger.info('stop_component: process {} not found, removing stale pidfile'.format(pid))
-                os.remove(pidfile)
-                self.kill_orphaned_processes(component_name)
-                return {'success': True, 'message': 'Removed stale pidfile, orphaned processes cleaned'}
+            kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+            logger.info('stop_component: kill result for {} (pid {}): returncode={}, stdout={}, stderr={}'.format(
+                component_name, pid, kill_result.returncode, kill_result.stdout, kill_result.stderr))
 
+            logger.info('stop_component: sleeping 1 second after kill for {}'.format(component_name))
             time.sleep(1)
+            logger.info('stop_component: sleep completed for {}'.format(component_name))
 
             if os.path.exists(pidfile):
                 os.remove(pidfile)
+            logger.info('stop_component: calling kill_orphaned_processes for {}'.format(component_name))
             self.kill_orphaned_processes(component_name)
+            logger.info('stop_component: kill_orphaned_processes completed for {}'.format(component_name))
+            logger.info('stop_component: returning success for {}'.format(component_name))
+            for handler in logger.handlers:
+                handler.flush()
             return {'success': True, 'message': 'Component killed, orphaned processes cleaned'}
 
         except Exception:
-            logger.error('stop_component: exception stopping {}: {}'.format(component_name, format_exc()))
+            logger.error('stop_component: EXCEPTION stopping {}: {}'.format(component_name, format_exc()))
+            for handler in logger.handlers:
+                handler.flush()
+            return {'success': False, 'error': format_exc()}
+
+# ################################################################################################################################
+
+    def _stop_proxy_component(self) -> 'dict':
+        """ Stops HAProxy by finding and killing the process.
+        """
+        try:
+            result = subprocess.run(
+                ['pgrep', '-f', 'haproxy.*haproxy.cfg'],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode != 0 or not result.stdout.strip():
+                logger.info('_stop_proxy_component: haproxy not running')
+                return {'success': True, 'message': 'HAProxy not running'}
+
+            pids = result.stdout.strip().split('\n')
+            for pid_str in pids:
+                if pid_str:
+                    pid = int(pid_str)
+                    logger.info('_stop_proxy_component: killing haproxy process {}'.format(pid))
+                    kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                    logger.info('_stop_proxy_component: kill result for pid {}: returncode={}'.format(pid, kill_result.returncode))
+
+            time.sleep(1)
+            logger.info('_stop_proxy_component: haproxy stopped')
+            return {'success': True, 'message': 'HAProxy stopped'}
+
+        except Exception:
+            logger.error('_stop_proxy_component: exception: {}'.format(format_exc()))
+            return {'success': False, 'error': format_exc()}
+
+# ################################################################################################################################
+
+    def stop_pubsub_component(self, component_name:'str') -> 'dict':
+        """ Stops a pubsub component by killing its process.
+        """
+        try:
+            process_patterns = {
+                'util-rabbitmqctl': 'util_rabbitmqctl.py',
+                'pubsub-publisher': 'pubsub/cli.py.*--publish',
+                'pubsub-pull-consumer': 'pubsub/cli.py.*--pull'
+            }
+
+            pattern = process_patterns.get(component_name)
+            if not pattern:
+                logger.error('stop_pubsub_component: unknown component {}'.format(component_name))
+                return {'success': False, 'error': 'Unknown component'}
+
+            result = subprocess.run(
+                ['pgrep', '-f', pattern],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                pids = result.stdout.strip().split('\n')
+                for pid_str in pids:
+                    if pid_str:
+                        pid = int(pid_str)
+                        logger.info('stop_pubsub_component: killing {} (pid {})'.format(component_name, pid))
+                        subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                return {'success': True, 'message': 'Component stopped'}
+            else:
+                logger.info('stop_pubsub_component: {} not running'.format(component_name))
+                return {'success': True, 'message': 'Component not running'}
+
+        except Exception:
+            logger.error('stop_pubsub_component: exception stopping {}: {}'.format(component_name, format_exc()))
+            return {'success': False, 'error': format_exc()}
+
+# ################################################################################################################################
+
+    def start_pubsub_component(self, component_name:'str') -> 'dict':
+        """ Starts a pubsub component using its startup script.
+        """
+        try:
+            script_name_map = {
+                'util-rabbitmqctl': 'start-util-rabbitmqctl.sh',
+                'pubsub-publisher': 'start-pubsub-publisher.sh',
+                'pubsub-pull-consumer': 'start-pubsub-pull-consumer.sh'
+            }
+
+            script_name = script_name_map.get(component_name)
+            if not script_name:
+                logger.error('start_pubsub_component: unknown component {}'.format(component_name))
+                return {'success': False, 'error': 'Unknown component'}
+
+            startup_script = os.path.join(self.config.base_dir, script_name)
+            logger.info('start_pubsub_component: looking for script at {}'.format(startup_script))
+
+            if not os.path.exists(startup_script):
+                logger.error('start_pubsub_component: script not found {}'.format(startup_script))
+                return {'success': False, 'error': 'Script not found'}
+
+            subprocess.Popen(
+                ['bash', startup_script],
+                cwd=self.config.base_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+
+            logger.info('start_pubsub_component: {} started'.format(component_name))
+            time.sleep(2)
+            return {'success': True, 'message': 'Component started'}
+
+        except Exception:
+            logger.error('start_pubsub_component: exception starting {}: {}'.format(component_name, format_exc()))
             return {'success': False, 'error': format_exc()}
 
 # ################################################################################################################################
 
     def start_component(self, component_name:'str', component_path:'str') -> 'dict':
-        """ Starts a Zato component.
+        """ Starts a Zato component using the startup scripts.
         """
         try:
-            zato_binary = self.find_file_in_parents(self.config.zato_path)
+            # Handle proxy component separately - it uses haproxy which runs in foreground without pidfile
+            if component_name == 'proxy':
+                return self._start_proxy_component()
 
-            if not zato_binary:
-                error = '{} not found in parent directories'.format(self.config.zato_path)
+            # Map component names to their startup script names
+            script_name_map = {
+                'scheduler': 'start-scheduler-fg.sh',
+                'server': 'start-server1-fg.sh',
+                'dashboard': 'start-web-admin-fg.sh',
+            }
+
+            script_name = script_name_map.get(component_name)
+            if not script_name:
+                error = 'Unknown component name: {}'.format(component_name)
+                logger.error('start_component: {}'.format(error))
+                return {'success': False, 'error': error}
+
+            startup_script = os.path.join(self.config.base_dir, script_name)
+            logger.info('start_component: looking for startup script at {}'.format(startup_script))
+
+            if not os.path.exists(startup_script):
+                error = 'Startup script not found: {}'.format(startup_script)
                 logger.error('start_component: {}'.format(error))
                 return {'success': False, 'error': error}
 
@@ -1036,67 +1267,99 @@ class Updater:
                 logger.error('start_component: pidfile exists for {}, component may already be running'.format(component_name))
                 return {'success': False, 'error': 'Component already running'}
 
-            logger.info('start_component: starting {} at {}'.format(component_name, component_path))
-            logger.info('start_component: command will be: {} start --verbose {}'.format(zato_binary, component_path))
+            logger.info('start_component: starting {} using script {}'.format(component_name, startup_script))
             logger.info('start_component: cwd: {}'.format(self.config.base_dir))
+            logger.info('start_component: about to call subprocess.Popen for {}'.format(component_name))
 
-            result = self.run_command(
-                command=[zato_binary, 'start', '--verbose', component_path],
+            process = subprocess.Popen(
+                ['bash', startup_script],
                 cwd=self.config.base_dir,
-                log_prefix='start_component'
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
             )
 
-            if result['success']:
-                max_wait = 5
-                time.sleep(max_wait)
+            logger.info('start_component: launched {} with pid {}'.format(component_name, process.pid))
+            logger.info('start_component: waiting for pidfile to appear for {} (max_wait=10s)'.format(component_name))
 
+            max_wait = 10
+            for i in range(max_wait):
+                time.sleep(1)
                 if os.path.exists(pidfile):
                     logger.info('start_component: {} started successfully'.format(component_name))
                     return {'success': True, 'message': 'Component started'}
 
-                logger.error('start_component: pidfile not created after {} seconds for {}'.format(max_wait, component_name))
-                logger.error('start_component: expected pidfile at: {}'.format(pidfile))
-                logger.error('start_component: pidfile exists check: {}'.format(os.path.exists(pidfile)))
-                logger.error('start_component: component_path exists check: {}'.format(os.path.exists(component_path)))
+            logger.error('start_component: pidfile not created after {} seconds for {}'.format(max_wait, component_name))
+            logger.error('start_component: expected pidfile at: {}'.format(pidfile))
+            logger.error('start_component: component_path exists check: {}'.format(os.path.exists(component_path)))
 
-                all_files = os.listdir(component_path) if os.path.exists(component_path) else []
-                logger.error('start_component: all files in {}: {}'.format(component_path, all_files))
+            all_files = os.listdir(component_path) if os.path.exists(component_path) else []
+            logger.error('start_component: all files in {}: {}'.format(component_path, all_files))
 
-                try:
-                    ps_result = subprocess.run(
-                        ['ps', 'aux'],
-                        capture_output=True,
-                        text=True,
-                        timeout=5
-                    )
-                    scheduler_procs = [line for line in ps_result.stdout.split('\n') if 'zato.scheduler' in line]
-                    logger.error('start_component: scheduler processes running: {}'.format(scheduler_procs))
-                except Exception:
-                    logger.error('start_component: failed to check running processes: {}'.format(format_exc()))
-
-                logger.error('start_component: command stdout: {}'.format(result.get('stdout', 'No stdout')))
-                logger.error('start_component: command stderr: {}'.format(result.get('stderr', 'No stderr')))
-
-                log_file = os.path.join(component_path, 'logs', 'scheduler.log')
-                if os.path.exists(log_file):
-                    try:
-                        with open(log_file, 'r') as f:
-                            last_lines = f.readlines()[-20:]
-                            logger.error('start_component: last 20 lines of scheduler.log: {}'.format(''.join(last_lines)))
-                    except Exception:
-                        logger.error('start_component: failed to read log file: {}'.format(format_exc()))
-
-                return {
-                    'success': False,
-                    'error': 'Pidfile not created after {} seconds'.format(max_wait),
-                    'stdout': result.get('stdout', ''),
-                    'stderr': result.get('stderr', '')
-                }
-
-            return result
+            return {
+                'success': False,
+                'error': 'Pidfile not created after {} seconds'.format(max_wait)
+            }
 
         except Exception:
             logger.error('start_component: exception starting {}: {}'.format(component_name, format_exc()))
+            return {'success': False, 'error': format_exc()}
+
+# ################################################################################################################################
+
+    def _start_proxy_component(self) -> 'dict':
+        """ Starts HAProxy using the same method as entrypoint.sh - runs in foreground without pidfile.
+        """
+        try:
+            startup_script = os.path.join(self.config.base_dir, 'start-haproxy.sh')
+            logger.info('_start_proxy_component: looking for startup script at {}'.format(startup_script))
+
+            if not os.path.exists(startup_script):
+                error = 'Startup script not found: {}'.format(startup_script)
+                logger.error('_start_proxy_component: {}'.format(error))
+                return {'success': False, 'error': error}
+
+            # Check if haproxy is already running
+            check_result = subprocess.run(
+                ['pgrep', '-f', 'haproxy.*haproxy.cfg'],
+                capture_output=True,
+                text=True
+            )
+            if check_result.returncode == 0 and check_result.stdout.strip():
+                logger.info('_start_proxy_component: haproxy already running with pids: {}'.format(check_result.stdout.strip()))
+                return {'success': False, 'error': 'HAProxy already running'}
+
+            logger.info('_start_proxy_component: starting haproxy using script {}'.format(startup_script))
+            logger.info('_start_proxy_component: cwd: {}'.format(self.config.base_dir))
+
+            process = subprocess.Popen(
+                ['bash', startup_script],
+                cwd=self.config.base_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+
+            logger.info('_start_proxy_component: launched haproxy with pid {}'.format(process.pid))
+
+            # Wait and verify haproxy process is running
+            time.sleep(2)
+
+            verify_result = subprocess.run(
+                ['pgrep', '-f', 'haproxy.*haproxy.cfg'],
+                capture_output=True,
+                text=True
+            )
+
+            if verify_result.returncode == 0 and verify_result.stdout.strip():
+                logger.info('_start_proxy_component: haproxy started successfully, pids: {}'.format(verify_result.stdout.strip()))
+                return {'success': True, 'message': 'HAProxy started'}
+
+            logger.error('_start_proxy_component: haproxy process not found after startup')
+            return {'success': False, 'error': 'HAProxy process not found after startup'}
+
+        except Exception:
+            logger.error('_start_proxy_component: exception: {}'.format(format_exc()))
             return {'success': False, 'error': format_exc()}
 
 # ################################################################################################################################
@@ -1148,12 +1411,22 @@ class Updater:
             logger.info('restart_component: restarting {} at {}'.format(component_name, component_path))
 
             stop_result = self.stop_component(component_name, component_path, port)
+            logger.info('restart_component: stop_component returned for {}: {}'.format(component_name, stop_result))
+            for handler in logger.handlers:
+                handler.flush()
+
             if not stop_result['success']:
                 logger.error('restart_component: failed to stop {}: {}'.format(component_name, stop_result.get('error')))
 
+            logger.info('restart_component: proceeding to start phase for {}, port={}'.format(component_name, port))
+            for handler in logger.handlers:
+                handler.flush()
+
             if port:
-                logger.info('restart_component: waiting for port {} to be released'.format(port))
-                if not wait_until_port_free(port, timeout=30):
+                logger.info('restart_component: waiting for port {} to be released (timeout=30s)'.format(port))
+                port_free = wait_until_port_free(port, timeout=30)
+                logger.info('restart_component: wait_until_port_free returned {} for port {}'.format(port_free, port))
+                if not port_free:
                     logger.error('restart_component: port {} still in use after stopping {}'.format(
                         port, component_name))
 
@@ -1162,13 +1435,18 @@ class Updater:
                         logger.info('restart_component: removing stale pidfile for {}'.format(component_name))
                         os.remove(pidfile)
 
-                    if not wait_until_port_free(port, timeout=10):
+                    port_free_retry = wait_until_port_free(port, timeout=10)
+                    logger.info('restart_component: wait_until_port_free retry returned {} for port {}'.format(port_free_retry, port))
+                    if not port_free_retry:
+                        logger.error('restart_component: port {} still in use after retries, cannot start {}'.format(port, component_name))
                         return {
                             'success': False,
                             'error': 'Port {} still in use, cannot start {}'.format(port, component_name)
                         }
 
+            logger.info('restart_component: calling start_component for {}'.format(component_name))
             start_result = self.start_component(component_name, component_path)
+            logger.info('restart_component: start_component returned for {}: {}'.format(component_name, start_result))
 
             if start_result['success']:
                 logger.info('restart_component: {} restarted successfully'.format(component_name))
@@ -1179,13 +1457,17 @@ class Updater:
             return start_result
 
         except Exception:
-            logger.error('restart_component: exception restarting {}: {}'.format(component_name, format_exc()))
+            logger.error('restart_component: EXCEPTION restarting {}: {}'.format(component_name, format_exc()))
+            for handler in logger.handlers:
+                handler.flush()
             return {'success': False, 'error': format_exc()}
 
 # ################################################################################################################################
 
     def restart_all_components(self, exclude_components:'list'=None, changed_files:'list'=None) -> 'dict':
         """ Restarts all Zato components in order based on changed files.
+        Stop order: proxy -> dashboard -> server -> scheduler -> pubsub-pull-consumer -> pubsub-publisher -> util-rabbitmqctl
+        Start order: util-rabbitmqctl -> pubsub-publisher -> pubsub-pull-consumer -> scheduler -> server -> dashboard -> proxy
         """
         exclude_components = exclude_components or []
         changed_files = changed_files or []
@@ -1201,12 +1483,18 @@ class Updater:
         if has_common_changes:
             logger.info('restart_all_components: zato-common has changes, restarting all components')
 
-        components = ['scheduler', 'server', 'dashboard']
+        main_components = ['scheduler', 'server', 'dashboard', 'proxy']
+        pubsub_components = ['util-rabbitmqctl', 'pubsub-publisher', 'pubsub-pull-consumer']
+
+        start_order = pubsub_components + main_components
+        stop_order = ['proxy', 'dashboard', 'server', 'scheduler', 'pubsub-pull-consumer', 'pubsub-publisher', 'util-rabbitmqctl']
+
         results = {}
         failed = []
         skipped = []
+        to_restart = []
 
-        for component_name in components:
+        for component_name in main_components:
             if component_name in exclude_components:
                 logger.info('restart_all_components: {} excluded from restart'.format(component_name))
                 skipped.append(component_name)
@@ -1222,16 +1510,40 @@ class Updater:
                 results[component_name] = {'success': True, 'message': 'No changes detected'}
                 continue
 
-            component_path = self.get_component_path(component_name)
-            component_port = self.get_component_port(component_name)
+            to_restart.append(component_name)
 
-            logger.info('restart_all_components: restarting {} (changes detected)'.format(component_name))
-            result = self.restart_component(component_name, component_path, component_port)
+        if 'server' in to_restart or has_common_changes:
+            for comp in pubsub_components:
+                if comp not in to_restart:
+                    to_restart.insert(0, comp)
+
+        logger.info('restart_all_components: stopping components in order: {}'.format([c for c in stop_order if c in to_restart]))
+        for component_name in stop_order:
+            if component_name not in to_restart:
+                continue
+            logger.info('restart_all_components: stopping {}'.format(component_name))
+            if component_name in pubsub_components:
+                self.stop_pubsub_component(component_name)
+            else:
+                component_path = self.get_component_path(component_name)
+                component_port = self.get_component_port(component_name)
+                self.stop_component(component_name, component_path, component_port)
+
+        logger.info('restart_all_components: starting components in order: {}'.format([c for c in start_order if c in to_restart]))
+        for component_name in start_order:
+            if component_name not in to_restart:
+                continue
+            logger.info('restart_all_components: starting {}'.format(component_name))
+            if component_name in pubsub_components:
+                result = self.start_pubsub_component(component_name)
+            else:
+                component_path = self.get_component_path(component_name)
+                result = self.start_component(component_name, component_path)
             results[component_name] = result
 
             if not result['success']:
                 failed.append(component_name)
-                logger.error('restart_all_components: failed to restart {}'.format(component_name))
+                logger.error('restart_all_components: failed to start {}'.format(component_name))
 
         if failed:
             message = 'Failed to restart components: {}. '.format(', '.join(failed))

@@ -19,6 +19,7 @@ from zato.admin.web.views import method_allowed
 from zato.common.json_internal import dumps
 from zato.common.util.updates import Updater, UpdaterConfig
 
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -216,7 +217,7 @@ def delete_schedule(req):
 def index(req):
     return TemplateResponse(req, 'zato/in-app-updates/index.html', {
         'current_version': updater.get_zato_version(),
-        'audit_log': updater.get_audit_log_entries(5)
+        'audit_log': updater.get_audit_log_entries(3)
     })
 
 # ################################################################################################################################
@@ -235,7 +236,7 @@ def get_latest_audit_entry(req):
 
 @method_allowed('GET')
 def get_audit_log_refresh(req):
-    entries = updater.get_audit_log_entries(5)
+    entries = updater.get_audit_log_entries(3)
     return json_response({'success': True, 'entries': entries})
 
 # ################################################################################################################################
