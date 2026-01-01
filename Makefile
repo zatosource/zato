@@ -117,7 +117,7 @@ update:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cli.py
 
 cron-update:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cron.py
+	/opt/zato/current/bin/py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cron.py
 
 stop-dashboard:
 	-$(CURDIR)/code/bin/zato stop $(HOME)/env/qs-1/web-admin
