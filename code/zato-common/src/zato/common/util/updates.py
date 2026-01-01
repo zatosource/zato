@@ -726,6 +726,46 @@ class Updater:
 
 # ################################################################################################################################
 
+    def _get_last_update_time(self) -> 'datetime | None':
+        """ Gets the last update run time from Redis.
+        """
+        try:
+            r = self.get_redis_connection()
+            last_run = r.get('zato:autoupdate:last_run')
+            if last_run:
+                return datetime.fromisoformat(last_run)
+            return None
+        except Exception:
+            logger.error('_get_last_update_time: exception: {}'.format(format_exc()))
+            return None
+
+# ################################################################################################################################
+
+    def _set_last_update_time(self) -> 'None':
+        """ Sets the last update run time in Redis.
+        """
+        try:
+            r = self.get_redis_connection()
+            r.set('zato:autoupdate:last_run', datetime.now(timezone.utc).isoformat())
+            logger.info('_set_last_update_time: recorded update time')
+        except Exception:
+            logger.error('_set_last_update_time: exception: {}'.format(format_exc()))
+
+# ################################################################################################################################
+
+    def _get_min_interval_minutes(self, frequency:'str') -> 'int':
+        """ Returns minimum minutes between updates for a given frequency.
+        """
+        intervals = {
+            'hourly': 50,
+            'daily': 23 * 60,
+            'weekly': 6 * 24 * 60,
+            'monthly': 27 * 24 * 60
+        }
+        return intervals.get(frequency, 23 * 60)
+
+# ################################################################################################################################
+
     def should_run_scheduled_update(self) -> 'bool':
         """ Checks if a scheduled update should run now.
         """
@@ -747,6 +787,17 @@ class Updater:
                 return False
 
             frequency = schedule.get('frequency', 'daily')
+
+            # Check if enough time has passed since last update
+            last_run = self._get_last_update_time()
+            if last_run:
+                min_interval = self._get_min_interval_minutes(frequency)
+                minutes_since_last = (datetime.now(timezone.utc) - last_run).total_seconds() / 60
+                logger.info('should_run_scheduled_update: last run was {} minutes ago, min interval is {} minutes'.format(
+                    int(minutes_since_last), min_interval))
+                if minutes_since_last < min_interval:
+                    logger.info('should_run_scheduled_update: not enough time since last update, skipping')
+                    return False
 
             if frequency == 'hourly':
                 # For hourly, run at the specified minute each hour
@@ -775,11 +826,11 @@ class Updater:
                 logger.info('should_run_scheduled_update: hourly schedule at minute {}, current minute {} (diff {} min)'.format(
                     schedule_minute, current_minute, minute_diff))
 
-                if minute_diff <= 1:
-                    logger.info('should_run_scheduled_update: minute matches within 1-minute window, update will run')
+                if minute_diff <= 10:
+                    logger.info('should_run_scheduled_update: minute matches within 10-minute window, update will run')
                     return True
                 else:
-                    logger.info('should_run_scheduled_update: minute difference {} exceeds 1-minute window'.format(minute_diff))
+                    logger.info('should_run_scheduled_update: minute difference {} exceeds 10-minute window'.format(minute_diff))
                     return False
 
             from zoneinfo import ZoneInfo

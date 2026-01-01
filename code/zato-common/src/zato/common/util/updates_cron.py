@@ -58,6 +58,8 @@ def main() -> 'int':
             logger.error('Component restart failed: {}'.format(restart_result.get('error', 'Unknown error')))
             return 1
 
+        updater._set_last_update_time()
+
         try:
             version_from = result.get('version_from', '')
             version_to = result.get('version_to', '')
