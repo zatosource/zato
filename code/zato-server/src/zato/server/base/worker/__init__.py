@@ -1245,6 +1245,9 @@ class WorkerStore(_WorkerStoreBase):
             if skip_response_elem:
                 return response
             else:
+                if isinstance(response, dict):
+                    return response
+
                 response = service.response.payload
 
                 if hasattr(response, 'getvalue'):
