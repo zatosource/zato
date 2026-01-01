@@ -984,6 +984,10 @@ class Updater:
         """ Stops a Zato component.
         """
         try:
+            # Handle proxy component separately - it uses haproxy which runs without pidfile
+            if component_name == 'proxy':
+                return self._stop_proxy_component()
+
             pidfile = os.path.join(component_path, 'pidfile')
 
             if not os.path.exists(pidfile):
@@ -1028,6 +1032,38 @@ class Updater:
             logger.error('stop_component: EXCEPTION stopping {}: {}'.format(component_name, format_exc()))
             for handler in logger.handlers:
                 handler.flush()
+            return {'success': False, 'error': format_exc()}
+
+# ################################################################################################################################
+
+    def _stop_proxy_component(self) -> 'dict':
+        """ Stops HAProxy by finding and killing the process.
+        """
+        try:
+            result = subprocess.run(
+                ['pgrep', '-f', 'haproxy.*haproxy.cfg'],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode != 0 or not result.stdout.strip():
+                logger.info('_stop_proxy_component: haproxy not running')
+                return {'success': True, 'message': 'HAProxy not running'}
+
+            pids = result.stdout.strip().split('\n')
+            for pid_str in pids:
+                if pid_str:
+                    pid = int(pid_str)
+                    logger.info('_stop_proxy_component: killing haproxy process {}'.format(pid))
+                    kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                    logger.info('_stop_proxy_component: kill result for pid {}: returncode={}'.format(pid, kill_result.returncode))
+
+            time.sleep(1)
+            logger.info('_stop_proxy_component: haproxy stopped')
+            return {'success': True, 'message': 'HAProxy stopped'}
+
+        except Exception:
+            logger.error('_stop_proxy_component: exception: {}'.format(format_exc()))
             return {'success': False, 'error': format_exc()}
 
 # ################################################################################################################################
@@ -1115,12 +1151,15 @@ class Updater:
         """ Starts a Zato component using the startup scripts.
         """
         try:
+            # Handle proxy component separately - it uses haproxy which runs in foreground without pidfile
+            if component_name == 'proxy':
+                return self._start_proxy_component()
+
             # Map component names to their startup script names
             script_name_map = {
                 'scheduler': 'start-scheduler-fg.sh',
                 'server': 'start-server1-fg.sh',
                 'dashboard': 'start-web-admin-fg.sh',
-                'proxy': 'start-load-balancer-fg.sh'
             }
 
             script_name = script_name_map.get(component_name)
@@ -1180,6 +1219,63 @@ class Updater:
 
         except Exception:
             logger.error('start_component: exception starting {}: {}'.format(component_name, format_exc()))
+            return {'success': False, 'error': format_exc()}
+
+# ################################################################################################################################
+
+    def _start_proxy_component(self) -> 'dict':
+        """ Starts HAProxy using the same method as entrypoint.sh - runs in foreground without pidfile.
+        """
+        try:
+            startup_script = os.path.join(self.config.base_dir, 'start-haproxy.sh')
+            logger.info('_start_proxy_component: looking for startup script at {}'.format(startup_script))
+
+            if not os.path.exists(startup_script):
+                error = 'Startup script not found: {}'.format(startup_script)
+                logger.error('_start_proxy_component: {}'.format(error))
+                return {'success': False, 'error': error}
+
+            # Check if haproxy is already running
+            check_result = subprocess.run(
+                ['pgrep', '-f', 'haproxy.*haproxy.cfg'],
+                capture_output=True,
+                text=True
+            )
+            if check_result.returncode == 0 and check_result.stdout.strip():
+                logger.info('_start_proxy_component: haproxy already running with pids: {}'.format(check_result.stdout.strip()))
+                return {'success': False, 'error': 'HAProxy already running'}
+
+            logger.info('_start_proxy_component: starting haproxy using script {}'.format(startup_script))
+            logger.info('_start_proxy_component: cwd: {}'.format(self.config.base_dir))
+
+            process = subprocess.Popen(
+                ['bash', startup_script],
+                cwd=self.config.base_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+
+            logger.info('_start_proxy_component: launched haproxy with pid {}'.format(process.pid))
+
+            # Wait and verify haproxy process is running
+            time.sleep(2)
+
+            verify_result = subprocess.run(
+                ['pgrep', '-f', 'haproxy.*haproxy.cfg'],
+                capture_output=True,
+                text=True
+            )
+
+            if verify_result.returncode == 0 and verify_result.stdout.strip():
+                logger.info('_start_proxy_component: haproxy started successfully, pids: {}'.format(verify_result.stdout.strip()))
+                return {'success': True, 'message': 'HAProxy started'}
+
+            logger.error('_start_proxy_component: haproxy process not found after startup')
+            return {'success': False, 'error': 'HAProxy process not found after startup'}
+
+        except Exception:
+            logger.error('_start_proxy_component: exception: {}'.format(format_exc()))
             return {'success': False, 'error': format_exc()}
 
 # ################################################################################################################################
