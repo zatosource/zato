@@ -749,8 +749,38 @@ class Updater:
             frequency = schedule.get('frequency', 'daily')
 
             if frequency == 'hourly':
-                logger.info('should_run_scheduled_update: hourly schedule, update will run')
-                return True
+                # For hourly, run at the specified minute each hour
+                schedule_time = schedule.get('time', '')
+                if schedule_time and ':' in schedule_time:
+                    time_parts = schedule_time.split(':')
+                    schedule_minute = int(time_parts[1])
+                else:
+                    schedule_minute = schedule.get('minute', 0)
+
+                from zoneinfo import ZoneInfo
+
+                schedule_timezone_str = schedule.get('timezone', 'UTC')
+                try:
+                    schedule_tz = ZoneInfo(schedule_timezone_str)
+                except Exception:
+                    logger.warning('should_run_scheduled_update: invalid timezone {}, using UTC'.format(schedule_timezone_str))
+                    schedule_tz = ZoneInfo('UTC')
+
+                now_server = datetime.now(timezone.utc)
+                now_user_tz = now_server.astimezone(schedule_tz)
+                current_minute = now_user_tz.minute
+
+                minute_diff = abs(current_minute - schedule_minute)
+
+                logger.info('should_run_scheduled_update: hourly schedule at minute {}, current minute {} (diff {} min)'.format(
+                    schedule_minute, current_minute, minute_diff))
+
+                if minute_diff <= 1:
+                    logger.info('should_run_scheduled_update: minute matches within 1-minute window, update will run')
+                    return True
+                else:
+                    logger.info('should_run_scheduled_update: minute difference {} exceeds 1-minute window'.format(minute_diff))
+                    return False
 
             from zoneinfo import ZoneInfo
 
