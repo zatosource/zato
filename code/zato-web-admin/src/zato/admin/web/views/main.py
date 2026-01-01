@@ -129,12 +129,19 @@ def login(req):
 
             # Set timezone from browser if not already set
             browser_timezone = req.POST.get('browser_timezone', '').strip()
+            logger.info('Browser timezone received: %r for user %s', browser_timezone, username)
             if browser_timezone:
                 user_profile = get_user_profile(req.user)
+                logger.info('Current user_profile.timezone: %r for user %s', user_profile.timezone, username)
                 if user_profile.timezone in (None, ''):
+                    logger.info('Timezone is None or empty, setting to %s for user %s', browser_timezone, username)
                     user_profile.timezone = browser_timezone
                     user_profile.save()
-                    logger.info('Set timezone to %s for user %s', browser_timezone, username)
+                    logger.info('Timezone saved to database: %s for user %s', browser_timezone, username)
+                else:
+                    logger.info('Timezone already set to %r, not overwriting for user %s', user_profile.timezone, username)
+            else:
+                logger.info('No browser timezone received for user %s', username)
 
             # At this point we know that all the possible credentials are valid
             # so we can log the user in and redirect the person further.
