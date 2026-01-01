@@ -1237,8 +1237,8 @@ class Updater:
 
     def restart_all_components(self, exclude_components:'list'=None, changed_files:'list'=None) -> 'dict':
         """ Restarts all Zato components in order based on changed files.
-        Stop order: dashboard -> server -> scheduler -> pubsub-pull-consumer -> pubsub-publisher -> util-rabbitmqctl
-        Start order: util-rabbitmqctl -> pubsub-publisher -> pubsub-pull-consumer -> scheduler -> server -> dashboard
+        Stop order: proxy -> dashboard -> server -> scheduler -> pubsub-pull-consumer -> pubsub-publisher -> util-rabbitmqctl
+        Start order: util-rabbitmqctl -> pubsub-publisher -> pubsub-pull-consumer -> scheduler -> server -> dashboard -> proxy
         """
         exclude_components = exclude_components or []
         changed_files = changed_files or []
@@ -1254,11 +1254,11 @@ class Updater:
         if has_common_changes:
             logger.info('restart_all_components: zato-common has changes, restarting all components')
 
-        main_components = ['scheduler', 'server', 'dashboard']
+        main_components = ['scheduler', 'server', 'dashboard', 'proxy']
         pubsub_components = ['util-rabbitmqctl', 'pubsub-publisher', 'pubsub-pull-consumer']
 
         start_order = pubsub_components + main_components
-        stop_order = ['dashboard', 'server', 'scheduler', 'pubsub-pull-consumer', 'pubsub-publisher', 'util-rabbitmqctl']
+        stop_order = ['proxy', 'dashboard', 'server', 'scheduler', 'pubsub-pull-consumer', 'pubsub-publisher', 'util-rabbitmqctl']
 
         results = {}
         failed = []
