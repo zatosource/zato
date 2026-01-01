@@ -953,7 +953,7 @@ class Updater:
             logger.info('kill_orphaned_processes: current process pid is {}'.format(current_pid))
 
             for line in ps_result.stdout.split('\n'):
-                if process_name in line and 'grep' not in line:
+                if process_name in line and 'grep' not in line and 'start-' not in line and 'Zato_' not in line:
                     parts = line.split()
                     if len(parts) > 1:
                         pid = int(parts[1])
