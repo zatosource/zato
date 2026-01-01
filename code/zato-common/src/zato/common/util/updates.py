@@ -821,16 +821,16 @@ class Updater:
                 now_user_tz = now_server.astimezone(schedule_tz)
                 current_minute = now_user_tz.minute
 
-                minute_diff = abs(current_minute - schedule_minute)
+                minute_diff = current_minute - schedule_minute
 
                 logger.info('should_run_scheduled_update: hourly schedule at minute {}, current minute {} (diff {} min)'.format(
                     schedule_minute, current_minute, minute_diff))
 
-                if minute_diff <= 10:
-                    logger.info('should_run_scheduled_update: minute matches within 10-minute window, update will run')
+                if 0 <= minute_diff <= 10:
+                    logger.info('should_run_scheduled_update: minute matches within 10-minute window after schedule, update will run')
                     return True
                 else:
-                    logger.info('should_run_scheduled_update: minute difference {} exceeds 10-minute window'.format(minute_diff))
+                    logger.info('should_run_scheduled_update: minute not within 0-10 minutes after scheduled minute')
                     return False
 
             from zoneinfo import ZoneInfo
@@ -870,17 +870,17 @@ class Updater:
 
             current_total_minutes = current_hour * 60 + current_minute
             schedule_total_minutes = schedule_hour * 60 + schedule_minute
-            time_diff = abs(current_total_minutes - schedule_total_minutes)
+            time_diff = current_total_minutes - schedule_total_minutes
 
             if frequency == 'daily':
                 logger.info('should_run_scheduled_update: daily schedule at {}, current time {} (diff {} min)'.format(
                     schedule_time_str, current_time_str, time_diff))
 
-                if time_diff <= 10:
-                    logger.info('should_run_scheduled_update: time matches within 10-minute window, update will run')
+                if 0 <= time_diff <= 10:
+                    logger.info('should_run_scheduled_update: time matches within 10-minute window after schedule, update will run')
                     return True
                 else:
-                    logger.info('should_run_scheduled_update: time difference {} minutes exceeds 10-minute window')
+                    logger.info('should_run_scheduled_update: time not within 0-10 minutes after scheduled time')
                     return False
 
             if frequency == 'weekly':
@@ -910,11 +910,11 @@ class Updater:
                         current_day_name, schedule_day_names))
                     return False
 
-                if time_diff <= 10:
-                    logger.info('should_run_scheduled_update: time and day match within 10-minute window, update will run')
+                if 0 <= time_diff <= 10:
+                    logger.info('should_run_scheduled_update: time and day match within 10-minute window after schedule, update will run')
                     return True
                 else:
-                    logger.info('should_run_scheduled_update: time difference {} minutes exceeds 10-minute window'.format(time_diff))
+                    logger.info('should_run_scheduled_update: time not within 0-10 minutes after scheduled time')
                     return False
 
             if frequency == 'monthly':
@@ -971,11 +971,11 @@ class Updater:
                         week_of_month, target_week))
                     return False
 
-                if time_diff <= 10:
-                    logger.info('should_run_scheduled_update: time, day, and week match within 10-minute window, update will run')
+                if 0 <= time_diff <= 10:
+                    logger.info('should_run_scheduled_update: time, day, and week match within 10-minute window after schedule, update will run')
                     return True
                 else:
-                    logger.info('should_run_scheduled_update: time difference {} minutes exceeds 10-minute window'.format(time_diff))
+                    logger.info('should_run_scheduled_update: time not within 0-10 minutes after scheduled time')
                     return False
 
             logger.info('should_run_scheduled_update: unknown frequency {}'.format(frequency))
