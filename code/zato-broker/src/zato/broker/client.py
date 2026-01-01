@@ -688,7 +688,7 @@ class BrokerClient:
 
         # Log service invocation with reply queue and CID in the same line
         reply_queue_info = f', reply-to: `{response.reply_queue_name}`' if response.reply_queue_name else ''
-        # logger.info(f'Req 🠊 {cid} - `{service}` - `{request}`{reply_queue_info}`')
+        logger.info(f'Req 🠊 {cid} - `{service}` - `{request}`{reply_queue_info}`')
 
         # Wait for response
         self._wait_for_response(ctx, response, timeout, sleep_time, cid)
