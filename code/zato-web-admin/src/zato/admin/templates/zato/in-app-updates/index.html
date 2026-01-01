@@ -191,7 +191,7 @@
                             <div class="audit-log-empty">No logs yet</div>
                             {% endif %}
                         </div>
-                        <div class="links-row {% if not audit_log %}hidden{% endif %}">
+                        <div class="links-row"{% if not audit_log %} style="display: none;"{% endif %}>
                             <div class="dashboard-link-item">
                                 <a href="/zato/updates/download-logs" class="dashboard-link">
                                     Download full logs
