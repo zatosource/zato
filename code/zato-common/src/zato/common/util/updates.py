@@ -949,14 +949,30 @@ class Updater:
 
             process_name = 'zato.web-admin' if component_name == 'dashboard' else 'zato.{}'.format(component_name)
 
+            current_pid = os.getpid()
+            logger.info('kill_orphaned_processes: current process pid is {}'.format(current_pid))
+
             for line in ps_result.stdout.split('\n'):
                 if process_name in line and 'grep' not in line:
                     parts = line.split()
                     if len(parts) > 1:
                         pid = int(parts[1])
-                        logger.info('kill_orphaned_processes: killing orphaned {} process {} ({})'.format(component_name, pid, process_name))
+
+                        if pid == current_pid:
+                            logger.warning('kill_orphaned_processes: SKIPPING pid {} - this is our own process!'.format(pid))
+                            continue
+
+                        logger.info('kill_orphaned_processes: about to kill orphaned {} process {} ({})'.format(component_name, pid, process_name))
+                        logger.info('kill_orphaned_processes: full ps line for pid {}: {}'.format(pid, line.strip()))
+                        for handler in logger.handlers:
+                            handler.flush()
+
                         orphan_kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
-                        logger.info('kill_orphaned_processes: kill result for pid {}: returncode={}'.format(pid, orphan_kill_result.returncode))
+
+                        logger.info('kill_orphaned_processes: kill result for pid {}: returncode={}, stdout={}, stderr={}'.format(
+                            pid, orphan_kill_result.returncode, orphan_kill_result.stdout, orphan_kill_result.stderr))
+                        for handler in logger.handlers:
+                            handler.flush()
         except Exception:
             logger.error('kill_orphaned_processes: EXCEPTION: {}'.format(format_exc()))
             for handler in logger.handlers:
