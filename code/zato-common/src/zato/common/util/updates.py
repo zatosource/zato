@@ -793,8 +793,11 @@ class Updater:
             if last_run:
                 min_interval = self._get_min_interval_minutes(frequency)
                 minutes_since_last = (datetime.now(timezone.utc) - last_run).total_seconds() / 60
-                logger.info('should_run_scheduled_update: last run was {} minutes ago, min interval is {} minutes'.format(
-                    int(minutes_since_last), min_interval))
+                minutes_since_last_int = int(minutes_since_last)
+                minutes_word = 'minute' if minutes_since_last_int == 1 else 'minutes'
+                interval_word = 'minute' if min_interval == 1 else 'minutes'
+                logger.info('should_run_scheduled_update: last run was {} {} ago, min interval is {} {}'.format(
+                    minutes_since_last_int, minutes_word, min_interval, interval_word))
                 if minutes_since_last < min_interval:
                     logger.info('should_run_scheduled_update: not enough time since last update, skipping')
                     return False
