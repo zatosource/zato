@@ -169,8 +169,8 @@
                 <div class="logs-section show">
                     <h3>Update log <img src="/static/gfx/info.svg" class="help-icon" id="logs-help" alt="info" /></h3>
                     <div class="links-panel">
-                        {% if audit_log %}
                         <div class="audit-log-list">
+                            {% if audit_log %}
                             {% for entry in audit_log %}
                             <div class="audit-log-entry">
                                 <div class="audit-log-header">
@@ -187,9 +187,11 @@
                                 </div>
                             </div>
                             {% endfor %}
+                            {% else %}
+                            <div class="audit-log-empty">No logs yet</div>
+                            {% endif %}
                         </div>
-                        {% endif %}
-                        <div class="links-row">
+                        <div class="links-row"{% if not audit_log %} style="display: none;"{% endif %}>
                             <div class="dashboard-link-item">
                                 <a href="/zato/updates/download-logs" class="dashboard-link">
                                     Download full logs
