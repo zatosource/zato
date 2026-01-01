@@ -517,6 +517,8 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                             if (entries.length > 3) {
                                 entries.last().remove();
                             }
+
+                            auditLogList.siblings('.links-row').removeClass('hidden');
                         }
                     }
                 }
