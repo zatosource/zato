@@ -1009,7 +1009,12 @@ class Updater:
                     if pid_str:
                         pid = int(pid_str)
                         logger.info(f'kill_process_by_port: killing process {pid} using port {port}')
-                        subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                        kill_args = ['-9', str(pid)]
+                        kill_result = subprocess.run(['sudo', 'kill'] + kill_args, capture_output=True)
+                        if kill_result.returncode != 0:
+                            logger.info(f'kill_process_by_port: sudo kill failed for pid {pid}, trying without sudo')
+                            kill_result = subprocess.run(['kill'] + kill_args, capture_output=True)
+                            logger.info(f'kill_process_by_port: non-sudo kill result for pid {pid}: returncode={kill_result.returncode}')
                 return True
             else:
                 logger.info(f'kill_process_by_port: no process found using port {port}')
@@ -1051,7 +1056,12 @@ class Updater:
                         for handler in logger.handlers:
                             handler.flush()
 
-                        orphan_kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                        kill_args = ['-9', str(pid)]
+                        orphan_kill_result = subprocess.run(['sudo', 'kill'] + kill_args, capture_output=True)
+
+                        if orphan_kill_result.returncode != 0:
+                            logger.info('kill_orphaned_processes: sudo kill failed for pid {}, trying without sudo'.format(pid))
+                            orphan_kill_result = subprocess.run(['kill'] + kill_args, capture_output=True)
 
                         logger.info('kill_orphaned_processes: kill result for pid {}: returncode={}, stdout={}, stderr={}'.format(
                             pid, orphan_kill_result.returncode, orphan_kill_result.stdout, orphan_kill_result.stderr))
@@ -1146,7 +1156,11 @@ class Updater:
                 if pid_str:
                     pid = int(pid_str)
                     logger.info('_stop_proxy_component: killing haproxy process {}'.format(pid))
-                    kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                    kill_args = ['-9', str(pid)]
+                    kill_result = subprocess.run(['sudo', 'kill'] + kill_args, capture_output=True)
+                    if kill_result.returncode != 0:
+                        logger.info('_stop_proxy_component: sudo kill failed for pid {}, trying without sudo'.format(pid))
+                        kill_result = subprocess.run(['kill'] + kill_args, capture_output=True)
                     logger.info('_stop_proxy_component: kill result for pid {}: returncode={}'.format(pid, kill_result.returncode))
 
             time.sleep(1)
@@ -1186,7 +1200,12 @@ class Updater:
                     if pid_str:
                         pid = int(pid_str)
                         logger.info('stop_pubsub_component: killing {} (pid {})'.format(component_name, pid))
-                        subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                        kill_args = ['-9', str(pid)]
+                        kill_result = subprocess.run(['sudo', 'kill'] + kill_args, capture_output=True)
+                        if kill_result.returncode != 0:
+                            logger.info('stop_pubsub_component: sudo kill failed for pid {}, trying without sudo'.format(pid))
+                            kill_result = subprocess.run(['kill'] + kill_args, capture_output=True)
+                            logger.info('stop_pubsub_component: non-sudo kill result for pid {}: returncode={}'.format(pid, kill_result.returncode))
                 return {'success': True, 'message': 'Component stopped'}
             else:
                 logger.info('stop_pubsub_component: {} not running'.format(component_name))
