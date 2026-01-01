@@ -955,9 +955,12 @@ class Updater:
                     if len(parts) > 1:
                         pid = int(parts[1])
                         logger.info('kill_orphaned_processes: killing orphaned {} process {} ({})'.format(component_name, pid, process_name))
-                        subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                        orphan_kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+                        logger.info('kill_orphaned_processes: kill result for pid {}: returncode={}'.format(pid, orphan_kill_result.returncode))
         except Exception:
-            logger.error('kill_orphaned_processes: exception: {}'.format(format_exc()))
+            logger.error('kill_orphaned_processes: EXCEPTION: {}'.format(format_exc()))
+            for handler in logger.handlers:
+                handler.flush()
 
 # ################################################################################################################################
 
@@ -987,17 +990,28 @@ class Updater:
             pid = int(pid_str)
             logger.info('stop_component: sending SIGKILL to {} (pid {})'.format(component_name, pid))
 
-            subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+            kill_result = subprocess.run(['sudo', 'kill', '-9', str(pid)], capture_output=True)
+            logger.info('stop_component: kill result for {} (pid {}): returncode={}, stdout={}, stderr={}'.format(
+                component_name, pid, kill_result.returncode, kill_result.stdout, kill_result.stderr))
 
+            logger.info('stop_component: sleeping 1 second after kill for {}'.format(component_name))
             time.sleep(1)
+            logger.info('stop_component: sleep completed for {}'.format(component_name))
 
             if os.path.exists(pidfile):
                 os.remove(pidfile)
+            logger.info('stop_component: calling kill_orphaned_processes for {}'.format(component_name))
             self.kill_orphaned_processes(component_name)
+            logger.info('stop_component: kill_orphaned_processes completed for {}'.format(component_name))
+            logger.info('stop_component: returning success for {}'.format(component_name))
+            for handler in logger.handlers:
+                handler.flush()
             return {'success': True, 'message': 'Component killed, orphaned processes cleaned'}
 
         except Exception:
-            logger.error('stop_component: exception stopping {}: {}'.format(component_name, format_exc()))
+            logger.error('stop_component: EXCEPTION stopping {}: {}'.format(component_name, format_exc()))
+            for handler in logger.handlers:
+                handler.flush()
             return {'success': False, 'error': format_exc()}
 
 # ################################################################################################################################
@@ -1116,6 +1130,7 @@ class Updater:
 
             logger.info('start_component: starting {} using script {}'.format(component_name, startup_script))
             logger.info('start_component: cwd: {}'.format(self.config.base_dir))
+            logger.info('start_component: about to call subprocess.Popen for {}'.format(component_name))
 
             process = subprocess.Popen(
                 ['bash', startup_script],
@@ -1126,6 +1141,7 @@ class Updater:
             )
 
             logger.info('start_component: launched {} with pid {}'.format(component_name, process.pid))
+            logger.info('start_component: waiting for pidfile to appear for {} (max_wait=10s)'.format(component_name))
 
             max_wait = 10
             for i in range(max_wait):
@@ -1199,12 +1215,22 @@ class Updater:
             logger.info('restart_component: restarting {} at {}'.format(component_name, component_path))
 
             stop_result = self.stop_component(component_name, component_path, port)
+            logger.info('restart_component: stop_component returned for {}: {}'.format(component_name, stop_result))
+            for handler in logger.handlers:
+                handler.flush()
+
             if not stop_result['success']:
                 logger.error('restart_component: failed to stop {}: {}'.format(component_name, stop_result.get('error')))
 
+            logger.info('restart_component: proceeding to start phase for {}, port={}'.format(component_name, port))
+            for handler in logger.handlers:
+                handler.flush()
+
             if port:
-                logger.info('restart_component: waiting for port {} to be released'.format(port))
-                if not wait_until_port_free(port, timeout=30):
+                logger.info('restart_component: waiting for port {} to be released (timeout=30s)'.format(port))
+                port_free = wait_until_port_free(port, timeout=30)
+                logger.info('restart_component: wait_until_port_free returned {} for port {}'.format(port_free, port))
+                if not port_free:
                     logger.error('restart_component: port {} still in use after stopping {}'.format(
                         port, component_name))
 
@@ -1213,13 +1239,18 @@ class Updater:
                         logger.info('restart_component: removing stale pidfile for {}'.format(component_name))
                         os.remove(pidfile)
 
-                    if not wait_until_port_free(port, timeout=10):
+                    port_free_retry = wait_until_port_free(port, timeout=10)
+                    logger.info('restart_component: wait_until_port_free retry returned {} for port {}'.format(port_free_retry, port))
+                    if not port_free_retry:
+                        logger.error('restart_component: port {} still in use after retries, cannot start {}'.format(port, component_name))
                         return {
                             'success': False,
                             'error': 'Port {} still in use, cannot start {}'.format(port, component_name)
                         }
 
+            logger.info('restart_component: calling start_component for {}'.format(component_name))
             start_result = self.start_component(component_name, component_path)
+            logger.info('restart_component: start_component returned for {}: {}'.format(component_name, start_result))
 
             if start_result['success']:
                 logger.info('restart_component: {} restarted successfully'.format(component_name))
@@ -1230,7 +1261,9 @@ class Updater:
             return start_result
 
         except Exception:
-            logger.error('restart_component: exception restarting {}: {}'.format(component_name, format_exc()))
+            logger.error('restart_component: EXCEPTION restarting {}: {}'.format(component_name, format_exc()))
+            for handler in logger.handlers:
+                handler.flush()
             return {'success': False, 'error': format_exc()}
 
 # ################################################################################################################################
