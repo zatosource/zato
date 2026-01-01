@@ -30,7 +30,7 @@ class UserProfile(models.Model):
         db_table = 'user_profile'
 
     user = models.OneToOneField(User, on_delete=_on_delete)
-    timezone = models.CharField(max_length=100, null=True, default='UTC')
+    timezone = models.CharField(max_length=100, null=True, default=None)
     date_format = models.CharField(max_length=100, null=True, default='dd-mm-yyyy')
     time_format = models.CharField(max_length=10, null=True, default='24')
     opaque1 = models.TextField(null=True)
