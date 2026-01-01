@@ -119,13 +119,20 @@ update:
 cron-update:
 	/opt/zato/current/bin/py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cron.py
 
+stop-server:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-server
+
+restart-server-with-scheduler:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server-with-scheduler
+
+stop-scheduler:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-scheduler
+
+restart-scheduler:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-scheduler
+
 stop-dashboard:
-	-$(CURDIR)/code/bin/zato stop $(HOME)/env/qs-1/web-admin
-	@if [ -f $(HOME)/env/qs-1/web-admin/pidfile ]; then \
-		kill -9 $$(cat $(HOME)/env/qs-1/web-admin/pidfile) 2>/dev/null || true; \
-		rm -f $(HOME)/env/qs-1/web-admin/pidfile; \
-	fi
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-dashboard
 
 restart-dashboard:
-	$(MAKE) stop-dashboard
-	$(CURDIR)/code/bin/zato start $(HOME)/env/qs-1/web-admin
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
