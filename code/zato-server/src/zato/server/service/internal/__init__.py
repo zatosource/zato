@@ -162,7 +162,8 @@ class AdminService(Service):
 
         if needs_meta and hasattr(self, '_search_tool'):
             if not is_text:
-                payload.zato_meta = self._search_tool.output_meta
+                if hasattr(payload, 'zato_meta'):
+                    payload.zato_meta = self._search_tool.output_meta
 
 # ################################################################################################################################
 
