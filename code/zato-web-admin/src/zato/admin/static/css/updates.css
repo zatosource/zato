@@ -30,21 +30,6 @@
     height: 17px;
 }
 
-.upgrade-info {
-    cursor: pointer;
-    display: none;
-}
-
-.upgrade-info:hover {
-    opacity: 0.8;
-}
-
-.upgrade-info.show {
-    display: inline-block;
-    padding: 6px;
-    margin-top: 8px;
-}
-
 #schedule-time {
     margin-bottom: 0;
 }
