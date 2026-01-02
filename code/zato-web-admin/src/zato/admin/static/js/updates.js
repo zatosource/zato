@@ -139,7 +139,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                 $('.upgrade-info').text('⭐ Updated to ' + response.version);
 
                 if (showUpdatesFound) {
-                    const updatesFound = $('.updates-found');
+                    const updatesFound = $('.status-message');
                     updatesFound.addClass('show');
                     setTimeout(() => {
                         updatesFound.addClass('fade');
