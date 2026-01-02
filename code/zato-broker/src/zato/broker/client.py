@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
 from dataclasses import dataclass
 from datetime import timedelta
 from http.client import OK
@@ -32,7 +33,7 @@ from requests.auth import HTTPBasicAuth
 from zato.common.api import AMQP, PubSub
 from zato.common.broker_message import SERVICE
 from zato.common.pubsub.util import get_broker_config
-from zato.common.util.api import new_cid_broker_client, new_cid_server, new_msg_id, utcnow
+from zato.common.util.api import as_bool, new_cid_broker_client, new_cid_server, new_msg_id, utcnow
 from zato.server.connection.amqp_ import Consumer, get_connection_class, Producer
 from zato.broker.message_handler import handle_broker_msg
 from zato.broker.amqp_layer import AMQP as _AMQP, BrokerConnection
@@ -52,6 +53,8 @@ logger = getLogger('zato')
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+_needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 
 _default_priority = PubSub.Message.Priority_Default
 _default_expiration = PubSub.Message.Default_Expiration
@@ -257,7 +260,7 @@ class BrokerClient:
                         'zato_pub_time': utcnow().isoformat()
                     }
                 ) # type: ignore
-            except Exception as e:
+            except Exception:
                 raise
 
     invoke_async = publish
@@ -267,15 +270,18 @@ class BrokerClient:
     def publish_to_queue(self, queue_name:'str', msg:'any_', correlation_id:'str'='') -> 'None':
         """ Publishes a message directly to a specific queue.
         """
-        logger.info(f'[PUBLISH_TO_QUEUE] Starting -> cid:`{correlation_id}` -> queue=`{queue_name}` -> msg_type:`{type(msg).__name__}`')
-        logger.info(f'[PUBLISH_TO_QUEUE] Message content -> {msg}')
+        if _needs_details:
+            logger.info(f'[PUBLISH_TO_QUEUE] Starting -> cid:`{correlation_id}` -> queue=`{queue_name}` -> msg_type:`{type(msg).__name__}`')
+            logger.info(f'[PUBLISH_TO_QUEUE] Message content -> {msg}')
 
         if not isinstance(msg, str):
             original_msg = msg
             msg = dumps(msg)
-            logger.info(f'[PUBLISH_TO_QUEUE] Converted to JSON -> original_type:`{type(original_msg).__name__}` -> json_length:`{len(msg)}` -> json:`{msg}`')
+            if _needs_details:
+                logger.info(f'[PUBLISH_TO_QUEUE] Converted to JSON -> original_type:`{type(original_msg).__name__}` -> json_length:`{len(msg)}` -> json:`{msg}`')
         else:
-            logger.info(f'[PUBLISH_TO_QUEUE] Message already string -> length:`{len(msg)}` -> content:`{msg}`')
+            if _needs_details:
+                logger.info(f'[PUBLISH_TO_QUEUE] Message already string -> length:`{len(msg)}` -> content:`{msg}`')
 
         # Prepare publish parameters
         publish_kwargs = {
@@ -289,47 +295,53 @@ class BrokerClient:
         # Add correlation ID if provided
         if correlation_id:
             publish_kwargs['correlation_id'] = correlation_id
-            logger.info(f'[PUBLISH_TO_QUEUE] Added correlation_id -> `{correlation_id}`')
+            if _needs_details:
+                logger.info(f'[PUBLISH_TO_QUEUE] Added correlation_id -> `{correlation_id}`')
 
-        logger.info(f'[PUBLISH_TO_QUEUE] Publish kwargs -> {publish_kwargs}')
+        if _needs_details:
+            logger.info(f'[PUBLISH_TO_QUEUE] Publish kwargs -> {publish_kwargs}')
 
         # Publish the message
         try:
-            logger.info(f'[PUBLISH_TO_QUEUE] Acquiring producer connection')
+            if _needs_details:
+                logger.info(f'[PUBLISH_TO_QUEUE] Acquiring producer connection')
             with self.producer.acquire() as client:
-                logger.info(f'[PUBLISH_TO_QUEUE] Producer acquired -> client:`{client}` -> connection:`{client.connection}` -> channel:`{client.channel}`')
+                if _needs_details:
+                    logger.info(f'[PUBLISH_TO_QUEUE] Producer acquired -> client:`{client}` -> connection:`{client.connection}` -> channel:`{client.channel}`')
 
-                # Check connection state
-                try:
-                    connection_info = {
-                        'connected': client.connection.connected,
-                        'transport': getattr(client.connection, 'transport', 'unknown'),
-                        'channels': getattr(client.connection, 'channels', 'unknown')
-                    }
-                    logger.info(f'[PUBLISH_TO_QUEUE] Connection state -> {connection_info}')
-                except Exception as conn_check_e:
-                    logger.warning(f'[PUBLISH_TO_QUEUE] Connection state check failed -> {conn_check_e}')
+                    # Check connection state
+                    try:
+                        connection_info = {
+                            'connected': client.connection.connected, # type: ignore
+                            'transport': getattr(client.connection, 'transport', 'unknown'),
+                            'channels': getattr(client.connection, 'channels', 'unknown')
+                        }
+                        logger.info(f'[PUBLISH_TO_QUEUE] Connection state -> {connection_info}')
+                    except Exception as conn_check_e:
+                        logger.warning(f'[PUBLISH_TO_QUEUE] Connection state check failed -> {conn_check_e}')
 
-                # Check channel state
-                try:
-                    channel_info = {
-                        'channel_id': getattr(client.channel, 'channel_id', 'unknown'),
-                        'is_open': getattr(client.channel, 'is_open', 'unknown')
-                    }
-                    logger.info(f'[PUBLISH_TO_QUEUE] Channel state -> {channel_info}')
-                except Exception as chan_check_e:
-                    logger.warning(f'[PUBLISH_TO_QUEUE] Channel state check failed -> {chan_check_e}')
+                    # Check channel state
+                    try:
+                        channel_info = {
+                            'channel_id': getattr(client.channel, 'channel_id', 'unknown'),
+                            'is_open': getattr(client.channel, 'is_open', 'unknown')
+                        }
+                        logger.info(f'[PUBLISH_TO_QUEUE] Channel state -> {channel_info}')
+                    except Exception as chan_check_e:
+                        logger.warning(f'[PUBLISH_TO_QUEUE] Channel state check failed -> {chan_check_e}')
 
-                logger.info(f'[PUBLISH_TO_QUEUE] About to publish -> msg_length:`{len(msg)}` -> kwargs:`{publish_kwargs}`')
+                    logger.info(f'[PUBLISH_TO_QUEUE] About to publish -> msg_length:`{len(msg)}` -> kwargs:`{publish_kwargs}`')
 
                 result = client.publish(msg, **publish_kwargs)
 
-                logger.info(f'[PUBLISH_TO_QUEUE] Publish completed successfully -> result:`{result}` -> cid:`{correlation_id}` -> queue:`{queue_name}`')
+                if _needs_details:
+                    logger.info(f'[PUBLISH_TO_QUEUE] Publish completed successfully -> result:`{result}` -> cid:`{correlation_id}` -> queue:`{queue_name}`')
 
         except Exception as publish_e:
             logger.error(f'[PUBLISH_TO_QUEUE] Publish failed -> cid:`{correlation_id}` -> queue:`{queue_name}` -> error:`{publish_e}` -> error_type:`{type(publish_e).__name__}`')
-            logger.error(f'[PUBLISH_TO_QUEUE] Publish kwargs at error -> {publish_kwargs}')
-            logger.error(f'[PUBLISH_TO_QUEUE] Message at error -> length:`{len(msg)}` -> content:`{msg}`')
+            if _needs_details:
+                logger.error(f'[PUBLISH_TO_QUEUE] Publish kwargs at error -> {publish_kwargs}')
+                logger.error(f'[PUBLISH_TO_QUEUE] Message at error -> length:`{len(msg)}` -> content:`{msg}`')
             raise
 
 # ################################################################################################################################
@@ -381,7 +393,7 @@ class BrokerClient:
         """ Specific handler for replies to the temporary reply queue.
         The name and config parameters are required by the Consumer callback signature but not used.
         """
-        if not isinstance(body, dict):
+        if not isinstance(body, (dict, list, int, float)):
             body = loads(body)
 
         # Get correlation ID
@@ -550,6 +562,7 @@ class BrokerClient:
         expiration = msg.get('expiration') or _default_expiration
 
         with self.producer.acquire() as client:
+
             _ = client.publish(
                 msg_str,
                 exchange='components',
@@ -645,9 +658,9 @@ class BrokerClient:
             def set_response(self, response):
                 self.data = response
                 self.ready = True
-                # reply_queue_info = f', reply-to: `{self.reply_queue_name}`' if self.reply_queue_name else ''
-                # logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{response}`{reply_queue_info}')
-                logger.info(f'Rsp 🠈 {cid} - `{self.service}`')
+                reply_queue_info = f', reply-to: `{self.reply_queue_name}`' if self.reply_queue_name else ''
+                logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{reply_queue_info}`')
+                # logger.info(f'Rsp 🠈 {cid} - `{self.service}` - `{reply_queue_info}` - `{response}`')
 
         # Initialize response holder
         response = ResponseHolder()

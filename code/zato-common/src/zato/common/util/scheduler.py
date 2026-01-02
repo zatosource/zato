@@ -109,7 +109,7 @@ def add_startup_jobs_to_odb_by_odb(cluster_id:'int', odb:'any_', jobs:'any_') ->
     """ Uses a direction ODB connection to add initial startup jobs to the ODB.
     """
     with closing(odb.session()) as session:
-        now = datetime.utcnow()
+        now = datetime.utcnow() # type: ignore
         for item in jobs:
 
             try:
@@ -196,7 +196,7 @@ def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]') -> '
     """
 
     # This can be static for all the jobs because the backend will calculate the actual start time itself
-    start_date = '2023-01-02T11:22:33'
+    start_date = '2025-01-02T11:22:33'
 
     # Jobs that we are creating will be active unless the configuration says otherwise
     is_active = True
@@ -231,7 +231,7 @@ def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]') -> '
             request.should_ignore_existing = should_ignore_existing
 
         # .. now, we can create a new job, ignoring the fact that it may potentially already exist.
-        api.invoke_service('zato.scheduler.job.create', request)
+        _ = api.invoke_service('zato.scheduler.job.create', request)
 
 # ################################################################################################################################
 
@@ -239,7 +239,7 @@ def load_scheduler_jobs_by_api(api:'SchedulerAPI', spawn:'bool') -> 'None':
     """ Uses server API calls to obtain a list of all jobs that the scheduler should run.
     """
     # Get a list of all the jobs we are to run ..
-    response = api.invoke_service('zato.scheduler.job.get-list')
+    response = api.invoke_service('zato.scheduler.job.get-list', needs_root_elem=True)
 
     # .. we have some jobs to schedule ..
     if response:

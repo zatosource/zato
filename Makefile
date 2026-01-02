@@ -112,3 +112,27 @@ grafana:
 		cfg:default.paths.logs=/tmp/grafana-logs \
 		cfg:default.paths.plugins=/tmp/grafana-plugins \
 		cfg:default.paths.provisioning=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_
+
+update:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cli.py
+
+cron-update:
+	/opt/zato/current/bin/py $(CURDIR)/code/zato-common/src/zato/common/util/updates_cron.py
+
+stop-server:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-server
+
+restart-server-with-scheduler:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server-with-scheduler
+
+stop-scheduler:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-scheduler
+
+restart-scheduler:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-scheduler
+
+stop-dashboard:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-dashboard
+
+restart-dashboard:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard

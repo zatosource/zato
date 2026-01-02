@@ -483,26 +483,37 @@ class EnvironmentManager:
 
     def pip_install_zato_packages(self) -> 'None':
 
-        # Note that zato-common must come first.
-        editable_packages = [
-            'zato-common',
-            'zato-broker',
-            'zato-cli',
-            'zato-client',
-            'zato-distlock',
-            'zato-scheduler',
-            'zato-openapi',
-            'zato-server',
-            'zato-web-admin',
-            'zato-testing',
-        ]
+        editable_packages = []
+        non_editable_packages = []
 
-        non_editable_packages = [
-            'zato-cy'
-        ]
+        zato_should_update_base = os.environ.get('Zato_Should_Update_Base', 'True')
 
-        self.run_pip_install_zato_packages(editable_packages)
-        self.run_pip_install_zato_packages(non_editable_packages, allow_editable=False)
+        if zato_should_update_base != 'False':
+
+            # Note that zato-common must come first.
+            editable_packages.extend([
+                'zato-common',
+                'zato-broker',
+                'zato-cli',
+                'zato-client',
+                'zato-distlock',
+                'zato-scheduler',
+                'zato-openapi',
+                'zato-server',
+                'zato-web-admin',
+                'zato-testing',
+            ])
+
+        zato_should_update_cy = os.environ.get('Zato_Should_Update_Cy', 'True')
+
+        if zato_should_update_cy == 'True':
+            non_editable_packages.append('zato-cy')
+
+        if editable_packages:
+            self.run_pip_install_zato_packages(editable_packages)
+
+        if non_editable_packages:
+            self.run_pip_install_zato_packages(non_editable_packages, allow_editable=False)
 
 # ################################################################################################################################
 

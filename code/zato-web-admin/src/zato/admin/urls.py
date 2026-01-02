@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, http_soap, log_streaming, main, scheduler, service
+from zato.admin.web.views import account, http_soap, log_streaming, main, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -37,6 +37,9 @@ from zato.admin.web.views.service import ide as service_ide
 from zato.admin.web.views.security import apikey, basic_auth, ntlm
 from zato.admin.web.views.security.oauth import outconn_client_credentials as oauth_outconn_client_credentials
 from zato.admin.web.views.stats import user as stats_user
+from zato.admin.web.views.monitoring import config as monitoring_config
+from zato.admin.web.views.monitoring import dashboard as monitoring_dashboard
+from zato.admin.web.views.monitoring.wizard import health as monitoring_wizard_health
 from zato.admin.web.views.vendors import keysight_vision
 from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import client
@@ -653,6 +656,35 @@ urlpatterns += [
 # ################################################################################################################################
 # ################################################################################################################################
 # #
+# #   Monitoring
+# #
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Monitoring - configuration
+    url(r'^zato/monitoring/config/$',
+        login_required(monitoring_config.config), name='monitoring-config'),
+
+    # Monitoring - wizard - health
+    url(r'^zato/monitoring/wizard/health/$',
+        login_required(monitoring_wizard_health.health), name='monitoring-wizard-health'),
+
+    # Monitoring - dashboard creation
+    url(r'^zato/monitoring/dashboard/create/$',
+        login_required(monitoring_dashboard.dashboard_create_page), name='monitoring-dashboard-create'),
+    url(r'^zato/monitoring/dashboard/create/grafana/$',
+        monitoring_dashboard.create_grafana_dashboard, name='monitoring-dashboard-create-grafana'),
+    url(r'^zato/monitoring/dashboard/create/datadog/$',
+        monitoring_dashboard.create_datadog_dashboard, name='monitoring-dashboard-create-datadog'),
+    url(r'^zato/monitoring/dashboard/try/$',
+        monitoring_dashboard.try_service_code, name='monitoring-dashboard-try'),
+    ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+# #
 # #   Vendors
 # #
 # ################################################################################################################################
@@ -777,6 +809,42 @@ urlpatterns += [
 ]
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # In-app updates
+
+    url(r'^zato/updates/$',
+        login_required(updates.index), name='in-app-updates'),
+    url(r'^zato/updates/check-availability$',
+        login_required(updates.check_availability), name='updates-check-availability'),
+    url(r'^zato/updates/check-latest-version$',
+        login_required(updates.check_latest_version), name='updates-check-latest-version'),
+    url(r'^zato/updates/get-latest-audit-entry$',
+        login_required(updates.get_latest_audit_entry), name='updates-get-latest-audit-entry'),
+    url(r'^zato/updates/get-audit-log-refresh$',
+        login_required(updates.get_audit_log_refresh), name='updates-get-audit-log-refresh'),
+    url(r'^zato/updates/download-and-install$',
+        login_required(updates.download_and_install), name='updates-download-and-install'),
+    url(r'^zato/updates/restart-scheduler$',
+        login_required(updates.restart_scheduler), name='updates-restart-scheduler'),
+    url(r'^zato/updates/restart-server$',
+        login_required(updates.restart_server), name='updates-restart-server'),
+    url(r'^zato/updates/restart-proxy$',
+        login_required(updates.restart_proxy), name='updates-restart-proxy'),
+    url(r'^zato/updates/restart-dashboard$',
+        login_required(updates.restart_dashboard), name='updates-restart-dashboard'),
+    url(r'^zato/updates/save-schedule$',
+        login_required(updates.save_schedule), name='updates-save-schedule'),
+    url(r'^zato/updates/load-schedule$',
+        login_required(updates.load_schedule), name='updates-load-schedule'),
+    url(r'^zato/updates/delete-schedule$',
+        login_required(updates.delete_schedule), name='updates-delete-schedule'),
+    url(r'^zato/updates/download-logs$',
+        login_required(updates.download_logs), name='updates-download-logs'),
+]
+
 # ################################################################################################################################
 
 urlpatterns += [

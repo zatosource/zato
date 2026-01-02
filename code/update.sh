@@ -4,14 +4,24 @@ CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL 
 while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
 N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 
+# We never update base packages from this script
+export Zato_Should_Update_Base=False
+
 # Our default branch
-Zato_Default_Branch=support/3.3
+Zato_Default_Branch=support/4.1
 
 # Always switch to a support branch first
 git checkout "${Zato_Default_Branch}" 2>/dev/null || git checkout -b "${Zato_Default_Branch}" "origin/${Zato_Default_Branch}"
 
 echo "*** Downloading updates ***"
-git -C $CURDIR pull
+git_pull_output=$(git -C $CURDIR pull 2>&1)
+echo "$git_pull_output"
+
+if echo "$git_pull_output" | grep -q "zato-cy/"; then
+    export Zato_Should_Update_Cy=True
+else
+    export Zato_Should_Update_Cy=False
+fi
 
 # An optional, specific branch or commit provided on input
 while getopts "c:" opt; do

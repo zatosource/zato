@@ -23,11 +23,8 @@ brew install \
     autoconf automake bzip2 curl git gsasl haproxy libev libevent libffi libtool \
     libyaml openssl ossp-uuid pkg-config $PYTHON_DEPENDENCIES || true
 
-curl https://bootstrap.pypa.io/get-pip.py | $(type -p $PY_BINARY)
-$PY_BINARY -m pip install -U virtualenv==20.8.1
-
 echo Installing virtualenv in $CURDIR
-$PY_BINARY -m virtualenv $CURDIR
+$PY_BINARY -m venv $CURDIR
 
 echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate

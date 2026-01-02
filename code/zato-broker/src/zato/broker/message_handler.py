@@ -64,6 +64,15 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
         if func := getattr(context, handler_name, None):
             msg = bunchify(msg)
             response = func(msg)
+
+            '''
+            print()
+            print(555, msg)
+            print(666, func)
+            print(777, response)
+            print()
+            '''
+
             result.response = response
             result.was_handled = True
         else:

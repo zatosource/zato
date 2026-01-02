@@ -1083,7 +1083,21 @@ def get_haproxy_agent_pidfile(component_dir):
     return os.path.abspath(os.path.join(component_dir, json_config['pid_file']))
 
 def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
-    open(os.path.join(component_dir, pidfile), 'w', encoding='utf8').write('{}'.format(os.getpid()))
+    from logging import getLogger
+    logger = getLogger(__name__)
+    
+    pid = os.getpid()
+    pidfile_path = os.path.join(component_dir, pidfile)
+    
+    logger.info('store_pidfile: component_dir={}, pidfile={}, pid={}, full_path={}'.format(
+        component_dir, pidfile, pid, pidfile_path))
+    
+    try:
+        with open(pidfile_path, 'w', encoding='utf8') as f:
+            f.write('{}'.format(pid))
+        logger.info('store_pidfile: pidfile written successfully to {}'.format(pidfile_path))
+    except Exception as e:
+        logger.error('store_pidfile: failed to write pidfile: {}'.format(e))
 
 # ################################################################################################################################
 
