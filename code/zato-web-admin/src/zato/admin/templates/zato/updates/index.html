@@ -22,7 +22,7 @@
     <div class="creation-panel">
         <div class="creation-content">
             <div class="creation-main">
-                <h3>Version info <img src="/static/gfx/info.svg" class="help-icon" id="version-info-help" alt="info" /></h3>
+                <h3>{{ page_config.version_section_title }} <img src="/static/gfx/info.svg" class="help-icon" id="version-info-help" alt="info" /></h3>
                 <div class="progress-panel">
                     <div class="version-info">
                         <div class="version-row">
@@ -54,11 +54,11 @@
                             <img src="/static/gfx/spinner.svg" class="button-spinner">
                             <span class="updates-found">Updates found</span>
                             <button class="secondary-button" id="check-button">
-                                Check for updates
+                                {{ page_config.check_button_label }}
                             </button>
                         </div>
                         <button class="action-button" id="update-button">
-                            Install updates
+                            {{ page_config.action_button_label }}
                         </button>
                     </div>
 
@@ -89,7 +89,7 @@
             </div>
 
             <div class="creation-sidebar">
-                <h3>Config <img src="/static/gfx/info.svg" class="help-icon" id="auto-update-help" alt="info" /></h3>
+                <h3>{{ page_config.config_section_title }} <img src="/static/gfx/info.svg" class="help-icon" id="auto-update-help" alt="info" /></h3>
                 <div class="config-panel">
                     <div class="config-item">
                         <div class="config-label">Auto-update</div>
@@ -167,7 +167,7 @@
                 </div>
 
                 <div class="logs-section show">
-                    <h3>Update log <img src="/static/gfx/info.svg" class="help-icon" id="logs-help" alt="info" /></h3>
+                    <h3>{{ page_config.logs_section_title }} <img src="/static/gfx/info.svg" class="help-icon" id="logs-help" alt="info" /></h3>
                     <div class="links-panel">
                         <div class="audit-log-list">
                             {% if audit_log %}
