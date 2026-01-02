@@ -33,7 +33,7 @@
 
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/in-app-updates.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/updates.css">
 
     {% if items %}
         {% include "zato/css-titlebar-padding.html" %}
@@ -244,7 +244,7 @@
             <div id="console-header">&nbsp;<a href="https://zato.io/{% if user.is_authenticated %}?v={{ zato_version|cut:"Zato " }} {% endif %}" id="logo-link"><img src="/static/gfx/logo.svg" alt="Zato logo" style="padding-top:3px;padding-bottom:3px;width:60px;margin-left:-0.25rem"/></a>
             {% if user.is_authenticated %}
                 <span id="logout" style="padding-top:10px">
-                    <a class="status-badge header-badge" href="{% url 'in-app-updates' %}" id="update-status-badge">
+                    <a class="status-badge header-badge" href="{% url 'updates' %}" id="update-status-badge">
                         <span id="update-status-text"></span>
                     </a>
                     <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
