@@ -356,26 +356,10 @@ $.fn.zato.updates.runRestartSteps = function(button) {
     config.pollUrl = '/zato/updates/';
     config.completedText = 'Installation complete';
     config.completionBadgeSelector = '#progress-install .info-message';
+    config.baseUrl = '/zato/updates';
 
     const latestVersion = $('#latest-version').text();
     config.completionBadgeText = '⭐ Updated to ' + latestVersion;
-
-    config.steps = {};
-    config.steps.scheduler = {};
-    config.steps.scheduler.url = '/zato/updates/restart-scheduler';
-    config.steps.scheduler.text = 'Restarting scheduler';
-
-    config.steps.server = {};
-    config.steps.server.url = '/zato/updates/restart-server';
-    config.steps.server.text = 'Restarting server';
-
-    config.steps.proxy = {};
-    config.steps.proxy.url = '/zato/updates/restart-proxy';
-    config.steps.proxy.text = 'Restarting proxy';
-
-    config.steps.dashboard = {};
-    config.steps.dashboard.url = '/zato/updates/restart-dashboard';
-    config.steps.dashboard.text = 'Restarting dashboard';
 
     config.onAllComplete = function() {
         $('#current-version').text(latestVersion);
