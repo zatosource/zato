@@ -7,7 +7,7 @@ $.fn.zato.in_app_updates.init = function() {
     }
 
     $('#check-button').on('click', $.fn.zato.in_app_updates.handleCheckForUpdates);
-    $('.copy-icon').on('click', $.fn.zato.in_app_updates.handleCopyIcon);
+    $('.copy-icon').on('click', $.fn.zato.settings.handleCopyIcon);
     $(document).on('click', '.info-message', $.fn.zato.in_app_updates.handleCopyUpgradeInfo);
     $('#update-button').on('click', $.fn.zato.in_app_updates.handleUpdateClick);
     $('#auto-restart').on('change', $.fn.zato.in_app_updates.handleAutoUpdateToggle);
@@ -24,21 +24,21 @@ $.fn.zato.in_app_updates.init = function() {
         {
             popover: {
                 title: 'Version info',
-                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+                description: ''
             }
         },
         {
             element: '#check-button',
             popover: {
                 title: 'Check for updates',
-                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+                description: ''
             }
         },
         {
             element: '#update-button',
             popover: {
                 title: 'Install updates',
-                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
+                description: ''
             }
         }
     ];
@@ -47,14 +47,14 @@ $.fn.zato.in_app_updates.init = function() {
         {
             popover: {
                 title: 'Config',
-                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+                description: ''
             }
         },
         {
             element: '.config-item',
             popover: {
                 title: 'Auto-update',
-                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
+                description: ''
             }
         }
     ];
@@ -63,14 +63,14 @@ $.fn.zato.in_app_updates.init = function() {
         {
             popover: {
                 title: 'Logs',
-                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
+                description: ''
             }
         },
         {
             element: '.dashboard-link-item',
             popover: {
                 title: 'Download logs',
-                description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
+                description: ''
             }
         }
     ];
@@ -238,40 +238,9 @@ $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
     $.fn.zato.in_app_updates.fetchLatestVersion(false);
 };
 
-$.fn.zato.in_app_updates.copyToClipboard = function(text, event) {
-    navigator.clipboard.writeText(text).then(function() {
-        const tooltip = $('<div class="copy-tooltip">Copied to clipboard</div>');
-        $('body').append(tooltip);
-
-        const rect = event.target.getBoundingClientRect();
-        tooltip.css({
-            left: rect.left + rect.width / 2 - tooltip.outerWidth() / 2 + 'px',
-            top: rect.top - tooltip.outerHeight() - 8 + 'px'
-        });
-
-        setTimeout(() => tooltip.addClass('show'), 10);
-
-        setTimeout(() => {
-            tooltip.removeClass('show');
-            setTimeout(() => tooltip.remove(), 200);
-        }, 1500);
-    });
-};
-
-$.fn.zato.in_app_updates.handleCopyIcon = function(e) {
-    e.stopPropagation();
-    const targetId = $(this).data('copy');
-    const targetElement = $('#' + targetId);
-
-    const fullError = targetElement.closest('#progress-download').data('full-error');
-    const text = fullError || targetElement.text();
-
-    $.fn.zato.in_app_updates.copyToClipboard(text, e);
-};
-
 $.fn.zato.in_app_updates.handleCopyUpgradeInfo = function(e) {
     const text = $(this).text().trim();
-    $.fn.zato.in_app_updates.copyToClipboard(text, e);
+    $.fn.zato.settings.copyToClipboard(text, e);
 };
 
 $.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
