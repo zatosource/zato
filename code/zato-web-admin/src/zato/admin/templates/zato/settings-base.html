@@ -30,7 +30,16 @@
                     {% block content_rows %}{% endblock %}
                     {% block buttons %}{% endblock %}
                     {% block action_steps %}{% endblock %}
-                    {% block restart_steps %}{% endblock %}
+                    {% if page_config.show_restart_steps %}
+                    <div class="progress-item hidden" id="progress-{{ page_config.restart_step_id }}">
+                        <div class="progress-icon"></div>
+                        <div class="progress-content">
+                            <div class="progress-platform">{{ page_config.restart_step_label }}</div>
+                            <div class="progress-text">Waiting...</div>
+                            {% block completion_badge %}{% endblock %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endblock %}
             </div>
