@@ -150,7 +150,7 @@
             });
 
             // Session timer
-            let sessionSeconds = 60 * 60;
+            let sessionSeconds = 2;
             const sessionTimerEl = document.getElementById('session-timer');
 
             function updateSessionTimer() {
@@ -269,7 +269,7 @@
                         <span id="update-status-text"></span>
                     </a>
                     <a class="top header-link-styled" href="{% url "account-settings-basic" %}">My settings</a>
-                    <span class="top"><span id="session-timer">60:00</span> (<a class="top" href="{% url "logout" %}">log out</a>)</span>
+                    <a class="top header-link-styled" href="{% url "logout" %}"><span id="session-timer">60:00</span> (log out)</a>
                 </span>
             {% endif %}
             </div>
