@@ -76,6 +76,23 @@
     height: 17px;
 }
 
+.info-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 3px;
+}
+
+.info-badge.success {
+    background: #067f39;
+    color: #fff;
+}
+
+.info-badge.error {
+    background: #cc0000;
+    color: #fff;
+}
+
 .button-container {
     display: flex;
     justify-content: flex-end;

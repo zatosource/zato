@@ -58,23 +58,6 @@
     opacity: 0;
 }
 
-.up-to-date-badge {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 3px;
-}
-
-.up-to-date-badge.yes {
-    background: #067f39;
-    color: #fff;
-}
-
-.up-to-date-badge.no {
-    background: #cc0000;
-    color: #fff;
-}
-
 .upgrade-info {
     cursor: pointer;
     display: none;
