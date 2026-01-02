@@ -41,12 +41,7 @@ class SetupResult:
 
 class AutoSetup:
 
-    def __init__(
-        self,
-        main_token:'str',
-        instance_id:'str',
-        region:'str'='prod-us-east-0'
-    ) -> 'None':
+    def __init__(self, main_token:'str', instance_id:'str', region:'str'='prod-us-east-0') -> 'None':
         self.main_token = main_token
         self.region = region
         self.instance_id = instance_id
@@ -55,6 +50,7 @@ class AutoSetup:
 # ################################################################################################################################
 
     def _make_request(self, method:'str', url:'str', data:'strdict | None'=None) -> 'strdict':
+
         headers = {
             'Authorization': f'Bearer {self.main_token}',
             'Content-Type': 'application/json'
@@ -89,12 +85,7 @@ class AutoSetup:
 
 # ################################################################################################################################
 
-    def create_token(
-        self,
-        access_policy_id:'str',
-        name:'str',
-        display_name:'str'
-    ) -> 'strdict':
+    def create_token(self, access_policy_id:'str', name:'str', display_name:'str') -> 'strdict':
 
         url = f'{self.base_url}/tokens?region={self.region}'
 
@@ -107,24 +98,19 @@ class AutoSetup:
 
 # ################################################################################################################################
 
-    def encode_credentials(
-        self,
-        token:'str'
-    ) -> 'str':
+    def encode_credentials(self, token:'str') -> 'str':
 
         credentials = f'{self.instance_id}:{token}'
         credentials_bytes = credentials.encode('utf-8')
         encoded_bytes = base64.b64encode(credentials_bytes)
         encoded = encoded_bytes.decode('utf-8')
+
         return encoded
 
 # ################################################################################################################################
 
-    def setup_complete(
-        self,
-        policy_name:'str',
-        token_name:'str'
-    ) -> 'SetupResult':
+    def setup_complete(self, policy_name:'str', token_name:'str') -> 'SetupResult':
+
         scopes = ['metrics:write', 'logs:write', 'traces:write']
 
         policy_response = self.create_access_policy(
@@ -134,6 +120,7 @@ class AutoSetup:
         )
 
         access_policy_id = policy_response.get('id')
+
         if not access_policy_id:
             result = SetupResult()
             result.error = 'Failed to create access policy'
@@ -147,6 +134,7 @@ class AutoSetup:
         )
 
         token = token_response.get('token')
+
         if not token:
             result = SetupResult()
             result.error = 'Failed to create token'
@@ -184,31 +172,31 @@ class CLI:
             description='Automate Grafana Cloud access policy and token creation'
         )
 
-        parser.add_argument(
+        _ = parser.add_argument(
             '--main-token',
             required=True,
             help='Bootstrap access token with accesspolicies:write scope'
         )
 
-        parser.add_argument(
+        _ = parser.add_argument(
             '--instance-id',
             required=True,
             help='Grafana Cloud instance ID'
         )
 
-        parser.add_argument(
+        _ = parser.add_argument(
             '--region',
             default='prod-us-east-0',
             help='Grafana Cloud region (default: prod-us-east-0)'
         )
 
-        parser.add_argument(
+        _ = parser.add_argument(
             '--policy-name',
             default='zato-otlp',
             help='Access policy name (default: zato-otlp)'
         )
 
-        parser.add_argument(
+        _ = parser.add_argument(
             '--token-name',
             default='zato-token',
             help='Token name (default: zato-token)'
@@ -219,6 +207,7 @@ class CLI:
 # ################################################################################################################################
 
     def run(self, args:'strlist | None'=None) -> 'int':
+
         logging.basicConfig(level=logging.INFO, format='%(message)s')
 
         parsed_args = self.parser.parse_args(args)
@@ -237,7 +226,8 @@ class CLI:
         if result.error:
             logger.error(f'Error: {result.error}')
             if result.error_response:
-                logger.error(json.dumps(result.error_response, indent=2))
+                err_msg = json.dumps(result.error_response, indent=2)
+                logger.error(err_msg)
             return 1
 
         logger.info(f'Access Policy ID: {result.access_policy_id}')
