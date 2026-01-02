@@ -142,3 +142,104 @@ $.fn.zato.settings.saveWithSpinner = function(options) {
         }
     });
 };
+
+$.fn.zato.settings.executeSteps = function(options) {
+    const stepsArray = Object.values(options.steps);
+    const progressKey = options.progressKey || 'install';
+    const button = options.button;
+    const pollUrl = options.pollUrl;
+    const pollTimeout = options.pollTimeout || 2000;
+    const maxPollAttempts = options.maxPollAttempts || 60;
+    const pollDelay = options.pollDelay || 2000;
+    const stepDelay = options.stepDelay || 500;
+
+    let currentStep = 0;
+    const totalSteps = stepsArray.length;
+
+    const runNextStep = function() {
+        if (currentStep >= totalSteps) {
+            $.fn.zato.settings.updateProgress(progressKey, 'completed', 'Installation complete');
+            if (button) {
+                button.prop('disabled', false);
+            }
+            if (options.onAllComplete) {
+                options.onAllComplete();
+            }
+            return;
+        }
+
+        const step = stepsArray[currentStep];
+        const stepNumber = currentStep + 1;
+        const progressText = stepNumber + ' / ' + totalSteps;
+        const statusText = step.text + '...';
+
+        $.fn.zato.settings.updateProgress(progressKey, 'processing', progressText, statusText);
+
+        $.ajax({
+            url: step.url,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $.cookie('csrftoken')
+            },
+            success: function(response) {
+                if (options.onStepComplete) {
+                    options.onStepComplete(step, response);
+                }
+
+                if (pollUrl && step.url.includes('dashboard')) {
+                    let pollAttempts = 0;
+
+                    const pollDashboard = function() {
+                        pollAttempts++;
+                        $.ajax({
+                            url: pollUrl,
+                            type: 'GET',
+                            timeout: pollTimeout,
+                            success: function() {
+                                currentStep++;
+                                runNextStep();
+                            },
+                            error: function() {
+                                if (pollAttempts < maxPollAttempts) {
+                                    setTimeout(pollDashboard, 1000);
+                                } else {
+                                    $.fn.zato.settings.updateProgress(progressKey, 'error', progressText, 'Dashboard did not restart');
+                                    if (button) {
+                                        button.prop('disabled', false);
+                                    }
+                                    if (options.onError) {
+                                        options.onError(step, 'Dashboard did not restart');
+                                    }
+                                }
+                            }
+                        });
+                    };
+
+                    setTimeout(pollDashboard, pollDelay);
+                } else {
+                    currentStep++;
+                    setTimeout(runNextStep, stepDelay);
+                }
+            },
+            error: function(xhr) {
+                let errorMsg = step.text + ' failed';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    errorMsg = response.error || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.responseText || errorMsg;
+                }
+
+                $.fn.zato.settings.updateProgress(progressKey, 'error', progressText, errorMsg);
+                if (button) {
+                    button.prop('disabled', false);
+                }
+                if (options.onError) {
+                    options.onError(step, errorMsg);
+                }
+            }
+        });
+    };
+
+    runNextStep();
+};

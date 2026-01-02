@@ -350,128 +350,74 @@ $.fn.zato.updates.handleUpdateClick = function() {
 };
 
 $.fn.zato.updates.runRestartSteps = function(button) {
-    const steps = [
-        {url: '/zato/updates/restart-scheduler', text: 'Restarting scheduler'},
-        {url: '/zato/updates/restart-server', text: 'Restarting server'},
-        {url: '/zato/updates/restart-proxy', text: 'Restarting proxy'},
-        {url: '/zato/updates/restart-dashboard', text: 'Restarting dashboard'}
-    ];
+    const config = {};
+    config.progressKey = 'install';
+    config.button = button;
+    config.pollUrl = '/zato/updates/';
 
-    let currentStep = 0;
-    const totalSteps = steps.length;
+    config.steps = {};
+    config.steps.scheduler = {};
+    config.steps.scheduler.url = '/zato/updates/restart-scheduler';
+    config.steps.scheduler.text = 'Restarting scheduler';
 
-    const runNextStep = function() {
-        if (currentStep >= totalSteps) {
-            $.fn.zato.settings.updateProgress('install', 'completed', 'Installation complete');
+    config.steps.server = {};
+    config.steps.server.url = '/zato/updates/restart-server';
+    config.steps.server.text = 'Restarting server';
 
-            const latestVersion = $('#latest-version').text();
-            const upgradeBadge = $('#progress-install .info-message');
-            upgradeBadge.text('⭐ Updated to ' + latestVersion).addClass('show').css('visibility', 'visible');
-            $('#current-version').text(latestVersion);
-            button.prop('disabled', false);
+    config.steps.proxy = {};
+    config.steps.proxy.url = '/zato/updates/restart-proxy';
+    config.steps.proxy.text = 'Restarting proxy';
 
-            const upToDateBadge = $('#up-to-date-badge');
-            upToDateBadge.removeClass('error').addClass('success').text('Yes');
+    config.steps.dashboard = {};
+    config.steps.dashboard.url = '/zato/updates/restart-dashboard';
+    config.steps.dashboard.text = 'Restarting dashboard';
 
-            localStorage.setItem('zato_updates_available', 'false');
+    config.onAllComplete = function() {
+        const latestVersion = $('#latest-version').text();
+        const upgradeBadge = $('#progress-install .info-message');
+        upgradeBadge.text('⭐ Updated to ' + latestVersion).addClass('show').css('visibility', 'visible');
+        $('#current-version').text(latestVersion);
 
-            const headerBadge = document.getElementById('update-status-badge');
-            const headerText = document.getElementById('update-status-text');
-            if (headerBadge && headerText) {
-                headerBadge.classList.remove('with-shine', 'white');
-                headerText.textContent = 'Up to date';
-            }
+        const upToDateBadge = $('#up-to-date-badge');
+        upToDateBadge.removeClass('error').addClass('success').text('Yes');
 
-            $.ajax({
-                url: '/zato/updates/get-latest-audit-entry',
-                type: 'GET',
-                success: function(response) {
-                    if (response.success && response.entry) {
-                        response.entry.time_ago = 'A moment ago';
-                        const newEntryHtml = $.fn.zato.updates.renderAuditLogEntry(response.entry, 'fade-in');
+        localStorage.setItem('zato_updates_available', 'false');
 
-                        const auditLogList = $('.audit-log-list');
-                        if (auditLogList.length) {
-                            const emptyMessage = auditLogList.find('.audit-log-empty');
-                            if (emptyMessage.length) {
-                                emptyMessage.remove();
-                            }
-                            auditLogList.prepend(newEntryHtml);
-                            const entries = auditLogList.children('.audit-log-entry');
-                            if (entries.length > 3) {
-                                entries.last().remove();
-                            }
-
-                            auditLogList.siblings('.links-row').css('display', '');
-                        }
-                    }
-                }
-            });
-
-            return;
+        const headerBadge = document.getElementById('update-status-badge');
+        const headerText = document.getElementById('update-status-text');
+        if (headerBadge && headerText) {
+            headerBadge.classList.remove('with-shine', 'white');
+            headerText.textContent = 'Up to date';
         }
 
-        const step = steps[currentStep];
-        const stepNumber = currentStep + 1;
-        const progressText = stepNumber + ' / ' + totalSteps;
-        const statusText = step.text + '...';
-
-        $.fn.zato.settings.updateProgress('install', 'processing', progressText, statusText);
-
         $.ajax({
-            url: step.url,
-            type: 'POST',
-            headers: {
-                'X-CSRFToken': $.cookie('csrftoken')
-            },
+            url: '/zato/updates/get-latest-audit-entry',
+            type: 'GET',
             success: function(response) {
-                if (step.url === '/zato/updates/restart-dashboard') {
-                    let pollAttempts = 0;
-                    const maxPollAttempts = 60;
+                if (response.success && response.entry) {
+                    response.entry.time_ago = 'A moment ago';
+                    const newEntryHtml = $.fn.zato.updates.renderAuditLogEntry(response.entry, 'fade-in');
 
-                    const pollDashboard = function() {
-                        pollAttempts++;
-                        $.ajax({
-                            url: '/zato/updates/',
-                            type: 'GET',
-                            timeout: 2000,
-                            success: function() {
-                                currentStep++;
-                                runNextStep();
-                            },
-                            error: function() {
-                                if (pollAttempts < maxPollAttempts) {
-                                    setTimeout(pollDashboard, 1000);
-                                } else {
-                                    $.fn.zato.settings.updateProgress('install', 'error', progressText, 'Dashboard did not restart');
-                                    button.prop('disabled', false);
-                                }
-                            }
-                        });
-                    };
+                    const auditLogList = $('.audit-log-list');
+                    if (auditLogList.length) {
+                        const emptyMessage = auditLogList.find('.audit-log-empty');
+                        if (emptyMessage.length) {
+                            emptyMessage.remove();
+                        }
+                        auditLogList.prepend(newEntryHtml);
+                        const entries = auditLogList.children('.audit-log-entry');
+                        if (entries.length > 3) {
+                            entries.last().remove();
+                        }
 
-                    setTimeout(pollDashboard, 2000);
-                } else {
-                    currentStep++;
-                    setTimeout(runNextStep, 500);
+                        auditLogList.siblings('.links-row').css('display', '');
+                    }
                 }
-            },
-            error: function(xhr) {
-                let errorMsg = step.text + ' failed';
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    errorMsg = response.error || errorMsg;
-                } catch(e) {
-                    errorMsg = xhr.responseText || errorMsg;
-                }
-
-                $.fn.zato.settings.updateProgress('install', 'error', progressText, errorMsg);
-                button.prop('disabled', false);
             }
         });
     };
 
-    runNextStep();
+    $.fn.zato.settings.executeSteps(config);
 };
 
 
