@@ -574,6 +574,20 @@ a.top:hover {
     text-decoration: none;
 }
 
+.header-link-styled {
+    display: inline;
+    padding: 3px;
+    background: rgb(1, 40, 69);
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    font-size: 12.32px;
+    font-weight: 400;
+    font-family: arial, helvetica, clean, sans-serif;
+    text-decoration: none !important;
+    vertical-align: baseline;
+}
+
 a.hint {
     color: #333;
     font-size: 10px
