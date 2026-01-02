@@ -1,93 +1,106 @@
-$.namespace('zato.in_app_updates');
-
-$.fn.zato.in_app_updates.init = function() {
+$.fn.zato.updates.init = function() {
     const headerBadge = document.getElementById('update-status-badge');
     if (headerBadge) {
         headerBadge.style.animation = 'none';
     }
 
-    $('#check-button').on('click', $.fn.zato.in_app_updates.handleCheckForUpdates);
+    $('#check-button').on('click', $.fn.zato.updates.handleCheckForUpdates);
     $('.copy-icon').on('click', $.fn.zato.settings.handleCopyIcon);
-    $(document).on('click', '.info-message', $.fn.zato.in_app_updates.handleCopyUpgradeInfo);
-    $('#update-button').on('click', $.fn.zato.in_app_updates.handleUpdateClick);
-    $('#auto-restart').on('change', $.fn.zato.in_app_updates.handleAutoUpdateToggle);
-    $('#update-frequency').on('change', $.fn.zato.in_app_updates.handleFrequencyChange);
-    $('#config-save-button').on('click', $.fn.zato.in_app_updates.handleSaveSchedule);
+    $(document).on('click', '.info-message', $.fn.zato.updates.handleCopyUpgradeInfo);
+    $('#update-button').on('click', $.fn.zato.updates.handleUpdateClick);
+    $('#auto-restart').on('change', $.fn.zato.updates.handleAutoUpdateToggle);
+    $('#update-frequency').on('change', $.fn.zato.updates.handleFrequencyChange);
+    $('#config-save-button').on('click', $.fn.zato.updates.handleSaveSchedule);
 
-    $.fn.zato.in_app_updates.displayTimezone();
-    $.fn.zato.in_app_updates.loadSchedule();
-    $.fn.zato.in_app_updates.fetchLatestVersion();
-    $.fn.zato.in_app_updates.startAuditLogRefresh();
-    $.fn.zato.in_app_updates.initTimestampTooltips();
+    $.fn.zato.updates.displayTimezone();
+    $.fn.zato.updates.loadSchedule();
+    $.fn.zato.updates.fetchLatestVersion();
+    $.fn.zato.updates.startAuditLogRefresh();
+    $.fn.zato.updates.initTimestampTooltips();
 
-    $.fn.zato.settings.initDriverTours([
-        {
-            trigger: '#version-info-help',
-            steps: [
-                {
-                    popover: {
-                        title: 'Version info',
-                        description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
-                    }
-                },
-                {
-                    element: '#check-button',
-                    popover: {
-                        title: 'Check for updates',
-                        description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
-                    }
-                },
-                {
-                    element: '#update-button',
-                    popover: {
-                        title: 'Install updates',
-                        description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
-                    }
-                }
-            ]
-        },
-        {
-            trigger: '#auto-update-help',
-            steps: [
-                {
-                    popover: {
-                        title: 'Config',
-                        description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
-                    }
-                },
-                {
-                    element: '.config-item',
-                    popover: {
-                        title: 'Auto-update',
-                        description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
-                    }
-                }
-            ]
-        },
-        {
-            trigger: '#logs-help',
-            steps: [
-                {
-                    popover: {
-                        title: 'Logs',
-                        description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.'
-                    }
-                },
-                {
-                    element: '.dashboard-link-item',
-                    popover: {
-                        title: 'Download logs',
-                        description: 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
-                    }
-                }
-            ]
-        }
-    ]);
+    const tours = {};
+
+    tours.versionInfo = {};
+    tours.versionInfo.trigger = '#version-info-help';
+    tours.versionInfo.steps = [];
+
+    tours.versionInfo.steps[0] = {};
+    tours.versionInfo.steps[0].popover = {};
+    tours.versionInfo.steps[0].popover.title = 'Version info';
+    tours.versionInfo.steps[0].popover.description = 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. ' +
+        'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>' +
+        'Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ' +
+        'ullamco laboris nisi ut aliquip ex ea commodo consequat.';
+
+    tours.versionInfo.steps[1] = {};
+    tours.versionInfo.steps[1].element = '#check-button';
+    tours.versionInfo.steps[1].popover = {};
+    tours.versionInfo.steps[1].popover.title = 'Check for updates';
+    tours.versionInfo.steps[1].popover.description = 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. ' +
+        'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>' +
+        'Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ' +
+        'ullamco laboris nisi ut aliquip ex ea commodo consequat.';
+
+    tours.versionInfo.steps[2] = {};
+    tours.versionInfo.steps[2].element = '#update-button';
+    tours.versionInfo.steps[2].popover = {};
+    tours.versionInfo.steps[2].popover.title = 'Install updates';
+    tours.versionInfo.steps[2].popover.description = 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. ' +
+        'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>' +
+        'Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ' +
+        'ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>' +
+        'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.';
+
+    tours.config = {};
+    tours.config.trigger = '#auto-update-help';
+    tours.config.steps = [];
+
+    tours.config.steps[0] = {};
+    tours.config.steps[0].popover = {};
+    tours.config.steps[0].popover.title = 'Config';
+    tours.config.steps[0].popover.description = 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. ' +
+        'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>' +
+        'Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ' +
+        'ullamco laboris nisi ut aliquip ex ea commodo consequat.';
+
+    tours.config.steps[1] = {};
+    tours.config.steps[1].element = '.config-item';
+    tours.config.steps[1].popover = {};
+    tours.config.steps[1].popover.title = 'Auto-update';
+    tours.config.steps[1].popover.description = 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. ' +
+        'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>' +
+        'Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ' +
+        'ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>' +
+        'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.';
+
+    tours.logs = {};
+    tours.logs.trigger = '#logs-help';
+    tours.logs.steps = [];
+
+    tours.logs.steps[0] = {};
+    tours.logs.steps[0].popover = {};
+    tours.logs.steps[0].popover.title = 'Logs';
+    tours.logs.steps[0].popover.description = 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. ' +
+        'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>' +
+        'Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ' +
+        'ullamco laboris nisi ut aliquip ex ea commodo consequat.';
+
+    tours.logs.steps[1] = {};
+    tours.logs.steps[1].element = '.dashboard-link-item';
+    tours.logs.steps[1].popover = {};
+    tours.logs.steps[1].popover.title = 'Download logs';
+    tours.logs.steps[1].popover.description = 'Lorem ipsum dolor sit amet, <strong>consectetur adipiscing elit</strong>. ' +
+        'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.<br><br>' +
+        'Ut enim ad minim veniam, <span style="color: #067f39;">quis nostrud exercitation</span> ' +
+        'ullamco laboris nisi ut aliquip ex ea commodo consequat.<br><br>' +
+        'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.';
+
+    $.fn.zato.settings.initDriverTours(Object.values(tours));
 
     $.fn.zato.settings.initToggleLabelClick('.config-item:first .config-label', '#auto-restart');
 };
 
-$.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
+$.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
     console.log('[FETCH-VERSION] fetchLatestVersion called, showUpdatesFound:', showUpdatesFound);
 
     const latestVersionEl = $('#latest-version');
@@ -205,20 +218,20 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
     });
 };
 
-$.fn.zato.in_app_updates.handleCheckForUpdates = function() {
+$.fn.zato.updates.handleCheckForUpdates = function() {
     const upToDateBadge = $('#up-to-date-badge');
     upToDateBadge.removeClass('success error').text('Checking...');
 
     $.fn.zato.settings.activateSpinner('.button-spinner');
-    $.fn.zato.in_app_updates.fetchLatestVersion(false);
+    $.fn.zato.updates.fetchLatestVersion(false);
 };
 
-$.fn.zato.in_app_updates.handleCopyUpgradeInfo = function(e) {
+$.fn.zato.updates.handleCopyUpgradeInfo = function(e) {
     const text = $(this).text().trim();
     $.fn.zato.settings.copyToClipboard(text, e);
 };
 
-$.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
+$.fn.zato.updates.handleAutoUpdateToggle = function() {
     const isEnabled = $(this).is(':checked');
 
     console.log('Auto-update toggle changed, enabled:', isEnabled);
@@ -227,7 +240,7 @@ $.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
         console.log('Showing schedule frequency');
         $('#schedule-frequency').removeClass('hidden');
         $('.save-button-container').css('display', 'flex');
-        $.fn.zato.in_app_updates.updateScheduleOptions();
+        $.fn.zato.updates.updateScheduleOptions();
     } else {
         console.log('Hiding all schedule fields');
         $('#schedule-frequency').addClass('hidden');
@@ -246,11 +259,11 @@ $.fn.zato.in_app_updates.handleAutoUpdateToggle = function() {
     }
 };
 
-$.fn.zato.in_app_updates.handleFrequencyChange = function() {
-    $.fn.zato.in_app_updates.updateScheduleOptions();
+$.fn.zato.updates.handleFrequencyChange = function() {
+    $.fn.zato.updates.updateScheduleOptions();
 };
 
-$.fn.zato.in_app_updates.updateScheduleOptions = function() {
+$.fn.zato.updates.updateScheduleOptions = function() {
     const frequency = $('#update-frequency').val();
 
     console.log('updateScheduleOptions called, frequency:', frequency);
@@ -282,7 +295,7 @@ $.fn.zato.in_app_updates.updateScheduleOptions = function() {
     console.log('schedule-time hidden:', $('#schedule-time').hasClass('hidden'));
 };
 
-$.fn.zato.in_app_updates.loadSchedule = function() {
+$.fn.zato.updates.loadSchedule = function() {
     $.ajax({
         url: '/zato/updates/load-schedule',
         type: 'GET',
@@ -296,18 +309,18 @@ $.fn.zato.in_app_updates.loadSchedule = function() {
 
                 $('#schedule-frequency').removeClass('hidden');
                 $('.save-button-container').css('display', 'flex');
-                $.fn.zato.in_app_updates.updateScheduleOptions();
+                $.fn.zato.updates.updateScheduleOptions();
             }
         }
     });
 };
 
-$.fn.zato.in_app_updates.displayTimezone = function() {
+$.fn.zato.updates.displayTimezone = function() {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     $('#timezone-display').text('(' + timezone + ')');
 };
 
-$.fn.zato.in_app_updates.handleSaveSchedule = function() {
+$.fn.zato.updates.handleSaveSchedule = function() {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const scheduleData = {
         enabled: true,
@@ -324,7 +337,7 @@ $.fn.zato.in_app_updates.handleSaveSchedule = function() {
     });
 };
 
-$.fn.zato.in_app_updates.handleUpdateClick = function() {
+$.fn.zato.updates.handleUpdateClick = function() {
     const button = $(this);
     button.prop('disabled', true);
 
@@ -343,7 +356,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
             $.fn.zato.settings.updateProgress('download', 'completed', 'Download complete');
 
             $('#progress-install').removeClass('hidden');
-            $.fn.zato.in_app_updates.runRestartSteps(button);
+            $.fn.zato.updates.runRestartSteps(button);
         },
         error: function(xhr) {
             console.error('Update error, status:', xhr.status);
@@ -383,7 +396,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
     });
 };
 
-$.fn.zato.in_app_updates.runRestartSteps = function(button) {
+$.fn.zato.updates.runRestartSteps = function(button) {
     const steps = [
         {url: '/zato/updates/restart-scheduler', text: 'Restarting scheduler'},
         {url: '/zato/updates/restart-server', text: 'Restarting server'},
@@ -422,7 +435,7 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
                 success: function(response) {
                     if (response.success && response.entry) {
                         response.entry.time_ago = 'A moment ago';
-                        const newEntryHtml = $.fn.zato.in_app_updates.renderAuditLogEntry(response.entry, 'fade-in');
+                        const newEntryHtml = $.fn.zato.updates.renderAuditLogEntry(response.entry, 'fade-in');
 
                         const auditLogList = $('.audit-log-list');
                         if (auditLogList.length) {
@@ -509,7 +522,7 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
 };
 
 
-$.fn.zato.in_app_updates.renderAuditLogEntry = function(entry, extraClass) {
+$.fn.zato.updates.renderAuditLogEntry = function(entry, extraClass) {
     const classAttr = extraClass ? `class="audit-log-entry ${extraClass}"` : 'class="audit-log-entry"';
     return `
         <div ${classAttr}>
@@ -529,7 +542,7 @@ $.fn.zato.in_app_updates.renderAuditLogEntry = function(entry, extraClass) {
     `;
 };
 
-$.fn.zato.in_app_updates.initTimestampTooltips = function() {
+$.fn.zato.updates.initTimestampTooltips = function() {
     $('.audit-log-time').each(function() {
         const elem = this;
         const timestamp = $(elem).data('timestamp');
@@ -552,7 +565,7 @@ $.fn.zato.in_app_updates.initTimestampTooltips = function() {
     });
 };
 
-$.fn.zato.in_app_updates.startAuditLogRefresh = function() {
+$.fn.zato.updates.startAuditLogRefresh = function() {
     const refreshAuditLog = function() {
         $.ajax({
             url: '/zato/updates/get-audit-log-refresh',
@@ -563,10 +576,10 @@ $.fn.zato.in_app_updates.startAuditLogRefresh = function() {
                     if (auditLogList.length) {
                         let entriesHtml = '';
                         for (const entry of response.entries) {
-                            entriesHtml += $.fn.zato.in_app_updates.renderAuditLogEntry(entry);
+                            entriesHtml += $.fn.zato.updates.renderAuditLogEntry(entry);
                         }
                         auditLogList.html(entriesHtml);
-                        $.fn.zato.in_app_updates.initTimestampTooltips();
+                        $.fn.zato.updates.initTimestampTooltips();
                     }
                 }
             }
@@ -577,5 +590,5 @@ $.fn.zato.in_app_updates.startAuditLogRefresh = function() {
 };
 
 $(document).ready(function() {
-    $.fn.zato.in_app_updates.init();
+    $.fn.zato.updates.init();
 });
