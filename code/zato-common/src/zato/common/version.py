@@ -56,7 +56,6 @@ def get_version():
     # stdlib
     import os
     import sys
-    from sys import version_info as py_version_info
 
     # Python 2/3 compatibility
     from zato.common.py23_.past.builtins import execfile
@@ -64,26 +63,15 @@ def get_version():
     # Default version if not set below
     version = '4.1'
 
-    try:
+    # Make sure the underlying git command runs in our git repository ..
+    code_dir = os.path.dirname(sys.executable)
+    os.chdir(code_dir)
 
-        # Make sure the underlying git command runs in our git repository ..
-        code_dir = os.path.dirname(sys.executable)
-        os.chdir(code_dir)
-
-        curdir = os.path.dirname(os.path.abspath(__file__))
-        _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
-        _locals = {}
-        execfile(_version_py, _locals)
-        version = 'Zato {}'.format(_locals['version'])
-
-    finally:
-        sys_info = get_sys_info()
-        version = '{}-py{}.{}.{}-{}'.format(
-            version,
-            py_version_info.major,
-            py_version_info.minor,
-            py_version_info.micro,
-            sys_info)
+    curdir = os.path.dirname(os.path.abspath(__file__))
+    _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
+    _locals = {}
+    execfile(_version_py, _locals)
+    version = 'Zato {}'.format(_locals['version'])
 
     return version
 

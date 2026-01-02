@@ -100,7 +100,7 @@ zato-ext-simple-rbac==0.1.1
 
 ciso8601==2.2.0; sys_platform == 'linux'
 sh==1.14.3; sys_platform == 'linux'
-portalocker==2.6.0
+portalocker==2.6.0; sys_platform == 'linux'
 psycopg2-binary==2.9.5; sys_platform == 'linux'
 python-ldap==3.4.5; sys_platform == 'linux'
 pywin32==305; platform_system == "Windows"
