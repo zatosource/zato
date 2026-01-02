@@ -101,14 +101,9 @@ $.fn.zato.updates.init = function() {
 };
 
 $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
-    console.log('[FETCH-VERSION] fetchLatestVersion called, showUpdatesFound:', showUpdatesFound);
-
     const latestVersionEl = $('#latest-version');
     const copyIcon = latestVersionEl.siblings('.copy-icon');
     const currentVersion = $('#current-version').text();
-
-    console.log('[FETCH-VERSION] currentVersion:', currentVersion);
-
     latestVersionEl.html('<img src="/static/gfx/spinner.svg" class="info-spinner">Checking...');
     copyIcon.addClass('hidden');
 
@@ -116,11 +111,7 @@ $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
         url: '/zato/updates/check-latest-version',
         type: 'GET',
         success: function(response) {
-            console.log('[FETCH-VERSION] AJAX success, response:', response);
-
             if (response.success) {
-                console.log('[FETCH-VERSION] response.version:', response.version);
-
                 latestVersionEl.text(response.version);
                 copyIcon.removeClass('hidden');
 
@@ -138,36 +129,16 @@ $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
                 }
 
                 const upToDateBadge = $('#up-to-date-badge');
-
-                console.log('[FETCH-VERSION] Comparing versions:', response.version, '!==', currentVersion);
-
                 if (response.version !== currentVersion) {
-                    console.log('[FETCH-VERSION] Versions differ - updates available');
-
                     upToDateBadge.removeClass('success').addClass('error').text('No');
-                    console.log('[FETCH-VERSION] Set up-to-date badge to No');
-
                     localStorage.setItem('zato_updates_available', 'true');
-                    console.log('[FETCH-VERSION] Set localStorage to true');
 
                     const headerBadge = document.getElementById('update-status-badge');
                     const headerText = document.getElementById('update-status-text');
-
-                    console.log('[FETCH-VERSION] headerBadge found:', !!headerBadge);
-                    console.log('[FETCH-VERSION] headerText found:', !!headerText);
-
                     if (headerBadge && headerText) {
-                        console.log('[FETCH-VERSION] Before update - badge classes:', headerBadge.className);
-                        console.log('[FETCH-VERSION] Before update - text content:', headerText.textContent);
-
                         headerText.textContent = '⭐ Updates available';
                         headerBadge.classList.remove('white');
                         headerBadge.classList.add('with-shine', 'loaded');
-
-                        console.log('[FETCH-VERSION] After update - badge classes:', headerBadge.className);
-                        console.log('[FETCH-VERSION] After update - text content:', headerText.textContent);
-                    } else {
-                        console.log('[FETCH-VERSION] ERROR: Could not find header badge elements');
                     }
 
                     setTimeout(() => {
@@ -178,32 +149,15 @@ $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
                         latestVersionEl.removeClass('pulsate');
                     }, 1600);
                 } else {
-                    console.log('[FETCH-VERSION] Versions match - up to date');
-
                     upToDateBadge.removeClass('error').addClass('success').text('Yes');
-                    console.log('[FETCH-VERSION] Set up-to-date badge to Yes');
-
                     localStorage.setItem('zato_updates_available', 'false');
-                    console.log('[FETCH-VERSION] Set localStorage to false');
 
                     const headerBadge = document.getElementById('update-status-badge');
                     const headerText = document.getElementById('update-status-text');
-
-                    console.log('[FETCH-VERSION] headerBadge found:', !!headerBadge);
-                    console.log('[FETCH-VERSION] headerText found:', !!headerText);
-
                     if (headerBadge && headerText) {
-                        console.log('[FETCH-VERSION] Before update - badge classes:', headerBadge.className);
-                        console.log('[FETCH-VERSION] Before update - text content:', headerText.textContent);
-
                         headerText.textContent = 'Up to date';
                         headerBadge.classList.remove('with-shine');
                         headerBadge.classList.add('loaded');
-
-                        console.log('[FETCH-VERSION] After update - badge classes:', headerBadge.className);
-                        console.log('[FETCH-VERSION] After update - text content:', headerText.textContent);
-                    } else {
-                        console.log('[FETCH-VERSION] ERROR: Could not find header badge elements');
                     }
                 }
             }
@@ -211,7 +165,6 @@ $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
         },
         error: function(xhr, status, error) {
-            console.log('[FETCH-VERSION] AJAX error:', xhr, status, error);
             latestVersionEl.text('Error loading version');
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
         }
