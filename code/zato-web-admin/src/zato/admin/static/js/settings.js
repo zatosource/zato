@@ -48,3 +48,10 @@ $.fn.zato.settings.initDriverTours = function(tours) {
         });
     });
 };
+
+$.fn.zato.settings.initToggleLabelClick = function(labelSelector, checkboxSelector) {
+    $(labelSelector).on('click', function() {
+        const checkbox = $(checkboxSelector);
+        checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
+    });
+};
