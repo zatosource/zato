@@ -149,6 +149,27 @@
                 }
             });
 
+            // Session timer
+            let sessionSeconds = 60 * 60;
+            const sessionTimerEl = document.getElementById('session-timer');
+
+            function updateSessionTimer() {
+                if (sessionSeconds <= 0) {
+                    sessionSeconds = 0;
+                }
+
+                const minutes = Math.floor(sessionSeconds / 60);
+                const seconds = sessionSeconds % 60;
+                sessionTimerEl.textContent = (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+
+                if (sessionSeconds > 0) {
+                    sessionSeconds--;
+                }
+            }
+
+            updateSessionTimer();
+            setInterval(updateSessionTimer, 1000);
+
             // Check for updates on page load
             console.log('[UPDATE-CHECK] Script loaded, about to call checkUpdateAvailability(true)');
             checkUpdateAvailability(true);
@@ -247,8 +268,8 @@
                     <a class="status-badge header-badge" href="{% url 'updates' %}" id="update-status-badge">
                         <span id="update-status-text"></span>
                     </a>
-                    <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
-                    <a class="top"  href="{% url "logout" %}">Log out ({{ user.username }})</a>
+                    ~ <a class="top" href="{% url "account-settings-basic" %}">My settings</a> ~
+                    <span class="top"><span id="session-timer">60:00</span> (<a class="top" href="{% url "logout" %}">log out</a>)</span>
                 </span>
             {% endif %}
             </div>
