@@ -150,7 +150,7 @@
             });
 
             // Session timer
-            let sessionSeconds = 2;
+            let sessionSeconds = 60 * 60 * 2;
             const sessionTimerEl = document.getElementById('session-timer');
 
             function updateSessionTimer() {
@@ -160,9 +160,10 @@
                     return;
                 }
 
-                const minutes = Math.floor(sessionSeconds / 60);
+                const hours = Math.floor(sessionSeconds / 3600);
+                const minutes = Math.floor((sessionSeconds % 3600) / 60);
                 const seconds = sessionSeconds % 60;
-                sessionTimerEl.textContent = (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+                sessionTimerEl.textContent = (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
 
                 sessionSeconds--;
             }
@@ -269,7 +270,7 @@
                         <span id="update-status-text"></span>
                     </a>
                     <a class="top header-link-styled" href="{% url "account-settings-basic" %}">My settings</a>
-                    <a class="top header-link-styled" href="{% url "logout" %}"><span id="session-timer">60:00</span> (log out)</a>
+                    <a class="top header-link-styled" href="{% url "logout" %}"><span id="session-timer">00:00:00</span> (log out)</a>
                 </span>
             {% endif %}
             </div>
