@@ -150,8 +150,14 @@
             });
 
             // Session timer
-            let sessionSeconds = 60 * 60 * 2;
+            const sessionDuration = 60 * 60 * 2;
+            let sessionSeconds = sessionDuration;
             const sessionTimerEl = document.getElementById('session-timer');
+            let lastMouseReset = 0;
+
+            function resetSessionTimer() {
+                sessionSeconds = sessionDuration;
+            }
 
             function updateSessionTimer() {
                 if (sessionSeconds <= 0) {
@@ -170,6 +176,21 @@
 
             updateSessionTimer();
             setInterval(updateSessionTimer, 1000);
+
+            document.addEventListener('keydown', resetSessionTimer);
+            document.addEventListener('click', resetSessionTimer);
+
+            let mouseThrottle;
+            document.addEventListener('mousemove', function() {
+                if (mouseThrottle) return;
+                mouseThrottle = true;
+                const now = Date.now();
+                if (now - lastMouseReset > 1000) {
+                    lastMouseReset = now;
+                    resetSessionTimer();
+                }
+                setTimeout(function() { mouseThrottle = false; }, 1000);
+            }, {passive: true});
 
             // Check for updates on page load
             console.log('[UPDATE-CHECK] Script loaded, about to call checkUpdateAvailability(true)');
