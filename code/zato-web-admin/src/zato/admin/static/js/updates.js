@@ -115,8 +115,6 @@ $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
                 latestVersionEl.text(response.version);
                 copyIcon.removeClass('hidden');
 
-                $('.info-message').text('⭐ Updated to ' + response.version);
-
                 if (showUpdatesFound) {
                     const updatesFound = $('.status-message');
                     updatesFound.addClass('show');
