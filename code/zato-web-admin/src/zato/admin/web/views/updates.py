@@ -215,7 +215,7 @@ def delete_schedule(req):
 
 @method_allowed('GET')
 def index(req):
-    return TemplateResponse(req, 'zato/in-app-updates/index.html', {
+    return TemplateResponse(req, 'zato/updates/index.html', {
         'current_version': updater.get_zato_version(),
         'audit_log': updater.get_audit_log_entries(3)
     })
