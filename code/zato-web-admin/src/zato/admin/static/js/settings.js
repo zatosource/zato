@@ -55,3 +55,42 @@ $.fn.zato.settings.initToggleLabelClick = function(labelSelector, checkboxSelect
         checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
     });
 };
+
+$.fn.zato.settings.updateProgress = function(step, status, message, statusText) {
+    const item = $('#progress-' + step);
+    const icon = item.find('.progress-icon');
+    const text = item.find('.progress-text');
+    const copyButton = item.find('.progress-error-copy');
+
+    const displayMessage = statusText ? '<span class="progress-count">' + message + '</span> <span class="progress-status">' + statusText + '</span>' : message;
+
+    if (status === 'processing') {
+        icon.addClass('spinner').removeClass('completed error').html('<img src="/static/gfx/spinner.svg">');
+        item.removeClass('error-state').addClass('processing-state');
+        if (copyButton.length) {
+            copyButton.addClass('hidden');
+        }
+    } else if (status === 'completed') {
+        icon.removeClass('spinner error').addClass('completed').text('✓');
+        item.removeClass('error-state processing-state');
+        if (copyButton.length) {
+            copyButton.addClass('hidden');
+        }
+    } else if (status === 'error') {
+        icon.removeClass('spinner completed').addClass('error').text('✗');
+        item.addClass('error-state').removeClass('processing-state');
+        if (copyButton.length) {
+            copyButton.removeClass('hidden');
+        }
+    }
+
+    text.html(displayMessage);
+};
+
+$.fn.zato.settings.activateSpinner = function(spinnerSelector) {
+    $(spinnerSelector).addClass('active');
+};
+
+$.fn.zato.settings.deactivateSpinner = function(spinnerSelector) {
+    $(spinnerSelector).removeClass('active');
+};
