@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import argparse
 import base64
+from datetime import datetime, timezone
 import json
 import logging
 import sys
@@ -139,7 +140,7 @@ class AutoSetup:
 
         policy_response = self.create_access_policy(
             name=policy_name,
-            display_name='Zato OTLP',
+            display_name=policy_name,
             scopes=scopes
         )
 
@@ -154,7 +155,7 @@ class AutoSetup:
         token_response = self.create_token(
             access_policy_id=access_policy_id,
             name=token_name,
-            display_name='Zato Token'
+            display_name=token_name
         )
 
         token = token_response.get('token')
@@ -210,14 +211,14 @@ class CLI:
 
         _ = parser.add_argument(
             '--policy-name',
-            default='zato-otlp',
-            help='Access policy name (default: zato-otlp)'
+            default=None,
+            help='Access policy name (default: auto-generated)'
         )
 
         _ = parser.add_argument(
             '--token-name',
-            default='zato-token',
-            help='Token name (default: zato-token)'
+            default=None,
+            help='Token name (default: auto-generated)'
         )
 
         return parser
@@ -235,9 +236,15 @@ class CLI:
             instance_id=parsed_args.instance_id
         )
 
+        now = datetime.now(timezone.utc)
+        timestamp = now.strftime('%Y-%m-%d-%H-%M-%S')
+
+        policy_name = parsed_args.policy_name or f'zato-otlp-{timestamp}'
+        token_name = parsed_args.token_name or f'zato-token-{timestamp}'
+
         result = setup.setup_complete(
-            policy_name=parsed_args.policy_name,
-            token_name=parsed_args.token_name
+            policy_name=policy_name,
+            token_name=token_name
         )
 
         if result.error:
