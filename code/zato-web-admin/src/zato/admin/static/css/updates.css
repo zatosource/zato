@@ -369,6 +369,7 @@
     border-right-style: dotted;
     border-top-style: dotted;
     border-bottom-style: dotted;
+    margin-bottom: 20px;
 }
 
 .progress-item:last-child {
