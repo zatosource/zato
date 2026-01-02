@@ -467,14 +467,11 @@ class Updater:
         """ Downloads and installs an update.
         """
         time.sleep(0.05)
-        version = self.get_zato_version()
         return {
-            'success': True,
-            'version_from': version,
-            'version_to': version,
-            'schedule': schedule,
-            'stdout': '',
-            'stderr': ''
+            'success': False,
+            'error': 'Mock error for testing',
+            'stdout': 'some stdout output',
+            'stderr': 'some stderr output'
         }
 
         logger.info('')
