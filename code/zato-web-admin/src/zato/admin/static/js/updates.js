@@ -84,10 +84,7 @@ $.fn.zato.in_app_updates.init = function() {
         }
     ]);
 
-    $('.config-item:first .config-label').on('click', function() {
-        const checkbox = $('#auto-restart');
-        checkbox.prop('checked', !checkbox.prop('checked'));
-    });
+    $.fn.zato.settings.initToggleLabelClick('.config-item:first .config-label', '#auto-restart');
 };
 
 $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {

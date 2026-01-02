@@ -613,6 +613,7 @@ input:checked + .toggle-slider:before {
     font-size: 12px;
     font-weight: 600;
     margin-top: 1rem;
+    margin-right: 5px;
 }
 
 .config-saved-message.active {
