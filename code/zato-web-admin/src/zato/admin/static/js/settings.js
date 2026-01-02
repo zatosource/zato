@@ -152,13 +152,19 @@ $.fn.zato.settings.executeSteps = function(options) {
     const maxPollAttempts = options.maxPollAttempts || 60;
     const pollDelay = options.pollDelay || 2000;
     const stepDelay = options.stepDelay || 500;
+    const completedText = options.completedText || 'Installation complete';
+    const completionBadgeSelector = options.completionBadgeSelector;
+    const completionBadgeText = options.completionBadgeText;
 
     let currentStep = 0;
     const totalSteps = stepsArray.length;
 
     const runNextStep = function() {
         if (currentStep >= totalSteps) {
-            $.fn.zato.settings.updateProgress(progressKey, 'completed', 'Installation complete');
+            $.fn.zato.settings.updateProgress(progressKey, 'completed', completedText);
+            if (completionBadgeSelector && completionBadgeText) {
+                $(completionBadgeSelector).text(completionBadgeText).addClass('show').css('visibility', 'visible');
+            }
             if (button) {
                 button.prop('disabled', false);
             }
