@@ -372,11 +372,11 @@
 }
 
 .progress-item:last-child {
-    border-bottom: 4px solid var(--border-light);
+    border-bottom: none;
 }
 
 .progress-item:last-child.error-state {
-    border-bottom: 4px dotted #cc0000;
+    border-bottom: none;
 }
 
 .progress-item.hidden {
