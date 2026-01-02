@@ -93,6 +93,17 @@
     color: #fff;
 }
 
+.info-spinner {
+    width: 19px;
+    height: 19px;
+    vertical-align: middle;
+    margin-right: 6px;
+    position: relative;
+    top: -1px;
+    animation: spin 0.5s linear infinite;
+    filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
+}
+
 .button-container {
     display: flex;
     justify-content: flex-end;
