@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+updates_config = {
+    'title': 'Install updates',
+    'api_prefix': '/zato/updates/'
+}
