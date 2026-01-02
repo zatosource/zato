@@ -162,20 +162,7 @@
                 </div>
 
                 <template id="audit-log-entry-template">
-                    <div class="audit-log-entry">
-                        <div class="audit-log-header">
-                            <span class="audit-log-time" data-timestamp=""></span>
-                            <span class="audit-log-type"></span>
-                        </div>
-                        <div class="audit-log-version-row">
-                            <span class="audit-log-label">From:</span>
-                            <span class="audit-log-version audit-log-version-from"></span>
-                        </div>
-                        <div class="audit-log-version-row">
-                            <span class="audit-log-label">To:</span>
-                            <span class="audit-log-version audit-log-version-to"></span>
-                        </div>
-                    </div>
+                    {% include "zato/updates/_audit_log_entry.html" with entry=empty_entry %}
                 </template>
 
                 <div class="logs-section show">
@@ -183,24 +170,11 @@
                     <div class="links-panel">
                         <div class="audit-log-list">
                             {% if audit_log %}
-                            {% for entry in audit_log %}
-                            <div class="audit-log-entry">
-                                <div class="audit-log-header">
-                                    <span class="audit-log-time" data-timestamp="{{ entry.timestamp }}">{{ entry.time_ago }}</span>
-                                    <span class="audit-log-type">{{ entry.type }}</span>
-                                </div>
-                                <div class="audit-log-version-row">
-                                    <span class="audit-log-label">From:</span>
-                                    <span class="audit-log-version audit-log-version-from">{{ entry.version_from }}</span>
-                                </div>
-                                <div class="audit-log-version-row">
-                                    <span class="audit-log-label">To:</span>
-                                    <span class="audit-log-version audit-log-version-to">{{ entry.version_to }}</span>
-                                </div>
-                            </div>
-                            {% endfor %}
+                                {% for entry in audit_log %}
+                                    {% include "zato/updates/_audit_log_entry.html" %}
+                                {% endfor %}
                             {% else %}
-                            <div class="audit-log-empty">No logs yet</div>
+                                <div class="audit-log-empty">No logs yet</div>
                             {% endif %}
                         </div>
                         <div class="links-row"{% if not audit_log %} style="display: none;"{% endif %}>
