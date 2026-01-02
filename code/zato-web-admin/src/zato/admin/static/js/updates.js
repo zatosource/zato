@@ -219,10 +219,13 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                     }
                 }
             }
+
+            $('.button-spinner').removeClass('active');
         },
         error: function(xhr, status, error) {
             console.log('[FETCH-VERSION] AJAX error:', xhr, status, error);
             latestVersionEl.text('Error loading version');
+            $('.button-spinner').removeClass('active');
         }
     });
 };
@@ -231,6 +234,7 @@ $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
     const upToDateBadge = $('#up-to-date-badge');
     upToDateBadge.removeClass('success error').text('Checking...');
 
+    $('.button-spinner').addClass('active');
     $.fn.zato.in_app_updates.fetchLatestVersion(false);
 };
 
