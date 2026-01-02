@@ -1,5 +1,3 @@
-$.namespace('zato.settings');
-
 $.fn.zato.settings.copyToClipboard = function(text, event) {
     navigator.clipboard.writeText(text).then(function() {
         const tooltip = $('<div class="copy-tooltip">Copied to clipboard</div>');
