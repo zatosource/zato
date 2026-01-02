@@ -121,7 +121,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
 
     console.log('[FETCH-VERSION] currentVersion:', currentVersion);
 
-    latestVersionEl.html('<img src="/static/gfx/spinner.svg" class="version-spinner">Checking...');
+    latestVersionEl.html('<img src="/static/gfx/spinner.svg" class="info-spinner">Checking...');
     copyIcon.addClass('hidden');
 
     $.ajax({
