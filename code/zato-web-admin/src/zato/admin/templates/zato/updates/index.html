@@ -1,97 +1,92 @@
-{% extends "zato/index.html" %}
+{% extends "zato/settings-base.html" %}
 
-{% block html_title %}Install updates{% endblock %}
+{% block page_title %}Install updates{% endblock %}
 
-{% block "extra_css" %}
-<script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
-<script type="text/javascript" src="/static/tippy/tippy.js"></script>
-<link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
-<link rel="stylesheet" type="text/css" href="/static/css/driver.css">
-<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+{% block extra_page_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/updates.css">
 {% endblock %}
 
-{% block "extra_js" %}
-<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
-<script type="text/javascript" src="/static/js/driver.js" nonce="{{ CSP_NONCE }}"></script>
-<script type="text/javascript" src="/static/js/settings.js" nonce="{{ CSP_NONCE }}"></script>
+{% block extra_page_js %}
 <script type="text/javascript" src="/static/js/updates.js" nonce="{{ CSP_NONCE }}"></script>
 {% endblock %}
 
-{% block "content" %}
+{% block section_title %}{{ page_config.version_section_title }}{% endblock %}
+{% block help_icon_id %}version-info-help{% endblock %}
 
-<div class="creation-container">
-    <div class="creation-panel">
-        <div class="creation-content">
-            <div class="creation-main">
-                <h3>{{ page_config.version_section_title }} <img src="/static/gfx/info.svg" class="help-icon" id="version-info-help" alt="info" /></h3>
-                <div class="progress-panel">
-                    <div class="info-container">
-                        <div class="info-row">
-                            <div class="info-label">{{ page_config.up_to_date_label }}</div>
-                            <span class="info-badge" id="up-to-date-badge">Checking...</span>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">{{ page_config.your_version_label }}</div>
-                            <div class="info-value">
-                                <span id="current-version">{{ current_version }}</span>
-                                <span class="copy-icon" data-copy="current-version" title="Copy to clipboard">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">{{ page_config.latest_version_label }}</div>
-                            <div class="info-value">
-                                <span id="latest-version"><img src="/static/gfx/spinner.svg" class="info-spinner">Checking...</span>
-                                <span class="copy-icon hidden" data-copy="latest-version" title="Copy to clipboard">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+{% block content_rows %}
+<div class="info-container">
+    <div class="info-row">
+        <div class="info-label">{{ page_config.up_to_date_label }}</div>
+        <span class="info-badge" id="up-to-date-badge">Checking...</span>
+    </div>
+    <div class="info-row">
+        <div class="info-label">{{ page_config.your_version_label }}</div>
+        <div class="info-value">
+            <span id="current-version">{{ current_version }}</span>
+            <span class="copy-icon" data-copy="current-version" title="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </span>
+        </div>
+    </div>
+    <div class="info-row">
+        <div class="info-label">{{ page_config.latest_version_label }}</div>
+        <div class="info-value">
+            <span id="latest-version"><img src="/static/gfx/spinner.svg" class="info-spinner">Checking...</span>
+            <span class="copy-icon hidden" data-copy="latest-version" title="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-                    <div class="button-container">
-                        <div class="button-wrapper">
-                            <img src="/static/gfx/spinner.svg" class="button-spinner">
-                            <span class="status-message">Updates found</span>
-                            <button class="secondary-button" id="check-button">
-                                {{ page_config.check_button_label }}
-                            </button>
-                        </div>
-                        <button class="action-button" id="update-button">
-                            {{ page_config.action_button_label }}
-                        </button>
-                    </div>
+{% block buttons %}
+<div class="button-container">
+    <div class="button-wrapper">
+        <img src="/static/gfx/spinner.svg" class="button-spinner">
+        <span class="status-message">Updates found</span>
+        <button class="secondary-button" id="check-button">
+            {{ page_config.check_button_label }}
+        </button>
+    </div>
+    <button class="action-button" id="update-button">
+        {{ page_config.action_button_label }}
+    </button>
+</div>
+{% endblock %}
 
-                    <div class="progress-item hidden" id="progress-download">
-                        <div class="progress-icon"></div>
-                        <div class="progress-content">
-                            <div class="progress-platform">
-                                {{ page_config.step1_label }}
-                                <span class="copy-icon progress-error-copy hidden" data-copy="download-error" title="Copy to clipboard">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                                </span>
-                            </div>
-                            <div class="progress-text" id="download-error">Waiting...</div>
-                        </div>
-                    </div>
+{% block action_steps %}
+<div class="progress-item hidden" id="progress-download">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">
+            {{ page_config.step1_label }}
+            <span class="copy-icon progress-error-copy hidden" data-copy="download-error" title="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </span>
+        </div>
+        <div class="progress-text" id="download-error">Waiting...</div>
+    </div>
+</div>
+{% endblock %}
 
-                    <div class="progress-item hidden" id="progress-install">
-                        <div class="progress-icon"></div>
-                        <div class="progress-content">
-                            <div class="progress-platform">{{ page_config.step2_label }}</div>
-                            <div class="progress-text">Waiting...</div>
-                            <span class="info-message status-badge with-shine">
-                                ⭐ Updated to
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+{% block restart_steps %}
+<div class="progress-item hidden" id="progress-install">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">{{ page_config.step2_label }}</div>
+        <div class="progress-text">Waiting...</div>
+    </div>
+</div>
+{% endblock %}
 
-            {% if page_config.show_sidebar %}
-            <div class="creation-sidebar">
+{% block completion_badge %}
+<span class="info-message status-badge with-shine">
+    ⭐ Updated to
+</span>
+{% endblock %}
+
+{% block right_content %}
                 <h3>{{ page_config.config_section_title }} <img src="/static/gfx/info.svg" class="help-icon" id="auto-update-help" alt="info" /></h3>
                 <div class="config-panel">
                     <div class="config-item">
@@ -220,10 +215,4 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
 {% endblock %}
