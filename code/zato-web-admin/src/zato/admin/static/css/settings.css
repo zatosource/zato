@@ -200,7 +200,7 @@
 .button-wrapper {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .secondary-button:hover {
@@ -584,7 +584,7 @@ input:checked + .toggle-slider:before {
     display: none;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 4px;
     margin-top: -4px;
     height: 40px;
 }
