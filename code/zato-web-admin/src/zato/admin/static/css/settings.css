@@ -1,11 +1,11 @@
-.creation-container {
+.settings-container {
     background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
     min-height: 100vh;
     padding: 40px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.creation-panel {
+.settings-panel {
     max-width: 957px;
     margin: 0 auto;
     background: var(--white);
@@ -13,22 +13,22 @@
     box-shadow: 8px 8px 0px var(--shadow-dark);
 }
 
-.creation-content {
+.settings-content {
     display: flex;
 }
 
-.creation-main {
+.settings-main {
     flex: 1;
     padding: 24px 40px 40px 40px;
 }
 
-.creation-sidebar {
+.settings-sidebar {
     background: var(--background-light);
     border-left: 3px solid var(--primary-dark);
     padding: 24px 32px 40px 32px;
 }
 
-.creation-main h3, .creation-sidebar h3 {
+.settings-main h3, .settings-sidebar h3 {
     font-size: 16px;
     font-weight: 600;
     color: var(--primary-dark);

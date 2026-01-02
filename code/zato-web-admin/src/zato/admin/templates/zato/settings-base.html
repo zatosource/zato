@@ -20,10 +20,10 @@
 
 {% block "content" %}
 
-<div class="creation-container">
-    <div class="creation-panel">
-        <div class="creation-content">
-            <div class="creation-main">
+<div class="settings-container">
+    <div class="settings-panel">
+        <div class="settings-content">
+            <div class="settings-main">
                 {% block left_content %}
                 <h3>{% block section_title %}{% endblock %} <img src="/static/gfx/info.svg" class="help-icon" id="{% block help_icon_id %}{% endblock %}" alt="info" /></h3>
                 <div class="progress-panel">
@@ -40,7 +40,7 @@
 
             {% block sidebar %}
             {% if page_config.show_sidebar %}
-            <div class="creation-sidebar">
+            <div class="settings-sidebar">
                 {% block right_content %}{% endblock %}
             </div>
             {% endif %}
