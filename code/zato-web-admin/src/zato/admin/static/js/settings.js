@@ -144,18 +144,49 @@ $.fn.zato.settings.saveWithSpinner = function(options) {
 };
 
 $.fn.zato.settings.executeSteps = function(options) {
-    const stepsArray = Object.values(options.steps);
-    const progressKey = options.progressKey || 'install';
+    const progressKey = options.progressKey;
     const button = options.button;
     const pollUrl = options.pollUrl;
     const pollTimeout = options.pollTimeout || 2000;
     const maxPollAttempts = options.maxPollAttempts || 60;
     const pollDelay = options.pollDelay || 2000;
     const stepDelay = options.stepDelay || 500;
-    const completedText = options.completedText || 'Installation complete';
+    const completedText = options.completedText;
     const completionBadgeSelector = options.completionBadgeSelector;
     const completionBadgeText = options.completionBadgeText;
-
+    const baseUrl = options.baseUrl;
+    
+    const shouldRestart = options.should_restart !== undefined ? options.should_restart : true;
+    const shouldRestartScheduler = options.should_restart_scheduler !== undefined ? options.should_restart_scheduler : true;
+    const shouldRestartServer = options.should_restart_server !== undefined ? options.should_restart_server : true;
+    const shouldRestartProxy = options.should_restart_proxy !== undefined ? options.should_restart_proxy : true;
+    const shouldRestartDashboard = options.should_restart_dashboard !== undefined ? options.should_restart_dashboard : true;
+    
+    const steps = {};
+    if (shouldRestart) {
+        if (shouldRestartScheduler) {
+            steps.scheduler = {};
+            steps.scheduler.url = baseUrl + '/restart-scheduler';
+            steps.scheduler.text = 'Restarting scheduler';
+        }
+        if (shouldRestartServer) {
+            steps.server = {};
+            steps.server.url = baseUrl + '/restart-server';
+            steps.server.text = 'Restarting server';
+        }
+        if (shouldRestartProxy) {
+            steps.proxy = {};
+            steps.proxy.url = baseUrl + '/restart-proxy';
+            steps.proxy.text = 'Restarting proxy';
+        }
+        if (shouldRestartDashboard) {
+            steps.dashboard = {};
+            steps.dashboard.url = baseUrl + '/restart-dashboard';
+            steps.dashboard.text = 'Restarting dashboard';
+        }
+    }
+    
+    const stepsArray = Object.values(steps);
     let currentStep = 0;
     const totalSteps = stepsArray.length;
 
