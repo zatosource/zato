@@ -123,7 +123,7 @@
 
 .info-message {
     cursor: pointer;
-    display: none !important;
+    display: none;
 }
 
 .info-message:hover {
@@ -131,9 +131,17 @@
 }
 
 .info-message.show {
-    display: inline-block !important;
+    display: inline-block;
     padding: 6px;
     margin-top: 8px;
+}
+
+.info-message.status-badge {
+    display: none;
+}
+
+.info-message.status-badge.show {
+    display: inline-block;
 }
 
 .button-container {
