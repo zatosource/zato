@@ -70,17 +70,8 @@
 </div>
 {% endblock %}
 
-{% block restart_steps %}
-<div class="progress-item hidden" id="progress-install">
-    <div class="progress-icon"></div>
-    <div class="progress-content">
-        <div class="progress-platform">{{ page_config.step2_label }}</div>
-        <div class="progress-text">Waiting...</div>
-        {% block completion_badge %}
-        <span class="info-message status-badge with-shine"></span>
-        {% endblock %}
-    </div>
-</div>
+{% block completion_badge %}
+<span class="info-message status-badge with-shine"></span>
 {% endblock %}
 
 {% block right_content %}
