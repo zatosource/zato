@@ -30,23 +30,6 @@
     height: 17px;
 }
 
-.updates-found {
-    display: none;
-    color: #067f39;
-    font-weight: 600;
-    font-size: 12px;
-    opacity: 1;
-    transition: opacity 0.5s ease;
-}
-
-.updates-found.show {
-    display: inline-block;
-}
-
-.updates-found.fade {
-    opacity: 0;
-}
-
 .upgrade-info {
     cursor: pointer;
     display: none;
