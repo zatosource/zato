@@ -94,3 +94,53 @@ $.fn.zato.settings.activateSpinner = function(spinnerSelector) {
 $.fn.zato.settings.deactivateSpinner = function(spinnerSelector) {
     $(spinnerSelector).removeClass('active');
 };
+
+$.fn.zato.settings.saveWithSpinner = function(options) {
+    const spinnerSelector = options.spinnerSelector || '.config-save-spinner';
+    const messageSelector = options.messageSelector || '.config-saved-message';
+    const buttonSelector = options.buttonSelector || '#config-save-button';
+    const minDelay = options.minDelay || 500;
+    const messageDisplayTime = options.messageDisplayTime || 1500;
+
+    $(spinnerSelector).css('display', 'block');
+    $(messageSelector).css('display', 'none');
+    $(buttonSelector).prop('disabled', true);
+
+    const startTime = Date.now();
+
+    $.ajax({
+        url: options.url,
+        type: options.method || 'POST',
+        headers: options.headers || {
+            'X-CSRFToken': $.cookie('csrftoken')
+        },
+        data: options.data ? JSON.stringify(options.data) : undefined,
+        contentType: options.contentType || 'application/json',
+        success: function(response) {
+            const elapsed = Date.now() - startTime;
+            const remainingDelay = Math.max(0, minDelay - elapsed);
+
+            setTimeout(function() {
+                $(spinnerSelector).css('display', 'none');
+                $(messageSelector).css('display', 'inline-block');
+                $(buttonSelector).prop('disabled', false);
+
+                setTimeout(function() {
+                    $(messageSelector).css('display', 'none');
+                }, messageDisplayTime);
+
+                if (options.onSuccess) {
+                    options.onSuccess(response);
+                }
+            }, remainingDelay);
+        },
+        error: function(xhr, status, error) {
+            $(spinnerSelector).css('display', 'none');
+            $(buttonSelector).prop('disabled', false);
+
+            if (options.onError) {
+                options.onError(xhr, status, error);
+            }
+        }
+    });
+};
