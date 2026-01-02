@@ -121,6 +121,21 @@
     opacity: 0;
 }
 
+.info-message {
+    cursor: pointer;
+    display: none;
+}
+
+.info-message:hover {
+    opacity: 0.8;
+}
+
+.info-message.show {
+    display: inline-block;
+    padding: 6px;
+    margin-top: 8px;
+}
+
 .button-container {
     display: flex;
     justify-content: flex-end;
