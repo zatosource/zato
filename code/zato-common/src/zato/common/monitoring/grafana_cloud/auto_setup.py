@@ -41,11 +41,35 @@ class SetupResult:
 
 class AutoSetup:
 
-    def __init__(self, main_token:'str', instance_id:'str', region:'str'='prod-us-east-0') -> 'None':
+    def __init__(self, main_token:'str', instance_id:'str', region:'str | None'=None) -> 'None':
         self.main_token = main_token
-        self.region = region
         self.instance_id = instance_id
+        self.region = region or self._extract_region_from_token(main_token)
         self.base_url = 'https://www.grafana.com/api/v1'
+
+# ################################################################################################################################
+
+    def _extract_region_from_token(self, token:'str') -> 'str':
+
+        token_parts = token.split('_')
+        if len(token_parts) < 2:
+            raise ValueError('Invalid token format: cannot extract region')
+
+        encoded_payload = token_parts[1]
+
+        decoded_bytes = base64.b64decode(encoded_payload)
+        decoded_str = decoded_bytes.decode('utf-8')
+        payload = json.loads(decoded_str)
+
+        metadata = payload.get('m')
+        if not metadata:
+            raise ValueError('Token metadata missing')
+
+        region = metadata.get('r')
+        if not region:
+            raise ValueError('Region not found in token metadata')
+
+        return region
 
 # ################################################################################################################################
 
@@ -185,12 +209,6 @@ class CLI:
         )
 
         _ = parser.add_argument(
-            '--region',
-            default='prod-us-east-0',
-            help='Grafana Cloud region (default: prod-us-east-0)'
-        )
-
-        _ = parser.add_argument(
             '--policy-name',
             default='zato-otlp',
             help='Access policy name (default: zato-otlp)'
@@ -214,8 +232,7 @@ class CLI:
 
         setup = AutoSetup(
             main_token=parsed_args.main_token,
-            instance_id=parsed_args.instance_id,
-            region=parsed_args.region
+            instance_id=parsed_args.instance_id
         )
 
         result = setup.setup_complete(
