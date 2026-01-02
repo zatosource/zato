@@ -25,23 +25,23 @@
             <div class="creation-main">
                 <h3>{{ page_config.version_section_title }} <img src="/static/gfx/info.svg" class="help-icon" id="version-info-help" alt="info" /></h3>
                 <div class="progress-panel">
-                    <div class="version-info">
-                        <div class="version-row">
-                            <div class="version-label">{{ page_config.up_to_date_label }}</div>
+                    <div class="info-container">
+                        <div class="info-row">
+                            <div class="info-label">{{ page_config.up_to_date_label }}</div>
                             <span class="up-to-date-badge" id="up-to-date-badge">Checking...</span>
                         </div>
-                        <div class="version-row">
-                            <div class="version-label">{{ page_config.your_version_label }}</div>
-                            <div class="version-value">
+                        <div class="info-row">
+                            <div class="info-label">{{ page_config.your_version_label }}</div>
+                            <div class="info-value">
                                 <span id="current-version">{{ current_version }}</span>
                                 <span class="copy-icon" data-copy="current-version" title="Copy to clipboard">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                                 </span>
                             </div>
                         </div>
-                        <div class="version-row">
-                            <div class="version-label">{{ page_config.latest_version_label }}</div>
-                            <div class="version-value">
+                        <div class="info-row">
+                            <div class="info-label">{{ page_config.latest_version_label }}</div>
+                            <div class="info-value">
                                 <span id="latest-version"><img src="/static/gfx/spinner.svg" class="version-spinner">Checking...</span>
                                 <span class="copy-icon hidden" data-copy="latest-version" title="Copy to clipboard">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>

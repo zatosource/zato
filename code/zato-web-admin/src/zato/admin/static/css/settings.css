@@ -44,6 +44,38 @@
     padding-bottom: 3px;
 }
 
+.info-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+}
+
+.info-label {
+    color: #000;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+}
+
+.info-value {
+    color: var(--primary-dark);
+    font-weight: 600;
+    font-family: monospace;
+    font-size: 14px;
+    min-width: 280px;
+    text-align: right;
+    line-height: 17px;
+    height: 17px;
+}
+
 .button-container {
     display: flex;
     justify-content: flex-end;
