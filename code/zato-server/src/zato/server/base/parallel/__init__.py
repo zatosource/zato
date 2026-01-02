@@ -1276,6 +1276,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'service.instance.id': 'dev4',
             'service.namespace': 'api4',
             'deployment.environment': 'dev',
+            'host.id': 'host.id.1',
+            'host.name': 'host.name.1',
         })
 
         from opentelemetry import propagate
@@ -1283,7 +1285,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         provider = TracerProvider(resource=resource)
 
-        exporter = OTLPSpanExporter()
+        exporter = OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")
         logger.debug('OTLP endpoint: %s', exporter._endpoint)
 
         processor = SimpleSpanProcessor(exporter)
