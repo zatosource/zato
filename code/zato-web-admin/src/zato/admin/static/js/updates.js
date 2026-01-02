@@ -408,23 +408,23 @@ $.fn.zato.updates.runRestartSteps = function(button) {
 
 
 $.fn.zato.updates.renderAuditLogEntry = function(entry, extraClass) {
-    const classAttr = extraClass ? `class="audit-log-entry ${extraClass}"` : 'class="audit-log-entry"';
-    return `
-        <div ${classAttr}>
-            <div class="audit-log-header">
-                <span class="audit-log-time" data-timestamp="${entry.timestamp}">${entry.time_ago}</span>
-                <span class="audit-log-type">${entry.type}</span>
-            </div>
-            <div class="audit-log-version-row">
-                <span class="audit-log-label">From:</span>
-                <span class="audit-log-version">${entry.version_from}</span>
-            </div>
-            <div class="audit-log-version-row">
-                <span class="audit-log-label">To:</span>
-                <span class="audit-log-version">${entry.version_to}</span>
-            </div>
-        </div>
-    `;
+    const template = document.getElementById('audit-log-entry-template');
+    const clone = template.content.cloneNode(true);
+    const entryDiv = clone.querySelector('.audit-log-entry');
+    
+    if (extraClass) {
+        entryDiv.classList.add(extraClass);
+    }
+    
+    const timeSpan = clone.querySelector('.audit-log-time');
+    timeSpan.setAttribute('data-timestamp', entry.timestamp);
+    timeSpan.textContent = entry.time_ago;
+    
+    clone.querySelector('.audit-log-type').textContent = entry.type;
+    clone.querySelector('.audit-log-version-from').textContent = entry.version_from;
+    clone.querySelector('.audit-log-version-to').textContent = entry.version_to;
+    
+    return clone;
 };
 
 $.fn.zato.updates.initTimestampTooltips = function() {
