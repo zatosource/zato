@@ -500,6 +500,11 @@ input:checked + .toggle-slider:before {
     padding: 0px 2px !important;
 }
 
+.driver-popover-close-btn:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .driver-overlay {
     background: rgba(0, 0, 0, 0.5) !important;
 }
