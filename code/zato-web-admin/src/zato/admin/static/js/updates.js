@@ -354,6 +354,11 @@ $.fn.zato.updates.runRestartSteps = function(button) {
     config.progressKey = 'install';
     config.button = button;
     config.pollUrl = '/zato/updates/';
+    config.completedText = 'Installation complete';
+    config.completionBadgeSelector = '#progress-install .info-message';
+
+    const latestVersion = $('#latest-version').text();
+    config.completionBadgeText = '⭐ Updated to ' + latestVersion;
 
     config.steps = {};
     config.steps.scheduler = {};
@@ -373,9 +378,6 @@ $.fn.zato.updates.runRestartSteps = function(button) {
     config.steps.dashboard.text = 'Restarting dashboard';
 
     config.onAllComplete = function() {
-        const latestVersion = $('#latest-version').text();
-        const upgradeBadge = $('#progress-install .info-message');
-        upgradeBadge.text('⭐ Updated to ' + latestVersion).addClass('show').css('visibility', 'visible');
         $('#current-version').text(latestVersion);
 
         const upToDateBadge = $('#up-to-date-badge');
