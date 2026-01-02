@@ -156,7 +156,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                 if (response.version !== currentVersion) {
                     console.log('[FETCH-VERSION] Versions differ - updates available');
 
-                    upToDateBadge.removeClass('yes').addClass('no').text('No');
+                    upToDateBadge.removeClass('success').addClass('error').text('No');
                     console.log('[FETCH-VERSION] Set up-to-date badge to No');
 
                     localStorage.setItem('zato_updates_available', 'true');
@@ -192,7 +192,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                 } else {
                     console.log('[FETCH-VERSION] Versions match - up to date');
 
-                    upToDateBadge.removeClass('no').addClass('yes').text('Yes');
+                    upToDateBadge.removeClass('error').addClass('success').text('Yes');
                     console.log('[FETCH-VERSION] Set up-to-date badge to Yes');
 
                     localStorage.setItem('zato_updates_available', 'false');
@@ -229,7 +229,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
 
 $.fn.zato.in_app_updates.handleCheckForUpdates = function() {
     const upToDateBadge = $('#up-to-date-badge');
-    upToDateBadge.removeClass('yes no').text('Checking...');
+    upToDateBadge.removeClass('success error').text('Checking...');
 
     $.fn.zato.in_app_updates.fetchLatestVersion(false);
 };
@@ -487,7 +487,7 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
             button.prop('disabled', false);
 
             const upToDateBadge = $('#up-to-date-badge');
-            upToDateBadge.removeClass('no').addClass('yes').text('Yes');
+            upToDateBadge.removeClass('error').addClass('success').text('Yes');
 
             localStorage.setItem('zato_updates_available', 'false');
 
