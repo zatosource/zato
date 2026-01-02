@@ -83,7 +83,7 @@
     margin-bottom: 24px;
 }
 
-.update-button {
+.action-button {
     background: var(--primary-dark);
     color: #fff;
     font-size: 11px;
@@ -98,23 +98,23 @@
     text-shadow: none !important;
 }
 
-.update-button:hover {
+.action-button:hover {
     background: var(--primary-dark);
     color: var(--white);
     box-shadow: none;
     text-shadow: none;
 }
 
-.update-button:disabled {
+.action-button:disabled {
     color: #ccc !important;
     cursor: not-allowed;
 }
 
-.update-button:disabled:hover {
+.action-button:disabled:hover {
     color: #ccc !important;
 }
 
-.check-button {
+.secondary-button {
     background: #fff;
     color: var(--primary-dark);
     border: 1px solid var(--primary-dark);
@@ -129,20 +129,20 @@
     text-shadow: none !important;
 }
 
-.check-button-wrapper {
+.button-wrapper {
     display: inline-flex;
     align-items: center;
     gap: 8px;
 }
 
-.check-button:hover {
+.secondary-button:hover {
     background: #fff;
     color: var(--primary-dark);
     box-shadow: none;
     text-shadow: none;
 }
 
-.check-button-spinner {
+.button-spinner {
     display: none;
     width: 25px;
     height: 25px;
@@ -150,7 +150,7 @@
     filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
 }
 
-.check-button-spinner.active {
+.button-spinner.active {
     display: inline-block;
 }
 
