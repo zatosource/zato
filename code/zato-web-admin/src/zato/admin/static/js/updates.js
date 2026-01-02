@@ -318,39 +318,9 @@ $.fn.zato.in_app_updates.handleSaveSchedule = function() {
         timezone: timezone
     };
 
-    $('.config-save-spinner').css('display', 'block');
-    $('.config-saved-message').css('display', 'none');
-    $('#config-save-button').prop('disabled', true);
-
-    const startTime = Date.now();
-
-    $.ajax({
+    $.fn.zato.settings.saveWithSpinner({
         url: '/zato/updates/save-schedule',
-        type: 'POST',
-        headers: {
-            'X-CSRFToken': $.cookie('csrftoken')
-        },
-        data: JSON.stringify(scheduleData),
-        contentType: 'application/json',
-        success: function(response) {
-            const elapsed = Date.now() - startTime;
-            const minDelay = 500;
-            const remainingDelay = Math.max(0, minDelay - elapsed);
-
-            setTimeout(function() {
-                $('.config-save-spinner').css('display', 'none');
-                $('.config-saved-message').css('display', 'inline-block');
-                $('#config-save-button').prop('disabled', false);
-
-                setTimeout(function() {
-                    $('.config-saved-message').css('display', 'none');
-                }, 1500);
-            }, remainingDelay);
-        },
-        error: function() {
-            $('.config-save-spinner').css('display', 'none');
-            $('#config-save-button').prop('disabled', false);
-        }
+        data: scheduleData
     });
 };
 
