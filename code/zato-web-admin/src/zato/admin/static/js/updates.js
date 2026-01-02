@@ -457,11 +457,11 @@ $.fn.zato.updates.startAuditLogRefresh = function() {
                 if (response.success && response.entries && response.entries.length > 0) {
                     const auditLogList = $('.audit-log-list');
                     if (auditLogList.length) {
-                        let entriesHtml = '';
+                        auditLogList.empty();
                         for (const entry of response.entries) {
-                            entriesHtml += $.fn.zato.updates.renderAuditLogEntry(entry);
+                            const entryFragment = $.fn.zato.updates.renderAuditLogEntry(entry);
+                            auditLogList.append(entryFragment);
                         }
-                        auditLogList.html(entriesHtml);
                         $.fn.zato.updates.initTimestampTooltips();
                     }
                 }
