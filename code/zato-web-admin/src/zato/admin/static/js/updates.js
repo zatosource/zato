@@ -594,7 +594,7 @@ $.fn.zato.in_app_updates.updateProgress = function(step, status, message, status
     const item = $('#progress-' + step);
     const icon = item.find('.progress-icon');
     const text = item.find('.progress-text');
-    const copyButton = item.find('.download-error-copy');
+    const copyButton = item.find('.progress-error-copy');
 
     const displayMessage = statusText ? '<span class="progress-count">' + message + '</span> <span class="progress-status">' + statusText + '</span>' : message;
 
