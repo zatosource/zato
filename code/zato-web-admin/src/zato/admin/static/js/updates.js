@@ -8,7 +8,7 @@ $.fn.zato.in_app_updates.init = function() {
 
     $('#check-button').on('click', $.fn.zato.in_app_updates.handleCheckForUpdates);
     $('.copy-icon').on('click', $.fn.zato.in_app_updates.handleCopyIcon);
-    $(document).on('click', '.upgrade-info', $.fn.zato.in_app_updates.handleCopyUpgradeInfo);
+    $(document).on('click', '.info-message', $.fn.zato.in_app_updates.handleCopyUpgradeInfo);
     $('#update-button').on('click', $.fn.zato.in_app_updates.handleUpdateClick);
     $('#auto-restart').on('change', $.fn.zato.in_app_updates.handleAutoUpdateToggle);
     $('#update-frequency').on('change', $.fn.zato.in_app_updates.handleFrequencyChange);
@@ -136,7 +136,7 @@ $.fn.zato.in_app_updates.fetchLatestVersion = function(showUpdatesFound) {
                 latestVersionEl.text(response.version);
                 copyIcon.removeClass('hidden');
 
-                $('.upgrade-info').text('⭐ Updated to ' + response.version);
+                $('.info-message').text('⭐ Updated to ' + response.version);
 
                 if (showUpdatesFound) {
                     const updatesFound = $('.status-message');
@@ -412,7 +412,7 @@ $.fn.zato.in_app_updates.handleUpdateClick = function() {
 
     $('#progress-download').removeClass('hidden error-state');
     $('#progress-install').addClass('hidden').removeClass('error-state');
-    $('#progress-install .upgrade-info').removeClass('show');
+    $('#progress-install .info-message').removeClass('show');
     $.fn.zato.in_app_updates.updateProgress('download', 'processing', 'Downloading updates...');
 
     $.ajax({
@@ -481,7 +481,7 @@ $.fn.zato.in_app_updates.runRestartSteps = function(button) {
             $.fn.zato.in_app_updates.updateProgress('install', 'completed', 'Installation complete');
 
             const latestVersion = $('#latest-version').text();
-            const upgradeBadge = $('#progress-install .upgrade-info');
+            const upgradeBadge = $('#progress-install .info-message');
             upgradeBadge.text('⭐ Updated to ' + latestVersion).addClass('show').css('visibility', 'visible');
             $('#current-version').text(latestVersion);
             button.prop('disabled', false);
