@@ -156,15 +156,15 @@
             function updateSessionTimer() {
                 if (sessionSeconds <= 0) {
                     sessionSeconds = 0;
+                    window.location.href = '{% url "logout" %}';
+                    return;
                 }
 
                 const minutes = Math.floor(sessionSeconds / 60);
                 const seconds = sessionSeconds % 60;
                 sessionTimerEl.textContent = (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
 
-                if (sessionSeconds > 0) {
-                    sessionSeconds--;
-                }
+                sessionSeconds--;
             }
 
             updateSessionTimer();
