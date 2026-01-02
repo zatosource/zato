@@ -468,6 +468,52 @@ input:checked + .toggle-slider:before {
     }
 }
 
+@keyframes pulsate {
+    0%, 100% { transform: scale(1); background-color: transparent; }
+    50% { transform: scale(1.1); background-color: #fffacd; }
+}
+
+.pulsate {
+    animation: pulsate 0.5s ease-in-out 3;
+    display: inline-block;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.save-button-container {
+    display: none;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: -4px;
+    height: 40px;
+}
+
+.config-save-spinner {
+    display: none;
+    width: 26px;
+    height: 26px;
+    margin-top: 1rem;
+    animation: spin 0.5s linear infinite;
+    filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
+}
+
+.config-save-spinner.active {
+    display: inline-block;
+}
+
+.config-saved-message {
+    display: none;
+    color: #067f39;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+.config-saved-message.active {
+    display: inline-block;
+}
+
 .progress-item {
     display: flex;
     align-items: center;
