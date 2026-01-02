@@ -3,18 +3,18 @@
 {% block html_title %}{% block page_title %}Settings{% endblock %}{% endblock %}
 
 {% block "extra_css" %}
-<script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
-<script type="text/javascript" src="/static/tippy/tippy.js"></script>
-<link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
-<link rel="stylesheet" type="text/css" href="/static/css/driver.css">
-<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+    <script type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script type="text/javascript" src="/static/tippy/tippy.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/zato/css/wizard.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/driver.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/settings.css">
 {% block extra_page_css %}{% endblock %}
 {% endblock %}
 
 {% block "extra_js" %}
-<link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
-<script type="text/javascript" src="/static/js/driver.js" nonce="{{ CSP_NONCE }}"></script>
-<script type="text/javascript" src="/static/js/settings.js" nonce="{{ CSP_NONCE }}"></script>
+    <link rel="stylesheet" media="screen" href="/static/css/tippy.css" />
+    <script type="text/javascript" src="/static/js/driver.js" nonce="{{ CSP_NONCE }}"></script>
+    <script type="text/javascript" src="/static/js/settings.js" nonce="{{ CSP_NONCE }}"></script>
 {% block extra_page_js %}{% endblock %}
 {% endblock %}
 
@@ -28,11 +28,8 @@
                 <h3>{% block section_title %}{% endblock %} <img src="/static/gfx/info.svg" class="help-icon" id="{% block help_icon_id %}{% endblock %}" alt="info" /></h3>
                 <div class="progress-panel">
                     {% block content_rows %}{% endblock %}
-
                     {% block buttons %}{% endblock %}
-
                     {% block action_steps %}{% endblock %}
-
                     {% block restart_steps %}{% endblock %}
                 </div>
                 {% endblock %}
