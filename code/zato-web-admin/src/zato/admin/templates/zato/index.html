@@ -179,17 +179,12 @@
 
             document.addEventListener('keydown', resetSessionTimer);
             document.addEventListener('click', resetSessionTimer);
-
-            let mouseThrottle;
             document.addEventListener('mousemove', function() {
-                if (mouseThrottle) return;
-                mouseThrottle = true;
                 const now = Date.now();
-                if (now - lastMouseReset > 1000) {
+                if (now - lastMouseReset >= 1000) {
                     lastMouseReset = now;
-                    resetSessionTimer();
+                    sessionSeconds = sessionDuration;
                 }
-                setTimeout(function() { mouseThrottle = false; }, 1000);
             }, {passive: true});
 
             // Check for updates on page load
