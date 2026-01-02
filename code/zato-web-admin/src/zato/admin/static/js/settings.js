@@ -31,3 +31,20 @@ $.fn.zato.settings.handleCopyIcon = function(e) {
 
     $.fn.zato.settings.copyToClipboard(text, e);
 };
+
+$.fn.zato.settings.initDriverTours = function(tours) {
+    const driverObj = window.driver.js.driver({
+        showProgress: true,
+        showButtons: ['next', 'previous', 'close'],
+        overlayColor: 'rgba(0, 0, 0, 0.5)',
+        popoverClass: 'driver-popover-custom',
+        animate: false
+    });
+
+    tours.forEach(function(tour) {
+        $(tour.trigger).on('click', function() {
+            driverObj.setSteps(tour.steps);
+            driverObj.drive(0);
+        });
+    });
+};

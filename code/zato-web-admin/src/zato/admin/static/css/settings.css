@@ -451,7 +451,7 @@ input:checked + .toggle-slider:before {
     fill: var(--primary-dark);
     position: relative;
     top: -1px;
-    visibility: hidden;
+    visibility: visible;
 }
 
 .help-icon:hover {
