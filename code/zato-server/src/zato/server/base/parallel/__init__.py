@@ -1271,13 +1271,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         logger.setLevel(logging.DEBUG)
         logger.addHandler(logging.StreamHandler())
 
+        import socket
+
+        host_name = socket.gethostname()
+
         resource = Resource.create({
             'service.name': 'zato4',
             'service.instance.id': 'dev4',
             'service.namespace': 'api4',
             'deployment.environment': 'dev',
-            'host.id': 'host.id.1',
-            'host.name': 'host.name.1',
+            'host.id': host_name,
+            'host.name': host_name,
         })
 
         from opentelemetry import propagate
