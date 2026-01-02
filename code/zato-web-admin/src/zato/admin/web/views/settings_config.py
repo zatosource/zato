@@ -26,4 +26,4 @@ updates_page_config['day_label'] = 'Day'
 updates_page_config['time_label'] = 'Time'
 updates_page_config['save_button_label'] = 'Save'
 updates_page_config['download_logs_label'] = 'Download full logs'
-updates_page_config['show_sidebar'] = 0
+updates_page_config['show_sidebar'] = True
