@@ -95,14 +95,14 @@
 }
 
 .info-value input[type="text"]:disabled {
-    background: #f5f5f5;
-    border-color: #ccc;
-    color: #999;
+    background: #e8e8e8;
+    border-color: #aaa;
+    color: #777;
     cursor: not-allowed;
 }
 
 .info-value input[type="text"]:disabled::placeholder {
-    color: #ccc;
+    color: #aaa;
 }
 
 .info-badge {
@@ -203,14 +203,14 @@
 }
 
 .action-button:disabled {
-    background: #e0e0e0;
-    color: #999 !important;
+    background: #c8c8c8;
+    color: #777 !important;
     cursor: not-allowed;
 }
 
 .action-button:disabled:hover {
-    background: #e0e0e0;
-    color: #999 !important;
+    background: #c8c8c8;
+    color: #777 !important;
 }
 
 .secondary-button {
@@ -242,15 +242,15 @@
 }
 
 .secondary-button:disabled {
-    color: #ccc;
-    border-color: #ccc;
+    color: #aaa;
+    border-color: #aaa;
     cursor: not-allowed;
 }
 
 .secondary-button:disabled:hover {
     background: #fff;
-    color: #ccc;
-    border-color: #ccc;
+    color: #aaa;
+    border-color: #aaa;
 }
 
 .button-spinner {
