@@ -26,6 +26,12 @@ from bunch import bunchify
 from gevent import sleep
 from gevent.lock import RLock
 
+# Open Telemetry
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
@@ -72,6 +78,7 @@ if 0:
 
     from bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
+    from opentelemetry.trace import Tracer
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
@@ -120,6 +127,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
     on_wsgi_request: 'any_'
+    tracer: 'Tracer'
 
     cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
@@ -251,6 +259,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Log streaming manager
         self.log_streaming_manager = LogStreamingManager()
+
+        # Monitoring
+        self._set_up_monitoring()
 
 # ################################################################################################################################
 
@@ -1243,6 +1254,57 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 data[idx] = item
 
         return data
+
+# ################################################################################################################################
+
+    def _set_up_monitoring(self):
+
+        import logging
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.trace import SpanKind
+
+        logger = logging.getLogger('zato.tracing')
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(logging.StreamHandler())
+
+        import socket
+
+        host_name = socket.gethostname()
+
+        resource = Resource.create({
+            'service.name': 'zato4',
+            'service.instance.id': 'dev4',
+            'service.namespace': 'api4',
+            'deployment.environment': 'dev',
+            'host.id': host_name,
+            'host.name': host_name,
+        })
+
+        from opentelemetry import propagate
+        # propagate.inject(headers)
+
+        provider = TracerProvider(resource=resource)
+
+        exporter = OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")
+        logger.debug('OTLP endpoint: %s', exporter._endpoint)
+
+        processor = SimpleSpanProcessor(exporter)
+        provider.add_span_processor(processor)
+        trace.set_tracer_provider(provider)
+
+        self.tracer = trace.get_tracer('zato.server')
+
+        cid = new_cid_server()
+
+        with self.tracer.start_as_current_span('my-process', kind=SpanKind.SERVER) as span:
+            span.set_attribute('key', 'value')
+            span.set_attribute('cid', cid)
+
+        logger.debug('Span export completed')
 
 # ################################################################################################################################
 

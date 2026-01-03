@@ -43,6 +43,9 @@ netaddr==0.8.0
 netifaces==0.11.0
 o365==2.1.2
 odoo-client-lib==1.2.4
+opentelemetry-api==1.39.1
+opentelemetry-exporter-otlp-proto-http==1.39.1
+opentelemetry-sdk==1.39.1
 oracledb==3.1.0
 orjson==3.11.3
 oslo.config==9.0.0

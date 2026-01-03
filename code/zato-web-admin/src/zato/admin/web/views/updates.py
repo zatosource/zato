@@ -16,9 +16,9 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.settings_config import updates_page_config
 from zato.common.json_internal import dumps
 from zato.common.util.updates import Updater, UpdaterConfig
-
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -215,7 +215,8 @@ def delete_schedule(req):
 
 @method_allowed('GET')
 def index(req):
-    return TemplateResponse(req, 'zato/in-app-updates/index.html', {
+    return TemplateResponse(req, 'zato/updates/index.html', {
+        'page_config': updates_page_config,
         'current_version': updater.get_zato_version(),
         'audit_log': updater.get_audit_log_entries(3)
     })
