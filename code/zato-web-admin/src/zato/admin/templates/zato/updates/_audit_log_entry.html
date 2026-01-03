@@ -1,0 +1,14 @@
+<div class="audit-log-entry">
+    <div class="audit-log-header">
+        <span class="audit-log-time" data-timestamp="{{ entry.timestamp }}">{{ entry.time_ago }}</span>
+        <span class="audit-log-type">{{ entry.type }}</span>
+    </div>
+    <div class="audit-log-version-row">
+        <span class="audit-log-label">From:</span>
+        <span class="audit-log-version audit-log-version-from">{{ entry.version_from }}</span>
+    </div>
+    <div class="audit-log-version-row">
+        <span class="audit-log-label">To:</span>
+        <span class="audit-log-version audit-log-version-to">{{ entry.version_to }}</span>
+    </div>
+</div>
