@@ -94,7 +94,6 @@
                 }
             });
         });
-        {% endif %}
 
         // Let users reveal password fields
         $(document).ready(function() {
@@ -187,13 +186,16 @@
                 }
             }, {passive: true});
 
-            setTimeout(function() {
-                checkUpdateAvailability();
-            }, 2000);
+            const isUpdatesPage = window.location.pathname === '/zato/updates/';
+            if (!isUpdatesPage) {
+                setTimeout(function() {
+                    checkUpdateAvailability();
+                }, 2000);
 
-            setInterval(function() {
-                checkUpdateAvailability();
-            }, 3600000);
+                setInterval(function() {
+                    checkUpdateAvailability();
+                }, 3600000);
+            }
 
         });
 
@@ -223,6 +225,7 @@
                 }
             });
         }
+        {% endif %}
 
     </script>
 
