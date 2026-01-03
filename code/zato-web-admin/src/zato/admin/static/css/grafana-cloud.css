@@ -4,15 +4,23 @@
     gap: 16px;
     row-gap: 16px;
     column-gap: 24px;
+    align-items: center;
 }
 
 .info-row {
     display: contents;
 }
 
+.info-row .info-label {
+    align-self: center;
+}
+
 .info-row .info-value {
     min-width: 0 !important;
     text-align: left;
+    height: auto !important;
+    line-height: normal !important;
+    align-self: center;
 }
 
 .info-value input[type="text"] {
