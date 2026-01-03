@@ -1,3 +1,9 @@
+.info-row .info-value {
+    flex: 1;
+    min-width: 0 !important;
+    text-align: left;
+}
+
 .info-value input[type="text"] {
     font-family: monospace;
     font-size: 14px;
@@ -6,7 +12,6 @@
     background: var(--white);
     border: 2px solid var(--primary-dark);
     padding: 4px 8px;
-    width: 280px;
     box-sizing: border-box;
 }
 
