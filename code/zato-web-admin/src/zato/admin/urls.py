@@ -872,6 +872,8 @@ urlpatterns += [
         login_required(grafana_cloud.load_schedule), name='observability-grafana-cloud-load-schedule'),
     url(r'^zato/observability/grafana-cloud/delete-schedule$',
         login_required(grafana_cloud.delete_schedule), name='observability-grafana-cloud-delete-schedule'),
+    url(r'^zato/observability/grafana-cloud/test-connection$',
+        login_required(grafana_cloud.test_connection), name='observability-grafana-cloud-test-connection'),
     url(r'^zato/observability/grafana-cloud/download-logs$',
         login_required(grafana_cloud.download_logs), name='observability-grafana-cloud-download-logs'),
 ]

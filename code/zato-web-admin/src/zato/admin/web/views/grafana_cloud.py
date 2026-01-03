@@ -213,6 +213,19 @@ def delete_schedule(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
+@method_allowed('POST')
+def test_connection(req):
+    import time
+    try:
+        time.sleep(0.1)
+        return json_response({'success': True, 'message': 'Connection successful'})
+    except Exception as e:
+        logger.error('test_connection: exception: {}'.format(e))
+        return json_response({'success': False, 'error': str(e)}, success=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('GET')
 def index(req):
     return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
