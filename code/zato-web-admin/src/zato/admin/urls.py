@@ -848,20 +848,10 @@ urlpatterns += [
 
     url(r'^zato/observability/grafana-cloud/$',
         login_required(grafana_cloud.index), name='observability-grafana-cloud'),
-    url(r'^zato/observability/grafana-cloud/restart-scheduler$',
-        login_required(grafana_cloud.restart_scheduler), name='observability-grafana-cloud-restart-scheduler'),
-    url(r'^zato/observability/grafana-cloud/restart-server$',
-        login_required(grafana_cloud.restart_server), name='observability-grafana-cloud-restart-server'),
-    url(r'^zato/observability/grafana-cloud/restart-proxy$',
-        login_required(grafana_cloud.restart_proxy), name='observability-grafana-cloud-restart-proxy'),
-    url(r'^zato/observability/grafana-cloud/restart-dashboard$',
-        login_required(grafana_cloud.restart_dashboard), name='observability-grafana-cloud-restart-dashboard'),
     url(r'^zato/observability/grafana-cloud/test-connection$',
         login_required(grafana_cloud.test_connection), name='observability-grafana-cloud-test-connection'),
     url(r'^zato/observability/grafana-cloud/save-config$',
         login_required(grafana_cloud.save_config), name='observability-grafana-cloud-save-config'),
-    url(r'^zato/observability/grafana-cloud/download-logs$',
-        login_required(grafana_cloud.download_logs), name='observability-grafana-cloud-download-logs'),
 ]
 
 # ################################################################################################################################
