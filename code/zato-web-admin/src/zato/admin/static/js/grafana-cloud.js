@@ -138,6 +138,7 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
     button.prop('disabled', true);
 
     $('#progress-configure').removeClass('hidden error-state');
+<<<<<<< Updated upstream
     $('#progress-scheduler').addClass('hidden').removeClass('error-state');
     $('#progress-server').addClass('hidden').removeClass('error-state');
     $('#progress-proxy').addClass('hidden').removeClass('error-state');
@@ -147,6 +148,14 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
 
     $.ajax({
         url: '/zato/observability/grafana-cloud/save-configuration',
+=======
+    $('#progress-install').addClass('hidden').removeClass('error-state');
+    $('#progress-install .info-message').removeClass('show');
+    $.fn.zato.settings.updateProgress('configure', 'processing', 'Configuring...');
+
+    $.ajax({
+        url: '/zato/observability/grafana-cloud/save-config',
+>>>>>>> Stashed changes
         type: 'POST',
         headers: {
             'X-CSRFToken': $.cookie('csrftoken')
@@ -158,11 +167,21 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
         }),
         contentType: 'application/json',
         success: function(response) {
+<<<<<<< Updated upstream
             $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration completed');
             $.fn.zato.grafanaCloud.runRestartSteps(button);
         },
         error: function(xhr) {
             let errorMsg = 'Save configuration failed';
+=======
+            $.fn.zato.settings.updateProgress('configure', 'completed', 'Configure complete');
+
+            $('#progress-install').removeClass('hidden');
+            $.fn.zato.updates.runRestartSteps(button);
+        },
+        error: function(xhr) {
+            let errorMsg = 'Configure failed';
+>>>>>>> Stashed changes
             let fullError = errorMsg;
             try {
                 const response = JSON.parse(xhr.responseText);
@@ -180,6 +199,7 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
     });
 };
 
+<<<<<<< Updated upstream
 $.fn.zato.grafanaCloud.runRestartSteps = function(button) {
     const steps = [
         { key: 'scheduler', url: '/zato/observability/grafana-cloud/restart-scheduler', text: 'Restarting...' },
@@ -254,6 +274,26 @@ $.fn.zato.grafanaCloud.runRestartSteps = function(button) {
             }
         });
     };
+=======
+$.fn.zato.updates.runRestartSteps = function(button) {
+    const config = {};
+    config.progressKey = 'install';
+    config.button = button;
+    config.pollUrl = '/zato/observability/grafana-cloud/';
+    config.completedText = 'Installation complete';
+    config.completionBadgeSelector = '#progress-install .info-message';
+    config.baseUrl = '/zato/updates';
+    config.completionBadgeText = '⭐ Configuration saved';
+
+    $.fn.zato.settings.executeSteps(config);
+};
+
+
+$.fn.zato.updates.renderAuditLogEntry = function(entry, extraClass) {
+    const template = document.getElementById('audit-log-entry-template');
+    const clone = template.content.cloneNode(true);
+    const entryDiv = clone.querySelector('.audit-log-entry');
+>>>>>>> Stashed changes
     
     runNextStep();
 };
