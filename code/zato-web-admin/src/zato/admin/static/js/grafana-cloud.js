@@ -168,11 +168,51 @@ $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
 };
 
 $.fn.zato.updates.handleCheckForUpdates = function() {
-    const upToDateBadge = $('#up-to-date-badge');
-    upToDateBadge.removeClass('success error').text('Checking...');
-
+    $('#progress-test').addClass('hidden').removeClass('error-state');
+    const statusMessage = $('.status-message.test-success');
+    statusMessage.removeClass('show fade');
+    
     $.fn.zato.settings.activateSpinner('.button-spinner');
-    $.fn.zato.updates.fetchLatestVersion(false);
+
+    $.ajax({
+        url: '/zato/observability/grafana-cloud/test-connection',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $.cookie('csrftoken')
+        },
+        data: JSON.stringify({
+            instance_id: $('#instance-id').val(),
+            api_token: $('#api-token').val()
+        }),
+        contentType: 'application/json',
+        success: function(response) {
+            $.fn.zato.settings.deactivateSpinner('.button-spinner');
+            statusMessage.addClass('show');
+            setTimeout(function() {
+                statusMessage.addClass('fade');
+                setTimeout(function() {
+                    statusMessage.removeClass('show fade');
+                }, 500);
+            }, 3000);
+        },
+        error: function(xhr) {
+            $.fn.zato.settings.deactivateSpinner('.button-spinner');
+            
+            let errorMsg = 'Connection test failed';
+            let fullError = errorMsg;
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMsg = response.error || errorMsg;
+                fullError = errorMsg;
+            } catch(e) {
+                errorMsg = xhr.responseText || errorMsg;
+                fullError = errorMsg;
+            }
+
+            $('#progress-test').removeClass('hidden').data('full-error', fullError);
+            $.fn.zato.settings.updateProgress('test', 'error', errorMsg);
+        }
+    });
 };
 
 $.fn.zato.updates.handleCopyUpgradeInfo = function(e) {

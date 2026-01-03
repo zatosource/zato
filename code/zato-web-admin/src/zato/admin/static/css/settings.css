@@ -76,6 +76,24 @@
     height: 17px;
 }
 
+.info-value input[type="text"] {
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--primary-dark);
+    background: var(--white);
+    border: 2px solid var(--primary-dark);
+    padding: 4px 8px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.info-value input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-dark);
+    background: var(--background-light);
+}
+
 .info-badge {
     font-size: 12px;
     font-weight: 600;
