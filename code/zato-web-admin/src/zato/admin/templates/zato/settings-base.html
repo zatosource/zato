@@ -21,7 +21,7 @@
 {% block "content" %}
 
 <div class="settings-container">
-    <div class="settings-panel">
+    <div class="settings-panel"{% if page_config.panel_width %} style="max-width: {{ page_config.panel_width }};"{% endif %}>
         <div class="settings-content">
             <div class="settings-main">
                 {% block left_content %}

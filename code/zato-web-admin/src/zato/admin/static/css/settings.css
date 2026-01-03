@@ -20,6 +20,7 @@
 .settings-main {
     flex: 1;
     padding: 24px 40px 40px 40px;
+    padding-bottom: 11px;
 }
 
 .settings-sidebar {
@@ -74,6 +75,35 @@
     text-align: right;
     line-height: 17px;
     height: 17px;
+}
+
+.info-value input[type="text"] {
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--primary-dark);
+    background: var(--white);
+    border: 2px solid var(--primary-dark);
+    padding: 4px 8px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.info-value input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-dark);
+    background: var(--background-light);
+}
+
+.info-value input[type="text"]:disabled {
+    background: #e8e8e8;
+    border-color: #aaa;
+    color: #777;
+    cursor: not-allowed;
+}
+
+.info-value input[type="text"]:disabled::placeholder {
+    color: #aaa;
 }
 
 .info-badge {
@@ -174,12 +204,14 @@
 }
 
 .action-button:disabled {
-    color: #ccc !important;
+    background: #c8c8c8;
+    color: #777 !important;
     cursor: not-allowed;
 }
 
 .action-button:disabled:hover {
-    color: #ccc !important;
+    background: #c8c8c8;
+    color: #777 !important;
 }
 
 .secondary-button {
@@ -208,6 +240,18 @@
     color: var(--primary-dark);
     box-shadow: none;
     text-shadow: none;
+}
+
+.secondary-button:disabled {
+    color: #aaa;
+    border-color: #aaa;
+    cursor: not-allowed;
+}
+
+.secondary-button:disabled:hover {
+    background: #fff;
+    color: #aaa;
+    border-color: #aaa;
 }
 
 .button-spinner {
@@ -517,6 +561,10 @@ input:checked + .toggle-slider:before {
     gap: 4px;
     margin-top: -4px;
     height: 40px;
+}
+
+.save-button-container .action-button {
+    margin-top: 16px;
 }
 
 .config-save-spinner {
