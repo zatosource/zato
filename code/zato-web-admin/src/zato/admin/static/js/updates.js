@@ -129,7 +129,6 @@ $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
                 const upToDateBadge = $('#up-to-date-badge');
                 if (response.version !== currentVersion) {
                     upToDateBadge.removeClass('success').addClass('error').text('No');
-                    localStorage.setItem('zato_updates_available', 'true');
 
                     const headerBadge = document.getElementById('update-status-badge');
                     const headerText = document.getElementById('update-status-text');
@@ -148,7 +147,6 @@ $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
                     }, 1600);
                 } else {
                     upToDateBadge.removeClass('error').addClass('success').text('Yes');
-                    localStorage.setItem('zato_updates_available', 'false');
 
                     const headerBadge = document.getElementById('update-status-badge');
                     const headerText = document.getElementById('update-status-text');
@@ -363,8 +361,6 @@ $.fn.zato.updates.runRestartSteps = function(button, latestVersion) {
 
         const upToDateBadge = $('#up-to-date-badge');
         upToDateBadge.removeClass('error').addClass('success').text('Yes');
-
-        localStorage.setItem('zato_updates_available', 'false');
 
         const headerBadge = document.getElementById('update-status-badge');
         const headerText = document.getElementById('update-status-text');
