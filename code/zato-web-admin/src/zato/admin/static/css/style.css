@@ -970,6 +970,7 @@ div.action-panel a {
 
 .status-badge.loaded {
     visibility: visible;
+    padding-left: 6.5px;
 }
 
 .status-badge::before {
@@ -1020,7 +1021,7 @@ div.action-panel a {
 
 .status-badge.header-badge {
     margin-left: 8px;
-    margin-right: 8px;
+    margin-right: 4px;
 }
 
 .status-badge.white {
