@@ -1,5 +1,16 @@
+.info-container {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    row-gap: 16px;
+    column-gap: 24px;
+}
+
+.info-row {
+    display: contents;
+}
+
 .info-row .info-value {
-    flex: 1;
     min-width: 0 !important;
     text-align: left;
 }
