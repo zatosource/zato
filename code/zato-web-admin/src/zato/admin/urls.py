@@ -848,16 +848,6 @@ urlpatterns += [
 
     url(r'^zato/observability/grafana-cloud/$',
         login_required(grafana_cloud.index), name='observability-grafana-cloud'),
-    url(r'^zato/observability/grafana-cloud/check-availability$',
-        login_required(grafana_cloud.check_availability), name='observability-grafana-cloud-check-availability'),
-    url(r'^zato/observability/grafana-cloud/check-latest-version$',
-        login_required(grafana_cloud.check_latest_version), name='observability-grafana-cloud-check-latest-version'),
-    url(r'^zato/observability/grafana-cloud/get-latest-audit-entry$',
-        login_required(grafana_cloud.get_latest_audit_entry), name='observability-grafana-cloud-get-latest-audit-entry'),
-    url(r'^zato/observability/grafana-cloud/get-audit-log-refresh$',
-        login_required(grafana_cloud.get_audit_log_refresh), name='observability-grafana-cloud-get-audit-log-refresh'),
-    url(r'^zato/observability/grafana-cloud/download-and-install$',
-        login_required(grafana_cloud.download_and_install), name='observability-grafana-cloud-download-and-install'),
     url(r'^zato/observability/grafana-cloud/restart-scheduler$',
         login_required(grafana_cloud.restart_scheduler), name='observability-grafana-cloud-restart-scheduler'),
     url(r'^zato/observability/grafana-cloud/restart-server$',
@@ -866,16 +856,8 @@ urlpatterns += [
         login_required(grafana_cloud.restart_proxy), name='observability-grafana-cloud-restart-proxy'),
     url(r'^zato/observability/grafana-cloud/restart-dashboard$',
         login_required(grafana_cloud.restart_dashboard), name='observability-grafana-cloud-restart-dashboard'),
-    url(r'^zato/observability/grafana-cloud/save-schedule$',
-        login_required(grafana_cloud.save_schedule), name='observability-grafana-cloud-save-schedule'),
-    url(r'^zato/observability/grafana-cloud/load-schedule$',
-        login_required(grafana_cloud.load_schedule), name='observability-grafana-cloud-load-schedule'),
-    url(r'^zato/observability/grafana-cloud/delete-schedule$',
-        login_required(grafana_cloud.delete_schedule), name='observability-grafana-cloud-delete-schedule'),
     url(r'^zato/observability/grafana-cloud/test-connection$',
         login_required(grafana_cloud.test_connection), name='observability-grafana-cloud-test-connection'),
-    url(r'^zato/observability/grafana-cloud/download-logs$',
-        login_required(grafana_cloud.download_logs), name='observability-grafana-cloud-download-logs'),
 ]
 
 # ################################################################################################################################
