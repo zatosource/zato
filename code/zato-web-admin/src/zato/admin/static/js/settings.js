@@ -71,8 +71,6 @@ $.fn.zato.settings.initIsEnabledToggle = function(toggleSelector, containerSelec
         fieldsToToggle.prop('disabled', !isEnabled);
     }
 
-    updateFieldsState(toggle.is(':checked'));
-
     toggle.on('change', function() {
         const isEnabled = $(this).is(':checked');
         updateFieldsState(isEnabled);

@@ -20,6 +20,7 @@
 .settings-main {
     flex: 1;
     padding: 24px 40px 40px 40px;
+    padding-bottom: 11px;
 }
 
 .settings-sidebar {
