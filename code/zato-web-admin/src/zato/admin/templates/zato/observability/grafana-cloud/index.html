@@ -26,18 +26,12 @@
         <div class="info-label">{{ page_config.your_version_label }}</div>
         <div class="info-value">
             <input type="text" id="endpoint-url" value="{{ endpoint_url }}" placeholder="https://example.grafana.net">
-            <span class="copy-icon" data-copy="endpoint-url" title="Copy to clipboard">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-            </span>
         </div>
     </div>
     <div class="info-row">
         <div class="info-label">{{ page_config.latest_version_label }}</div>
         <div class="info-value">
             <input type="text" id="api-token" value="{{ api_token }}" placeholder="Enter API token">
-            <span class="copy-icon" data-copy="api-token" title="Copy to clipboard">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-            </span>
         </div>
     </div>
 </div>
@@ -75,109 +69,4 @@
 
 {% block completion_badge %}
 <span class="info-message status-badge with-shine"></span>
-{% endblock %}
-
-{% block right_content %}
-                <h3>{{ page_config.config_section_title }} <img src="/static/gfx/info.svg" class="help-icon" id="auto-update-help" alt="info" /></h3>
-                <div class="config-panel">
-                    <div class="config-item">
-                        <div class="config-label">{{ page_config.auto_update_label }}</div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="auto-restart">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="config-item hidden" id="schedule-frequency">
-                        <div class="config-label">{{ page_config.frequency_label }}</div>
-                        <select class="schedule-select" id="update-frequency">
-                            <option value="hourly">Hourly</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
-                        </select>
-                    </div>
-                    <div class="config-item hidden" id="schedule-week">
-                        <div class="config-label">{{ page_config.week_label }}</div>
-                        <select class="schedule-select" id="update-week">
-                            <option value="first">First week of month</option>
-                            <option value="second">Second week of month</option>
-                            <option value="third">Third week of month</option>
-                            <option value="last">Last week of month</option>
-                        </select>
-                    </div>
-                    <div class="config-item hidden" id="schedule-day">
-                        <div class="config-label">{{ page_config.day_label }}</div>
-                        <select class="schedule-select" id="update-day">
-                            <option value="monday">Monday</option>
-                            <option value="tuesday">Tuesday</option>
-                            <option value="wednesday">Wednesday</option>
-                            <option value="thursday">Thursday</option>
-                            <option value="friday">Friday</option>
-                            <option value="saturday">Saturday</option>
-                            <option value="sunday">Sunday</option>
-                        </select>
-                    </div>
-                    <div class="config-item hidden" id="schedule-time">
-                        <div class="config-label">{{ page_config.time_label }} <span id="timezone-display"></span></div>
-                        <select class="schedule-select" id="update-time">
-                            <option value="00:00">00:00</option>
-                            <option value="01:00">01:00</option>
-                            <option value="02:00">02:00</option>
-                            <option value="03:00" selected>03:00</option>
-                            <option value="04:00">04:00</option>
-                            <option value="05:00">05:00</option>
-                            <option value="06:00">06:00</option>
-                            <option value="07:00">07:00</option>
-                            <option value="08:00">08:00</option>
-                            <option value="09:00">09:00</option>
-                            <option value="10:00">10:00</option>
-                            <option value="11:00">11:00</option>
-                            <option value="12:00">12:00</option>
-                            <option value="13:00">13:00</option>
-                            <option value="14:00">14:00</option>
-                            <option value="15:00">15:00</option>
-                            <option value="16:00">16:00</option>
-                            <option value="17:00">17:00</option>
-                            <option value="18:00">18:00</option>
-                            <option value="19:00">19:00</option>
-                            <option value="20:00">20:00</option>
-                            <option value="21:00">21:00</option>
-                            <option value="22:00">22:00</option>
-                            <option value="23:00">23:00</option>
-                        </select>
-                    </div>
-                    <div class="save-button-container">
-                        <img src="/static/gfx/spinner.svg" class="config-save-spinner">
-                        <span class="config-saved-message">Saved</span>
-                        <button class="config-save-button" id="config-save-button">
-                            {{ page_config.save_button_label }}
-                        </button>
-                    </div>
-                </div>
-
-                <template id="audit-log-entry-template">
-                    {% include "zato/updates/_audit_log_entry.html" with entry=empty_entry %}
-                </template>
-
-                <div class="logs-section show">
-                    <h3>{{ page_config.logs_section_title }} <img src="/static/gfx/info.svg" class="help-icon" id="logs-help" alt="info" /></h3>
-                    <div class="links-panel">
-                        <div class="audit-log-list">
-                            {% if audit_log %}
-                                {% for entry in audit_log %}
-                                    {% include "zato/updates/_audit_log_entry.html" %}
-                                {% endfor %}
-                            {% else %}
-                                <div class="audit-log-empty">No logs yet</div>
-                            {% endif %}
-                        </div>
-                        <div class="links-row"{% if not audit_log %} style="display: none;"{% endif %}>
-                            <div class="dashboard-link-item">
-                                <a href="/zato/updates/download-logs" class="dashboard-link">
-                                    {{ page_config.download_logs_label }}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 {% endblock %}
