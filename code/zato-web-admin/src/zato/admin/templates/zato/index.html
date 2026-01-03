@@ -6,10 +6,15 @@
 
 {% block head %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery-3.7.1.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/hide-show-password.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.custom.css">
+    <link rel="stylesheet" media="screen" href="/static/css/formalize.css" />
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+
+    {% if user.is_authenticated %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery-ui-1.13.2/jquery-ui.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.getUrlParam.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/hide-show-password.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/stringformat.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/chosen/chosen.jquery.js"></script>
 
@@ -22,18 +27,11 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/log_streaming.js"></script>
 
-    <script nonce="{{ CSP_NONCE }}">
-    </script>
 
     <link rel="stylesheet" media="screen" href="/static/chosen/chosen.css" />
-    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.custom.css">
-    <link rel="stylesheet" media="screen" href="/static/css/formalize.css" />
     <link rel="stylesheet" media="screen" href="/static/css/navigation/pure-css-navigation.css" />
 
-
-    {% comment %} Our CSS must come last {% endcomment %}
-    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/updates.css">
+    {% endif %}
 
     {% if items %}
         {% include "zato/css-titlebar-padding.html" %}
@@ -85,6 +83,10 @@
 
     <script nonce="{{ CSP_NONCE }}">
 
+        $(document).ready(function() {
+            $('input[type="password"]').hidePassword(true);
+        });
+
         {% if user.is_authenticated %}
         // Let users close delete dialogs via the Esc key
         $(document).ready(function() {
@@ -97,7 +99,6 @@
 
         // Let users reveal password fields
         $(document).ready(function() {
-            $('input[type="password"]').hidePassword(true);
 
             // Set grafana link href dynamically
             $('.grafana-link').attr('href', window.location.protocol + '//' + window.location.hostname + ':33033/dashboards').attr('target', '_blank');
@@ -263,9 +264,9 @@
                                 <a class="menu-link" href="#">Security &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "security-apikey" %}?cluster={{ cluster_id|default:"1" }}">API keys</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-basic-auth" %}?cluster={{ cluster_id|default:"1" }}">Basic Auth</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-oauth-outconn-client-credentials" %}?cluster={{ cluster_id|default:"1" }}">Bearer tokens</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "groups" "zato-api-creds" %}?cluster={{ cluster_id|default:"1" }}">Groups</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-basic-auth" %}?cluster={{ cluster_id|default:"1" }}">HTTP Basic Auth</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:"1" }}">NTLM</a></li>
                                 </ul>
                             </li>

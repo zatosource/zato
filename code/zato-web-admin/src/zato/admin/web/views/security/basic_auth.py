@@ -49,7 +49,7 @@ class _CreateEdit(CreateEdit):
         output_required = 'id', 'name'
 
     def success_message(self, item):
-        return 'Successfully {} HTTP Basic Auth definition `{}`'.format(self.verb, item.name)
+        return 'Successfully {} Basic Auth definition `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'security-basic-auth-create'
@@ -62,7 +62,7 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'security-basic-auth-delete'
-    error_message = 'Could not delete the HTTP Basic Auth definition'
+    error_message = 'Could not delete the Basic Auth definition'
     service_name = 'zato.security.basic-auth.delete'
 
 @method_allowed('POST')
