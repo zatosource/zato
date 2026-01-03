@@ -466,6 +466,7 @@ class Updater:
     def download_and_install(self, update_script_name:'str' = 'update.sh', update_type:'str' = 'manual', schedule:'strnone'=None, exclude_from_restart:'list'=None) -> 'dict':
         """ Downloads and installs an update.
         """
+        '''
         time.sleep(0.05)
         version = self.get_zato_version()
         return {
@@ -476,6 +477,7 @@ class Updater:
             'stdout': '',
             'stderr': ''
         }
+        '''
 
         logger.info('')
         logger.info('#' * 80)
