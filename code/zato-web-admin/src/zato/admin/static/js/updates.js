@@ -4,8 +4,6 @@ $.fn.zato.updates.init = function() {
         headerBadge.style.animation = 'none';
     }
 
-    $('#update-button').prop('disabled', true);
-
     $('#check-button').on('click', $.fn.zato.updates.handleCheckForUpdates);
     $('.copy-icon').on('click', $.fn.zato.settings.handleCopyIcon);
     $(document).on('click', '.info-message', $.fn.zato.updates.handleCopyUpgradeInfo);
@@ -163,12 +161,10 @@ $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
             }
 
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
-            $('#update-button').prop('disabled', false);
         },
         error: function(xhr, status, error) {
             latestVersionEl.text('Error loading version');
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
-            $('#update-button').prop('disabled', false);
         }
     });
 };
@@ -177,7 +173,6 @@ $.fn.zato.updates.handleCheckForUpdates = function() {
     const upToDateBadge = $('#up-to-date-badge');
     upToDateBadge.removeClass('success error').text('Checking...');
 
-    $('#update-button').prop('disabled', true);
     $.fn.zato.settings.activateSpinner('.button-spinner');
     $.fn.zato.updates.fetchLatestVersion(false);
 };
