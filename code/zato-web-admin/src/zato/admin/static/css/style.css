@@ -154,7 +154,8 @@ span.like-a {
 
 #console-header {
     background-color: var(--zato-seablue);
-    box-shadow: 0px 0px 4px #333
+    box-shadow: 0px 0px 4px #333;
+    min-height: 43px;
 }
 
 #logo {
