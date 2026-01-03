@@ -1,13 +1,13 @@
 {% extends "zato/settings-base.html" %}
 
-{% block page_title %}Install updates{% endblock %}
+{% block page_title %}{{ page_config.title }}{% endblock %}
 
 {% block extra_page_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/updates.css">
+<link rel="stylesheet" type="text/css" href="/static/css/grafana-cloud.css">
 {% endblock %}
 
 {% block extra_page_js %}
-<script type="text/javascript" src="/static/js/updates.js" nonce="{{ CSP_NONCE }}"></script>
+<script type="text/javascript" src="/static/js/grafana-cloud.js" nonce="{{ CSP_NONCE }}"></script>
 {% endblock %}
 
 {% block section_title %}{{ page_config.version_section_title }}{% endblock %}
@@ -17,13 +17,13 @@
 <div class="info-container">
     <div class="info-row">
         <div class="info-label">{{ page_config.up_to_date_label }}</div>
-        <span class="info-badge" id="up-to-date-badge">Checking...</span>
+        <span class="info-badge" id="connected-badge">Not connected</span>
     </div>
     <div class="info-row">
         <div class="info-label">{{ page_config.your_version_label }}</div>
         <div class="info-value">
-            <span id="current-version">{{ current_version }}</span>
-            <span class="copy-icon" data-copy="current-version" title="Copy to clipboard">
+            <input type="text" id="endpoint-url" value="{{ endpoint_url }}" placeholder="https://example.grafana.net">
+            <span class="copy-icon" data-copy="endpoint-url" title="Copy to clipboard">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
             </span>
         </div>
@@ -31,8 +31,8 @@
     <div class="info-row">
         <div class="info-label">{{ page_config.latest_version_label }}</div>
         <div class="info-value">
-            <span id="latest-version"><img src="/static/gfx/spinner.svg" class="info-spinner">Checking...</span>
-            <span class="copy-icon hidden" data-copy="latest-version" title="Copy to clipboard">
+            <input type="text" id="api-token" value="{{ api_token }}" placeholder="Enter API token">
+            <span class="copy-icon" data-copy="api-token" title="Copy to clipboard">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
             </span>
         </div>
