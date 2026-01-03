@@ -217,7 +217,7 @@ def delete_schedule(req):
 def index(req):
     return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
         'page_config': grafana_cloud_page_config,
-        'endpoint_url': '',
+        'instance_id': '',
         'api_token': '',
         'audit_log': []
     })
