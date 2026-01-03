@@ -67,7 +67,7 @@ content_rows.append(row)
 grafana_cloud_page_config = {}
 grafana_cloud_page_config['title'] = 'Grafana Cloud'
 grafana_cloud_page_config['api_prefix'] = '/zato/observability/grafana-cloud/'
-grafana_cloud_page_config['step1_label'] = 'Configure'
+grafana_cloud_page_config['step1_label'] = 'Configuring Grafana Cloud'
 grafana_cloud_page_config['step2_label'] = 'Connect'
 grafana_cloud_page_config['check_button_label'] = 'Test connection'
 grafana_cloud_page_config['action_button_label'] = 'Save'
