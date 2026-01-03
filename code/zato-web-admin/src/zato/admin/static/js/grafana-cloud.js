@@ -2,6 +2,7 @@ $.fn.zato.grafanaCloud = {};
 
 $.fn.zato.grafanaCloud.init = function() {
     $('#check-button').on('click', $.fn.zato.grafanaCloud.handleTestConnection);
+    $('#update-button').on('click', $.fn.zato.grafanaCloud.handleSaveClick);
     $.fn.zato.settings.initIsEnabledToggle('#is-enabled', '.progress-panel');
 
     const tours = {};
@@ -130,6 +131,131 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
             $.fn.zato.settings.updateProgress('test', 'error', errorMsg);
         }
     });
+};
+
+$.fn.zato.grafanaCloud.handleSaveClick = function() {
+    const button = $(this);
+    button.prop('disabled', true);
+
+    $('#progress-configure').removeClass('hidden error-state');
+    $('#progress-scheduler').addClass('hidden').removeClass('error-state');
+    $('#progress-server').addClass('hidden').removeClass('error-state');
+    $('#progress-proxy').addClass('hidden').removeClass('error-state');
+    $('#progress-dashboard').addClass('hidden').removeClass('error-state');
+    $('#progress-test').addClass('hidden').removeClass('error-state');
+    $.fn.zato.settings.updateProgress('configure', 'processing', 'Configuring...');
+
+    $.ajax({
+        url: '/zato/observability/grafana-cloud/save-configuration',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': $.cookie('csrftoken')
+        },
+        data: JSON.stringify({
+            is_enabled: $('#is-enabled').is(':checked'),
+            instance_id: $('#instance-id').val(),
+            api_token: $('#api-token').val()
+        }),
+        contentType: 'application/json',
+        success: function(response) {
+            $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration completed');
+            $.fn.zato.grafanaCloud.runRestartSteps(button);
+        },
+        error: function(xhr) {
+            let errorMsg = 'Save configuration failed';
+            let fullError = errorMsg;
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMsg = response.error || errorMsg;
+                fullError = errorMsg;
+            } catch(e) {
+                errorMsg = xhr.responseText || errorMsg;
+                fullError = errorMsg;
+            }
+
+            $('#progress-configure').data('full-error', fullError);
+            $.fn.zato.settings.updateProgress('configure', 'error', errorMsg);
+            button.prop('disabled', false);
+        }
+    });
+};
+
+$.fn.zato.grafanaCloud.runRestartSteps = function(button) {
+    const steps = [
+        { key: 'scheduler', url: '/zato/observability/grafana-cloud/restart-scheduler', text: 'Restarting...' },
+        { key: 'server', url: '/zato/observability/grafana-cloud/restart-server', text: 'Restarting...' },
+        { key: 'proxy', url: '/zato/observability/grafana-cloud/restart-proxy', text: 'Restarting...' },
+        { key: 'dashboard', url: '/zato/observability/grafana-cloud/restart-dashboard', text: 'Restarting...' }
+    ];
+    
+    let currentStep = 0;
+    
+    const runNextStep = function() {
+        if (currentStep >= steps.length) {
+            button.prop('disabled', false);
+            return;
+        }
+        
+        const step = steps[currentStep];
+        $('#progress-' + step.key).removeClass('hidden');
+        $.fn.zato.settings.updateProgress(step.key, 'processing', step.text);
+        
+        $.ajax({
+            url: step.url,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $.cookie('csrftoken')
+            },
+            success: function(response) {
+                $.fn.zato.settings.updateProgress(step.key, 'completed', 'Completed');
+                
+                if (step.key === 'dashboard') {
+                    let pollAttempts = 0;
+                    const maxPollAttempts = 60;
+                    
+                    const pollDashboard = function() {
+                        pollAttempts++;
+                        $.ajax({
+                            url: '/zato/observability/grafana-cloud/',
+                            type: 'GET',
+                            timeout: 2000,
+                            success: function() {
+                                currentStep++;
+                                runNextStep();
+                            },
+                            error: function() {
+                                if (pollAttempts < maxPollAttempts) {
+                                    setTimeout(pollDashboard, 1000);
+                                } else {
+                                    $.fn.zato.settings.updateProgress(step.key, 'error', 'Dashboard did not restart');
+                                    button.prop('disabled', false);
+                                }
+                            }
+                        });
+                    };
+                    
+                    setTimeout(pollDashboard, 2000);
+                } else {
+                    currentStep++;
+                    setTimeout(runNextStep, 500);
+                }
+            },
+            error: function(xhr) {
+                let errorMsg = 'Restart failed';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    errorMsg = response.error || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.responseText || errorMsg;
+                }
+                
+                $.fn.zato.settings.updateProgress(step.key, 'error', errorMsg);
+                button.prop('disabled', false);
+            }
+        });
+    };
+    
+    runNextStep();
 };
 
 $(document).ready(function() {

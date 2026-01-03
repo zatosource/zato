@@ -152,6 +152,27 @@ def test_connection(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
+@method_allowed('POST')
+def save_configuration(req):
+    from zato.common.json_internal import loads
+    try:
+        body = req.body.decode('utf-8')
+        config_data = loads(body)
+        
+        is_enabled = config_data.get('is_enabled', False)
+        instance_id = config_data.get('instance_id', '')
+        api_token = config_data.get('api_token', '')
+        
+        logger.info('save_configuration: is_enabled={}, instance_id={}'.format(is_enabled, instance_id))
+        
+        return json_response({'success': True, 'message': 'Configuration saved'})
+    except Exception as e:
+        logger.error('save_configuration: exception: {}'.format(e))
+        return json_response({'success': False, 'error': str(e)}, success=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 @method_allowed('GET')
 def index(req):
     return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
