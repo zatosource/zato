@@ -86,6 +86,7 @@ grafana_cloud_page_config['save_button_label'] = 'Save'
 grafana_cloud_page_config['download_logs_label'] = 'Download full logs'
 grafana_cloud_page_config['show_sidebar'] = False
 grafana_cloud_page_config['show_restart_steps'] = True
+grafana_cloud_page_config['panel_width'] = '35%'
 grafana_cloud_page_config['restart_step_id'] = 'connect'
 grafana_cloud_page_config['restart_step_label'] = grafana_cloud_page_config['step2_label']
 grafana_cloud_page_config['content_rows'] = []
