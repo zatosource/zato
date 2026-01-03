@@ -19,3 +19,4 @@ class ContentRow:
     copy_id: str = ''
     spinner: bool = False
     options: list = field(default_factory=list)
+    input_width: str = '100%'
