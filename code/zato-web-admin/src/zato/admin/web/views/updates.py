@@ -10,10 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from logging import getLogger
 
-# Django
-from django.http import HttpResponse
-from django.template.response import TemplateResponse
-
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.settings.base import SettingsBaseView
