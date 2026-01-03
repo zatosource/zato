@@ -93,11 +93,10 @@ grafana_cloud_page_config['content_rows'] = []
 content_rows = grafana_cloud_page_config['content_rows']
 
 row = ContentRow(
-    label=grafana_cloud_page_config['up_to_date_label'],
-    widget='badge',
-    value_key='connected',
-    element_id='connected-badge',
-    default_text='Not connected'
+    label='Is enabled',
+    widget='toggle',
+    value_key='is_enabled',
+    element_id='is-enabled'
 )
 content_rows.append(row)
 
