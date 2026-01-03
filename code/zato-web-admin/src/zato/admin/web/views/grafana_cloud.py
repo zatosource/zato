@@ -16,7 +16,6 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.settings_config import grafana_cloud_page_config
 from zato.common.json_internal import dumps
 from zato.common.util.updates import Updater, UpdaterConfig
 
@@ -228,8 +227,17 @@ def test_connection(req):
 
 @method_allowed('GET')
 def index(req):
+    page_config = {
+        'title': 'Grafana Cloud',
+        'your_version_label': 'Instance ID',
+        'latest_version_label': 'API Token',
+        'check_button_label': 'Test connection',
+        'action_button_label': 'Save',
+        'step1_label': 'Configure',
+        'version_section_title': 'Grafana Cloud'
+    }
     return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
-        'page_config': grafana_cloud_page_config,
+        'page_config': page_config,
         'is_enabled': False,
         'instance_id': '',
         'api_token': '',
