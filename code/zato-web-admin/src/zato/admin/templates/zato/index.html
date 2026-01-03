@@ -279,9 +279,9 @@
 {% block body %}
     <div>
         <div id="hd">
-            <div id="console-header">&nbsp;<a href="https://zato.io/{% if user.is_authenticated %}?v={{ zato_version|cut:"Zato " }} {% endif %}" id="logo-link"><img src="/static/gfx/logo.svg" alt="Zato logo" style="padding-top:3px;padding-bottom:3px;width:60px;margin-left:-0.25rem"/></a>
+            <div id="console-header">&nbsp;<a href="https://zato.io/{% if user.is_authenticated %}?v={{ zato_version|cut:"Zato " }} {% endif %}" id="logo-link"><img src="/static/gfx/logo.svg" alt="Zato logo" style="width:60px;margin-left:-0.25rem"/></a>
             {% if user.is_authenticated %}
-                <span id="logout" style="padding-top:10px">
+                <span id="logout">
                     <a class="status-badge header-badge" href="{% url 'updates' %}" id="update-status-badge">
                         <span id="update-status-text"></span>
                     </a>

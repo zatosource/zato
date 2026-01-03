@@ -155,7 +155,9 @@ span.like-a {
 #console-header {
     background-color: var(--zato-seablue);
     box-shadow: 0px 0px 4px #333;
-    min-height: 43px;
+    min-height: 41px;
+    display: flex;
+    align-items: center;
 }
 
 #logo {
@@ -170,9 +172,8 @@ span.like-a {
 
 #logout {
     color: #fff;
-    float: right;
+    margin-left: auto;
     font-size: 0.77rem;
-    padding-top: 6px;
     padding-right: 7.5px
 }
 
