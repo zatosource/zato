@@ -562,6 +562,40 @@ input:checked + .toggle-slider:before {
     height: 40px;
 }
 
+.config-save-button {
+    margin-top: 16px;
+    background: var(--primary-dark);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.config-save-button:hover {
+    background: var(--primary-dark);
+    color: var(--white);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.config-save-button:disabled {
+    background: #c8c8c8;
+    color: #555;
+    cursor: not-allowed;
+}
+
+.config-save-button:disabled:hover {
+    background: #c8c8c8;
+    color: #555;
+}
+
 .config-save-spinner {
     display: none;
     width: 26px;
