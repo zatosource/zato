@@ -6,6 +6,8 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+from zato.admin.web.views.settings.models import ContentRow
+
 updates_page_config = {}
 updates_page_config['title'] = 'Install updates'
 updates_page_config['api_prefix'] = '/zato/updates/'
@@ -30,3 +32,34 @@ updates_page_config['show_sidebar'] = True
 updates_page_config['show_restart_steps'] = True
 updates_page_config['restart_step_id'] = 'install'
 updates_page_config['restart_step_label'] = updates_page_config['step2_label']
+updates_page_config['content_rows'] = []
+
+content_rows = updates_page_config['content_rows']
+
+row = ContentRow(
+    label=updates_page_config['up_to_date_label'],
+    widget='badge',
+    value_key='up_to_date',
+    element_id='up-to-date-badge',
+    default_text='Checking...'
+)
+content_rows.append(row)
+
+row = ContentRow(
+    label=updates_page_config['your_version_label'],
+    widget='text',
+    value_key='current_version',
+    is_copyable=True,
+    copy_id='current-version'
+)
+content_rows.append(row)
+
+row = ContentRow(
+    label=updates_page_config['latest_version_label'],
+    widget='text',
+    value_key='latest_version',
+    is_copyable=True,
+    copy_id='latest-version',
+    spinner=True
+)
+content_rows.append(row)
