@@ -203,12 +203,14 @@
 }
 
 .action-button:disabled {
-    color: #ccc !important;
+    background: #e0e0e0;
+    color: #999 !important;
     cursor: not-allowed;
 }
 
 .action-button:disabled:hover {
-    color: #ccc !important;
+    background: #e0e0e0;
+    color: #999 !important;
 }
 
 .secondary-button {
