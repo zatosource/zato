@@ -388,7 +388,11 @@ Examples:
         logs_dir = os.path.join(component_path, 'logs')
         os.makedirs(logs_dir, exist_ok=True) # Ensure logs directory exists
         access_log = os.path.join(logs_dir, 'gunicorn-access.log')
-        error_log = os.path.join(logs_dir, 'gunicorn-error.log')
+        
+        if self.args.fg:
+            error_log = '-'
+        else:
+            error_log = os.path.join(logs_dir, 'gunicorn-error.log')
 
         # Use the Zato Python interpreter to run Gunicorn
         zato_python = os.path.join(zato_base_code_dir, 'bin', 'python')
@@ -428,7 +432,10 @@ Examples:
 
         # `stderr_path` for `proc.start_process` captures Gunicorn's initial bootstrap errors.
         # Gunicorn's own `--error-logfile` handles its operational errors.
-        gunicorn_bootstrap_stderr = self.args.stderr_path or os.path.join(logs_dir, 'gunicorn-bootstrap-stderr.log')
+        if self.args.fg:
+            gunicorn_bootstrap_stderr = self.args.stderr_path
+        else:
+            gunicorn_bootstrap_stderr = self.args.stderr_path or os.path.join(logs_dir, 'gunicorn-bootstrap-stderr.log')
 
         # `on_keyboard_interrupt` in `proc.start_process` gets called if the Zato wrapper (sarge) is interrupted.
         # Gunicorn, when run in foreground, handles SIGINT itself to gracefully shut down and remove its PID file.
