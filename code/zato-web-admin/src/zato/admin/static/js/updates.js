@@ -290,6 +290,7 @@ $.fn.zato.updates.handleSaveSchedule = function() {
 
 $.fn.zato.updates.handleUpdateClick = function() {
     const button = $(this);
+    const latestVersion = $('#latest-version').text();
     button.prop('disabled', true);
 
     $('#progress-download').removeClass('hidden error-state');
@@ -307,7 +308,7 @@ $.fn.zato.updates.handleUpdateClick = function() {
             $.fn.zato.settings.updateProgress('download', 'completed', 'Download complete');
 
             $('#progress-install').removeClass('hidden');
-            $.fn.zato.updates.runRestartSteps(button);
+            $.fn.zato.updates.runRestartSteps(button, latestVersion);
         },
         error: function(xhr) {
             console.error('Update error, status:', xhr.status);
@@ -347,7 +348,7 @@ $.fn.zato.updates.handleUpdateClick = function() {
     });
 };
 
-$.fn.zato.updates.runRestartSteps = function(button) {
+$.fn.zato.updates.runRestartSteps = function(button, latestVersion) {
     const config = {};
     config.progressKey = 'install';
     config.button = button;
@@ -356,7 +357,6 @@ $.fn.zato.updates.runRestartSteps = function(button) {
     config.completionBadgeSelector = '#progress-install .info-message';
     config.baseUrl = '/zato/updates';
 
-    const latestVersion = $('#latest-version').text();
     config.completionBadgeText = '⭐ Updated to ' + latestVersion;
 
     config.onAllComplete = function() {
