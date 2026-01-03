@@ -1,3 +1,21 @@
+.info-value input[type="text"] {
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    background: var(--white);
+    border: 2px solid var(--primary-dark);
+    padding: 4px 8px;
+    width: 280px;
+    box-sizing: border-box;
+}
+
+.info-value input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-dark);
+    background: var(--background-light);
+}
+
 #schedule-time {
     margin-bottom: 0;
 }

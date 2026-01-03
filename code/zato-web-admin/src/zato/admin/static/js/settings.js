@@ -25,7 +25,15 @@ $.fn.zato.settings.handleCopyIcon = function(e) {
 
     const parentProgress = targetElement.closest('.progress-item');
     const fullError = parentProgress.data('full-error');
-    const text = fullError || targetElement.text();
+    
+    let text = fullError;
+    if (!text) {
+        if (targetElement.is('input')) {
+            text = targetElement.val();
+        } else {
+            text = targetElement.text();
+        }
+    }
 
     $.fn.zato.settings.copyToClipboard(text, e);
 };
