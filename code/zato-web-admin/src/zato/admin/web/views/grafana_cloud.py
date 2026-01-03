@@ -45,53 +45,6 @@ def json_response(data, success=True):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('GET')
-def check_availability(req):
-    try:
-        result = updater.check_latest_version()
-
-        if not result['success']:
-            return json_response({'updates_available': False})
-
-        current_version = updater.get_zato_version()
-        latest_version = result.get('version', '')
-
-        updates_available = current_version != latest_version
-
-        return json_response({
-            'updates_available': updates_available,
-            'current_version': current_version,
-            'latest_version': latest_version
-        })
-    except Exception as e:
-        logger.error('check_availability: exception: {}'.format(e))
-        return json_response({'updates_available': False})
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def download_and_install(req):
-    logger.info('download_and_install: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
-    result = updater.download_and_install(exclude_from_restart=['dashboard'])
-
-    if result['success']:
-        import redis
-        try:
-            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-            version_from = result.get('version_from', '')
-            version_to = result.get('version_to', '')
-            _ = r.set('zato:update:version_from', version_from)
-            _ = r.set('zato:update:version_to', version_to)
-            _ = r.set('zato:update:schedule', 'manual')
-        except Exception:
-            pass
-
-    return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def restart_component(req, component_name, component_path, port=0):
     logger.info('restart_{}: called from client: {}'.format(component_name, req.META.get('REMOTE_ADDR')))
     result = updater.restart_component(component_name, component_path, port)
@@ -187,33 +140,6 @@ def restart_dashboard(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def save_schedule(req):
-    from zato.common.json_internal import loads
-    body = req.body.decode('utf-8')
-    schedule_data = loads(body)
-    result = updater.save_schedule(schedule_data)
-    return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def load_schedule(req):
-    result = updater.load_schedule()
-    return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def delete_schedule(req):
-    result = updater.delete_schedule()
-    return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
 def test_connection(req):
     import time
     try:
@@ -235,55 +161,6 @@ def index(req):
         'api_token': '',
         'audit_log': []
     })
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def get_latest_audit_entry(req):
-    entries = updater.get_audit_log_entries(1)
-    if entries:
-        return json_response({'success': True, 'entry': entries[0]})
-    else:
-        return json_response({'success': True, 'entry': None})
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def get_audit_log_refresh(req):
-    entries = updater.get_audit_log_entries(3)
-    return json_response({'success': True, 'entries': entries})
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def check_latest_version(req):
-    result = updater.check_latest_version()
-    return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def download_logs(req):
-    import os
-    from django.http import FileResponse, HttpResponse
-
-    base_dir = os.path.expanduser('~/env/qs-1')
-    update_log_path = os.path.join(base_dir, 'server1', 'logs', 'update.log')
-
-    if not os.path.exists(update_log_path):
-        return HttpResponse('Update log file not found', status=404)
-
-    try:
-        response = FileResponse(open(update_log_path, 'rb'), content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="update.log"'
-        return response
-    except Exception as e:
-        logger.error('download_logs: failed to read update.log: {}'.format(e))
-        return HttpResponse('Error reading update log: {}'.format(e), status=500)
 
 # ################################################################################################################################
 # ################################################################################################################################
