@@ -153,39 +153,18 @@ def test_connection(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-<<<<<<< Updated upstream
-def save_configuration(req):
-    from zato.common.json_internal import loads
-    try:
-        body = req.body.decode('utf-8')
-        config_data = loads(body)
-        
-        is_enabled = config_data.get('is_enabled', False)
-        instance_id = config_data.get('instance_id', '')
-        api_token = config_data.get('api_token', '')
-        
-        logger.info('save_configuration: is_enabled={}, instance_id={}'.format(is_enabled, instance_id))
-        
-        return json_response({'success': True, 'message': 'Configuration saved'})
-    except Exception as e:
-        logger.error('save_configuration: exception: {}'.format(e))
-        return json_response({'success': False, 'error': str(e)}, success=False)
-=======
 def save_config(req):
     from zato.common.json_internal import loads
     body = req.body.decode('utf-8')
     config_data = loads(body)
     logger.info('save_config: config_data={}'.format(config_data))
     return json_response({'success': True, 'message': 'Configuration saved'})
->>>>>>> Stashed changes
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
 def index(req):
-<<<<<<< Updated upstream
-=======
     page_config = {
         'title': 'Grafana Cloud',
         'your_version_label': 'Instance ID',
@@ -199,9 +178,8 @@ def index(req):
         'restart_step_label': 'Install',
         'panel_width': '35%'
     }
->>>>>>> Stashed changes
     return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
-        'page_config': grafana_cloud_page_config,
+        'page_config': page_config,
         'is_enabled': False,
         'instance_id': '',
         'api_token': '',

@@ -860,13 +860,10 @@ urlpatterns += [
         login_required(grafana_cloud.restart_dashboard), name='observability-grafana-cloud-restart-dashboard'),
     url(r'^zato/observability/grafana-cloud/test-connection$',
         login_required(grafana_cloud.test_connection), name='observability-grafana-cloud-test-connection'),
-<<<<<<< Updated upstream
-=======
     url(r'^zato/observability/grafana-cloud/save-config$',
         login_required(grafana_cloud.save_config), name='observability-grafana-cloud-save-config'),
     url(r'^zato/observability/grafana-cloud/download-logs$',
         login_required(grafana_cloud.download_logs), name='observability-grafana-cloud-download-logs'),
->>>>>>> Stashed changes
 ]
 
 # ################################################################################################################################
