@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}HTTP Basic Auth{% endblock %}
+{% block html_title %}Basic Auth{% endblock %}
 
 {% block "extra_css" %}
 
@@ -23,7 +23,7 @@
     {% comment %} Common JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} HTTP Basic Auth {% endcomment %}
+    {% comment %} Basic Auth {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/security/basic-auth.js"></script>
 
 
@@ -47,7 +47,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">HTTP Basic Auth</h2>
+<h2 class="zato">Basic Auth</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -61,7 +61,7 @@
     {% if cluster_id %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.security.basic_auth.create()">Create HTTP Basic Auth definition</a>
+            <a href="javascript:$.fn.zato.security.basic_auth.create()">Create Basic Auth definition</a>
         </div>
 
         <div id="markup">

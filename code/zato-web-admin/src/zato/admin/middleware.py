@@ -136,6 +136,10 @@ class ZatoMiddleware:
         self.process_request(req)
         response = self.get_response(req)
         response.headers['Server'] = 'Apache'
+        if req.user.is_authenticated:
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
         return response
 
     def process_request(self, req):
