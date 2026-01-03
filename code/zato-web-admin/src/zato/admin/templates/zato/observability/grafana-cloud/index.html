@@ -1,0 +1,84 @@
+{% extends "zato/settings-base.html" %}
+
+{% block page_title %}{{ page_config.title }}{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/grafana-cloud.css">
+{% endblock %}
+
+{% block extra_page_js %}
+<script type="text/javascript" src="/static/js/grafana-cloud.js" nonce="{{ CSP_NONCE }}"></script>
+{% endblock %}
+
+{% block section_title %}{{ page_config.version_section_title }}{% endblock %}
+{% block help_icon_id %}version-info-help{% endblock %}
+
+{% block content_rows %}
+<div class="info-container">
+    <div class="info-row">
+        <div class="info-label">Is enabled</div>
+        <label class="toggle-switch">
+            <input type="checkbox" id="is-enabled"{% if is_enabled %} checked{% endif %}>
+            <span class="toggle-slider"></span>
+        </label>
+    </div>
+    <div class="info-row">
+        <div class="info-label">{{ page_config.your_version_label }}</div>
+        <div class="info-value">
+            <input type="text" id="instance-id" value="{{ instance_id }}" placeholder="123456"{% if not is_enabled %} disabled{% endif %}>
+        </div>
+    </div>
+    <div class="info-row">
+        <div class="info-label">{{ page_config.latest_version_label }}</div>
+        <div class="info-value">
+            <input type="text" id="api-token" value="{{ api_token }}" placeholder="glc_eyJvIjoiMTYzMTU0OCIsIm4i..."{% if not is_enabled %} disabled{% endif %}>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block buttons %}
+<div class="button-container">
+    <div class="button-wrapper">
+        <img src="/static/gfx/spinner.svg" class="button-spinner">
+        <span class="status-message test-success">OK</span>
+        <button class="secondary-button" id="check-button"{% if not is_enabled %} disabled{% endif %}>
+            {{ page_config.check_button_label }}
+        </button>
+    </div>
+    <button class="action-button" id="update-button"{% if not is_enabled %} disabled{% endif %}>
+        {{ page_config.action_button_label }}
+    </button>
+</div>
+{% endblock %}
+
+{% block action_steps %}
+<div class="progress-item hidden" id="progress-test">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">
+            Test connection
+            <span class="copy-icon progress-error-copy hidden" data-copy="test-error" title="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </span>
+        </div>
+        <div class="progress-text" id="test-error">Waiting...</div>
+    </div>
+</div>
+<div class="progress-item hidden" id="progress-configure">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">
+            {{ page_config.step1_label }}
+            <span class="copy-icon progress-error-copy hidden" data-copy="configure-error" title="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </span>
+        </div>
+        <div class="progress-text" id="configure-error">Waiting...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block completion_badge %}
+<span class="info-message status-badge with-shine"></span>
+{% endblock %}

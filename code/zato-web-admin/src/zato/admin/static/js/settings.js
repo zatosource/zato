@@ -25,7 +25,15 @@ $.fn.zato.settings.handleCopyIcon = function(e) {
 
     const parentProgress = targetElement.closest('.progress-item');
     const fullError = parentProgress.data('full-error');
-    const text = fullError || targetElement.text();
+    
+    let text = fullError;
+    if (!text) {
+        if (targetElement.is('input')) {
+            text = targetElement.val();
+        } else {
+            text = targetElement.text();
+        }
+    }
 
     $.fn.zato.settings.copyToClipboard(text, e);
 };
@@ -51,6 +59,21 @@ $.fn.zato.settings.initToggleLabelClick = function(labelSelector, checkboxSelect
     $(labelSelector).on('click', function() {
         const checkbox = $(checkboxSelector);
         checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
+    });
+};
+
+$.fn.zato.settings.initIsEnabledToggle = function(toggleSelector, containerSelector) {
+    const toggle = $(toggleSelector);
+    const container = $(containerSelector);
+
+    function updateFieldsState(isEnabled) {
+        const fieldsToToggle = container.find('input:not(' + toggleSelector + '), select, button');
+        fieldsToToggle.prop('disabled', !isEnabled);
+    }
+
+    toggle.on('change', function() {
+        const isEnabled = $(this).is(':checked');
+        updateFieldsState(isEnabled);
     });
 };
 
