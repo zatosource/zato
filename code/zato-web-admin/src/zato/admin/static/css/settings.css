@@ -94,6 +94,17 @@
     background: var(--background-light);
 }
 
+.info-value input[type="text"]:disabled {
+    background: #f5f5f5;
+    border-color: #ccc;
+    color: #999;
+    cursor: not-allowed;
+}
+
+.info-value input[type="text"]:disabled::placeholder {
+    color: #ccc;
+}
+
 .info-badge {
     font-size: 12px;
     font-weight: 600;
@@ -226,6 +237,18 @@
     color: var(--primary-dark);
     box-shadow: none;
     text-shadow: none;
+}
+
+.secondary-button:disabled {
+    color: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
+.secondary-button:disabled:hover {
+    background: #fff;
+    color: #ccc;
+    border-color: #ccc;
 }
 
 .button-spinner {

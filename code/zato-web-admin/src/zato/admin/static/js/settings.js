@@ -62,6 +62,23 @@ $.fn.zato.settings.initToggleLabelClick = function(labelSelector, checkboxSelect
     });
 };
 
+$.fn.zato.settings.initIsEnabledToggle = function(toggleSelector, containerSelector) {
+    const toggle = $(toggleSelector);
+    const container = $(containerSelector);
+
+    function updateFieldsState(isEnabled) {
+        const fieldsToToggle = container.find('input:not(' + toggleSelector + '), select, button');
+        fieldsToToggle.prop('disabled', !isEnabled);
+    }
+
+    updateFieldsState(toggle.is(':checked'));
+
+    toggle.on('change', function() {
+        const isEnabled = $(this).is(':checked');
+        updateFieldsState(isEnabled);
+    });
+};
+
 $.fn.zato.settings.updateProgress = function(step, status, message, statusText) {
     const item = $('#progress-' + step);
     const icon = item.find('.progress-icon');

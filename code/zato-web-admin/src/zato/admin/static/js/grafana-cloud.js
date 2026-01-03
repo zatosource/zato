@@ -98,6 +98,7 @@ $.fn.zato.updates.init = function() {
     $.fn.zato.settings.initDriverTours(Object.values(tours));
 
     $.fn.zato.settings.initToggleLabelClick('.config-item:first .config-label', '#auto-restart');
+    $.fn.zato.settings.initIsEnabledToggle('#is-enabled', '.progress-panel');
 };
 
 $.fn.zato.updates.fetchLatestVersion = function(showUpdatesFound) {
