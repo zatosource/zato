@@ -16,8 +16,11 @@
 {% block content_rows %}
 <div class="info-container">
     <div class="info-row">
-        <div class="info-label">{{ page_config.up_to_date_label }}</div>
-        <span class="info-badge" id="connected-badge">Not connected</span>
+        <div class="info-label">Is enabled</div>
+        <label class="toggle-switch">
+            <input type="checkbox" id="is-enabled">
+            <span class="toggle-slider"></span>
+        </label>
     </div>
     <div class="info-row">
         <div class="info-label">{{ page_config.your_version_label }}</div>
