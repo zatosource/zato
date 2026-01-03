@@ -848,8 +848,6 @@ urlpatterns += [
 
     url(r'^zato/observability/grafana-cloud/$',
         login_required(grafana_cloud.index), name='observability-grafana-cloud'),
-    url(r'^zato/observability/grafana-cloud/save-configuration$',
-        login_required(grafana_cloud.save_configuration), name='observability-grafana-cloud-save-configuration'),
     url(r'^zato/observability/grafana-cloud/restart-scheduler$',
         login_required(grafana_cloud.restart_scheduler), name='observability-grafana-cloud-restart-scheduler'),
     url(r'^zato/observability/grafana-cloud/restart-server$',

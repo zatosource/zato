@@ -134,8 +134,6 @@ def start_process(
     ) -> 'int':
     """ Starts a new process from a given Python path, either in background or foreground (run_in_fg).
     """
-    stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
-
     stdout_redirect = ''
     stderr_redirect = ''
 
@@ -148,13 +146,14 @@ def start_process(
     else:
         if not run_in_fg:
             stdout_redirect = '1> /dev/null'
-        stderr_redirect = '2> {}'.format(stderr_path)
+
+        if stderr_path or not run_in_fg:
+            stderr_path = stderr_path or mkstemp('-zato-start-{}.txt'.format(component_name.replace(' ','')))[1]
+            stderr_redirect = '2> {}'.format(stderr_path)
 
     program = '{} {} {} {}'.format(executable, extra_cli_options, stdout_redirect, stderr_redirect)
 
     try:
-        _stderr = _StdErr(stderr_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
-
         run_kwargs:'strdict' = {
             async_keyword: False if run_in_fg else True,
         }
@@ -162,23 +161,24 @@ def start_process(
         # Do not send input if it does not really exist because it prevents pdb from attaching to a service's stdin
         if stdin_data:
             run_kwargs['input'] = stdin_data
-        
+
         if env_vars:
             run_kwargs['env'] = env_vars
 
         p = sarge_run(program, **run_kwargs)
 
-        # Wait a moment for any potential errors
-        _err = _stderr.wait_for_error()
-        if _err:
-            should_be_ignored = False
-            for item in stderr_ignore:
-                if item in _err:
-                    should_be_ignored = True
-                    break
-            if not should_be_ignored:
-                logger.warning('Stderr received from program `%s` e:`%s`, kw:`%s`', program, _err, run_kwargs)
-                sys.exit(failed_to_start_err)
+        if stderr_path:
+            _stderr = _StdErr(stderr_path, stderr_sleep_fg if run_in_fg else stderr_sleep_bg)
+            _err = _stderr.wait_for_error()
+            if _err:
+                should_be_ignored = False
+                for item in stderr_ignore:
+                    if item in _err:
+                        should_be_ignored = True
+                        break
+                if not should_be_ignored:
+                    logger.warning('Stderr received from program `%s` e:`%s`, kw:`%s`', program, _err, run_kwargs)
+                    sys.exit(failed_to_start_err)
 
         # Update the exit code ..
         exit_code = p.returncode
