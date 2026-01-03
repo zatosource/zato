@@ -70,12 +70,12 @@ grafana_cloud_page_config['api_prefix'] = '/zato/observability/grafana-cloud/'
 grafana_cloud_page_config['step1_label'] = 'Configure'
 grafana_cloud_page_config['step2_label'] = 'Connect'
 grafana_cloud_page_config['check_button_label'] = 'Test connection'
-grafana_cloud_page_config['action_button_label'] = 'Save and connect'
+grafana_cloud_page_config['action_button_label'] = 'Save'
 grafana_cloud_page_config['version_section_title'] = 'Grafana Cloud'
 grafana_cloud_page_config['config_section_title'] = 'Config'
 grafana_cloud_page_config['logs_section_title'] = 'Connection log'
 grafana_cloud_page_config['up_to_date_label'] = 'Connected?'
-grafana_cloud_page_config['your_version_label'] = 'Endpoint URL'
+grafana_cloud_page_config['your_version_label'] = 'Instance ID'
 grafana_cloud_page_config['latest_version_label'] = 'API Token'
 grafana_cloud_page_config['auto_update_label'] = 'Auto-connect'
 grafana_cloud_page_config['frequency_label'] = 'How often?'
@@ -104,9 +104,9 @@ content_rows.append(row)
 row = ContentRow(
     label=grafana_cloud_page_config['your_version_label'],
     widget='input',
-    value_key='endpoint_url',
+    value_key='instance_id',
     is_copyable=True,
-    copy_id='endpoint-url'
+    copy_id='instance-id'
 )
 content_rows.append(row)
 
