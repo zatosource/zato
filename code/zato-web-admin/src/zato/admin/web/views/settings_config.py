@@ -6,7 +6,7 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from zato.admin.web.views.settings.models import ContentRow
+from zato.admin.web.views.models import ContentRow
 
 updates_page_config = {}
 updates_page_config['title'] = 'Install updates'
