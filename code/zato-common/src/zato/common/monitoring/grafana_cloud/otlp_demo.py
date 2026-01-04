@@ -57,8 +57,11 @@ class OTLPDemo:
         set_logger_provider(log_provider)
 
         otlp_handler = LoggingHandler(level=logging.INFO, logger_provider=log_provider)
+
         stdout_handler = logging.StreamHandler()
         stdout_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s - %(message)s')
+        stdout_handler.setFormatter(formatter)
 
         self.logger = logging.getLogger('zato.demo')
         self.logger.setLevel(logging.DEBUG)
