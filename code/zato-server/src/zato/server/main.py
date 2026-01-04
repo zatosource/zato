@@ -139,7 +139,7 @@ resource = Resource.create({
 })
 
 log_provider = LoggerProvider(resource=resource)
-log_exporter = OTLPLogExporter(endpoint="http://localhost:4318/v1/logs")
+log_exporter = OTLPLogExporter(endpoint='http://localhost:4318/v1/logs')
 log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
 set_logger_provider(log_provider)
 
