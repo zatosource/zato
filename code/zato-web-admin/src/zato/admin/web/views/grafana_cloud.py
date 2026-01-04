@@ -185,29 +185,147 @@ def test_connection(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def save_config(req):
+def toggle_enabled(req):
+    import redis
+    from traceback import format_exc
     from zato.common.json_internal import loads
-    body = req.body.decode('utf-8')
-    config_data = loads(body)
-    logger.info('save_config: config_data={}'.format(config_data))
+
     response_data = {}
-    response_data['success'] = True
-    response_data['message'] = 'Configuration saved'
-    return json_response(response_data)
+    response_data['success'] = False
+
+    try:
+        body = req.body.decode('utf-8')
+        config_data = loads(body)
+
+        is_enabled = config_data.get('is_enabled', False)
+        enabled_value = 'true' if is_enabled else 'false'
+
+        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        _ = r.set('zato:grafana_cloud:is_enabled', enabled_value)
+
+        response_data['success'] = True
+        response_data['message'] = 'Configuration updated'
+        logger.info('toggle_enabled: is_enabled set to {}'.format(enabled_value))
+
+        return json_response(response_data)
+
+    except Exception as e:
+        logger.error('toggle_enabled exception: {}'.format(format_exc()))
+        error_message = str(e)
+        response_data['error'] = error_message
+        return json_response(response_data, success=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def save_config(req):
+    from datetime import datetime, timezone
+    from traceback import format_exc
+    from zato.common.json_internal import loads
+    from zato.common.monitoring.grafana_cloud.auto_setup import AutoSetup
+
+    response_data = {}
+    response_data['success'] = False
+
+    try:
+        body = req.body.decode('utf-8')
+        config_data = loads(body)
+        logger.info('save_config: config_data={}'.format(config_data))
+
+        instance_id = config_data.get('instance_id', '')
+        api_token = config_data.get('api_token', '')
+
+        if not instance_id or not api_token:
+            response_data['error'] = 'Instance ID and API Token are required'
+            return json_response(response_data, success=False)
+
+        setup = AutoSetup(main_token=api_token, instance_id=instance_id)
+
+        now = datetime.now(timezone.utc)
+        timestamp = now.strftime('%Y-%m-%d-%H-%M-%S')
+        policy_name = 'zato-otlp-{}'.format(timestamp)
+        token_name = 'zato-token-{}'.format(timestamp)
+
+        result = setup.setup_complete(policy_name=policy_name, token_name=token_name)
+
+        if result.error:
+            error_message = result.error
+            response_data['error'] = error_message
+            logger.error('save_config error: {}'.format(error_message))
+            if result.error_response:
+                logger.error('save_config error_response: {}'.format(result.error_response))
+            return json_response(response_data, success=False)
+
+        import redis
+        try:
+            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            _ = r.set('zato:grafana_cloud:instance_id', instance_id)
+            _ = r.set('zato:grafana_cloud:api_token', api_token)
+            _ = r.set('zato:grafana_cloud:runtime_token', result.token)
+            _ = r.set('zato:grafana_cloud:is_enabled', 'true')
+        except Exception as e:
+            logger.error('save_config redis error: {}'.format(format_exc()))
+
+        response_data['success'] = True
+        response_data['message'] = 'Configuration saved'
+        response_data['access_policy_id'] = result.access_policy_id
+        response_data['token'] = result.token
+        response_data['encoded_credentials'] = result.encoded_credentials
+
+        logger.info('save_config: setup complete, policy_id={}, token={}'.format(
+            result.access_policy_id, result.token))
+
+        return json_response(response_data)
+
+    except Exception as e:
+        logger.error('save_config exception: {}'.format(format_exc()))
+        error_message = str(e)
+        response_data['error'] = error_message
+        return json_response(response_data, success=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
 def index(req):
+    import redis
+    from traceback import format_exc
+
     grafana_cloud_page_config['step1_label'] = 'Configuring'
     grafana_cloud_page_config['restart_step_id'] = 'install'
     grafana_cloud_page_config['restart_step_label'] = 'Restarting'
+
+    instance_id = ''
+    api_token = ''
+    is_enabled = False
+
+    try:
+        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        logger.info('index: connecting to redis')
+        
+        instance_id = r.get('zato:grafana_cloud:instance_id') or ''
+        logger.info('index: instance_id from redis: {}'.format(instance_id))
+        
+        api_token = r.get('zato:grafana_cloud:api_token') or ''
+        logger.info('index: api_token from redis: {}'.format(api_token))
+        
+        is_enabled_value = r.get('zato:grafana_cloud:is_enabled') or 'false'
+        logger.info('index: is_enabled_value from redis: {}'.format(is_enabled_value))
+        
+        is_enabled = is_enabled_value == 'true'
+        logger.info('index: is_enabled boolean: {}'.format(is_enabled))
+    except Exception:
+        logger.error('index: redis error: {}'.format(format_exc()))
+
+    logger.info('index: returning template with is_enabled={}, instance_id={}, api_token={}'.format(
+        is_enabled, instance_id, api_token))
+
     return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
         'page_config': grafana_cloud_page_config,
-        'is_enabled': False,
-        'instance_id': '',
-        'api_token': '',
+        'is_enabled': is_enabled,
+        'instance_id': instance_id,
+        'api_token': api_token,
         'audit_log': []
     })
 
