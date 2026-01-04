@@ -134,6 +134,22 @@ class AutoSetup:
 
 # ################################################################################################################################
 
+    def test_connection(self) -> 'strdict':
+        from logging import getLogger
+        from traceback import format_exc
+
+        logger = getLogger(__name__)
+        url = f'{self.base_url}/instances/{self.instance_id}'
+
+        try:
+            response = self._make_request('GET', url)
+            return {'success': True, 'message': 'Connection successful', 'response': response}
+        except Exception:
+            logger.error('test_connection error: {}'.format(format_exc()))
+            return {'success': False, 'error': 'Connection failed'}
+
+# ################################################################################################################################
+
     def setup_complete(self, policy_name:'str', token_name:'str') -> 'SetupResult':
 
         scopes = ['metrics:write', 'logs:write', 'traces:write']
