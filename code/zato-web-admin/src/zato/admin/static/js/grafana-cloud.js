@@ -155,7 +155,7 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
         }),
         contentType: 'application/json',
         success: function(response) {
-            $.fn.zato.settings.updateProgress('configure', 'completed', 'Configure complete');
+            $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration complete');
 
             $('#progress-install').removeClass('hidden');
             $.fn.zato.updates.runRestartSteps(button);
@@ -184,10 +184,10 @@ $.fn.zato.updates.runRestartSteps = function(button) {
     config.progressKey = 'install';
     config.button = button;
     config.pollUrl = '/zato/observability/grafana-cloud/';
-    config.completedText = 'Installation complete';
+    config.completedText = 'All components restarted';
     config.completionBadgeSelector = '#progress-install .info-message';
     config.baseUrl = '/zato/updates';
-    config.completionBadgeText = '⭐ Configuration saved';
+    config.completionBadgeText = '⭐ Grafana Cloud configured successfully';
 
     $.fn.zato.settings.executeSteps(config);
 };

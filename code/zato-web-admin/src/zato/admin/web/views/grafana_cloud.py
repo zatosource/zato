@@ -171,11 +171,11 @@ def index(req):
         'latest_version_label': 'API Token',
         'check_button_label': 'Test connection',
         'action_button_label': 'Save',
-        'step1_label': 'Configure',
+        'step1_label': 'Configuring',
         'version_section_title': 'Grafana Cloud',
         'show_restart_steps': True,
         'restart_step_id': 'install',
-        'restart_step_label': 'Install',
+        'restart_step_label': 'Restarting',
         'panel_width': '35%'
     }
     return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
