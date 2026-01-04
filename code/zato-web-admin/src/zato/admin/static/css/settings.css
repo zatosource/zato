@@ -84,7 +84,7 @@
     color: var(--primary-dark);
     background: var(--white);
     border: 2px solid var(--primary-dark);
-    padding: 4px 8px;
+    padding: 0px 3px;
     box-sizing: border-box;
     width: 100%;
 }

@@ -3,7 +3,48 @@ $.fn.zato.grafanaCloud = {};
 $.fn.zato.grafanaCloud.init = function() {
     $('#check-button').on('click', $.fn.zato.grafanaCloud.handleTestConnection);
     $('#update-button').on('click', $.fn.zato.grafanaCloud.handleSaveClick);
-    $.fn.zato.settings.initIsEnabledToggle('#is-enabled', '.progress-panel');
+    
+    const toggle = $('#is-enabled');
+    const container = $('.progress-panel');
+    
+    console.log('grafanaCloud.init: toggle checked:', toggle.is(':checked'));
+    console.log('grafanaCloud.init: instance_id value:', $('#instance-id').val());
+    console.log('grafanaCloud.init: api_token value:', $('#api-token').val());
+    
+    function updateFieldsState(isEnabled) {
+        console.log('updateFieldsState: isEnabled =', isEnabled);
+        const fieldsToToggle = container.find('input:not(#is-enabled), select, button');
+        console.log('updateFieldsState: found', fieldsToToggle.length, 'fields to toggle');
+        fieldsToToggle.prop('disabled', !isEnabled);
+    }
+    
+    const initialEnabled = toggle.is(':checked');
+    console.log('grafanaCloud.init: setting initial state, isEnabled =', initialEnabled);
+    updateFieldsState(initialEnabled);
+    
+    toggle.on('change', function() {
+        const isEnabled = $(this).is(':checked');
+        console.log('toggle.onChange: isEnabled =', isEnabled);
+        updateFieldsState(isEnabled);
+        
+        $.ajax({
+            url: '/zato/observability/grafana-cloud/toggle-enabled',
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $.cookie('csrftoken')
+            },
+            data: JSON.stringify({
+                is_enabled: isEnabled
+            }),
+            contentType: 'application/json',
+            success: function() {
+                console.log('toggle-enabled: success');
+            },
+            error: function(xhr) {
+                console.error('toggle-enabled: error', xhr);
+            }
+        });
+    });
 
     const tours = {};
 
