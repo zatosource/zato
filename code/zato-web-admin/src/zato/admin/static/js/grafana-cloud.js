@@ -6,21 +6,38 @@ $.fn.zato.grafanaCloud.init = function() {
     
     const toggle = $('#is-enabled');
     const container = $('.progress-panel');
+    const instanceIdInput = $('#instance-id');
+    const apiTokenInput = $('#api-token');
+    const saveButton = $('#update-button');
     
     console.log('grafanaCloud.init: toggle checked:', toggle.is(':checked'));
-    console.log('grafanaCloud.init: instance_id value:', $('#instance-id').val());
-    console.log('grafanaCloud.init: api_token value:', $('#api-token').val());
+    console.log('grafanaCloud.init: instance_id value:', instanceIdInput.val());
+    console.log('grafanaCloud.init: api_token value:', apiTokenInput.val());
+    
+    function updateSaveButtonState() {
+        const instanceId = instanceIdInput.val().trim();
+        const apiToken = apiTokenInput.val().trim();
+        const hasValues = instanceId.length > 0 && apiToken.length > 0;
+        saveButton.prop('disabled', !hasValues);
+        console.log('updateSaveButtonState: instanceId length =', instanceId.length, ', apiToken length =', apiToken.length, ', disabled =', !hasValues);
+    }
     
     function updateFieldsState(isEnabled) {
         console.log('updateFieldsState: isEnabled =', isEnabled);
         const fieldsToToggle = container.find('input:not(#is-enabled), select, button');
         console.log('updateFieldsState: found', fieldsToToggle.length, 'fields to toggle');
         fieldsToToggle.prop('disabled', !isEnabled);
+        if (isEnabled) {
+            updateSaveButtonState();
+        }
     }
     
     const initialEnabled = toggle.is(':checked');
     console.log('grafanaCloud.init: setting initial state, isEnabled =', initialEnabled);
     updateFieldsState(initialEnabled);
+    
+    instanceIdInput.on('input', updateSaveButtonState);
+    apiTokenInput.on('input', updateSaveButtonState);
     
     toggle.on('change', function() {
         const isEnabled = $(this).is(':checked');
@@ -177,6 +194,8 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
 $.fn.zato.grafanaCloud.handleSaveClick = function() {
     const button = $(this);
     button.prop('disabled', true);
+
+    $('#progress-test').addClass('hidden').removeClass('error-state');
 
     $('#progress-configure').removeClass('hidden error-state');
     $('#progress-install').addClass('hidden').removeClass('error-state');
