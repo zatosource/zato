@@ -160,7 +160,7 @@ def test_connection(req):
         api_token = config_data.get('api_token', '')
 
         if not instance_id or not api_token:
-            response_data['error'] = 'Instance ID and API Token are required'
+            response_data['error'] = 'Both instance ID and API token are required'
             return json_response(response_data, success=False)
 
         setup = AutoSetup(main_token=api_token, instance_id=instance_id)
@@ -261,7 +261,6 @@ def save_config(req):
         try:
             r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
             _ = r.set('zato:grafana_cloud:instance_id', instance_id)
-            _ = r.set('zato:grafana_cloud:api_token', api_token)
             _ = r.set('zato:grafana_cloud:runtime_token', result.token)
             _ = r.set('zato:grafana_cloud:is_enabled', 'true')
         except Exception as e:
@@ -303,16 +302,13 @@ def index(req):
     try:
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
         logger.info('index: connecting to redis')
-        
+
         instance_id = r.get('zato:grafana_cloud:instance_id') or ''
         logger.info('index: instance_id from redis: {}'.format(instance_id))
-        
-        api_token = r.get('zato:grafana_cloud:api_token') or ''
-        logger.info('index: api_token from redis: {}'.format(api_token))
-        
+
         is_enabled_value = r.get('zato:grafana_cloud:is_enabled') or 'false'
         logger.info('index: is_enabled_value from redis: {}'.format(is_enabled_value))
-        
+
         is_enabled = is_enabled_value == 'true'
         logger.info('index: is_enabled boolean: {}'.format(is_enabled))
     except Exception:
