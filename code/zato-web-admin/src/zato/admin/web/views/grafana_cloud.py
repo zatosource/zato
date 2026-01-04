@@ -141,9 +141,13 @@ def restart_dashboard(req):
 
 @method_allowed('POST')
 def test_connection(req):
+
+    import time
     from traceback import format_exc
     from zato.common.json_internal import loads
     from zato.common.monitoring.grafana_cloud.auto_setup import AutoSetup
+
+    time.sleep(0.2)
 
     response_data = {}
     response_data['success'] = False
