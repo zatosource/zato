@@ -141,13 +141,30 @@ def restart_dashboard(req):
 
 @method_allowed('POST')
 def test_connection(req):
-    import time
+    from traceback import format_exc
+    from zato.common.json_internal import loads
+    from zato.common.monitoring.grafana_cloud.auto_setup import AutoSetup
+    
     try:
-        time.sleep(0.1)
-        return json_response({'success': True, 'message': 'Connection successful'})
-    except Exception as e:
-        logger.error('test_connection: exception: {}'.format(e))
-        return json_response({'success': False, 'error': str(e)}, success=False)
+        body = req.body.decode('utf-8')
+        config_data = loads(body)
+        
+        instance_id = config_data.get('instance_id', '')
+        api_token = config_data.get('api_token', '')
+        
+        if not instance_id or not api_token:
+            return json_response({'success': False, 'error': 'Instance ID and API Token are required'}, success=False)
+        
+        setup = AutoSetup(main_token=api_token, instance_id=instance_id)
+        result = setup.test_connection()
+        
+        if result['success']:
+            return json_response({'success': True, 'message': result['message']})
+        else:
+            return json_response({'success': False, 'error': result.get('error', 'Connection failed')}, success=False)
+    except Exception:
+        logger.error('test_connection: exception: {}'.format(format_exc()))
+        return json_response({'success': False, 'error': 'Connection test failed'}, success=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
