@@ -88,6 +88,8 @@ class AutoSetup:
             json=data
         )
 
+        response.raise_for_status()
+
         return response.json()
 
 # ################################################################################################################################
@@ -143,10 +145,30 @@ class AutoSetup:
 
         try:
             response = self._make_request('GET', url)
-            return {'success': True, 'message': 'Connection successful', 'response': response}
+            result = {}
+            result['success'] = True
+            result['message'] = 'Connection successful'
+            result['response'] = response
+            return result
+        except requests.exceptions.HTTPError as e:
+            logger.error('test_connection HTTP error: {}'.format(format_exc()))
+            result = {}
+            result['success'] = False
+            
+            try:
+                error_data = e.response.json()
+                error_message = error_data.get('message', str(error_data))
+            except Exception:
+                error_message = str(e.response.status_code)
+            
+            result['error'] = 'Response from Grafana Cloud: {}'.format(error_message)
+            return result
         except Exception:
             logger.error('test_connection error: {}'.format(format_exc()))
-            return {'success': False, 'error': 'Connection failed'}
+            result = {}
+            result['success'] = False
+            result['error'] = 'Connection failed'
+            return result
 
 # ################################################################################################################################
 

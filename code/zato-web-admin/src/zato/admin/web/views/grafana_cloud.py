@@ -153,18 +153,31 @@ def test_connection(req):
         api_token = config_data.get('api_token', '')
         
         if not instance_id or not api_token:
-            return json_response({'success': False, 'error': 'Instance ID and API Token are required'}, success=False)
+            response_data = {}
+            response_data['success'] = False
+            response_data['error'] = 'Instance ID and API Token are required'
+            return json_response(response_data, success=False)
         
         setup = AutoSetup(main_token=api_token, instance_id=instance_id)
         result = setup.test_connection()
         
         if result['success']:
-            return json_response({'success': True, 'message': result['message']})
+            response_data = {}
+            response_data['success'] = True
+            response_data['message'] = result['message']
+            return json_response(response_data)
         else:
-            return json_response({'success': False, 'error': result.get('error', 'Connection failed')}, success=False)
+            error_msg = result.get('error', 'Connection failed')
+            response_data = {}
+            response_data['success'] = False
+            response_data['error'] = error_msg
+            return json_response(response_data, success=False)
     except Exception:
         logger.error('test_connection: exception: {}'.format(format_exc()))
-        return json_response({'success': False, 'error': 'Connection test failed'}, success=False)
+        response_data = {}
+        response_data['success'] = False
+        response_data['error'] = 'Connection test failed'
+        return json_response(response_data, success=False)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -175,28 +188,21 @@ def save_config(req):
     body = req.body.decode('utf-8')
     config_data = loads(body)
     logger.info('save_config: config_data={}'.format(config_data))
-    return json_response({'success': True, 'message': 'Configuration saved'})
+    response_data = {}
+    response_data['success'] = True
+    response_data['message'] = 'Configuration saved'
+    return json_response(response_data)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
 def index(req):
-    page_config = {
-        'title': 'Grafana Cloud',
-        'your_version_label': 'Instance ID',
-        'latest_version_label': 'API Token',
-        'check_button_label': 'Test connection',
-        'action_button_label': 'Save',
-        'step1_label': 'Configuring',
-        'version_section_title': 'Grafana Cloud',
-        'show_restart_steps': True,
-        'restart_step_id': 'install',
-        'restart_step_label': 'Restarting',
-        'panel_width': '35%'
-    }
+    grafana_cloud_page_config['step1_label'] = 'Configuring'
+    grafana_cloud_page_config['restart_step_id'] = 'install'
+    grafana_cloud_page_config['restart_step_label'] = 'Restarting'
     return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
-        'page_config': page_config,
+        'page_config': grafana_cloud_page_config,
         'is_enabled': False,
         'instance_id': '',
         'api_token': '',
