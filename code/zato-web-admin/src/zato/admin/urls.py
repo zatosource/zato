@@ -850,6 +850,8 @@ urlpatterns += [
         login_required(grafana_cloud.index), name='observability-grafana-cloud'),
     url(r'^zato/observability/grafana-cloud/test-connection$',
         login_required(grafana_cloud.test_connection), name='observability-grafana-cloud-test-connection'),
+    url(r'^zato/observability/grafana-cloud/toggle-enabled$',
+        login_required(grafana_cloud.toggle_enabled), name='observability-grafana-cloud-toggle-enabled'),
     url(r'^zato/observability/grafana-cloud/save-config$',
         login_required(grafana_cloud.save_config), name='observability-grafana-cloud-save-config'),
 ]
