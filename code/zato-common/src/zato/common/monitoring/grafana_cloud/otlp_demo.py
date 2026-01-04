@@ -9,12 +9,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import socket
 
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -25,9 +28,10 @@ from opentelemetry.trace import SpanKind
 
 class OTLPDemo:
 
-    def __init__(self, traces_endpoint='http://localhost:4318/v1/traces', logs_endpoint='http://localhost:4318/v1/logs'):
+    def __init__(self, traces_endpoint='http://localhost:4318/v1/traces', logs_endpoint='http://localhost:4318/v1/logs', metrics_endpoint='http://localhost:4318/v1/metrics'):
         self.traces_endpoint = traces_endpoint
         self.logs_endpoint = logs_endpoint
+        self.metrics_endpoint = metrics_endpoint
 
 # ################################################################################################################################
 
@@ -68,6 +72,13 @@ class OTLPDemo:
         self.logger.addHandler(otlp_handler)
         self.logger.addHandler(stdout_handler)
 
+        metric_reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=self.metrics_endpoint))
+        metric_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+        metrics.set_meter_provider(metric_provider)
+
+        self.meter = metrics.get_meter('zato.demo')
+        self.event_counter = self.meter.create_counter('user_events', description='User events counter')
+
 # ################################################################################################################################
 
     def run(self):
@@ -79,9 +90,26 @@ class OTLPDemo:
 
             self.logger.info('Inside demo-process span')
 
+            span.add_event('user_login', {'user.email': 'user@example.com', 'event.type': 'login'})
+            self.event_counter.add(1, {'user.email': 'user@example.com', 'event.type': 'login'})
+            event_logger = self.logger.getChild('events')
+            event_logger.info('user_login', extra={'user.email': 'user@example.com', 'event.type': 'login'})
+
+            span.add_event('session_created', {'user.email': 'user@example.com', 'event.type': 'session', 'session.id': 'abc123'})
+            self.event_counter.add(1, {'user.email': 'user@example.com', 'event.type': 'session'})
+            event_logger.info('session_created', extra={'user.email': 'user@example.com', 'event.type': 'session', 'session.id': 'abc123'})
+
             with self.tracer.start_as_current_span('demo-child-operation', kind=SpanKind.INTERNAL) as child_span:
                 child_span.set_attribute('operation.type', 'child')
                 self.logger.info('Inside child operation')
+
+            span.add_event('user_action', {'user.email': 'user2@example.net', 'event.type': 'action', 'action.name': 'update_profile'})
+            self.event_counter.add(1, {'user.email': 'user2@example.net', 'event.type': 'action'})
+            event_logger.info('user_action', extra={'user.email': 'user2@example.net', 'event.type': 'action', 'action.name': 'update_profile'})
+
+            span.add_event('user_logout', {'user.email': 'user2@example.net', 'event.type': 'logout'})
+            self.event_counter.add(1, {'user.email': 'user2@example.net', 'event.type': 'logout'})
+            event_logger.info('user_logout', extra={'user.email': 'user2@example.net', 'event.type': 'logout'})
 
             self.logger.info('Child operation completed')
 
