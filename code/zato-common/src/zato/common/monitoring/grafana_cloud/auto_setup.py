@@ -141,7 +141,7 @@ class AutoSetup:
         from traceback import format_exc
 
         logger = getLogger(__name__)
-        url = f'{self.base_url}/instances/{self.instance_id}'
+        url = f'{self.base_url}/accesspolicies?region={self.region}'
 
         try:
             response = self._make_request('GET', url)
