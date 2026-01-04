@@ -144,39 +144,37 @@ def test_connection(req):
     from traceback import format_exc
     from zato.common.json_internal import loads
     from zato.common.monitoring.grafana_cloud.auto_setup import AutoSetup
-    
+
+    response_data = {}
+    response_data['success'] = False
+
     try:
         body = req.body.decode('utf-8')
         config_data = loads(body)
-        
+
         instance_id = config_data.get('instance_id', '')
         api_token = config_data.get('api_token', '')
-        
+
         if not instance_id or not api_token:
-            response_data = {}
-            response_data['success'] = False
             response_data['error'] = 'Instance ID and API Token are required'
             return json_response(response_data, success=False)
-        
+
         setup = AutoSetup(main_token=api_token, instance_id=instance_id)
         result = setup.test_connection()
-        
+
         if result['success']:
-            response_data = {}
             response_data['success'] = True
             response_data['message'] = result['message']
             return json_response(response_data)
         else:
-            error_msg = result.get('error', 'Connection failed')
-            response_data = {}
-            response_data['success'] = False
+            error_msg = result['error']
             response_data['error'] = error_msg
             return json_response(response_data, success=False)
-    except Exception:
-        logger.error('test_connection: exception: {}'.format(format_exc()))
-        response_data = {}
-        response_data['success'] = False
-        response_data['error'] = 'Connection test failed'
+
+    except Exception as e:
+        logger.error('test_connection exception: {}'.format(format_exc()))
+        error_message = str(e)
+        response_data['error'] = error_message
         return json_response(response_data, success=False)
 
 # ################################################################################################################################
