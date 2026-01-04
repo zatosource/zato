@@ -56,10 +56,14 @@ class OTLPDemo:
         log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
         set_logger_provider(log_provider)
 
-        handler = LoggingHandler(level=logging.INFO, logger_provider=log_provider)
+        otlp_handler = LoggingHandler(level=logging.INFO, logger_provider=log_provider)
+        stdout_handler = logging.StreamHandler()
+        stdout_handler.setLevel(logging.DEBUG)
+
         self.logger = logging.getLogger('zato.demo')
-        self.logger.setLevel(logging.INFO)
-        self.logger.addHandler(handler)
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(otlp_handler)
+        self.logger.addHandler(stdout_handler)
 
 # ################################################################################################################################
 
