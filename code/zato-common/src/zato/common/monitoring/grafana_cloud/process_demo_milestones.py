@@ -55,7 +55,7 @@ def push_milestone(process_id, milestone_name):
     conn.close()
 
 if __name__ == '__main__':
-    process_id = 'flight_lo123'
+    process_id = 'flight_lo456'
 
     push_milestone(process_id, 'checkin')
     time.sleep(1)
