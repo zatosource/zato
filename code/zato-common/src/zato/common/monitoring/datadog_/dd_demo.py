@@ -37,7 +37,7 @@ class DatadogDemo:
         self.logger.info('Starting Datadog demo')
 
         parent_span = tracer.trace('My Process', service='My Process', resource='My Process')
-        parent_span.set_tag('Process name', 'My process')
+        parent_span.set_tag('process', 'My process')
         ctx = tracer.current_trace_context()
         parent_span.finish()
 
