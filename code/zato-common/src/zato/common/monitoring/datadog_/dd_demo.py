@@ -44,25 +44,28 @@ class DatadogDemo:
     def run(self):
         self.logger.info('Starting Datadog demo')
 
-        parent_span = tracer.trace(name='my.name.1a', service='channel.1', resource='My Process')
-        parent_span.set_tag('process', 'My process')
+        step1 = tracer.trace(name='', service='channel.1', resource='Step 1')
+        step1.set_tag('process', 'My process')
+        step1.set_tag('cid', '123a')
 
         ctx = tracer.current_trace_context()
-        parent_span.finish()
-
-        tracer.context_provider.activate(ctx)
-
-        step1 = tracer.trace('Step 1', service='core.1', resource='Step 1')
-        step1.set_tag('process', 'My process')
-        step1.set_tag('user.email', 'user@example.com')
         step1.finish()
 
         tracer.context_provider.activate(ctx)
 
-        step2 = tracer.trace('Step 2', service='adapter.1', resource='Step 2')
+        step2 = tracer.trace(name='', service='core.1', resource='Step 2')
         step2.set_tag('process', 'My process')
-        step2.set_tag('user.email', 'user2@example.net')
+        step2.set_tag('cid', '123a')
+        step2.set_tag('user.email', 'user@example.com')
         step2.finish()
+
+        tracer.context_provider.activate(ctx)
+
+        step3 = tracer.trace(name='', service='adapter.1', resource='Step 3')
+        step3.set_tag('process', 'My process')
+        step3.set_tag('cid', '123a')
+        step3.set_tag('user.email', 'user2@example.net')
+        step3.finish()
 
         self.logger.info('Datadog demo completed')
 
