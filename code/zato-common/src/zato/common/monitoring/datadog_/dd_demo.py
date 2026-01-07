@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import socket
 
-from ddtrace import tracer
+from ddtrace.trace import tracer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,42 +36,26 @@ class DatadogDemo:
     def run(self):
         self.logger.info('Starting Datadog demo')
 
-        with tracer.trace('demo-process', service='zato-dd-demo', resource='demo-process') as span:
-            span.set_tag('demo.key', 'demo-value')
-            span.set_tag('demo.step', 'start')
-            span.set_tag('service.instance.id', 'demo-instance')
-            span.set_tag('service.namespace', 'demo')
-            span.set_tag('deployment.environment', 'dev')
-            span.set_tag('host.id', self.host_name)
-            span.set_tag('host.name', self.host_name)
+        parent_span = tracer.trace('My Process', service='My Process', resource='My Process')
+        parent_span.set_tag('Process name', 'My process')
+        ctx = tracer.current_trace_context()
+        parent_span.finish()
 
-            self.logger.info('Inside demo-process span')
+        self.logger.info('Parent span finished, ctx=%s', ctx)
 
-            span.set_tag('user.email', 'user@example.com')
-            span.set_tag('event.type', 'login')
-            span.set_tag('event.name', 'user_login')
-            self.logger.info('user_login event')
+        tracer.context_provider.activate(ctx)
 
-            span.set_tag('session.id', 'abc123')
-            span.set_tag('event.name', 'session_created')
-            self.logger.info('session_created event')
+        step1 = tracer.trace('Step 1', service='zato-dd-demo', resource='Step 1')
+        step1.set_tag('user.email', 'user@example.com')
+        self.logger.info('Step 1')
+        step1.finish()
 
-            with tracer.trace('demo-child-operation', service='zato-dd-demo', resource='demo-child-operation') as child_span:
-                child_span.set_tag('operation.type', 'child')
-                self.logger.info('Inside child operation')
+        tracer.context_provider.activate(ctx)
 
-            span.set_tag('user.email', 'user2@example.net')
-            span.set_tag('event.type', 'action')
-            span.set_tag('action.name', 'update_profile')
-            span.set_tag('event.name', 'user_action')
-            self.logger.info('user_action event')
-
-            span.set_tag('user.email', 'user2@example.net')
-            span.set_tag('event.type', 'logout')
-            span.set_tag('event.name', 'user_logout')
-            self.logger.info('user_logout event')
-
-            self.logger.info('Child operation completed')
+        step2 = tracer.trace('Step 2', service='zato-dd-demo', resource='Step 2')
+        step2.set_tag('user.email', 'user2@example.net')
+        self.logger.info('Step 2')
+        step2.finish()
 
         self.logger.info('Datadog demo completed')
 
