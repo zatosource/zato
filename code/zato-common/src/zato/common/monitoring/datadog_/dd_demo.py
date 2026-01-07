@@ -9,7 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import socket
 
+from ddtrace import patch
 from ddtrace.trace import tracer
+
+patch(gevent=True)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,12 +26,12 @@ class DatadogDemo:
 
     def setup(self):
         stdout_handler = logging.StreamHandler()
-        stdout_handler.setLevel(logging.DEBUG)
+        stdout_handler.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s - %(message)s')
         stdout_handler.setFormatter(formatter)
 
         self.logger = logging.getLogger('zato.demo')
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         self.logger.addHandler(stdout_handler)
 
 # ################################################################################################################################
@@ -38,6 +41,7 @@ class DatadogDemo:
 
         parent_span = tracer.trace('My Process', service='My Process', resource='My Process')
         parent_span.set_tag('process', 'My process')
+
         ctx = tracer.current_trace_context()
         parent_span.finish()
 
@@ -46,6 +50,7 @@ class DatadogDemo:
         tracer.context_provider.activate(ctx)
 
         step1 = tracer.trace('Step 1', service='zato-dd-demo', resource='Step 1')
+        step1.set_tag('process', 'My process')
         step1.set_tag('user.email', 'user@example.com')
         self.logger.info('Step 1')
         step1.finish()
@@ -53,6 +58,7 @@ class DatadogDemo:
         tracer.context_provider.activate(ctx)
 
         step2 = tracer.trace('Step 2', service='zato-dd-demo', resource='Step 2')
+        step2.set_tag('process', 'My process')
         step2.set_tag('user.email', 'user2@example.net')
         self.logger.info('Step 2')
         step2.finish()
