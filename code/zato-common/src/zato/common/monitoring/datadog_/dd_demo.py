@@ -44,28 +44,24 @@ class DatadogDemo:
     def run(self):
         self.logger.info('Starting Datadog demo')
 
-        parent_span = tracer.trace('My Process', service='My Process', resource='My Process')
+        parent_span = tracer.trace(name='my.name.1a', service='channel.1', resource='My Process')
         parent_span.set_tag('process', 'My process')
 
         ctx = tracer.current_trace_context()
         parent_span.finish()
 
-        self.logger.info('Parent span finished, ctx=%s', ctx)
-
         tracer.context_provider.activate(ctx)
 
-        step1 = tracer.trace('Step 1', service='zato-dd-demo', resource='Step 1')
+        step1 = tracer.trace('Step 1', service='core.1', resource='Step 1')
         step1.set_tag('process', 'My process')
         step1.set_tag('user.email', 'user@example.com')
-        self.logger.info('Step 1')
         step1.finish()
 
         tracer.context_provider.activate(ctx)
 
-        step2 = tracer.trace('Step 2', service='zato-dd-demo', resource='Step 2')
+        step2 = tracer.trace('Step 2', service='adapter.1', resource='Step 2')
         step2.set_tag('process', 'My process')
         step2.set_tag('user.email', 'user2@example.net')
-        self.logger.info('Step 2')
         step2.finish()
 
         self.logger.info('Datadog demo completed')
