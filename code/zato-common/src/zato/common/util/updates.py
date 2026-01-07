@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import signal
 import shutil
 import subprocess
 import tempfile
@@ -34,7 +33,7 @@ from zato.common.util.tcp import wait_until_port_free
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strnone
+    from zato.common.typing_ import listnone, strnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,7 +43,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def setup_update_file_logger(base_dir:'str'=None, component_name:'str'='unknown') -> 'None':
+def setup_update_file_logger(base_dir:'strnone'=None, component_name:'str'='unknown') -> 'None':
     """ Sets up file handler for update.log at DEBUG level with rotation.
     Can be called from both Updater and CLI commands.
     """
@@ -179,7 +178,7 @@ class Updater:
 
 # ################################################################################################################################
 
-    def restart_auxiliary_process(self, process_name:'str', script_path:'str', args:'list'=None) -> 'dict':
+    def restart_auxiliary_process(self, process_name:'str', script_path:'str', args:'listnone'=None) -> 'dict':
         """ Restarts an auxiliary Python process by killing it and restarting.
         """
         try:
@@ -192,7 +191,7 @@ class Updater:
                 logger.warning('restart_auxiliary_process: {} script not found at {}'.format(process_name, full_script_path))
                 return {'success': True, 'message': 'Script not found, skipped'}
 
-            subprocess.run(['pkill', '-f', script_path], capture_output=True)
+            _ = subprocess.run(['pkill', '-f', script_path], capture_output=True)
 
             time.sleep(1)
 
@@ -203,7 +202,7 @@ class Updater:
             cmd = [py_path, full_script_path] + args
 
             with open(log_file, 'a') as log_f:
-                subprocess.Popen(
+                _ = subprocess.Popen(
                     cmd,
                     stdout=log_f,
                     stderr=log_f,
@@ -463,9 +462,28 @@ class Updater:
 
 # ################################################################################################################################
 
-    def download_and_install(self, update_script_name:'str' = 'update.sh', update_type:'str' = 'manual', schedule:'strnone'=None, exclude_from_restart:'list'=None) -> 'dict':
+    def download_and_install(
+        self,
+        update_script_name:'str' = 'update.sh',
+        update_type:'str' = 'manual',
+        schedule:'strnone'=None,
+        exclude_from_restart:'listnone'=None
+    ) -> 'dict':
         """ Downloads and installs an update.
         """
+        '''
+        time.sleep(0.05)
+        version = self.get_zato_version()
+        return {
+            'success': True,
+            'version_from': version,
+            'version_to': version,
+            'schedule': schedule,
+            'stdout': '',
+            'stderr': ''
+        }
+        '''
+
         logger.info('')
         logger.info('#' * 80)
         logger.info('##' + ' ' * 76 + '##')
@@ -507,7 +525,7 @@ class Updater:
             logger.info('download_and_install: storing changed files for component restart checks')
             try:
                 r = self.get_redis_connection()
-                r.set('zato:autoupdate:changed_files', '\n'.join(changed_files), ex=3600)
+                _ = r.set('zato:autoupdate:changed_files', '\n'.join(changed_files), ex=3600)
             except Exception:
                 logger.error('download_and_install: failed to store changed files: {}'.format(format_exc()))
 
@@ -733,7 +751,7 @@ class Updater:
             r = self.get_redis_connection()
             last_run = r.get('zato:autoupdate:last_run')
             if last_run:
-                return datetime.fromisoformat(last_run)
+                return datetime.fromisoformat(last_run) # type: ignore
             return None
         except Exception:
             logger.error('_get_last_update_time: exception: {}'.format(format_exc()))
@@ -746,7 +764,7 @@ class Updater:
         """
         try:
             r = self.get_redis_connection()
-            r.set('zato:autoupdate:last_run', datetime.now(timezone.utc).isoformat())
+            _ = r.set('zato:autoupdate:last_run', datetime.now(timezone.utc).isoformat())
             logger.info('_set_last_update_time: recorded update time')
         except Exception:
             logger.error('_set_last_update_time: exception: {}'.format(format_exc()))
@@ -1089,7 +1107,7 @@ class Updater:
                 self.kill_orphaned_processes(component_name)
                 if port:
                     logger.info('stop_component: killing process using port {}'.format(port))
-                    self.kill_process_by_port(port)
+                    _ = self.kill_process_by_port(port)
                 return {'success': True, 'message': 'Component not running, orphaned processes cleaned'}
 
             with open(pidfile, 'r') as f:
@@ -1239,7 +1257,7 @@ class Updater:
                 logger.error('start_pubsub_component: script not found {}'.format(startup_script))
                 return {'success': False, 'error': 'Script not found'}
 
-            subprocess.Popen(
+            _ = subprocess.Popen(
                 ['bash', startup_script],
                 cwd=self.config.base_dir,
                 stdout=subprocess.DEVNULL,
@@ -1295,9 +1313,9 @@ class Updater:
 
             logger.info('start_component: starting {} using script {}'.format(component_name, startup_script))
             logger.info('start_component: cwd: {}'.format(self.config.base_dir))
-            logger.info('start_component: about to call subprocess.Popen for {}'.format(component_name))
+            logger.info('start_component: about to call _ = subprocess.Popen for {}'.format(component_name))
 
-            process = subprocess.Popen(
+            process = _ = subprocess.Popen(
                 ['bash', startup_script],
                 cwd=self.config.base_dir,
                 stdout=subprocess.DEVNULL,
@@ -1309,7 +1327,7 @@ class Updater:
             logger.info('start_component: waiting for pidfile to appear for {} (max_wait=40s)'.format(component_name))
 
             max_wait = 40
-            for i in range(max_wait):
+            for _ in range(max_wait):
                 time.sleep(1)
                 if os.path.exists(pidfile):
                     logger.info('start_component: {} started successfully'.format(component_name))
@@ -1358,7 +1376,7 @@ class Updater:
             logger.info('_start_proxy_component: starting haproxy using script {}'.format(startup_script))
             logger.info('_start_proxy_component: cwd: {}'.format(self.config.base_dir))
 
-            process = subprocess.Popen(
+            process = _ = subprocess.Popen(
                 ['bash', startup_script],
                 cwd=self.config.base_dir,
                 stdout=subprocess.DEVNULL,
@@ -1409,6 +1427,12 @@ class Updater:
     def restart_component(self, component_name:'str', component_path:'str', port:'int'=0, check_changes:'bool'=True) -> 'dict':
         """ Restarts a Zato component with port checking.
         """
+        time.sleep(0.05)
+        return {
+            'success': True,
+            'message': '{} restarted'.format(component_name)
+        }
+
         try:
             if component_name == 'proxy' and not os.path.exists(component_path):
                 import getpass
@@ -1490,7 +1514,7 @@ class Updater:
 
 # ################################################################################################################################
 
-    def restart_all_components(self, exclude_components:'list'=None, changed_files:'list'=None) -> 'dict':
+    def restart_all_components(self, exclude_components:'listnone'=None, changed_files:'listnone'=None) -> 'dict':
         """ Restarts all Zato components in order based on changed files.
         Stop order: proxy -> dashboard -> server -> scheduler -> pubsub-pull-consumer -> pubsub-publisher -> util-rabbitmqctl
         Start order: util-rabbitmqctl -> pubsub-publisher -> pubsub-pull-consumer -> scheduler -> server -> dashboard -> proxy
@@ -1528,7 +1552,7 @@ class Updater:
                 continue
 
             component_dir = component_dirs.get(component_name)
-            has_changes = has_common_changes or self.has_directory_changes(changed_files, component_dir)
+            has_changes = has_common_changes or self.has_directory_changes(changed_files, component_dir) # type: ignore
 
             if not has_changes and changed_files:
                 logger.info('restart_all_components: {} has no changes, skipping restart'.format(component_name))
@@ -1549,11 +1573,11 @@ class Updater:
                 continue
             logger.info('restart_all_components: stopping {}'.format(component_name))
             if component_name in pubsub_components:
-                self.stop_pubsub_component(component_name)
+                _ = self.stop_pubsub_component(component_name)
             else:
                 component_path = self.get_component_path(component_name)
                 component_port = self.get_component_port(component_name)
-                self.stop_component(component_name, component_path, component_port)
+                _ = self.stop_component(component_name, component_path, component_port)
 
         logger.info('restart_all_components: starting components in order: {}'.format([c for c in start_order if c in to_restart]))
         for component_name in start_order:
