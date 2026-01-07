@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, http_soap, log_streaming, main, scheduler, service, updates
+from zato.admin.web.views import account, grafana_cloud, http_soap, log_streaming, main, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -816,33 +816,66 @@ urlpatterns += [
     # In-app updates
 
     url(r'^zato/updates/$',
-        login_required(updates.index), name='in-app-updates'),
+        login_required(updates.updates_view.index), name='updates'),
     url(r'^zato/updates/check-availability$',
         login_required(updates.check_availability), name='updates-check-availability'),
     url(r'^zato/updates/check-latest-version$',
         login_required(updates.check_latest_version), name='updates-check-latest-version'),
     url(r'^zato/updates/get-latest-audit-entry$',
-        login_required(updates.get_latest_audit_entry), name='updates-get-latest-audit-entry'),
+        login_required(updates.updates_view.get_latest_audit_entry), name='updates-get-latest-audit-entry'),
     url(r'^zato/updates/get-audit-log-refresh$',
-        login_required(updates.get_audit_log_refresh), name='updates-get-audit-log-refresh'),
+        login_required(updates.updates_view.get_audit_log_refresh), name='updates-get-audit-log-refresh'),
     url(r'^zato/updates/download-and-install$',
         login_required(updates.download_and_install), name='updates-download-and-install'),
     url(r'^zato/updates/restart-scheduler$',
-        login_required(updates.restart_scheduler), name='updates-restart-scheduler'),
+        login_required(updates.updates_view.restart_scheduler), name='updates-restart-scheduler'),
     url(r'^zato/updates/restart-server$',
-        login_required(updates.restart_server), name='updates-restart-server'),
+        login_required(updates.updates_view.restart_server), name='updates-restart-server'),
     url(r'^zato/updates/restart-proxy$',
-        login_required(updates.restart_proxy), name='updates-restart-proxy'),
+        login_required(updates.updates_view.restart_proxy), name='updates-restart-proxy'),
     url(r'^zato/updates/restart-dashboard$',
-        login_required(updates.restart_dashboard), name='updates-restart-dashboard'),
+        login_required(updates.updates_view.restart_dashboard), name='updates-restart-dashboard'),
     url(r'^zato/updates/save-schedule$',
-        login_required(updates.save_schedule), name='updates-save-schedule'),
+        login_required(updates.updates_view.save_schedule), name='updates-save-schedule'),
     url(r'^zato/updates/load-schedule$',
-        login_required(updates.load_schedule), name='updates-load-schedule'),
+        login_required(updates.updates_view.load_schedule), name='updates-load-schedule'),
     url(r'^zato/updates/delete-schedule$',
-        login_required(updates.delete_schedule), name='updates-delete-schedule'),
+        login_required(updates.updates_view.delete_schedule), name='updates-delete-schedule'),
     url(r'^zato/updates/download-logs$',
         login_required(updates.download_logs), name='updates-download-logs'),
+
+    # Observability - Grafana Cloud
+
+    url(r'^zato/observability/grafana-cloud/$',
+        login_required(grafana_cloud.index), name='observability-grafana-cloud'),
+    url(r'^zato/observability/grafana-cloud/check-availability$',
+        login_required(grafana_cloud.check_availability), name='observability-grafana-cloud-check-availability'),
+    url(r'^zato/observability/grafana-cloud/check-latest-version$',
+        login_required(grafana_cloud.check_latest_version), name='observability-grafana-cloud-check-latest-version'),
+    url(r'^zato/observability/grafana-cloud/get-latest-audit-entry$',
+        login_required(grafana_cloud.get_latest_audit_entry), name='observability-grafana-cloud-get-latest-audit-entry'),
+    url(r'^zato/observability/grafana-cloud/get-audit-log-refresh$',
+        login_required(grafana_cloud.get_audit_log_refresh), name='observability-grafana-cloud-get-audit-log-refresh'),
+    url(r'^zato/observability/grafana-cloud/download-and-install$',
+        login_required(grafana_cloud.download_and_install), name='observability-grafana-cloud-download-and-install'),
+    url(r'^zato/observability/grafana-cloud/restart-scheduler$',
+        login_required(grafana_cloud.restart_scheduler), name='observability-grafana-cloud-restart-scheduler'),
+    url(r'^zato/observability/grafana-cloud/restart-server$',
+        login_required(grafana_cloud.restart_server), name='observability-grafana-cloud-restart-server'),
+    url(r'^zato/observability/grafana-cloud/restart-proxy$',
+        login_required(grafana_cloud.restart_proxy), name='observability-grafana-cloud-restart-proxy'),
+    url(r'^zato/observability/grafana-cloud/restart-dashboard$',
+        login_required(grafana_cloud.restart_dashboard), name='observability-grafana-cloud-restart-dashboard'),
+    url(r'^zato/observability/grafana-cloud/save-schedule$',
+        login_required(grafana_cloud.save_schedule), name='observability-grafana-cloud-save-schedule'),
+    url(r'^zato/observability/grafana-cloud/load-schedule$',
+        login_required(grafana_cloud.load_schedule), name='observability-grafana-cloud-load-schedule'),
+    url(r'^zato/observability/grafana-cloud/delete-schedule$',
+        login_required(grafana_cloud.delete_schedule), name='observability-grafana-cloud-delete-schedule'),
+    url(r'^zato/observability/grafana-cloud/test-connection$',
+        login_required(grafana_cloud.test_connection), name='observability-grafana-cloud-test-connection'),
+    url(r'^zato/observability/grafana-cloud/download-logs$',
+        login_required(grafana_cloud.download_logs), name='observability-grafana-cloud-download-logs'),
 ]
 
 # ################################################################################################################################

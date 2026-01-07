@@ -1,0 +1,305 @@
+$.fn.zato.settings.copyToClipboard = function(text, event) {
+    navigator.clipboard.writeText(text).then(function() {
+        const tooltip = $('<div class="copy-tooltip">Copied to clipboard</div>');
+        $('body').append(tooltip);
+
+        const rect = event.target.getBoundingClientRect();
+        tooltip.css({
+            left: rect.left + rect.width / 2 - tooltip.outerWidth() / 2 + 'px',
+            top: rect.top - tooltip.outerHeight() - 8 + 'px'
+        });
+
+        setTimeout(() => tooltip.addClass('show'), 10);
+
+        setTimeout(() => {
+            tooltip.removeClass('show');
+            setTimeout(() => tooltip.remove(), 200);
+        }, 1500);
+    });
+};
+
+$.fn.zato.settings.handleCopyIcon = function(e) {
+    e.stopPropagation();
+    const targetId = $(this).data('copy');
+    const targetElement = $('#' + targetId);
+
+    const parentProgress = targetElement.closest('.progress-item');
+    const fullError = parentProgress.data('full-error');
+    
+    let text = fullError;
+    if (!text) {
+        if (targetElement.is('input')) {
+            text = targetElement.val();
+        } else {
+            text = targetElement.text();
+        }
+    }
+
+    $.fn.zato.settings.copyToClipboard(text, e);
+};
+
+$.fn.zato.settings.initDriverTours = function(tours) {
+    const driverObj = window.driver.js.driver({
+        showProgress: true,
+        showButtons: ['next', 'previous', 'close'],
+        overlayColor: 'rgba(0, 0, 0, 0.5)',
+        popoverClass: 'driver-popover-custom',
+        animate: false
+    });
+
+    tours.forEach(function(tour) {
+        $(tour.trigger).on('click', function() {
+            driverObj.setSteps(tour.steps);
+            driverObj.drive(0);
+        });
+    });
+};
+
+$.fn.zato.settings.initToggleLabelClick = function(labelSelector, checkboxSelector) {
+    $(labelSelector).on('click', function() {
+        const checkbox = $(checkboxSelector);
+        checkbox.prop('checked', !checkbox.prop('checked')).trigger('change');
+    });
+};
+
+$.fn.zato.settings.initIsEnabledToggle = function(toggleSelector, containerSelector) {
+    const toggle = $(toggleSelector);
+    const container = $(containerSelector);
+
+    function updateFieldsState(isEnabled) {
+        const fieldsToToggle = container.find('input:not(' + toggleSelector + '), select, button');
+        fieldsToToggle.prop('disabled', !isEnabled);
+    }
+
+    toggle.on('change', function() {
+        const isEnabled = $(this).is(':checked');
+        updateFieldsState(isEnabled);
+    });
+};
+
+$.fn.zato.settings.updateProgress = function(step, status, message, statusText) {
+    const item = $('#progress-' + step);
+    const icon = item.find('.progress-icon');
+    const text = item.find('.progress-text');
+    const copyButton = item.find('.progress-error-copy');
+
+    const displayMessage = statusText ? '<span class="progress-count">' + message + '</span> <span class="progress-status">' + statusText + '</span>' : message;
+
+    if (status === 'processing') {
+        icon.addClass('spinner').removeClass('completed error').html('<img src="/static/gfx/spinner.svg">');
+        item.removeClass('error-state').addClass('processing-state');
+        if (copyButton.length) {
+            copyButton.addClass('hidden');
+        }
+    } else if (status === 'completed') {
+        icon.removeClass('spinner error').addClass('completed').text('✓');
+        item.removeClass('error-state processing-state');
+        if (copyButton.length) {
+            copyButton.addClass('hidden');
+        }
+    } else if (status === 'error') {
+        icon.removeClass('spinner completed').addClass('error').text('✗');
+        item.addClass('error-state').removeClass('processing-state');
+        if (copyButton.length) {
+            copyButton.removeClass('hidden');
+        }
+    }
+
+    text.html(displayMessage);
+};
+
+$.fn.zato.settings.activateSpinner = function(spinnerSelector) {
+    $(spinnerSelector).addClass('active');
+};
+
+$.fn.zato.settings.deactivateSpinner = function(spinnerSelector) {
+    $(spinnerSelector).removeClass('active');
+};
+
+$.fn.zato.settings.saveWithSpinner = function(options) {
+    const spinnerSelector = options.spinnerSelector || '.config-save-spinner';
+    const messageSelector = options.messageSelector || '.config-saved-message';
+    const buttonSelector = options.buttonSelector || '#config-save-button';
+    const minDelay = options.minDelay || 500;
+    const messageDisplayTime = options.messageDisplayTime || 1500;
+
+    $(spinnerSelector).css('display', 'block');
+    $(messageSelector).css('display', 'none');
+    $(buttonSelector).prop('disabled', true);
+
+    const startTime = Date.now();
+
+    $.ajax({
+        url: options.url,
+        type: options.method || 'POST',
+        headers: options.headers || {
+            'X-CSRFToken': $.cookie('csrftoken')
+        },
+        data: options.data ? JSON.stringify(options.data) : undefined,
+        contentType: options.contentType || 'application/json',
+        success: function(response) {
+            const elapsed = Date.now() - startTime;
+            const remainingDelay = Math.max(0, minDelay - elapsed);
+
+            setTimeout(function() {
+                $(spinnerSelector).css('display', 'none');
+                $(messageSelector).css('display', 'inline-block');
+                $(buttonSelector).prop('disabled', false);
+
+                setTimeout(function() {
+                    $(messageSelector).css('display', 'none');
+                }, messageDisplayTime);
+
+                if (options.onSuccess) {
+                    options.onSuccess(response);
+                }
+            }, remainingDelay);
+        },
+        error: function(xhr, status, error) {
+            $(spinnerSelector).css('display', 'none');
+            $(buttonSelector).prop('disabled', false);
+
+            if (options.onError) {
+                options.onError(xhr, status, error);
+            }
+        }
+    });
+};
+
+$.fn.zato.settings.executeSteps = function(options) {
+    const progressKey = options.progressKey;
+    const button = options.button;
+    const pollUrl = options.pollUrl;
+    const pollTimeout = options.pollTimeout || 2000;
+    const maxPollAttempts = options.maxPollAttempts || 60;
+    const pollDelay = options.pollDelay || 2000;
+    const stepDelay = options.stepDelay || 500;
+    const completedText = options.completedText;
+    const completionBadgeSelector = options.completionBadgeSelector;
+    const completionBadgeText = options.completionBadgeText;
+    const baseUrl = options.baseUrl;
+    
+    const shouldRestart = options.should_restart !== undefined ? options.should_restart : true;
+    const shouldRestartScheduler = options.should_restart_scheduler !== undefined ? options.should_restart_scheduler : true;
+    const shouldRestartServer = options.should_restart_server !== undefined ? options.should_restart_server : true;
+    const shouldRestartProxy = options.should_restart_proxy !== undefined ? options.should_restart_proxy : true;
+    const shouldRestartDashboard = options.should_restart_dashboard !== undefined ? options.should_restart_dashboard : true;
+    
+    const steps = {};
+    if (shouldRestart) {
+        if (shouldRestartScheduler) {
+            steps.scheduler = {};
+            steps.scheduler.url = baseUrl + '/restart-scheduler';
+            steps.scheduler.text = 'Restarting scheduler';
+        }
+        if (shouldRestartServer) {
+            steps.server = {};
+            steps.server.url = baseUrl + '/restart-server';
+            steps.server.text = 'Restarting server';
+        }
+        if (shouldRestartProxy) {
+            steps.proxy = {};
+            steps.proxy.url = baseUrl + '/restart-proxy';
+            steps.proxy.text = 'Restarting proxy';
+        }
+        if (shouldRestartDashboard) {
+            steps.dashboard = {};
+            steps.dashboard.url = baseUrl + '/restart-dashboard';
+            steps.dashboard.text = 'Restarting dashboard';
+        }
+    }
+    
+    const stepsArray = Object.values(steps);
+    let currentStep = 0;
+    const totalSteps = stepsArray.length;
+
+    const runNextStep = function() {
+        if (currentStep >= totalSteps) {
+            $.fn.zato.settings.updateProgress(progressKey, 'completed', completedText);
+            if (completionBadgeSelector && completionBadgeText) {
+                $(completionBadgeSelector).text(completionBadgeText).addClass('show').css('visibility', 'visible');
+            }
+            if (button) {
+                button.prop('disabled', false);
+            }
+            if (options.onAllComplete) {
+                options.onAllComplete();
+            }
+            return;
+        }
+
+        const step = stepsArray[currentStep];
+        const stepNumber = currentStep + 1;
+        const progressText = stepNumber + ' / ' + totalSteps;
+        const statusText = step.text + '...';
+
+        $.fn.zato.settings.updateProgress(progressKey, 'processing', progressText, statusText);
+
+        $.ajax({
+            url: step.url,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $.cookie('csrftoken')
+            },
+            success: function(response) {
+                if (options.onStepComplete) {
+                    options.onStepComplete(step, response);
+                }
+
+                if (pollUrl && step.url.includes('dashboard')) {
+                    let pollAttempts = 0;
+
+                    const pollDashboard = function() {
+                        pollAttempts++;
+                        $.ajax({
+                            url: pollUrl,
+                            type: 'GET',
+                            timeout: pollTimeout,
+                            success: function() {
+                                currentStep++;
+                                runNextStep();
+                            },
+                            error: function() {
+                                if (pollAttempts < maxPollAttempts) {
+                                    setTimeout(pollDashboard, 1000);
+                                } else {
+                                    $.fn.zato.settings.updateProgress(progressKey, 'error', progressText, 'Dashboard did not restart');
+                                    if (button) {
+                                        button.prop('disabled', false);
+                                    }
+                                    if (options.onError) {
+                                        options.onError(step, 'Dashboard did not restart');
+                                    }
+                                }
+                            }
+                        });
+                    };
+
+                    setTimeout(pollDashboard, pollDelay);
+                } else {
+                    currentStep++;
+                    setTimeout(runNextStep, stepDelay);
+                }
+            },
+            error: function(xhr) {
+                let errorMsg = step.text + ' failed';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    errorMsg = response.error || errorMsg;
+                } catch(e) {
+                    errorMsg = xhr.responseText || errorMsg;
+                }
+
+                $.fn.zato.settings.updateProgress(progressKey, 'error', progressText, errorMsg);
+                if (button) {
+                    button.prop('disabled', false);
+                }
+                if (options.onError) {
+                    options.onError(step, errorMsg);
+                }
+            }
+        });
+    };
+
+    runNextStep();
+};

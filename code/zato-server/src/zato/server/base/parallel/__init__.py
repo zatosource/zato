@@ -26,6 +26,12 @@ from bunch import bunchify
 from gevent import sleep
 from gevent.lock import RLock
 
+# Open Telemetry
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
@@ -72,6 +78,7 @@ if 0:
 
     from bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
+    from opentelemetry.trace import Tracer
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
@@ -120,6 +127,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
     on_wsgi_request: 'any_'
+    tracer: 'Tracer'
 
     cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
@@ -251,6 +259,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Log streaming manager
         self.log_streaming_manager = LogStreamingManager()
+
+        # Monitoring
+        self._set_up_monitoring()
 
 # ################################################################################################################################
 
@@ -1243,6 +1254,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 data[idx] = item
 
         return data
+
+# ################################################################################################################################
+
+    def _set_up_monitoring(self):
+        pass
 
 # ################################################################################################################################
 

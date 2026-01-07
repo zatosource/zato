@@ -1,0 +1,15 @@
+<div class="info-row">
+    <div class="info-label">{{ row.label }}</div>
+    {% if row.widget == 'badge' %}
+    <span class="info-badge" id="{{ row.element_id }}">{{ row.default_text }}</span>
+    {% elif row.widget == 'text' %}
+    <div class="info-value">
+        <span id="{{ row.copy_id }}">{% if row.spinner %}<img src="/static/gfx/spinner.svg" class="info-spinner">Checking...{% endif %}</span>
+        {% if row.is_copyable %}
+        <span class="copy-icon{% if row.spinner %} hidden{% endif %}" data-copy="{{ row.copy_id }}" title="Copy to clipboard">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+        </span>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

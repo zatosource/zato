@@ -6,10 +6,15 @@
 
 {% block head %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery-3.7.1.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/hide-show-password.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.custom.css">
+    <link rel="stylesheet" media="screen" href="/static/css/formalize.css" />
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+
+    {% if user.is_authenticated %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery-ui-1.13.2/jquery-ui.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.getUrlParam.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/hide-show-password.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/stringformat.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/chosen/chosen.jquery.js"></script>
 
@@ -22,18 +27,11 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/log_streaming.js"></script>
 
-    <script nonce="{{ CSP_NONCE }}">
-    </script>
 
     <link rel="stylesheet" media="screen" href="/static/chosen/chosen.css" />
-    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.custom.css">
-    <link rel="stylesheet" media="screen" href="/static/css/formalize.css" />
     <link rel="stylesheet" media="screen" href="/static/css/navigation/pure-css-navigation.css" />
 
-
-    {% comment %} Our CSS must come last {% endcomment %}
-    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/in-app-updates.css">
+    {% endif %}
 
     {% if items %}
         {% include "zato/css-titlebar-padding.html" %}
@@ -85,6 +83,10 @@
 
     <script nonce="{{ CSP_NONCE }}">
 
+        $(document).ready(function() {
+            $('input[type="password"]').hidePassword(true);
+        });
+
         {% if user.is_authenticated %}
         // Let users close delete dialogs via the Esc key
         $(document).ready(function() {
@@ -94,11 +96,9 @@
                 }
             });
         });
-        {% endif %}
 
         // Let users reveal password fields
         $(document).ready(function() {
-            $('input[type="password"]').hidePassword(true);
 
             // Set grafana link href dynamically
             $('.grafana-link').attr('href', window.location.protocol + '//' + window.location.hostname + ':33033/dashboards').attr('target', '_blank');
@@ -149,90 +149,84 @@
                 }
             });
 
-            // Check for updates on page load
-            console.log('[UPDATE-CHECK] Script loaded, about to call checkUpdateAvailability(true)');
-            checkUpdateAvailability(true);
-            console.log('[UPDATE-CHECK] checkUpdateAvailability(true) called');
+            // Session timer
+            const sessionDuration = 60 * 60 * 2;
+            let sessionSeconds = sessionDuration;
+            const sessionTimerEl = document.getElementById('session-timer');
+            let lastMouseReset = 0;
 
-            // Schedule checks to run at half past each hour
-            var now = new Date();
-            var minutesUntilHalfPast = (30 - now.getMinutes() + 60) % 60;
-            if (minutesUntilHalfPast === 0 && now.getSeconds() > 0) {
-                minutesUntilHalfPast = 60;
+            function resetSessionTimer() {
+                sessionSeconds = sessionDuration;
             }
-            var msUntilHalfPast = minutesUntilHalfPast * 60 * 1000 - now.getSeconds() * 1000 - now.getMilliseconds();
 
-            setTimeout(function() {
-                checkUpdateAvailability(false);
+            function updateSessionTimer() {
+                if (sessionSeconds <= 0) {
+                    sessionSeconds = 0;
+                    window.location.href = '{% url "logout" %}';
+                    return;
+                }
+
+                const hours = Math.floor(sessionSeconds / 3600);
+                const minutes = Math.floor((sessionSeconds % 3600) / 60);
+                const seconds = sessionSeconds % 60;
+                sessionTimerEl.textContent = (hours < 10 ? '0' : '') + hours + ':' + (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+
+                sessionSeconds--;
+            }
+
+            updateSessionTimer();
+            setInterval(updateSessionTimer, 1000);
+
+            document.addEventListener('keydown', resetSessionTimer);
+            document.addEventListener('click', resetSessionTimer);
+            document.addEventListener('mousemove', function() {
+                const now = Date.now();
+                if (now - lastMouseReset >= 1000) {
+                    lastMouseReset = now;
+                    sessionSeconds = sessionDuration;
+                }
+            }, {passive: true});
+
+            const isUpdatesPage = window.location.pathname === '/zato/updates/';
+            if (!isUpdatesPage) {
+                setTimeout(function() {
+                    checkUpdateAvailability();
+                }, 2000);
+
                 setInterval(function() {
-                    checkUpdateAvailability(false);
+                    checkUpdateAvailability();
                 }, 3600000);
-            }, msUntilHalfPast);
+            }
 
         });
 
-        // Apply update status to badge
         function applyUpdateStatus(updatesAvailable) {
-            console.log('[UPDATE-BADGE] applyUpdateStatus called with updatesAvailable:', updatesAvailable);
-
             const badge = $('#update-status-badge');
             const text = $('#update-status-text');
 
-            console.log('[UPDATE-BADGE] badge element:', badge.length > 0 ? 'found' : 'NOT FOUND');
-            console.log('[UPDATE-BADGE] text element:', text.length > 0 ? 'found' : 'NOT FOUND');
-
             if (updatesAvailable) {
-                console.log('[UPDATE-BADGE] Setting to "Updates available" with shine');
                 text.text('⭐ Updates available');
-                badge.addClass('with-shine');
-            } else {
-                console.log('[UPDATE-BADGE] Setting to "Up to date" without shine');
-                text.text('Up to date');
-                badge.removeClass('with-shine');
+                badge.addClass('with-shine loaded');
+                badge.css({
+                    'opacity': '0',
+                    'transition': 'opacity 200ms ease-in'
+                });
+                setTimeout(function() {
+                    badge.css('opacity', '1');
+                }, 10);
             }
-
-            badge.addClass('loaded');
-            console.log('[UPDATE-BADGE] Added "loaded" class, badge should now be visible');
-            console.log('[UPDATE-BADGE] Final badge classes:', badge.attr('class'));
-            console.log('[UPDATE-BADGE] Final text content:', text.text());
         }
 
-        // Check for updates availability
-        function checkUpdateAvailability(isInitialLoad) {
-            console.log('[UPDATE-CHECK] checkUpdateAvailability called, isInitialLoad:', isInitialLoad);
-
-            const cached = localStorage.getItem('zato_updates_available');
-            console.log('[UPDATE-CHECK] localStorage value:', cached);
-
-            if (isInitialLoad && cached !== null) {
-                console.log('[UPDATE-CHECK] Using cached value, skipping AJAX call');
-                const cachedBool = cached === 'true';
-                console.log('[UPDATE-CHECK] Cached boolean value:', cachedBool);
-                applyUpdateStatus(cachedBool);
-                return;
-            }
-
-            console.log('[UPDATE-CHECK] Making AJAX call to check-availability endpoint');
-
+        function checkUpdateAvailability() {
             $.ajax({
                 url: '/zato/updates/check-availability',
                 type: 'GET',
                 success: function(response) {
-                    console.log('[UPDATE-CHECK] AJAX success, response:', response);
-                    const updatesAvailable = response.updates_available;
-                    console.log('[UPDATE-CHECK] Updates available:', updatesAvailable);
-                    localStorage.setItem('zato_updates_available', updatesAvailable);
-                    console.log('[UPDATE-CHECK] Saved to localStorage');
-                    applyUpdateStatus(updatesAvailable);
-                },
-                error: function(xhr, status, error) {
-                    console.log('[UPDATE-CHECK] AJAX error, xhr:', xhr, 'status:', status, 'error:', error);
-                    localStorage.setItem('zato_updates_available', 'false');
-                    console.log('[UPDATE-CHECK] Set localStorage to false due to error');
-                    applyUpdateStatus(false);
+                    applyUpdateStatus(response.updates_available);
                 }
             });
         }
+        {% endif %}
 
     </script>
 
@@ -241,14 +235,14 @@
 {% block body %}
     <div>
         <div id="hd">
-            <div id="console-header">&nbsp;<a href="https://zato.io/{% if user.is_authenticated %}?v={{ zato_version|cut:"Zato " }} {% endif %}" id="logo-link"><img src="/static/gfx/logo.svg" alt="Zato logo" style="padding-top:3px;padding-bottom:3px;width:60px;margin-left:-0.25rem"/></a>
+            <div id="console-header">&nbsp;<a href="https://zato.io/{% if user.is_authenticated %}?v={{ zato_version|cut:"Zato " }} {% endif %}" id="logo-link"><img src="/static/gfx/logo.svg" alt="Zato logo" style="width:60px;margin-left:-0.25rem"/></a>
             {% if user.is_authenticated %}
-                <span id="logout" style="padding-top:10px">
-                    <a class="status-badge header-badge" href="{% url 'in-app-updates' %}" id="update-status-badge">
+                <span id="logout">
+                    <a class="status-badge header-badge" href="{% url 'updates' %}" id="update-status-badge">
                         <span id="update-status-text"></span>
                     </a>
-                    <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
-                    <a class="top"  href="{% url "logout" %}">Log out ({{ user.username }})</a>
+                    <a class="top header-link-styled" href="{% url "account-settings-basic" %}">My settings</a>
+                    <a class="top header-link-styled" href="{% url "logout" %}"><span id="session-timer">00:00:00</span> (log out)</a>
                 </span>
             {% endif %}
             </div>
@@ -270,9 +264,9 @@
                                 <a class="menu-link" href="#">Security &darr;</a>
                                 <ul>
                                     <li class="child"><a class="menu-link" href="{% url "security-apikey" %}?cluster={{ cluster_id|default:"1" }}">API keys</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "security-basic-auth" %}?cluster={{ cluster_id|default:"1" }}">Basic Auth</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-oauth-outconn-client-credentials" %}?cluster={{ cluster_id|default:"1" }}">Bearer tokens</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "groups" "zato-api-creds" %}?cluster={{ cluster_id|default:"1" }}">Groups</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "security-basic-auth" %}?cluster={{ cluster_id|default:"1" }}">HTTP Basic Auth</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:"1" }}">NTLM</a></li>
                                 </ul>
                             </li>
@@ -408,6 +402,15 @@
                             </li>
 
                             <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>
+
+                            <!--
+                            <li class="first-level">
+                                <a class="menu-link" href="#">Observability &darr;</a>
+                                <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "observability-grafana-cloud" %}?cluster={{ cluster_id|default:"1" }}">Grafana Cloud</a></li>
+                                </ul>
+                            </li>
+                            -->
 
                             <li class="first-level" >
                                 <a class="menu-link"  style="padding-left: 0.3rem" href="#">System &darr;</a>
