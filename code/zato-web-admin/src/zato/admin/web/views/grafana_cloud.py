@@ -16,7 +16,6 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.settings_config import grafana_cloud_page_config
 from zato.common.json_internal import dumps
 from zato.common.util.updates import Updater, UpdaterConfig
 
@@ -288,6 +287,7 @@ def save_config(req):
 
 @method_allowed('GET')
 def index(req):
+
     import redis
     from traceback import format_exc
 
