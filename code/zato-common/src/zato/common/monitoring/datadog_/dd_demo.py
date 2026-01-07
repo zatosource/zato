@@ -7,10 +7,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 import logging
+import os
 import socket
+
+os.environ['DD_TRACE_DEBUG'] = 'false'
 
 from ddtrace import patch
 from ddtrace.trace import tracer
+
+logging.getLogger('ddtrace').setLevel(logging.WARNING)
 
 patch(gevent=True)
 
