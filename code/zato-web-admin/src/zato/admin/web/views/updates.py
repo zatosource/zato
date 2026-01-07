@@ -10,14 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from logging import getLogger
 
-# Django
-from django.http import HttpResponse
-from django.template.response import TemplateResponse
-
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.admin.web.views.settings_config import updates_page_config
-from zato.common.json_internal import dumps
+from zato.admin.web.views.settings.base import SettingsBaseView
+from zato.admin.web.views.settings.config import updates_page_config
+from zato.admin.web.views.settings.handlers import ScheduleHandler, AuditLogHandler
+from zato.admin.web.views.settings.utils import json_response
 from zato.common.util.updates import Updater, UpdaterConfig
 
 # ################################################################################################################################
@@ -36,11 +34,40 @@ updater = Updater(updater_config)
 # ################################################################################################################################
 # ################################################################################################################################
 
-def json_response(data, success=True):
-    from django.http.response import HttpResponseServerError
-    response_json = dumps(data)
-    response_class = HttpResponse if success else HttpResponseServerError
-    return response_class(response_json, content_type='application/json')
+class UpdatesView(SettingsBaseView):
+
+    def __init__(self):
+        super().__init__(updates_page_config, updater, 'zato/updates/index.html')
+        self.schedule_handler = ScheduleHandler(updater)
+        self.audit_log_handler = AuditLogHandler(updater)
+
+    def get_index_context(self):
+        context = super().get_index_context()
+        context['current_version'] = updater.get_zato_version()
+        context['audit_log'] = updater.get_audit_log_entries(3)
+        return context
+
+    @method_allowed('POST')
+    def save_schedule(self, req):
+        return self.schedule_handler.save(req)
+
+    @method_allowed('GET')
+    def load_schedule(self, req):
+        return self.schedule_handler.load(req)
+
+    @method_allowed('POST')
+    def delete_schedule(self, req):
+        return self.schedule_handler.delete(req)
+
+    @method_allowed('GET')
+    def get_latest_audit_entry(self, req):
+        return self.audit_log_handler.get_latest_entry(req)
+
+    @method_allowed('GET')
+    def get_audit_log_refresh(self, req):
+        return self.audit_log_handler.get_refresh(req)
+
+updates_view = UpdatesView()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -88,157 +115,6 @@ def download_and_install(req):
             pass
 
     return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def restart_component(req, component_name, component_path, port=0):
-    logger.info('restart_{}: called from client: {}'.format(component_name, req.META.get('REMOTE_ADDR')))
-    result = updater.restart_component(component_name, component_path, port)
-    return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def restart_scheduler(req):
-    return restart_component(req, 'scheduler', updater.get_component_path('scheduler'), updater.get_component_port('scheduler'))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def restart_server(req):
-    return restart_component(req, 'server', updater.get_component_path('server'), updater.get_component_port('server'))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def restart_proxy(req):
-    return restart_component(req, 'proxy', updater.get_component_path('proxy'), updater.get_component_port('proxy'))
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def restart_dashboard(req):
-    import subprocess
-    import threading
-    import os
-
-    logger.info('restart_dashboard: called from client: {}'.format(req.META.get('REMOTE_ADDR')))
-
-    def restart_after_delay():
-        import time
-        import redis
-        import requests
-        from logging import getLogger
-        time.sleep(1)
-
-        try:
-            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-            version_from = r.get('zato:update:version_from') or ''
-            version_to = r.get('zato:update:version_to') or ''
-            schedule = r.get('zato:update:schedule') or 'manual'
-            if version_from and version_to:
-                url = f'https://zato.io/support/updates/info-4.1.json?from={version_from}&to={version_to}&mode=manual&schedule={schedule}'
-                _ = requests.get(url, timeout=2)
-        except Exception:
-            pass
-
-        update_logger = getLogger('zato.common.util.updates')
-
-        update_logger.info('')
-        update_logger.info('#' * 80)
-        update_logger.info('##' + ' ' * 76 + '##')
-        update_logger.info('##' + ' ' * 21 + 'UPDATE COMPLETED' + ' ' * 39 + '##')
-        update_logger.info('##' + ' ' * 76 + '##')
-        update_logger.info('#' * 80)
-        update_logger.info('')
-
-        logger.info('restart_dashboard: executing make restart-dashboard')
-        try:
-            makefile_dir = os.path.expanduser('~/projects/zatosource-zato/4.1')
-            logger.info('restart_dashboard: makefile_dir={}'.format(makefile_dir))
-            result = subprocess.run(
-                ['make', 'restart-dashboard'],
-                cwd=makefile_dir,
-                capture_output=True,
-                text=True
-            )
-            logger.info('restart_dashboard: returncode={}'.format(result.returncode))
-            logger.info('restart_dashboard: stdout={}'.format(result.stdout))
-            if result.stderr:
-                logger.error('restart_dashboard: stderr={}'.format(result.stderr))
-        except Exception as e:
-            logger.error('restart_dashboard: failed to execute make: {}'.format(e))
-
-    thread = threading.Thread(target=restart_after_delay, daemon=True)
-    thread.start()
-
-    result = {
-        'success': True,
-        'message': 'Dashboard restarting'
-    }
-    return json_response(result, success=True)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def save_schedule(req):
-    from zato.common.json_internal import loads
-    body = req.body.decode('utf-8')
-    schedule_data = loads(body)
-    result = updater.save_schedule(schedule_data)
-    return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def load_schedule(req):
-    result = updater.load_schedule()
-    return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def delete_schedule(req):
-    result = updater.delete_schedule()
-    return json_response(result, success=result['success'])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def index(req):
-    return TemplateResponse(req, 'zato/updates/index.html', {
-        'page_config': updates_page_config,
-        'current_version': updater.get_zato_version(),
-        'audit_log': updater.get_audit_log_entries(3)
-    })
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def get_latest_audit_entry(req):
-    entries = updater.get_audit_log_entries(1)
-    if entries:
-        return json_response({'success': True, 'entry': entries[0]})
-    else:
-        return json_response({'success': True, 'entry': None})
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def get_audit_log_refresh(req):
-    entries = updater.get_audit_log_entries(3)
-    return json_response({'success': True, 'entries': entries})
 
 # ################################################################################################################################
 # ################################################################################################################################
