@@ -22,10 +22,6 @@ class DatadogDemo:
 # ################################################################################################################################
 
     def setup(self):
-        tracer.configure(
-            hostname=self.host_name,
-        )
-
         stdout_handler = logging.StreamHandler()
         stdout_handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s - %(message)s')
