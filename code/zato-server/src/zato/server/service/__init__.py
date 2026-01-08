@@ -292,8 +292,8 @@ class Service:
     """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, AMQP
     or any other, regardless whether they arere built-in or user-defined ones.
     """
+
     process_name:'str'
-    datadog_context: 'DatadogContext'
 
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
@@ -376,9 +376,11 @@ class Service:
         *ignored_args:'any_',
         **ignored_kwargs:'any_'
     ) -> 'None':
+
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
-        self.impl_name = self.__class__.__service_impl_name # Ditto
         self.logger = _get_logger(self.name) # type: Logger
+
+        self.impl_name = self.__class__.__service_impl_name # Same setup as in self.name
         self.cid = ''
         self.in_reply_to = ''
         self.data_format = ''
@@ -643,6 +645,10 @@ class Service:
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
+        print()
+        print(111, self.name)
+        print()
+
         # We may have it from our caler ..
         _datadog_parent_context = kwargs.get('datadog_context')
 
@@ -829,7 +835,11 @@ class Service:
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
             self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), {})
 
-        kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
+        kwargs.update({
+            'serialize':serialize,
+            'as_bunch': as_bunch,
+            'datadog_context': getattr(self, 'datadog_context', None),
+        })
 
         if timeout:
             g = None
