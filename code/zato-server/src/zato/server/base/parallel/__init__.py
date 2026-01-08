@@ -1276,6 +1276,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _set_up_datadog(self):
         logger.info('Setting up Datadog monitoring')
 
+        # Datadog
+        from ddtrace.trace import tracer
+        self.datadog_tracer = tracer
+
 # ################################################################################################################################
 
     def on_pubsub_message(self, body:'any_', amqp_msg:'KombuMessage', name:'str', config:'dict') -> 'None':
