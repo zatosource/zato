@@ -78,7 +78,7 @@ if 0:
 
     from bunch import Bunch as bunch_
     from ddtrace.trace import tracer as dd_tracer
-    from ddtrace._trace.tracer import Tracer as DDTracer
+    from ddtrace._trace.tracer import Tracer as DatadogTracer
     from kombu.transport.pyamqp import Message as KombuMessage
     from opentelemetry.trace import Tracer as OTLPTracer
     from zato.common.crypto.api import ServerCryptoManager
@@ -144,8 +144,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     stop_after: 'intnone'
     deploy_auto_from: 'str' = ''
 
-    dd_tracer: 'DDTracer'
+    datadog_tracer: 'DatadogTracer'
     otlp_tracer: 'OTLPTracer'
+
+    is_datadog_enabled: 'bool' = False
+    is_grafana_cloud_enabled: 'bool' = False
 
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
@@ -1261,7 +1264,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _set_up_monitoring(self):
+    def _set_up_grafana_cloud(self):
+        pass
+
+# ################################################################################################################################
+
+    def _set_up_datadog(self):
         pass
 
 # ################################################################################################################################
