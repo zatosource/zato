@@ -19,6 +19,8 @@ logging.getLogger('ddtrace').setLevel(logging.WARNING)
 
 patch(gevent=True)
 
+cid = '123a1'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -46,8 +48,9 @@ class DatadogDemo:
 
         step1 = tracer.trace(name='', service='channel.1', resource='Step 1')
         step1.set_tag('process', 'My process')
-        step1.set_tag('cid', '123a')
-        step1.set_tag('message.info', '---')
+        step1.set_tag('cid', cid)
+        step1.set_tag('message', '')
+        step1.set_tag('message_level', 'INFO')
 
         ctx = tracer.current_trace_context()
         step1.finish()
@@ -56,16 +59,18 @@ class DatadogDemo:
 
         step2 = tracer.trace(name='', service='core.1', resource='Step 2')
         step2.set_tag('process', 'My process')
-        step2.set_tag('cid', '123a')
-        step2.set_tag('message.info', 'Here is my info message')
+        step2.set_tag('cid', cid)
+        step2.set_tag('message', 'This is an info message')
+        step2.set_tag('message_level', 'INFO')
         step2.finish()
 
         tracer.context_provider.activate(ctx)
 
         step3 = tracer.trace(name='', service='adapter.1', resource='Step 3')
         step3.set_tag('process', 'My process')
-        step3.set_tag('cid', '123a')
-        step3.set_tag('message.info', 'System updated OK')
+        step3.set_tag('cid', cid)
+        step3.set_tag('message', "Hi, I'm a warning")
+        step3.set_tag('message_level', 'WARN')
         step3.finish()
 
         self.logger.info('Datadog demo completed')
