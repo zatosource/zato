@@ -77,8 +77,10 @@ from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 if 0:
 
     from bunch import Bunch as bunch_
+    from ddtrace.trace import tracer as dd_tracer
+    from ddtrace._trace.tracer import Tracer as DDTracer
     from kombu.transport.pyamqp import Message as KombuMessage
-    from opentelemetry.trace import Tracer
+    from opentelemetry.trace import Tracer as OTLPTracer
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
@@ -127,7 +129,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
     on_wsgi_request: 'any_'
-    tracer: 'Tracer'
 
     cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
@@ -142,6 +143,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     stop_after: 'intnone'
     deploy_auto_from: 'str' = ''
+
+    dd_tracer: 'DDTracer'
+    otlp_tracer: 'OTLPTracer'
 
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'

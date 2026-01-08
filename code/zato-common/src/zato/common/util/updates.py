@@ -22,9 +22,6 @@ from urllib.request import Request, urlopen
 # humanize
 import humanize
 
-# Redis
-import redis
-
 # Zato
 from zato.common.json_internal import dumps, loads
 from zato.common.util.tcp import wait_until_port_free
@@ -235,6 +232,9 @@ class Updater:
     def get_redis_connection(self) -> 'redis.Redis':
         """ Returns a Redis connection.
         """
+        # Redis
+        import redis
+
         return redis.Redis(
             host=self.config.redis_host,
             port=self.config.redis_port,

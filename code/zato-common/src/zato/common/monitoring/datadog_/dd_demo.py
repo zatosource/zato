@@ -47,6 +47,7 @@ class DatadogDemo:
         step1 = tracer.trace(name='', service='channel.1', resource='Step 1')
         step1.set_tag('process', 'My process')
         step1.set_tag('cid', '123a')
+        step1.set_tag('message.info', '---')
 
         ctx = tracer.current_trace_context()
         step1.finish()
@@ -56,7 +57,7 @@ class DatadogDemo:
         step2 = tracer.trace(name='', service='core.1', resource='Step 2')
         step2.set_tag('process', 'My process')
         step2.set_tag('cid', '123a')
-        step2.set_tag('user.email', 'user@example.com')
+        step2.set_tag('message.info', 'Here is my info message')
         step2.finish()
 
         tracer.context_provider.activate(ctx)
@@ -64,7 +65,7 @@ class DatadogDemo:
         step3 = tracer.trace(name='', service='adapter.1', resource='Step 3')
         step3.set_tag('process', 'My process')
         step3.set_tag('cid', '123a')
-        step3.set_tag('user.email', 'user2@example.net')
+        step3.set_tag('message.info', 'System updated OK')
         step3.finish()
 
         self.logger.info('Datadog demo completed')
