@@ -645,18 +645,14 @@ class Service:
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
-        print()
-        print(111, self.name)
-        print()
-
         # We may have it from our caler ..
         _datadog_parent_context = kwargs.get('datadog_context')
 
         # .. build a span indicating that we're being invoked ..
         _datadog_span = self.server.datadog_tracer.start_span(
             name='',
-            service=self.name,
-            resource=f'Call: {self.name}',
+            service=service.name,
+            resource=f'Call: {service.name}',
             child_of=_datadog_parent_context
         )
 
