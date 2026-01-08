@@ -85,6 +85,7 @@ UUID = UUID # type: ignore
 # ################################################################################################################################
 
 if 0:
+    from ddtrace._trace.context import Context as DatadogContext
     from logging import Logger
     from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
@@ -354,6 +355,9 @@ class Service:
 
     # Processing time in milliseconds
     processing_time: 'float'
+
+    # Monitoring
+    _datadog_context: 'DatadogContext'
 
     # Rule engine
     rules: 'RulesManager'
