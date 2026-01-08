@@ -292,6 +292,9 @@ class Service:
     """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, AMQP
     or any other, regardless whether they arere built-in or user-defined ones.
     """
+    process_name:'str'
+    datadog_context: 'DatadogContext'
+
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
     security: 'SecurityFacade'
@@ -357,7 +360,7 @@ class Service:
     processing_time: 'float'
 
     # Monitoring
-    _datadog_context: 'DatadogContext'
+    datadog_context: 'DatadogContext'
 
     # Rule engine
     rules: 'RulesManager'
@@ -613,6 +616,8 @@ class Service:
         **kwargs:'any_'
     ) -> 'any_':
 
+        self.process_name = kwargs.get('process_name', 'No name')
+
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
         channel_item = wsgi_environ.get('zato.channel_item', {})
@@ -638,10 +643,26 @@ class Service:
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
-        _trace = self.server.datadog_tracer.trace(name='', service=self.name, resource='Invoked')
-        _trace.set_tag('process', 'No name')
-        _trace.set_tag('cid', self.cid)
-        _trace.finish()
+        # We may have it from our caler ..
+        _datadog_parent_context = kwargs.get('datadog_context')
+
+        # .. build a span indicating that we're being invoked ..
+        _datadog_span = self.server.datadog_tracer.start_span(
+            name='',
+            service=self.name,
+            resource='Invoked',
+            child_of=_datadog_parent_context
+        )
+
+        # .. set our metadata ..
+        _datadog_span.set_tag('process', self.process_name)
+        _datadog_span.set_tag('cid', self.cid)
+
+        # .. store it for possible later use ..
+        self.datadog_context = _datadog_span.context
+
+        # .. and finish the span.
+        _datadog_span.finish()
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
