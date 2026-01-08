@@ -403,17 +403,16 @@
 
                             <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>
 
-                            <!--
                             <li class="first-level">
-                                <a class="menu-link" href="#">Observability &darr;</a>
+                                <a class="menu-link" href="#">Monitoring &darr;</a>
                                 <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "observability-grafana-cloud" %}?cluster={{ cluster_id|default:"1" }}">Datadog</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "observability-grafana-cloud" %}?cluster={{ cluster_id|default:"1" }}">Grafana Cloud</a></li>
                                 </ul>
                             </li>
-                            -->
 
                             <li class="first-level" >
-                                <a class="menu-link"  style="padding-left: 0.3rem" href="#">System &darr;</a>
+                                <a class="menu-link" href="#">System &darr;</a>
                                 <ul>
                                     <li class="child">
                                         <a class="menu-link" href="#">Config &rarr;</a>
@@ -435,19 +434,9 @@
                                 </ul>
                             </li>
 
-                            {% if 0 %}
-                            <li class="first-level">
-                                <a class="menu-link" href="#">Observability &darr;</a>
-                                <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "monitoring-config" %}?cluster={{ cluster_id|default:"1" }}">Config</a></li>
-                                    <li class="child"><a class="menu-link grafana-link" href="#">Grafana</a></li>
-                                    <li class="child"><a class="menu-link" href="javascript:alert('Opening Datadog dashboard...')">Datadog</a></li>
-                                </ul>
-                            </li>
-                            {% endif %}
                         </ul>
                         <ul class="first-level right">
-                            <li class="first-level right"><a class="menu-link" href="https://zato.io/en/docs/3.2/index.html?v={{ zato_version|cut:"Zato " }}">Docs</a></li>
+                            <li class="first-level right"><a class="menu-link" href="https://zato.io/en/docs/4.1/index.html?v={{ zato_version|cut:"Zato " }}">Docs</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/blog/">Blog</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://www.linkedin.com/company/zatosource/">LinkedIn</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/services/index.html">Support</a></li>

@@ -16,6 +16,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.settings.config import grafana_cloud_page_config
 from zato.common.json_internal import dumps
 from zato.common.util.updates import Updater, UpdaterConfig
 
