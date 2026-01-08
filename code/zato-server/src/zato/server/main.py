@@ -39,9 +39,63 @@ patch_queue()
 patch_contextvars()
 
 # stdlib
-import locale
 import logging
 import os
+
+# Datadog monitoring
+if os.environ.get('Zato_Datadog_Enabled'):
+
+    # Datadog
+    from ddtrace import patch as dd_patch
+
+    # Check if we need DD debug logs ..
+    has_debug = os.environ.get('Zato_Datadog_Debug_Enabled') or ''
+    has_debug = has_debug.lower() in {'true', '1'}
+    has_debug = str(has_debug).lower()
+
+    # .. and assign that accordingly ..
+    os.environ['DD_TRACE_DEBUG'] = has_debug
+
+    # .. now we can configure patch DD to work with gevent ..
+    dd_patch(gevent=True)
+
+# Grafana Cloud monitoring
+if os.environ.get('Zato_Grafana_Cloud_Enabled'):
+    '''
+    #
+    # Grafana
+    #
+
+    import socket
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry._logs import set_logger_provider
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+
+    host_name = socket.gethostname()
+
+    resource = Resource.create({
+        'service.name': 'zato4',
+        'service.instance.id': 'dev4',
+        'service.namespace': 'api4',
+        'deployment.environment': 'dev',
+        'host.id': host_name,
+        'host.name': host_name,
+    })
+
+    log_provider = LoggerProvider(resource=resource)
+    log_exporter = OTLPLogExporter(endpoint='http://localhost:4318/v1/logs')
+    log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+    set_logger_provider(log_provider)
+
+    handler = LoggingHandler(level=logging.INFO, logger_provider=log_provider)
+    logging.getLogger().addHandler(handler)
+    '''
+
+# stdlib
+import locale
+import logging
 import sys
 from logging.config import dictConfig
 
@@ -116,41 +170,6 @@ class ModuleCtx:
         bind_host:   Env_Bind_Host,
         bind_port:   Env_Bind_Port,
     }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-'''
-#
-# Grafana
-#
-
-import socket
-from opentelemetry.sdk.resources import Resource
-from opentelemetry._logs import set_logger_provider
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-
-host_name = socket.gethostname()
-
-resource = Resource.create({
-    'service.name': 'zato4',
-    'service.instance.id': 'dev4',
-    'service.namespace': 'api4',
-    'deployment.environment': 'dev',
-    'host.id': host_name,
-    'host.name': host_name,
-})
-
-log_provider = LoggerProvider(resource=resource)
-log_exporter = OTLPLogExporter(endpoint='http://localhost:4318/v1/logs')
-log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
-set_logger_provider(log_provider)
-
-handler = LoggingHandler(level=logging.INFO, logger_provider=log_provider)
-logging.getLogger().addHandler(handler)
-'''
 
 # ################################################################################################################################
 # ################################################################################################################################
