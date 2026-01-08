@@ -650,7 +650,7 @@ class Service:
         _datadog_span = self.server.datadog_tracer.start_span(
             name='',
             service=self.name,
-            resource='Invoked',
+            resource=f'Call: {self.name}',
             child_of=_datadog_parent_context
         )
 
