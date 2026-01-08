@@ -95,7 +95,6 @@ if os.environ.get('Zato_Grafana_Cloud_Enabled'):
 
 # stdlib
 import locale
-import logging
 import sys
 from logging.config import dictConfig
 
