@@ -634,6 +634,11 @@ class Service:
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
+        _trace = self.server.datadog_tracer.trace(name='', service=self.name, resource='Invoked')
+        _trace.set_tag('process', 'No name')
+        _trace.set_tag('cid', self.cid)
+        _trace.finish()
+
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
         # implemented by user services.
@@ -820,6 +825,7 @@ class Service:
     def invoke(self, zato_name:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service synchronously by its name.
         """
+
         # The 'zato_name' parameter is actually a service class,
         # not its name, and we need to extract the name ourselves.
         if isclass(zato_name) and issubclass(zato_name, Service): # type: Service
