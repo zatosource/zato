@@ -147,8 +147,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     datadog_tracer: 'DatadogTracer'
     otlp_tracer: 'OTLPTracer'
 
-    is_datadog_enabled: 'bool' = False
-    is_grafana_cloud_enabled: 'bool' = False
+    is_datadog_enabled: 'bool'
+    is_grafana_cloud_enabled: 'bool'
 
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
@@ -266,9 +266,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Log streaming manager
         self.log_streaming_manager = LogStreamingManager()
-
-        # Monitoring
-        self._set_up_monitoring()
 
 # ################################################################################################################################
 
@@ -752,6 +749,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # This also cannot be done in __init__ which doesn't have this variable yet
         self.process_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
         self.is_first_worker = self.process_idx == 0
+
+        # Monitoring
+        if self.is_datadog_enabled:
+            self._set_up_datadog()
+
+        if self.is_grafana_cloud_enabled:
+            self._set_up_grafana_cloud()
 
         # Used later on
         use_tls = as_bool(self.fs_server_config.crypto.use_tls)
@@ -1270,7 +1274,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _set_up_datadog(self):
-        pass
+        logger.info('Setting up Datadog monitoring')
 
 # ################################################################################################################################
 
