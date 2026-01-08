@@ -42,8 +42,14 @@ else:
 import logging
 import os
 
+# Reusable
+true_values = {'true', '1', 'y', 'yes'}
+
 # Datadog monitoring
-if os.environ.get('Zato_Datadog_Enabled'):
+is_datadog_enabled = os.environ.get('Zato_Datadog_Enabled') or ''
+is_datadog_enabled = is_datadog_enabled.lower() in true_values
+
+if is_datadog_enabled:
 
     # Datadog
     from ddtrace import patch as dd_patch
@@ -60,7 +66,11 @@ if os.environ.get('Zato_Datadog_Enabled'):
     dd_patch(gevent=True)
 
 # Grafana Cloud monitoring
-if os.environ.get('Zato_Grafana_Cloud_Enabled'):
+
+is_grafana_cloud_enabled = os.environ.get('Zato_Grafana_Cloud_Enabled') or ''
+is_grafana_cloud_enabled = is_grafana_cloud_enabled.lower() in true_values
+
+if is_grafana_cloud_enabled:
     '''
     #
     # Grafana
@@ -486,6 +496,10 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.env_manager = env_manager
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore
+
+    # Monitoring
+    server.is_datadog_enabled = is_datadog_enabled
+    server.is_grafana_cloud_enabled = is_grafana_cloud_enabled
 
     if scheduler_api_password := server.fs_server_config.scheduler.get('scheduler_api_password'):
         if is_encrypted(scheduler_api_password):
