@@ -658,11 +658,6 @@ class Service:
 
         if service.needs_datadog_logging:
 
-            print()
-            print(111, service.needs_datadog_logging)
-            print(222, service)
-            print()
-
             # We may have it from our caler ..
             _datadog_parent_context = kwargs.get('datadog_context')
 
