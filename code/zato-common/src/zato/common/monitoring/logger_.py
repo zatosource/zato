@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from logging import Logger
 
 # ################################################################################################################################
@@ -32,12 +33,17 @@ class DatadogLogger(Logger):
         self.service_name = service_name
         self.datadog_tracer = self.server.datadog_tracer
 
+        root_logger = logging.getLogger()
+        self.setLevel(root_logger.level)
+        for handler in root_logger.handlers:
+            self.addHandler(handler)
+
 # ################################################################################################################################
 
-    def _zato_emit_log(self, level:'str', msg:'str', step:'strnone') -> 'None':
+    def _zato_emit_log(self, level:'str', msg:'str', event:'strnone') -> 'None':
         trace = self.datadog_tracer.trace(name='', service=self.service_name)
-        if step:
-            trace.resource = step
+        if event:
+            trace.resource = event
         trace.set_tag('cid', self.cid)
         trace.set_tag('message', msg)
         trace.set_tag('message_level', level)
@@ -45,35 +51,35 @@ class DatadogLogger(Logger):
 
 # ################################################################################################################################
 
-    def debug(self, msg:'any_', *args:'any_', step:'strnone'=None, **kwargs:'any_') -> 'None':
+    def debug(self, msg:'any_', *args:'any_', event:'strnone'=None, **kwargs:'any_') -> 'None':
         super().debug(msg, *args, **kwargs)
-        self._zato_emit_log('DEBUG', str(msg), step)
+        self._zato_emit_log('DEBUG', str(msg), event)
 
 # ################################################################################################################################
 
-    def info(self, msg:'any_', *args:'any_', step:'strnone'=None, **kwargs:'any_') -> 'None':
+    def info(self, msg:'any_', *args:'any_', event:'strnone'=None, **kwargs:'any_') -> 'None':
         super().info(msg, *args, **kwargs)
-        self._zato_emit_log('INFO', str(msg), step)
+        self._zato_emit_log('INFO', str(msg), event)
 
 # ################################################################################################################################
 
-    def warning(self, msg:'any_', *args:'any_', step:'strnone'=None, **kwargs:'any_') -> 'None':
+    def warning(self, msg:'any_', *args:'any_', event:'strnone'=None, **kwargs:'any_') -> 'None':
         super().warning(msg, *args, **kwargs)
-        self._zato_emit_log('WARNING', str(msg), step)
+        self._zato_emit_log('WARNING', str(msg), event)
 
     warn = warning
 
 # ################################################################################################################################
 
-    def error(self, msg:'any_', *args:'any_', step:'strnone'=None, **kwargs:'any_') -> 'None':
+    def error(self, msg:'any_', *args:'any_', event:'strnone'=None, **kwargs:'any_') -> 'None':
         super().error(msg, *args, **kwargs)
-        self._zato_emit_log('ERROR', str(msg), step)
+        self._zato_emit_log('ERROR', str(msg), event)
 
 # ################################################################################################################################
 
-    def critical(self, msg:'any_', *args:'any_', step:'strnone'=None, **kwargs:'any_') -> 'None':
+    def critical(self, msg:'any_', *args:'any_', event:'strnone'=None, **kwargs:'any_') -> 'None':
         super().critical(msg, *args, **kwargs)
-        self._zato_emit_log('CRITICAL', str(msg), step)
+        self._zato_emit_log('CRITICAL', str(msg), event)
 
 # ################################################################################################################################
 # ################################################################################################################################
