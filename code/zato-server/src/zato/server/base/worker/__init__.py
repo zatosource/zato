@@ -16,7 +16,7 @@ import sys
 from errno import ENOENT
 from inspect import isclass
 from threading import RLock
-from traceback import format_exc, format_stack
+from traceback import format_exc
 from uuid import uuid4
 
 # Bunch
@@ -1209,11 +1209,6 @@ class WorkerStore(_WorkerStoreBase):
             payload = msg['payload']
 
         service, is_active = self.server.service_store.new_instance_by_name(msg['service'])
-
-        print()
-        print(222, service)
-        print(333, is_active)
-        print()
 
         if not is_active:
             msg = 'Could not invoke an inactive service:`{}`, cid:`{}`'.format(service.get_name(), cid)
