@@ -619,7 +619,8 @@ class Service:
 
         # Configure logging depending on whether monitoring is enabled ..
         if self.server.is_datadog_enabled:
-            pass
+            self.logger = DatadogLogger(self.name, cid, server, self.name)
+            self.logger.warning('Hello, this is a warning')
         else:
 
             # .. no Datadog = use stdlib's logger.
