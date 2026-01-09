@@ -36,6 +36,7 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIOR
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
+from zato.common.monitoring.logger_ import DatadogLogger
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
@@ -378,8 +379,6 @@ class Service:
     ) -> 'None':
 
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
-        self.logger = _get_logger(self.name) # type: Logger
-
         self.impl_name = self.__class__.__service_impl_name # Same setup as in self.name
         self.cid = ''
         self.in_reply_to = ''
@@ -389,7 +388,7 @@ class Service:
         self.job_type = ''     # type: str
         self.environ = Bunch()
         self.request = Request(self) # type: Request
-        self.response = Response(self.logger) # type: ignore
+        self.response = Response() # type: ignore
 
         # This is where user configuration is kept
         self.config = Bunch()
@@ -618,8 +617,18 @@ class Service:
         **kwargs:'any_'
     ) -> 'any_':
 
-        self.process_name = kwargs.get('process_name', 'No name')
+        # Configure logging depending on whether monitoring is enabled ..
+        if self.server.is_datadog_enabled:
+            pass
+        else:
 
+            # .. no Datadog = use stdlib's logger.
+            self.logger = _get_logger(self.name) # type: Logger
+
+        # .. now we can assign the logger to our request object.
+        self.request.logger = self.logger
+
+        self.process_name = kwargs.get('process_name', 'No name')
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
         channel_item = wsgi_environ.get('zato.channel_item', {})
@@ -1174,7 +1183,7 @@ class Service:
         service, _ = \
             self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
-        service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
+        _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
             cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
 
         return service
