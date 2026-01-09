@@ -361,6 +361,7 @@ class Service:
     processing_time: 'float'
 
     # Monitoring
+    needs_datadog_logging: 'bool'
     datadog_context: 'DatadogContext'
 
     # Rule engine
@@ -619,14 +620,14 @@ class Service:
 
         # Configure logging depending on whether monitoring is enabled ..
         if self.server.is_datadog_enabled:
-            self.logger = DatadogLogger(self.name, cid, server, self.name)
+            service.logger = DatadogLogger(service.name, cid, server, service.name)
         else:
 
             # .. no Datadog = use stdlib's logger.
-            self.logger = _get_logger(self.name) # type: Logger
+            service.logger = _get_logger(service.name) # type: Logger
 
         # .. now we can assign the logger to our request object.
-        self.request.logger = self.logger
+        service.request.logger = service.logger
 
         self.process_name = kwargs.get('process_name', 'No name')
         wsgi_environ = kwargs.get('wsgi_environ', {})
