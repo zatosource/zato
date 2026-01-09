@@ -618,9 +618,11 @@ class Service:
         **kwargs:'any_'
     ) -> 'any_':
 
+        self.process_name = kwargs.get('process_name', 'No name')
+
         # Configure logging depending on whether monitoring is enabled ..
         if self.server.is_datadog_enabled:
-            service.logger = DatadogLogger(service.name, cid, server, service.name)
+            service.logger = DatadogLogger(cid, server, service.name, self.process_name)
         else:
 
             # .. no Datadog = use stdlib's logger.
@@ -629,7 +631,6 @@ class Service:
         # .. now we can assign the logger to our request object.
         service.request.logger = service.logger
 
-        self.process_name = kwargs.get('process_name', 'No name')
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
         channel_item = wsgi_environ.get('zato.channel_item', {})
@@ -655,26 +656,36 @@ class Service:
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
-        # We may have it from our caler ..
-        _datadog_parent_context = kwargs.get('datadog_context')
+        if service.needs_datadog_logging:
 
-        # .. build a span indicating that we're being invoked ..
-        _datadog_span = self.server.datadog_tracer.start_span(
-            name='',
-            resource=f'Call: {service.name}',
-            child_of=_datadog_parent_context
-        )
+            print()
+            print(111, service.needs_datadog_logging)
+            print(222, service)
+            print()
 
-        # .. set our metadata ..
-        _datadog_span.set_tag('cid', self.cid)
-        _datadog_span.set_tag('process', self.process_name)
-        _datadog_span.set_tag('zato_service', service.name)
+            # We may have it from our caler ..
+            _datadog_parent_context = kwargs.get('datadog_context')
 
-        # .. store it for possible later use ..
-        self.datadog_context = _datadog_span.context
+            # .. build a span indicating that we're being invoked ..
+            _datadog_span = self.server.datadog_tracer.start_span(
+                name='',
+                service=service.name,
+                resource=f'Service was invoked',
+                child_of=_datadog_parent_context
+            )
 
-        # .. and finish the span.
-        _datadog_span.finish()
+            # .. set our metadata ..
+            _datadog_span.set_tag('cid', self.cid)
+            _datadog_span.set_tag('zato_process', self.process_name)
+            _datadog_span.set_tag('zato_service', service.name)
+            _datadog_span.set_tag('zato_message_level', 'INFO')
+            _datadog_span.set_tag('zato_message', f'---')
+
+            # .. store it for possible later use ..
+            self.datadog_context = _datadog_span.context
+
+            # .. and finish the span.
+            _datadog_span.finish()
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being

@@ -25,28 +25,28 @@ class DatadogLogger(Logger):
     cid: 'str'
     server: 'ParallelServer'
     service_name: 'str'
+    process_name: 'str'
 
-    def __init__(self, name:'str', cid:'str', server:'ParallelServer', service_name:'str') -> 'None':
-        super().__init__(name)
+    def __init__(
+        self, cid:'str', server:'ParallelServer', service_name:'str', process_name:'str') -> 'None':
+        super().__init__('zato')
         self.cid = cid
         self.server = server
         self.service_name = service_name
+        self.process_name = process_name
         self.datadog_tracer = self.server.datadog_tracer
-
-        root_logger = logging.getLogger()
-        self.setLevel(root_logger.level)
-        for handler in root_logger.handlers:
-            self.addHandler(handler)
 
 # ################################################################################################################################
 
     def _zato_emit_log(self, level:'str', msg:'str', event:'strnone') -> 'None':
+        event = event or 'Logger'
         trace = self.datadog_tracer.trace(name='', service=self.service_name)
-        if event:
-            trace.resource = event
+        trace.resource = event
         trace.set_tag('cid', self.cid)
-        trace.set_tag('message', msg)
-        trace.set_tag('message_level', level)
+        trace.set_tag('zato_message', msg)
+        trace.set_tag('zato_message_level', level)
+        trace.set_tag('zato_service', self.service_name)
+        trace.set_tag('zato_process', self.process_name)
         trace.finish()
 
 # ################################################################################################################################
