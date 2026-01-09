@@ -651,14 +651,14 @@ class Service:
         # .. build a span indicating that we're being invoked ..
         _datadog_span = self.server.datadog_tracer.start_span(
             name='',
-            service=service.name,
             resource=f'Call: {service.name}',
             child_of=_datadog_parent_context
         )
 
         # .. set our metadata ..
-        _datadog_span.set_tag('process', self.process_name)
         _datadog_span.set_tag('cid', self.cid)
+        _datadog_span.set_tag('process', self.process_name)
+        _datadog_span.set_tag('zato_service', service.name)
 
         # .. store it for possible later use ..
         self.datadog_context = _datadog_span.context
