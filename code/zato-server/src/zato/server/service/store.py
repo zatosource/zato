@@ -435,7 +435,7 @@ class ServiceStore:
     def set_up_class_attributes(self, class_:'type[Service]', service_store:'ServiceStore') -> 'None':
 
         # Local aliases
-        service_name = class_. #
+        service_name = class_.get_name()
         _Class_SimpleIO = None # type: ignore
         _Class_SimpleIO = _Class_SimpleIO # type: ignore
 
