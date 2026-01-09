@@ -420,7 +420,7 @@ input:checked + .toggle-slider:before {
     fill: var(--primary-dark);
     position: relative;
     top: -1px;
-    visibility: visible;
+    visibility: hidden;
 }
 
 .help-icon:hover {
