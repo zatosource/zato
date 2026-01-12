@@ -76,7 +76,7 @@ def restart_proxy(req):
 
 @method_allowed('POST')
 def restart_dashboard(req):
-    import subprocess
+    import subprocess as _subprocess
     import threading
     import os
 
@@ -114,7 +114,7 @@ def restart_dashboard(req):
         try:
             makefile_dir = os.path.expanduser('~/projects/zatosource-zato/4.1')
             logger.info('restart_dashboard: makefile_dir={}'.format(makefile_dir))
-            result = subprocess.run(
+            result = _subprocess.run(
                 ['make', 'restart-dashboard'],
                 cwd=makefile_dir,
                 capture_output=True,
@@ -142,12 +142,13 @@ def restart_dashboard(req):
 @method_allowed('POST')
 def test_connection(req):
 
-    import time
+    from opentelemetry import metrics as _
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+    from opentelemetry.sdk.resources import Resource
     from traceback import format_exc
     from zato.common.json_internal import loads
-    from zato.common.monitoring.grafana_cloud.auto_setup import AutoSetup
-
-    time.sleep(0.2)
 
     response_data = {}
     response_data['success'] = False
@@ -155,25 +156,54 @@ def test_connection(req):
     try:
         body = req.body.decode('utf-8')
         config_data = loads(body)
+        logger.info('test_connection: config_data={}'.format(config_data))
 
-        instance_id = config_data.get('instance_id', '')
-        api_token = config_data.get('api_token', '')
+        _instance_id = config_data.get('instance_id', '')
+        _api_key = config_data.get('api_key', '')
+        _endpoint = config_data.get('endpoint', '')
 
-        if not instance_id or not api_token:
-            response_data['error'] = 'Both instance ID and API token are required'
+        logger.info('test_connection: instance_id={}, api_key={}, endpoint={}'.format(
+            _instance_id, _api_key[:10] + '...' if _api_key else '', _endpoint))
+
+        if not _instance_id or not _api_key or not _endpoint:
+            response_data['error'] = 'Instance ID, API key and endpoint are required'
+            logger.error('test_connection: missing required fields')
             return json_response(response_data, success=False)
 
-        setup = AutoSetup(main_token=api_token, instance_id=instance_id)
-        result = setup.test_connection()
+        otlp_endpoint = 'http://localhost:4318/v1/metrics'
+        logger.info('test_connection: creating resource')
+        resource = Resource.create({'service.name': 'zato'})
 
-        if result['success']:
-            response_data['success'] = True
-            response_data['message'] = result['message']
-            return json_response(response_data)
-        else:
-            error_msg = result['error']
-            response_data['error'] = error_msg
-            return json_response(response_data, success=False)
+        logger.info('test_connection: creating exporter with endpoint={}'.format(otlp_endpoint))
+        exporter = OTLPMetricExporter(endpoint=otlp_endpoint)
+
+        logger.info('test_connection: creating reader')
+        reader = PeriodicExportingMetricReader(exporter, export_interval_millis=1000)
+
+        logger.info('test_connection: creating provider')
+        provider = MeterProvider(resource=resource, metric_readers=[reader])
+
+        logger.info('test_connection: creating meter')
+        meter = provider.get_meter('zato.test')
+
+        logger.info('test_connection: creating gauge zato.test.conn')
+        gauge = meter.create_gauge('zato.test.conn')
+
+        logger.info('test_connection: setting gauge value to 1')
+        gauge.set(1)
+
+        logger.info('test_connection: calling force_flush')
+        flush_result = provider.force_flush()
+        logger.info('test_connection: force_flush returned {}'.format(flush_result))
+
+        logger.info('test_connection: calling shutdown')
+        provider.shutdown()
+        logger.info('test_connection: shutdown complete')
+
+        response_data['success'] = True
+        response_data['message'] = 'Test metric sent'
+        logger.info('test_connection: success')
+        return json_response(response_data)
 
     except Exception as e:
         logger.error('test_connection exception: {}'.format(format_exc()))
@@ -220,10 +250,9 @@ def toggle_enabled(req):
 
 @method_allowed('POST')
 def save_config(req):
-    from datetime import datetime, timezone
+    import redis
     from traceback import format_exc
     from zato.common.json_internal import loads
-    from zato.common.monitoring.grafana_cloud.auto_setup import AutoSetup
 
     response_data = {}
     response_data['success'] = False
@@ -234,46 +263,23 @@ def save_config(req):
         logger.info('save_config: config_data={}'.format(config_data))
 
         instance_id = config_data.get('instance_id', '')
-        api_token = config_data.get('api_token', '')
+        api_key = config_data.get('api_key', '')
+        endpoint = config_data.get('endpoint', '')
 
-        if not instance_id or not api_token:
-            response_data['error'] = 'Instance ID and API Token are required'
+        if not instance_id or not api_key or not endpoint:
+            response_data['error'] = 'Instance ID, API key and endpoint are required'
             return json_response(response_data, success=False)
 
-        setup = AutoSetup(main_token=api_token, instance_id=instance_id)
-
-        now = datetime.now(timezone.utc)
-        timestamp = now.strftime('%Y-%m-%d-%H-%M-%S')
-        policy_name = 'zato-otlp-{}'.format(timestamp)
-        token_name = 'zato-token-{}'.format(timestamp)
-
-        result = setup.setup_complete(policy_name=policy_name, token_name=token_name)
-
-        if result.error:
-            error_message = result.error
-            response_data['error'] = error_message
-            logger.error('save_config error: {}'.format(error_message))
-            if result.error_response:
-                logger.error('save_config error_response: {}'.format(result.error_response))
-            return json_response(response_data, success=False)
-
-        import redis
-        try:
-            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-            _ = r.set('zato:grafana_cloud:instance_id', instance_id)
-            _ = r.set('zato:grafana_cloud:runtime_token', result.token)
-            _ = r.set('zato:grafana_cloud:is_enabled', 'true')
-        except Exception as e:
-            logger.error('save_config redis error: {}'.format(format_exc()))
+        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        _ = r.set('zato:grafana_cloud:instance_id', instance_id)
+        _ = r.set('zato:grafana_cloud:runtime_token', api_key)
+        _ = r.set('zato:grafana_cloud:endpoint', endpoint)
+        _ = r.set('zato:grafana_cloud:is_enabled', 'true')
 
         response_data['success'] = True
         response_data['message'] = 'Configuration saved'
-        response_data['access_policy_id'] = result.access_policy_id
-        response_data['token'] = result.token
-        response_data['encoded_credentials'] = result.encoded_credentials
 
-        logger.info('save_config: setup complete, policy_id={}, token={}'.format(
-            result.access_policy_id, result.token))
+        logger.info('save_config: saved instance_id={}'.format(instance_id))
 
         return json_response(response_data)
 
@@ -297,7 +303,8 @@ def index(req):
     grafana_cloud_page_config['restart_step_label'] = 'Restarting'
 
     instance_id = ''
-    api_token = ''
+    api_key = ''
+    endpoint = ''
     is_enabled = False
 
     try:
@@ -307,6 +314,12 @@ def index(req):
         instance_id = r.get('zato:grafana_cloud:instance_id') or ''
         logger.info('index: instance_id from redis: {}'.format(instance_id))
 
+        api_key = r.get('zato:grafana_cloud:runtime_token') or ''
+        logger.info('index: api_key from redis: {}'.format(api_key))
+
+        endpoint = r.get('zato:grafana_cloud:endpoint') or ''
+        logger.info('index: endpoint from redis: {}'.format(endpoint))
+
         is_enabled_value = r.get('zato:grafana_cloud:is_enabled') or 'false'
         logger.info('index: is_enabled_value from redis: {}'.format(is_enabled_value))
 
@@ -315,14 +328,15 @@ def index(req):
     except Exception:
         logger.error('index: redis error: {}'.format(format_exc()))
 
-    logger.info('index: returning template with is_enabled={}, instance_id={}, api_token={}'.format(
-        is_enabled, instance_id, api_token))
+    logger.info('index: returning template with is_enabled={}, instance_id={}'.format(
+        is_enabled, instance_id))
 
     return TemplateResponse(req, 'zato/monitoring/grafana-cloud/index.html', {
         'page_config': grafana_cloud_page_config,
         'is_enabled': is_enabled,
         'instance_id': instance_id,
-        'api_token': api_token,
+        'api_key': api_key,
+        'endpoint': endpoint,
         'audit_log': []
     })
 
