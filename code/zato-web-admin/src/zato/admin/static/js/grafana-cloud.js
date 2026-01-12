@@ -148,11 +148,19 @@ $.fn.zato.grafanaCloud.init = function() {
 };
 
 $.fn.zato.grafanaCloud.handleTestConnection = function() {
+    console.log('handleTestConnection: starting');
     $('#progress-test').addClass('hidden').removeClass('error-state');
     const statusMessage = $('.status-message.test-success');
     statusMessage.removeClass('show fade');
     
     $.fn.zato.settings.activateSpinner('.button-spinner');
+
+    const requestData = {
+        instance_id: $('#instance-id').val(),
+        api_key: $('#api-key').val(),
+        endpoint: $('#endpoint').val()
+    };
+    console.log('handleTestConnection: request data:', JSON.stringify(requestData));
 
     $.ajax({
         url: '/zato/monitoring/grafana-cloud/test-connection',
@@ -160,13 +168,10 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
         headers: {
             'X-CSRFToken': $.cookie('csrftoken')
         },
-        data: JSON.stringify({
-            instance_id: $('#instance-id').val(),
-            api_key: $('#api-key').val(),
-            endpoint: $('#endpoint').val()
-        }),
+        data: JSON.stringify(requestData),
         contentType: 'application/json',
         success: function(response) {
+            console.log('handleTestConnection: success response:', JSON.stringify(response));
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
             statusMessage.addClass('show');
             setTimeout(function() {
@@ -176,7 +181,11 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
                 }, 500);
             }, 3000);
         },
-        error: function(xhr) {
+        error: function(xhr, status, error) {
+            console.log('handleTestConnection: error status:', status);
+            console.log('handleTestConnection: error:', error);
+            console.log('handleTestConnection: xhr.status:', xhr.status);
+            console.log('handleTestConnection: xhr.responseText:', xhr.responseText);
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
             
             let errorMsg = 'Connection test failed';
@@ -185,9 +194,11 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
                 const response = JSON.parse(xhr.responseText);
                 errorMsg = response.error || errorMsg;
                 fullError = errorMsg;
+                console.log('handleTestConnection: parsed error:', errorMsg);
             } catch(e) {
                 errorMsg = xhr.responseText || errorMsg;
                 fullError = errorMsg;
+                console.log('handleTestConnection: raw error:', errorMsg);
             }
 
             $('#progress-test').removeClass('hidden').data('full-error', fullError);
