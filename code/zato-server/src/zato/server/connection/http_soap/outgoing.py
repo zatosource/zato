@@ -633,7 +633,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         datadog_service_name = current_datadog_service_name.get()
         datadog_process_name = current_datadog_process_name.get()
         datadog_cid = current_datadog_cid.get()
-        logger.info('http_request datadog_context=%s', datadog_context)
 
         # We do not serialize ourselves data based on this content type,
         # leaving it up to the underlying HTTP library to do it ..
