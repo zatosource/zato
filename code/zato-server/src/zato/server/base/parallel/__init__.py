@@ -1271,7 +1271,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _set_up_grafana_cloud(self):
         logger.info('Setting up Grafana Cloud monitoring')
 
-        resource = trace.get_tracer_provider().resource
+        from opentelemetry.sdk.resources import Resource
+
+        resource = Resource.create({'service.name': 'zato.server'})
         exporter = OTLPSpanExporter(endpoint='http://localhost:4318/v1/traces')
         processor = BatchSpanProcessor(exporter)
 

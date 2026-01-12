@@ -86,8 +86,11 @@ if is_datadog_enabled:
 
 # Grafana Cloud monitoring
 
-is_grafana_cloud_enabled = os.environ.get('Zato_Grafana_Cloud_Enabled') or ''
-is_grafana_cloud_enabled = is_grafana_cloud_enabled.lower() in true_values
+grafana_cloud_instance_id = os.environ.get('Zato_Grafana_Cloud_Instance_ID') or ''
+grafana_cloud_api_key = os.environ.get('Zato_Grafana_Cloud_API_Key') or ''
+grafana_cloud_endpoint = os.environ.get('Zato_Grafana_Cloud_Endpoint') or ''
+
+is_grafana_cloud_enabled = bool(grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
 
 # stdlib
 import locale
