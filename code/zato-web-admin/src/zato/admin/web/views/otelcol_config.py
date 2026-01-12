@@ -20,6 +20,15 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+  hostmetrics:
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      filesystem:
+      network:
+      load:
   prometheus:
     config:
       scrape_configs:
@@ -71,7 +80,7 @@ service:
       processors: [batch]
       exporters: [debug, otlphttp, spanmetrics, grafanacloud]
     metrics:
-      receivers: [otlp, prometheus, spanmetrics]
+      receivers: [otlp, prometheus, spanmetrics, hostmetrics]
       processors: [batch]
       exporters: [debug, otlphttp]
     metrics/grafanacloud:
