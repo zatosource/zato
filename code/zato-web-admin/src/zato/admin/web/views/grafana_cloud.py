@@ -156,29 +156,53 @@ def test_connection(req):
     try:
         body = req.body.decode('utf-8')
         config_data = loads(body)
+        logger.info('test_connection: config_data={}'.format(config_data))
 
         _instance_id = config_data.get('instance_id', '')
         _api_key = config_data.get('api_key', '')
         _endpoint = config_data.get('endpoint', '')
 
+        logger.info('test_connection: instance_id={}, api_key={}, endpoint={}'.format(
+            _instance_id, _api_key[:10] + '...' if _api_key else '', _endpoint))
+
         if not _instance_id or not _api_key or not _endpoint:
             response_data['error'] = 'Instance ID, API key and endpoint are required'
+            logger.error('test_connection: missing required fields')
             return json_response(response_data, success=False)
 
+        otlp_endpoint = 'http://localhost:4318/v1/metrics'
+        logger.info('test_connection: creating resource')
         resource = Resource.create({'service.name': 'zato'})
-        exporter = OTLPMetricExporter(endpoint='http://localhost:4318/v1/metrics')
+
+        logger.info('test_connection: creating exporter with endpoint={}'.format(otlp_endpoint))
+        exporter = OTLPMetricExporter(endpoint=otlp_endpoint)
+
+        logger.info('test_connection: creating reader')
         reader = PeriodicExportingMetricReader(exporter, export_interval_millis=1000)
+
+        logger.info('test_connection: creating provider')
         provider = MeterProvider(resource=resource, metric_readers=[reader])
 
+        logger.info('test_connection: creating meter')
         meter = provider.get_meter('zato.test')
+
+        logger.info('test_connection: creating gauge zato.test.conn')
         gauge = meter.create_gauge('zato.test.conn')
+
+        logger.info('test_connection: setting gauge value to 1')
         gauge.set(1)
 
-        _ = provider.force_flush()
+        logger.info('test_connection: calling force_flush')
+        flush_result = provider.force_flush()
+        logger.info('test_connection: force_flush returned {}'.format(flush_result))
+
+        logger.info('test_connection: calling shutdown')
         provider.shutdown()
+        logger.info('test_connection: shutdown complete')
 
         response_data['success'] = True
         response_data['message'] = 'Test metric sent'
+        logger.info('test_connection: success')
         return json_response(response_data)
 
     except Exception as e:
