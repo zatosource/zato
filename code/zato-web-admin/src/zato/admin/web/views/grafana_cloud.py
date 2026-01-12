@@ -216,9 +216,22 @@ def test_connection(req):
 
 @method_allowed('POST')
 def toggle_enabled(req):
+    import redis
+    from zato.common.json_internal import loads
+
     response_data = {}
     response_data['success'] = True
+
+    body = req.body.decode('utf-8')
+    config_data = loads(body)
+    is_enabled = config_data.get('is_enabled', False)
+
+    r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+    _ = r.set('zato:grafana_cloud:is_enabled', 'true' if is_enabled else 'false')
+
     response_data['message'] = 'Toggle state updated'
+    response_data['needs_restart'] = not is_enabled
+
     return json_response(response_data)
 
 # ################################################################################################################################
