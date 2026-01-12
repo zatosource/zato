@@ -216,42 +216,10 @@ def test_connection(req):
 
 @method_allowed('POST')
 def toggle_enabled(req):
-    import redis
-    from traceback import format_exc
-    from zato.common.json_internal import loads
-
     response_data = {}
-    response_data['success'] = False
-
-    try:
-        body = req.body.decode('utf-8')
-        config_data = loads(body)
-
-        is_enabled = config_data.get('is_enabled', False)
-
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-
-        if is_enabled:
-            _ = r.set('zato:grafana_cloud:is_enabled', 'true')
-            response_data['message'] = 'Configuration updated'
-        else:
-            _ = r.delete('zato:grafana_cloud:is_enabled')
-            _ = r.delete('zato:grafana_cloud:instance_id')
-            _ = r.delete('zato:grafana_cloud:runtime_token')
-            _ = r.delete('zato:grafana_cloud:endpoint')
-            response_data['message'] = 'Configuration removed'
-            response_data['needs_restart'] = True
-
-        response_data['success'] = True
-        logger.info('toggle_enabled: is_enabled set to {}'.format(is_enabled))
-
-        return json_response(response_data)
-
-    except Exception as e:
-        logger.error('toggle_enabled exception: {}'.format(format_exc()))
-        error_message = str(e)
-        response_data['error'] = error_message
-        return json_response(response_data, success=False)
+    response_data['success'] = True
+    response_data['message'] = 'Toggle state updated'
+    return json_response(response_data)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -280,19 +248,24 @@ def save_config(req):
         config_data = loads(body)
         logger.info('save_config: config_data={}'.format(config_data))
 
+        is_enabled = config_data.get('is_enabled', False)
         instance_id = config_data.get('instance_id', '')
         api_key = config_data.get('api_key', '')
         endpoint = config_data.get('endpoint', '')
 
-        if not instance_id or not api_key or not endpoint:
-            response_data['error'] = 'Instance ID, API key and endpoint are required'
-            return json_response(response_data, success=False)
+        if is_enabled:
+            has_instance_id = bool(instance_id)
+            has_api_key = bool(api_key)
+            has_endpoint = bool(endpoint)
+            if not has_instance_id or not has_api_key or not has_endpoint:
+                response_data['error'] = 'Instance ID, API key and endpoint are required'
+                return json_response(response_data, success=False)
 
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
         _ = r.set('zato:grafana_cloud:instance_id', instance_id)
         _ = r.set('zato:grafana_cloud:runtime_token', api_key)
         _ = r.set('zato:grafana_cloud:endpoint', endpoint)
-        _ = r.set('zato:grafana_cloud:is_enabled', 'true')
+        _ = r.set('zato:grafana_cloud:is_enabled', 'true' if is_enabled else 'false')
 
         credentials_raw = '{}:{}'.format(instance_id, api_key)
         credentials_encoded = base64.b64encode(credentials_raw.encode('utf-8')).decode('utf-8')
