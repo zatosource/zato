@@ -70,9 +70,6 @@ if is_datadog_enabled:
 
     _datadog_logger.info('Enabling Datadog integration')
 
-    # Datadog
-    from ddtrace import patch as dd_patch
-
     # Check if we need DD debug logs ..
     has_debug = os.environ.get('Zato_Datadog_Debug_Enabled') or ''
     has_debug = has_debug.lower() in {'true', '1'}
@@ -82,7 +79,7 @@ if is_datadog_enabled:
     os.environ['DD_TRACE_DEBUG'] = has_debug
     _datadog_logger.info('DD_TRACE_DEBUG={}'.format(has_debug))
 
-    # .. set agent host if configured ..
+    # .. set agent host if configured - must be done before importing ddtrace ..
     if datadog_main_agent:
         main_host, main_port = datadog_main_agent.split(':')
         os.environ['DD_AGENT_HOST'] = main_host
@@ -96,7 +93,8 @@ if is_datadog_enabled:
         os.environ['DD_DOGSTATSD_PORT'] = metrics_port
         _datadog_logger.info('DD_DOGSTATSD_HOST={}, DD_DOGSTATSD_PORT={}'.format(metrics_host, metrics_port))
 
-    # .. now we can configure patch DD to work with gevent ..
+    # .. now import and patch ddtrace after env vars are set ..
+    from ddtrace import patch as dd_patch
     _datadog_logger.info('Calling dd_patch(gevent=True)')
     dd_patch(gevent=True)
     _datadog_logger.info('dd_patch completed')
