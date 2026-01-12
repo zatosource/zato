@@ -359,6 +359,9 @@ Examples:
                     for env_key, redis_key in grafana_cloud_config.items():
                         if not grafana_cloud_values[env_key]:
                             grafana_cloud_values[env_key] = redis_client.get(redis_key)
+                else:
+                    for env_key in grafana_cloud_config:
+                        grafana_cloud_values[env_key] = ''
             except Exception:
                 pass
 
