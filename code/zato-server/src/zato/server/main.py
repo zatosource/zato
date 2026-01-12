@@ -46,20 +46,20 @@ import os
 true_values = {'true', '1', 'y', 'yes'}
 
 # Datadog monitoring - read config from env vars set by start.py
-datadog_main_agent = os.environ.get('Zato_Datadog_Main_Agent') or ''
-datadog_metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent') or ''
+datadog_main_agent = os.environ.get('Zato_Datadog_Main_Agent')
+datadog_metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent')
 datadog_service_name = os.environ.get('Zato_Datadog_Service_Name') or 'zato.server'
 
-datadog_enabled_env = os.environ.get('Zato_Datadog_Enabled') or ''
-datadog_enabled_env = datadog_enabled_env.lower() in true_values
+datadog_enabled_env = os.environ.get('Zato_Datadog_Enabled')
+datadog_enabled_env = datadog_enabled_env.lower() in true_values if datadog_enabled_env else False
 
 is_datadog_enabled = datadog_enabled_env or bool(datadog_main_agent or datadog_metrics_agent)
 
 if is_datadog_enabled:
 
     # Check if we need DD debug logs ..
-    has_debug = os.environ.get('Zato_Datadog_Debug_Enabled') or ''
-    has_debug = has_debug.lower() in {'true', '1'}
+    has_debug = os.environ.get('Zato_Datadog_Debug_Enabled')
+    has_debug = has_debug.lower() in {'true', '1'} if has_debug else False
     has_debug = str(has_debug).lower()
 
     # .. and assign that accordingly ..
@@ -86,9 +86,9 @@ if is_datadog_enabled:
 
 # Grafana Cloud monitoring
 
-grafana_cloud_instance_id = os.environ.get('Zato_Grafana_Cloud_Instance_ID') or ''
-grafana_cloud_api_key = os.environ.get('Zato_Grafana_Cloud_API_Key') or ''
-grafana_cloud_endpoint = os.environ.get('Zato_Grafana_Cloud_Endpoint') or ''
+grafana_cloud_instance_id = os.environ.get('Zato_Grafana_Cloud_Instance_ID')
+grafana_cloud_api_key = os.environ.get('Zato_Grafana_Cloud_API_Key')
+grafana_cloud_endpoint = os.environ.get('Zato_Grafana_Cloud_Endpoint')
 
 is_grafana_cloud_enabled = bool(grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
 
