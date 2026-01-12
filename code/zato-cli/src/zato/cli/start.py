@@ -314,27 +314,57 @@ Examples:
         # Check basic configuration
         self.run_check_config()
 
-        # Read Datadog config from Redis and set env vars
+        # Read Datadog config from env vars or Redis
         env_vars = {}
-        try:
-            redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-            main_agent = redis_client.get('zato:datadog:main_agent') or ''
-            metrics_agent = redis_client.get('zato:datadog:metrics_agent') or ''
-            if main_agent:
-                env_vars['Zato_Datadog_Main_Agent'] = main_agent
-            if metrics_agent:
-                env_vars['Zato_Datadog_Metrics_Agent'] = metrics_agent
-        except Exception:
-            pass
 
-        # Read Grafana Cloud config from Redis and set env vars
-        try:
-            redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-            grafana_cloud_enabled = redis_client.get('zato:grafana_cloud:is_enabled') or ''
-            if grafana_cloud_enabled == 'true':
-                env_vars['Zato_Grafana_Cloud_Enabled'] = 'true'
-        except Exception:
-            pass
+        main_agent = os.environ.get('Zato_Datadog_Main_Agent')
+        metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent')
+
+        if not main_agent or not metrics_agent:
+            try:
+                redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+                if not main_agent:
+                    main_agent = redis_client.get('zato:datadog:main_agent')
+                if not metrics_agent:
+                    metrics_agent = redis_client.get('zato:datadog:metrics_agent')
+            except Exception:
+                pass
+
+        if main_agent:
+            env_vars['Zato_Datadog_Main_Agent'] = main_agent
+        if metrics_agent:
+            env_vars['Zato_Datadog_Metrics_Agent'] = metrics_agent
+
+        # Read Grafana Cloud config from env vars or Redis
+        grafana_cloud_config = {
+            'Zato_Grafana_Cloud_Instance_ID': 'zato:grafana_cloud:instance_id',
+            'Zato_Grafana_Cloud_API_Key': 'zato:grafana_cloud:runtime_token',
+            'Zato_Grafana_Cloud_Endpoint': 'zato:grafana_cloud:endpoint',
+        }
+
+        grafana_cloud_values = {}
+        needs_redis = False
+
+        for env_key in grafana_cloud_config:
+            value = os.environ.get(env_key)
+            grafana_cloud_values[env_key] = value
+            if not value:
+                needs_redis = True
+
+        if needs_redis:
+            try:
+                redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+                is_enabled = redis_client.get('zato:grafana_cloud:is_enabled')
+                if is_enabled == 'true':
+                    for env_key, redis_key in grafana_cloud_config.items():
+                        if not grafana_cloud_values[env_key]:
+                            grafana_cloud_values[env_key] = redis_client.get(redis_key)
+            except Exception:
+                pass
+
+        for env_key, value in grafana_cloud_values.items():
+            if value:
+                env_vars[env_key] = value
 
         # Start the server now
         return self.start_component(
