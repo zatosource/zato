@@ -9,9 +9,18 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from threading import RLock
 
+# ddtrace
+from ddtrace.vendor.dogstatsd.base import statsd
+
 # Zato
 from zato.common.typing_ import anydict, floatnone
 from zato.common.util.time_ import utcnow_as_ms
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.server.service import Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,6 +125,23 @@ class MetricsStore:
                 lines.append(line)
 
             return '\n'.join(lines) + '\n'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ServiceMetrics:
+    """ Metrics interface for services.
+    """
+
+    def __init__(self, service:'Service') -> 'None':
+        self.service = service
+
+    def push(self, event_name:'str', value:'float') -> 'None':
+        """ Push a metric with a numeric value.
+        """
+        service_name = self.service.name
+        tags = [f'service:{service_name}']
+        statsd.gauge(event_name, value, tags=tags)
 
 # ################################################################################################################################
 # ################################################################################################################################

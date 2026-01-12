@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, grafana_cloud, http_soap, log_streaming, main, scheduler, service, updates
+from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -844,38 +844,27 @@ urlpatterns += [
     url(r'^zato/updates/download-logs$',
         login_required(updates.download_logs), name='updates-download-logs'),
 
-    # Observability - Grafana Cloud
+    # Monitoring - Grafana Cloud
 
-    url(r'^zato/observability/grafana-cloud/$',
-        login_required(grafana_cloud.index), name='observability-grafana-cloud'),
-    url(r'^zato/observability/grafana-cloud/check-availability$',
-        login_required(grafana_cloud.check_availability), name='observability-grafana-cloud-check-availability'),
-    url(r'^zato/observability/grafana-cloud/check-latest-version$',
-        login_required(grafana_cloud.check_latest_version), name='observability-grafana-cloud-check-latest-version'),
-    url(r'^zato/observability/grafana-cloud/get-latest-audit-entry$',
-        login_required(grafana_cloud.get_latest_audit_entry), name='observability-grafana-cloud-get-latest-audit-entry'),
-    url(r'^zato/observability/grafana-cloud/get-audit-log-refresh$',
-        login_required(grafana_cloud.get_audit_log_refresh), name='observability-grafana-cloud-get-audit-log-refresh'),
-    url(r'^zato/observability/grafana-cloud/download-and-install$',
-        login_required(grafana_cloud.download_and_install), name='observability-grafana-cloud-download-and-install'),
-    url(r'^zato/observability/grafana-cloud/restart-scheduler$',
-        login_required(grafana_cloud.restart_scheduler), name='observability-grafana-cloud-restart-scheduler'),
-    url(r'^zato/observability/grafana-cloud/restart-server$',
-        login_required(grafana_cloud.restart_server), name='observability-grafana-cloud-restart-server'),
-    url(r'^zato/observability/grafana-cloud/restart-proxy$',
-        login_required(grafana_cloud.restart_proxy), name='observability-grafana-cloud-restart-proxy'),
-    url(r'^zato/observability/grafana-cloud/restart-dashboard$',
-        login_required(grafana_cloud.restart_dashboard), name='observability-grafana-cloud-restart-dashboard'),
-    url(r'^zato/observability/grafana-cloud/save-schedule$',
-        login_required(grafana_cloud.save_schedule), name='observability-grafana-cloud-save-schedule'),
-    url(r'^zato/observability/grafana-cloud/load-schedule$',
-        login_required(grafana_cloud.load_schedule), name='observability-grafana-cloud-load-schedule'),
-    url(r'^zato/observability/grafana-cloud/delete-schedule$',
-        login_required(grafana_cloud.delete_schedule), name='observability-grafana-cloud-delete-schedule'),
-    url(r'^zato/observability/grafana-cloud/test-connection$',
-        login_required(grafana_cloud.test_connection), name='observability-grafana-cloud-test-connection'),
-    url(r'^zato/observability/grafana-cloud/download-logs$',
-        login_required(grafana_cloud.download_logs), name='observability-grafana-cloud-download-logs'),
+    url(r'^zato/monitoring/grafana-cloud/$',
+        login_required(grafana_cloud.index), name='monitoring-grafana-cloud'),
+    url(r'^zato/monitoring/grafana-cloud/test-connection$',
+        login_required(grafana_cloud.test_connection), name='monitoring-grafana-cloud-test-connection'),
+    url(r'^zato/monitoring/grafana-cloud/toggle-enabled$',
+        login_required(grafana_cloud.toggle_enabled), name='monitoring-grafana-cloud-toggle-enabled'),
+    url(r'^zato/monitoring/grafana-cloud/save-config$',
+        login_required(grafana_cloud.save_config), name='monitoring-grafana-cloud-save-config'),
+
+    # Monitoring - Datadog
+
+    url(r'^zato/monitoring/datadog/$',
+        login_required(datadog.index), name='monitoring-datadog'),
+    url(r'^zato/monitoring/datadog/test-connection$',
+        login_required(datadog.test_connection), name='monitoring-datadog-test-connection'),
+    url(r'^zato/monitoring/datadog/toggle-enabled$',
+        login_required(datadog.toggle_enabled), name='monitoring-datadog-toggle-enabled'),
+    url(r'^zato/monitoring/datadog/save-config$',
+        login_required(datadog.save_config), name='monitoring-datadog-save-config'),
 ]
 
 # ################################################################################################################################

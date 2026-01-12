@@ -8,12 +8,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from contextvars import ContextVar
 from copy import deepcopy
 from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
 from traceback import format_exc
 from urllib.parse import urlencode
+
+# Datadog
+from ddtrace import tracer as datadog_tracer
 
 # requests
 from requests import Response as _RequestsResponse
@@ -57,6 +61,12 @@ if 0:
 
 logger = getLogger('zato_rest')
 has_debug = logger.isEnabledFor(DEBUG)
+
+# Datadog context variables - set by service, read by http_request
+current_datadog_context:'ContextVar' = ContextVar('current_datadog_context', default=None)
+current_datadog_service_name:'ContextVar' = ContextVar('current_datadog_service_name', default=None)
+current_datadog_process_name:'ContextVar' = ContextVar('current_datadog_process_name', default=None)
+current_datadog_cid:'ContextVar' = ContextVar('current_datadog_cid', default=None)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -617,6 +627,12 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # Pop it here for later use because we cannot pass it to the requests module
         model = kwargs.pop('model', None)
 
+        # Get datadog context from contextvar (set by service)
+        datadog_context = current_datadog_context.get()
+        datadog_service_name = current_datadog_service_name.get()
+        datadog_process_name = current_datadog_process_name.get()
+        datadog_cid = current_datadog_cid.get()
+
         # We do not serialize ourselves data based on this content type,
         # leaving it up to the underlying HTTP library to do it ..
         needs_serialize_based_on_content_type = self.config.get('content_type') != ContentType.FormURLEncoded
@@ -651,6 +667,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # .. build a default set of headers now ..
         headers = self._create_headers(cid, headers)
 
+        # .. inject datadog tracing headers if context is available ..
+        # if datadog_context:
+        #    from ddtrace.propagation.http import HTTPPropagator
+        #    HTTPPropagator.inject(datadog_context, headers)
+
         # .. SOAP requests need to be specifically formatted now ..
         if _is_soap:
             data, headers = self._soap_data(data, headers)
@@ -670,8 +691,25 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 data = data.encode('utf-8')
 
         # .. do invoke the connection ..
-        response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
-        response = cast_('Response', response)
+        conn_name = self.config['name']
+        if datadog_context:
+            with datadog_tracer.start_span(
+                name='zato.http.request',
+                service=datadog_service_name,
+                resource=f'REST Outgoing: {conn_name}',
+                child_of=datadog_context
+            ) as span:
+                span.set_tag('cid', datadog_cid)
+                span.set_tag('zato_process', datadog_process_name)
+                span.set_tag('zato_service', datadog_service_name)
+                span.set_tag('zato_message_level', 'INFO')
+                response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
+                response = cast_('Response', response)
+                full_url = address + ('?' + '&'.join(f'{k}={v}' for k, v in qs_params.items()) if qs_params else '')
+                span.set_tag('zato_message', f'{response.status_code} {method} {full_url}')
+        else:
+            response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
+            response = cast_('Response', response)
 
         # .. by default, we have no parsed response at all, ..
         # .. which means that we can assume it will be the same as the raw, text response ..
