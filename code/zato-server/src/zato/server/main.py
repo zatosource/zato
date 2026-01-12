@@ -54,21 +54,7 @@ datadog_enabled_env = datadog_enabled_env.lower() in true_values
 
 is_datadog_enabled = datadog_enabled_env or bool(datadog_main_agent or datadog_metrics_agent)
 
-_datadog_logger = logging.getLogger('zato')
-_datadog_logger.setLevel(logging.INFO)
-_datadog_handler = logging.StreamHandler()
-_datadog_handler.setLevel(logging.INFO)
-_datadog_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
-_datadog_logger.addHandler(_datadog_handler)
-
-_datadog_logger.info('Zato_Datadog_Main_Agent={}'.format(datadog_main_agent))
-_datadog_logger.info('Zato_Datadog_Metrics_Agent={}'.format(datadog_metrics_agent))
-_datadog_logger.info('Zato_Datadog_Enabled={}'.format(os.environ.get('Zato_Datadog_Enabled', '')))
-_datadog_logger.info('is_datadog_enabled={}'.format(is_datadog_enabled))
-
 if is_datadog_enabled:
-
-    _datadog_logger.info('Enabling Datadog integration')
 
     # Check if we need DD debug logs ..
     has_debug = os.environ.get('Zato_Datadog_Debug_Enabled') or ''
@@ -77,29 +63,22 @@ if is_datadog_enabled:
 
     # .. and assign that accordingly ..
     os.environ['DD_TRACE_DEBUG'] = has_debug
-    _datadog_logger.info('DD_TRACE_DEBUG={}'.format(has_debug))
 
     # .. set agent host if configured - must be done before importing ddtrace ..
     if datadog_main_agent:
         main_host, main_port = datadog_main_agent.split(':')
         os.environ['DD_AGENT_HOST'] = main_host
         os.environ['DD_TRACE_AGENT_PORT'] = main_port
-        _datadog_logger.info('DD_AGENT_HOST={}, DD_TRACE_AGENT_PORT={}'.format(main_host, main_port))
 
     # .. set dogstatsd host if configured ..
     if datadog_metrics_agent:
         metrics_host, metrics_port = datadog_metrics_agent.split(':')
         os.environ['DD_DOGSTATSD_HOST'] = metrics_host
         os.environ['DD_DOGSTATSD_PORT'] = metrics_port
-        _datadog_logger.info('DD_DOGSTATSD_HOST={}, DD_DOGSTATSD_PORT={}'.format(metrics_host, metrics_port))
 
     # .. now import and patch ddtrace after env vars are set ..
     from ddtrace import patch as dd_patch
-    _datadog_logger.info('Calling dd_patch(gevent=True)')
     dd_patch(gevent=True)
-    _datadog_logger.info('dd_patch completed')
-else:
-    _datadog_logger.info('Datadog integration is disabled')
 
 # Grafana Cloud monitoring
 
@@ -430,16 +409,6 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
-
-    # Log Datadog configuration
-    logger.info('Datadog: Zato_Datadog_Main_Agent={}'.format(datadog_main_agent))
-    logger.info('Datadog: Zato_Datadog_Metrics_Agent={}'.format(datadog_metrics_agent))
-    logger.info('Datadog: Zato_Datadog_Enabled={}'.format(os.environ.get('Zato_Datadog_Enabled', '')))
-    logger.info('Datadog: is_datadog_enabled={}'.format(is_datadog_enabled))
-    logger.info('Datadog: DD_AGENT_HOST={}'.format(os.environ.get('DD_AGENT_HOST', '')))
-    logger.info('Datadog: DD_TRACE_AGENT_PORT={}'.format(os.environ.get('DD_TRACE_AGENT_PORT', '')))
-    logger.info('Datadog: DD_DOGSTATSD_HOST={}'.format(os.environ.get('DD_DOGSTATSD_HOST', '')))
-    logger.info('Datadog: DD_DOGSTATSD_PORT={}'.format(os.environ.get('DD_DOGSTATSD_PORT', '')))
 
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
