@@ -618,7 +618,7 @@ class Service:
         **kwargs:'any_'
     ) -> 'any_':
 
-        self.process_name = kwargs.get('process_name', 'No name')
+        self.process_name = kwargs.get('process_name') or service.process_name
 
         # Configure logging depending on whether monitoring is enabled ..
         if service.needs_datadog_logging:
