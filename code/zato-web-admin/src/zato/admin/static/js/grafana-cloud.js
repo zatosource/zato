@@ -7,19 +7,22 @@ $.fn.zato.grafanaCloud.init = function() {
     const toggle = $('#is-enabled');
     const container = $('.progress-panel');
     const instanceIdInput = $('#instance-id');
-    const apiTokenInput = $('#api-token');
+    const apiKeyInput = $('#api-key');
+    const endpointInput = $('#endpoint');
     const saveButton = $('#update-button');
     
     console.log('grafanaCloud.init: toggle checked:', toggle.is(':checked'));
     console.log('grafanaCloud.init: instance_id value:', instanceIdInput.val());
-    console.log('grafanaCloud.init: api_token value:', apiTokenInput.val());
+    console.log('grafanaCloud.init: api_key value:', apiKeyInput.val());
+    console.log('grafanaCloud.init: endpoint value:', endpointInput.val());
     
     function updateSaveButtonState() {
         const instanceId = instanceIdInput.val().trim();
-        const apiToken = apiTokenInput.val().trim();
-        const hasValues = instanceId.length > 0 && apiToken.length > 0;
+        const apiKey = apiKeyInput.val().trim();
+        const endpoint = endpointInput.val().trim();
+        const hasValues = instanceId.length > 0 && apiKey.length > 0 && endpoint.length > 0;
         saveButton.prop('disabled', !hasValues);
-        console.log('updateSaveButtonState: instanceId length =', instanceId.length, ', apiToken length =', apiToken.length, ', disabled =', !hasValues);
+        console.log('updateSaveButtonState: instanceId length =', instanceId.length, ', apiKey length =', apiKey.length, ', endpoint length =', endpoint.length, ', disabled =', !hasValues);
     }
     
     function updateFieldsState(isEnabled) {
@@ -37,7 +40,8 @@ $.fn.zato.grafanaCloud.init = function() {
     updateFieldsState(initialEnabled);
     
     instanceIdInput.on('input', updateSaveButtonState);
-    apiTokenInput.on('input', updateSaveButtonState);
+    apiKeyInput.on('input', updateSaveButtonState);
+    endpointInput.on('input', updateSaveButtonState);
     
     toggle.on('change', function() {
         const isEnabled = $(this).is(':checked');
@@ -144,11 +148,19 @@ $.fn.zato.grafanaCloud.init = function() {
 };
 
 $.fn.zato.grafanaCloud.handleTestConnection = function() {
+    console.log('handleTestConnection: starting');
     $('#progress-test').addClass('hidden').removeClass('error-state');
     const statusMessage = $('.status-message.test-success');
     statusMessage.removeClass('show fade');
     
     $.fn.zato.settings.activateSpinner('.button-spinner');
+
+    const requestData = {
+        instance_id: $('#instance-id').val(),
+        api_key: $('#api-key').val(),
+        endpoint: $('#endpoint').val()
+    };
+    console.log('handleTestConnection: request data:', JSON.stringify(requestData));
 
     $.ajax({
         url: '/zato/monitoring/grafana-cloud/test-connection',
@@ -156,12 +168,10 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
         headers: {
             'X-CSRFToken': $.cookie('csrftoken')
         },
-        data: JSON.stringify({
-            instance_id: $('#instance-id').val(),
-            api_token: $('#api-token').val()
-        }),
+        data: JSON.stringify(requestData),
         contentType: 'application/json',
         success: function(response) {
+            console.log('handleTestConnection: success response:', JSON.stringify(response));
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
             statusMessage.addClass('show');
             setTimeout(function() {
@@ -171,7 +181,11 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
                 }, 500);
             }, 3000);
         },
-        error: function(xhr) {
+        error: function(xhr, status, error) {
+            console.log('handleTestConnection: error status:', status);
+            console.log('handleTestConnection: error:', error);
+            console.log('handleTestConnection: xhr.status:', xhr.status);
+            console.log('handleTestConnection: xhr.responseText:', xhr.responseText);
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
             
             let errorMsg = 'Connection test failed';
@@ -180,9 +194,11 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
                 const response = JSON.parse(xhr.responseText);
                 errorMsg = response.error || errorMsg;
                 fullError = errorMsg;
+                console.log('handleTestConnection: parsed error:', errorMsg);
             } catch(e) {
                 errorMsg = xhr.responseText || errorMsg;
                 fullError = errorMsg;
+                console.log('handleTestConnection: raw error:', errorMsg);
             }
 
             $('#progress-test').removeClass('hidden').data('full-error', fullError);
@@ -211,7 +227,8 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
         data: JSON.stringify({
             is_enabled: $('#is-enabled').is(':checked'),
             instance_id: $('#instance-id').val(),
-            api_token: $('#api-token').val()
+            api_key: $('#api-key').val(),
+            endpoint: $('#endpoint').val()
         }),
         contentType: 'application/json',
         success: function(response) {
