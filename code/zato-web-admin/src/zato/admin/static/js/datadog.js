@@ -1,25 +1,21 @@
-$.fn.zato.grafanaCloud = {};
+$.fn.zato.datadog = {};
 
-$.fn.zato.grafanaCloud.init = function() {
-    $('#check-button').on('click', $.fn.zato.grafanaCloud.handleTestConnection);
-    $('#update-button').on('click', $.fn.zato.grafanaCloud.handleSaveClick);
+$.fn.zato.datadog.init = function() {
+    $('#check-button').on('click', $.fn.zato.datadog.handleTestConnection);
+    $('#update-button').on('click', $.fn.zato.datadog.handleSaveClick);
     
     const toggle = $('#is-enabled');
     const container = $('.progress-panel');
-    const instanceIdInput = $('#instance-id');
-    const apiTokenInput = $('#api-token');
+    const mainAgentInput = $('#main-agent');
+    const metricsAgentInput = $('#metrics-agent');
     const saveButton = $('#update-button');
     
-    console.log('grafanaCloud.init: toggle checked:', toggle.is(':checked'));
-    console.log('grafanaCloud.init: instance_id value:', instanceIdInput.val());
-    console.log('grafanaCloud.init: api_token value:', apiTokenInput.val());
+    console.log('datadog.init: toggle checked:', toggle.is(':checked'));
+    console.log('datadog.init: main_agent value:', mainAgentInput.val());
+    console.log('datadog.init: metrics_agent value:', metricsAgentInput.val());
     
     function updateSaveButtonState() {
-        const instanceId = instanceIdInput.val().trim();
-        const apiToken = apiTokenInput.val().trim();
-        const hasValues = instanceId.length > 0 && apiToken.length > 0;
-        saveButton.prop('disabled', !hasValues);
-        console.log('updateSaveButtonState: instanceId length =', instanceId.length, ', apiToken length =', apiToken.length, ', disabled =', !hasValues);
+        saveButton.prop('disabled', false);
     }
     
     function updateFieldsState(isEnabled) {
@@ -33,11 +29,11 @@ $.fn.zato.grafanaCloud.init = function() {
     }
     
     const initialEnabled = toggle.is(':checked');
-    console.log('grafanaCloud.init: setting initial state, isEnabled =', initialEnabled);
+    console.log('datadog.init: setting initial state, isEnabled =', initialEnabled);
     updateFieldsState(initialEnabled);
     
-    instanceIdInput.on('input', updateSaveButtonState);
-    apiTokenInput.on('input', updateSaveButtonState);
+    mainAgentInput.on('input', updateSaveButtonState);
+    metricsAgentInput.on('input', updateSaveButtonState);
     
     toggle.on('change', function() {
         const isEnabled = $(this).is(':checked');
@@ -45,7 +41,7 @@ $.fn.zato.grafanaCloud.init = function() {
         updateFieldsState(isEnabled);
         
         $.ajax({
-            url: '/zato/monitoring/grafana-cloud/toggle-enabled',
+            url: '/zato/monitoring/datadog/toggle-enabled',
             type: 'POST',
             headers: {
                 'X-CSRFToken': $.cookie('csrftoken')
@@ -143,7 +139,7 @@ $.fn.zato.grafanaCloud.init = function() {
     $.fn.zato.settings.initDriverTours(Object.values(tours));
 };
 
-$.fn.zato.grafanaCloud.handleTestConnection = function() {
+$.fn.zato.datadog.handleTestConnection = function() {
     $('#progress-test').addClass('hidden').removeClass('error-state');
     const statusMessage = $('.status-message.test-success');
     statusMessage.removeClass('show fade');
@@ -151,14 +147,14 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
     $.fn.zato.settings.activateSpinner('.button-spinner');
 
     $.ajax({
-        url: '/zato/monitoring/grafana-cloud/test-connection',
+        url: '/zato/monitoring/datadog/test-connection',
         type: 'POST',
         headers: {
             'X-CSRFToken': $.cookie('csrftoken')
         },
         data: JSON.stringify({
-            instance_id: $('#instance-id').val(),
-            api_token: $('#api-token').val()
+            main_agent: $('#main-agent').val(),
+            metrics_agent: $('#metrics-agent').val()
         }),
         contentType: 'application/json',
         success: function(response) {
@@ -175,23 +171,24 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
             
             let errorMsg = 'Connection test failed';
-            let fullError = errorMsg;
             try {
                 const response = JSON.parse(xhr.responseText);
-                errorMsg = response.error || errorMsg;
-                fullError = errorMsg;
+                if (response.errors && response.errors.length) {
+                    errorMsg = response.errors.join('<br/>');
+                } else if (response.error) {
+                    errorMsg = response.error;
+                }
             } catch(e) {
                 errorMsg = xhr.responseText || errorMsg;
-                fullError = errorMsg;
             }
 
-            $('#progress-test').removeClass('hidden').data('full-error', fullError);
+            $('#progress-test').removeClass('hidden').data('full-error', errorMsg);
             $.fn.zato.settings.updateProgress('test', 'error', errorMsg);
         }
     });
 };
 
-$.fn.zato.grafanaCloud.handleSaveClick = function() {
+$.fn.zato.datadog.handleSaveClick = function() {
     const button = $(this);
     button.prop('disabled', true);
 
@@ -203,22 +200,22 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
     $.fn.zato.settings.updateProgress('configure', 'processing', 'Configuring...');
 
     $.ajax({
-        url: '/zato/monitoring/grafana-cloud/save-config',
+        url: '/zato/monitoring/datadog/save-config',
         type: 'POST',
         headers: {
             'X-CSRFToken': $.cookie('csrftoken')
         },
         data: JSON.stringify({
             is_enabled: $('#is-enabled').is(':checked'),
-            instance_id: $('#instance-id').val(),
-            api_token: $('#api-token').val()
+            main_agent: $('#main-agent').val(),
+            metrics_agent: $('#metrics-agent').val()
         }),
         contentType: 'application/json',
         success: function(response) {
             $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration complete');
 
             $('#progress-install').removeClass('hidden');
-            $.fn.zato.updates.runRestartSteps(button);
+            $.fn.zato.datadog.runRestartSteps(button);
         },
         error: function(xhr) {
             let errorMsg = 'Configure failed';
@@ -239,19 +236,19 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
     });
 };
 
-$.fn.zato.updates.runRestartSteps = function(button) {
+$.fn.zato.datadog.runRestartSteps = function(button) {
     const config = {};
     config.progressKey = 'install';
     config.button = button;
-    config.pollUrl = '/zato/monitoring/grafana-cloud/';
+    config.pollUrl = '/zato/monitoring/datadog/';
     config.completedText = 'All components restarted';
     config.completionBadgeSelector = '#progress-install .info-message';
     config.baseUrl = '/zato/updates';
-    config.completionBadgeText = '⭐ Grafana Cloud configured successfully';
+    config.completionBadgeText = '⭐ Datadog configured successfully';
 
     $.fn.zato.settings.executeSteps(config);
 };
 
 $(document).ready(function() {
-    $.fn.zato.grafanaCloud.init();
+    $.fn.zato.datadog.init();
 });
