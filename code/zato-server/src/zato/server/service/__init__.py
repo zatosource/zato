@@ -622,7 +622,7 @@ class Service:
 
         # Configure logging depending on whether monitoring is enabled ..
         if service.needs_datadog_logging:
-            service.logger = DatadogLogger(cid, server, service.name, self.process_name)
+            service.logger = DatadogLogger(cid, server, service.name, self.process_name, self)
         else:
 
             # .. no Datadog = use stdlib's logger.
@@ -658,7 +658,7 @@ class Service:
 
         if service.needs_datadog_logging:
 
-            # We may have it from our caler ..
+            # We may have it from our caller ..
             _datadog_parent_context = kwargs.get('datadog_context')
 
             # .. build a span indicating that we're being invoked ..
