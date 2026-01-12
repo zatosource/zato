@@ -671,9 +671,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # .. inject datadog tracing headers if context is available ..
         if datadog_context:
-            logger.info('http_request injecting headers, before=%s', dict(headers))
             HTTPPropagator.inject(datadog_context, headers)
-            logger.info('http_request injecting headers, after=%s', dict(headers))
 
         # .. SOAP requests need to be specifically formatted now ..
         if _is_soap:
@@ -699,7 +697,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             with datadog_tracer.start_span(
                 name='zato.http.request',
                 service=datadog_service_name,
-                resource=f'REST outgoing {conn_name}',
+                resource=f'REST Outgoing: {conn_name}',
                 child_of=datadog_context
             ) as span:
                 span.set_tag('cid', datadog_cid)
