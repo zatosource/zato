@@ -7,19 +7,22 @@ $.fn.zato.grafanaCloud.init = function() {
     const toggle = $('#is-enabled');
     const container = $('.progress-panel');
     const instanceIdInput = $('#instance-id');
-    const apiTokenInput = $('#api-token');
+    const apiKeyInput = $('#api-key');
+    const endpointInput = $('#endpoint');
     const saveButton = $('#update-button');
     
     console.log('grafanaCloud.init: toggle checked:', toggle.is(':checked'));
     console.log('grafanaCloud.init: instance_id value:', instanceIdInput.val());
-    console.log('grafanaCloud.init: api_token value:', apiTokenInput.val());
+    console.log('grafanaCloud.init: api_key value:', apiKeyInput.val());
+    console.log('grafanaCloud.init: endpoint value:', endpointInput.val());
     
     function updateSaveButtonState() {
         const instanceId = instanceIdInput.val().trim();
-        const apiToken = apiTokenInput.val().trim();
-        const hasValues = instanceId.length > 0 && apiToken.length > 0;
+        const apiKey = apiKeyInput.val().trim();
+        const endpoint = endpointInput.val().trim();
+        const hasValues = instanceId.length > 0 && apiKey.length > 0 && endpoint.length > 0;
         saveButton.prop('disabled', !hasValues);
-        console.log('updateSaveButtonState: instanceId length =', instanceId.length, ', apiToken length =', apiToken.length, ', disabled =', !hasValues);
+        console.log('updateSaveButtonState: instanceId length =', instanceId.length, ', apiKey length =', apiKey.length, ', endpoint length =', endpoint.length, ', disabled =', !hasValues);
     }
     
     function updateFieldsState(isEnabled) {
@@ -37,7 +40,8 @@ $.fn.zato.grafanaCloud.init = function() {
     updateFieldsState(initialEnabled);
     
     instanceIdInput.on('input', updateSaveButtonState);
-    apiTokenInput.on('input', updateSaveButtonState);
+    apiKeyInput.on('input', updateSaveButtonState);
+    endpointInput.on('input', updateSaveButtonState);
     
     toggle.on('change', function() {
         const isEnabled = $(this).is(':checked');
@@ -158,7 +162,8 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
         },
         data: JSON.stringify({
             instance_id: $('#instance-id').val(),
-            api_token: $('#api-token').val()
+            api_key: $('#api-key').val(),
+            endpoint: $('#endpoint').val()
         }),
         contentType: 'application/json',
         success: function(response) {
@@ -211,7 +216,8 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
         data: JSON.stringify({
             is_enabled: $('#is-enabled').is(':checked'),
             instance_id: $('#instance-id').val(),
-            api_token: $('#api-token').val()
+            api_key: $('#api-key').val(),
+            endpoint: $('#endpoint').val()
         }),
         contentType: 'application/json',
         success: function(response) {
