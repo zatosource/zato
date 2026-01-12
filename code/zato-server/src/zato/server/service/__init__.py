@@ -45,7 +45,8 @@ from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
-from zato.server.connection.http_soap.outgoing import current_datadog_context
+from zato.server.connection.http_soap.outgoing import current_datadog_cid, current_datadog_context, \
+    current_datadog_process_name, current_datadog_service_name
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -686,6 +687,9 @@ class Service:
             # .. set it in contextvar so http_request can access it ..
             logger.info('update_handle setting contextvar with context=%s', _datadog_span.context)
             _ = current_datadog_context.set(_datadog_span.context)
+            _ = current_datadog_service_name.set(service.name)
+            _ = current_datadog_process_name.set(self.process_name)
+            _ = current_datadog_cid.set(self.cid)
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
