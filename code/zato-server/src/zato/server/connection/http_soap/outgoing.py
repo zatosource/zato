@@ -18,7 +18,6 @@ from urllib.parse import urlencode
 
 # Datadog
 from ddtrace import tracer as datadog_tracer
-from ddtrace.propagation.http import HTTPPropagator
 
 # requests
 from requests import Response as _RequestsResponse
@@ -669,8 +668,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         headers = self._create_headers(cid, headers)
 
         # .. inject datadog tracing headers if context is available ..
-        if datadog_context:
-            HTTPPropagator.inject(datadog_context, headers)
+        # if datadog_context:
+        #    from ddtrace.propagation.http import HTTPPropagator
+        #    HTTPPropagator.inject(datadog_context, headers)
 
         # .. SOAP requests need to be specifically formatted now ..
         if _is_soap:
