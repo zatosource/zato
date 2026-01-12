@@ -48,6 +48,7 @@ true_values = {'true', '1', 'y', 'yes'}
 # Datadog monitoring - read config from env vars set by start.py
 datadog_main_agent = os.environ.get('Zato_Datadog_Main_Agent') or ''
 datadog_metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent') or ''
+datadog_service_name = os.environ.get('Zato_Datadog_Service_Name') or ''
 
 datadog_enabled_env = os.environ.get('Zato_Datadog_Enabled') or ''
 datadog_enabled_env = datadog_enabled_env.lower() in true_values
@@ -75,6 +76,9 @@ if is_datadog_enabled:
         metrics_host, metrics_port = datadog_metrics_agent.split(':')
         os.environ['DD_DOGSTATSD_HOST'] = metrics_host
         os.environ['DD_DOGSTATSD_PORT'] = metrics_port
+
+    # .. set service name - always ensure it exists ..
+    os.environ['DD_SERVICE'] = datadog_service_name
 
     # .. now import and patch ddtrace after env vars are set ..
     from ddtrace import patch as dd_patch
