@@ -301,6 +301,10 @@ Examples:
 # ################################################################################################################################
 
     def _on_server(self, *ignored:'any_') -> 'int': # show_output was an old param, *ignored is safer for dispatch
+
+        # redis
+        import redis
+
         from zato.common.util.updates import setup_update_file_logger
         setup_update_file_logger(component_name='server')
 
@@ -310,13 +314,27 @@ Examples:
         # Check basic configuration
         self.run_check_config()
 
+        # Read Datadog config from Redis and set env vars
+        env_vars = {}
+        try:
+            redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            main_agent = redis_client.get('zato:datadog:main_agent') or ''
+            metrics_agent = redis_client.get('zato:datadog:metrics_agent') or ''
+            if main_agent:
+                env_vars['Zato_Datadog_Main_Agent'] = main_agent
+            if metrics_agent:
+                env_vars['Zato_Datadog_Metrics_Agent'] = metrics_agent
+        except Exception:
+            pass
+
         # Start the server now
         return self.start_component(
             'zato.server.main',
             'server',
             self.component_dir,
             self.delete_pidfile,
-            extra_options=extra_options
+            extra_options=extra_options,
+            env_vars=env_vars
         )
 
 # ################################################################################################################################
