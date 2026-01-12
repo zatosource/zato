@@ -1426,10 +1426,6 @@ class Updater:
         """ Restarts a Zato component with port checking.
         """
         time.sleep(0.05)
-        return {
-            'success': True,
-            'message': '{} restarted'.format(component_name)
-        }
 
         try:
             if component_name == 'proxy' and not os.path.exists(component_path):
