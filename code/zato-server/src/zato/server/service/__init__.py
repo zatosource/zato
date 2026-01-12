@@ -37,6 +37,7 @@ from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.monitoring.logger_ import DatadogLogger
+from zato.common.monitoring.metrics import ServiceMetrics
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
@@ -292,7 +293,7 @@ class Service:
     or any other, regardless whether they arere built-in or user-defined ones.
     """
 
-    process_name:'str'
+    process_name:'str' = 'No name'
 
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
@@ -360,7 +361,8 @@ class Service:
 
     # Monitoring
     needs_datadog_logging: 'bool'
-    datadog_context: 'DatadogContext'
+    datadog_context: 'DatadogContext' = None
+    metrics: 'ServiceMetrics'
 
     # Rule engine
     rules: 'RulesManager'
@@ -1172,6 +1174,7 @@ class Service:
         service.static_config = server.static_config
         service.time = server.time_util
         service.security = SecurityFacade(service.server)
+        service.metrics = ServiceMetrics(service)
 
         if channel_params:
             service.request.channel_params.update(channel_params)
