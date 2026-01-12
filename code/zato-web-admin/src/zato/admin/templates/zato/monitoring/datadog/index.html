@@ -25,13 +25,13 @@
     <div class="info-row">
         <div class="info-label">Main agent</div>
         <div class="info-value">
-            <input type="text" id="main-agent" value="{{ main_agent }}" placeholder="localhost:8126"{% if not is_enabled %} disabled{% endif %}>
+            <input type="text" id="main-agent" value="{{ main_agent|default:'localhost:8126' }}" placeholder="localhost:8126"{% if not is_enabled %} disabled{% endif %}>
         </div>
     </div>
     <div class="info-row">
         <div class="info-label">Metrics agent</div>
         <div class="info-value">
-            <input type="text" id="metrics-agent" value="{{ metrics_agent }}" placeholder="localhost:8125"{% if not is_enabled %} disabled{% endif %}>
+            <input type="text" id="metrics-agent" value="{{ metrics_agent|default:'localhost:8125' }}" placeholder="localhost:8125"{% if not is_enabled %} disabled{% endif %}>
         </div>
     </div>
 </div>

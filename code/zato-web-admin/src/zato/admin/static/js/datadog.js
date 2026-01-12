@@ -171,17 +171,18 @@ $.fn.zato.datadog.handleTestConnection = function() {
             $.fn.zato.settings.deactivateSpinner('.button-spinner');
             
             let errorMsg = 'Connection test failed';
-            let fullError = errorMsg;
             try {
                 const response = JSON.parse(xhr.responseText);
-                errorMsg = response.error || errorMsg;
-                fullError = errorMsg;
+                if (response.errors && response.errors.length) {
+                    errorMsg = response.errors.join('<br/>');
+                } else if (response.error) {
+                    errorMsg = response.error;
+                }
             } catch(e) {
                 errorMsg = xhr.responseText || errorMsg;
-                fullError = errorMsg;
             }
 
-            $('#progress-test').removeClass('hidden').data('full-error', fullError);
+            $('#progress-test').removeClass('hidden').data('full-error', errorMsg);
             $.fn.zato.settings.updateProgress('test', 'error', errorMsg);
         }
     });

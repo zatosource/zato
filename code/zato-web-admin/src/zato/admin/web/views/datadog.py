@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import socket
 import subprocess
 import threading
 import time
@@ -142,10 +143,27 @@ def restart_dashboard(req):
 # ################################################################################################################################
 # ################################################################################################################################
 
+def _test_agent_connection(address, label, errors, use_udp=False):
+    host, port = address.split(':')
+    port = int(port)
+    try:
+        sock_type = socket.SOCK_DGRAM if use_udp else socket.SOCK_STREAM
+        sock = socket.socket(socket.AF_INET, sock_type)
+        sock.settimeout(2)
+        if use_udp:
+            _ = sock.sendto(b'', (host, port))
+        else:
+            sock.connect((host, port))
+        sock.close()
+        logger.info('test_connection: {} connection successful'.format(label))
+    except Exception as e:
+        errors.append('{} ({}): {}'.format(label, address, e))
+        logger.error('test_connection: {} connection failed: {}'.format(label, e))
+
+# ################################################################################################################################
+
 @method_allowed('POST')
 def test_connection(req):
-
-    time.sleep(0.2)
 
     response_data = {}
     response_data['success'] = False
@@ -154,10 +172,19 @@ def test_connection(req):
         body = req.body.decode('utf-8')
         config_data = loads(body)
 
-        main_agent = config_data.get('main_agent', '')
-        metrics_agent = config_data.get('metrics_agent', '')
+        main_agent = config_data.get('main_agent', '') or 'localhost:8126'
+        metrics_agent = config_data.get('metrics_agent', '') or 'localhost:8125'
 
         logger.info('test_connection: main_agent={}, metrics_agent={}'.format(main_agent, metrics_agent))
+
+        errors = []
+
+        _test_agent_connection(main_agent, 'Main agent', errors)
+        _test_agent_connection(metrics_agent, 'Metrics agent', errors, use_udp=True)
+
+        if errors:
+            response_data['errors'] = errors
+            return json_response(response_data, success=False)
 
         response_data['success'] = True
         response_data['message'] = 'Connection test successful'
