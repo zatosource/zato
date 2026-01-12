@@ -587,7 +587,8 @@ class ServiceStore:
             # Monitoring
             zato_prefixes = ('zato', 'pub.zato')
             is_zato_service = service_name.startswith(zato_prefixes)
-            class_.needs_datadog_logging = self.server.is_datadog_enabled and (not is_zato_service)
+            is_excluded_service = service_name == 'demo.ping'
+            class_.needs_datadog_logging = self.server.is_datadog_enabled and (not is_zato_service) and (not is_excluded_service)
 
             # Crypto operations
             class_.crypto = service_store.server.crypto_manager
