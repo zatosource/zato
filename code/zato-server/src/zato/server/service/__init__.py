@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
-import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
@@ -667,8 +666,7 @@ class Service:
             _datadog_parent_context = kwargs.get('datadog_context')
 
             # .. build the service name for Datadog ..
-            _dd_service = os.environ['DD_SERVICE']
-            _dd_service_name = '{} | {}'.format(_dd_service, service.name) if _dd_service else service.name
+            _dd_service_name = service.name
 
             # .. build a span indicating that we're being invoked ..
             _datadog_span = self.server.datadog_tracer.start_span(
