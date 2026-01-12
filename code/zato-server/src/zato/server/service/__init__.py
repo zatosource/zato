@@ -104,8 +104,6 @@ if 0:
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato.server.connection.cassandra import CassandraAPI
-    from zato.server.query import CassandraQueryAPI
     from zato.simpleio import CySimpleIO
     anydictnone = anydictnone
     callnone = callnone
@@ -115,8 +113,6 @@ if 0:
     AuditPII = AuditPII
     BrokerClient = BrokerClient
     callable_ = callable_
-    CassandraAPI = CassandraAPI
-    CassandraQueryAPI = CassandraQueryAPI
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
     CySimpleIO = CySimpleIO # type: ignore
@@ -658,8 +654,9 @@ class Service:
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
-        # Datadog span is created here but finished after handle() completes
+        # Datadog spans - created here but finished after handle() completes
         _datadog_span = None
+        _datadog_channel_span = None
 
         if service.needs_datadog_logging:
 
@@ -685,11 +682,27 @@ class Service:
             self.datadog_context = _datadog_span.context
 
             # .. set it in contextvar so http_request can access it ..
-            logger.info('update_handle setting contextvar with context=%s', _datadog_span.context)
             _ = current_datadog_context.set(_datadog_span.context)
             _ = current_datadog_service_name.set(service.name)
             _ = current_datadog_process_name.set(self.process_name)
             _ = current_datadog_cid.set(self.cid)
+
+            # .. if this is a REST channel, create a span for it ..
+            if channel == CHANNEL.HTTP_SOAP and channel_item:
+                channel_name = channel_item.get('name', '')
+                request_method = wsgi_environ.get('REQUEST_METHOD', '')
+                raw_uri = wsgi_environ.get('RAW_URI', '')
+                _datadog_channel_span = self.server.datadog_tracer.start_span(
+                    name='zato.http.channel',
+                    service=service.name,
+                    resource=f'REST Channel: {channel_name}',
+                    child_of=_datadog_span.context
+                )
+                _datadog_channel_span.set_tag('cid', self.cid)
+                _datadog_channel_span.set_tag('zato_process', self.process_name)
+                _datadog_channel_span.set_tag('zato_service', service.name)
+                _datadog_channel_span.set_tag('zato_message_level', 'INFO')
+                _datadog_channel_span.set_tag('zato_message', f'{request_method} {raw_uri}')
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -742,7 +755,7 @@ class Service:
                         else:
                             payload = service.response.payload
 
-                        spawn_greenlet(func, service, payload, exc_data)
+                        _ = spawn_greenlet(func, service, payload, exc_data)
 
                     # It is possible that, on behalf of our caller (e.g. pub.zato.service.service-invoker),
                     # we also need to populate a dictionary of headers that were produced by the service
@@ -764,6 +777,8 @@ class Service:
                     if e:
                         raise e from None
                 finally:
+                    if _datadog_channel_span:
+                        _datadog_channel_span.finish()
                     if _datadog_span:
                         _datadog_span.finish()
 
@@ -955,7 +970,7 @@ class Service:
         if callback:
             async_ctx.callback = list(callback) if isinstance(callback, (list, tuple)) else [callback]
 
-        spawn_greenlet(self._invoke_async, async_ctx, channel)
+        _ = spawn_greenlet(self._invoke_async, async_ctx, channel)
 
         return cid
 
@@ -1209,7 +1224,7 @@ class Service:
 
 # ################################################################################################################################
 
-class _Hook(Service):
+class _Hook(Service): # type: ignore
     """ Base class for all hook services.
     """
     _hook_func_name: 'strdict'
