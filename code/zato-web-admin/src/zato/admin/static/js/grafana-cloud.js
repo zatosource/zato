@@ -65,6 +65,8 @@ $.fn.zato.grafanaCloud.init = function() {
                     apiKeyInput.val('');
                     endpointInput.val('');
                     
+                    $('#progress-install .info-message').removeClass('show');
+                    
                     $('#progress-configure').removeClass('hidden error-state');
                     $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration removed');
                     
