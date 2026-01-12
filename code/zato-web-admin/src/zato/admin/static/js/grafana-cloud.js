@@ -60,6 +60,13 @@ $.fn.zato.grafanaCloud.init = function() {
             contentType: 'application/json',
             success: function(response) {
                 console.log('toggle-enabled: success', response);
+                if (response.needs_restart) {
+                    $('#progress-install .info-message').removeClass('show');
+                    $('#progress-configure').removeClass('hidden error-state');
+                    $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration updated');
+                    $('#progress-install').removeClass('hidden');
+                    $.fn.zato.updates.runRestartSteps(null, false);
+                }
             },
             error: function(xhr) {
                 console.error('toggle-enabled: error', xhr);
