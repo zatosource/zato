@@ -89,39 +89,6 @@ if is_datadog_enabled:
 is_grafana_cloud_enabled = os.environ.get('Zato_Grafana_Cloud_Enabled') or ''
 is_grafana_cloud_enabled = is_grafana_cloud_enabled.lower() in true_values
 
-if is_grafana_cloud_enabled:
-    '''
-    #
-    # Grafana
-    #
-
-    import socket
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry._logs import set_logger_provider
-    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-
-    host_name = socket.gethostname()
-
-    resource = Resource.create({
-        'service.name': 'zato4',
-        'service.instance.id': 'dev4',
-        'service.namespace': 'api4',
-        'deployment.environment': 'dev',
-        'host.id': host_name,
-        'host.name': host_name,
-    })
-
-    log_provider = LoggerProvider(resource=resource)
-    log_exporter = OTLPLogExporter(endpoint='http://localhost:4318/v1/logs')
-    log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
-    set_logger_provider(log_provider)
-
-    handler = LoggingHandler(level=logging.INFO, logger_provider=log_provider)
-    logging.getLogger().addHandler(handler)
-    '''
-
 # stdlib
 import locale
 import sys
