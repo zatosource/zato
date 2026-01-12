@@ -433,6 +433,16 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     logger = logging.getLogger(__name__)
 
+    # Log Datadog configuration
+    logger.info('Datadog: Zato_Datadog_Main_Agent={}'.format(datadog_main_agent))
+    logger.info('Datadog: Zato_Datadog_Metrics_Agent={}'.format(datadog_metrics_agent))
+    logger.info('Datadog: Zato_Datadog_Enabled={}'.format(os.environ.get('Zato_Datadog_Enabled', '')))
+    logger.info('Datadog: is_datadog_enabled={}'.format(is_datadog_enabled))
+    logger.info('Datadog: DD_AGENT_HOST={}'.format(os.environ.get('DD_AGENT_HOST', '')))
+    logger.info('Datadog: DD_TRACE_AGENT_PORT={}'.format(os.environ.get('DD_TRACE_AGENT_PORT', '')))
+    logger.info('Datadog: DD_DOGSTATSD_HOST={}'.format(os.environ.get('DD_DOGSTATSD_HOST', '')))
+    logger.info('Datadog: DD_DOGSTATSD_PORT={}'.format(os.environ.get('DD_DOGSTATSD_PORT', '')))
+
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
