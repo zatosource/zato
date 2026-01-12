@@ -31,6 +31,10 @@ if 0:
 
 # ################################################################################################################################
 
+logger = logging.getLogger('zato_admin')
+
+# ################################################################################################################################
+
 success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)
 
@@ -118,7 +122,7 @@ class AdminService(Service):
                 if 'password' in k:
                     data[k] = SECRET_SHADOW
 
-            self.logger.info('Request; service:`%s`, data:`%s` cid:`%s`, ', self.name, data, self.cid)
+            logger.info('Request; service:`%s`, data:`%s` cid:`%s`, ', self.name, data, self.cid)
 
 # ################################################################################################################################
 
@@ -149,9 +153,8 @@ class AdminService(Service):
             return
 
         if self.server.is_admin_enabled_for_info:
-            self.logger.info(
-                'Response; service:`%s`, data:`%s` cid:`%s`, ', self.name, get_response_value(self.response), self.cid
-            )
+            logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
+                self.name, get_response_value(self.response), self.cid)
 
         payload = self.response.payload
         is_text = isinstance(payload, basestring)
