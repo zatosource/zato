@@ -47,6 +47,12 @@ $.fn.zato.grafanaCloud.init = function() {
         const isEnabled = $(this).is(':checked');
         console.log('toggle.onChange: isEnabled =', isEnabled);
         updateFieldsState(isEnabled);
+
+        if (isEnabled) {
+            $('#progress-configure').addClass('hidden');
+            $('#progress-install').addClass('hidden');
+            $('#progress-install .info-message').removeClass('show');
+        }
         
         $.ajax({
             url: '/zato/monitoring/grafana-cloud/toggle-enabled',
