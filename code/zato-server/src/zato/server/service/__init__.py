@@ -361,7 +361,7 @@ class Service:
 
     # Monitoring
     needs_datadog_logging: 'bool'
-    datadog_context: 'DatadogContext' = None
+    datadog_context: 'DatadogContext' = None # type: ignore
     metrics: 'ServiceMetrics'
 
     # Rule engine
