@@ -662,12 +662,8 @@ class Service:
 
         if service.needs_datadog_logging:
 
-            logger.info('Datadog: needs_datadog_logging=True for service={}'.format(service.name))
-
             # We may have it from our caller ..
             _datadog_parent_context = kwargs.get('datadog_context')
-
-            logger.info('Datadog: starting span for service={}, parent_context={}'.format(service.name, _datadog_parent_context))
 
             # .. build a span indicating that we're being invoked ..
             _datadog_span = self.server.datadog_tracer.start_span(
@@ -676,8 +672,6 @@ class Service:
                 resource=f'Invoker',
                 child_of=_datadog_parent_context
             )
-
-            logger.info('Datadog: span started, span_id={}, trace_id={}'.format(_datadog_span.span_id, _datadog_span.trace_id))
 
             # .. set our metadata ..
             _datadog_span.set_tag('cid', self.cid)
@@ -711,8 +705,6 @@ class Service:
                 _datadog_channel_span.set_tag('zato_service', service.name)
                 _datadog_channel_span.set_tag('zato_message_level', 'INFO')
                 _datadog_channel_span.set_tag('zato_message', f'{request_method} {raw_uri}')
-        else:
-            logger.info('Datadog: needs_datadog_logging=False for service={}'.format(service.name))
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -788,12 +780,9 @@ class Service:
                         raise e from None
                 finally:
                     if _datadog_channel_span:
-                        logger.info('Datadog: finishing channel span')
                         _datadog_channel_span.finish()
                     if _datadog_span:
-                        logger.info('Datadog: finishing span, span_id={}, trace_id={}'.format(_datadog_span.span_id, _datadog_span.trace_id))
                         _datadog_span.finish()
-                        logger.info('Datadog: span finished')
 
         # We don't accept it but some response needs to be returned anyway.
         else:
