@@ -318,7 +318,7 @@ def index(req):
     logger.info('index: returning template with is_enabled={}, instance_id={}, api_token={}'.format(
         is_enabled, instance_id, api_token))
 
-    return TemplateResponse(req, 'zato/observability/grafana-cloud/index.html', {
+    return TemplateResponse(req, 'zato/monitoring/grafana-cloud/index.html', {
         'page_config': grafana_cloud_page_config,
         'is_enabled': is_enabled,
         'instance_id': instance_id,
