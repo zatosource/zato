@@ -317,15 +317,21 @@ Examples:
         # Read Datadog config from Redis and set env vars
         env_vars = {}
         try:
+            self.logger.info('Datadog: connecting to Redis to read config')
             redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
             main_agent = redis_client.get('zato:datadog:main_agent') or ''
             metrics_agent = redis_client.get('zato:datadog:metrics_agent') or ''
+            self.logger.info('Datadog: main_agent={}, metrics_agent={}'.format(main_agent, metrics_agent))
             if main_agent:
                 env_vars['Zato_Datadog_Main_Agent'] = main_agent
+                self.logger.info('Datadog: set env var Zato_Datadog_Main_Agent={}'.format(main_agent))
             if metrics_agent:
                 env_vars['Zato_Datadog_Metrics_Agent'] = metrics_agent
-        except Exception:
-            pass
+                self.logger.info('Datadog: set env var Zato_Datadog_Metrics_Agent={}'.format(metrics_agent))
+            if not main_agent and not metrics_agent:
+                self.logger.info('Datadog: no agents configured in Redis, Datadog will be disabled')
+        except Exception as e:
+            self.logger.error('Datadog: failed to read config from Redis: {}'.format(e))
 
         # Start the server now
         return self.start_component(
