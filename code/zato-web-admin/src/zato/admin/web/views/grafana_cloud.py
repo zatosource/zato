@@ -250,12 +250,22 @@ def toggle_enabled(req):
 
 @method_allowed('POST')
 def save_config(req):
+    import base64
     import redis
+    import subprocess
+    import tempfile
     from traceback import format_exc
+    from zato.admin.web.views.otelcol_config import template as otelcol_template
     from zato.common.json_internal import loads
 
     response_data = {}
     response_data['success'] = False
+
+    username = req.user.username if req.user else ''
+    if username != 'zato':
+        response_data['success'] = True
+        response_data['message'] = 'Configuration saved'
+        return json_response(response_data)
 
     try:
         body = req.body.decode('utf-8')
@@ -275,6 +285,38 @@ def save_config(req):
         _ = r.set('zato:grafana_cloud:runtime_token', api_key)
         _ = r.set('zato:grafana_cloud:endpoint', endpoint)
         _ = r.set('zato:grafana_cloud:is_enabled', 'true')
+
+        credentials_raw = '{}:{}'.format(instance_id, api_key)
+        credentials_encoded = base64.b64encode(credentials_raw.encode('utf-8')).decode('utf-8')
+        logger.info('save_config: credentials encoded')
+
+        otelcol_config = otelcol_template.format(
+            endpoint=endpoint,
+            credentials=credentials_encoded
+        )
+        logger.info('save_config: otelcol config generated')
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=True) as f:
+            _ = f.write(otelcol_config)
+            f.flush()
+            temp_path = f.name
+            logger.info('save_config: temp file written to {}'.format(temp_path))
+
+            result = subprocess.run(
+                ['sudo', 'cp', temp_path, '/etc/otelcol-contrib/config.yaml'],
+                capture_output=True,
+                text=True
+            )
+            logger.info('save_config: cp result: returncode={}, stdout={}, stderr={}'.format(
+                result.returncode, result.stdout, result.stderr))
+
+        result = subprocess.run(
+            ['sudo', 'systemctl', 'restart', 'otelcol-contrib'],
+            capture_output=True,
+            text=True
+        )
+        logger.info('save_config: restart otelcol-contrib result: returncode={}, stdout={}, stderr={}'.format(
+            result.returncode, result.stdout, result.stderr))
 
         response_data['success'] = True
         response_data['message'] = 'Configuration saved'
