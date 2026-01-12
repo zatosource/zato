@@ -48,7 +48,7 @@ true_values = {'true', '1', 'y', 'yes'}
 # Datadog monitoring - read config from env vars set by start.py
 datadog_main_agent = os.environ.get('Zato_Datadog_Main_Agent') or ''
 datadog_metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent') or ''
-datadog_service_name = os.environ.get('Zato_Datadog_Service_Name') or ''
+datadog_service_name = os.environ.get('Zato_Datadog_Service_Name') or 'zato.server'
 
 datadog_enabled_env = os.environ.get('Zato_Datadog_Enabled') or ''
 datadog_enabled_env = datadog_enabled_env.lower() in true_values
