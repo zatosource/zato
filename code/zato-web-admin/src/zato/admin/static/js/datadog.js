@@ -243,7 +243,7 @@ $.fn.zato.datadog.runRestartSteps = function(button) {
     config.pollUrl = '/zato/monitoring/datadog/';
     config.completedText = 'All components restarted';
     config.completionBadgeSelector = '#progress-install .info-message';
-    config.baseUrl = '/zato/updates';
+    config.baseUrl = '/zato/monitoring/datadog';
     config.completionBadgeText = '⭐ Datadog configured successfully';
 
     $.fn.zato.settings.executeSteps(config);

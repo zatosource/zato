@@ -48,6 +48,7 @@ true_values = {'true', '1', 'y', 'yes'}
 # Datadog monitoring - read config from env vars set by start.py
 datadog_main_agent = os.environ.get('Zato_Datadog_Main_Agent') or ''
 datadog_metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent') or ''
+datadog_service_name = os.environ.get('Zato_Datadog_Service_Name') or 'zato.server'
 
 datadog_enabled_env = os.environ.get('Zato_Datadog_Enabled') or ''
 datadog_enabled_env = datadog_enabled_env.lower() in true_values
@@ -55,9 +56,6 @@ datadog_enabled_env = datadog_enabled_env.lower() in true_values
 is_datadog_enabled = datadog_enabled_env or bool(datadog_main_agent or datadog_metrics_agent)
 
 if is_datadog_enabled:
-
-    # Datadog
-    from ddtrace import patch as dd_patch
 
     # Check if we need DD debug logs ..
     has_debug = os.environ.get('Zato_Datadog_Debug_Enabled') or ''
@@ -67,7 +65,7 @@ if is_datadog_enabled:
     # .. and assign that accordingly ..
     os.environ['DD_TRACE_DEBUG'] = has_debug
 
-    # .. set agent host if configured ..
+    # .. set agent host if configured - must be done before importing ddtrace ..
     if datadog_main_agent:
         main_host, main_port = datadog_main_agent.split(':')
         os.environ['DD_AGENT_HOST'] = main_host
@@ -79,7 +77,11 @@ if is_datadog_enabled:
         os.environ['DD_DOGSTATSD_HOST'] = metrics_host
         os.environ['DD_DOGSTATSD_PORT'] = metrics_port
 
-    # .. now we can configure patch DD to work with gevent ..
+    # .. set service name - always ensure it exists ..
+    os.environ['DD_SERVICE'] = datadog_service_name
+
+    # .. now import and patch ddtrace after env vars are set ..
+    from ddtrace import patch as dd_patch
     dd_patch(gevent=True)
 
 # Grafana Cloud monitoring
