@@ -142,11 +142,9 @@ def restart_dashboard(req):
 @method_allowed('POST')
 def test_connection(req):
 
-    from opentelemetry import metrics as _
-    from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-    from opentelemetry.sdk.resources import Resource
+    import base64
+    import requests
+    from http import HTTPStatus
     from traceback import format_exc
     from zato.common.json_internal import loads
 
@@ -158,53 +156,51 @@ def test_connection(req):
         config_data = loads(body)
         logger.info('test_connection: config_data={}'.format(config_data))
 
-        _instance_id = config_data.get('instance_id', '')
-        _api_key = config_data.get('api_key', '')
-        _endpoint = config_data.get('endpoint', '')
+        instance_id = config_data.get('instance_id', '')
+        api_key = config_data.get('api_key', '')
+        endpoint = config_data.get('endpoint', '')
 
         logger.info('test_connection: instance_id={}, api_key={}, endpoint={}'.format(
-            _instance_id, _api_key[:10] + '...' if _api_key else '', _endpoint))
+            instance_id, api_key[:10] + '...' if api_key else '', endpoint))
 
-        if not _instance_id or not _api_key or not _endpoint:
-            response_data['error'] = 'Instance ID, API key and endpoint are required'
-            logger.error('test_connection: missing required fields')
+        if not instance_id:
+            response_data['error'] = 'Instance ID is required'
+            return json_response(response_data, success=False)
+        if not api_key:
+            response_data['error'] = 'API key is required'
+            return json_response(response_data, success=False)
+        if not endpoint:
+            response_data['error'] = 'Endpoint is required'
             return json_response(response_data, success=False)
 
-        otlp_endpoint = 'http://localhost:4318/v1/metrics'
-        logger.info('test_connection: creating resource')
-        resource = Resource.create({'service.name': 'zato'})
+        credentials_raw = '{}:{}'.format(instance_id, api_key)
+        credentials_encoded = base64.b64encode(credentials_raw.encode('utf-8')).decode('utf-8')
 
-        logger.info('test_connection: creating exporter with endpoint={}'.format(otlp_endpoint))
-        exporter = OTLPMetricExporter(endpoint=otlp_endpoint)
+        test_url = endpoint.rstrip('/') + '/v1/metrics'
+        logger.info('test_connection: testing endpoint {}'.format(test_url))
 
-        logger.info('test_connection: creating reader')
-        reader = PeriodicExportingMetricReader(exporter, export_interval_millis=1000)
+        headers = {
+            'Authorization': 'Basic {}'.format(credentials_encoded),
+            'Content-Type': 'application/x-protobuf'
+        }
 
-        logger.info('test_connection: creating provider')
-        provider = MeterProvider(resource=resource, metric_readers=[reader])
+        resp = requests.post(test_url, headers=headers, data=b'', timeout=10)
+        logger.info('test_connection: response status={}'.format(resp.status_code))
 
-        logger.info('test_connection: creating meter')
-        meter = provider.get_meter('zato.test')
+        if resp.status_code == HTTPStatus.OK:
+            response_data['success'] = True
+            response_data['message'] = 'Connection successful'
+            return json_response(response_data)
+        else:
+            response_data['error'] = resp.text
+            return json_response(response_data, success=False)
 
-        logger.info('test_connection: creating gauge zato.test.conn')
-        gauge = meter.create_gauge('zato.test.conn')
-
-        logger.info('test_connection: setting gauge value to 1')
-        gauge.set(1)
-
-        logger.info('test_connection: calling force_flush')
-        flush_result = provider.force_flush()
-        logger.info('test_connection: force_flush returned {}'.format(flush_result))
-
-        logger.info('test_connection: calling shutdown')
-        provider.shutdown()
-        logger.info('test_connection: shutdown complete')
-
-        response_data['success'] = True
-        response_data['message'] = 'Test metric sent'
-        logger.info('test_connection: success')
-        return json_response(response_data)
-
+    except requests.exceptions.ConnectionError:
+        response_data['error'] = 'Could not connect to endpoint'
+        return json_response(response_data, success=False)
+    except requests.exceptions.Timeout:
+        response_data['error'] = 'Connection timed out'
+        return json_response(response_data, success=False)
     except Exception as e:
         logger.error('test_connection exception: {}'.format(format_exc()))
         error_message = str(e)
