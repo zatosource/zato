@@ -8,12 +8,16 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from contextvars import ContextVar
 from copy import deepcopy
 from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
 from traceback import format_exc
 from urllib.parse import urlencode
+
+# Datadog
+from ddtrace.propagation.http import HTTPPropagator
 
 # requests
 from requests import Response as _RequestsResponse
@@ -57,6 +61,9 @@ if 0:
 
 logger = getLogger('zato_rest')
 has_debug = logger.isEnabledFor(DEBUG)
+
+# Datadog context variable - set by service, read by http_request
+current_datadog_context:'ContextVar' = ContextVar('current_datadog_context', default=None)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -617,6 +624,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         # Pop it here for later use because we cannot pass it to the requests module
         model = kwargs.pop('model', None)
 
+        # Get datadog context from contextvar (set by service)
+        datadog_context = current_datadog_context.get()
+
         # We do not serialize ourselves data based on this content type,
         # leaving it up to the underlying HTTP library to do it ..
         needs_serialize_based_on_content_type = self.config.get('content_type') != ContentType.FormURLEncoded
@@ -650,6 +660,10 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # .. build a default set of headers now ..
         headers = self._create_headers(cid, headers)
+
+        # .. inject datadog tracing headers if context is available ..
+        if datadog_context:
+            HTTPPropagator.inject(datadog_context, headers)
 
         # .. SOAP requests need to be specifically formatted now ..
         if _is_soap:
