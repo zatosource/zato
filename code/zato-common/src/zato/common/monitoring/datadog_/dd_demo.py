@@ -46,6 +46,7 @@ class DatadogDemo:
     def run(self):
         self.logger.info('Starting Datadog demo')
 
+
         step1 = tracer.trace(name='', service='channel.1', resource='Step 1')
         step1.set_tag('process', 'My process')
         step1.set_tag('cid', cid)
