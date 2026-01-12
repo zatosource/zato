@@ -621,7 +621,7 @@ class Service:
         self.process_name = kwargs.get('process_name', 'No name')
 
         # Configure logging depending on whether monitoring is enabled ..
-        if self.server.is_datadog_enabled:
+        if service.needs_datadog_logging:
             service.logger = DatadogLogger(cid, server, service.name, self.process_name)
         else:
 
@@ -665,7 +665,7 @@ class Service:
             _datadog_span = self.server.datadog_tracer.start_span(
                 name='',
                 service=service.name,
-                resource=f'Service was invoked',
+                resource=f'Invoker',
                 child_of=_datadog_parent_context
             )
 
@@ -674,7 +674,7 @@ class Service:
             _datadog_span.set_tag('zato_process', self.process_name)
             _datadog_span.set_tag('zato_service', service.name)
             _datadog_span.set_tag('zato_message_level', 'INFO')
-            _datadog_span.set_tag('zato_message', f'---')
+            _datadog_span.set_tag('zato_message', f'Service was invoked')
 
             # .. store it for possible later use ..
             self.datadog_context = _datadog_span.context
