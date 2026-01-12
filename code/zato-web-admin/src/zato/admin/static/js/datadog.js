@@ -6,20 +6,16 @@ $.fn.zato.datadog.init = function() {
     
     const toggle = $('#is-enabled');
     const container = $('.progress-panel');
-    const instanceIdInput = $('#instance-id');
-    const apiTokenInput = $('#api-token');
+    const mainAgentInput = $('#main-agent');
+    const metricsAgentInput = $('#metrics-agent');
     const saveButton = $('#update-button');
     
     console.log('datadog.init: toggle checked:', toggle.is(':checked'));
-    console.log('datadog.init: instance_id value:', instanceIdInput.val());
-    console.log('datadog.init: api_token value:', apiTokenInput.val());
+    console.log('datadog.init: main_agent value:', mainAgentInput.val());
+    console.log('datadog.init: metrics_agent value:', metricsAgentInput.val());
     
     function updateSaveButtonState() {
-        const instanceId = instanceIdInput.val().trim();
-        const apiToken = apiTokenInput.val().trim();
-        const hasValues = instanceId.length > 0 && apiToken.length > 0;
-        saveButton.prop('disabled', !hasValues);
-        console.log('updateSaveButtonState: instanceId length =', instanceId.length, ', apiToken length =', apiToken.length, ', disabled =', !hasValues);
+        saveButton.prop('disabled', false);
     }
     
     function updateFieldsState(isEnabled) {
@@ -36,8 +32,8 @@ $.fn.zato.datadog.init = function() {
     console.log('datadog.init: setting initial state, isEnabled =', initialEnabled);
     updateFieldsState(initialEnabled);
     
-    instanceIdInput.on('input', updateSaveButtonState);
-    apiTokenInput.on('input', updateSaveButtonState);
+    mainAgentInput.on('input', updateSaveButtonState);
+    metricsAgentInput.on('input', updateSaveButtonState);
     
     toggle.on('change', function() {
         const isEnabled = $(this).is(':checked');
@@ -157,8 +153,8 @@ $.fn.zato.datadog.handleTestConnection = function() {
             'X-CSRFToken': $.cookie('csrftoken')
         },
         data: JSON.stringify({
-            instance_id: $('#instance-id').val(),
-            api_token: $('#api-token').val()
+            main_agent: $('#main-agent').val(),
+            metrics_agent: $('#metrics-agent').val()
         }),
         contentType: 'application/json',
         success: function(response) {
@@ -210,8 +206,8 @@ $.fn.zato.datadog.handleSaveClick = function() {
         },
         data: JSON.stringify({
             is_enabled: $('#is-enabled').is(':checked'),
-            instance_id: $('#instance-id').val(),
-            api_token: $('#api-token').val()
+            main_agent: $('#main-agent').val(),
+            metrics_agent: $('#metrics-agent').val()
         }),
         contentType: 'application/json',
         success: function(response) {

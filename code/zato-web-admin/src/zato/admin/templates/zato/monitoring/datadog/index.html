@@ -23,15 +23,15 @@
         </label>
     </div>
     <div class="info-row">
-        <div class="info-label">{{ page_config.your_version_label }}</div>
+        <div class="info-label">Main agent</div>
         <div class="info-value">
-            <input type="text" id="instance-id" value="{{ instance_id }}" placeholder="123456"{% if not is_enabled %} disabled{% endif %}>
+            <input type="text" id="main-agent" value="{{ main_agent }}" placeholder="localhost:8126"{% if not is_enabled %} disabled{% endif %}>
         </div>
     </div>
     <div class="info-row">
-        <div class="info-label">{{ page_config.latest_version_label }}</div>
+        <div class="info-label">Metrics agent</div>
         <div class="info-value">
-            <input type="text" id="api-token" value="{{ api_token }}" placeholder="abc123..."{% if not is_enabled %} disabled{% endif %}>
+            <input type="text" id="metrics-agent" value="{{ metrics_agent }}" placeholder="localhost:8125"{% if not is_enabled %} disabled{% endif %}>
         </div>
     </div>
 </div>

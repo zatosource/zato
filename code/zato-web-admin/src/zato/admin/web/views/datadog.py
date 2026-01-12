@@ -154,12 +154,10 @@ def test_connection(req):
         body = req.body.decode('utf-8')
         config_data = loads(body)
 
-        instance_id = config_data.get('instance_id', '')
-        api_token = config_data.get('api_token', '')
+        main_agent = config_data.get('main_agent', '')
+        metrics_agent = config_data.get('metrics_agent', '')
 
-        if not instance_id or not api_token:
-            response_data['error'] = 'Both instance ID and API token are required'
-            return json_response(response_data, success=False)
+        logger.info('test_connection: main_agent={}, metrics_agent={}'.format(main_agent, metrics_agent))
 
         response_data['success'] = True
         response_data['message'] = 'Connection test successful'
@@ -216,17 +214,13 @@ def save_config(req):
         config_data = loads(body)
         logger.info('save_config: config_data={}'.format(config_data))
 
-        instance_id = config_data.get('instance_id', '')
-        api_token = config_data.get('api_token', '')
-
-        if not instance_id or not api_token:
-            response_data['error'] = 'Instance ID and API Token are required'
-            return json_response(response_data, success=False)
+        main_agent = config_data.get('main_agent', '')
+        metrics_agent = config_data.get('metrics_agent', '')
 
         try:
             r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-            _ = r.set('zato:datadog:instance_id', instance_id)
-            _ = r.set('zato:datadog:api_token', api_token)
+            _ = r.set('zato:datadog:main_agent', main_agent)
+            _ = r.set('zato:datadog:metrics_agent', metrics_agent)
             _ = r.set('zato:datadog:is_enabled', 'true')
         except Exception:
             logger.error('save_config redis error: {}'.format(format_exc()))
@@ -254,16 +248,19 @@ def index(req):
     datadog_page_config['restart_step_id'] = 'install'
     datadog_page_config['restart_step_label'] = 'Restarting'
 
-    instance_id = ''
-    api_token = ''
+    main_agent = ''
+    metrics_agent = ''
     is_enabled = False
 
     try:
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
         logger.info('index: connecting to redis')
 
-        instance_id = r.get('zato:datadog:instance_id') or ''
-        logger.info('index: instance_id from redis: {}'.format(instance_id))
+        main_agent = r.get('zato:datadog:main_agent') or ''
+        logger.info('index: main_agent from redis: {}'.format(main_agent))
+
+        metrics_agent = r.get('zato:datadog:metrics_agent') or ''
+        logger.info('index: metrics_agent from redis: {}'.format(metrics_agent))
 
         is_enabled_value = r.get('zato:datadog:is_enabled') or 'false'
         logger.info('index: is_enabled_value from redis: {}'.format(is_enabled_value))
@@ -273,14 +270,14 @@ def index(req):
     except Exception:
         logger.error('index: redis error: {}'.format(format_exc()))
 
-    logger.info('index: returning template with is_enabled={}, instance_id={}, api_token={}'.format(
-        is_enabled, instance_id, api_token))
+    logger.info('index: returning template with is_enabled={}, main_agent={}, metrics_agent={}'.format(
+        is_enabled, main_agent, metrics_agent))
 
     return TemplateResponse(req, 'zato/monitoring/datadog/index.html', {
         'page_config': datadog_page_config,
         'is_enabled': is_enabled,
-        'instance_id': instance_id,
-        'api_token': api_token,
+        'main_agent': main_agent,
+        'metrics_agent': metrics_agent,
         'audit_log': []
     })
 

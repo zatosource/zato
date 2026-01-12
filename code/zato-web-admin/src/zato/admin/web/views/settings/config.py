@@ -130,14 +130,6 @@ datadog_page_config['action_button_label'] = 'Save'
 datadog_page_config['version_section_title'] = 'Datadog'
 datadog_page_config['config_section_title'] = 'Config'
 datadog_page_config['logs_section_title'] = 'Connection log'
-datadog_page_config['up_to_date_label'] = 'Connected?'
-datadog_page_config['your_version_label'] = 'Instance ID'
-datadog_page_config['latest_version_label'] = 'API Token'
-datadog_page_config['auto_update_label'] = 'Auto-connect'
-datadog_page_config['frequency_label'] = 'How often?'
-datadog_page_config['week_label'] = 'Week'
-datadog_page_config['day_label'] = 'Day'
-datadog_page_config['time_label'] = 'Time'
 datadog_page_config['save_button_label'] = 'Save'
 datadog_page_config['download_logs_label'] = 'Download full logs'
 datadog_page_config['show_sidebar'] = False
@@ -158,20 +150,20 @@ row = ContentRow(
 content_rows.append(row)
 
 row = ContentRow(
-    label=datadog_page_config['your_version_label'],
+    label='Main agent',
     widget='input',
-    value_key='instance_id',
+    value_key='main_agent',
     is_copyable=True,
-    copy_id='instance-id'
+    copy_id='main-agent'
 )
 content_rows.append(row)
 
 row = ContentRow(
-    label=datadog_page_config['latest_version_label'],
+    label='Metrics agent',
     widget='input',
-    value_key='api_token',
+    value_key='metrics_agent',
     is_copyable=True,
-    copy_id='api-token',
+    copy_id='metrics-agent',
     spinner=False
 )
 content_rows.append(row)
