@@ -657,6 +657,9 @@ class Service:
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
+        # Datadog span is created here but finished after handle() completes
+        _datadog_span = None
+
         if service.needs_datadog_logging:
 
             # We may have it from our caller ..
@@ -681,10 +684,8 @@ class Service:
             self.datadog_context = _datadog_span.context
 
             # .. set it in contextvar so http_request can access it ..
+            logger.info('update_handle setting contextvar with context=%s', _datadog_span.context)
             _ = current_datadog_context.set(_datadog_span.context)
-
-            # .. and finish the span.
-            _datadog_span.finish()
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -758,6 +759,9 @@ class Service:
                 else:
                     if e:
                         raise e from None
+                finally:
+                    if _datadog_span:
+                        _datadog_span.finish()
 
         # We don't accept it but some response needs to be returned anyway.
         else:
