@@ -76,7 +76,7 @@ def restart_proxy(req):
 
 @method_allowed('POST')
 def restart_dashboard(req):
-    import subprocess
+    import subprocess as _subprocess
     import threading
     import os
 
@@ -114,7 +114,7 @@ def restart_dashboard(req):
         try:
             makefile_dir = os.path.expanduser('~/projects/zatosource-zato/4.1')
             logger.info('restart_dashboard: makefile_dir={}'.format(makefile_dir))
-            result = subprocess.run(
+            result = _subprocess.run(
                 ['make', 'restart-dashboard'],
                 cwd=makefile_dir,
                 capture_output=True,
@@ -142,7 +142,7 @@ def restart_dashboard(req):
 @method_allowed('POST')
 def test_connection(req):
 
-    from opentelemetry import metrics
+    from opentelemetry import metrics as _
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
     from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -157,11 +157,11 @@ def test_connection(req):
         body = req.body.decode('utf-8')
         config_data = loads(body)
 
-        instance_id = config_data.get('instance_id', '')
-        api_key = config_data.get('api_key', '')
-        endpoint = config_data.get('endpoint', '')
+        _instance_id = config_data.get('instance_id', '')
+        _api_key = config_data.get('api_key', '')
+        _endpoint = config_data.get('endpoint', '')
 
-        if not instance_id or not api_key or not endpoint:
+        if not _instance_id or not _api_key or not _endpoint:
             response_data['error'] = 'Instance ID, API key and endpoint are required'
             return json_response(response_data, success=False)
 
@@ -174,7 +174,7 @@ def test_connection(req):
         gauge = meter.create_gauge('zato.test.conn')
         gauge.set(1)
 
-        provider.force_flush()
+        _ = provider.force_flush()
         provider.shutdown()
 
         response_data['success'] = True
@@ -247,10 +247,10 @@ def save_config(req):
             return json_response(response_data, success=False)
 
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-        r.set('zato:grafana_cloud:instance_id', instance_id)
-        r.set('zato:grafana_cloud:runtime_token', api_key)
-        r.set('zato:grafana_cloud:endpoint', endpoint)
-        r.set('zato:grafana_cloud:is_enabled', 'true')
+        _ = r.set('zato:grafana_cloud:instance_id', instance_id)
+        _ = r.set('zato:grafana_cloud:runtime_token', api_key)
+        _ = r.set('zato:grafana_cloud:endpoint', endpoint)
+        _ = r.set('zato:grafana_cloud:is_enabled', 'true')
 
         response_data['success'] = True
         response_data['message'] = 'Configuration saved'
