@@ -39,6 +39,12 @@ $.fn.zato.datadog.init = function() {
         const isEnabled = $(this).is(':checked');
         console.log('toggle.onChange: isEnabled =', isEnabled);
         updateFieldsState(isEnabled);
+
+        if (isEnabled) {
+            $('#progress-configure').addClass('hidden');
+            $('#progress-install').addClass('hidden');
+            $('#progress-install .info-message').removeClass('show');
+        }
         
         $.ajax({
             url: '/zato/monitoring/datadog/toggle-enabled',
@@ -50,8 +56,8 @@ $.fn.zato.datadog.init = function() {
                 is_enabled: isEnabled
             }),
             contentType: 'application/json',
-            success: function() {
-                console.log('toggle-enabled: success');
+            success: function(response) {
+                console.log('toggle-enabled: success', response);
             },
             error: function(xhr) {
                 console.error('toggle-enabled: error', xhr);
@@ -215,7 +221,8 @@ $.fn.zato.datadog.handleSaveClick = function() {
             $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration complete');
 
             $('#progress-install').removeClass('hidden');
-            $.fn.zato.datadog.runRestartSteps(button);
+            const isEnabled = $('#is-enabled').is(':checked');
+            $.fn.zato.datadog.runRestartSteps(button, isEnabled);
         },
         error: function(xhr) {
             let errorMsg = 'Configure failed';
@@ -236,7 +243,7 @@ $.fn.zato.datadog.handleSaveClick = function() {
     });
 };
 
-$.fn.zato.datadog.runRestartSteps = function(button) {
+$.fn.zato.datadog.runRestartSteps = function(button, isEnabled) {
     const config = {};
     config.progressKey = 'install';
     config.button = button;
@@ -244,7 +251,7 @@ $.fn.zato.datadog.runRestartSteps = function(button) {
     config.completedText = 'All components restarted';
     config.completionBadgeSelector = '#progress-install .info-message';
     config.baseUrl = '/zato/monitoring/datadog';
-    config.completionBadgeText = '⭐ Datadog configured successfully';
+    config.completionBadgeText = isEnabled ? '⭐ Datadog configured successfully' : '⭐ Datadog disabled successfully';
 
     $.fn.zato.settings.executeSteps(config);
 };
