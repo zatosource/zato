@@ -119,3 +119,59 @@ row = ContentRow(
     spinner=False
 )
 content_rows.append(row)
+
+datadog_page_config = {}
+datadog_page_config['title'] = 'Datadog'
+datadog_page_config['api_prefix'] = '/zato/monitoring/datadog/'
+datadog_page_config['step1_label'] = 'Configuring Datadog'
+datadog_page_config['step2_label'] = 'Connect'
+datadog_page_config['check_button_label'] = 'Test connection'
+datadog_page_config['action_button_label'] = 'Save'
+datadog_page_config['version_section_title'] = 'Datadog'
+datadog_page_config['config_section_title'] = 'Config'
+datadog_page_config['logs_section_title'] = 'Connection log'
+datadog_page_config['up_to_date_label'] = 'Connected?'
+datadog_page_config['your_version_label'] = 'Instance ID'
+datadog_page_config['latest_version_label'] = 'API Token'
+datadog_page_config['auto_update_label'] = 'Auto-connect'
+datadog_page_config['frequency_label'] = 'How often?'
+datadog_page_config['week_label'] = 'Week'
+datadog_page_config['day_label'] = 'Day'
+datadog_page_config['time_label'] = 'Time'
+datadog_page_config['save_button_label'] = 'Save'
+datadog_page_config['download_logs_label'] = 'Download full logs'
+datadog_page_config['show_sidebar'] = False
+datadog_page_config['show_restart_steps'] = True
+datadog_page_config['panel_width'] = '35%'
+datadog_page_config['restart_step_id'] = 'connect'
+datadog_page_config['restart_step_label'] = datadog_page_config['step2_label']
+datadog_page_config['content_rows'] = []
+
+content_rows = datadog_page_config['content_rows']
+
+row = ContentRow(
+    label='Is enabled',
+    widget='toggle',
+    value_key='is_enabled',
+    element_id='is-enabled'
+)
+content_rows.append(row)
+
+row = ContentRow(
+    label=datadog_page_config['your_version_label'],
+    widget='input',
+    value_key='instance_id',
+    is_copyable=True,
+    copy_id='instance-id'
+)
+content_rows.append(row)
+
+row = ContentRow(
+    label=datadog_page_config['latest_version_label'],
+    widget='input',
+    value_key='api_token',
+    is_copyable=True,
+    copy_id='api-token',
+    spinner=False
+)
+content_rows.append(row)

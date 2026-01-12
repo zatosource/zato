@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, grafana_cloud, http_soap, log_streaming, main, scheduler, service, updates
+from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -854,6 +854,17 @@ urlpatterns += [
         login_required(grafana_cloud.toggle_enabled), name='monitoring-grafana-cloud-toggle-enabled'),
     url(r'^zato/monitoring/grafana-cloud/save-config$',
         login_required(grafana_cloud.save_config), name='monitoring-grafana-cloud-save-config'),
+
+    # Monitoring - Datadog
+
+    url(r'^zato/monitoring/datadog/$',
+        login_required(datadog.index), name='monitoring-datadog'),
+    url(r'^zato/monitoring/datadog/test-connection$',
+        login_required(datadog.test_connection), name='monitoring-datadog-test-connection'),
+    url(r'^zato/monitoring/datadog/toggle-enabled$',
+        login_required(datadog.toggle_enabled), name='monitoring-datadog-toggle-enabled'),
+    url(r'^zato/monitoring/datadog/save-config$',
+        login_required(datadog.save_config), name='monitoring-datadog-save-config'),
 ]
 
 # ################################################################################################################################
