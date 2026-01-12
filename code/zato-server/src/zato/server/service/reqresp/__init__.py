@@ -72,11 +72,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
@@ -148,7 +143,7 @@ class Request:
         transport=None    # type: strnone
     ) -> 'None':
         self.service = service
-        self.logger = cast_('Logger', service.logger)
+        self.logger = cast_('Logger', None) # This is populated in a service's update_handle
         self.payload = ''
         self.text = ''
         self.input = None # type: any_
@@ -210,21 +205,6 @@ class Request:
     @raw_request.setter
     def raw_request(self, value:'any_') -> 'any_':
         self.text = value
-
-# ################################################################################################################################
-
-    def deepcopy(self):
-        """ Returns a deep copy of self.
-        """
-        request = Request(None)
-        request.logger = logging.getLogger(self.logger.name)
-
-        for name in Request.__slots__:
-            if name == 'logger':
-                continue
-            setattr(request, name, deepcopy(getattr(self, name)))
-
-        return request
 
 # ################################################################################################################################
 

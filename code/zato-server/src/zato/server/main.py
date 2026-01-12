@@ -15,14 +15,6 @@ warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-
 from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
      patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
 
-# ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-try:
-    import cloghandler # type: ignore
-except ImportError:
-    pass
-else:
-    cloghandler = cloghandler # For pyflakes
-
 # Note that the order of patching matters, just like in patch_all
 patch_os()
 patch_time()
@@ -38,10 +30,98 @@ patch_signal()
 patch_queue()
 patch_contextvars()
 
+# ConcurrentLogHandler - updates stdlib's logging config on import so this needs to stay after gevent patches
+try:
+    import cloghandler # type: ignore
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
+
 # stdlib
-import locale
 import logging
 import os
+
+# Reusable
+true_values = {'true', '1', 'y', 'yes'}
+
+# Datadog monitoring - read config from env vars set by start.py
+datadog_main_agent = os.environ.get('Zato_Datadog_Main_Agent') or ''
+datadog_metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent') or ''
+
+datadog_enabled_env = os.environ.get('Zato_Datadog_Enabled') or ''
+datadog_enabled_env = datadog_enabled_env.lower() in true_values
+
+is_datadog_enabled = datadog_enabled_env or bool(datadog_main_agent or datadog_metrics_agent)
+
+if is_datadog_enabled:
+
+    # Datadog
+    from ddtrace import patch as dd_patch
+
+    # Check if we need DD debug logs ..
+    has_debug = os.environ.get('Zato_Datadog_Debug_Enabled') or ''
+    has_debug = has_debug.lower() in {'true', '1'}
+    has_debug = str(has_debug).lower()
+
+    # .. and assign that accordingly ..
+    os.environ['DD_TRACE_DEBUG'] = has_debug
+
+    # .. set agent host if configured ..
+    if datadog_main_agent:
+        main_host, main_port = datadog_main_agent.split(':')
+        os.environ['DD_AGENT_HOST'] = main_host
+        os.environ['DD_TRACE_AGENT_PORT'] = main_port
+
+    # .. set dogstatsd host if configured ..
+    if datadog_metrics_agent:
+        metrics_host, metrics_port = datadog_metrics_agent.split(':')
+        os.environ['DD_DOGSTATSD_HOST'] = metrics_host
+        os.environ['DD_DOGSTATSD_PORT'] = metrics_port
+
+    # .. now we can configure patch DD to work with gevent ..
+    dd_patch(gevent=True)
+
+# Grafana Cloud monitoring
+
+is_grafana_cloud_enabled = os.environ.get('Zato_Grafana_Cloud_Enabled') or ''
+is_grafana_cloud_enabled = is_grafana_cloud_enabled.lower() in true_values
+
+if is_grafana_cloud_enabled:
+    '''
+    #
+    # Grafana
+    #
+
+    import socket
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry._logs import set_logger_provider
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+
+    host_name = socket.gethostname()
+
+    resource = Resource.create({
+        'service.name': 'zato4',
+        'service.instance.id': 'dev4',
+        'service.namespace': 'api4',
+        'deployment.environment': 'dev',
+        'host.id': host_name,
+        'host.name': host_name,
+    })
+
+    log_provider = LoggerProvider(resource=resource)
+    log_exporter = OTLPLogExporter(endpoint='http://localhost:4318/v1/logs')
+    log_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+    set_logger_provider(log_provider)
+
+    handler = LoggingHandler(level=logging.INFO, logger_provider=log_provider)
+    logging.getLogger().addHandler(handler)
+    '''
+
+# stdlib
+import locale
 import sys
 from logging.config import dictConfig
 
@@ -433,6 +513,10 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.env_manager = env_manager
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore
+
+    # Monitoring
+    server.is_datadog_enabled = is_datadog_enabled
+    server.is_grafana_cloud_enabled = is_grafana_cloud_enabled
 
     if scheduler_api_password := server.fs_server_config.scheduler.get('scheduler_api_password'):
         if is_encrypted(scheduler_api_password):

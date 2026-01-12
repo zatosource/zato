@@ -435,6 +435,7 @@ class ServiceStore:
     def set_up_class_attributes(self, class_:'type[Service]', service_store:'ServiceStore') -> 'None':
 
         # Local aliases
+        service_name = class_.get_name()
         _Class_SimpleIO = None # type: ignore
         _Class_SimpleIO = _Class_SimpleIO # type: ignore
 
@@ -582,6 +583,11 @@ class ServiceStore:
                 class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
                 class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
                 class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
+
+            # Monitoring
+            zato_prefixes = ('zato', 'pub.zato')
+            is_zato_service = service_name.startswith(zato_prefixes)
+            class_.needs_datadog_logging = self.server.is_datadog_enabled and (not is_zato_service)
 
             # Crypto operations
             class_.crypto = service_store.server.crypto_manager
