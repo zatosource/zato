@@ -626,6 +626,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # Get datadog context from contextvar (set by service)
         datadog_context = current_datadog_context.get()
+        logger.info('http_request datadog_context=%s', datadog_context)
 
         # We do not serialize ourselves data based on this content type,
         # leaving it up to the underlying HTTP library to do it ..
@@ -663,7 +664,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # .. inject datadog tracing headers if context is available ..
         if datadog_context:
+            logger.info('http_request injecting headers, before=%s', dict(headers))
             HTTPPropagator.inject(datadog_context, headers)
+            logger.info('http_request injecting headers, after=%s', dict(headers))
 
         # .. SOAP requests need to be specifically formatted now ..
         if _is_soap:
