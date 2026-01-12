@@ -45,6 +45,7 @@ from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
+from zato.server.connection.http_soap.outgoing import current_datadog_context
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -678,6 +679,9 @@ class Service:
 
             # .. store it for possible later use ..
             self.datadog_context = _datadog_span.context
+
+            # .. set it in contextvar so http_request can access it ..
+            _ = current_datadog_context.set(_datadog_span.context)
 
             # .. and finish the span.
             _datadog_span.finish()
