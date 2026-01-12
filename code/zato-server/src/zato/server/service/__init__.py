@@ -665,10 +665,13 @@ class Service:
             # We may have it from our caller ..
             _datadog_parent_context = kwargs.get('datadog_context')
 
+            # .. build the service name for Datadog ..
+            _dd_service_name = service.name
+
             # .. build a span indicating that we're being invoked ..
             _datadog_span = self.server.datadog_tracer.start_span(
                 name='',
-                service=service.name,
+                service=_dd_service_name,
                 resource=f'Invoker',
                 child_of=_datadog_parent_context
             )
@@ -696,7 +699,7 @@ class Service:
                 raw_uri = wsgi_environ.get('RAW_URI', '')
                 _datadog_channel_span = self.server.datadog_tracer.start_span(
                     name='zato.http.channel',
-                    service=service.name,
+                    service=_dd_service_name,
                     resource=f'REST Channel: {channel_name}',
                     child_of=_datadog_span.context
                 )

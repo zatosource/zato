@@ -865,6 +865,14 @@ urlpatterns += [
         login_required(datadog.toggle_enabled), name='monitoring-datadog-toggle-enabled'),
     url(r'^zato/monitoring/datadog/save-config$',
         login_required(datadog.save_config), name='monitoring-datadog-save-config'),
+    url(r'^zato/monitoring/datadog/restart-scheduler$',
+        login_required(datadog.restart_scheduler), name='monitoring-datadog-restart-scheduler'),
+    url(r'^zato/monitoring/datadog/restart-server$',
+        login_required(datadog.restart_server), name='monitoring-datadog-restart-server'),
+    url(r'^zato/monitoring/datadog/restart-proxy$',
+        login_required(datadog.restart_proxy), name='monitoring-datadog-restart-proxy'),
+    url(r'^zato/monitoring/datadog/restart-dashboard$',
+        login_required(datadog.restart_dashboard), name='monitoring-datadog-restart-dashboard'),
 ]
 
 # ################################################################################################################################

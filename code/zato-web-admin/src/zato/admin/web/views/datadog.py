@@ -58,7 +58,7 @@ def json_response(data, success=True):
 
 def restart_component(req, component_name, component_path, port=0):
     logger.info('restart_{}: called from client: {}'.format(component_name, req.META.get('REMOTE_ADDR')))
-    result = updater.restart_component(component_name, component_path, port)
+    result = updater.restart_component(component_name, component_path, port, check_changes=False)
     return json_response(result, success=result['success'])
 
 # ################################################################################################################################
