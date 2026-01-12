@@ -844,16 +844,16 @@ urlpatterns += [
     url(r'^zato/updates/download-logs$',
         login_required(updates.download_logs), name='updates-download-logs'),
 
-    # Observability - Grafana Cloud
+    # Monitoring - Grafana Cloud
 
-    url(r'^zato/observability/grafana-cloud/$',
-        login_required(grafana_cloud.index), name='observability-grafana-cloud'),
-    url(r'^zato/observability/grafana-cloud/test-connection$',
-        login_required(grafana_cloud.test_connection), name='observability-grafana-cloud-test-connection'),
-    url(r'^zato/observability/grafana-cloud/toggle-enabled$',
-        login_required(grafana_cloud.toggle_enabled), name='observability-grafana-cloud-toggle-enabled'),
-    url(r'^zato/observability/grafana-cloud/save-config$',
-        login_required(grafana_cloud.save_config), name='observability-grafana-cloud-save-config'),
+    url(r'^zato/monitoring/grafana-cloud/$',
+        login_required(grafana_cloud.index), name='monitoring-grafana-cloud'),
+    url(r'^zato/monitoring/grafana-cloud/test-connection$',
+        login_required(grafana_cloud.test_connection), name='monitoring-grafana-cloud-test-connection'),
+    url(r'^zato/monitoring/grafana-cloud/toggle-enabled$',
+        login_required(grafana_cloud.toggle_enabled), name='monitoring-grafana-cloud-toggle-enabled'),
+    url(r'^zato/monitoring/grafana-cloud/save-config$',
+        login_required(grafana_cloud.save_config), name='monitoring-grafana-cloud-save-config'),
 ]
 
 # ################################################################################################################################
