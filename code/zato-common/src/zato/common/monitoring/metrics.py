@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from threading import RLock
 
+# ddtrace
+from ddtrace.vendor.dogstatsd.base import statsd
+
 # Zato
 from zato.common.typing_ import anydict, floatnone
 from zato.common.util.time_ import utcnow_as_ms
@@ -133,28 +136,12 @@ class ServiceMetrics:
     def __init__(self, service:'Service') -> 'None':
         self.service = service
 
-    def push(self, event_name:'str', value:'int') -> 'None':
-        """ Push a metric event with an integer value.
+    def push(self, event_name:'str', value:'float') -> 'None':
+        """ Push a metric with a numeric value.
         """
-        tracer = self.service.server.datadog_tracer
         service_name = self.service.name
-        process_name = self.service.process_name
-        cid = self.service.cid
-        datadog_context = self.service.datadog_context
-
-        with tracer.start_span(
-            name='zato.metrics.push',
-            service=service_name,
-            resource=f'Metrics {event_name}',
-            child_of=datadog_context
-        ) as span:
-            span.set_tag('cid', cid)
-            span.set_tag('zato_process', process_name)
-            span.set_tag('zato_service', service_name)
-            span.set_tag('zato_message_level', 'INFO')
-            span.set_tag('zato_message', f'{event_name} {value}')
-            span.set_tag('event_name', event_name)
-            span.set_tag('event_value', value)
+        tags = [f'service:{service_name}']
+        statsd.gauge(event_name, value, tags=tags)
 
 # ################################################################################################################################
 # ################################################################################################################################
