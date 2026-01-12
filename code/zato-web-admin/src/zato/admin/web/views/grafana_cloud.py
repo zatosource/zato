@@ -228,14 +228,22 @@ def toggle_enabled(req):
         config_data = loads(body)
 
         is_enabled = config_data.get('is_enabled', False)
-        enabled_value = 'true' if is_enabled else 'false'
 
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-        _ = r.set('zato:grafana_cloud:is_enabled', enabled_value)
+
+        if is_enabled:
+            _ = r.set('zato:grafana_cloud:is_enabled', 'true')
+            response_data['message'] = 'Configuration updated'
+        else:
+            _ = r.delete('zato:grafana_cloud:is_enabled')
+            _ = r.delete('zato:grafana_cloud:instance_id')
+            _ = r.delete('zato:grafana_cloud:runtime_token')
+            _ = r.delete('zato:grafana_cloud:endpoint')
+            response_data['message'] = 'Configuration removed'
+            response_data['needs_restart'] = True
 
         response_data['success'] = True
-        response_data['message'] = 'Configuration updated'
-        logger.info('toggle_enabled: is_enabled set to {}'.format(enabled_value))
+        logger.info('toggle_enabled: is_enabled set to {}'.format(is_enabled))
 
         return json_response(response_data)
 

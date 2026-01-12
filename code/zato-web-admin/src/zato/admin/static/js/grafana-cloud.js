@@ -58,8 +58,19 @@ $.fn.zato.grafanaCloud.init = function() {
                 is_enabled: isEnabled
             }),
             contentType: 'application/json',
-            success: function() {
-                console.log('toggle-enabled: success');
+            success: function(response) {
+                console.log('toggle-enabled: success', response);
+                if (!isEnabled && response.needs_restart) {
+                    instanceIdInput.val('');
+                    apiKeyInput.val('');
+                    endpointInput.val('');
+                    
+                    $('#progress-configure').removeClass('hidden error-state');
+                    $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration removed');
+                    
+                    $('#progress-install').removeClass('hidden');
+                    $.fn.zato.updates.runDisableSteps();
+                }
             },
             error: function(xhr) {
                 console.error('toggle-enabled: error', xhr);
@@ -265,6 +276,19 @@ $.fn.zato.updates.runRestartSteps = function(button) {
     config.completionBadgeSelector = '#progress-install .info-message';
     config.baseUrl = '/zato/updates';
     config.completionBadgeText = '⭐ Grafana Cloud configured successfully';
+
+    $.fn.zato.settings.executeSteps(config);
+};
+
+$.fn.zato.updates.runDisableSteps = function() {
+    const config = {};
+    config.progressKey = 'install';
+    config.button = null;
+    config.pollUrl = '/zato/monitoring/grafana-cloud/';
+    config.completedText = 'All components restarted';
+    config.completionBadgeSelector = '#progress-install .info-message';
+    config.baseUrl = '/zato/updates';
+    config.completionBadgeText = '⭐ Grafana Cloud disabled successfully';
 
     $.fn.zato.settings.executeSteps(config);
 };
