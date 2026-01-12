@@ -45,7 +45,7 @@ $.fn.zato.grafanaCloud.init = function() {
         updateFieldsState(isEnabled);
         
         $.ajax({
-            url: '/zato/observability/grafana-cloud/toggle-enabled',
+            url: '/zato/monitoring/grafana-cloud/toggle-enabled',
             type: 'POST',
             headers: {
                 'X-CSRFToken': $.cookie('csrftoken')
@@ -151,7 +151,7 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
     $.fn.zato.settings.activateSpinner('.button-spinner');
 
     $.ajax({
-        url: '/zato/observability/grafana-cloud/test-connection',
+        url: '/zato/monitoring/grafana-cloud/test-connection',
         type: 'POST',
         headers: {
             'X-CSRFToken': $.cookie('csrftoken')
@@ -203,7 +203,7 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
     $.fn.zato.settings.updateProgress('configure', 'processing', 'Configuring...');
 
     $.ajax({
-        url: '/zato/observability/grafana-cloud/save-config',
+        url: '/zato/monitoring/grafana-cloud/save-config',
         type: 'POST',
         headers: {
             'X-CSRFToken': $.cookie('csrftoken')
@@ -243,7 +243,7 @@ $.fn.zato.updates.runRestartSteps = function(button) {
     const config = {};
     config.progressKey = 'install';
     config.button = button;
-    config.pollUrl = '/zato/observability/grafana-cloud/';
+    config.pollUrl = '/zato/monitoring/grafana-cloud/';
     config.completedText = 'All components restarted';
     config.completionBadgeSelector = '#progress-install .info-message';
     config.baseUrl = '/zato/updates';
