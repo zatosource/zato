@@ -1272,16 +1272,28 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         logger.info('Setting up Grafana Cloud monitoring')
 
         from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 
         resource = Resource.create({'service.name': 'zato.server'})
-        exporter = OTLPSpanExporter(endpoint='http://localhost:4318/v1/traces')
-        processor = BatchSpanProcessor(exporter)
+
+        trace_exporter = OTLPSpanExporter(endpoint='http://localhost:4318/v1/traces')
+        processor = BatchSpanProcessor(trace_exporter)
 
         provider = TracerProvider(resource=resource)
         provider.add_span_processor(processor)
         trace.set_tracer_provider(provider)
 
         self.otlp_tracer = trace.get_tracer('zato.server')
+
+        metrics_exporter = OTLPMetricExporter(endpoint='http://localhost:4318/v1/metrics')
+        metrics_reader = PeriodicExportingMetricReader(metrics_exporter, export_interval_millis=5000)
+        metrics_provider = MeterProvider(resource=resource, metric_readers=[metrics_reader])
+
+        self.otlp_meter = metrics_provider.get_meter('zato.server')
+        self.otlp_gauges = {}
+        self.otlp_gauges_lock = RLock()
 
 # ################################################################################################################################
 
