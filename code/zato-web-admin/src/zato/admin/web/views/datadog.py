@@ -158,7 +158,7 @@ def _test_agent_connection(address, label, errors, use_udp=False):
         logger.info('test_connection: {} connection successful'.format(label))
     except Exception as e:
         errors.append('{} ({}): {}'.format(label, address, e))
-        logger.error('test_connection: {} connection failed: {}'.format(label, e))
+        logger.error('test_connection: {} connection failed: {}'.format(label, format_exc()))
 
 # ################################################################################################################################
 
