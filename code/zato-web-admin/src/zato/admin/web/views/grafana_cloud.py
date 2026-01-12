@@ -142,9 +142,13 @@ def restart_dashboard(req):
 @method_allowed('POST')
 def test_connection(req):
 
+    from opentelemetry import metrics
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+    from opentelemetry.sdk.resources import Resource
     from traceback import format_exc
     from zato.common.json_internal import loads
-    from zato.common.monitoring.grafana_cloud.auto_setup import AutoSetup
 
     response_data = {}
     response_data['success'] = False
@@ -161,17 +165,21 @@ def test_connection(req):
             response_data['error'] = 'Instance ID, API key and endpoint are required'
             return json_response(response_data, success=False)
 
-        setup = AutoSetup(main_token=api_key, instance_id=instance_id)
-        result = setup.test_connection()
+        resource = Resource.create({'service.name': 'zato'})
+        exporter = OTLPMetricExporter(endpoint='http://localhost:4318/v1/metrics')
+        reader = PeriodicExportingMetricReader(exporter, export_interval_millis=1000)
+        provider = MeterProvider(resource=resource, metric_readers=[reader])
 
-        if result['success']:
-            response_data['success'] = True
-            response_data['message'] = result['message']
-            return json_response(response_data)
-        else:
-            error_msg = result['error']
-            response_data['error'] = error_msg
-            return json_response(response_data, success=False)
+        meter = provider.get_meter('zato.test')
+        gauge = meter.create_gauge('zato.test.conn')
+        gauge.set(1)
+
+        provider.force_flush()
+        provider.shutdown()
+
+        response_data['success'] = True
+        response_data['message'] = 'Test metric sent'
+        return json_response(response_data)
 
     except Exception as e:
         logger.error('test_connection exception: {}'.format(format_exc()))
