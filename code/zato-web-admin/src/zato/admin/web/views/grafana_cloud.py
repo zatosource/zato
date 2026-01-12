@@ -163,14 +163,19 @@ def test_connection(req):
         logger.info('test_connection: instance_id={}, api_key={}, endpoint={}'.format(
             instance_id, api_key[:10] + '...' if api_key else '', endpoint))
 
+        missing = []
         if not instance_id:
-            response_data['error'] = 'Instance ID is required'
-            return json_response(response_data, success=False)
+            missing.append('Instance ID')
         if not api_key:
-            response_data['error'] = 'API key is required'
-            return json_response(response_data, success=False)
+            missing.append('API key')
         if not endpoint:
-            response_data['error'] = 'Endpoint is required'
+            missing.append('Endpoint')
+
+        if missing:
+            if len(missing) == 1:
+                response_data['error'] = 'Field missing: {}'.format(missing[0])
+            else:
+                response_data['error'] = 'Fields missing: {}'.format(', '.join(missing))
             return json_response(response_data, success=False)
 
         credentials_raw = '{}:{}'.format(instance_id, api_key)
