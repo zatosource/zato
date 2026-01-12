@@ -406,7 +406,7 @@ Examples:
         logs_dir = os.path.join(component_path, 'logs')
         os.makedirs(logs_dir, exist_ok=True) # Ensure logs directory exists
         access_log = os.path.join(logs_dir, 'gunicorn-access.log')
-        
+
         if self.args.fg:
             error_log = '-'
         else:
@@ -478,7 +478,7 @@ Examples:
         # This logging mimics what start_component would do via start_python_process's caller
         if self.show_output:
             if not self.args.fg:
-                if exit_code == 0 or exit_code is None:
+                if exit_code == 0:
                     self.logger.debug('Zato Dashboard `{}` starting in background'.format(component_path))
                 else:
                     self.logger.error(
