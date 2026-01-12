@@ -54,7 +54,13 @@ datadog_enabled_env = datadog_enabled_env.lower() in true_values
 
 is_datadog_enabled = datadog_enabled_env or bool(datadog_main_agent or datadog_metrics_agent)
 
-_datadog_logger = logging.getLogger('zato.datadog')
+_datadog_logger = logging.getLogger('zato')
+_datadog_logger.setLevel(logging.INFO)
+_datadog_handler = logging.StreamHandler()
+_datadog_handler.setLevel(logging.INFO)
+_datadog_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
+_datadog_logger.addHandler(_datadog_handler)
+
 _datadog_logger.info('Zato_Datadog_Main_Agent={}'.format(datadog_main_agent))
 _datadog_logger.info('Zato_Datadog_Metrics_Agent={}'.format(datadog_metrics_agent))
 _datadog_logger.info('Zato_Datadog_Enabled={}'.format(os.environ.get('Zato_Datadog_Enabled', '')))
