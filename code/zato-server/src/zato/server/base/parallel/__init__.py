@@ -1269,7 +1269,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _set_up_grafana_cloud(self):
-        pass
+        logger.info('Setting up Grafana Cloud monitoring')
+
+        resource = trace.get_tracer_provider().resource
+        exporter = OTLPSpanExporter(endpoint='http://localhost:4318/v1/traces')
+        processor = BatchSpanProcessor(exporter)
+
+        provider = TracerProvider(resource=resource)
+        provider.add_span_processor(processor)
+        trace.set_tracer_provider(provider)
+
+        self.otlp_tracer = trace.get_tracer('zato.server')
 
 # ################################################################################################################################
 

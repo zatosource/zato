@@ -327,6 +327,15 @@ Examples:
         except Exception:
             pass
 
+        # Read Grafana Cloud config from Redis and set env vars
+        try:
+            redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            grafana_cloud_enabled = redis_client.get('zato:grafana_cloud:is_enabled') or ''
+            if grafana_cloud_enabled == 'true':
+                env_vars['Zato_Grafana_Cloud_Enabled'] = 'true'
+        except Exception:
+            pass
+
         # Start the server now
         return self.start_component(
             'zato.server.main',
