@@ -172,10 +172,23 @@ def test_connection(req):
         body = req.body.decode('utf-8')
         config_data = loads(body)
 
-        main_agent = config_data.get('main_agent', '') or 'localhost:8126'
-        metrics_agent = config_data.get('metrics_agent', '') or 'localhost:8125'
+        main_agent = config_data.get('main_agent', '')
+        metrics_agent = config_data.get('metrics_agent', '')
 
         logger.info('test_connection: main_agent={}, metrics_agent={}'.format(main_agent, metrics_agent))
+
+        missing = []
+        if not main_agent:
+            missing.append('Main agent')
+        if not metrics_agent:
+            missing.append('Metrics agent')
+
+        if missing:
+            if len(missing) == 1:
+                response_data['error'] = 'Field missing: {}'.format(missing[0])
+            else:
+                response_data['error'] = 'Fields missing: {}'.format(', '.join(missing))
+            return json_response(response_data, success=False)
 
         errors = []
 
@@ -203,29 +216,16 @@ def test_connection(req):
 def toggle_enabled(req):
 
     response_data = {}
-    response_data['success'] = False
+    response_data['success'] = True
 
-    try:
-        body = req.body.decode('utf-8')
-        config_data = loads(body)
+    body = req.body.decode('utf-8')
+    config_data = loads(body)
+    is_enabled = config_data.get('is_enabled', False)
 
-        is_enabled = config_data.get('is_enabled', False)
-        enabled_value = 'true' if is_enabled else 'false'
+    response_data['message'] = 'Toggle state updated'
+    response_data['needs_restart'] = not is_enabled
 
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-        _ = r.set('zato:datadog:is_enabled', enabled_value)
-
-        response_data['success'] = True
-        response_data['message'] = 'Configuration updated'
-        logger.info('toggle_enabled: is_enabled set to {}'.format(enabled_value))
-
-        return json_response(response_data)
-
-    except Exception as e:
-        logger.error('toggle_enabled exception: {}'.format(format_exc()))
-        error_message = str(e)
-        response_data['error'] = error_message
-        return json_response(response_data, success=False)
+    return json_response(response_data)
 
 # ################################################################################################################################
 # ################################################################################################################################
