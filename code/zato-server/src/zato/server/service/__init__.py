@@ -709,6 +709,16 @@ class Service:
                 _datadog_channel_span.set_tag('zato_message_level', 'INFO')
                 _datadog_channel_span.set_tag('zato_message', f'{request_method} {raw_uri}')
 
+        # Push invocation metric to Grafana Cloud
+        if server.is_grafana_cloud_enabled:
+            metric_name = 'zato.service.' + service.name
+            with server.otlp_gauges_lock:
+                gauge = server.otlp_gauges.get(metric_name)
+                if not gauge:
+                    gauge = server.otlp_meter.create_gauge(metric_name)
+                    server.otlp_gauges[metric_name] = gauge
+            gauge.set(1)
+
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
         # implemented by user services.
