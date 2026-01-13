@@ -710,14 +710,8 @@ class Service:
                 _datadog_channel_span.set_tag('zato_message', f'{request_method} {raw_uri}')
 
         # Push invocation metric to Grafana Cloud
-        import logging as _gc_logging
-        _gc_logger = _gc_logging.getLogger('zato.service.grafana_cloud')
-        _gc_logger.info('[trace] is_grafana_cloud_enabled=%s', server.is_grafana_cloud_enabled)
         if server.is_grafana_cloud_enabled:
-            _gc_metric_name = 'zato.service.' + service.name
-            _gc_logger.info('[trace] pushing metric name=%s value=1', _gc_metric_name)
-            service.metrics.push(_gc_metric_name, 1)
-            _gc_logger.info('[trace] metric pushed')
+            service.metrics.push('zato.service.' + service.name, 1)
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
