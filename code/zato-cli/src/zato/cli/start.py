@@ -336,6 +336,7 @@ Examples:
             env_vars['Zato_Datadog_Metrics_Agent'] = metrics_agent
 
         # Read Grafana Cloud config from env vars or Redis
+        self.logger.info('Reading Grafana Cloud config')
         grafana_cloud_config = {
             'Zato_Grafana_Cloud_Instance_ID': 'zato:grafana_cloud:instance_id',
             'Zato_Grafana_Cloud_API_Key': 'zato:grafana_cloud:runtime_token',
@@ -365,12 +366,14 @@ Examples:
                 else:
                     for env_key in grafana_cloud_config:
                         grafana_cloud_values[env_key] = ''
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.error('Grafana Cloud Redis error: %s', e)
 
         for env_key, value in grafana_cloud_values.items():
             if value:
                 env_vars[env_key] = value
+
+        self.logger.info('Grafana Cloud env_vars to pass: %s', list(env_vars.keys()))
 
         # Start the server now
         return self.start_component(

@@ -90,6 +90,18 @@ grafana_cloud_instance_id = os.environ.get('Zato_Grafana_Cloud_Instance_ID')
 grafana_cloud_api_key = os.environ.get('Zato_Grafana_Cloud_API_Key')
 grafana_cloud_endpoint = os.environ.get('Zato_Grafana_Cloud_Endpoint')
 
+if not (grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint):
+    try:
+        import redis as redis_lib
+        redis_client = redis_lib.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        is_enabled = redis_client.get('zato:grafana_cloud:is_enabled')
+        if is_enabled == 'true':
+            grafana_cloud_instance_id = grafana_cloud_instance_id or redis_client.get('zato:grafana_cloud:instance_id')
+            grafana_cloud_api_key = grafana_cloud_api_key or redis_client.get('zato:grafana_cloud:runtime_token')
+            grafana_cloud_endpoint = grafana_cloud_endpoint or redis_client.get('zato:grafana_cloud:endpoint')
+    except Exception as e:
+        logging.getLogger(__name__).error('Grafana Cloud Redis read error: %s', e)
+
 is_grafana_cloud_enabled = bool(grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
 
 # stdlib
