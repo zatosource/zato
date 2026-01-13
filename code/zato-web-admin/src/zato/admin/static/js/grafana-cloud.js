@@ -214,8 +214,16 @@ $.fn.zato.grafanaCloud.handleTestConnection = function() {
 };
 
 $.fn.zato.grafanaCloud.handleSaveClick = function() {
+    console.log('handleSaveClick: starting');
     const button = $(this);
+    console.log('handleSaveClick: button found:', button.length > 0);
     button.prop('disabled', true);
+
+    console.log('handleSaveClick: preparing to call save-config');
+    console.log('handleSaveClick: is_enabled:', $('#is-enabled').is(':checked'));
+    console.log('handleSaveClick: instance_id:', $('#instance-id').val());
+    console.log('handleSaveClick: api_key length:', $('#api-key').val().length);
+    console.log('handleSaveClick: endpoint:', $('#endpoint').val());
 
     $('#progress-test').addClass('hidden').removeClass('error-state');
 
@@ -238,13 +246,18 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
         }),
         contentType: 'application/json',
         success: function(response) {
+            console.log('handleSaveClick: save-config success:', response);
             $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration complete');
 
             $('#progress-install').removeClass('hidden');
             const isEnabled = $('#is-enabled').is(':checked');
+            console.log('handleSaveClick: starting restart steps, isEnabled:', isEnabled);
             $.fn.zato.updates.runRestartSteps(button, isEnabled);
         },
-        error: function(xhr) {
+        error: function(xhr, status, error) {
+            console.log('handleSaveClick: save-config error:', status, error);
+            console.log('handleSaveClick: xhr.status:', xhr.status);
+            console.log('handleSaveClick: xhr.responseText:', xhr.responseText);
             let errorMsg = 'Configure failed';
             let fullError = errorMsg;
             try {
