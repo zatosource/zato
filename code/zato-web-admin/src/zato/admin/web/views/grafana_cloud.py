@@ -249,9 +249,11 @@ def save_config(req):
     response_data['success'] = False
 
     os_username = getpass.getuser()
+    logger.info('save_config: os_username=%s', os_username)
     if os_username != 'zato':
+        logger.info('save_config: os_username is not zato, skipping actual save')
         response_data['success'] = True
-        response_data['message'] = 'Configuration saved'
+        response_data['message'] = 'Save skipped, user={}'.format(os_username)
         return json_response(response_data)
 
     try:
