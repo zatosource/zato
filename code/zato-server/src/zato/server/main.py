@@ -384,6 +384,9 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     logger = logging.getLogger(__name__)
 
+    logger.info('Grafana Cloud env vars - instance_id:%s api_key:%s endpoint:%s -> enabled:%s',
+        grafana_cloud_instance_id, grafana_cloud_api_key, grafana_cloud_endpoint, is_grafana_cloud_enabled)
+
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)

@@ -751,6 +751,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_first_worker = self.process_idx == 0
 
         # Monitoring
+        logger.info('Monitoring setup - datadog_enabled:%s grafana_cloud_enabled:%s',
+            self.is_datadog_enabled, self.is_grafana_cloud_enabled)
+
         if self.is_datadog_enabled:
             self._set_up_datadog()
 
