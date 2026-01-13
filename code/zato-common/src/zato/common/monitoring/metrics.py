@@ -142,17 +142,33 @@ class ServiceMetrics:
         service_name = self.service.name
         server = self.service.server
 
+        print('metrics.push: [trace] event_name={} value={} service_name={}'.format(event_name, value, service_name))
+        print('metrics.push: [trace] is_datadog_enabled={} is_grafana_cloud_enabled={}'.format(
+            server.is_datadog_enabled, server.is_grafana_cloud_enabled))
+
         if server.is_datadog_enabled:
+            print('metrics.push: [trace] pushing to datadog')
             tags = [f'service:{service_name}']
             statsd.gauge(event_name, value, tags=tags)
+            print('metrics.push: [trace] datadog push done')
 
         if server.is_grafana_cloud_enabled:
+            print('metrics.push: [trace] pushing to grafana cloud')
+            print('metrics.push: [trace] otlp_meter={}'.format(server.otlp_meter))
+            print('metrics.push: [trace] otlp_gauges={}'.format(server.otlp_gauges))
+            print('metrics.push: [trace] otlp_gauges_lock={}'.format(server.otlp_gauges_lock))
             with server.otlp_gauges_lock:
+                print('metrics.push: [trace] acquired lock')
                 gauge = server.otlp_gauges.get(event_name)
+                print('metrics.push: [trace] existing gauge={}'.format(gauge))
                 if not gauge:
+                    print('metrics.push: [trace] creating new gauge for {}'.format(event_name))
                     gauge = server.otlp_meter.create_gauge(event_name)
                     server.otlp_gauges[event_name] = gauge
+                    print('metrics.push: [trace] gauge created={}'.format(gauge))
+            print('metrics.push: [trace] setting gauge value={} attrs={}'.format(value, {'service': service_name}))
             gauge.set(value, {'service': service_name})
+            print('metrics.push: [trace] gauge.set done')
 
 # ################################################################################################################################
 # ################################################################################################################################
