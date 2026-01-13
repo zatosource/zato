@@ -142,33 +142,44 @@ class ServiceMetrics:
         service_name = self.service.name
         server = self.service.server
 
-        print('metrics.push: [trace] event_name={} value={} service_name={}'.format(event_name, value, service_name))
-        print('metrics.push: [trace] is_datadog_enabled={} is_grafana_cloud_enabled={}'.format(
+        import sys
+        sys.stderr.write('metrics.push: [trace] event_name={} value={} service_name={}\n'.format(event_name, value, service_name))
+        sys.stderr.write('metrics.push: [trace] is_datadog_enabled={} is_grafana_cloud_enabled={}\n'.format(
             server.is_datadog_enabled, server.is_grafana_cloud_enabled))
+        sys.stderr.flush()
 
         if server.is_datadog_enabled:
-            print('metrics.push: [trace] pushing to datadog')
+            sys.stderr.write('metrics.push: [trace] pushing to datadog\n')
+            sys.stderr.flush()
             tags = [f'service:{service_name}']
             statsd.gauge(event_name, value, tags=tags)
-            print('metrics.push: [trace] datadog push done')
+            sys.stderr.write('metrics.push: [trace] datadog push done\n')
+            sys.stderr.flush()
 
         if server.is_grafana_cloud_enabled:
-            print('metrics.push: [trace] pushing to grafana cloud')
-            print('metrics.push: [trace] otlp_meter={}'.format(server.otlp_meter))
-            print('metrics.push: [trace] otlp_gauges={}'.format(server.otlp_gauges))
-            print('metrics.push: [trace] otlp_gauges_lock={}'.format(server.otlp_gauges_lock))
+            sys.stderr.write('metrics.push: [trace] pushing to grafana cloud\n')
+            sys.stderr.write('metrics.push: [trace] otlp_meter={}\n'.format(server.otlp_meter))
+            sys.stderr.write('metrics.push: [trace] otlp_gauges={}\n'.format(server.otlp_gauges))
+            sys.stderr.write('metrics.push: [trace] otlp_gauges_lock={}\n'.format(server.otlp_gauges_lock))
+            sys.stderr.flush()
             with server.otlp_gauges_lock:
-                print('metrics.push: [trace] acquired lock')
+                sys.stderr.write('metrics.push: [trace] acquired lock\n')
+                sys.stderr.flush()
                 gauge = server.otlp_gauges.get(event_name)
-                print('metrics.push: [trace] existing gauge={}'.format(gauge))
+                sys.stderr.write('metrics.push: [trace] existing gauge={}\n'.format(gauge))
+                sys.stderr.flush()
                 if not gauge:
-                    print('metrics.push: [trace] creating new gauge for {}'.format(event_name))
+                    sys.stderr.write('metrics.push: [trace] creating new gauge for {}\n'.format(event_name))
+                    sys.stderr.flush()
                     gauge = server.otlp_meter.create_gauge(event_name)
                     server.otlp_gauges[event_name] = gauge
-                    print('metrics.push: [trace] gauge created={}'.format(gauge))
-            print('metrics.push: [trace] setting gauge value={} attrs={}'.format(value, {'service': service_name}))
+                    sys.stderr.write('metrics.push: [trace] gauge created={}\n'.format(gauge))
+                    sys.stderr.flush()
+            sys.stderr.write('metrics.push: [trace] setting gauge value={} attrs={}\n'.format(value, {'service': service_name}))
+            sys.stderr.flush()
             gauge.set(value, {'service': service_name})
-            print('metrics.push: [trace] gauge.set done')
+            sys.stderr.write('metrics.push: [trace] gauge.set done\n')
+            sys.stderr.flush()
 
 # ################################################################################################################################
 # ################################################################################################################################
