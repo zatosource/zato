@@ -154,6 +154,20 @@ class ServiceMetrics:
                     server.otlp_gauges[event_name] = gauge
             gauge.set(value, {'service': service_name})
 
+    def incr(self, event_name:'str', value:'int'=1) -> 'None':
+        """ Increment a counter metric.
+        """
+        service_name = self.service.name
+        server = self.service.server
+
+        if server.is_grafana_cloud_enabled:
+            with server.otlp_counters_lock:
+                counter = server.otlp_counters.get(event_name)
+                if not counter:
+                    counter = server.otlp_meter.create_counter(event_name)
+                    server.otlp_counters[event_name] = counter
+            counter.add(value, {'service': service_name})
+
 # ################################################################################################################################
 # ################################################################################################################################
 
