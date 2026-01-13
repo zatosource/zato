@@ -139,39 +139,20 @@ class ServiceMetrics:
     def push(self, event_name:'str', value:'float') -> 'None':
         """ Push a metric with a numeric value.
         """
-        import logging
-        logger = logging.getLogger('zato.metrics.push')
-
         service_name = self.service.name
         server = self.service.server
 
-        logger.info('[trace] event_name=%s value=%s service_name=%s', event_name, value, service_name)
-        logger.info('[trace] is_datadog_enabled=%s is_grafana_cloud_enabled=%s',
-            server.is_datadog_enabled, server.is_grafana_cloud_enabled)
-
         if server.is_datadog_enabled:
-            logger.info('[trace] pushing to datadog')
             tags = [f'service:{service_name}']
             statsd.gauge(event_name, value, tags=tags)
-            logger.info('[trace] datadog push done')
 
         if server.is_grafana_cloud_enabled:
-            logger.info('[trace] pushing to grafana cloud')
-            logger.info('[trace] otlp_meter=%s', server.otlp_meter)
-            logger.info('[trace] otlp_gauges=%s', server.otlp_gauges)
-            logger.info('[trace] otlp_gauges_lock=%s', server.otlp_gauges_lock)
             with server.otlp_gauges_lock:
-                logger.info('[trace] acquired lock')
                 gauge = server.otlp_gauges.get(event_name)
-                logger.info('[trace] existing gauge=%s', gauge)
                 if not gauge:
-                    logger.info('[trace] creating new gauge for %s', event_name)
                     gauge = server.otlp_meter.create_gauge(event_name)
                     server.otlp_gauges[event_name] = gauge
-                    logger.info('[trace] gauge created=%s', gauge)
-            logger.info('[trace] setting gauge value=%s attrs=%s', value, {'service': service_name})
             gauge.set(value, {'service': service_name})
-            logger.info('[trace] gauge.set done')
 
 # ################################################################################################################################
 # ################################################################################################################################
