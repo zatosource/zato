@@ -293,10 +293,10 @@ def save_config(req):
                 text=True
             )
 
+        _ = subprocess.run(['pkill', '-f', 'otelcol-contrib'], capture_output=True, text=True)
         _ = subprocess.run(
-            ['sudo', 'systemctl', 'restart', 'otelcol-contrib'],
-            capture_output=True,
-            text=True
+            'otelcol-contrib --config=/etc/otelcol-contrib/config.yaml > /var/log/otelcol-contrib.log 2>&1 &',
+            shell=True
         )
 
         response_data['success'] = True
