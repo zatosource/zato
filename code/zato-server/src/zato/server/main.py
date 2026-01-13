@@ -84,54 +84,11 @@ if is_datadog_enabled:
     from ddtrace import patch as dd_patch
     dd_patch(gevent=True)
 
-# Grafana Cloud monitoring
-
-_gc_logger = logging.getLogger(__name__)
-
-grafana_cloud_instance_id = os.environ.get('Zato_Grafana_Cloud_Instance_ID')
-grafana_cloud_api_key = os.environ.get('Zato_Grafana_Cloud_API_Key')
-grafana_cloud_endpoint = os.environ.get('Zato_Grafana_Cloud_Endpoint')
-
-_gc_logger.info('Grafana Cloud env vars - instance_id:%s api_key:%s endpoint:%s',
-    grafana_cloud_instance_id, grafana_cloud_api_key, grafana_cloud_endpoint)
-
-_gc_needs_redis = not (grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
-_gc_logger.info('Grafana Cloud needs_redis: %s', _gc_needs_redis)
-
-if _gc_needs_redis:
-    _gc_logger.info('Grafana Cloud connecting to Redis')
-    try:
-        import redis as redis_lib
-        redis_client = redis_lib.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-        _gc_logger.info('Grafana Cloud Redis connected')
-
-        is_enabled = redis_client.get('zato:grafana_cloud:is_enabled')
-        _gc_logger.info('Grafana Cloud Redis zato:grafana_cloud:is_enabled = %s', is_enabled)
-
-        if is_enabled == 'true':
-            _gc_logger.info('Grafana Cloud is enabled in Redis, reading values')
-
-            _redis_instance_id = redis_client.get('zato:grafana_cloud:instance_id')
-            _redis_api_key = redis_client.get('zato:grafana_cloud:runtime_token')
-            _redis_endpoint = redis_client.get('zato:grafana_cloud:endpoint')
-
-            _gc_logger.info('Grafana Cloud Redis values - instance_id:%s api_key:%s endpoint:%s',
-                _redis_instance_id, _redis_api_key, _redis_endpoint)
-
-            grafana_cloud_instance_id = grafana_cloud_instance_id or _redis_instance_id
-            grafana_cloud_api_key = grafana_cloud_api_key or _redis_api_key
-            grafana_cloud_endpoint = grafana_cloud_endpoint or _redis_endpoint
-
-            _gc_logger.info('Grafana Cloud final values - instance_id:%s api_key:%s endpoint:%s',
-                grafana_cloud_instance_id, grafana_cloud_api_key, grafana_cloud_endpoint)
-        else:
-            _gc_logger.info('Grafana Cloud is_enabled is not true, skipping Redis values')
-
-    except Exception as e:
-        _gc_logger.error('Grafana Cloud Redis error: %s', e)
-
-is_grafana_cloud_enabled = bool(grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
-_gc_logger.info('Grafana Cloud is_grafana_cloud_enabled: %s', is_grafana_cloud_enabled)
+# Grafana Cloud monitoring - values read later in run() after logging is configured
+grafana_cloud_instance_id = None
+grafana_cloud_api_key = None
+grafana_cloud_endpoint = None
+is_grafana_cloud_enabled = False
 
 # stdlib
 import locale
@@ -424,6 +381,54 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         dictConfig(logging_config)
 
     logger = logging.getLogger(__name__)
+
+    # Read Grafana Cloud config
+    global grafana_cloud_instance_id, grafana_cloud_api_key, grafana_cloud_endpoint, is_grafana_cloud_enabled
+
+    grafana_cloud_instance_id = os.environ.get('Zato_Grafana_Cloud_Instance_ID')
+    grafana_cloud_api_key = os.environ.get('Zato_Grafana_Cloud_API_Key')
+    grafana_cloud_endpoint = os.environ.get('Zato_Grafana_Cloud_Endpoint')
+
+    logger.info('Grafana Cloud env vars - instance_id:%s api_key:%s endpoint:%s',
+        grafana_cloud_instance_id, grafana_cloud_api_key, grafana_cloud_endpoint)
+
+    _gc_needs_redis = not (grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
+    logger.info('Grafana Cloud needs_redis: %s', _gc_needs_redis)
+
+    if _gc_needs_redis:
+        logger.info('Grafana Cloud connecting to Redis')
+        try:
+            import redis as redis_lib
+            redis_client = redis_lib.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            logger.info('Grafana Cloud Redis connected')
+
+            _gc_is_enabled = redis_client.get('zato:grafana_cloud:is_enabled')
+            logger.info('Grafana Cloud Redis zato:grafana_cloud:is_enabled = %s', _gc_is_enabled)
+
+            if _gc_is_enabled == 'true':
+                logger.info('Grafana Cloud is enabled in Redis, reading values')
+
+                _redis_instance_id = redis_client.get('zato:grafana_cloud:instance_id')
+                _redis_api_key = redis_client.get('zato:grafana_cloud:runtime_token')
+                _redis_endpoint = redis_client.get('zato:grafana_cloud:endpoint')
+
+                logger.info('Grafana Cloud Redis values - instance_id:%s api_key:%s endpoint:%s',
+                    _redis_instance_id, _redis_api_key, _redis_endpoint)
+
+                grafana_cloud_instance_id = grafana_cloud_instance_id or _redis_instance_id
+                grafana_cloud_api_key = grafana_cloud_api_key or _redis_api_key
+                grafana_cloud_endpoint = grafana_cloud_endpoint or _redis_endpoint
+
+                logger.info('Grafana Cloud final values - instance_id:%s api_key:%s endpoint:%s',
+                    grafana_cloud_instance_id, grafana_cloud_api_key, grafana_cloud_endpoint)
+            else:
+                logger.info('Grafana Cloud is_enabled is not true, skipping Redis values')
+
+        except Exception as e:
+            logger.error('Grafana Cloud Redis error: %s', e)
+
+    is_grafana_cloud_enabled = bool(grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
+    logger.info('Grafana Cloud is_grafana_cloud_enabled: %s', is_grafana_cloud_enabled)
 
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
