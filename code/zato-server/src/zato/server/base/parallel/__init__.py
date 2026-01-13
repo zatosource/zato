@@ -1297,6 +1297,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.otlp_meter = metrics_provider.get_meter('zato.server')
         self.otlp_gauges = {}
         self.otlp_gauges_lock = RLock()
+        self.otlp_counters = {}
+        self.otlp_counters_lock = RLock()
 
 # ################################################################################################################################
 
