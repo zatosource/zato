@@ -245,136 +245,68 @@ def save_config(req):
     from zato.admin.web.views.otelcol_config import template as otelcol_template
     from zato.common.json_internal import loads
 
-    print('save_config: [trace] function entered')
-    logger.info('save_config: [trace] function entered')
-
     response_data = {}
     response_data['success'] = False
 
     os_username = getpass.getuser()
-    print('save_config: [trace] os_username={}'.format(os_username))
-    logger.info('save_config: [trace] os_username={}'.format(os_username))
-
     if os_username != 'zato':
-        print('save_config: [trace] os_username is not zato, skipping actual save')
-        logger.info('save_config: [trace] os_username is not zato, skipping actual save')
         response_data['success'] = True
         response_data['message'] = 'Save skipped, user={}'.format(os_username)
-        print('save_config: [trace] returning response_data={}'.format(response_data))
-        logger.info('save_config: [trace] returning response_data={}'.format(response_data))
         return json_response(response_data)
-
-    print('save_config: [trace] os_username is zato, proceeding with save')
-    logger.info('save_config: [trace] os_username is zato, proceeding with save')
 
     try:
         body = req.body.decode('utf-8')
-        print('save_config: [trace] body={}'.format(body))
-        logger.info('save_config: [trace] body={}'.format(body))
-
         config_data = loads(body)
-        print('save_config: [trace] config_data={}'.format(config_data))
-        logger.info('save_config: [trace] config_data={}'.format(config_data))
 
         is_enabled = config_data.get('is_enabled', False)
         instance_id = config_data.get('instance_id', '')
         api_key = config_data.get('api_key', '')
         endpoint = config_data.get('endpoint', '')
 
-        print('save_config: [trace] is_enabled={} instance_id={} api_key_len={} endpoint={}'.format(
-            is_enabled, instance_id, len(api_key), endpoint))
-        logger.info('save_config: [trace] is_enabled={} instance_id={} api_key_len={} endpoint={}'.format(
-            is_enabled, instance_id, len(api_key), endpoint))
-
         if is_enabled:
-            has_instance_id = bool(instance_id)
-            has_api_key = bool(api_key)
-            has_endpoint = bool(endpoint)
-            if not has_instance_id or not has_api_key or not has_endpoint:
+            if not instance_id or not api_key or not endpoint:
                 response_data['error'] = 'Instance ID, API key and endpoint are required'
                 return json_response(response_data, success=False)
 
-        print('save_config: [trace] connecting to Redis localhost:6379')
-        logger.info('save_config: [trace] connecting to Redis localhost:6379')
-
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-        print('save_config: [trace] Redis connected, setting keys')
-        logger.info('save_config: [trace] Redis connected, setting keys')
-
-        result1 = r.set('zato:grafana_cloud:instance_id', instance_id)
-        print('save_config: [trace] set instance_id result={}'.format(result1))
-        logger.info('save_config: [trace] set instance_id result={}'.format(result1))
-
-        result2 = r.set('zato:grafana_cloud:runtime_token', api_key)
-        print('save_config: [trace] set runtime_token result={}'.format(result2))
-        logger.info('save_config: [trace] set runtime_token result={}'.format(result2))
-
-        result3 = r.set('zato:grafana_cloud:endpoint', endpoint)
-        print('save_config: [trace] set endpoint result={}'.format(result3))
-        logger.info('save_config: [trace] set endpoint result={}'.format(result3))
-
-        is_enabled_str = 'true' if is_enabled else 'false'
-        result4 = r.set('zato:grafana_cloud:is_enabled', is_enabled_str)
-        print('save_config: [trace] set is_enabled={} result={}'.format(is_enabled_str, result4))
-        logger.info('save_config: [trace] set is_enabled={} result={}'.format(is_enabled_str, result4))
-
-        print('save_config: [trace] verifying Redis values')
-        logger.info('save_config: [trace] verifying Redis values')
-
-        verify_instance_id = r.get('zato:grafana_cloud:instance_id')
-        verify_is_enabled = r.get('zato:grafana_cloud:is_enabled')
-        print('save_config: [trace] verify instance_id={} is_enabled={}'.format(verify_instance_id, verify_is_enabled))
-        logger.info('save_config: [trace] verify instance_id={} is_enabled={}'.format(verify_instance_id, verify_is_enabled))
+        r.set('zato:grafana_cloud:instance_id', instance_id)
+        r.set('zato:grafana_cloud:runtime_token', api_key)
+        r.set('zato:grafana_cloud:endpoint', endpoint)
+        r.set('zato:grafana_cloud:is_enabled', 'true' if is_enabled else 'false')
 
         credentials_raw = '{}:{}'.format(instance_id, api_key)
         credentials_encoded = base64.b64encode(credentials_raw.encode('utf-8')).decode('utf-8')
-        print('save_config: [trace] credentials encoded')
-        logger.info('save_config: [trace] credentials encoded')
 
         otelcol_config = otelcol_template.format(
             endpoint=endpoint,
             credentials=credentials_encoded
         )
-        logger.info('save_config: otelcol config generated')
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=True) as f:
             _ = f.write(otelcol_config)
             f.flush()
             temp_path = f.name
-            logger.info('save_config: temp file written to {}'.format(temp_path))
-
-            result = subprocess.run(
+            _ = subprocess.run(
                 ['sudo', 'cp', temp_path, '/etc/otelcol-contrib/config.yaml'],
                 capture_output=True,
                 text=True
             )
-            logger.info('save_config: cp result: returncode={}, stdout={}, stderr={}'.format(
-                result.returncode, result.stdout, result.stderr))
 
-        result = subprocess.run(
+        _ = subprocess.run(
             ['sudo', 'systemctl', 'restart', 'otelcol-contrib'],
             capture_output=True,
             text=True
         )
-        logger.info('save_config: restart otelcol-contrib result: returncode={}, stdout={}, stderr={}'.format(
-            result.returncode, result.stdout, result.stderr))
 
         response_data['success'] = True
         response_data['message'] = 'Configuration saved'
 
-        print('save_config: [trace] success, returning response_data={}'.format(response_data))
-        logger.info('save_config: [trace] success, returning response_data={}'.format(response_data))
-
         return json_response(response_data)
 
     except Exception as e:
-        print('save_config: [trace] exception: {}'.format(format_exc()))
-        logger.error('save_config: [trace] exception: {}'.format(format_exc()))
-        error_message = str(e)
-        response_data['error'] = error_message
-        print('save_config: [trace] returning error response_data={}'.format(response_data))
-        logger.info('save_config: [trace] returning error response_data={}'.format(response_data))
+        logger.error('save_config exception: %s', format_exc())
+        response_data['error'] = str(e)
         return json_response(response_data, success=False)
 
 # ################################################################################################################################
@@ -386,9 +318,6 @@ def index(req):
     import redis
     from traceback import format_exc
 
-    print('index: [trace] function entered')
-    logger.info('index: [trace] function entered')
-
     grafana_cloud_page_config['step1_label'] = 'Configuring'
     grafana_cloud_page_config['restart_step_id'] = 'install'
     grafana_cloud_page_config['restart_step_label'] = 'Restarting'
@@ -399,42 +328,13 @@ def index(req):
     is_enabled = False
 
     try:
-        print('index: [trace] connecting to Redis localhost:6379')
-        logger.info('index: [trace] connecting to Redis localhost:6379')
-
         r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-
-        print('index: [trace] Redis connected, reading keys')
-        logger.info('index: [trace] Redis connected, reading keys')
-
         instance_id = r.get('zato:grafana_cloud:instance_id') or ''
-        print('index: [trace] instance_id={}'.format(instance_id))
-        logger.info('index: [trace] instance_id={}'.format(instance_id))
-
         api_key = r.get('zato:grafana_cloud:runtime_token') or ''
-        print('index: [trace] api_key_len={}'.format(len(api_key)))
-        logger.info('index: [trace] api_key_len={}'.format(len(api_key)))
-
         endpoint = r.get('zato:grafana_cloud:endpoint') or ''
-        print('index: [trace] endpoint={}'.format(endpoint))
-        logger.info('index: [trace] endpoint={}'.format(endpoint))
-
-        is_enabled_value = r.get('zato:grafana_cloud:is_enabled')
-        print('index: [trace] is_enabled_value={}'.format(is_enabled_value))
-        logger.info('index: [trace] is_enabled_value={}'.format(is_enabled_value))
-
-        is_enabled = is_enabled_value == 'true'
-        print('index: [trace] is_enabled boolean={}'.format(is_enabled))
-        logger.info('index: [trace] is_enabled boolean={}'.format(is_enabled))
-
+        is_enabled = r.get('zato:grafana_cloud:is_enabled') == 'true'
     except Exception:
-        print('index: [trace] redis error: {}'.format(format_exc()))
-        logger.error('index: [trace] redis error: {}'.format(format_exc()))
-
-    print('index: [trace] returning template with is_enabled={} instance_id={} endpoint={}'.format(
-        is_enabled, instance_id, endpoint))
-    logger.info('index: [trace] returning template with is_enabled={} instance_id={} endpoint={}'.format(
-        is_enabled, instance_id, endpoint))
+        logger.error('index redis error: %s', format_exc())
 
     return TemplateResponse(req, 'zato/monitoring/grafana-cloud/index.html', {
         'page_config': grafana_cloud_page_config,
