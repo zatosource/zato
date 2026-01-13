@@ -336,7 +336,9 @@ Examples:
             env_vars['Zato_Datadog_Metrics_Agent'] = metrics_agent
 
         # Read Grafana Cloud config from env vars or Redis
-        self.logger.info('Reading Grafana Cloud config')
+        print('start.py: [trace] Reading Grafana Cloud config')
+        self.logger.info('start.py: [trace] Reading Grafana Cloud config')
+
         grafana_cloud_config = {
             'Zato_Grafana_Cloud_Instance_ID': 'zato:grafana_cloud:instance_id',
             'Zato_Grafana_Cloud_API_Key': 'zato:grafana_cloud:runtime_token',
@@ -349,31 +351,52 @@ Examples:
         for env_key in grafana_cloud_config:
             value = os.environ.get(env_key)
             grafana_cloud_values[env_key] = value
+            print('start.py: [trace] env {}={}'.format(env_key, value))
+            self.logger.info('start.py: [trace] env {}={}'.format(env_key, value))
             if not value:
                 needs_redis = True
 
+        print('start.py: [trace] needs_redis={}'.format(needs_redis))
+        self.logger.info('start.py: [trace] needs_redis={}'.format(needs_redis))
+
         if needs_redis:
+            print('start.py: [trace] connecting to Redis localhost:6379')
+            self.logger.info('start.py: [trace] connecting to Redis localhost:6379')
             try:
                 redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+                print('start.py: [trace] Redis connected')
+                self.logger.info('start.py: [trace] Redis connected')
+
                 is_enabled = redis_client.get('zato:grafana_cloud:is_enabled')
-                self.logger.info('Grafana Cloud is_enabled from Redis: %s', is_enabled)
+                print('start.py: [trace] is_enabled from Redis: {}'.format(is_enabled))
+                self.logger.info('start.py: [trace] is_enabled from Redis: {}'.format(is_enabled))
+
                 if is_enabled == 'true':
+                    print('start.py: [trace] is_enabled is true, reading values')
+                    self.logger.info('start.py: [trace] is_enabled is true, reading values')
                     for env_key, redis_key in grafana_cloud_config.items():
                         if not grafana_cloud_values[env_key]:
                             value = redis_client.get(redis_key)
                             grafana_cloud_values[env_key] = value
-                            self.logger.info('Grafana Cloud %s from Redis: %s', env_key, value)
+                            print('start.py: [trace] {} from Redis: {}'.format(env_key, value))
+                            self.logger.info('start.py: [trace] {} from Redis: {}'.format(env_key, value))
                 else:
+                    print('start.py: [trace] is_enabled is not true, clearing values')
+                    self.logger.info('start.py: [trace] is_enabled is not true, clearing values')
                     for env_key in grafana_cloud_config:
                         grafana_cloud_values[env_key] = ''
             except Exception as e:
-                self.logger.error('Grafana Cloud Redis error: %s', e)
+                print('start.py: [trace] Redis error: {}'.format(e))
+                self.logger.error('start.py: [trace] Redis error: {}'.format(e))
 
         for env_key, value in grafana_cloud_values.items():
             if value:
                 env_vars[env_key] = value
+                print('start.py: [trace] adding to env_vars: {}={}'.format(env_key, value[:20] if value else None))
+                self.logger.info('start.py: [trace] adding to env_vars: {}={}'.format(env_key, value[:20] if value else None))
 
-        self.logger.info('Grafana Cloud env_vars to pass: %s', list(env_vars.keys()))
+        print('start.py: [trace] final env_vars keys: {}'.format(list(env_vars.keys())))
+        self.logger.info('start.py: [trace] final env_vars keys: {}'.format(list(env_vars.keys())))
 
         # Start the server now
         return self.start_component(
