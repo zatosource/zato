@@ -246,7 +246,7 @@ $.fn.zato.grafanaCloud.handleSaveClick = function() {
         }),
         contentType: 'application/json',
         success: function(response) {
-            console.log('handleSaveClick: save-config success:', response);
+            console.log('handleSaveClick: save-config success:', JSON.stringify(response));
             $.fn.zato.settings.updateProgress('configure', 'completed', 'Configuration complete');
 
             $('#progress-install').removeClass('hidden');

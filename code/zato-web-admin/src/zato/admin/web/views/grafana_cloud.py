@@ -237,6 +237,7 @@ def toggle_enabled(req):
 @method_allowed('POST')
 def save_config(req):
     import base64
+    import getpass
     import redis
     import subprocess
     import tempfile
@@ -247,8 +248,8 @@ def save_config(req):
     response_data = {}
     response_data['success'] = False
 
-    username = req.user.username if req.user else ''
-    if username != 'zato':
+    os_username = getpass.getuser()
+    if os_username != 'zato':
         response_data['success'] = True
         response_data['message'] = 'Configuration saved'
         return json_response(response_data)
