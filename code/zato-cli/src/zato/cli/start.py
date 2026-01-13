@@ -355,10 +355,13 @@ Examples:
             try:
                 redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
                 is_enabled = redis_client.get('zato:grafana_cloud:is_enabled')
+                self.logger.info('Grafana Cloud is_enabled from Redis: %s', is_enabled)
                 if is_enabled == 'true':
                     for env_key, redis_key in grafana_cloud_config.items():
                         if not grafana_cloud_values[env_key]:
-                            grafana_cloud_values[env_key] = redis_client.get(redis_key)
+                            value = redis_client.get(redis_key)
+                            grafana_cloud_values[env_key] = value
+                            self.logger.info('Grafana Cloud %s from Redis: %s', env_key, value)
                 else:
                     for env_key in grafana_cloud_config:
                         grafana_cloud_values[env_key] = ''
