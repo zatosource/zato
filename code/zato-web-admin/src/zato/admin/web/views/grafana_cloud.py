@@ -245,6 +245,8 @@ def save_config(req):
     from zato.admin.web.views.otelcol_config import template as otelcol_template
     from zato.common.json_internal import loads
 
+    logger.info('save_config: called')
+
     response_data = {}
     response_data['success'] = False
 
@@ -293,11 +295,14 @@ def save_config(req):
                 text=True
             )
 
-        _ = subprocess.run(['pkill', '-f', 'otelcol-contrib'], capture_output=True, text=True)
-        _ = subprocess.run(
-            'otelcol-contrib --config=/etc/otelcol-contrib/config.yaml > /var/log/otelcol-contrib.log 2>&1 &',
-            shell=True
+        logger.info('save_config: restarting otelcol-contrib')
+        _ = subprocess.run(['sudo', 'pkill', '-f', 'otelcol-contrib'], capture_output=True, text=True)
+        _ = subprocess.Popen(
+            'sudo otelcol-contrib --config=/etc/otelcol-contrib/config.yaml >> /tmp/otelcol.log 2>&1',
+            shell=True,
+            start_new_session=True
         )
+        logger.info('save_config: otelcol-contrib restarted')
 
         response_data['success'] = True
         response_data['message'] = 'Configuration saved'
