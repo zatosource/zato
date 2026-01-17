@@ -67,6 +67,7 @@ current_datadog_context:'ContextVar' = ContextVar('current_datadog_context', def
 current_datadog_service_name:'ContextVar' = ContextVar('current_datadog_service_name', default=None)
 current_datadog_process_name:'ContextVar' = ContextVar('current_datadog_process_name', default=None)
 current_datadog_cid:'ContextVar' = ContextVar('current_datadog_cid', default=None)
+current_datadog_env_name:'ContextVar' = ContextVar('current_datadog_env_name', default='')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -632,6 +633,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         datadog_service_name = current_datadog_service_name.get()
         datadog_process_name = current_datadog_process_name.get()
         datadog_cid = current_datadog_cid.get()
+        datadog_env_name = current_datadog_env_name.get()
 
         # We do not serialize ourselves data based on this content type,
         # leaving it up to the underlying HTTP library to do it ..
@@ -702,6 +704,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                 span.set_tag('cid', datadog_cid)
                 span.set_tag('zato_process', datadog_process_name)
                 span.set_tag('zato_service', datadog_service_name)
+                span.set_tag('zato_env_name', datadog_env_name)
                 span.set_tag('zato_message_level', 'INFO')
                 response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
                 response = cast_('Response', response)

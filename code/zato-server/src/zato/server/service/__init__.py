@@ -47,7 +47,7 @@ from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
 from zato.server.connection.http_soap.outgoing import current_datadog_cid, current_datadog_context, \
-    current_datadog_process_name, current_datadog_service_name
+    current_datadog_env_name, current_datadog_process_name, current_datadog_service_name
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -666,7 +666,10 @@ class Service:
             _datadog_parent_context = kwargs.get('datadog_context')
 
             # .. build the service name for Datadog ..
-            _dd_service_name = service.name
+            if self.server.env_name:
+                _dd_service_name = f'{self.server.env_name} | {service.name}'
+            else:
+                _dd_service_name = service.name
 
             # .. build a span indicating that we're being invoked ..
             _datadog_span = self.server.datadog_tracer.start_span(
@@ -680,6 +683,7 @@ class Service:
             _datadog_span.set_tag('cid', self.cid)
             _datadog_span.set_tag('zato_process', self.process_name)
             _datadog_span.set_tag('zato_service', service.name)
+            _datadog_span.set_tag('zato_env_name', self.server.env_name)
             _datadog_span.set_tag('zato_message_level', 'INFO')
             _datadog_span.set_tag('zato_message', f'Service was invoked')
 
@@ -691,6 +695,7 @@ class Service:
             _ = current_datadog_service_name.set(service.name)
             _ = current_datadog_process_name.set(self.process_name)
             _ = current_datadog_cid.set(self.cid)
+            _ = current_datadog_env_name.set(self.server.env_name)
 
             # .. if this is a REST channel, create a span for it ..
             if channel == CHANNEL.HTTP_SOAP and channel_item:
@@ -706,6 +711,7 @@ class Service:
                 _datadog_channel_span.set_tag('cid', self.cid)
                 _datadog_channel_span.set_tag('zato_process', self.process_name)
                 _datadog_channel_span.set_tag('zato_service', service.name)
+                _datadog_channel_span.set_tag('zato_env_name', self.server.env_name)
                 _datadog_channel_span.set_tag('zato_message_level', 'INFO')
                 _datadog_channel_span.set_tag('zato_message', f'{request_method} {raw_uri}')
 

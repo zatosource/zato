@@ -507,6 +507,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     # Monitoring
     server.is_datadog_enabled = is_datadog_enabled
     server.is_grafana_cloud_enabled = is_grafana_cloud_enabled
+    server.env_name = os.environ.get('Zato_Env_Name', '')
 
     if scheduler_api_password := server.fs_server_config.scheduler.get('scheduler_api_password'):
         if is_encrypted(scheduler_api_password):
