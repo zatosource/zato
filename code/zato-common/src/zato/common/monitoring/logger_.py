@@ -60,6 +60,7 @@ class DatadogLogger(Logger):
         trace.set_tag('zato_message_level', level)
         trace.set_tag('zato_service', self.service_name)
         trace.set_tag('zato_process', self.process_name)
+        trace.set_tag('zato_env_name', self.server.env_name)
         trace.finish()
 
 # ################################################################################################################################
