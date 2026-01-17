@@ -150,6 +150,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     is_datadog_enabled: 'bool'
     is_grafana_cloud_enabled: 'bool'
 
+    env_name: 'str'
+
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
