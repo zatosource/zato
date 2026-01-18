@@ -7,7 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 import os
+import traceback
 from dataclasses import dataclass
 
 # requests
@@ -42,7 +44,10 @@ class Parser:
     def from_data(self, data:'str') -> 'OpenAPIDefinition':
 
         # Parse the yaml/json data
-        spec = yaml.safe_load(data)
+        try:
+            spec = yaml.safe_load(data)
+        except yaml.YAMLError:
+            spec = json.loads(data)
 
         # Extract servers
         servers = []
@@ -173,6 +178,12 @@ if __name__ == '__main__':
         filepath = os.path.join(samples_dir, filename)
         with open(filepath, 'r') as f:
             data = f.read()
-        definition = parser.from_data(data)
+        try:
+            definition = parser.from_data(data)
+        except Exception as e:
+            print(f'\nFailed to parse: {filepath}')
+            print(f'Error: {e}')
+            print(f'Traceback:\n{traceback.format_exc()}')
+            continue
         name = os.path.splitext(filename)[0].replace('_', ' ').title()
         _print_definition(name, definition)
