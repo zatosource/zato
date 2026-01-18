@@ -15,16 +15,6 @@ servers:
 security:
   - basicAuth: []
 
-components:
-  securitySchemes:
-    basicAuth:
-      type: http
-      scheme: basic
-      description: |
-        Demo credentials:
-        - Username: user.1
-        - Password: password.1
-
 paths:
   /pubsub/topic/{topic_name}:
     post:
@@ -268,6 +258,16 @@ paths:
               schema:
                 type: string
                 description: HTML error page for malformed requests
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: |
+        Demo credentials:
+        - Username: user.1
+        - Password: password.1
 
   schemas:
     SuccessResponse:
