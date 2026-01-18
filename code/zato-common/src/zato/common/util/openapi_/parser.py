@@ -67,6 +67,8 @@ class Parser:
             scheme = scheme_data.get('scheme', '')
             if scheme == 'basic':
                 auth_lookup[scheme_name] = 'basic_auth'
+            elif scheme == 'bearer':
+                auth_lookup[scheme_name] = 'bearer_token'
             elif auth_type == 'oauth2':
                 auth_lookup[scheme_name] = 'oauth2'
             elif auth_type == 'apiKey':
