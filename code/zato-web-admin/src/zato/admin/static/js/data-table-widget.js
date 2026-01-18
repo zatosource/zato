@@ -55,6 +55,8 @@ $.fn.zato.data_table_widget.render = function(config) {
     $("#" + container_id).html(html);
 
     $.fn.zato.data_table_widget.bind_events(container_id, columns);
+
+    $("#" + container_id + "-select-all").prop("checked", true).trigger("change");
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
