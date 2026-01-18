@@ -27,6 +27,7 @@ $.fn.zato.http_soap.openapi.init = function() {
     $("#openapi-copy-paste-close").click($.fn.zato.http_soap.openapi.close_copy_paste_overlay);
     $("#openapi-copy-paste-cancel").click($.fn.zato.http_soap.openapi.close_copy_paste_overlay);
     $("#openapi-copy-paste-ok").click($.fn.zato.http_soap.openapi.on_copy_paste_ok);
+    $("#openapi-table-import").click($.fn.zato.http_soap.openapi.on_table_import);
     $(".openapi-overlay-backdrop").click($.fn.zato.http_soap.openapi.close_copy_paste_overlay);
 
     document.addEventListener("keydown", function(e) {
@@ -101,6 +102,8 @@ $.fn.zato.http_soap.openapi.close_copy_paste_overlay = function() {
     $("#openapi-copy-paste-textarea").val($.fn.zato.http_soap.openapi.original_yaml);
     $("#openapi-copy-paste-textarea").show();
     $("#openapi-data-table-container").hide().empty();
+    $("#openapi-copy-paste-ok").show();
+    $("#openapi-table-import").hide();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -129,14 +132,51 @@ $.fn.zato.http_soap.openapi.show_table = function(data) {
             {label: "URL path", field: "path"}
         ],
         rows: rows,
-        hidden_fields: ["server", "auth", "content_type"],
+        hidden_fields: ["server", "auth", "content_type", "name", "path"],
         filter_placeholder: "Filter ..."
     };
 
     $("#openapi-copy-paste-textarea").hide();
-    $("#openapi-data-table-container").show();
+    $("#openapi-data-table-container").css("display", "flex").css("flex-direction", "column");
+    $("#openapi-copy-paste-ok").hide();
+    $("#openapi-table-import").show();
 
     $.fn.zato.data_table_widget.render(config);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.http_soap.openapi.on_table_import = function() {
+    let selected = $.fn.zato.data_table_widget.get_selected("openapi-data-table-container", ["server", "auth", "content_type", "name", "path"]);
+
+    if (selected.length === 0) {
+        return;
+    }
+
+    $.ajax({
+        type: "POST",
+        url: "/zato/http-soap/openapi/import/",
+        data: JSON.stringify(selected),
+        contentType: "application/json",
+        headers: {"X-CSRFToken": $.cookie("csrftoken")},
+        success: function(response) {
+            if (response.success) {
+                $.fn.zato.http_soap.openapi.close_copy_paste_overlay();
+            }
+        },
+        error: function(xhr) {
+            let error_msg = "Import failed";
+            try {
+                let response = JSON.parse(xhr.responseText);
+                if (response.error) {
+                    error_msg = response.error;
+                }
+            } catch (e) {
+                error_msg = xhr.responseText || error_msg;
+            }
+            console.error(error_msg);
+        }
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

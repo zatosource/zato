@@ -854,11 +854,12 @@
         </div>
         <div class="openapi-overlay-body">
             <textarea id="openapi-copy-paste-textarea" placeholder="Paste an OpenAPI definition here ..." spellcheck="false">{{ openapi_sample_data }}</textarea>
-            <div id="openapi-data-table-container" style="display: none; height: 100%;"></div>
+            <div id="openapi-data-table-container" style="display: none; flex: 1; min-height: 0; overflow: hidden;"></div>
         </div>
         <div class="openapi-overlay-footer">
             <button class="openapi-button-cancel" id="openapi-copy-paste-cancel">Cancel</button>
             <button class="openapi-button-ok" id="openapi-copy-paste-ok">OK</button>
+            <button class="openapi-button-ok" id="openapi-table-import" style="display: none;">OK</button>
         </div>
     </div>
 </div>

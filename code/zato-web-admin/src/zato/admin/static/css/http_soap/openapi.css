@@ -82,6 +82,8 @@
     background: #1f1f1f;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .openapi-overlay-body textarea {

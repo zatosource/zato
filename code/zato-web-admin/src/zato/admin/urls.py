@@ -416,6 +416,9 @@ urlpatterns += [
     url(r'^zato/http-soap/openapi/parse/$',
         login_required(openapi_.parse), name='http-soap-openapi-parse'),
 
+    url(r'^zato/http-soap/openapi/import/$',
+        login_required(openapi_.import_objects), name='http-soap-openapi-import'),
+
     ]
 
 # ################################################################################################################################
