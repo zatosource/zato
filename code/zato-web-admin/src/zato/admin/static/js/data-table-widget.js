@@ -48,6 +48,7 @@ $.fn.zato.data_table_widget.render = function(config) {
     html += '</tbody>';
 
     html += '</table>';
+    html += '<div class="zato-data-table-no-matches" style="display: none;">No matches</div>';
     html += '</div>';
     html += '</div>';
 
@@ -88,16 +89,35 @@ $.fn.zato.data_table_widget.bind_events = function(container_id, columns) {
         $("#" + container_id + "-select-all").prop("checked", all_checked);
     });
 
+    $("#" + container_id + "-table").on("click", "td", function(e) {
+        if ($(e.target).is("input[type='checkbox']")) {
+            return;
+        }
+        let checkbox = $(this).closest("tr").find("." + container_id + "-row-checkbox");
+        checkbox.prop("checked", !checkbox.prop("checked")).trigger("change");
+    });
+
     $("#" + container_id + "-filter").on("input", function() {
         let filter_value = $(this).val().toLowerCase();
+        let match_count = 0;
+
+        $("#" + container_id + "-table").show();
+        $("#" + container_id).find(".zato-data-table-no-matches").hide();
+
         $("#" + container_id + "-table tbody tr").each(function() {
             let row_text = $(this).text().toLowerCase();
             if (row_text.indexOf(filter_value) > -1) {
                 $(this).show();
+                match_count++;
             } else {
                 $(this).hide();
             }
         });
+
+        if (match_count === 0) {
+            $("#" + container_id + "-table").hide();
+            $("#" + container_id).find(".zato-data-table-no-matches").show();
+        }
 
         let visible_rows = $("#" + container_id + "-table tbody tr:visible");
         let all_checked = visible_rows.length > 0 && visible_rows.find("." + container_id + "-row-checkbox").length === visible_rows.find("." + container_id + "-row-checkbox:checked").length;
