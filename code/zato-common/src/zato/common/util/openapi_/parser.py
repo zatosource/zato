@@ -20,19 +20,11 @@ import yaml
 # ################################################################################################################################
 
 @dataclass(init=False)
-class OpenAPIAuth:
-    type: 'str'
-    scheme: 'str'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@dataclass(init=False)
 class OpenAPIPathItem:
+    name: 'str'
     path: 'str'
-    method: 'str'
-    auth: 'OpenAPIAuth | None'
-    content_types: 'list[str]'
+    auth: 'str'
+    content_type: 'str'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -57,50 +49,67 @@ class Parser:
         for server_data in spec.get('servers', []):
             servers.append(server_data.get('url', ''))
 
-        # Extract paths
-        paths = [p for p in spec.get('paths', {}).keys() if p.startswith('/')]
-
-        # Extract authentication
-        auth_list = []
+        # Build auth lookup from security schemes
         components = spec.get('components', {})
         security_schemes = components.get('securitySchemes', {})
-        for _, scheme_data in security_schemes.items():
-            auth = OpenAPIAuth()
-            auth.type = scheme_data.get('type', '')
-            auth.scheme = scheme_data.get('scheme', '')
-            auth_list.append(auth)
+        auth_lookup = {}
+        for scheme_name, scheme_data in security_schemes.items():
+            scheme = scheme_data.get('scheme', '')
+            if scheme:
+                scheme = scheme + '_auth'
+            auth_lookup[scheme_name] = scheme
 
-        # Extract content types
-        content_types_set = set()
+        # Global security requirements
+        global_security = spec.get('security', [])
+
+        # Extract paths with their methods, auth and content types
+        path_items = []
         paths_data = spec.get('paths', {})
-        for _, path_item in paths_data.items():
-            for _, operation in path_item.items():
+
+        for path_str, path_data in paths_data.items():
+            if not path_str.startswith('/'):
+                continue
+
+            for method, operation in path_data.items():
                 if not isinstance(operation, dict):
                     continue
 
-                # Check request body
+                # Determine auth for this operation
+                operation_security = operation.get('security', global_security)
+                auth = ''
+                for sec_req in operation_security:
+                    for scheme_name in sec_req.keys():
+                        if scheme_name in auth_lookup:
+                            auth = auth_lookup[scheme_name]
+                            break
+                    if auth:
+                        break
+
+                # Get content type from request body
                 request_body = operation.get('requestBody', {})
                 content = request_body.get('content', {})
-                for ct in content.keys():
-                    content_types_set.add(ct)
+                content_type = next(iter(content.keys()), 'application/json')
 
-                # Check responses
-                responses = operation.get('responses', {})
-                for _, response_data in responses.items():
-                    if not isinstance(response_data, dict):
-                        continue
-                    response_content = response_data.get('content', {})
-                    for ct in response_content.keys():
-                        content_types_set.add(ct)
+                # Generate name from operationId, summary, or path
+                name = operation.get('operationId', '')
+                if not name:
+                    summary = operation.get('summary', '')
+                    if summary:
+                        name = summary.lower().replace(' ', '_')
+                if not name:
+                    name = path_str.strip('/').replace('/', '_').replace('{', '').replace('}', '')
 
-        content_types = sorted(content_types_set)
+                path_item = OpenAPIPathItem()
+                path_item.name = name
+                path_item.path = path_str
+                path_item.auth = auth
+                path_item.content_type = content_type
+                path_items.append(path_item)
 
         # Build the definition
         definition = OpenAPIDefinition()
         definition.servers = servers
-        definition.paths = paths
-        definition.auth = auth_list
-        definition.content_types = content_types
+        definition.paths = path_items
 
         return definition
 
@@ -145,13 +154,8 @@ if __name__ == '__main__':
         print(f'  {server}')
 
     print('\nPaths:')
-    for path in definition.paths:
-        print(f'  {path}')
-
-    print('\nAuth:')
-    for auth in definition.auth:
-        print(f'  type={auth.type}, scheme={auth.scheme}')
-
-    print('\nContent types:')
-    for ct in definition.content_types:
-        print(f'  {ct}')
+    for item in definition.paths:
+        print(f'  {item.name}')
+        print(f'    path: {item.path}')
+        print(f'    auth: {item.auth}')
+        print(f'    content_type: {item.content_type}')
