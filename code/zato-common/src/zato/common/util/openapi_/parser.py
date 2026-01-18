@@ -102,6 +102,10 @@ class Parser:
                 if not name:
                     name = path_str.strip('/').replace('/', ' ').replace('{', '').replace('}', '').replace('_', ' ').title()
 
+                # Fix grammar: "a" -> "an" before vowels
+                name = name.replace(' a A', ' an A').replace(' a E', ' an E').replace(' a I', ' an I').replace(' a O', ' an O').replace(' a U', ' an U')
+                name = name.replace(' a a', ' an a').replace(' a e', ' an e').replace(' a i', ' an i').replace(' a o', ' an o').replace(' a u', ' an u')
+
                 path_item = OpenAPIPathItem()
                 path_item.name = name
                 path_item.path = path_str
