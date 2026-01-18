@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 from logging import getLogger
+from traceback import format_exc
 from uuid import uuid4
 
 # PyYAML
@@ -111,21 +112,28 @@ def import_objects(req):
             enmasse_file_path = f.name
 
         try:
+            cmd = ['zato', 'enmasse', server_path, '--import', '--input', enmasse_file_path, '--verbose']
+            logger.info('enmasse command: %s', ' '.join(cmd))
+
             result = subprocess.run(
-                [sys.executable, '-m', 'zato.cli.zato_command', 'enmasse', server_path,
-                 '--import', '--input', enmasse_file_path, '--verbose'],
+                cmd,
                 capture_output=True,
                 text=True
             )
 
+            logger.info('enmasse returncode: %s', result.returncode)
             logger.info('enmasse stdout:\n%s', result.stdout)
-            if result.stderr:
-                logger.info('enmasse stderr:\n%s', result.stderr)
+            logger.info('enmasse stderr:\n%s', result.stderr)
 
             if result.returncode != 0:
                 error_msg = result.stderr or 'Enmasse returned non-zero exit code'
                 response_data['error'] = error_msg
                 return json_response(response_data, success=False)
+
+        except Exception:
+            logger.error('enmasse exception:\n%s', format_exc())
+            response_data['error'] = format_exc()
+            return json_response(response_data, success=False)
 
         finally:
             if os.path.exists(enmasse_file_path):
