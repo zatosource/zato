@@ -20,6 +20,9 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    {% if connection == 'outgoing' and transport == 'plain_http' %}
+    <link rel="stylesheet" type="text/css" href="/static/css/http_soap/openapi.css">
+    {% endif %}
 {% endblock %}
 
 {% block "extra_js" %}
@@ -840,6 +843,23 @@
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% if connection == 'outgoing' and transport == 'plain_http' %}
+<div id="openapi-copy-paste-overlay" class="openapi-overlay hidden">
+    <div class="openapi-overlay-backdrop"></div>
+    <div class="openapi-overlay-content">
+        <div class="openapi-overlay-header">
+            <h2>Import OpenAPI definition</h2>
+            <button id="openapi-copy-paste-close" class="openapi-close-button">✕</button>
+        </div>
+        <div class="openapi-overlay-body">
+            <textarea id="openapi-copy-paste-textarea" placeholder="Paste an OpenAPI definition here ...">{{ openapi_sample_data }}</textarea>
+        </div>
+        <div class="openapi-overlay-footer">
+            <button class="openapi-button-cancel" id="openapi-copy-paste-cancel">Cancel</button>
+            <button class="openapi-button-ok" id="openapi-copy-paste-ok">OK</button>
+        </div>
+    </div>
+</div>
+
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     $.fn.zato.http_soap.openapi.init();
