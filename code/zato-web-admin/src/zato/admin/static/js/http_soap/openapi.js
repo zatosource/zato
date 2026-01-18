@@ -273,12 +273,24 @@ $.fn.zato.http_soap.openapi.on_url_ok = function() {
     $.fn.zato.http_soap.openapi.show_spinner("Fetching ...");
 
     $.ajax({
-        type: "GET",
-        url: url,
+        type: "POST",
+        url: "/zato/http-soap/openapi/fetch/",
+        data: JSON.stringify({url: url}),
+        contentType: "application/json",
+        headers: {"X-CSRFToken": $.cookie("csrftoken")},
         success: function(response) {
             $("#openapi-import-spinner").remove();
 
-            let content = typeof response === "string" ? response : JSON.stringify(response);
+            if (!response.success) {
+                $("#openapi-copy-paste-textarea").val(response.error).show();
+                $("#openapi-url-input-container").hide();
+                $("#openapi-url-ok").hide();
+                $("#openapi-copy-paste-ok").hide();
+                $("#openapi-back").show();
+                return;
+            }
+
+            let content = response.content;
 
             $("#openapi-url-input-container").hide();
             $("#openapi-url-ok").hide();
@@ -298,28 +310,38 @@ $.fn.zato.http_soap.openapi.on_url_ok = function() {
                         $.fn.zato.http_soap.openapi.show_table(parsed_data);
                     } else {
                         $("#openapi-copy-paste-textarea").val(response.error).show();
-                        $("#openapi-copy-paste-ok").show();
+                        $("#openapi-copy-paste-ok").hide();
+                        $("#openapi-back").show();
                     }
                 },
                 error: function(xhr) {
                     $("#openapi-import-spinner").remove();
                     let error_msg = "Parse failed";
                     try {
-                        let response = JSON.parse(xhr.responseText);
-                        if (response.error) {
-                            error_msg = response.error;
+                        let resp = JSON.parse(xhr.responseText);
+                        if (resp.error) {
+                            error_msg = resp.error;
                         }
                     } catch (e) {
                         error_msg = xhr.responseText || error_msg;
                     }
                     $("#openapi-copy-paste-textarea").val(error_msg).show();
-                    $("#openapi-copy-paste-ok").show();
+                    $("#openapi-copy-paste-ok").hide();
+                    $("#openapi-back").show();
                 }
             });
         },
         error: function(xhr) {
             $("#openapi-import-spinner").remove();
-            let error_msg = "Failed to fetch URL: " + (xhr.statusText || "Unknown error");
+            let error_msg = "Failed to fetch URL";
+            try {
+                let resp = JSON.parse(xhr.responseText);
+                if (resp.error) {
+                    error_msg = resp.error;
+                }
+            } catch (e) {
+                error_msg = xhr.responseText || error_msg;
+            }
             $("#openapi-copy-paste-textarea").val(error_msg).show();
             $("#openapi-url-input-container").hide();
             $("#openapi-url-ok").hide();
