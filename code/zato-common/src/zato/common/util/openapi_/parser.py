@@ -7,10 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import argparse
 import json
 import os
 import traceback
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 # requests
 import requests
@@ -161,7 +162,7 @@ def _print_definition(name:'str', definition:'OpenAPIDefinition') -> 'None':
 # ################################################################################################################################
 # ################################################################################################################################
 
-if __name__ == '__main__':
+def _run_demo() -> 'None':
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     samples_dir = os.path.join(current_dir, 'samples')
@@ -203,3 +204,29 @@ if __name__ == '__main__':
             continue
         name = os.path.splitext(filename)[0].replace('_', ' ').title()
         _print_definition(name, definition)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+
+    arg_parser = argparse.ArgumentParser(description='Parse OpenAPI definitions')
+    group = arg_parser.add_mutually_exclusive_group(required=False)
+    _ = group.add_argument('--from-url', dest='from_url', help='URL to fetch OpenAPI definition from')
+    _ = group.add_argument('--from-file', dest='from_file', help='Path to OpenAPI definition file')
+    _ = group.add_argument('--demo', action='store_true', help='Run demo with sample files')
+
+    args = arg_parser.parse_args()
+
+    parser = Parser()
+
+    if args.from_url:
+        definition = parser.from_url(args.from_url)
+        print(json.dumps(asdict(definition), indent=2))
+    elif args.from_file:
+        with open(args.from_file, 'r', encoding='utf-8', errors='ignore') as f:
+            data = f.read()
+        definition = parser.from_data(data)
+        print(json.dumps(asdict(definition), indent=2))
+    else:
+        _run_demo()
