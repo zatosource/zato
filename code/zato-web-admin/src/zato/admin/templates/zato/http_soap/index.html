@@ -21,6 +21,7 @@
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
     {% if connection == 'outgoing' and transport == 'plain_http' %}
+    <link rel="stylesheet" type="text/css" href="/static/css/data-table-widget.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/openapi.css">
     {% endif %}
 {% endblock %}
@@ -37,6 +38,7 @@
 
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/data-table-widget.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/openapi.js"></script>
 
 
@@ -852,6 +854,7 @@
         </div>
         <div class="openapi-overlay-body">
             <textarea id="openapi-copy-paste-textarea" placeholder="Paste an OpenAPI definition here ..." spellcheck="false">{{ openapi_sample_data }}</textarea>
+            <div id="openapi-data-table-container" style="display: none; height: 100%;"></div>
         </div>
         <div class="openapi-overlay-footer">
             <button class="openapi-button-cancel" id="openapi-copy-paste-cancel">Cancel</button>
