@@ -70,7 +70,7 @@ class Parser:
             if not path_str.startswith('/'):
                 continue
 
-            for method, operation in path_data.items():
+            for _, operation in path_data.items():
                 if not isinstance(operation, dict):
                     continue
 
@@ -90,14 +90,12 @@ class Parser:
                 content = request_body.get('content', {})
                 content_type = next(iter(content.keys()), 'application/json')
 
-                # Generate name from operationId, summary, or path
-                name = operation.get('operationId', '')
+                # Generate name from summary, operationId, or path
+                name = operation.get('summary', '')
                 if not name:
-                    summary = operation.get('summary', '')
-                    if summary:
-                        name = summary.lower().replace(' ', '_')
+                    name = operation.get('operationId', '')
                 if not name:
-                    name = path_str.strip('/').replace('/', '_').replace('{', '').replace('}', '')
+                    name = path_str.strip('/').replace('/', ' ').replace('{', '').replace('}', '').replace('_', ' ').title()
 
                 path_item = OpenAPIPathItem()
                 path_item.name = name
@@ -123,33 +121,12 @@ class Parser:
 # ################################################################################################################################
 # ################################################################################################################################
 
-if __name__ == '__main__':
+def _print_definition(name:'str', definition:'OpenAPIDefinition') -> 'None':
+    print(f'\n{"=" * 60}')
+    print(f'{name}')
+    print('=' * 60)
 
-    # Find the yaml file by walking up directories
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    search_dir = current_dir
-
-    while True:
-        parent = os.path.dirname(search_dir)
-        if parent == search_dir:
-            raise Exception('Could not find zato-server directory')
-        search_dir = parent
-        candidate = os.path.join(search_dir, 'zato-server')
-        if os.path.isdir(candidate):
-            break
-
-    yaml_path = os.path.join(
-        candidate,
-        'src', 'zato', 'server', 'service', 'internal', 'pubsub', 'openapi.yaml'
-    )
-
-    with open(yaml_path, 'r') as f:
-        data = f.read()
-
-    parser = Parser()
-    definition = parser.from_data(data)
-
-    print('Servers:')
+    print('\nServers:')
     for server in definition.servers:
         print(f'  {server}')
 
@@ -159,3 +136,43 @@ if __name__ == '__main__':
         print(f'    path: {item.path}')
         print(f'    auth: {item.auth}')
         print(f'    content_type: {item.content_type}')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    samples_dir = os.path.join(current_dir, 'samples')
+
+    # Find zato-server directory
+    search_dir = current_dir
+    while True:
+        parent = os.path.dirname(search_dir)
+        if parent == search_dir:
+            raise Exception('Could not find zato-server directory')
+        search_dir = parent
+        candidate = os.path.join(search_dir, 'zato-server')
+        if os.path.isdir(candidate):
+            break
+
+    parser = Parser()
+
+    # Parse Zato pub/sub OpenAPI
+    yaml_path = os.path.join(
+        candidate,
+        'src', 'zato', 'server', 'service', 'internal', 'pubsub', 'openapi.yaml'
+    )
+    with open(yaml_path, 'r') as f:
+        data = f.read()
+    definition = parser.from_data(data)
+    _print_definition('Zato pub/sub', definition)
+
+    # Parse sample files
+    for filename in sorted(os.listdir(samples_dir)):
+        filepath = os.path.join(samples_dir, filename)
+        with open(filepath, 'r') as f:
+            data = f.read()
+        definition = parser.from_data(data)
+        name = os.path.splitext(filename)[0].replace('_', ' ').title()
+        _print_definition(name, definition)
