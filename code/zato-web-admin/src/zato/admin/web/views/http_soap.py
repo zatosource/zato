@@ -270,7 +270,7 @@ def index(req): # type: ignore
     if connection == 'outgoing' and transport == 'plain_http':
         openapi_dir = os.path.dirname(os.path.abspath(openapi_module.__file__))
         samples_dir = os.path.join(openapi_dir, 'samples')
-        docusign_path = os.path.join(samples_dir, 'docusign.yaml')
+        docusign_path = os.path.join(samples_dir, 'docusign-v2.yaml')
         with open(docusign_path, 'r', encoding='utf-8') as f:
             openapi_sample_data = f.read()
 
