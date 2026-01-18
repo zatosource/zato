@@ -193,7 +193,9 @@ def build_enmasse_config(items):
                     'username': f'{sec_type}_user_{name.replace(" ", "_").lower()}',
                     'password': uuid4().hex
                 }
-                if sec_type == 'bearer_token' and auth_server_url:
+                if sec_type == 'basic_auth':
+                    sec_def['realm'] = 'OpenAPI'
+                elif sec_type == 'bearer_token' and auth_server_url:
                     sec_def['auth_server_url'] = auth_server_url
                 security_defs[sec_name] = sec_def
 
