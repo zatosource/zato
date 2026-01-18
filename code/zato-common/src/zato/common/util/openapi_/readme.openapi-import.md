@@ -161,6 +161,17 @@ For each unique security definition:
 - `password`: `uuid4().hex` (random 32-char hex string)
 - `auth_server_url`: from OpenAPI spec's OAuth2 `tokenUrl` (for bearer_token only)
 
+### OAuth2 fields in Zato dashboard
+
+After import, OAuth2 security definitions appear at `/zato/security/oauth/outconn/client-credentials/`.
+
+Default field values set during import:
+- **Client ID field**: `client_id`
+- **Client secret field**: `client_secret`
+- **Grant type**: `client_credentials`
+
+These defaults follow RFC 6749 and work with most OAuth2 servers. Users can edit them in the web admin if a provider uses different field names.
+
 ## Data table widget
 
 ### `$.fn.zato.data_table_widget.render(config)`
