@@ -208,7 +208,7 @@ $.fn.zato.http_soap.openapi.show_table = function(data) {
         filter_placeholder: "Filter ..."
     };
 
-    $("#openapi-copy-paste-textarea").hide();
+    $("#openapi-editor-container").hide();
     $("#openapi-data-table-container").css("display", "flex").css("flex-direction", "column");
     $("#openapi-copy-paste-ok").hide();
     $("#openapi-table-import").show();
