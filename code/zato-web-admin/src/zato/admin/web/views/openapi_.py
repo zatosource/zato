@@ -18,6 +18,9 @@ from uuid import uuid4
 # PyYAML
 import yaml
 
+# requests
+import requests as requests_lib
+
 # Django
 from django.http import HttpResponse
 from django.http.response import HttpResponseServerError
@@ -82,6 +85,39 @@ def parse(req):
 
     except Exception as e:
         logger.exception('parse exception')
+        response_data['error'] = str(e)
+        return json_response(response_data, success=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def fetch_url(req):
+
+    response_data = {}
+    response_data['success'] = False
+
+    try:
+        request_data = loads(req.body.decode('utf-8'))
+        url = request_data['url']
+
+        if not url.startswith('http://') and not url.startswith('https://'):
+            url = 'https://' + url
+
+        resp = requests_lib.get(url, timeout=30)
+        resp.raise_for_status()
+
+        response_data['success'] = True
+        response_data['content'] = resp.text
+
+        return json_response(response_data)
+
+    except requests_lib.exceptions.RequestException as e:
+        response_data['error'] = f'Failed to fetch URL: {e}'
+        return json_response(response_data, success=False)
+
+    except Exception as e:
+        logger.exception('fetch_url exception')
         response_data['error'] = str(e)
         return json_response(response_data, success=False)
 
