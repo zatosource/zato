@@ -43,11 +43,15 @@ class Parser:
 
     def from_data(self, data:'str') -> 'OpenAPIDefinition':
 
-        # Parse the yaml/json data
+        # Parse the yaml/json data - sanitize non-printable characters first
+        sanitized = ''.join(c if c.isprintable() or c in '\n\r\t' else ' ' for c in data)
         try:
-            spec = yaml.safe_load(data)
-        except yaml.YAMLError:
-            spec = json.loads(data)
+            spec = yaml.safe_load(sanitized)
+        except yaml.YAMLError as e:
+            try:
+                spec = json.loads(sanitized)
+            except json.JSONDecodeError:
+                raise Exception(f'Failed to parse as yaml: {e}')
 
         # Extract servers
         servers = []
@@ -180,7 +184,7 @@ if __name__ == '__main__':
     # Parse sample files
     for filename in sorted(os.listdir(samples_dir)):
         filepath = os.path.join(samples_dir, filename)
-        with open(filepath, 'r') as f:
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             data = f.read()
         try:
             definition = parser.from_data(data)
