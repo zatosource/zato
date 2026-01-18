@@ -121,6 +121,7 @@ $.fn.zato.http_soap.openapi.show_table = function(data) {
             path: path_item.path,
             server: server,
             auth: path_item.auth,
+            auth_server_url: path_item.auth_server_url,
             content_type: path_item.content_type
         });
     }
@@ -132,7 +133,7 @@ $.fn.zato.http_soap.openapi.show_table = function(data) {
             {label: "URL path", field: "path"}
         ],
         rows: rows,
-        hidden_fields: ["server", "auth", "content_type", "name", "path"],
+        hidden_fields: ["server", "auth", "auth_server_url", "content_type", "name", "path"],
         filter_placeholder: "Filter ..."
     };
 
@@ -147,7 +148,7 @@ $.fn.zato.http_soap.openapi.show_table = function(data) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.http_soap.openapi.on_table_import = function() {
-    let selected = $.fn.zato.data_table_widget.get_selected("openapi-data-table-container", ["server", "auth", "content_type", "name", "path"]);
+    let selected = $.fn.zato.data_table_widget.get_selected("openapi-data-table-container", ["server", "auth", "auth_server_url", "content_type", "name", "path"]);
 
     if (selected.length === 0) {
         return;

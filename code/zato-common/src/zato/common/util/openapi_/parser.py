@@ -27,6 +27,7 @@ class OpenAPIPathItem:
     name: 'str'
     path: 'str'
     auth: 'str'
+    auth_server_url: 'str'
     content_type: 'str'
 
 # ################################################################################################################################
@@ -63,6 +64,7 @@ class Parser:
         components = spec.get('components', {})
         security_schemes = components.get('securitySchemes', {})
         auth_lookup = {}
+        token_url_lookup = {}
         for scheme_name, scheme_data in security_schemes.items():
             auth_type = scheme_data.get('type', '')
             scheme = scheme_data.get('scheme', '')
@@ -72,6 +74,12 @@ class Parser:
                 auth_lookup[scheme_name] = 'bearer_token'
             elif auth_type == 'oauth2':
                 auth_lookup[scheme_name] = 'oauth2'
+                flows = scheme_data.get('flows', {})
+                for flow_data in flows.values():
+                    token_url = flow_data.get('tokenUrl', '')
+                    if token_url:
+                        token_url_lookup[scheme_name] = token_url
+                        break
             elif auth_type == 'apiKey':
                 auth_lookup[scheme_name] = 'api_key'
             else:
@@ -95,10 +103,12 @@ class Parser:
                 # Determine auth for this operation
                 operation_security = operation.get('security', global_security)
                 auth = ''
+                auth_server_url = ''
                 for sec_req in operation_security:
                     for scheme_name in sec_req.keys():
                         if scheme_name in auth_lookup:
                             auth = auth_lookup[scheme_name]
+                            auth_server_url = token_url_lookup.get(scheme_name, '')
                             break
                     if auth:
                         break
@@ -123,6 +133,7 @@ class Parser:
                 path_item.name = name
                 path_item.path = path_str
                 path_item.auth = auth
+                path_item.auth_server_url = auth_server_url
                 path_item.content_type = content_type
                 path_items.append(path_item)
 
