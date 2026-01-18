@@ -88,6 +88,8 @@ class AutoSetup:
             json=data
         )
 
+        response.raise_for_status()
+
         return response.json()
 
 # ################################################################################################################################
@@ -131,6 +133,42 @@ class AutoSetup:
         encoded = encoded_bytes.decode('utf-8')
 
         return encoded
+
+# ################################################################################################################################
+
+    def test_connection(self) -> 'strdict':
+        from logging import getLogger
+        from traceback import format_exc
+
+        logger = getLogger(__name__)
+        url = f'{self.base_url}/accesspolicies?region={self.region}'
+
+        try:
+            response = self._make_request('GET', url)
+            result = {}
+            result['success'] = True
+            result['message'] = 'Connection successful'
+            result['response'] = response
+            return result
+        except requests.exceptions.HTTPError as e:
+            logger.error('test_connection HTTP error: {}'.format(format_exc()))
+            result = {}
+            result['success'] = False
+            
+            try:
+                error_data = e.response.json()
+                error_message = error_data.get('message', str(error_data))
+            except Exception:
+                error_message = str(e.response.status_code)
+            
+            result['error'] = 'Response from Grafana Cloud: {}'.format(error_message)
+            return result
+        except Exception:
+            logger.error('test_connection error: {}'.format(format_exc()))
+            result = {}
+            result['success'] = False
+            result['error'] = 'Connection failed'
+            return result
 
 # ################################################################################################################################
 

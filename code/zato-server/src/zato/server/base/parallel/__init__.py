@@ -77,8 +77,10 @@ from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 if 0:
 
     from bunch import Bunch as bunch_
+    from ddtrace.trace import tracer as dd_tracer
+    from ddtrace._trace.tracer import Tracer as DatadogTracer
     from kombu.transport.pyamqp import Message as KombuMessage
-    from opentelemetry.trace import Tracer
+    from opentelemetry.trace import Tracer as OTLPTracer
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
     from zato.common.odb.model import Cluster as ClusterModel
@@ -127,7 +129,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
     on_wsgi_request: 'any_'
-    tracer: 'Tracer'
 
     cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
@@ -142,6 +143,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     stop_after: 'intnone'
     deploy_auto_from: 'str' = ''
+
+    datadog_tracer: 'DatadogTracer'
+    otlp_tracer: 'OTLPTracer'
+
+    is_datadog_enabled: 'bool'
+    is_grafana_cloud_enabled: 'bool'
+
+    env_name: 'str'
 
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
@@ -259,9 +268,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Log streaming manager
         self.log_streaming_manager = LogStreamingManager()
-
-        # Monitoring
-        self._set_up_monitoring()
 
 # ################################################################################################################################
 
@@ -745,6 +751,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # This also cannot be done in __init__ which doesn't have this variable yet
         self.process_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
         self.is_first_worker = self.process_idx == 0
+
+        # Monitoring
+        logger.info('Monitoring setup - datadog_enabled:%s grafana_cloud_enabled:%s',
+            self.is_datadog_enabled, self.is_grafana_cloud_enabled)
+
+        if self.is_datadog_enabled:
+            self._set_up_datadog()
+
+        if self.is_grafana_cloud_enabled:
+            self._set_up_grafana_cloud()
 
         # Used later on
         use_tls = as_bool(self.fs_server_config.crypto.use_tls)
@@ -1257,8 +1273,43 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _set_up_monitoring(self):
-        pass
+    def _set_up_grafana_cloud(self):
+        logger.info('Setting up Grafana Cloud monitoring')
+
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+
+        resource = Resource.create({'service.name': 'zato.server'})
+
+        trace_exporter = OTLPSpanExporter(endpoint='http://localhost:4318/v1/traces')
+        processor = BatchSpanProcessor(trace_exporter)
+
+        provider = TracerProvider(resource=resource)
+        provider.add_span_processor(processor)
+        trace.set_tracer_provider(provider)
+
+        self.otlp_tracer = trace.get_tracer('zato.server')
+
+        metrics_exporter = OTLPMetricExporter(endpoint='http://localhost:4318/v1/metrics')
+        metrics_reader = PeriodicExportingMetricReader(metrics_exporter, export_interval_millis=5000)
+        metrics_provider = MeterProvider(resource=resource, metric_readers=[metrics_reader])
+
+        self.otlp_meter = metrics_provider.get_meter('zato.server')
+        self.otlp_gauges = {}
+        self.otlp_gauges_lock = RLock()
+        self.otlp_counters = {}
+        self.otlp_counters_lock = RLock()
+
+# ################################################################################################################################
+
+    def _set_up_datadog(self):
+        logger.info('Setting up Datadog monitoring')
+
+        # Datadog
+        from ddtrace.trace import tracer
+        self.datadog_tracer = tracer
 
 # ################################################################################################################################
 

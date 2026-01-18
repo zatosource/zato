@@ -15,14 +15,6 @@ warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-
 from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
      patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
 
-# ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
-try:
-    import cloghandler # type: ignore
-except ImportError:
-    pass
-else:
-    cloghandler = cloghandler # For pyflakes
-
 # Note that the order of patching matters, just like in patch_all
 patch_os()
 patch_time()
@@ -38,10 +30,68 @@ patch_signal()
 patch_queue()
 patch_contextvars()
 
+# ConcurrentLogHandler - updates stdlib's logging config on import so this needs to stay after gevent patches
+try:
+    import cloghandler # type: ignore
+except ImportError:
+    pass
+else:
+    cloghandler = cloghandler # For pyflakes
+
 # stdlib
-import locale
 import logging
 import os
+
+# Reusable
+true_values = {'true', '1', 'y', 'yes'}
+
+# Datadog monitoring - read config from env vars set by start.py
+datadog_main_agent = os.environ.get('Zato_Datadog_Main_Agent')
+datadog_metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent')
+datadog_service_name = os.environ.get('Zato_Datadog_Service_Name') or 'zato.server'
+
+datadog_enabled_env = os.environ.get('Zato_Datadog_Enabled')
+datadog_enabled_env = datadog_enabled_env.lower() in true_values if datadog_enabled_env else False
+
+is_datadog_enabled = datadog_enabled_env or bool(datadog_main_agent or datadog_metrics_agent)
+
+if is_datadog_enabled:
+
+    # Check if we need DD debug logs ..
+    has_debug = os.environ.get('Zato_Datadog_Debug_Enabled')
+    has_debug = has_debug.lower() in {'true', '1'} if has_debug else False
+    has_debug = str(has_debug).lower()
+
+    # .. and assign that accordingly ..
+    os.environ['DD_TRACE_DEBUG'] = has_debug
+
+    # .. set agent host if configured - must be done before importing ddtrace ..
+    if datadog_main_agent:
+        main_host, main_port = datadog_main_agent.split(':')
+        os.environ['DD_AGENT_HOST'] = main_host
+        os.environ['DD_TRACE_AGENT_PORT'] = main_port
+
+    # .. set dogstatsd host if configured ..
+    if datadog_metrics_agent:
+        metrics_host, metrics_port = datadog_metrics_agent.split(':')
+        os.environ['DD_DOGSTATSD_HOST'] = metrics_host
+        os.environ['DD_DOGSTATSD_PORT'] = metrics_port
+
+    # .. set service name - always ensure it exists ..
+    os.environ['DD_SERVICE'] = datadog_service_name
+
+    # .. now import and patch ddtrace after env vars are set ..
+    from ddtrace import patch as dd_patch
+    dd_patch(gevent=True)
+
+# Grafana Cloud monitoring - values read later in run() after logging is configured
+grafana_cloud_instance_id = None
+grafana_cloud_api_key = None
+grafana_cloud_endpoint = None
+is_grafana_cloud_enabled = False
+
+# stdlib
+import locale
 import sys
 from logging.config import dictConfig
 
@@ -332,6 +382,26 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     logger = logging.getLogger(__name__)
 
+    # Read Grafana Cloud config
+    global grafana_cloud_instance_id, grafana_cloud_api_key, grafana_cloud_endpoint, is_grafana_cloud_enabled
+
+    grafana_cloud_instance_id = os.environ.get('Zato_Grafana_Cloud_Instance_ID')
+    grafana_cloud_api_key = os.environ.get('Zato_Grafana_Cloud_API_Key')
+    grafana_cloud_endpoint = os.environ.get('Zato_Grafana_Cloud_Endpoint')
+
+    if not (grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint):
+        try:
+            import redis as redis_lib
+            redis_client = redis_lib.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+            if redis_client.get('zato:grafana_cloud:is_enabled') == 'true':
+                grafana_cloud_instance_id = grafana_cloud_instance_id or redis_client.get('zato:grafana_cloud:instance_id')
+                grafana_cloud_api_key = grafana_cloud_api_key or redis_client.get('zato:grafana_cloud:runtime_token')
+                grafana_cloud_endpoint = grafana_cloud_endpoint or redis_client.get('zato:grafana_cloud:endpoint')
+        except Exception:
+            pass
+
+    is_grafana_cloud_enabled = bool(grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
+
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
@@ -433,6 +503,11 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.env_manager = env_manager
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore
+
+    # Monitoring
+    server.is_datadog_enabled = is_datadog_enabled
+    server.is_grafana_cloud_enabled = is_grafana_cloud_enabled
+    server.env_name = os.environ.get('Zato_Env_Name', '')
 
     if scheduler_api_password := server.fs_server_config.scheduler.get('scheduler_api_password'):
         if is_encrypted(scheduler_api_password):
