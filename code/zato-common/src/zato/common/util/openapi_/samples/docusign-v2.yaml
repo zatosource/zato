@@ -2,7 +2,7 @@ openapi: 3.0.0
 servers:
   - url: https://www.docusign.net/restapi
 info:
-  description: DocuSign REST API - Light version for testing
+  description: DocuSign REST API
   title: DocuSign REST API
   version: v2.1
 

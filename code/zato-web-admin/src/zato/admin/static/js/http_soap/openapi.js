@@ -5,9 +5,49 @@ $.fn.zato.http_soap.openapi.original_yaml = "";
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.http_soap.openapi.highlight_yaml = function(text) {
+    let escaped = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    let highlighted = escaped
+        .replace(/(#.*)$/gm, '<span class="hl-comment">$1</span>')
+        .replace(/^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*)(:)/gm, '$1<span class="hl-key">$2</span>$3')
+        .replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span class="hl-str">$1</span>')
+        .replace(/:\s*('(?:[^'\\]|\\.)*')/g, ": <span class=\"hl-str\">$1</span>")
+        .replace(/:\s*(true|false|null)\b/gi, ': <span class="hl-bool">$1</span>')
+        .replace(/:\s*(-?\d+\.?\d*)\b/g, ': <span class="hl-num">$1</span>');
+
+    return highlighted;
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.http_soap.openapi.sync_highlight = function() {
+    let text = $("#openapi-copy-paste-textarea").val();
+    let highlighted = $.fn.zato.http_soap.openapi.highlight_yaml(text);
+    $("#openapi-highlight-layer").html(highlighted + "\n");
+
+    let textarea = document.getElementById("openapi-copy-paste-textarea");
+    let layer = document.getElementById("openapi-highlight-layer");
+    layer.scrollTop = textarea.scrollTop;
+    layer.scrollLeft = textarea.scrollLeft;
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.http_soap.openapi.init = function() {
 
     $.fn.zato.http_soap.openapi.original_yaml = $("#openapi-copy-paste-textarea").val();
+
+    $.fn.zato.http_soap.openapi.sync_highlight();
+    $("#openapi-copy-paste-textarea").on("input", $.fn.zato.http_soap.openapi.sync_highlight);
+    $("#openapi-copy-paste-textarea").on("scroll", function() {
+        let layer = document.getElementById("openapi-highlight-layer");
+        layer.scrollTop = this.scrollTop;
+        layer.scrollLeft = this.scrollLeft;
+    });
 
     let url_params = new URLSearchParams(window.location.search);
     if (url_params.get("openapi_imported") === "1") {
@@ -113,7 +153,7 @@ $.fn.zato.http_soap.openapi.on_from_copy_paste = function() {
 
 $.fn.zato.http_soap.openapi.on_from_url = function() {
     $("#openapi-copy-paste-overlay").removeClass("hidden");
-    $("#openapi-copy-paste-textarea").hide();
+    $("#openapi-editor-container").hide();
     $("#openapi-copy-paste-ok").hide();
     $("#openapi-url-input-container").css("display", "flex");
     $("#openapi-url-ok").show();
@@ -125,7 +165,9 @@ $.fn.zato.http_soap.openapi.on_from_url = function() {
 $.fn.zato.http_soap.openapi.close_copy_paste_overlay = function() {
     $("#openapi-copy-paste-overlay").addClass("hidden");
     $("#openapi-copy-paste-textarea").val($.fn.zato.http_soap.openapi.original_yaml);
+    $.fn.zato.http_soap.openapi.sync_highlight();
     $("#openapi-copy-paste-textarea").show();
+    $("#openapi-editor-container").show();
     $("#openapi-url-input-container").hide();
     $("#openapi-url-input").val("");
     $("#openapi-data-table-container").hide().empty();
