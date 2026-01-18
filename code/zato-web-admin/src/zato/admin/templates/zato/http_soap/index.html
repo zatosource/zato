@@ -504,14 +504,6 @@
                             <td>{{ create_form.content_type }}</td>
                         </tr>
 
-                        {% if transport == 'soap' %}
-                            <tr>
-                                <td style="vertical-align:middle">Serialization type
-                                </td>
-                                <td>{{ create_form.serialization_type }}</td>
-                            </tr>
-                        {% endif %}
-
                         {% endif %}
 
                         {% if False %}
@@ -613,6 +605,7 @@
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
                     {{ create_form.data_encoding }}
+                    {{ create_form.serialization_type }}
 
                 </form>
             </div>
@@ -731,14 +724,6 @@
                             <td>{{ edit_form.content_type }}</td>
                         </tr>
 
-                        {% if transport == 'soap' %}
-                            <tr>
-                                <td style="vertical-align:middle">Serialization type
-                                </td>
-                                <td>{{ edit_form.serialization_type }}</td>
-                            </tr>
-                        {% endif %}
-
                         {% endif %}
 
                         {% if connection == 'outgoing' %}
@@ -819,6 +804,7 @@
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
                     {{ edit_form.data_encoding }}
+                    {{ edit_form.serialization_type }}
 
                 </form>
             </div>
