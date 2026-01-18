@@ -13,7 +13,7 @@ There are two dataclasses:
 class OpenAPIPathItem:
     name: str         # human-readable name from summary/operationId
     path: str         # the url path like /accounts/{id}
-    auth: str         # "basic_auth", "oauth2", "api_key", or "unsupported-<name>"
+    auth: str         # "basic_auth", "bearer_token", "oauth2", "api_key", or "unsupported-<name>"
     content_type: str # request content type, defaults to "application/json"
 ```
 
@@ -40,6 +40,7 @@ The `Parser` class has two methods:
 3. Extracts servers from `servers` list
 4. Builds auth lookup from `components.securitySchemes`:
    - HTTP basic -> "basic_auth"
+   - HTTP bearer -> "bearer_token"
    - OAuth2 -> "oauth2"
    - API key -> "api_key"
    - anything else -> "unsupported-<scheme_name>"
