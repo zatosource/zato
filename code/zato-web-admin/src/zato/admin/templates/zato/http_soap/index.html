@@ -483,6 +483,7 @@
                             <td>{{ create_form.ping_method }}</td>
                         </tr>
 
+                        {% if transport == 'plain_http' %}
                         <tr>
                             <td style="vertical-align:middle">Pool size
                             <br/>
@@ -490,6 +491,7 @@
                             </td>
                             <td>{{ create_form.pool_size }}</td>
                         </tr>
+                        {% endif %}
 
                         <tr>
                             <td style="vertical-align:middle">Timeout (s)
@@ -499,17 +501,11 @@
                             <td>{{ create_form.timeout }}</td>
                         </tr>
 
+                        {% if transport == 'plain_http' %}
                         <tr>
                             <td style="vertical-align:middle">Content type</td>
                             <td>{{ create_form.content_type }}</td>
                         </tr>
-
-                        {% if transport == 'soap' %}
-                            <tr>
-                                <td style="vertical-align:middle">Serialization type
-                                </td>
-                                <td>{{ create_form.serialization_type }}</td>
-                            </tr>
                         {% endif %}
 
                         {% endif %}
@@ -613,6 +609,11 @@
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
                     {{ create_form.data_encoding }}
+                    {{ create_form.serialization_type }}
+                    {% if transport == 'soap' %}
+                    <input type="hidden" name="pool_size" value="20" />
+                    <input type="hidden" name="content_type" value="" />
+                    {% endif %}
 
                 </form>
             </div>
@@ -710,6 +711,7 @@
                             <td>{{ edit_form.ping_method }}</td>
                         </tr>
 
+                        {% if transport == 'plain_http' %}
                         <tr>
                             <td style="vertical-align:middle">Pool size
                             <br/>
@@ -717,6 +719,7 @@
                             </td>
                             <td>{{ edit_form.pool_size }}</td>
                         </tr>
+                        {% endif %}
 
                         <tr>
                             <td style="vertical-align:middle">Timeout (s)
@@ -726,17 +729,11 @@
                             <td>{{ edit_form.timeout }}</td>
                         </tr>
 
+                        {% if transport == 'plain_http' %}
                         <tr>
                             <td style="vertical-align:middle">Content type</td>
                             <td>{{ edit_form.content_type }}</td>
                         </tr>
-
-                        {% if transport == 'soap' %}
-                            <tr>
-                                <td style="vertical-align:middle">Serialization type
-                                </td>
-                                <td>{{ edit_form.serialization_type }}</td>
-                            </tr>
                         {% endif %}
 
                         {% endif %}
@@ -819,6 +816,11 @@
                     <input type="hidden" name="transport" value="{{ transport }}" />
 
                     {{ edit_form.data_encoding }}
+                    {{ edit_form.serialization_type }}
+                    {% if transport == 'soap' %}
+                    <input type="hidden" name="edit-pool_size" value="20" />
+                    <input type="hidden" name="edit-content_type" value="" />
+                    {% endif %}
 
                 </form>
             </div>

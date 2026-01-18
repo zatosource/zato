@@ -22,9 +22,6 @@ from urllib.request import Request, urlopen
 # humanize
 import humanize
 
-# Redis
-import redis
-
 # Zato
 from zato.common.json_internal import dumps, loads
 from zato.common.util.tcp import wait_until_port_free
@@ -232,10 +229,11 @@ class Updater:
 
 # ################################################################################################################################
 
-    def get_redis_connection(self) -> 'redis.Redis':
+    def get_redis_connection(self):
         """ Returns a Redis connection.
         """
-        return redis.Redis(
+        import redis as redis_module
+        return redis_module.Redis(
             host=self.config.redis_host,
             port=self.config.redis_port,
             db=self.config.redis_db,
@@ -1428,10 +1426,6 @@ class Updater:
         """ Restarts a Zato component with port checking.
         """
         time.sleep(0.05)
-        return {
-            'success': True,
-            'message': '{} restarted'.format(component_name)
-        }
 
         try:
             if component_name == 'proxy' and not os.path.exists(component_path):
