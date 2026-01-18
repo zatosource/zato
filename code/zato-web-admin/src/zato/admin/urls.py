@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, scheduler, service, updates
+from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, openapi_, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -412,6 +412,9 @@ urlpatterns += [
         login_required(http_soap.reload_wsdl), name='http-soap-reload-wsdl'),
     url(r'^zato/http-soap/get-security-groups/(?P<group_type>.*)/$',
         login_required(groups.get_group_list), name='http-soap-get-all-security-groups'),
+
+    url(r'^zato/http-soap/openapi/parse/$',
+        login_required(openapi_.parse), name='http-soap-openapi-parse'),
 
     ]
 
