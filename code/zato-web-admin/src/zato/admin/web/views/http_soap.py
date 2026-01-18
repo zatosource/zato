@@ -293,6 +293,7 @@ def index(req): # type: ignore
         'meta': meta,
         'req':req,
         'openapi_sample_data': openapi_sample_data,
+        'zato_template_name': 'zato/http_soap/index.html',
         }
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
