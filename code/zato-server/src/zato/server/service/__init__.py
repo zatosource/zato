@@ -36,6 +36,8 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIOR
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
+from zato.common.monitoring.logger_ import DatadogLogger
+from zato.common.monitoring.metrics import ServiceMetrics
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
@@ -44,6 +46,8 @@ from zato.server.commands import CommandsFacade
 from zato.server.connection.cache import CacheAPI
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
+from zato.server.connection.http_soap.outgoing import current_datadog_cid, current_datadog_context, \
+    current_datadog_env_name, current_datadog_process_name, current_datadog_service_name
 from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
@@ -85,6 +89,7 @@ UUID = UUID # type: ignore
 # ################################################################################################################################
 
 if 0:
+    from ddtrace._trace.context import Context as DatadogContext
     from logging import Logger
     from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
@@ -100,8 +105,6 @@ if 0:
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato.server.connection.cassandra import CassandraAPI
-    from zato.server.query import CassandraQueryAPI
     from zato.simpleio import CySimpleIO
     anydictnone = anydictnone
     callnone = callnone
@@ -111,8 +114,6 @@ if 0:
     AuditPII = AuditPII
     BrokerClient = BrokerClient
     callable_ = callable_
-    CassandraAPI = CassandraAPI
-    CassandraQueryAPI = CassandraQueryAPI
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
     CySimpleIO = CySimpleIO # type: ignore
@@ -291,6 +292,9 @@ class Service:
     """ A base class for all services deployed on Zato servers, no matter the transport and protocol, be it REST, AMQP
     or any other, regardless whether they arere built-in or user-defined ones.
     """
+
+    process_name:'str' = 'No name'
+
     rest: 'RESTFacade'
     schedule: 'SchedulerFacade'
     security: 'SecurityFacade'
@@ -355,6 +359,11 @@ class Service:
     # Processing time in milliseconds
     processing_time: 'float'
 
+    # Monitoring
+    needs_datadog_logging: 'bool'
+    datadog_context: 'DatadogContext' = None # type: ignore
+    metrics: 'ServiceMetrics'
+
     # Rule engine
     rules: 'RulesManager'
 
@@ -369,9 +378,9 @@ class Service:
         *ignored_args:'any_',
         **ignored_kwargs:'any_'
     ) -> 'None':
+
         self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
-        self.impl_name = self.__class__.__service_impl_name # Ditto
-        self.logger = _get_logger(self.name) # type: Logger
+        self.impl_name = self.__class__.__service_impl_name # Same setup as in self.name
         self.cid = ''
         self.in_reply_to = ''
         self.data_format = ''
@@ -380,7 +389,7 @@ class Service:
         self.job_type = ''     # type: str
         self.environ = Bunch()
         self.request = Request(self) # type: Request
-        self.response = Response(self.logger) # type: ignore
+        self.response = Response() # type: ignore
 
         # This is where user configuration is kept
         self.config = Bunch()
@@ -609,6 +618,19 @@ class Service:
         **kwargs:'any_'
     ) -> 'any_':
 
+        self.process_name = kwargs.get('process_name') or service.process_name
+
+        # Configure logging depending on whether monitoring is enabled ..
+        if service.needs_datadog_logging:
+            service.logger = DatadogLogger(cid, server, service.name, self.process_name, self)
+        else:
+
+            # .. no Datadog = use stdlib's logger.
+            service.logger = _get_logger(service.name) # type: Logger
+
+        # .. now we can assign the logger to our request object.
+        service.request.logger = service.logger
+
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
         channel_item = wsgi_environ.get('zato.channel_item', {})
@@ -633,6 +655,69 @@ class Service:
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
+
+        # Datadog spans - created here but finished after handle() completes
+        _datadog_span = None
+        _datadog_channel_span = None
+
+        if service.needs_datadog_logging:
+
+            # We may have it from our caller ..
+            _datadog_parent_context = kwargs.get('datadog_context')
+
+            # .. build the service name for Datadog ..
+            if self.server.env_name:
+                _dd_service_name = f'{self.server.env_name} | {service.name}'
+            else:
+                _dd_service_name = service.name
+
+            # .. build a span indicating that we're being invoked ..
+            _datadog_span = self.server.datadog_tracer.start_span(
+                name='',
+                service=_dd_service_name,
+                resource=f'Invoker',
+                child_of=_datadog_parent_context
+            )
+
+            # .. set our metadata ..
+            _datadog_span.set_tag('cid', self.cid)
+            _datadog_span.set_tag('zato_process', self.process_name)
+            _datadog_span.set_tag('zato_service', service.name)
+            _datadog_span.set_tag('zato_env_name', self.server.env_name)
+            _datadog_span.set_tag('zato_message_level', 'INFO')
+            _datadog_span.set_tag('zato_message', f'Service was invoked')
+
+            # .. store it for possible later use ..
+            self.datadog_context = _datadog_span.context
+
+            # .. set it in contextvar so http_request can access it ..
+            _ = current_datadog_context.set(_datadog_span.context)
+            _ = current_datadog_service_name.set(service.name)
+            _ = current_datadog_process_name.set(self.process_name)
+            _ = current_datadog_cid.set(self.cid)
+            _ = current_datadog_env_name.set(self.server.env_name)
+
+            # .. if this is a REST channel, create a span for it ..
+            if channel == CHANNEL.HTTP_SOAP and channel_item:
+                channel_name = channel_item.get('name', '')
+                request_method = wsgi_environ.get('REQUEST_METHOD', '')
+                raw_uri = wsgi_environ.get('RAW_URI', '')
+                _datadog_channel_span = self.server.datadog_tracer.start_span(
+                    name='zato.http.channel',
+                    service=_dd_service_name,
+                    resource=f'REST Channel: {channel_name}',
+                    child_of=_datadog_span.context
+                )
+                _datadog_channel_span.set_tag('cid', self.cid)
+                _datadog_channel_span.set_tag('zato_process', self.process_name)
+                _datadog_channel_span.set_tag('zato_service', service.name)
+                _datadog_channel_span.set_tag('zato_env_name', self.server.env_name)
+                _datadog_channel_span.set_tag('zato_message_level', 'INFO')
+                _datadog_channel_span.set_tag('zato_message', f'{request_method} {raw_uri}')
+
+        # Increment invocation counter for Grafana Cloud
+        if server.is_grafana_cloud_enabled:
+            service.metrics.incr('zato_service_' + service.name.replace('.', '_').replace('-', '_'))
 
         # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
         # if ServiceStore replaces self.accept with None in the most common case of this method's not being
@@ -685,7 +770,7 @@ class Service:
                         else:
                             payload = service.response.payload
 
-                        spawn_greenlet(func, service, payload, exc_data)
+                        _ = spawn_greenlet(func, service, payload, exc_data)
 
                     # It is possible that, on behalf of our caller (e.g. pub.zato.service.service-invoker),
                     # we also need to populate a dictionary of headers that were produced by the service
@@ -706,6 +791,11 @@ class Service:
                 else:
                     if e:
                         raise e from None
+                finally:
+                    if _datadog_channel_span:
+                        _datadog_channel_span.finish()
+                    if _datadog_span:
+                        _datadog_span.finish()
 
         # We don't accept it but some response needs to be returned anyway.
         else:
@@ -799,7 +889,11 @@ class Service:
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
             self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), {})
 
-        kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
+        kwargs.update({
+            'serialize':serialize,
+            'as_bunch': as_bunch,
+            'datadog_context': getattr(self, 'datadog_context', None),
+        })
 
         if timeout:
             g = None
@@ -820,6 +914,7 @@ class Service:
     def invoke(self, zato_name:'any_', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service synchronously by its name.
         """
+
         # The 'zato_name' parameter is actually a service class,
         # not its name, and we need to extract the name ourselves.
         if isclass(zato_name) and issubclass(zato_name, Service): # type: Service
@@ -890,7 +985,7 @@ class Service:
         if callback:
             async_ctx.callback = list(callback) if isinstance(callback, (list, tuple)) else [callback]
 
-        spawn_greenlet(self._invoke_async, async_ctx, channel)
+        _ = spawn_greenlet(self._invoke_async, async_ctx, channel)
 
         return cid
 
@@ -1092,6 +1187,7 @@ class Service:
         service.static_config = server.static_config
         service.time = server.time_util
         service.security = SecurityFacade(service.server)
+        service.metrics = ServiceMetrics(service)
 
         if channel_params:
             service.request.channel_params.update(channel_params)
@@ -1137,14 +1233,14 @@ class Service:
         service, _ = \
             self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
-        service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
+        _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
             cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
 
         return service
 
 # ################################################################################################################################
 
-class _Hook(Service):
+class _Hook(Service): # type: ignore
     """ Base class for all hook services.
     """
     _hook_func_name: 'strdict'
@@ -1345,6 +1441,8 @@ class RESTAdapter(Service):
 
         # .. and return it to our caller.
         self.response.payload = out
+
+SOAPAdapter = RESTAdapter
 
 # ################################################################################################################################
 # ################################################################################################################################

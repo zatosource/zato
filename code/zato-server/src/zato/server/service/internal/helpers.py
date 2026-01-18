@@ -148,7 +148,7 @@ class PubInputLogger(Service):
     name = 'demo.input-logger'
 
     def handle(self):
-        self.logger.info('Received request: `%s`', self.request.raw_request)
+        self.logger.info(f'Received request: `{self.request.raw_request}`')
 
 # ################################################################################################################################
 

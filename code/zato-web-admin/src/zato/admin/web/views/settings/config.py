@@ -66,8 +66,8 @@ content_rows.append(row)
 
 grafana_cloud_page_config = {}
 grafana_cloud_page_config['title'] = 'Grafana Cloud'
-grafana_cloud_page_config['api_prefix'] = '/zato/observability/grafana-cloud/'
-grafana_cloud_page_config['step1_label'] = 'Configure'
+grafana_cloud_page_config['api_prefix'] = '/zato/monitoring/grafana-cloud/'
+grafana_cloud_page_config['step1_label'] = 'Configuring Grafana Cloud'
 grafana_cloud_page_config['step2_label'] = 'Connect'
 grafana_cloud_page_config['check_button_label'] = 'Test connection'
 grafana_cloud_page_config['action_button_label'] = 'Save'
@@ -76,7 +76,8 @@ grafana_cloud_page_config['config_section_title'] = 'Config'
 grafana_cloud_page_config['logs_section_title'] = 'Connection log'
 grafana_cloud_page_config['up_to_date_label'] = 'Connected?'
 grafana_cloud_page_config['your_version_label'] = 'Instance ID'
-grafana_cloud_page_config['latest_version_label'] = 'API Token'
+grafana_cloud_page_config['api_key_label'] = 'API key'
+grafana_cloud_page_config['endpoint_label'] = 'Endpoint'
 grafana_cloud_page_config['auto_update_label'] = 'Auto-connect'
 grafana_cloud_page_config['frequency_label'] = 'How often?'
 grafana_cloud_page_config['week_label'] = 'Week'
@@ -86,7 +87,7 @@ grafana_cloud_page_config['save_button_label'] = 'Save'
 grafana_cloud_page_config['download_logs_label'] = 'Download full logs'
 grafana_cloud_page_config['show_sidebar'] = False
 grafana_cloud_page_config['show_restart_steps'] = True
-grafana_cloud_page_config['panel_width'] = '35%'
+grafana_cloud_page_config['panel_width'] = '45%'
 grafana_cloud_page_config['restart_step_id'] = 'connect'
 grafana_cloud_page_config['restart_step_label'] = grafana_cloud_page_config['step2_label']
 grafana_cloud_page_config['content_rows'] = []
@@ -111,11 +112,59 @@ row = ContentRow(
 content_rows.append(row)
 
 row = ContentRow(
-    label=grafana_cloud_page_config['latest_version_label'],
+    label=grafana_cloud_page_config['api_key_label'],
     widget='input',
-    value_key='api_token',
+    value_key='api_key',
     is_copyable=True,
-    copy_id='api-token',
+    copy_id='api-key',
+    spinner=False
+)
+content_rows.append(row)
+
+datadog_page_config = {}
+datadog_page_config['title'] = 'Datadog'
+datadog_page_config['api_prefix'] = '/zato/monitoring/datadog/'
+datadog_page_config['step1_label'] = 'Configuring Datadog'
+datadog_page_config['step2_label'] = 'Connect'
+datadog_page_config['check_button_label'] = 'Test connection'
+datadog_page_config['action_button_label'] = 'Save'
+datadog_page_config['version_section_title'] = 'Datadog'
+datadog_page_config['config_section_title'] = 'Config'
+datadog_page_config['logs_section_title'] = 'Connection log'
+datadog_page_config['save_button_label'] = 'Save'
+datadog_page_config['download_logs_label'] = 'Download full logs'
+datadog_page_config['show_sidebar'] = False
+datadog_page_config['show_restart_steps'] = True
+datadog_page_config['panel_width'] = '45%'
+datadog_page_config['restart_step_id'] = 'connect'
+datadog_page_config['restart_step_label'] = datadog_page_config['step2_label']
+datadog_page_config['content_rows'] = []
+
+content_rows = datadog_page_config['content_rows']
+
+row = ContentRow(
+    label='Is enabled',
+    widget='toggle',
+    value_key='is_enabled',
+    element_id='is-enabled'
+)
+content_rows.append(row)
+
+row = ContentRow(
+    label='Main agent',
+    widget='input',
+    value_key='main_agent',
+    is_copyable=True,
+    copy_id='main-agent'
+)
+content_rows.append(row)
+
+row = ContentRow(
+    label='Metrics agent',
+    widget='input',
+    value_key='metrics_agent',
+    is_copyable=True,
+    copy_id='metrics-agent',
     spinner=False
 )
 content_rows.append(row)

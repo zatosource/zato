@@ -29,9 +29,15 @@
         </div>
     </div>
     <div class="info-row">
-        <div class="info-label">{{ page_config.latest_version_label }}</div>
+        <div class="info-label">{{ page_config.api_key_label }}</div>
         <div class="info-value">
-            <input type="text" id="api-token" value="{{ api_token }}" placeholder="glc_eyJvIjoiMTYzMTU0OCIsIm4i..."{% if not is_enabled %} disabled{% endif %}>
+            <input type="text" id="api-key" value="{{ api_key }}" placeholder="glc_eyJvIjoiMTYzMTU0OCIsIm4i..."{% if not is_enabled %} disabled{% endif %}>
+        </div>
+    </div>
+    <div class="info-row">
+        <div class="info-label">{{ page_config.endpoint_label }}</div>
+        <div class="info-value">
+            <input type="text" id="endpoint" value="{{ endpoint }}" placeholder="https://otlp-gw-address.grafana.net/otlp"{% if not is_enabled %} disabled{% endif %}>
         </div>
     </div>
 </div>
@@ -75,6 +81,34 @@
             </span>
         </div>
         <div class="progress-text" id="configure-error">Waiting...</div>
+    </div>
+</div>
+<div class="progress-item hidden" id="progress-scheduler">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">Scheduler</div>
+        <div class="progress-text">Waiting...</div>
+    </div>
+</div>
+<div class="progress-item hidden" id="progress-server">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">Server</div>
+        <div class="progress-text">Waiting...</div>
+    </div>
+</div>
+<div class="progress-item hidden" id="progress-proxy">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">Proxy</div>
+        <div class="progress-text">Waiting...</div>
+    </div>
+</div>
+<div class="progress-item hidden" id="progress-dashboard">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">Dashboard</div>
+        <div class="progress-text">Waiting...</div>
     </div>
 </div>
 {% endblock %}

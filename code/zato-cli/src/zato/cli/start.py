@@ -301,6 +301,10 @@ Examples:
 # ################################################################################################################################
 
     def _on_server(self, *ignored:'any_') -> 'int': # show_output was an old param, *ignored is safer for dispatch
+
+        # redis
+        import redis
+
         from zato.common.util.updates import setup_update_file_logger
         setup_update_file_logger(component_name='server')
 
@@ -310,13 +314,69 @@ Examples:
         # Check basic configuration
         self.run_check_config()
 
+        # Read Datadog config from env vars or Redis
+        env_vars = {}
+
+        main_agent = os.environ.get('Zato_Datadog_Main_Agent')
+        metrics_agent = os.environ.get('Zato_Datadog_Metrics_Agent')
+
+        if not main_agent or not metrics_agent:
+            try:
+                redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+                if not main_agent:
+                    main_agent = redis_client.get('zato:datadog:main_agent')
+                if not metrics_agent:
+                    metrics_agent = redis_client.get('zato:datadog:metrics_agent')
+            except Exception:
+                pass
+
+        if main_agent:
+            env_vars['Zato_Datadog_Main_Agent'] = main_agent
+        if metrics_agent:
+            env_vars['Zato_Datadog_Metrics_Agent'] = metrics_agent
+
+        # Read Grafana Cloud config from env vars or Redis
+        grafana_cloud_config = {
+            'Zato_Grafana_Cloud_Instance_ID': 'zato:grafana_cloud:instance_id',
+            'Zato_Grafana_Cloud_API_Key': 'zato:grafana_cloud:runtime_token',
+            'Zato_Grafana_Cloud_Endpoint': 'zato:grafana_cloud:endpoint',
+        }
+
+        grafana_cloud_values = {}
+        needs_redis = False
+
+        for env_key in grafana_cloud_config:
+            value = os.environ.get(env_key)
+            grafana_cloud_values[env_key] = value
+            if not value:
+                needs_redis = True
+
+        if needs_redis:
+            try:
+                redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+                is_enabled = redis_client.get('zato:grafana_cloud:is_enabled')
+                if is_enabled == 'true':
+                    for env_key, redis_key in grafana_cloud_config.items():
+                        if not grafana_cloud_values[env_key]:
+                            grafana_cloud_values[env_key] = redis_client.get(redis_key)
+                else:
+                    for env_key in grafana_cloud_config:
+                        grafana_cloud_values[env_key] = ''
+            except Exception:
+                pass
+
+        for env_key, value in grafana_cloud_values.items():
+            if value:
+                env_vars[env_key] = value
+
         # Start the server now
         return self.start_component(
             'zato.server.main',
             'server',
             self.component_dir,
             self.delete_pidfile,
-            extra_options=extra_options
+            extra_options=extra_options,
+            env_vars=env_vars
         )
 
 # ################################################################################################################################
@@ -388,7 +448,11 @@ Examples:
         logs_dir = os.path.join(component_path, 'logs')
         os.makedirs(logs_dir, exist_ok=True) # Ensure logs directory exists
         access_log = os.path.join(logs_dir, 'gunicorn-access.log')
-        error_log = os.path.join(logs_dir, 'gunicorn-error.log')
+
+        if self.args.fg:
+            error_log = '-'
+        else:
+            error_log = os.path.join(logs_dir, 'gunicorn-error.log')
 
         # Use the Zato Python interpreter to run Gunicorn
         zato_python = os.path.join(zato_base_code_dir, 'bin', 'python')
@@ -428,7 +492,10 @@ Examples:
 
         # `stderr_path` for `proc.start_process` captures Gunicorn's initial bootstrap errors.
         # Gunicorn's own `--error-logfile` handles its operational errors.
-        gunicorn_bootstrap_stderr = self.args.stderr_path or os.path.join(logs_dir, 'gunicorn-bootstrap-stderr.log')
+        if self.args.fg:
+            gunicorn_bootstrap_stderr = self.args.stderr_path
+        else:
+            gunicorn_bootstrap_stderr = self.args.stderr_path or os.path.join(logs_dir, 'gunicorn-bootstrap-stderr.log')
 
         # `on_keyboard_interrupt` in `proc.start_process` gets called if the Zato wrapper (sarge) is interrupted.
         # Gunicorn, when run in foreground, handles SIGINT itself to gracefully shut down and remove its PID file.
@@ -453,7 +520,7 @@ Examples:
         # This logging mimics what start_component would do via start_python_process's caller
         if self.show_output:
             if not self.args.fg:
-                if exit_code == 0 or exit_code is None:
+                if exit_code == 0:
                     self.logger.debug('Zato Dashboard `{}` starting in background'.format(component_path))
                 else:
                     self.logger.error(
