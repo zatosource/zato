@@ -1,0 +1,152 @@
+
+.openapi-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.openapi-overlay.hidden {
+    display: none;
+}
+
+.openapi-overlay-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.openapi-overlay-content {
+    position: relative;
+    width: 1063px;
+    height: 85vh;
+    background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.openapi-overlay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: move;
+}
+
+.openapi-overlay-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+}
+
+.openapi-close-button {
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.openapi-close-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.openapi-overlay-body {
+    flex: 1;
+    padding: 16px 24px;
+    background: #1f1f1f;
+    display: flex;
+    flex-direction: column;
+}
+
+.openapi-overlay-body textarea {
+    flex: 1;
+    width: 100%;
+    padding: 12px 16px;
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 14px;
+    font-family: monospace;
+    resize: none;
+    transition: all 0.2s ease;
+}
+
+.openapi-overlay-body textarea:focus {
+    outline: none;
+    border-color: #4a9eff;
+    background: #333;
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+}
+
+.openapi-overlay-body textarea::placeholder {
+    color: #666;
+}
+
+.openapi-overlay-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    background: linear-gradient(180deg, #1f1f1f 0%, #2a2a2a 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.openapi-overlay-footer button {
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-shadow: none;
+}
+
+.openapi-button-cancel {
+    background: #3a3a3a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ccc;
+}
+
+.openapi-button-cancel:hover {
+    background: #4a4a4a;
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.openapi-button-ok {
+    background: #4a9eff;
+    border: 1px solid #4a9eff;
+    color: #fff;
+}
+
+.openapi-button-ok:hover {
+    background: #5aafff;
+    border-color: #5aafff;
+}
