@@ -9,6 +9,24 @@ $.fn.zato.http_soap.openapi.init = function() {
 
     $.fn.zato.http_soap.openapi.original_yaml = $("#openapi-copy-paste-textarea").val();
 
+    let url_params = new URLSearchParams(window.location.search);
+    if (url_params.get("openapi_imported") === "1") {
+        let url = new URL(window.location.href);
+        url.searchParams.delete("openapi_imported");
+        window.history.replaceState({}, document.title, url.toString());
+
+        if (!document.getElementById("openapi-flash-style")) {
+            let style = document.createElement("style");
+            style.id = "openapi-flash-style";
+            style.textContent = "@keyframes flash-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }";
+            document.head.appendChild(style);
+        }
+
+        $("#user-message").text("OK, imported").addClass("user-message-success");
+        $("#user-message-div").show();
+        $("#user-message").css("animation", "flash-green 0.8s ease-in-out 2");
+    }
+
     let openapi_import_content = `
         <input type="button" id="openapi-from-copy-paste" value="From copy/paste" onclick="$.fn.zato.http_soap.openapi.on_from_copy_paste();"/>
         <input type="button" id="openapi-from-url" value="From URL" onclick="$.fn.zato.http_soap.openapi.on_from_url();"/>
@@ -27,6 +45,7 @@ $.fn.zato.http_soap.openapi.init = function() {
     $("#openapi-copy-paste-close").click($.fn.zato.http_soap.openapi.close_copy_paste_overlay);
     $("#openapi-copy-paste-cancel").click($.fn.zato.http_soap.openapi.close_copy_paste_overlay);
     $("#openapi-copy-paste-ok").click($.fn.zato.http_soap.openapi.on_copy_paste_ok);
+    $("#openapi-url-ok").click($.fn.zato.http_soap.openapi.on_url_ok);
     $("#openapi-table-import").click($.fn.zato.http_soap.openapi.on_table_import);
     $(".openapi-overlay-backdrop").click($.fn.zato.http_soap.openapi.close_copy_paste_overlay);
 
@@ -92,7 +111,12 @@ $.fn.zato.http_soap.openapi.on_from_copy_paste = function() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.http_soap.openapi.on_from_url = function() {
-    alert("From URL clicked");
+    $("#openapi-copy-paste-overlay").removeClass("hidden");
+    $("#openapi-copy-paste-textarea").hide();
+    $("#openapi-copy-paste-ok").hide();
+    $("#openapi-url-input-container").css("display", "flex");
+    $("#openapi-url-ok").show();
+    $("#openapi-url-input").val("").focus();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -101,8 +125,11 @@ $.fn.zato.http_soap.openapi.close_copy_paste_overlay = function() {
     $("#openapi-copy-paste-overlay").addClass("hidden");
     $("#openapi-copy-paste-textarea").val($.fn.zato.http_soap.openapi.original_yaml);
     $("#openapi-copy-paste-textarea").show();
+    $("#openapi-url-input-container").hide();
+    $("#openapi-url-input").val("");
     $("#openapi-data-table-container").hide().empty();
     $("#openapi-copy-paste-ok").show();
+    $("#openapi-url-ok").hide();
     $("#openapi-table-import").hide();
 }
 
@@ -154,8 +181,7 @@ $.fn.zato.http_soap.openapi.on_table_import = function() {
         return;
     }
 
-    let spinner_html = '<div id="openapi-import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 10001;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Creating ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
-    $("body").append(spinner_html);
+    $.fn.zato.http_soap.openapi.show_spinner("Importing ...");
 
     $.ajax({
         type: "POST",
@@ -167,6 +193,9 @@ $.fn.zato.http_soap.openapi.on_table_import = function() {
             $("#openapi-import-spinner").remove();
             if (response.success) {
                 $.fn.zato.http_soap.openapi.close_copy_paste_overlay();
+                let url = new URL(window.location.href);
+                url.searchParams.set("openapi_imported", "1");
+                window.location.href = url.toString();
             }
         },
         error: function(xhr) {
@@ -190,8 +219,7 @@ $.fn.zato.http_soap.openapi.on_table_import = function() {
 $.fn.zato.http_soap.openapi.on_copy_paste_ok = function() {
     let content = $("#openapi-copy-paste-textarea").val();
 
-    let spinner_html = '<div id="openapi-import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 10001;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Importing ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
-    $("body").append(spinner_html);
+    $.fn.zato.http_soap.openapi.show_spinner("Reading ...");
 
     $.ajax({
         type: "POST",
@@ -223,5 +251,79 @@ $.fn.zato.http_soap.openapi.on_copy_paste_ok = function() {
         }
     });
 }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.http_soap.openapi.show_spinner = function(message) {
+    let spinner_html = '<div id="openapi-import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 10001;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>' + message + '</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
+    $("body").append(spinner_html);
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.http_soap.openapi.on_url_ok = function() {
+    let url = $("#openapi-url-input").val().trim();
+
+    if (!url) {
+        return;
+    }
+
+    $.fn.zato.http_soap.openapi.show_spinner("Fetching ...");
+
+    $.ajax({
+        type: "GET",
+        url: url,
+        success: function(response) {
+            $("#openapi-import-spinner").remove();
+
+            let content = typeof response === "string" ? response : JSON.stringify(response);
+
+            $("#openapi-url-input-container").hide();
+            $("#openapi-url-ok").hide();
+
+            $.fn.zato.http_soap.openapi.show_spinner("Reading ...");
+
+            $.ajax({
+                type: "POST",
+                url: "/zato/http-soap/openapi/parse/",
+                data: content,
+                contentType: "text/plain",
+                headers: {"X-CSRFToken": $.cookie("csrftoken")},
+                success: function(response) {
+                    $("#openapi-import-spinner").remove();
+                    if (response.success) {
+                        let parsed_data = JSON.parse(response.result);
+                        $.fn.zato.http_soap.openapi.show_table(parsed_data);
+                    } else {
+                        $("#openapi-copy-paste-textarea").val(response.error).show();
+                        $("#openapi-copy-paste-ok").show();
+                    }
+                },
+                error: function(xhr) {
+                    $("#openapi-import-spinner").remove();
+                    let error_msg = "Parse failed";
+                    try {
+                        let response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            error_msg = response.error;
+                        }
+                    } catch (e) {
+                        error_msg = xhr.responseText || error_msg;
+                    }
+                    $("#openapi-copy-paste-textarea").val(error_msg).show();
+                    $("#openapi-copy-paste-ok").show();
+                }
+            });
+        },
+        error: function(xhr) {
+            $("#openapi-import-spinner").remove();
+            let error_msg = "Failed to fetch URL: " + (xhr.statusText || "Unknown error");
+            $("#openapi-copy-paste-textarea").val(error_msg).show();
+            $("#openapi-url-input-container").hide();
+            $("#openapi-url-ok").hide();
+            $("#openapi-copy-paste-ok").show();
+        }
+    });
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
