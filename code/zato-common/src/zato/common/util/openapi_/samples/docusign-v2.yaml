@@ -12,26 +12,10 @@ info:
 
 components:
   securitySchemes:
-    basicAuthWithCreds:
+    basicAuth:
       type: http
       scheme: basic
-      x-username: admin
-      x-password: secret123
-    basicAuthNoCreds:
-      type: http
-      scheme: basic
-    oauth2WithCreds:
-      type: oauth2
-      x-client-id: docusign-client-123
-      x-client-secret: super-secret-456
-      flows:
-        clientCredentials:
-          tokenUrl: https://account.docusign.com/oauth/token
-          scopes:
-            signature: Access signature operations
-            extended: Access extended operations
-            impersonation: Impersonate users
-    oauth2NoCreds:
+    oauth2ClientCredentials:
       type: oauth2
       flows:
         clientCredentials:
@@ -62,7 +46,7 @@ paths:
       operationId: Accounts_PostAccounts
       summary: Creates new DocuSign accounts
       security:
-        - basicAuthWithCreds: []
+        - basicAuth: []
       responses:
         "201":
           description: Created
@@ -72,7 +56,7 @@ paths:
       operationId: Accounts_GetAccount
       summary: Retrieves the account information
       security:
-        - basicAuthWithCreds: []
+        - basicAuth: []
       responses:
         "200":
           description: Successful response
@@ -82,7 +66,7 @@ paths:
       operationId: BillingPlans_GetBillingPlan
       summary: Get the billing plan details
       security:
-        - basicAuthNoCreds: []
+        - basicAuth: []
       responses:
         "200":
           description: Successful response
@@ -92,7 +76,7 @@ paths:
       operationId: AccountBrands_GetBrands
       summary: Gets a list of brands
       security:
-        - basicAuthNoCreds: []
+        - basicAuth: []
       responses:
         "200":
           description: Successful response
@@ -102,9 +86,8 @@ paths:
       operationId: Envelopes_PostEnvelopes
       summary: Creates an envelope
       security:
-        - oauth2WithCreds:
+        - oauth2ClientCredentials:
             - signature
-            - extended
       responses:
         "201":
           description: Created
@@ -114,7 +97,8 @@ paths:
       operationId: Envelopes_GetEnvelope
       summary: Gets the status of a single envelope
       security:
-        - oauth2WithCreds: []
+        - oauth2ClientCredentials:
+            - signature
       responses:
         "200":
           description: Successful response
@@ -124,9 +108,7 @@ paths:
       operationId: Users_GetUsers
       summary: Retrieves the list of users
       security:
-        - oauth2NoCreds:
-            - signature
-            - impersonation
+        - oauth2ClientCredentials: []
       responses:
         "200":
           description: Successful response
@@ -136,7 +118,7 @@ paths:
       operationId: Users_GetUser
       summary: Gets a particular user
       security:
-        - oauth2NoCreds: []
+        - oauth2ClientCredentials: []
       responses:
         "200":
           description: Successful response
