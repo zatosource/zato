@@ -1,0 +1,142 @@
+openapi: 3.0.0
+servers:
+  - url: https://www.docusign.net/restapi
+info:
+  contact:
+    email: devcenter@docusign.com
+    name: DocuSign Developer Center
+    url: https://developers.docusign.com/
+  description: DocuSign REST API - Light version for testing
+  title: DocuSign REST API
+  version: v2.1
+
+components:
+  securitySchemes:
+    basicAuthWithCreds:
+      type: http
+      scheme: basic
+      x-username: admin
+      x-password: secret123
+    basicAuthNoCreds:
+      type: http
+      scheme: basic
+    oauth2WithCreds:
+      type: oauth2
+      x-client-id: docusign-client-123
+      x-client-secret: super-secret-456
+      flows:
+        clientCredentials:
+          tokenUrl: https://account.docusign.com/oauth/token
+          scopes:
+            signature: Access signature operations
+            extended: Access extended operations
+            impersonation: Impersonate users
+    oauth2NoCreds:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://account.docusign.com/oauth/token
+          scopes:
+            signature: Access signature operations
+            extended: Access extended operations
+
+paths:
+  /service_information:
+    get:
+      operationId: ServiceInformation_GetServiceInformation
+      summary: Retrieves the available REST API versions
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1:
+    get:
+      operationId: ServiceInformation_GetResourceInformation
+      summary: Lists resources for REST version specified
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts:
+    post:
+      operationId: Accounts_PostAccounts
+      summary: Creates new DocuSign accounts
+      security:
+        - basicAuthWithCreds: []
+      responses:
+        "201":
+          description: Created
+
+  /v2.1/accounts/{accountId}:
+    get:
+      operationId: Accounts_GetAccount
+      summary: Retrieves the account information
+      security:
+        - basicAuthWithCreds: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/billing_plan:
+    get:
+      operationId: BillingPlans_GetBillingPlan
+      summary: Get the billing plan details
+      security:
+        - basicAuthNoCreds: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/brands:
+    get:
+      operationId: AccountBrands_GetBrands
+      summary: Gets a list of brands
+      security:
+        - basicAuthNoCreds: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/envelopes:
+    post:
+      operationId: Envelopes_PostEnvelopes
+      summary: Creates an envelope
+      security:
+        - oauth2WithCreds:
+            - signature
+            - extended
+      responses:
+        "201":
+          description: Created
+
+  /v2.1/accounts/{accountId}/envelopes/{envelopeId}:
+    get:
+      operationId: Envelopes_GetEnvelope
+      summary: Gets the status of a single envelope
+      security:
+        - oauth2WithCreds: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/users:
+    get:
+      operationId: Users_GetUsers
+      summary: Retrieves the list of users
+      security:
+        - oauth2NoCreds:
+            - signature
+            - impersonation
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/users/{userId}:
+    get:
+      operationId: Users_GetUser
+      summary: Gets a particular user
+      security:
+        - oauth2NoCreds: []
+      responses:
+        "200":
+          description: Successful response
