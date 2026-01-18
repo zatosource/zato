@@ -146,6 +146,7 @@
     background: #4a9eff;
     border: 1px solid #4a9eff;
     color: #fff;
+    min-width: 80px;
 }
 
 .openapi-button-ok:hover {

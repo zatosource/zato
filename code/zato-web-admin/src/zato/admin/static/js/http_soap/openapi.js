@@ -46,6 +46,7 @@ $.fn.zato.http_soap.openapi.init = function() {
     $("#openapi-copy-paste-cancel").click($.fn.zato.http_soap.openapi.close_copy_paste_overlay);
     $("#openapi-copy-paste-ok").click($.fn.zato.http_soap.openapi.on_copy_paste_ok);
     $("#openapi-url-ok").click($.fn.zato.http_soap.openapi.on_url_ok);
+    $("#openapi-back").click($.fn.zato.http_soap.openapi.on_back);
     $("#openapi-table-import").click($.fn.zato.http_soap.openapi.on_table_import);
     $(".openapi-overlay-backdrop").click($.fn.zato.http_soap.openapi.close_copy_paste_overlay);
 
@@ -130,6 +131,7 @@ $.fn.zato.http_soap.openapi.close_copy_paste_overlay = function() {
     $("#openapi-data-table-container").hide().empty();
     $("#openapi-copy-paste-ok").show();
     $("#openapi-url-ok").hide();
+    $("#openapi-back").hide();
     $("#openapi-table-import").hide();
 }
 
@@ -321,9 +323,21 @@ $.fn.zato.http_soap.openapi.on_url_ok = function() {
             $("#openapi-copy-paste-textarea").val(error_msg).show();
             $("#openapi-url-input-container").hide();
             $("#openapi-url-ok").hide();
-            $("#openapi-copy-paste-ok").show();
+            $("#openapi-copy-paste-ok").hide();
+            $("#openapi-back").show();
         }
     });
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.http_soap.openapi.on_back = function() {
+    $("#openapi-copy-paste-textarea").hide();
+    $("#openapi-copy-paste-ok").hide();
+    $("#openapi-back").hide();
+    $("#openapi-url-input-container").css("display", "flex");
+    $("#openapi-url-ok").show();
+    $("#openapi-url-input").focus();
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
