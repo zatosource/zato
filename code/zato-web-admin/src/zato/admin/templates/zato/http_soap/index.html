@@ -19,6 +19,7 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -28,8 +29,12 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/openapi.js"></script>
 
 
     <script nonce="{{ CSP_NONCE }}">
@@ -147,6 +152,10 @@
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.http_soap.create('{{ transport_label }} {{ connection_label }}')">Create a new {{ transport_label }} {{ connection_label }}</a>
+            {% if connection == 'outgoing' and transport == 'plain_http' %}
+            |
+            <a href="javascript:void(0)" id="openapi-import-link">Import OpenAPI</a>
+            {% endif %}
         </div>
 
         <div id="markup">
@@ -829,5 +838,13 @@
     {% endif %}
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% if connection == 'outgoing' and transport == 'plain_http' %}
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.http_soap.openapi.init();
+});
+</script>
+{% endif %}
 
 {% endblock %}

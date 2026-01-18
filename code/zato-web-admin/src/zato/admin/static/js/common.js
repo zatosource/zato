@@ -77,6 +77,7 @@ $.namespace('zato.groups');
 $.namespace('zato.groups.members');
 $.namespace('zato.http_soap');
 $.namespace('zato.http_soap.details');
+$.namespace('zato.http_soap.openapi');
 $.namespace('zato.ide');
 $.namespace('zato.invoker');
 $.namespace('zato.message');
