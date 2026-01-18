@@ -19,7 +19,7 @@ from django.http.response import HttpResponseServerError
 
 # Zato
 from zato.admin.web.views import method_allowed
-from zato.common.json_internal import dumps
+from zato.common.json_internal import dumps, loads
 from zato.common.util import openapi_ as openapi_module
 
 # ################################################################################################################################
@@ -77,6 +77,31 @@ def parse(req):
 
     except Exception as e:
         logger.exception('parse exception')
+        response_data['error'] = str(e)
+        return json_response(response_data, success=False)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def import_objects(req):
+
+    response_data = {}
+    response_data['success'] = False
+
+    try:
+        import_data = req.body.decode('utf-8')
+        parsed_data = loads(import_data)
+
+        logger.info('import_objects: received data:\n%s', dumps(parsed_data, indent=2))
+
+        response_data['success'] = True
+        response_data['message'] = 'Import received'
+
+        return json_response(response_data)
+
+    except Exception as e:
+        logger.exception('import_objects exception')
         response_data['error'] = str(e)
         return json_response(response_data, success=False)
 

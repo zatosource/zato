@@ -36,8 +36,10 @@
 .zato-data-table-container {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.12);
+    min-height: 0;
 }
 
 .zato-data-table-container::-webkit-scrollbar {
@@ -94,6 +96,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    background: linear-gradient(180deg, rgba(45, 45, 45, 0.15) 0%, rgba(35, 35, 35, 0.15) 100%);
+    cursor: pointer;
 }
 
 .zato-data-table td:first-child {
@@ -106,6 +110,10 @@
 
 .zato-data-table tbody tr:hover {
     background: rgba(255, 255, 255, 0.04);
+}
+
+.zato-data-table tbody tr:hover td {
+    background: linear-gradient(180deg, rgba(55, 55, 55, 0.25) 0%, rgba(45, 45, 45, 0.25) 100%);
 }
 
 .zato-data-table tbody tr.selected {
@@ -124,4 +132,12 @@
     text-align: center;
     color: #666;
     font-size: 14px;
+}
+
+.zato-data-table-no-matches {
+    padding-top: 1rem;
+    text-align: center;
+    color: #888;
+    font-size: 24px;
+    font-weight: 300;
 }
