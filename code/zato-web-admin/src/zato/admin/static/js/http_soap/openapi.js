@@ -153,6 +153,9 @@ $.fn.zato.http_soap.openapi.on_table_import = function() {
         return;
     }
 
+    let spinner_html = '<div id="openapi-import-spinner" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid #ccc; border-radius: 5px; z-index: 10001;"><div style="display: inline-block; width: 16px; height: 16px; border: 2px solid #ccc; border-top: 2px solid #333; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle;"></div>Creating ...</div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>';
+    $("body").append(spinner_html);
+
     $.ajax({
         type: "POST",
         url: "/zato/http-soap/openapi/import/",
@@ -160,11 +163,13 @@ $.fn.zato.http_soap.openapi.on_table_import = function() {
         contentType: "application/json",
         headers: {"X-CSRFToken": $.cookie("csrftoken")},
         success: function(response) {
+            $("#openapi-import-spinner").remove();
             if (response.success) {
                 $.fn.zato.http_soap.openapi.close_copy_paste_overlay();
             }
         },
         error: function(xhr) {
+            $("#openapi-import-spinner").remove();
             let error_msg = "Import failed";
             try {
                 let response = JSON.parse(xhr.responseText);
