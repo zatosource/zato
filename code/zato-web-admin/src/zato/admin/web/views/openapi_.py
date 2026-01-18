@@ -166,6 +166,7 @@ def build_enmasse_config(items):
         name = item['name']
         path = item['path']
         auth = item['auth']
+        auth_server_url = item.get('auth_server_url', '')
         content_type = item.get('content_type', 'application/json')
 
         data_format = 'json'
@@ -192,6 +193,8 @@ def build_enmasse_config(items):
                     'username': f'{sec_type}_user_{name.replace(" ", "_").lower()}',
                     'password': uuid4().hex
                 }
+                if sec_type == 'bearer_token' and auth_server_url:
+                    sec_def['auth_server_url'] = auth_server_url
                 security_defs[sec_name] = sec_def
 
         enmasse_config['outgoing_rest'].append(outgoing_rest_item)
