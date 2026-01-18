@@ -55,6 +55,10 @@ class Parser:
             except json.JSONDecodeError:
                 raise Exception(f'Failed to parse as yaml: {e}')
 
+        if not isinstance(spec, dict):
+            preview = str(spec)[:500] if spec else '(empty)'
+            raise Exception(f'Invalid OpenAPI spec: expected dict, got {type(spec).__name__}\n\nContent:\n{preview}')
+
         # Extract servers
         servers = []
         for server_data in spec.get('servers', []):
@@ -81,9 +85,15 @@ class Parser:
                         token_url_lookup[scheme_name] = token_url
                         break
             elif auth_type == 'apiKey':
-                auth_lookup[scheme_name] = 'api_key'
+                in_location = scheme_data.get('in', 'header')
+                if in_location == 'header':
+                    auth_lookup[scheme_name] = 'api_key'
+                else:
+                    auth_lookup[scheme_name] = f'unsupported-apikey-{in_location}'
+            elif auth_type == 'mutualTLS':
+                auth_lookup[scheme_name] = 'unsupported-mutualTLS'
             else:
-                auth_lookup[scheme_name] = f'unsupported-{scheme_name}'
+                auth_lookup[scheme_name] = f'unsupported-{auth_type}'
 
         # Global security requirements
         global_security = spec.get('security', [])
