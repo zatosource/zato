@@ -44,7 +44,7 @@ class Parser:
     def from_data(self, data:'str') -> 'OpenAPIDefinition':
 
         # Parse the yaml/json data - sanitize non-printable characters first
-        sanitized = ''.join(c if c.isprintable() or c in '\n\r\t' else ' ' for c in data)
+        sanitized = ''.join(c if c.isprintable() or c in '\n\r\t' else '_' for c in data)
         try:
             spec = yaml.safe_load(sanitized)
         except yaml.YAMLError as e:
@@ -63,10 +63,16 @@ class Parser:
         security_schemes = components.get('securitySchemes', {})
         auth_lookup = {}
         for scheme_name, scheme_data in security_schemes.items():
+            auth_type = scheme_data.get('type', '')
             scheme = scheme_data.get('scheme', '')
-            if scheme:
-                scheme = scheme + '_auth'
-            auth_lookup[scheme_name] = scheme
+            if scheme == 'basic':
+                auth_lookup[scheme_name] = 'basic_auth'
+            elif auth_type == 'oauth2':
+                auth_lookup[scheme_name] = 'oauth2'
+            elif auth_type == 'apiKey':
+                auth_lookup[scheme_name] = 'api_key'
+            else:
+                auth_lookup[scheme_name] = f'unsupported-{scheme_name}'
 
         # Global security requirements
         global_security = spec.get('security', [])
