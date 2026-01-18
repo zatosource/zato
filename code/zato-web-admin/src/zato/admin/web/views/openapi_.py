@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 from logging import getLogger
+from uuid import uuid4
 
 # PyYAML
 import yaml
@@ -54,7 +55,7 @@ def parse(req):
         parser_path = os.path.join(openapi_dir, 'parser.py')
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8') as f:
-            f.write(openapi_data)
+            _ = f.write(openapi_data)
             temp_file_path = f.name
 
         try:
@@ -103,8 +104,35 @@ def import_objects(req):
 
         logger.info('import_objects: enmasse YAML:\n%s', enmasse_yaml)
 
+        server_path = os.path.expanduser('~/env/qs-1/server1')
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8') as f:
+            _ = f.write(enmasse_yaml)
+            enmasse_file_path = f.name
+
+        try:
+            result = subprocess.run(
+                [sys.executable, '-m', 'zato.cli.zato_command', 'enmasse', server_path,
+                 '--import', '--input', enmasse_file_path, '--verbose'],
+                capture_output=True,
+                text=True
+            )
+
+            logger.info('enmasse stdout:\n%s', result.stdout)
+            if result.stderr:
+                logger.info('enmasse stderr:\n%s', result.stderr)
+
+            if result.returncode != 0:
+                error_msg = result.stderr or 'Enmasse returned non-zero exit code'
+                response_data['error'] = error_msg
+                return json_response(response_data, success=False)
+
+        finally:
+            if os.path.exists(enmasse_file_path):
+                os.unlink(enmasse_file_path)
+
         response_data['success'] = True
-        response_data['message'] = 'Import received'
+        response_data['message'] = 'Import completed'
 
         return json_response(response_data)
 
@@ -150,10 +178,13 @@ def build_enmasse_config(items):
 
             if sec_name not in security_defs:
                 sec_type = map_auth_to_security_type(auth)
-                security_defs[sec_name] = {
+                sec_def = {
                     'name': sec_name,
-                    'type': sec_type
+                    'type': sec_type,
+                    'username': f'{sec_type}_user_{name.replace(" ", "_").lower()}',
+                    'password': uuid4().hex
                 }
+                security_defs[sec_name] = sec_def
 
         enmasse_config['outgoing_rest'].append(outgoing_rest_item)
 
