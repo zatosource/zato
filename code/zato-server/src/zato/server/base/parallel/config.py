@@ -191,6 +191,11 @@ class ConfigLoader:
             hs_item['match_target'] = get_match_target(hs_item, http_methods_allowed_re=self.http_methods_allowed_re)
             hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], hs_item.get('match_slash', ''))
 
+            gateway_service_list = hs_item.get('gateway_service_list') or ''
+            allowed = set(line.strip() for line in gateway_service_list.splitlines() if line.strip())
+            server.gateway_services_allowed[hs_item['id']] = allowed
+            logger.info('[DEBUG] Loaded gateway services for channel %s -> %s', hs_item['id'], allowed)
+
             http_soap.append(hs_item)
 
         self.config.http_soap = http_soap
