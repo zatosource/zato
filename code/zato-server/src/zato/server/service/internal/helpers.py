@@ -23,6 +23,7 @@ from zato.common.typing_ import cast_, intnone, list_, optional
 from zato.common.util.api import utcnow
 from zato.common.util.open_ import open_w
 from zato.server.commands import CommandResult, Config
+from zato.common.api import SEC_DEF_TYPE
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -218,7 +219,7 @@ class ServiceGateway(Service):
         self.wsgi_environ['zato.sec_def'] = {
             'id': None,
             'name': None,
-            'type': 'gateway',
+            'type': SEC_DEF_TYPE.BASIC_AUTH,
             'username': username,
             'impl': None,
         }
