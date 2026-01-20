@@ -19,6 +19,14 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    {% if connection == 'channel' and transport == 'plain_http' %}
+    <link rel="stylesheet" type="text/css" href="/static/css/http_soap/channel.css">
+    {% endif %}
+    {% if connection == 'outgoing' and transport == 'plain_http' %}
+    <link rel="stylesheet" type="text/css" href="/static/css/data-table-widget.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/http_soap/openapi.css">
+    {% endif %}
 {% endblock %}
 
 {% block "extra_js" %}
@@ -28,8 +36,13 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/popperjs.core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/tippy/tippy.js"></script>
+
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/index.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/data-table-widget.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/http_soap/openapi.js"></script>
 
 
     <script nonce="{{ CSP_NONCE }}">
@@ -125,6 +138,11 @@
             // 38a
             'data_encoding',
 
+            // 39 - gateway_service_list for REST channels
+            {% if connection == 'channel' and transport == 'plain_http' %}
+                'gateway_service_list',
+            {% endif %}
+
         ]
     }
     </script>
@@ -147,6 +165,10 @@
     {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.http_soap.create('{{ transport_label }} {{ connection_label }}')">Create a new {{ transport_label }} {{ connection_label }}</a>
+            {% if connection == 'outgoing' and transport == 'plain_http' %}
+            |
+            <a href="javascript:void(0)" id="openapi-import-link">Import OpenAPI</a>
+            {% endif %}
         </div>
 
         <div id="markup">
@@ -251,6 +273,11 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <!-- 39 - gateway_service_list for REST channels -->
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                            <th class='ignore'>&nbsp;</th>
+                        {% endif %}
+
                 </thead>
 
                 <tbody>
@@ -264,7 +291,7 @@
 
                         <!-- 3 -->
                         <td>
-                            {{ item.name }}
+                            <span class="gateway-badge" id="gw-badge-{{ item.id }}">GW</span><span class="name-value">{{ item.name }}</span>
                         </td>
 
                         <!-- 4 -->
@@ -374,6 +401,11 @@
                         <!-- 38a -->
                         <td class='ignore'>{{ item.data_encoding|default:"" }}</td>
 
+                        <!-- 39 - gateway_service_list for REST channels -->
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                            <td class='ignore'>{{ item.gateway_service_list|default:"" }}</td>
+                        {% endif %}
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -434,6 +466,17 @@
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.service }}</td>
                         </tr>
+
+                        {% if transport == 'plain_http' %}
+                        <tr class="gateway-service-list-row" id="gateway-service-list-row-create">
+                            <td style="vertical-align:middle">Gateway services</td>
+                            <td>
+                                <textarea id="id_gateway_service_list" name="gateway_service_list" rows="4" cols="40"></textarea>
+                                <br/>
+                                <span class="form_hint">One entry per line</span>
+                            </td>
+                        </tr>
+                        {% endif %}
                         {% endif %}
 
                         <tr>
@@ -586,6 +629,7 @@
                                 {{ create_form.http_accept }}
                             </td>
                         </tr>
+
                         {% endif %}
 
                         {% if connection == 'outgoing' %}
@@ -662,6 +706,17 @@
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service }}</td>
                         </tr>
+
+                        {% if transport == 'plain_http' %}
+                        <tr class="gateway-service-list-row" id="gateway-service-list-row-edit">
+                            <td style="vertical-align:middle">Gateway services</td>
+                            <td>
+                                <textarea id="id_edit-gateway_service_list" name="edit-gateway_service_list" rows="4" cols="40"></textarea>
+                                <br/>
+                                <span class="form_hint">One entry per line</span>
+                            </td>
+                        </tr>
+                        {% endif %}
                         {% endif %}
 
                         <tr>
@@ -800,6 +855,7 @@
                                 {{ edit_form.http_accept }}
                             </td>
                         </tr>
+
                         {% endif %}
 
                         <tr>
@@ -829,5 +885,40 @@
     {% endif %}
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% if connection == 'outgoing' and transport == 'plain_http' %}
+<div id="openapi-copy-paste-overlay" class="openapi-overlay hidden">
+    <div class="openapi-overlay-backdrop"></div>
+    <div class="openapi-overlay-content">
+        <div class="openapi-overlay-header">
+            <h2>Import OpenAPI definition</h2>
+            <button id="openapi-copy-paste-close" class="openapi-close-button">✕</button>
+        </div>
+        <div class="openapi-overlay-body">
+            <div id="openapi-editor-container">
+                <pre id="openapi-highlight-layer" aria-hidden="true"></pre>
+                <textarea id="openapi-copy-paste-textarea" placeholder="Paste an OpenAPI definition here ..." spellcheck="false"></textarea>
+            </div>
+            <div id="openapi-url-input-container" style="display: none; flex: 1; min-height: 0; justify-content: center; align-items: center;">
+                <input type="text" id="openapi-url-input" placeholder="Enter URL to OpenAPI definition ..." spellcheck="false" style="width: 80%; padding: 14px; font-size: 16px; font-family: monospace; border: 1px solid #555; border-radius: 4px; background: #2a2a2a; color: #e0e0e0;" />
+            </div>
+            <div id="openapi-data-table-container" style="display: none; flex: 1; min-height: 0; overflow: hidden;"></div>
+        </div>
+        <div class="openapi-overlay-footer">
+            <button class="openapi-button-cancel" id="openapi-copy-paste-cancel">Cancel</button>
+            <button class="openapi-button-ok" id="openapi-back" style="display: none;">Back</button>
+            <button class="openapi-button-ok" id="openapi-copy-paste-ok">OK</button>
+            <button class="openapi-button-ok" id="openapi-url-ok" style="display: none;">OK</button>
+            <button class="openapi-button-ok" id="openapi-table-import" style="display: none;">OK</button>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.http_soap.openapi.init();
+});
+</script>
+{% endif %}
 
 {% endblock %}

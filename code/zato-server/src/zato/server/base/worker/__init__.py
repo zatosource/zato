@@ -1352,6 +1352,13 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an HTTP/SOAP channel.
         """
+        channel_id = msg['id']
+        gateway_service_list = msg.get('gateway_service_list') or ''
+        allowed = set(line.strip() for line in gateway_service_list.splitlines() if line.strip())
+
+        with self.server.gateway_services_allowed_lock:
+            self.server.gateway_services_allowed[channel_id] = allowed
+
         self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
@@ -1363,6 +1370,10 @@ class WorkerStore(_WorkerStoreBase):
         if item['cache_type']:
             cache = self.server.get_cache(item['cache_type'], item['cache_name'])
             cache.delete_by_prefix('http-channel-{}'.format(item['id']))
+
+        channel_id = item['id']
+        with self.server.gateway_services_allowed_lock:
+            _ = self.server.gateway_services_allowed.pop(channel_id, None)
 
         # Delete the channel object now
         self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
