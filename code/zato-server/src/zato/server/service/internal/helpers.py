@@ -212,6 +212,17 @@ class ServiceGateway(Service):
     def handle(self) -> 'None':
         service = self.request.http.params.get('service')
         request = self.request.raw_request
+
+        username = self.wsgi_environ.get('HTTP_X_ZATO_USERNAME', '')
+
+        self.wsgi_environ['zato.sec_def'] = {
+            'id': None,
+            'name': None,
+            'type': 'gateway',
+            'username': username,
+            'impl': None,
+        }
+
         self.response.payload = self.invoke(service, request, wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
