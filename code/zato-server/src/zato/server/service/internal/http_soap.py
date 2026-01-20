@@ -87,7 +87,7 @@ class _BaseGet(AdminService):
             'content_encoding', Boolean('match_slash'), 'http_accept', \
                 'should_parse_on_input', 'should_validate', 'should_return_errors', \
                 'data_encoding', 'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
-                'security_group_member_count', 'needs_security_group_names', Boolean('validate_tls')
+                'security_group_member_count', 'needs_security_group_names', Boolean('validate_tls'), 'gateway_service_list'
 
 # ################################################################################################################################
 
@@ -317,7 +317,8 @@ class Create(_CreateEdit):
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'is_active', 'transport', 'is_internal', 'cluster_id', \
-            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls')
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls'), \
+            'gateway_service_list'
         output_required = 'id', 'name'
         output_optional = 'url_path'
 
@@ -489,7 +490,8 @@ class Edit(_CreateEdit):
             'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
             'cluster_id', 'is_active', 'transport', \
-            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls')
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls'), \
+            'gateway_service_list'
         output_optional = 'id', 'name'
 
     def handle(self):

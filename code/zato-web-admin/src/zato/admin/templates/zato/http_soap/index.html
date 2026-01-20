@@ -20,6 +20,9 @@
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <link rel="stylesheet" type="text/css" href="/static/css/tippy.css">
+    {% if connection == 'channel' and transport == 'plain_http' %}
+    <link rel="stylesheet" type="text/css" href="/static/css/http_soap/channel.css">
+    {% endif %}
     {% if connection == 'outgoing' and transport == 'plain_http' %}
     <link rel="stylesheet" type="text/css" href="/static/css/data-table-widget.css">
     <link rel="stylesheet" type="text/css" href="/static/css/http_soap/openapi.css">
@@ -134,6 +137,11 @@
 
             // 38a
             'data_encoding',
+
+            // 39 - gateway_service_list for REST channels
+            {% if connection == 'channel' and transport == 'plain_http' %}
+                'gateway_service_list',
+            {% endif %}
 
         ]
     }
@@ -265,6 +273,11 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        <!-- 39 - gateway_service_list for REST channels -->
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                            <th class='ignore'>&nbsp;</th>
+                        {% endif %}
+
                 </thead>
 
                 <tbody>
@@ -388,6 +401,11 @@
                         <!-- 38a -->
                         <td class='ignore'>{{ item.data_encoding|default:"" }}</td>
 
+                        <!-- 39 - gateway_service_list for REST channels -->
+                        {% if connection == 'channel' and transport == 'plain_http' %}
+                            <td class='ignore'>{{ item.gateway_service_list|default:"" }}</td>
+                        {% endif %}
+
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -448,6 +466,17 @@
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.service }}</td>
                         </tr>
+
+                        {% if transport == 'plain_http' %}
+                        <tr class="gateway-service-list-row" id="gateway-service-list-row-create">
+                            <td style="vertical-align:middle">Gateway services</td>
+                            <td>
+                                <textarea id="id_gateway_service_list" name="gateway_service_list" rows="4" cols="40"></textarea>
+                                <br/>
+                                <span class="form_hint">One entry per line</span>
+                            </td>
+                        </tr>
+                        {% endif %}
                         {% endif %}
 
                         <tr>
@@ -600,6 +629,7 @@
                                 {{ create_form.http_accept }}
                             </td>
                         </tr>
+
                         {% endif %}
 
                         {% if connection == 'outgoing' %}
@@ -676,6 +706,17 @@
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service }}</td>
                         </tr>
+
+                        {% if transport == 'plain_http' %}
+                        <tr class="gateway-service-list-row" id="gateway-service-list-row-edit">
+                            <td style="vertical-align:middle">Gateway services</td>
+                            <td>
+                                <textarea id="id_edit-gateway_service_list" name="edit-gateway_service_list" rows="4" cols="40"></textarea>
+                                <br/>
+                                <span class="form_hint">One entry per line</span>
+                            </td>
+                        </tr>
+                        {% endif %}
                         {% endif %}
 
                         <tr>
@@ -814,6 +855,7 @@
                                 {{ edit_form.http_accept }}
                             </td>
                         </tr>
+
                         {% endif %}
 
                         <tr>
