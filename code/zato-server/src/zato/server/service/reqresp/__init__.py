@@ -85,7 +85,7 @@ direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 class HTTPRequestData:
     """ Data regarding an HTTP request.
     """
-    __slots__ = 'method', 'GET', 'POST', 'path', 'params', 'user_agent', '_wsgi_environ'
+    __slots__ = 'method', 'GET', 'POST', 'path', 'params', 'user_agent', 'headers', '_wsgi_environ'
 
     def __init__(self, _Bunch=Bunch):
         self.method = None # type: str
@@ -94,6 +94,7 @@ class HTTPRequestData:
         self.path = None # type: str
         self.params = _Bunch()
         self.user_agent = ''
+        self.headers = _Bunch()
         self._wsgi_environ = None # type: dict
 
     def init(self, wsgi_environ=None):
@@ -104,6 +105,13 @@ class HTTPRequestData:
         self.path = wsgi_environ.get('PATH_INFO') # type: str
         self.params.update(wsgi_environ.get('zato.http.path_params', {}))
         self.user_agent = wsgi_environ.get('HTTP_USER_AGENT')
+        self._extract_headers()
+
+    def _extract_headers(self):
+        for key, value in self._wsgi_environ.items():
+            if key.startswith('HTTP_'):
+                header_name = key[5:].replace('_', '-').lower()
+                self.headers[header_name] = value
 
     def get_form_data(self) -> 'stranydict':
         return util_get_form_data(self._wsgi_environ)
@@ -119,6 +127,7 @@ class HTTPRequestData:
             'path': self.path,
             'params': dict(self.params),
             'user_agent': self.user_agent,
+            'headers': dict(self.headers),
         }
 
 # ################################################################################################################################
