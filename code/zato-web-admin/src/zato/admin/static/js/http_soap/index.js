@@ -364,7 +364,7 @@ $.fn.zato.http_soap.set_gateway_url_path = function(suffix, service_name) {
 
     if(service_name === $.fn.zato.http_soap.gateway_trigger_service) {
         $.fn.zato.http_soap.previous_url_path[suffix] = url_path_elem.val();
-        var url_path = '/zato/{service_name}';
+        var url_path = '/zato/gateway/{service}';
 
         if($.fn.zato.http_soap.needs_random_prefix) {
             var random_array = new Uint32Array(1);
@@ -372,7 +372,7 @@ $.fn.zato.http_soap.set_gateway_url_path = function(suffix, service_name) {
             var random_int = random_array[0] % 100000001;
             var pad_char = String((random_array[0] % 9) + 1);
             var padded_int = String(random_int).padStart(9, pad_char);
-            url_path = '/zato/' + padded_int + '/{service_name}';
+            url_path = '/zato/gateway/' + padded_int + '/{service}';
         }
 
         url_path_elem.val(url_path);
