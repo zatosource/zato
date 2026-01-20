@@ -24,6 +24,7 @@ from zato.common.util.api import utcnow
 from zato.common.util.open_ import open_w
 from zato.server.commands import CommandResult, Config
 from zato.common.api import SEC_DEF_TYPE
+from zato.server.connection.http_soap import Unauthorized
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -213,6 +214,18 @@ class ServiceGateway(Service):
     def handle(self) -> 'None':
         service = self.request.http.params.get('service')
         request = self.request.raw_request
+        channel_id = self.channel.id
+
+        with self.server.gateway_services_allowed_lock:
+            allowed_services = self.server.gateway_services_allowed.get(channel_id, set())
+
+        self.logger.info('[DEBUG] Checking service `%s` for channel `%s` (%s), cid:%s, allowed: %s',
+            service, self.channel.name, self.request.http.path, self.cid, allowed_services)
+
+        if allowed_services and service not in allowed_services:
+            self.logger.warning('[DEBUG] Service `%s` not in allowed list for channel `%s` (%s), cid:%s',
+                service, self.channel.name, self.request.http.path, self.cid)
+            raise Unauthorized(self.cid, 'Service not allowed', 'gateway')
 
         username = self.wsgi_environ.get('HTTP_X_ZATO_USERNAME', '')
 
