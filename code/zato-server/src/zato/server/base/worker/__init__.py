@@ -1358,7 +1358,6 @@ class WorkerStore(_WorkerStoreBase):
 
         with self.server.gateway_services_allowed_lock:
             self.server.gateway_services_allowed[channel_id] = allowed
-        logger.info('[DEBUG] Updated gateway services cache for channel %s (%s) -> %s', channel_id, msg['name'], allowed)
 
         self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
 
@@ -1375,7 +1374,6 @@ class WorkerStore(_WorkerStoreBase):
         channel_id = item['id']
         with self.server.gateway_services_allowed_lock:
             _ = self.server.gateway_services_allowed.pop(channel_id, None)
-        logger.info('[DEBUG] Deleted gateway services cache for channel %s (%s)', channel_id, msg.name)
 
         # Delete the channel object now
         self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
