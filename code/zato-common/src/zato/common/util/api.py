@@ -405,6 +405,23 @@ def get_user_config_name(name:'str') -> 'str':
 
 # ################################################################################################################################
 
+def convert_config_values(config:'Bunch') -> 'Bunch':
+    """ Recursively converts string values in a Bunch to their appropriate Python types.
+    """
+    for key in config:
+        value = config[key]
+        if isinstance(value, Bunch):
+            convert_config_values(value)
+        elif isinstance(value, str):
+            config[key] = parse_simple_type(value)
+        elif isinstance(value, list):
+            for idx, item in enumerate(value):
+                if isinstance(item, str):
+                    value[idx] = parse_simple_type(item)
+    return config
+
+# ################################################################################################################################
+
 def _get_config(
     *,
     conf, # type: ConfigObj
@@ -415,6 +432,9 @@ def _get_config(
 ) -> 'Bunch | ConfigObj':
 
     conf = bunchify(conf) if bunchified else conf # type: ignore
+
+    if bunchified:
+        conf = convert_config_values(conf)
 
     if needs_user_config:
         conf.user_config_items = {} # type: ignore
@@ -428,6 +448,8 @@ def _get_config(
                 else:
                     user_conf = ConfigObj(path)
                     user_conf = bunchify(user_conf) if bunchified else user_conf
+                    if bunchified:
+                        user_conf = convert_config_values(user_conf)
                     conf.user_config_items[name] = user_conf # type: ignore
 
     # At this point, we have a Bunch instance that contains
