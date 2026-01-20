@@ -208,7 +208,8 @@ class ChannelInfo:
     """ Conveys information abouts the channel that a service is invoked through.
     Available in services as self.channel or self.chan.
     """
-    __slots__ = ('id', 'name', 'type', 'data_format', 'is_internal', 'match_target', 'impl', 'security', 'sec')
+    __slots__ = ('id', 'name', 'type', 'data_format', 'is_internal', 'match_target', 'impl', 'security', 'sec',
+        'gateway_service_list')
 
     def __init__(
         self,
@@ -219,7 +220,8 @@ class ChannelInfo:
         is_internal: 'boolnone',
         match_target: 'any_',
         security: 'ChannelSecurityInfo',
-        impl: 'any_'
+        impl: 'any_',
+        gateway_service_list: 'strnone' = None
     ) -> 'None':
         self.id = id
         self.name = name
@@ -229,6 +231,7 @@ class ChannelInfo:
         self.match_target = match_target
         self.impl = impl
         self.security = self.sec = security
+        self.gateway_service_list = gateway_service_list
 
     def __repr__(self) -> 'str':
         return make_repr(self)
@@ -1218,7 +1221,8 @@ class Service:
             channel_item.get('data_format'),
             channel_item.get('is_internal'),
             channel_item.get('match_target'),
-            chan_sec_info, channel_item
+            chan_sec_info, channel_item,
+            channel_item.get('gateway_service_list')
         )
 
         if init:
