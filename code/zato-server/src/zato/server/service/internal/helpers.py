@@ -221,34 +221,17 @@ class ServiceGateway(Service):
     name = 'helpers.service-gateway'
 
     def handle(self) -> 'None':
-        import logging
-        logger = logging.getLogger('zato')
-        logger.info('[DEBUG] ServiceGateway.handle() STARTED')
-
         service = self.request.http.params.get('service')
         request = self.request.raw_request
         channel_id = self.channel.id
 
-        logger.info('[DEBUG] http.params: %s', dict(self.request.http.params))
-        logger.info('[DEBUG] service from params: `%s`', service)
-        logger.info('[DEBUG] channel_id: %s', channel_id)
-
         with self.server.gateway_services_allowed_lock:
-            logger.info('[DEBUG] gateway_services_allowed keys: %s', list(self.server.gateway_services_allowed.keys()))
             allowed_services = self.server.gateway_services_allowed[channel_id]
 
-        logger.info('[DEBUG] Checking service `%s` for channel `%s` (%s), cid:%s, allowed: %s',
-            service, self.channel.name, self.request.http.path, self.cid, allowed_services)
-
         if service not in allowed_services:
-            logger.warning('[DEBUG] Service `%s` not in allowed list for channel `%s` (%s), cid:%s',
-                service, self.channel.name, self.request.http.path, self.cid)
             raise Unauthorized(self.cid, 'Unauthorized', 'gateway')
 
-        logger.info('[DEBUG] Service allowed, preparing to invoke')
-
         username = self.wsgi_environ.get('HTTP_X_ZATO_USERNAME', '')
-        logger.info('[DEBUG] username from X-Zato-Username: `%s`', username)
 
         self.wsgi_environ['zato.sec_def'] = {
             'id': None,
@@ -258,10 +241,7 @@ class ServiceGateway(Service):
             'impl': None,
         }
 
-        logger.info('[DEBUG] About to invoke service `%s` with request len=%s', service, len(request) if request else 0)
-        result = self.invoke(service, request, wsgi_environ=self.wsgi_environ)
-        logger.info('[DEBUG] Invoke returned: %s', result)
-        self.response.payload = result
+        self.response.payload = self.invoke(service, request, wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
 # ################################################################################################################################
