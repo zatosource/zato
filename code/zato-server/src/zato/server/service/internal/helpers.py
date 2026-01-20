@@ -217,12 +217,12 @@ class ServiceGateway(Service):
         channel_id = self.channel.id
 
         with self.server.gateway_services_allowed_lock:
-            allowed_services = self.server.gateway_services_allowed.get(channel_id, set())
+            allowed_services = self.server.gateway_services_allowed[channel_id]
 
         self.logger.info('[DEBUG] Checking service `%s` for channel `%s` (%s), cid:%s, allowed: %s',
             service, self.channel.name, self.request.http.path, self.cid, allowed_services)
 
-        if allowed_services and service not in allowed_services:
+        if service not in allowed_services:
             self.logger.warning('[DEBUG] Service `%s` not in allowed list for channel `%s` (%s), cid:%s',
                 service, self.channel.name, self.request.http.path, self.cid)
             raise Unauthorized(self.cid, 'Service not allowed', 'gateway')
