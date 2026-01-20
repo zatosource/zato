@@ -237,6 +237,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.internal_cache_patterns = {}
         self.internal_cache_lock_patterns = RLock()
 
+        # Gateway services allowed per channel (by channel ID)
+        self.gateway_services_allowed = {}
+        self.gateway_services_allowed_lock = RLock()
+
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
         self.user_ctx_lock = RLock()

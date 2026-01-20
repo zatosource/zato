@@ -1,0 +1,522 @@
+openapi: 3.0.0
+servers:
+  - url: https://www.docusign.net/restapi
+info:
+  description: DocuSign REST API
+  title: DocuSign REST API
+  version: v2.1
+
+components:
+  securitySchemes:
+
+    # Sends username:password as Base64-encoded string in Authorization header.
+    # Format: Authorization: Basic base64(username:password)
+    # Simple but credentials sent with every request.
+    basicAuth:
+      type: http
+      scheme: basic
+
+    # Sends a token in Authorization header.
+    # Format: Authorization: Bearer <token>
+    # Token is typically a JWT or opaque string obtained from an auth server.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    # Sends a static secret key in a custom HTTP header.
+    # Server validates the key exists and is authorized.
+    # No expiration unless server enforces it.
+    apiKeyHeader:
+      type: apiKey
+      name: X-API-Key
+      in: header
+
+    # Sends API key as a URL query parameter.
+    # Less secure since keys may appear in logs, browser history, referrer headers.
+    apiKeyQuery:
+      type: apiKey
+      name: api_key
+      in: query
+
+    # Sends API key in a cookie.
+    # Useful when cookies are already part of the auth flow.
+    apiKeyCookie:
+      type: apiKey
+      name: session_id
+      in: cookie
+
+    # Client exchanges client_id + client_secret for an access token.
+    # Token request: POST to tokenUrl with grant_type=client_credentials.
+    # No user involvement, purely M2M.
+    # x-speakeasy-token-endpoint-authentication controls how credentials are sent:
+    #   - client_secret_basic: credentials in Authorization header as Basic auth
+    #   - client_secret_post: credentials in POST body
+    oauth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://account.docusign.com/oauth/token
+          scopes:
+            signature: Access signature operations
+            extended: Access extended operations
+      x-speakeasy-token-endpoint-authentication: client_secret_basic
+
+    # Validates token against a Cognito User Pool.
+    # providerARNs lists which user pools can issue valid tokens.
+    # Gateway extracts and validates JWT claims automatically.
+    awsCognitoAuthorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: cognito_user_pools
+      x-amazon-apigateway-authorizer:
+        type: cognito_user_pools
+        providerARNs:
+          - arn:aws:cognito-idp:us-east-1:123456789012:userpool/us-east-1_ABC123
+
+    # Invokes a Lambda function to validate the token.
+    # Lambda returns an IAM policy (allow/deny) and optional context.
+    # authorizerResultTtlInSeconds caches the result to reduce Lambda invocations.
+    # identitySource specifies where to extract the token from.
+    awsLambdaAuthorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: custom
+      x-amazon-apigateway-authorizer:
+        type: token
+        authorizerUri: arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:123456789012:function:my-authorizer/invocations
+        authorizerResultTtlInSeconds: 300
+        identitySource: method.request.header.Authorization
+        authorizerCredentials: arn:aws:iam::123456789012:role/lambda-invoke-role
+
+    # Uses AWS Signature Version 4.
+    # Client signs requests using AWS access key + secret key.
+    # Signature includes timestamp, preventing replay attacks.
+    # Requires AWS SDK or manual signing logic.
+    awsIamAuth:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: awsSigv4
+
+    # Validates JWTs signed by a Google Cloud service account.
+    # x-google-issuer: the expected "iss" claim in the JWT.
+    # x-google-jwks_uri: URL to fetch public keys for signature verification.
+    # x-google-audiences: expected "aud" claim (your API identifier).
+    googleServiceAccount:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-google-issuer: SERVICE-ACCOUNT-EMAIL@PROJECT-ID.iam.gserviceaccount.com
+      x-google-jwks_uri: https://www.googleapis.com/robot/v1/metadata/x509/SERVICE-ACCOUNT-EMAIL@PROJECT-ID.iam.gserviceaccount.com
+      x-google-audiences: api.example.com
+
+    # Static API key validation at the gateway.
+    # key_names: list of header/query param names to check for the key.
+    # hide_credentials: strips the key from the request before forwarding to upstream.
+    # key_in_header/key_in_query: where to look for the key.
+    kongKeyAuth:
+      type: apiKey
+      name: apikey
+      in: header
+      x-kong-plugin-key-auth:
+        name: key-auth
+        enabled: true
+        config:
+          key_names:
+            - api_key
+            - apikey
+            - X-API-Key
+          hide_credentials: true
+          key_in_header: true
+          key_in_query: true
+
+    # Gateway validates JWT signature and claims.
+    # claims_to_verify: which standard claims to check (exp, nbf, etc.).
+    # key_claim_name: which claim identifies the consumer (for key lookup).
+    kongJwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-kong-plugin-jwt:
+        name: jwt
+        enabled: true
+        config:
+          claims_to_verify:
+            - exp
+          key_claim_name: iss
+
+    # Gateway-level auth configuration.
+    # stripAuthorizationData: removes auth header before forwarding to upstream.
+    # Prevents upstream from seeing credentials.
+    tykAuth:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-tyk-api-gateway:
+        server:
+          authentication:
+            enabled: true
+            stripAuthorizationData: true
+            securitySchemes:
+              tykAuth:
+                enabled: true
+                header:
+                  name: Authorization
+
+    # API key validated by a gateway policy.
+    # x-apigee-policy.type: the policy type to execute.
+    # keyLocation: where the policy looks for the key.
+    apigeeApiKey:
+      type: apiKey
+      name: x-api-key
+      in: header
+      x-apigee-policy:
+        type: VerifyAPIKey
+        keyLocation: request.header.x-api-key
+
+    # OAuth2 token validated by a gateway policy.
+    # operation: VerifyAccessToken checks the token against the OAuth server.
+    apigeeOAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://org-env.apigee.net/oauth/token
+          scopes:
+            read: Read access
+      x-apigee-policy:
+        type: OAuthV2
+        operation: VerifyAccessToken
+
+    # Credential value injected from an environment variable at runtime.
+    # Format: $ENV://VARIABLE_NAME
+    # Gateway reads the env var when the config is loaded.
+    apisixEnvVarKey:
+      type: apiKey
+      name: X-API-Key
+      in: header
+      x-apisix-secret: "$ENV://API_KEY"
+
+    # Credential fetched from HashiCorp Vault at runtime.
+    # Format: $secret://vault/<vault-id>/<path>
+    # Requires separate Vault connection configuration.
+    apisixVaultKey:
+      type: apiKey
+      name: X-API-Key
+      in: header
+      x-apisix-secret: "$secret://vault/1/kv/api-credentials/key"
+
+    # Credential fetched from AWS Secrets Manager at runtime.
+    # Format: $secret://aws/<secrets-manager-id>/<secret-name>
+    # Requires IAM permissions to access the secret.
+    apisixAwsSecretsKey:
+      type: apiKey
+      name: X-API-Key
+      in: header
+      x-apisix-secret: "$secret://aws/1/api-credentials"
+
+    # Generic patterns for referencing external credentials.
+    # These are not standardized but show common conventions.
+    # Tooling must interpret these and inject actual values.
+    externalSecretRef:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-credential-source:
+        type: environment
+        variable: API_TOKEN
+      x-credential-source-alt:
+        type: file
+        path: /etc/secrets/api-token
+      x-credential-source-vault:
+        type: hashicorp-vault
+        path: secret/data/api/credentials
+        key: token
+
+    # Client presents an X.509 certificate during TLS handshake.
+    # Server validates the certificate against a trusted CA.
+    # No credentials in HTTP layer, auth happens at transport layer.
+    # Requires PKI infrastructure to issue and manage client certs.
+    mutualTLS:
+      type: mutualTLS
+
+paths:
+  /service_information:
+    get:
+      operationId: ServiceInformation_GetServiceInformation
+      summary: Retrieves the available REST API versions
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1:
+    get:
+      operationId: ServiceInformation_GetResourceInformation
+      summary: Lists resources for REST version specified
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts:
+    post:
+      operationId: Accounts_PostAccounts
+      summary: Creates new DocuSign accounts
+      security:
+        - basicAuth: []
+      responses:
+        "201":
+          description: Created
+
+  /v2.1/accounts/{accountId}:
+    get:
+      operationId: Accounts_GetAccount
+      summary: Retrieves the account information
+      security:
+        - basicAuth: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/billing_plan:
+    get:
+      operationId: BillingPlans_GetBillingPlan
+      summary: Get the billing plan details
+      security:
+        - basicAuth: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/brands:
+    get:
+      operationId: AccountBrands_GetBrands
+      summary: Gets a list of brands
+      security:
+        - basicAuth: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/envelopes:
+    post:
+      operationId: Envelopes_PostEnvelopes
+      summary: Creates an envelope
+      security:
+        - oauth2ClientCredentials:
+            - signature
+      responses:
+        "201":
+          description: Created
+
+  /v2.1/accounts/{accountId}/envelopes/{envelopeId}:
+    get:
+      operationId: Envelopes_GetEnvelope
+      summary: Gets the status of a single envelope
+      security:
+        - oauth2ClientCredentials:
+            - signature
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/users:
+    get:
+      operationId: Users_GetUsers
+      summary: Retrieves the list of users
+      security:
+        - oauth2ClientCredentials: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/accounts/{accountId}/users/{userId}:
+    get:
+      operationId: Users_GetUser
+      summary: Gets a particular user
+      security:
+        - oauth2ClientCredentials: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/bearer:
+    get:
+      operationId: Auth_BearerTest
+      summary: Test endpoint for bearer auth
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/apikey-header:
+    get:
+      operationId: Auth_ApiKeyHeaderTest
+      summary: Test endpoint for API key in header
+      security:
+        - apiKeyHeader: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/apikey-query:
+    get:
+      operationId: Auth_ApiKeyQueryTest
+      summary: Test endpoint for API key in query (NOT SUPPORTED)
+      security:
+        - apiKeyQuery: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/apikey-cookie:
+    get:
+      operationId: Auth_ApiKeyCookieTest
+      summary: Test endpoint for API key in cookie (NOT SUPPORTED)
+      security:
+        - apiKeyCookie: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/aws-cognito:
+    get:
+      operationId: Auth_AwsCognitoTest
+      summary: Test endpoint for AWS Cognito authorizer
+      security:
+        - awsCognitoAuthorizer: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/aws-lambda:
+    get:
+      operationId: Auth_AwsLambdaTest
+      summary: Test endpoint for AWS Lambda authorizer
+      security:
+        - awsLambdaAuthorizer: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/aws-iam:
+    get:
+      operationId: Auth_AwsIamTest
+      summary: Test endpoint for AWS IAM SigV4 (NOT SUPPORTED)
+      security:
+        - awsIamAuth: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/google-sa:
+    get:
+      operationId: Auth_GoogleServiceAccountTest
+      summary: Test endpoint for Google service account JWT
+      security:
+        - googleServiceAccount: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/kong-key:
+    get:
+      operationId: Auth_KongKeyTest
+      summary: Test endpoint for Kong key-auth
+      security:
+        - kongKeyAuth: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/kong-jwt:
+    get:
+      operationId: Auth_KongJwtTest
+      summary: Test endpoint for Kong JWT
+      security:
+        - kongJwtAuth: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/tyk:
+    get:
+      operationId: Auth_TykTest
+      summary: Test endpoint for Tyk auth
+      security:
+        - tykAuth: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/apigee-key:
+    get:
+      operationId: Auth_ApigeeApiKeyTest
+      summary: Test endpoint for Apigee API key
+      security:
+        - apigeeApiKey: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/apigee-oauth:
+    get:
+      operationId: Auth_ApigeeOAuthTest
+      summary: Test endpoint for Apigee OAuth
+      security:
+        - apigeeOAuth: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/apisix-env:
+    get:
+      operationId: Auth_ApisixEnvVarTest
+      summary: Test endpoint for APISIX env var key
+      security:
+        - apisixEnvVarKey: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/apisix-vault:
+    get:
+      operationId: Auth_ApisixVaultTest
+      summary: Test endpoint for APISIX Vault key
+      security:
+        - apisixVaultKey: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/apisix-aws:
+    get:
+      operationId: Auth_ApisixAwsSecretsTest
+      summary: Test endpoint for APISIX AWS Secrets key
+      security:
+        - apisixAwsSecretsKey: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/external-secret:
+    get:
+      operationId: Auth_ExternalSecretTest
+      summary: Test endpoint for external secret ref
+      security:
+        - externalSecretRef: []
+      responses:
+        "200":
+          description: Successful response
+
+  /v2.1/auth/mtls:
+    get:
+      operationId: Auth_MutualTlsTest
+      summary: Test endpoint for mutual TLS (NOT SUPPORTED)
+      security:
+        - mutualTLS: []
+      responses:
+        "200":
+          description: Successful response
