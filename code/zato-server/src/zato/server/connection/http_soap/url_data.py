@@ -444,7 +444,7 @@ class URLData(PyURLData):
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',
             'cache_type', 'cache_id', 'cache_name', 'cache_expiry', 'content_encoding', 'match_slash',
             'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding',
-            'security_groups', 'security_groups_ctx'):
+            'security_groups', 'security_groups_ctx', 'gateway_service_list'):
 
             channel_item[name] = msg.get(name)
 
