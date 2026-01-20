@@ -111,6 +111,16 @@ class HTTPRequestData:
     def __repr__(self):
         return make_repr(self)
 
+    def to_dict(self) -> 'stranydict':
+        return {
+            'method': self.method,
+            'GET': dict(self.GET),
+            'POST': dict(self.POST),
+            'path': self.path,
+            'params': dict(self.params),
+            'user_agent': self.user_agent,
+        }
+
 # ################################################################################################################################
 
 class AMQPRequestData:

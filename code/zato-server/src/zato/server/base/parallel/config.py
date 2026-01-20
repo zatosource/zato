@@ -193,8 +193,8 @@ class ConfigLoader:
 
             gateway_service_list = hs_item.get('gateway_service_list') or ''
             allowed = set(line.strip() for line in gateway_service_list.splitlines() if line.strip())
-            server.gateway_services_allowed[hs_item['id']] = allowed
-            logger.info('[DEBUG] Loaded gateway services for channel %s -> %s', hs_item['id'], allowed)
+            self.gateway_services_allowed[hs_item['id']] = allowed
+            logger.info('[DEBUG] Loaded gateway services for channel %s (%s) -> %s', hs_item['id'], hs_item['name'], allowed)
 
             http_soap.append(hs_item)
 
