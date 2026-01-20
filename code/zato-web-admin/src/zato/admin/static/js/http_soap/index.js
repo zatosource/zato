@@ -26,8 +26,9 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HTTPSOAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.http_soap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'validate_tls', 'gateway_service_list']);
+    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'validate_tls']);
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
+    $.fn.zato.http_soap.update_gateway_badges();
 
     $.each(['', 'edit-'], function(ignored, suffix) {
 
@@ -56,6 +57,8 @@ $.fn.zato.data_table.after_populate = function() {
         var service_elem = $(String.format('#id_{0}service', suffix));
         $.fn.zato.http_soap.toggle_gateway_service_list(suffix, service_elem.val());
     });
+
+    $.fn.zato.http_soap.update_gateway_badges();
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -221,7 +224,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     /* 3 */
-    row += String.format('<td>{0}</td>', item.name);
+    var gw_badge_class = (item.service === $.fn.zato.http_soap.gateway_trigger_service) ? 'gateway-badge visible' : 'gateway-badge';
+    row += String.format('<td><span class="{0}" id="gw-badge-{1}">GW</span><span class="name-value">{2}</span></td>', gw_badge_class, item.id, item.name);
 
     /* 4 */
     row += String.format('<td style="text-align:center">{0}</td>', is_active ? 'Yes' : 'No');
@@ -348,6 +352,21 @@ $.fn.zato.http_soap.toggle_gateway_service_list = function(suffix, service_name)
     else {
         row.fadeOut(duration);
     }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.update_gateway_badges = function() {
+    var trigger_service = $.fn.zato.http_soap.gateway_trigger_service;
+    $.each($.fn.zato.data_table.data, function(id, item) {
+        var badge = $('#gw-badge-' + id);
+        if(item.service === trigger_service) {
+            badge.addClass('visible');
+        }
+        else {
+            badge.removeClass('visible');
+        }
+    });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
