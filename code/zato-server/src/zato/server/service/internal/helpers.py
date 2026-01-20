@@ -24,7 +24,6 @@ from zato.common.util.api import utcnow
 from zato.common.util.open_ import open_w
 from zato.server.commands import CommandResult, Config
 from zato.server.service import Model, Service
-from zato.server.service.internal.service import Invoke
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -205,10 +204,15 @@ class HTMLService(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ServiceGateway(Invoke):
-    """ Service to invoke other services through.
+class ServiceGateway(Service):
+    """ Dispatches incoming requests to target services.
     """
     name = 'helpers.service-gateway'
+
+    def handle(self) -> 'None':
+        service = self.request.http.params.get('service')
+        request = self.request.raw_request
+        self.response.payload = self.invoke(service, request, wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
 # ################################################################################################################################

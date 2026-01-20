@@ -1,7 +1,7 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.http_soap.gateway_trigger_service = 'api.my-service';
+$.fn.zato.http_soap.gateway_trigger_service = 'helpers.service-gateway';
 $.fn.zato.http_soap.gateway_fade_duration = 100;
 $.fn.zato.http_soap.previous_url_path = {'': '', 'edit-': ''};
 $.fn.zato.http_soap.needs_random_prefix = false;
