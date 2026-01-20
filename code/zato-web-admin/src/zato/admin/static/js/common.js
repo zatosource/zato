@@ -344,7 +344,8 @@ $.fn.zato.data_table.parse = function() {
         $.each(tds, function(td_idx, td) {
 
             var attr_name = columns[td_idx];
-            var attr_value = $(td).text().trim();
+            var name_value_elem = $(td).find('.name-value');
+            var attr_value = name_value_elem.length ? name_value_elem.text().trim() : $(td).text().trim();
 
             // console.log('td_idx:`'+ td_idx +'`, attr_name:`'+ attr_name +'`, attr_value:`'+ attr_value + '`');
 
