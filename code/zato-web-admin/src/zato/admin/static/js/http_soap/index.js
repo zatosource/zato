@@ -1,6 +1,11 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.http_soap.gateway_trigger_service = 'api.my-service';
+$.fn.zato.http_soap.gateway_fade_duration = 100;
+
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.data_table.HTTPSOAP = new Class({
     toString: function() {
         var s = '<HTTPSOAP id:{0} name:{1} is_active:{2} merge_url_params_req:{3} data_format:{4} serialization_type:{5}>';
@@ -21,7 +26,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HTTPSOAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.http_soap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'validate_tls']);
+    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'validate_tls', 'gateway_service_list']);
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
 
     $.each(['', 'edit-'], function(ignored, suffix) {
@@ -33,6 +38,11 @@ $(document).ready(function() {
             $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, elem.val() == 'suds');
             elem.change($.fn.zato.http_soap.data_table.on_serialization_change);
         });
+
+        var service_elem = $(String.format('#id_{0}service', suffix));
+        service_elem.change(function() {
+            $.fn.zato.http_soap.toggle_gateway_service_list(suffix, this.value);
+        });
     });
 })
 
@@ -42,6 +52,9 @@ $.fn.zato.data_table.after_populate = function() {
     $.each(['', 'edit-'], function(ignored, suffix) {
         var elem = $(String.format('#id_{0}serialization_type', suffix));
         $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, elem.val() == 'suds');
+
+        var service_elem = $(String.format('#id_{0}service', suffix));
+        $.fn.zato.http_soap.toggle_gateway_service_list(suffix, service_elem.val());
     });
 }
 
@@ -300,6 +313,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     /* 38a */
     row += String.format("<td class='ignore'>{0}</td>", data.data_encoding || data_encoding);
 
+    /* 39 - gateway_service_list for REST channels */
+    if(is_channel && !is_soap) {
+        row += String.format("<td class='ignore'>{0}</td>", item.gateway_service_list || '');
+    }
+
     if(include_tr) {
         row += '</tr>';
     }
@@ -316,6 +334,21 @@ $.fn.zato.http_soap.delete_ = function(id) {
         'Are you sure you want to delete object `{0}`?',
         true);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.toggle_gateway_service_list = function(suffix, service_name) {
+    var row_id = suffix ? 'gateway-service-list-row-edit' : 'gateway-service-list-row-create';
+    var row = $('#' + row_id);
+    var duration = $.fn.zato.http_soap.gateway_fade_duration;
+
+    if(service_name === $.fn.zato.http_soap.gateway_trigger_service) {
+        row.fadeIn(duration);
+    }
+    else {
+        row.fadeOut(duration);
+    }
+};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

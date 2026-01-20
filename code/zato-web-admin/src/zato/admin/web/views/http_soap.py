@@ -105,6 +105,7 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'content_encoding': params.get(prefix + 'content_encoding'),
         'validate_tls': params.get(prefix + 'validate_tls'),
         'data_encoding': params.get(prefix + 'data_encoding'),
+        'gateway_service_list': params.get(prefix + 'gateway_service_list'),
     }
 
     return message
