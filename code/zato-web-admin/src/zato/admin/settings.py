@@ -98,6 +98,8 @@ else:
 APPEND_SLASH = True
 SECURE_CONTENT_TYPE_NOSNIFF = False
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
 # Absolute path to the directory that holds media.
 # Example: '/home/media/media.lawrence.com/'
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'static')
