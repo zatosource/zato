@@ -82,7 +82,7 @@ class ChannelImporter:
 
                 # Compare standard attributes (excluding security and groups)
                 for key, value in item.items():
-                    if key not in ['security', 'groups'] and key in db_def and db_def[key] != value:
+                    if key not in ['security', 'groups', 'gateway_service_list'] and key in db_def and db_def[key] != value:
                         logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_def[key])
                         needs_update = True
                         break
@@ -95,6 +95,10 @@ class ChannelImporter:
                 if self._groups_need_update(item, db_def):
                     needs_update = True
 
+                # Check gateway_service_list
+                if self._gateway_service_list_needs_update(item, db_def):
+                    needs_update = True
+
                 if needs_update:
                     item['id'] = db_def['id']  # Add ID to original item
                     logger.info('Will update %s with id=%s', name, db_def['id'])
@@ -105,7 +109,7 @@ class ChannelImporter:
         logger.info('Comparison result: to_create=%d to_update=%d', len(to_create), len(to_update))
         return to_create, to_update
 
-    def _groups_need_update(self, item, db_def):
+    def _groups_need_update(self, item:'anydict', db_def:'anydict') -> 'bool':
         """ Check if security groups need update.
         """
 
@@ -134,6 +138,29 @@ class ChannelImporter:
         # Return True if groups differ
         if yaml_groups != db_groups:
             logger.info('Groups changed for channel %s: yaml=%s db=%s', item['name'], sorted(yaml_groups), sorted(db_groups))
+            return True
+
+        return False
+
+# ################################################################################################################################
+
+    def _gateway_service_list_needs_update(self, item:'anydict', db_def:'anydict') -> 'bool':
+        """ Check if gateway_service_list needs update.
+        """
+        yaml_list = item.get('gateway_service_list', [])
+        yaml_value = '\n'.join(yaml_list) if yaml_list else ''
+
+        db_value = ''
+        try:
+            opaque1 = db_def.get('opaque1')
+            if opaque1:
+                opaque = loads(opaque1)
+                db_value = opaque.get('gateway_service_list', '')
+        except Exception as e:
+            logger.warning('Error parsing opaque for channel %s: %s', item['name'], e)
+
+        if yaml_value != db_value:
+            logger.info('gateway_service_list changed for channel %s', item['name'])
             return True
 
         return False
@@ -197,7 +224,7 @@ class ChannelImporter:
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['service', 'security', 'groups']:
+            if key not in ['service', 'security', 'groups', 'gateway_service_list']:
                 setattr(channel, key, value)
 
         if security_item:
@@ -206,12 +233,19 @@ class ChannelImporter:
 
         logger.info('Channel created with security_id=%s', channel.security_id)
 
+        # Build opaque attributes
+        opaque_attrs = {}
+
         # Handle security groups
         if channel_def.get('groups'):
             security_groups = self._preprocess_security_groups(channel_def)
+            opaque_attrs['security_groups'] = security_groups
 
-            # Create an object to store in opaque1
-            opaque_attrs = {'security_groups': security_groups}
+        # Handle gateway_service_list
+        if gateway_service_list := channel_def.get('gateway_service_list'):
+            opaque_attrs['gateway_service_list'] = '\n'.join(gateway_service_list)
+
+        if opaque_attrs:
             set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)
@@ -238,7 +272,7 @@ class ChannelImporter:
 
         # Process standard attributes
         for key, value in channel_def.items():
-            if key not in ['id', 'service', 'security', 'groups']:
+            if key not in ['id', 'service', 'security', 'groups', 'gateway_service_list']:
                 setattr(channel, key, value)
 
         # Handle security definition
@@ -259,11 +293,19 @@ class ChannelImporter:
         else:
             logger.info('No security definition specified for channel %s', channel_def['name'])
 
+        # Build opaque attributes
+        opaque_attrs = {}
+
         # Handle security groups
         if (groups := channel_def.get('groups')) is not None and groups:
             security_groups = self._preprocess_security_groups(channel_def)
-            # Create an object to store in opaque1
-            opaque_attrs = {'security_groups': security_groups}
+            opaque_attrs['security_groups'] = security_groups
+
+        # Handle gateway_service_list
+        if gateway_service_list := channel_def.get('gateway_service_list'):
+            opaque_attrs['gateway_service_list'] = '\n'.join(gateway_service_list)
+
+        if opaque_attrs:
             set_instance_opaque_attrs(channel, opaque_attrs)
 
         session.add(channel)

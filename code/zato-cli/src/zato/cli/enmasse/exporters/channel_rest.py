@@ -141,6 +141,10 @@ class ChannelExporter:
             if channel_row.content_encoding:
                 exported_channel['content_encoding'] = channel_row.content_encoding
 
+            if gateway_service_list := channel_row.get('gateway_service_list'):
+                if gateway_service_list.strip():
+                    exported_channel['gateway_service_list'] = gateway_service_list.strip().split('\n')
+
             exported_channels.append(exported_channel)
 
         logger.info('Successfully prepared %d REST Channel definitions for export', len(exported_channels))

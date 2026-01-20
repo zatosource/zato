@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import os
 from operator import itemgetter
 from traceback import format_exc
 
@@ -26,6 +27,7 @@ from zato.common.api import CACHE, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, DEFAUL
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import HTTPSOAP
+from zato.common.util import openapi_ as openapi_module
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,6 +105,7 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'content_encoding': params.get(prefix + 'content_encoding'),
         'validate_tls': params.get(prefix + 'validate_tls'),
         'data_encoding': params.get(prefix + 'data_encoding'),
+        'gateway_service_list': params.get(prefix + 'gateway_service_list'),
     }
 
     return message
@@ -264,6 +267,14 @@ def index(req): # type: ignore
 
             items.append(http_soap)
 
+    openapi_sample_data = ''
+    if connection == 'outgoing' and transport == 'plain_http':
+        openapi_dir = os.path.dirname(os.path.abspath(openapi_module.__file__))
+        samples_dir = os.path.join(openapi_dir, 'samples')
+        docusign_path = os.path.join(samples_dir, 'docusign-v2.yaml')
+        with open(docusign_path, 'r', encoding='utf-8') as f:
+            openapi_sample_data = f.read()
+
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
         'search_form':SearchForm(req.zato.clusters, req.GET),
@@ -281,7 +292,9 @@ def index(req): # type: ignore
         'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
         'paginate':True,
         'meta': meta,
-        'req':req
+        'req':req,
+        'openapi_sample_data': openapi_sample_data,
+        'zato_template_name': 'zato/http_soap/index.html',
         }
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)

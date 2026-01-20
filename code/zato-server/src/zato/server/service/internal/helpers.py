@@ -23,8 +23,9 @@ from zato.common.typing_ import cast_, intnone, list_, optional
 from zato.common.util.api import utcnow
 from zato.common.util.open_ import open_w
 from zato.server.commands import CommandResult, Config
+from zato.common.api import SEC_DEF_TYPE
+from zato.server.connection.http_soap import Unauthorized
 from zato.server.service import Model, Service
-from zato.server.service.internal.service import Invoke
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,6 +138,8 @@ class GetLogStreamingStatus(Service):
 class Echo(Service):
     """ Copies request over to response.
     """
+    name = 'helpers.echo'
+
     def handle(self) -> 'None':
         self.response.payload = self.request.raw_request
 
@@ -147,8 +150,15 @@ class PubInputLogger(Service):
 
     name = 'demo.input-logger'
 
+    input = '-hello'
+    output = 'world'
+
     def handle(self):
-        self.logger.info(f'Received request: `{self.request.raw_request}`')
+        import logging
+        logger = logging.getLogger('zato')
+        logger.info(f'Received request: `{self.request.raw_request}`')
+        logger.info(f'Channel info: `{self.channel.to_dict()}`')
+        self.response.payload.world = f'{self.name} received your request.'
 
 # ################################################################################################################################
 
@@ -205,10 +215,33 @@ class HTMLService(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ServiceGateway(Invoke):
-    """ Service to invoke other services through.
+class ServiceGateway(Service):
+    """ Dispatches incoming requests to target services.
     """
     name = 'helpers.service-gateway'
+
+    def handle(self) -> 'None':
+        service = self.request.http.params.get('service')
+        request = self.request.raw_request
+        channel_id = self.channel.id
+
+        with self.server.gateway_services_allowed_lock:
+            allowed_services = self.server.gateway_services_allowed[channel_id]
+
+        if service not in allowed_services:
+            raise Unauthorized(self.cid, 'Unauthorized', 'gateway')
+
+        username = self.wsgi_environ.get('HTTP_X_ZATO_USERNAME', '')
+
+        self.wsgi_environ['zato.sec_def'] = {
+            'id': None,
+            'name': None,
+            'type': SEC_DEF_TYPE.BASIC_AUTH,
+            'username': username,
+            'impl': None,
+        }
+
+        self.response.payload = self.invoke(service, request, wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
 # ################################################################################################################################
