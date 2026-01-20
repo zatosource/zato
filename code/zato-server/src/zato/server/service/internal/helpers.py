@@ -219,6 +219,9 @@ class ServiceGateway(Service):
         request = self.request.raw_request
         channel_id = self.channel.id
 
+        self.logger.info('[DEBUG] http.params: %s', dict(self.request.http.params))
+        self.logger.info('[DEBUG] service from params: `%s`', service)
+
         with self.server.gateway_services_allowed_lock:
             allowed_services = self.server.gateway_services_allowed[channel_id]
 
