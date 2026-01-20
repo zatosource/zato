@@ -138,6 +138,8 @@ class GetLogStreamingStatus(Service):
 class Echo(Service):
     """ Copies request over to response.
     """
+    name = 'helpers.echo'
+
     def handle(self) -> 'None':
         self.response.payload = self.request.raw_request
 
@@ -150,6 +152,7 @@ class PubInputLogger(Service):
 
     def handle(self):
         self.logger.info(f'Received request: `{self.request.raw_request}`')
+        self.logger.info(f'Channel info: `{self.channel.to_dict}`')
 
 # ################################################################################################################################
 
@@ -225,7 +228,7 @@ class ServiceGateway(Service):
         if service not in allowed_services:
             self.logger.warning('[DEBUG] Service `%s` not in allowed list for channel `%s` (%s), cid:%s',
                 service, self.channel.name, self.request.http.path, self.cid)
-            raise Unauthorized(self.cid, 'Service not allowed', 'gateway')
+            raise Unauthorized(self.cid, 'Unauthorized', 'gateway')
 
         username = self.wsgi_environ.get('HTTP_X_ZATO_USERNAME', '')
 

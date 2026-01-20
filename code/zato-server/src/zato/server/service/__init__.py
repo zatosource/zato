@@ -236,6 +236,23 @@ class ChannelInfo:
     def __repr__(self) -> 'str':
         return make_repr(self)
 
+    def to_dict(self, needs_impl:'bool'=False) -> 'strdict':
+        out = {
+            'id': self.id,
+            'name': self.name,
+            'type': self.type,
+            'data_format': self.data_format,
+            'is_internal': self.is_internal,
+            'match_target': self.match_target,
+            'gateway_service_list': self.gateway_service_list,
+            'security': self.security.to_dict(needs_impl) if self.security else None,
+        }
+
+        if needs_impl:
+            out['impl'] = self.impl
+
+        return out
+
 # ################################################################################################################################
 
 class ChannelSecurityInfo:
