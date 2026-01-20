@@ -3,6 +3,7 @@
 
 $.fn.zato.http_soap.gateway_trigger_service = 'api.my-service';
 $.fn.zato.http_soap.gateway_fade_duration = 100;
+$.fn.zato.http_soap.previous_url_path = {'': '', 'edit-': ''};
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -43,6 +44,7 @@ $(document).ready(function() {
         var service_elem = $(String.format('#id_{0}service', suffix));
         service_elem.change(function() {
             $.fn.zato.http_soap.toggle_gateway_service_list(suffix, this.value);
+            $.fn.zato.http_soap.set_gateway_url_path(suffix, this.value);
         });
     });
 })
@@ -351,6 +353,28 @@ $.fn.zato.http_soap.toggle_gateway_service_list = function(suffix, service_name)
     }
     else {
         row.fadeOut(duration);
+    }
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.set_gateway_url_path = function(suffix, service_name) {
+    var url_path_elem = $(String.format('#id_{0}url_path', suffix));
+
+    if(service_name === $.fn.zato.http_soap.gateway_trigger_service) {
+        $.fn.zato.http_soap.previous_url_path[suffix] = url_path_elem.val();
+        var random_array = new Uint32Array(1);
+        crypto.getRandomValues(random_array);
+        var random_int = random_array[0] % 100000001;
+        var padded_int = String(random_int).padStart(9, '9');
+        var url_path = '/zato/' + padded_int + '/{service_name}';
+        url_path_elem.val(url_path);
+    }
+    else {
+        if($.fn.zato.http_soap.previous_url_path[suffix]) {
+            url_path_elem.val($.fn.zato.http_soap.previous_url_path[suffix]);
+            $.fn.zato.http_soap.previous_url_path[suffix] = '';
+        }
     }
 };
 
