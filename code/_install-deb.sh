@@ -50,7 +50,7 @@ if [[ "$CLEAR_VENV" == "y" ]]; then
 fi
 
 echo Creating virtual environment in $CURDIR using uv
-$UV_BIN venv "$(realpath $CURDIR)" --python $PY_BINARY --allow-existing
+$UV_BIN venv "$(realpath $CURDIR)" --python $PY_BINARY --allow-existing -q
 
 echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
