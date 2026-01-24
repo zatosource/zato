@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 
 log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=log_format)
+logging.basicConfig(level=logging.INFO, format=log_format)
 
 logger = logging.getLogger('zato')
 
@@ -41,14 +41,6 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 # ################################################################################################################################
 
-if '3.8' in py_version:
-    setuptools_version = '57.4.0'
-else:
-    setuptools_version = '80.3.1'
-
-pip_deps_windows     = f'setuptools=={setuptools_version} wheel'
-pip_deps_non_windows = f'setuptools=={setuptools_version} wheel pip'
-pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,22 +134,8 @@ class EnvironmentManager:
 # ################################################################################################################################
 
     def _set_up_pip_flags(self) -> 'None':
-
-        #
-        # Under RHEL, pip install may not have the '--no-warn-script-location' flag.
-        # At the same time, under RHEL, we need to use --no-cache-dir.
-        #
-
-        linux_distro = self._get_linux_distro_name()
-        is_rhel = 'red hat' in linux_distro or 'centos' in linux_distro
-
-        # Explicitly ignore the non-existing option and add a different one..
-        if is_rhel:
-            self.pip_options = '--no-cache-dir'
-
-        # .. or make use of it.
-        else:
-            self.pip_options = '--no-warn-script-location'
+        # uv doesn't need special pip flags
+        self.pip_options = ''
 
 # ################################################################################################################################
 
@@ -223,7 +201,7 @@ class EnvironmentManager:
         else:
 
             # These are always in the same location
-            self.pip_command = os.path.join(self.bin_dir, 'pip')
+            self.pip_command = os.path.join(self.base_dir, 'support-linux', 'bin', 'uv') + ' pip'
             self.python_command = os.path.join(self.bin_dir, 'python')
             self.code_dir = self.base_dir
             self.zato_reqs_path = os.path.join(self.base_dir, 'requirements.txt')
@@ -366,35 +344,18 @@ class EnvironmentManager:
                 stderr = stderr.decode('utf8')
 
                 if log_stderr:
-                    logger.warning(stderr)
-
-                if exit_on_error:
-                    process.kill()
-                    sys.exit(1)
-                else:
-                    if needs_stderr:
-                        return stderr
+                    logger.info(stderr)
 
             if process.poll() is not None:
                 break
 
+        # Check exit code after process completes
+        if exit_on_error and process.returncode != 0:
+            logger.error('Command failed with exit code %s', process.returncode)
+            sys.exit(1)
+
         if needs_stdout:
             return stdout
-
-# ################################################################################################################################
-
-    def pip_install_core_pip(self) -> 'None':
-
-        # Set up the command ..
-        command = '{pip_command} install {pip_install_prefix} {pip_options} -U {pip_deps}'.format(**{
-            'pip_command': self.pip_command,
-            'pip_install_prefix': self.pip_install_prefix,
-            'pip_options': self.pip_options,
-            'pip_deps':    pip_deps,
-        })
-
-        # .. and run it.
-        _ = self.run_command(command, exit_on_error=True)
 
 # ################################################################################################################################
 
@@ -407,7 +368,6 @@ class EnvironmentManager:
         # Set up the command ..
         command = """
             {pip_command}
-            -v
             install
             {pip_install_prefix}
             {pip_options}
@@ -436,9 +396,6 @@ class EnvironmentManager:
         # All the -e arguments that pip will receive
         pip_args = []
 
-        # This is used everywhere except with Cython
-        if allow_editable:
-            pip_args.append('--use-pep517')
 
         # Build the arguments
         for name in packages:
@@ -447,7 +404,7 @@ class EnvironmentManager:
             pip_args.append(arg)
 
         # Build the command ..
-        command = '{pip_command} install {pip_install_prefix} --no-warn-script-location {pip_args}'.format(**{
+        command = '{pip_command} install {pip_install_prefix} {pip_args}'.format(**{
             'pip_command': self.pip_command,
             'pip_install_prefix': self.pip_install_prefix,
             'pip_args': ' '.join(pip_args)
@@ -470,7 +427,7 @@ class EnvironmentManager:
         for package in packages:
 
             # Set up the command ..
-            command = '{pip_command} install {pip_install_prefix} --no-warn-script-location {package}'.format(**{
+            command = '{pip_command} install {pip_install_prefix} {package}'.format(**{
                 'pip_command': self.pip_command,
                 'pip_install_prefix': self.pip_install_prefix,
                 'package': package,
@@ -527,7 +484,7 @@ class EnvironmentManager:
         ]
 
         # Build the command ..
-        command = '{} uninstall -y -qq {}'.format(self.pip_command, ' '.join(packages))
+        command = '{} uninstall {}'.format(self.pip_command, ' '.join(packages))
 
         # .. and run it.
         _ = self.run_command(command, exit_on_error=False)
@@ -535,7 +492,6 @@ class EnvironmentManager:
 # ################################################################################################################################
 
     def pip_install(self) -> 'None':
-        self.pip_install_core_pip()
         self.pip_install_standalone_requirements()
         self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
