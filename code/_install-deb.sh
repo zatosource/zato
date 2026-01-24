@@ -11,7 +11,7 @@ PY_BINARY=$1
 INSTALL_PYTHON=${2:-y}
 SKIP_OS=${3:-n}
 CLEAR_VENV=${4:-n}
-echo "*** Zato Ubuntu 24.04+ installation using $PY_BINARY ***"
+echo "*** Zato installation using $PY_BINARY ***"
 
 if [[ "$SKIP_OS" != "y" ]]; then
     # Always run an update so there are no surprises later on when it actually
@@ -50,7 +50,7 @@ if [[ "$CLEAR_VENV" == "y" ]]; then
 fi
 
 echo Creating virtual environment in $CURDIR using uv
-$UV_BIN venv $CURDIR --python $PY_BINARY --allow-existing
+$UV_BIN venv "$(realpath $CURDIR)" --python $PY_BINARY --allow-existing
 
 echo Activating virtualenv in $CURDIR
 source $CURDIR/bin/activate
