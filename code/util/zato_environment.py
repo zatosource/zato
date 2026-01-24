@@ -209,6 +209,9 @@ class EnvironmentManager:
             # This is not used under Linux
             self.pip_install_prefix = ''
 
+            # Set VIRTUAL_ENV to full path so uv shows it instead of "."
+            os.environ['VIRTUAL_ENV'] = os.path.abspath(self.base_dir)
+
 # ################################################################################################################################
 
     def get_bundled_python_version(self, bundle_ext_dir:'str', os_type:'str') -> 'str':
@@ -438,6 +441,67 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
+    def _should_rebuild_zato_cy(self) -> 'bool':
+        """ Check if zato-cy needs rebuilding by comparing source and build timestamps. """
+        zato_cy_dir = os.path.join(self.code_dir, 'zato-cy', 'src', 'zato', 'cy')
+        logger.info('Checking zato-cy rebuild, source dir: %s', zato_cy_dir)
+
+        # Find all .pyx source files
+        pyx_files = []
+        for root, dirs, files in os.walk(zato_cy_dir):
+            for f in files:
+                if f.endswith('.pyx'):
+                    pyx_files.append(os.path.join(root, f))
+
+        logger.info('Found %d .pyx files', len(pyx_files))
+
+        if not pyx_files:
+            logger.info('No .pyx files found, will rebuild')
+            return True
+
+        # Get the newest source file modification time
+        newest_source = 0
+        newest_source_file = ''
+        for pyx_file in pyx_files:
+            mtime = os.path.getmtime(pyx_file)
+            if mtime > newest_source:
+                newest_source = mtime
+                newest_source_file = pyx_file
+
+        logger.info('Newest source: %s (mtime: %s)', newest_source_file, newest_source)
+
+        # Find the corresponding .so files in zato-cy source directory
+        zato_cy_src = os.path.join(self.code_dir, 'zato-cy', 'src')
+        so_files = []
+        logger.info('Looking for .so files in: %s', zato_cy_src)
+        for root, dirs, files in os.walk(zato_cy_src):
+            for f in files:
+                if f.endswith('.so'):
+                    so_files.append(os.path.join(root, f))
+
+        logger.info('Found %d .so files: %s', len(so_files), so_files)
+
+        if not so_files:
+            logger.info('No .so files found, will rebuild')
+            return True
+
+        # Get the oldest .so file modification time
+        oldest_build = float('inf')
+        oldest_build_file = ''
+        for so_file in so_files:
+            mtime = os.path.getmtime(so_file)
+            if mtime < oldest_build:
+                oldest_build = mtime
+                oldest_build_file = so_file
+
+        logger.info('Oldest build: %s (mtime: %s)', oldest_build_file, oldest_build)
+        logger.info('Source newer than build: %s', newest_source > oldest_build)
+
+        # Rebuild if any source is newer than the oldest build
+        return newest_source > oldest_build
+
+# ################################################################################################################################
+
     def pip_install_zato_packages(self) -> 'None':
 
         editable_packages = []
@@ -461,10 +525,16 @@ class EnvironmentManager:
                 'zato-testing',
             ])
 
-        zato_should_update_cy = os.environ.get('Zato_Should_Update_Cy', 'True')
+        zato_should_update_cy = os.environ.get('Zato_Should_Update_Cy', '')
 
+        # Only rebuild zato-cy if explicitly requested or if sources changed
         if zato_should_update_cy == 'True':
             non_editable_packages.append('zato-cy')
+        elif zato_should_update_cy != 'False':
+            if self._should_rebuild_zato_cy():
+                non_editable_packages.append('zato-cy')
+            else:
+                logger.info('zato-cy is up to date, skipping rebuild')
 
         if editable_packages:
             self.run_pip_install_zato_packages(editable_packages)
@@ -495,7 +565,6 @@ class EnvironmentManager:
         self.pip_install_standalone_requirements()
         self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
-        self.pip_uninstall()
 
 # ################################################################################################################################
 
