@@ -386,57 +386,78 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
+    def _should_install_requirements(self) -> 'bool':
+        """ Check if requirements.txt needs to be installed by comparing its mtime with site-packages. """
+        if not os.path.exists(self.zato_reqs_path):
+            return False
+
+        reqs_mtime = os.path.getmtime(self.zato_reqs_path)
+
+        # Check if site-packages has any newer packages than requirements.txt
+        # If site-packages dir doesn't exist, we need to install
+        if not os.path.exists(self.site_packages_dir):
+            return True
+
+        # Find a marker file to check if requirements were installed
+        marker_file = os.path.join(self.site_packages_dir, '.zato_reqs_installed')
+        if not os.path.exists(marker_file):
+            return True
+
+        marker_mtime = os.path.getmtime(marker_file)
+        return reqs_mtime > marker_mtime
+
+    def _mark_requirements_installed(self) -> 'None':
+        """ Create a marker file to track when requirements were last installed. """
+        marker_file = os.path.join(self.site_packages_dir, '.zato_reqs_installed')
+        with open(marker_file, 'w') as f:
+            f.write('')
+
+# ################################################################################################################################
+
     def pip_install_zato_requirements(self) -> 'None':
+
+        # Skip if requirements already installed and unchanged
+        if not self._should_install_requirements():
+            logger.info('requirements.txt unchanged, skipping')
+            return
 
         # Install our own requirements
         self.pip_install_requirements_by_path(self.zato_reqs_path, exit_on_error=False)
+        self._mark_requirements_installed()
 
 # ################################################################################################################################
 
     def run_pip_install_zato_packages(self, packages:'strlist', allow_editable:'bool'=True) -> 'None':
 
-        # All the -e arguments that pip will receive
+        # Build the -e arguments for all packages at once
         pip_args = []
-
-
-        # Build the arguments
         for name in packages:
             package_path = os.path.join(self.code_dir, name)
-            arg = '-e {}'.format(package_path)
-            pip_args.append(arg)
+            pip_args.append('-e {}'.format(package_path))
 
-        # Build the command ..
-        command = '{pip_command} install {pip_install_prefix} {pip_args}'.format(**{
+        # Use --no-deps since dependencies come from requirements.txt
+        command = '{pip_command} install {pip_install_prefix} --no-deps {pip_args}'.format(**{
             'pip_command': self.pip_command,
             'pip_install_prefix': self.pip_install_prefix,
             'pip_args': ' '.join(pip_args)
         })
 
-        # .. and run it.
         _ = self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
     def pip_install_standalone_requirements(self) -> 'None':
 
-        # These cannot be installed via requirements.txt
-        packages = [
-            'cython==3.1.0',
-            'pyOpenSSL==25.0.0',
-            'zato-ext-bunch==1.3',
-        ]
+        # These cannot be installed via requirements.txt - install all at once
+        packages = 'cython==3.1.0 pyOpenSSL==25.0.0 zato-ext-bunch==1.3'
 
-        for package in packages:
+        command = '{pip_command} install {pip_install_prefix} {packages}'.format(**{
+            'pip_command': self.pip_command,
+            'pip_install_prefix': self.pip_install_prefix,
+            'packages': packages,
+        })
 
-            # Set up the command ..
-            command = '{pip_command} install {pip_install_prefix} {package}'.format(**{
-                'pip_command': self.pip_command,
-                'pip_install_prefix': self.pip_install_prefix,
-                'package': package,
-            })
-
-            # .. and run it.
-            _ = self.run_command(command, exit_on_error=True)
+        _ = self.run_command(command, exit_on_error=True)
 
 # ################################################################################################################################
 
