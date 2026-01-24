@@ -201,16 +201,15 @@ class EnvironmentManager:
         else:
 
             # These are always in the same location
-            self.pip_command = os.path.join(self.base_dir, 'support-linux', 'bin', 'uv') + ' pip'
-            self.python_command = os.path.join(self.bin_dir, 'python')
+            uv_bin = os.path.join(self.base_dir, 'support-linux', 'bin', 'uv')
+            python_path = os.path.abspath(os.path.join(self.bin_dir, 'python'))
+            self.pip_command = f'{uv_bin} pip --python {python_path}'
+            self.python_command = python_path
             self.code_dir = self.base_dir
             self.zato_reqs_path = os.path.join(self.base_dir, 'requirements.txt')
 
             # This is not used under Linux
             self.pip_install_prefix = ''
-
-            # Set VIRTUAL_ENV to full path so uv shows it instead of "."
-            os.environ['VIRTUAL_ENV'] = os.path.abspath(self.base_dir)
 
 # ################################################################################################################################
 
