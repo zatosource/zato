@@ -47,7 +47,7 @@ if ! [ -x "$(command -v $PY_BINARY)" ]; then
             sudo apt-get update
             [ "$INSTALL_PYTHON" == "y" ] && sudo apt-get install -y --reinstall ${PY_BINARY}
         else
-            echo "install.sh: Unsupported OS: only Ubuntu 24.04+ is supported." >&2
+            echo "install.sh: Unsupported OS." >&2
             exit 1
         fi
     fi
@@ -93,6 +93,6 @@ if [ "$(type -p apt-get)" ]
 then
     source ./_install-deb.sh $PY_BINARY ${INSTALL_PYTHON} ${SKIP_OS} ${CLEAR_VENV}
 else
-    echo "install.sh: Unsupported OS: only Ubuntu 24.04+ is supported." >&2
+    echo "install.sh: Unsupported OS." >&2
     exit 1
 fi
