@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Silence warnings before any imports
 import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-threaded.*fork.*')
+warnings.filterwarnings('ignore', category=UserWarning, message='.*pkg_resources is deprecated.*')
 
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.

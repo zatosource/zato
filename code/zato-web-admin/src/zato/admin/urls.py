@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, openapi_, scheduler, service, updates
+from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -898,6 +898,28 @@ urlpatterns += [
         login_required(log_streaming.log_stream), name='log-streaming-stream'),
 ]
 
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Settings - Python packages
+
+    url(r'^zato/python-packages/$',
+        login_required(python_packages.index), name='settings-python-packages'),
+    url(r'^zato/python-packages/test-packages$',
+        login_required(python_packages.test_packages), name='settings-python-packages-test'),
+    url(r'^zato/python-packages/save-config$',
+        login_required(python_packages.save_config), name='settings-python-packages-save-config'),
+    url(r'^zato/python-packages/restart-scheduler$',
+        login_required(python_packages.restart_scheduler), name='settings-python-packages-restart-scheduler'),
+    url(r'^zato/python-packages/restart-server$',
+        login_required(python_packages.restart_server), name='settings-python-packages-restart-server'),
+    url(r'^zato/python-packages/restart-proxy$',
+        login_required(python_packages.restart_proxy), name='settings-python-packages-restart-proxy'),
+    url(r'^zato/python-packages/restart-dashboard$',
+        login_required(python_packages.restart_dashboard), name='settings-python-packages-restart-dashboard'),
+]
 # ################################################################################################################################
 # ################################################################################################################################
 
