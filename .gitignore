@@ -1,6 +1,10 @@
 .hypothesis
 .vscode
 code/.installed.cfg
+code/.lock
+code/CACHEDIR.TAG
+code/support-linux/bin/uv
+code/support-linux/bin/uvx
 code/.Python
 code/\.vscode/
 code/bin/*
