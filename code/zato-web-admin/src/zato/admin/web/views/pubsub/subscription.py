@@ -18,7 +18,7 @@ from django.http import HttpResponse, HttpResponseServerError
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.util import get_pubsub_security_definitions, get_service_list as util_get_service_list
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, get_outconn_rest_list
-from zato.common.api import PubSub
+from zato.common.api import CONNECTION, PubSub, URL_TYPE
 from zato.common.odb.model import PubSubSubscription
 
 # ################################################################################################################################
@@ -597,4 +597,49 @@ def get_topics_by_security(req):
             }),
             content_type='application/json',
             status=500
+        )
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def get_rest_channels(req):
+    """ Retrieves a list of REST channels (API endpoints) for pubsub subscriptions.
+    """
+    cluster_id = req.GET.get('cluster_id')
+
+    logger.info('VIEW get_rest_channels: received request with cluster_id=%s', cluster_id)
+
+    try:
+        response = req.zato.client.invoke('zato.http-soap.get-list', {
+            'cluster_id': cluster_id,
+            'connection': CONNECTION.CHANNEL,
+            'transport': URL_TYPE.PLAIN_HTTP,
+        })
+
+        channels_list = []
+        for item in response:
+            channels_list.append({
+                'id': item.id,
+                'name': item.name,
+                'service_name': item.service_name,
+                'url_path': item.url_path,
+            })
+
+        logger.info('VIEW get_rest_channels: returning %d channels', len(channels_list))
+
+        return HttpResponse(
+            dumps({
+                'msg': 'REST channels retrieved successfully',
+                'rest_channels': channels_list
+            }),
+            content_type='application/json'
+        )
+    except Exception as e:
+        logger.error('VIEW get_rest_channels: error=%s', e)
+        return HttpResponseServerError(
+            dumps({
+                'error': str(e) or 'Error retrieving REST channels'
+            }),
+            content_type='application/json'
         )
