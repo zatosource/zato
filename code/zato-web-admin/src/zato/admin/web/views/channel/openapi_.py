@@ -7,12 +7,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import os
+from json import dumps
+
+# Django
+from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web.forms.channel.openapi import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
-from zato.common.api import GENERIC, generic_attrs
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.common.api import CONNECTION, GENERIC, generic_attrs, URL_TYPE
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,6 +118,44 @@ class Delete(_Delete):
     url_name = 'channel-openapi-delete'
     error_message = 'Could not delete OpenAPI channel'
     service_name = 'zato.generic.connection.delete'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def get_rest_channels(req):
+    cluster_id = req.GET.get('cluster_id')
+
+    try:
+        response = req.zato.client.invoke('zato.http-soap.get-list', {
+            'cluster_id': cluster_id,
+            'connection': CONNECTION.CHANNEL,
+            'transport': URL_TYPE.PLAIN_HTTP,
+        })
+
+        channels_list = []
+        for item in response:
+            channels_list.append({
+                'id': item.id,
+                'name': item.name,
+                'service_name': item.service_name,
+                'url_path': item.url_path,
+            })
+
+        return HttpResponse(
+            dumps({
+                'rest_channels': channels_list
+            }),
+            content_type='application/json'
+        )
+    except Exception as e:
+        logger.error('get_rest_channels error: %s', e)
+        return HttpResponseServerError(
+            dumps({
+                'error': str(e) or 'Error retrieving REST channels'
+            }),
+            content_type='application/json'
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################
