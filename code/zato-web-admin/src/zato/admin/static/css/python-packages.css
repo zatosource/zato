@@ -1,0 +1,116 @@
+.python-packages-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.python-packages-container .info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: auto !important;
+}
+
+.python-packages-container .textarea-row .info-label {
+    align-self: flex-start;
+}
+
+.python-packages-container .textarea-value {
+    width: 100%;
+    height: auto !important;
+}
+
+.python-packages-container textarea {
+    display: block;
+    width: 100%;
+    min-height: 200px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid var(--primary-dark);
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.python-packages-container textarea:focus {
+    outline: none;
+    border-color: var(--primary-dark);
+    box-shadow: 0 0 0 2px rgba(6, 127, 57, 0.1);
+}
+
+.python-packages-container textarea::placeholder {
+    color: #999;
+}
+
+.status-message.test-success {
+    color: #067f39;
+    margin-right: 4px;
+}
+
+.test-results {
+    margin-top: 16px;
+    margin-bottom: 24px;
+    font-family: monospace;
+    font-size: 13px;
+    display: table;
+    width: 100%;
+}
+
+.test-results .result-item {
+    display: table-row;
+}
+
+.test-results .result-item > span {
+    display: table-cell;
+    padding: 10px 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.test-results .result-item:last-child > span {
+    border-bottom: none;
+}
+
+.test-results .result-package {
+    color: #333;
+}
+
+.test-results .result-status-cell {
+}
+
+.test-results .result-status {
+    display: inline-block;
+    font-weight: 600;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 3px 8px;
+}
+
+.test-results .result-status.ok {
+    color: #067f39;
+}
+
+.test-results .result-status.error {
+    color: #dc3545;
+}
+
+.test-results .result-status.skipped {
+    color: #6c757d;
+}
+
+.test-results .result-message {
+    color: #666;
+}
+
+.test-results .result-message a {
+    color: #0969da;
+    text-decoration: none;
+}
+
+.custom-index-note {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #666;
+}
