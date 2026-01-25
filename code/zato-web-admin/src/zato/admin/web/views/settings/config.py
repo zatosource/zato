@@ -168,3 +168,32 @@ row = ContentRow(
     spinner=False
 )
 content_rows.append(row)
+
+python_packages_page_config = {}
+python_packages_page_config['title'] = 'Install Python packages'
+python_packages_page_config['api_prefix'] = '/zato/python-packages/'
+python_packages_page_config['step1_label'] = 'Installing packages'
+python_packages_page_config['step2_label'] = 'Restart'
+python_packages_page_config['check_button_label'] = 'Test'
+python_packages_page_config['action_button_label'] = 'Save'
+python_packages_page_config['version_section_title'] = 'Install Python packages'
+python_packages_page_config['config_section_title'] = 'Config'
+python_packages_page_config['logs_section_title'] = 'Installation log'
+python_packages_page_config['save_button_label'] = 'Save'
+python_packages_page_config['download_logs_label'] = 'Download full logs'
+python_packages_page_config['show_sidebar'] = False
+python_packages_page_config['show_restart_steps'] = True
+python_packages_page_config['panel_width'] = '55%'
+python_packages_page_config['restart_step_id'] = 'install'
+python_packages_page_config['restart_step_label'] = python_packages_page_config['step2_label']
+python_packages_page_config['content_rows'] = []
+
+content_rows = python_packages_page_config['content_rows']
+
+row = ContentRow(
+    label='Requirements',
+    widget='textarea',
+    value_key='requirements',
+    element_id='requirements'
+)
+content_rows.append(row)
