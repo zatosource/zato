@@ -461,50 +461,6 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
-    def _should_rebuild_zato_cy(self) -> 'bool':
-        """ Check if zato-cy needs rebuilding by comparing source and build timestamps. """
-        zato_cy_dir = os.path.join(self.code_dir, 'zato-cy', 'src', 'zato', 'cy')
-
-        # Find all .pyx source files
-        pyx_files = []
-        for root, dirs, files in os.walk(zato_cy_dir):
-            for f in files:
-                if f.endswith('.pyx'):
-                    pyx_files.append(os.path.join(root, f))
-
-        if not pyx_files:
-            return True
-
-        # Get the newest source file modification time
-        newest_source = 0
-        for pyx_file in pyx_files:
-            mtime = os.path.getmtime(pyx_file)
-            if mtime > newest_source:
-                newest_source = mtime
-
-        # Find the corresponding .so files in zato-cy source directory
-        zato_cy_src = os.path.join(self.code_dir, 'zato-cy', 'src')
-        so_files = []
-        for root, dirs, files in os.walk(zato_cy_src):
-            for f in files:
-                if f.endswith('.so'):
-                    so_files.append(os.path.join(root, f))
-
-        if not so_files:
-            return True
-
-        # Get the oldest .so file modification time
-        oldest_build = float('inf')
-        for so_file in so_files:
-            mtime = os.path.getmtime(so_file)
-            if mtime < oldest_build:
-                oldest_build = mtime
-
-        # Rebuild if any source is newer than the oldest build
-        return newest_source > oldest_build
-
-# ################################################################################################################################
-
     def pip_install_zato_packages(self) -> 'None':
 
         editable_packages = []
@@ -528,16 +484,7 @@ class EnvironmentManager:
                 'zato-testing',
             ])
 
-        zato_should_update_cy = os.environ.get('Zato_Should_Update_Cy', '')
-
-        # Only rebuild zato-cy if explicitly requested or if sources changed
-        if zato_should_update_cy == 'True':
-            non_editable_packages.append('zato-cy')
-        elif zato_should_update_cy != 'False':
-            if self._should_rebuild_zato_cy():
-                non_editable_packages.append('zato-cy')
-            else:
-                logger.info('zato-cy is up to date, skipping rebuild')
+        non_editable_packages.append('zato-cy')
 
         if editable_packages:
             self.run_pip_install_zato_packages(editable_packages)
