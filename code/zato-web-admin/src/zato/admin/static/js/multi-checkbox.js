@@ -155,7 +155,7 @@
         }
 
         var filterId = containerId + '_filter';
-        var html = '<input type="text" id="' + filterId + '" class="multi-checkbox-filter" placeholder="Filter..." style="width:100%; margin-bottom:5px; padding:3px;">';
+        var html = '<input type="text" id="' + filterId + '" class="multi-checkbox-filter" placeholder="Filter...">';
         html += '<table class="multi-select-table"><tbody>';
 
         for (var i = 0; i < items.length; i++) {
@@ -166,7 +166,7 @@
             var linkTextLower = (item.linkText || '').toLowerCase();
             var descriptionLower = (item.description || '').toLowerCase();
 
-            html += '<tr class="multi-checkbox-row" data-checkbox-id="' + checkboxId + '" data-link-text="' + linkTextLower + '" data-description="' + descriptionLower + '" style="cursor: pointer;">';
+            html += '<tr class="multi-checkbox-row" data-checkbox-id="' + checkboxId + '" data-link-text="' + linkTextLower + '" data-description="' + descriptionLower + '">';
             html += '<td><input type="checkbox" id="' + checkboxId + '" name="' + inputName + '" value="' + item.id + '" class="tri-state' + indeterminateClass + '"' + checkedAttr + '></td>';
             html += '<td>';
 
