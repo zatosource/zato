@@ -4,7 +4,7 @@
     overflow-y: auto;
     overflow-x: auto;
     height:130px;
-    background-color:#fff;
+    background-color:#fffefb;
 }
 
 .multi-select-input
@@ -13,6 +13,10 @@
     width:100%;
     border:none;
     background-color:#e6e6e6
+}
+
+.multi-select-table {
+    width: 100%;
 }
 
 .multi-select-table td {
@@ -57,15 +61,40 @@ label.toggle:hover {
 
 .multi-checkbox-filter {
     width: 100%;
-    padding: 3px;
+    padding: 8px 12px;
+    border: 2px solid #3498db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: linear-gradient(to bottom, #fff, #f8f9fa);
+    transition: border-color 0.2s, background 0.2s;
+    outline: none;
+}
+
+.multi-checkbox-filter:focus {
+    border-color: #2980b9;
+    background: #fff;
+}
+
+.multi-checkbox-filter::placeholder {
+    color: #aaa;
+    font-style: italic;
 }
 
 .multi-checkbox-filter-row {
     background-color: transparent !important;
 }
 
+.multi-checkbox-filter-row td {
+    padding: 4px 4px 4px 4px;
+}
+
 .multi-checkbox-row {
     cursor: pointer;
+}
+
+.multi-checkbox-row:hover {
+    background-color: #f5f0e8 !important;
+    border-top: none !important;
 }
 
 .loading-message {
