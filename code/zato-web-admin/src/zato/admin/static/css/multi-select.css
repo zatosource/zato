@@ -107,3 +107,31 @@ label.toggle:hover {
     outline: 2px solid #999;
     outline-offset: 1px;
 }
+
+.url-path-display {
+    font-family: monospace;
+    color: #333;
+}
+
+.form-label-cell {
+    vertical-align: middle;
+    width: 17%;
+}
+
+.form-label-cell-narrow {
+    vertical-align: middle;
+}
+
+.form-label-cell-top {
+    vertical-align: top;
+    padding-top: 5px;
+}
+
+.form-value-cell-multi {
+    min-height: 25px;
+    vertical-align: middle;
+}
+
+.form-buttons-cell {
+    text-align: right;
+}

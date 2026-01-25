@@ -111,7 +111,7 @@
                 <form novalidate action="{% url "channel-openapi-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:17%">
+                            <td class="form-label-cell">
                                 <label for="id_name">
                                 Name
                                 </label>
@@ -119,7 +119,18 @@
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">
+                            <td class="form-label-cell-narrow">
+                                <label>
+                                URL path
+                                </label>
+                            </td>
+                            <td>
+                                <span id="id_url_path_display" class="url-path-display">{{ openapi_path_prefix }}</span>
+                                {{ create_form.url_path }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="form-label-cell-narrow">
                                 <label for="id_is_active">
                                 Active
                                 </label>
@@ -127,15 +138,15 @@
                             <td>{{ create_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:top; padding-top:5px">
+                            <td class="form-label-cell-top">
                                 REST channels
                             </td>
-                            <td id="td_rest_channels_list" style="min-height: 25px; vertical-align: middle;">
+                            <td id="td_rest_channels_list" class="form-value-cell-multi">
                                 <div class="multi-select-div" id="rest-channels-div"><table class="multi-select-table"><tr><td colspan="2"><span class="loading-message">Loading REST channels...</span></td></tr></table></div>
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td colspan="2" class="form-buttons-cell">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
@@ -151,7 +162,7 @@
                 <form novalidate action="{% url "channel-openapi-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:17%">
+                            <td class="form-label-cell">
                                 <label for="id_name">
                                 Name
                                 </label>
@@ -159,7 +170,18 @@
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">
+                            <td class="form-label-cell-narrow">
+                                <label>
+                                URL path
+                                </label>
+                            </td>
+                            <td>
+                                <span id="id_edit-url_path_display" class="url-path-display">{{ openapi_path_prefix }}</span>
+                                {{ edit_form.url_path }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="form-label-cell-narrow">
                                 <label for="id_edit-is_active">
                                 Active
                                 </label>
@@ -167,15 +189,15 @@
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:top; padding-top:5px">
+                            <td class="form-label-cell-top">
                                 REST channels
                             </td>
-                            <td id="id_edit-td_rest_channels_list" style="min-height: 25px; vertical-align: middle;">
+                            <td id="id_edit-td_rest_channels_list" class="form-value-cell-multi">
                                 <div class="multi-select-div" id="id_edit-rest-channels-div"><table class="multi-select-table"><tr><td colspan="2"><span class="loading-message">Loading REST channels...</span></td></tr></table></div>
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="2" style="text-align:right">
+                            <td colspan="2" class="form-buttons-cell">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>

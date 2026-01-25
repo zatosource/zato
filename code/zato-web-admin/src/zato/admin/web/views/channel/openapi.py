@@ -6,10 +6,22 @@ Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import os
+
 # Zato
 from zato.admin.web.forms.channel.openapi import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.api import GENERIC, generic_attrs
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_openapi_path_prefix():
+    prefix = os.environ.get('Zato_OpenAPI_Path_Prefix', '/openapi/')
+    if not prefix.endswith('/'):
+        prefix = prefix + '/'
+    return prefix
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,6 +32,7 @@ class OpenAPIChannelConfigObject:
         self.id = -1
         self.name = ''
         self.is_active = True
+        self.url_path = ''
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -44,6 +57,7 @@ class Index(_Index):
         return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
+            'openapi_path_prefix': get_openapi_path_prefix(),
         }
 
 # ################################################################################################################################
@@ -53,7 +67,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'id', 'name', 'is_active'
+        input_required = 'id', 'name', 'is_active', 'url_path'
         output_required = 'id', 'name'
 
 # ################################################################################################################################
