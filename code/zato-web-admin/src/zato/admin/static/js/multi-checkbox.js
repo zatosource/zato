@@ -155,8 +155,8 @@
         }
 
         var filterId = containerId + '_filter';
-        var html = '<input type="text" id="' + filterId + '" class="multi-checkbox-filter" placeholder="Filter...">';
-        html += '<table class="multi-select-table"><tbody>';
+        var html = '<table class="multi-select-table"><tbody>';
+        html += '<tr class="multi-checkbox-filter-row"><td colspan="2"><input type="text" id="' + filterId + '" class="multi-checkbox-filter" placeholder="Filter..."></td></tr>';
 
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
