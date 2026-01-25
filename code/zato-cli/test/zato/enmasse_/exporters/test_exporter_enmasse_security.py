@@ -107,8 +107,8 @@ class TestEnmasseSecurityExporter(TestCase):
             # Check common fields that should be exported - excludes passwords
             self.assertEqual(exported_def.get('name'), yaml_def.get('name'),  f'Security name mismatch for "{name}"')
 
-            # Check username for all security types
-            if 'username' in yaml_def:
+            # Check username for all security types except apikey (apikey doesn't export username)
+            if 'username' in yaml_def and yaml_def.get('type') != 'apikey':
                 self.assertEqual(exported_def.get('username'), yaml_def.get('username'),  f'Username mismatch for security definition "{name}"')
 
             # Check type-specific fields

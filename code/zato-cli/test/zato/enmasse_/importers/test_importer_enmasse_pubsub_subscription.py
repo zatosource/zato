@@ -183,7 +183,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
             'push_type': 'service',
             'push_service_name': 'demo.updated-service',
             'topic_id_list': topic_id_list,
-            'is_active': False  # Changed is_active
+            'is_delivery_active': False  # Changed is_delivery_active
         }
 
         # Update the pubsub subscription definition
@@ -194,7 +194,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
         self.assertEqual(updated_instance.delivery_type, 'push')
         self.assertEqual(updated_instance.push_type, 'service')
         self.assertEqual(updated_instance.push_service_name, 'demo.updated-service')
-        self.assertFalse(updated_instance.is_active)
+        self.assertFalse(updated_instance.is_delivery_active)
 
         # Make sure sub_key was preserved
         self.assertEqual(updated_instance.sub_key, instance.sub_key)
@@ -303,7 +303,7 @@ class TestEnmassePubSubSubscriptionFromYAML(TestCase):
         # Verify all subscriptions are active by default
         all_subs = subscription_created + subscription_updated
         for sub in all_subs:
-            self.assertTrue(sub.is_active)
+            self.assertTrue(sub.is_delivery_active)
 
         # Verify cluster_id is set correctly
         for sub in all_subs:
