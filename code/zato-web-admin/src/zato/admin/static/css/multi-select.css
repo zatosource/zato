@@ -57,8 +57,11 @@ label.toggle:hover {
 
 .multi-checkbox-filter {
     width: 100%;
-    margin-bottom: 5px;
     padding: 3px;
+}
+
+.multi-checkbox-filter-row {
+    background-color: transparent !important;
 }
 
 .multi-checkbox-row {
