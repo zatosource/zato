@@ -23,10 +23,20 @@ $(document).ready(function() {
 
     $('#create-div').dialog('option', 'open', function() {
         $.fn.zato.channel.openapi.loadRestChannels('rest-channels-div');
+        $.fn.zato.channel.openapi.updateSlug('id_name', 'id_url_path', 'id_url_path_display');
     });
 
     $('#edit-div').dialog('option', 'open', function() {
         $.fn.zato.channel.openapi.loadRestChannels('id_edit-rest-channels-div');
+        $.fn.zato.channel.openapi.updateSlug('id_edit-name', 'id_edit-url_path', 'id_edit-url_path_display');
+    });
+
+    $('#id_name').on('input', function() {
+        $.fn.zato.channel.openapi.updateSlug('id_name', 'id_url_path', 'id_url_path_display');
+    });
+
+    $('#id_edit-name').on('input', function() {
+        $.fn.zato.channel.openapi.updateSlug('id_edit-name', 'id_edit-url_path', 'id_edit-url_path_display');
     });
 })
 
@@ -79,6 +89,44 @@ $.fn.zato.channel.openapi.delete_ = function(id) {
         'OpenAPI channel `{0}` deleted',
         'Are you sure you want to delete OpenAPI channel `{0}`?',
         true);
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.openapi.slugify = function(text) {
+    var result = '';
+    for (var i = 0; i < text.length; i++) {
+        var char = text[i];
+        if (char === '/') {
+            result += '/';
+        } else if (/[0-9]/.test(char)) {
+            result += char;
+        } else if (/[a-zA-Z]/.test(char)) {
+            result += char.toLowerCase();
+        } else if (char === ' ' || char === '-' || char === '_') {
+            if (result.length > 0 && result[result.length - 1] !== '-' && result[result.length - 1] !== '/') {
+                result += '-';
+            }
+        }
+    }
+    if (result.length > 0 && result[result.length - 1] === '-') {
+        result = result.slice(0, -1);
+    }
+    return result;
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.openapi.updateSlug = function(nameInputId, hiddenInputId, displayId) {
+    var name = $('#' + nameInputId).val() || '';
+    var slug = $.fn.zato.channel.openapi.slugify(name);
+    var prefix = $('#' + displayId).data('prefix') || $('#' + displayId).text().split('/').filter(Boolean).map(function(p) { return '/' + p; }).join('') + '/';
+    if (!$('#' + displayId).data('prefix')) {
+        $('#' + displayId).data('prefix', prefix);
+    }
+    var urlPath = prefix + slug;
+    $('#' + hiddenInputId).val(urlPath);
+    $('#' + displayId).text(urlPath);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
