@@ -40,7 +40,7 @@ class GetList(AdminService):
         request_elem = 'zato_security_basic_auth_get_list_request'
         response_elem = 'zato_security_basic_auth_get_list_response'
         input_required = 'cluster_id',
-        input_optional = 'needs_password',
+        input_optional = GetListAdminSIO.input_optional + ('needs_password',)
         output_required = 'id', 'name', 'is_active', 'username', 'realm',
         output_optional = 'password',
 
