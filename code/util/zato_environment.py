@@ -26,7 +26,7 @@ if 0:
 # ################################################################################################################################
 
 log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=log_format)
+logging.basicConfig(level=logging.INFO, format=log_format)
 
 logger = logging.getLogger('zato')
 
@@ -41,14 +41,6 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 # ################################################################################################################################
 
-if '3.8' in py_version:
-    setuptools_version = '57.4.0'
-else:
-    setuptools_version = '80.3.1'
-
-pip_deps_windows     = f'setuptools=={setuptools_version} wheel'
-pip_deps_non_windows = f'setuptools=={setuptools_version} wheel pip'
-pip_deps = pip_deps_windows if is_windows else pip_deps_non_windows
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,22 +134,8 @@ class EnvironmentManager:
 # ################################################################################################################################
 
     def _set_up_pip_flags(self) -> 'None':
-
-        #
-        # Under RHEL, pip install may not have the '--no-warn-script-location' flag.
-        # At the same time, under RHEL, we need to use --no-cache-dir.
-        #
-
-        linux_distro = self._get_linux_distro_name()
-        is_rhel = 'red hat' in linux_distro or 'centos' in linux_distro
-
-        # Explicitly ignore the non-existing option and add a different one..
-        if is_rhel:
-            self.pip_options = '--no-cache-dir'
-
-        # .. or make use of it.
-        else:
-            self.pip_options = '--no-warn-script-location'
+        # uv doesn't need special pip flags
+        self.pip_options = ''
 
 # ################################################################################################################################
 
@@ -223,13 +201,15 @@ class EnvironmentManager:
         else:
 
             # These are always in the same location
-            self.pip_command = os.path.join(self.bin_dir, 'pip')
-            self.python_command = os.path.join(self.bin_dir, 'python')
+            uv_bin = os.path.join(self.base_dir, 'support-linux', 'bin', 'uv')
+            python_path = os.path.abspath(os.path.join(self.bin_dir, 'python'))
+            self.pip_command = f'{uv_bin} pip -q'
+            self.python_command = python_path
             self.code_dir = self.base_dir
             self.zato_reqs_path = os.path.join(self.base_dir, 'requirements.txt')
 
-            # This is not used under Linux
-            self.pip_install_prefix = ''
+            # --python flag for uv pip install/uninstall commands
+            self.pip_install_prefix = f'--python {python_path}'
 
 # ################################################################################################################################
 
@@ -366,35 +346,18 @@ class EnvironmentManager:
                 stderr = stderr.decode('utf8')
 
                 if log_stderr:
-                    logger.warning(stderr)
-
-                if exit_on_error:
-                    process.kill()
-                    sys.exit(1)
-                else:
-                    if needs_stderr:
-                        return stderr
+                    logger.info(stderr)
 
             if process.poll() is not None:
                 break
 
+        # Check exit code after process completes
+        if exit_on_error and process.returncode != 0:
+            logger.error('Command failed with exit code %s', process.returncode)
+            sys.exit(1)
+
         if needs_stdout:
             return stdout
-
-# ################################################################################################################################
-
-    def pip_install_core_pip(self) -> 'None':
-
-        # Set up the command ..
-        command = '{pip_command} install {pip_install_prefix} {pip_options} -U {pip_deps}'.format(**{
-            'pip_command': self.pip_command,
-            'pip_install_prefix': self.pip_install_prefix,
-            'pip_options': self.pip_options,
-            'pip_deps':    pip_deps,
-        })
-
-        # .. and run it.
-        _ = self.run_command(command, exit_on_error=True)
 
 # ################################################################################################################################
 
@@ -407,7 +370,6 @@ class EnvironmentManager:
         # Set up the command ..
         command = """
             {pip_command}
-            -v
             install
             {pip_install_prefix}
             {pip_options}
@@ -424,60 +386,78 @@ class EnvironmentManager:
 
 # ################################################################################################################################
 
+    def _should_install_requirements(self) -> 'bool':
+        """ Check if requirements.txt needs to be installed by comparing its mtime with site-packages. """
+        if not os.path.exists(self.zato_reqs_path):
+            return False
+
+        reqs_mtime = os.path.getmtime(self.zato_reqs_path)
+
+        # Check if site-packages has any newer packages than requirements.txt
+        # If site-packages dir doesn't exist, we need to install
+        if not os.path.exists(self.site_packages_dir):
+            return True
+
+        # Find a marker file to check if requirements were installed
+        marker_file = os.path.join(self.site_packages_dir, '.zato_reqs_installed')
+        if not os.path.exists(marker_file):
+            return True
+
+        marker_mtime = os.path.getmtime(marker_file)
+        return reqs_mtime > marker_mtime
+
+    def _mark_requirements_installed(self) -> 'None':
+        """ Create a marker file to track when requirements were last installed. """
+        marker_file = os.path.join(self.site_packages_dir, '.zato_reqs_installed')
+        with open(marker_file, 'w') as f:
+            f.write('')
+
+# ################################################################################################################################
+
     def pip_install_zato_requirements(self) -> 'None':
+
+        # Skip if requirements already installed and unchanged
+        if not self._should_install_requirements():
+            logger.info('requirements.txt unchanged, skipping')
+            return
 
         # Install our own requirements
         self.pip_install_requirements_by_path(self.zato_reqs_path, exit_on_error=False)
+        self._mark_requirements_installed()
 
 # ################################################################################################################################
 
     def run_pip_install_zato_packages(self, packages:'strlist', allow_editable:'bool'=True) -> 'None':
 
-        # All the -e arguments that pip will receive
+        # Build the -e arguments for all packages at once
         pip_args = []
-
-        # This is used everywhere except with Cython
-        if allow_editable:
-            pip_args.append('--use-pep517')
-
-        # Build the arguments
         for name in packages:
             package_path = os.path.join(self.code_dir, name)
-            arg = '-e {}'.format(package_path)
-            pip_args.append(arg)
+            pip_args.append('-e {}'.format(package_path))
 
-        # Build the command ..
-        command = '{pip_command} install {pip_install_prefix} --no-warn-script-location {pip_args}'.format(**{
+        # Use --no-deps since dependencies come from requirements.txt
+        command = '{pip_command} install {pip_install_prefix} --no-deps {pip_args}'.format(**{
             'pip_command': self.pip_command,
             'pip_install_prefix': self.pip_install_prefix,
             'pip_args': ' '.join(pip_args)
         })
 
-        # .. and run it.
         _ = self.run_command(command, exit_on_error=False)
 
 # ################################################################################################################################
 
     def pip_install_standalone_requirements(self) -> 'None':
 
-        # These cannot be installed via requirements.txt
-        packages = [
-            'cython==3.1.0',
-            'pyOpenSSL==25.0.0',
-            'zato-ext-bunch==1.3',
-        ]
+        # These cannot be installed via requirements.txt - install all at once
+        packages = 'cython==3.1.0 pyOpenSSL==25.0.0 zato-ext-bunch==1.3'
 
-        for package in packages:
+        command = '{pip_command} install {pip_install_prefix} {packages}'.format(**{
+            'pip_command': self.pip_command,
+            'pip_install_prefix': self.pip_install_prefix,
+            'packages': packages,
+        })
 
-            # Set up the command ..
-            command = '{pip_command} install {pip_install_prefix} --no-warn-script-location {package}'.format(**{
-                'pip_command': self.pip_command,
-                'pip_install_prefix': self.pip_install_prefix,
-                'package': package,
-            })
-
-            # .. and run it.
-            _ = self.run_command(command, exit_on_error=True)
+        _ = self.run_command(command, exit_on_error=True)
 
 # ################################################################################################################################
 
@@ -504,10 +484,7 @@ class EnvironmentManager:
                 'zato-testing',
             ])
 
-        zato_should_update_cy = os.environ.get('Zato_Should_Update_Cy', 'True')
-
-        if zato_should_update_cy == 'True':
-            non_editable_packages.append('zato-cy')
+        non_editable_packages.append('zato-cy')
 
         if editable_packages:
             self.run_pip_install_zato_packages(editable_packages)
@@ -527,7 +504,7 @@ class EnvironmentManager:
         ]
 
         # Build the command ..
-        command = '{} uninstall -y -qq {}'.format(self.pip_command, ' '.join(packages))
+        command = '{} uninstall {}'.format(self.pip_command, ' '.join(packages))
 
         # .. and run it.
         _ = self.run_command(command, exit_on_error=False)
@@ -535,11 +512,9 @@ class EnvironmentManager:
 # ################################################################################################################################
 
     def pip_install(self) -> 'None':
-        self.pip_install_core_pip()
         self.pip_install_standalone_requirements()
         self.pip_install_zato_requirements()
         self.pip_install_zato_packages()
-        self.pip_uninstall()
 
 # ################################################################################################################################
 

@@ -52,7 +52,7 @@ class Matcher:
 
         # If True, we will include slashes in pattern matching,
         # otherwise they will not be taken into account.
-        slash_pattern = '\/' if match_slash else ''
+        slash_pattern = r'\/' if match_slash else ''
 
         # HTTP methods to ignore in case one is set for a particular HTTP channel
         self.ignore_http_methods = set(['CONNECT', 'DELETE', 'GET', 'HEAD', 'OPTIONS', 'PATCH', 'POST', 'PUT', 'TRACE'])
@@ -61,7 +61,7 @@ class Matcher:
         self.pattern = pattern
         self.matcher = None
         self.is_static = True
-        self._brace_pattern = re_compile('\{[\w \$.\-:|=~^\/]+\}', stdlib_re.UNICODE)
+        self._brace_pattern = re_compile(r'\{[\w \$.\-:|=~^\/]+\}', stdlib_re.UNICODE)
         self._elem_re_template = r'(?P<{}>[\w \$.\-:|=~^'+ slash_pattern +']+)'
         self._set_up_matcher(self.pattern)
 
