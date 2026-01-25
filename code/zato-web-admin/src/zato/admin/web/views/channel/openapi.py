@@ -14,12 +14,22 @@ from zato.common.api import GENERIC, generic_attrs
 # ################################################################################################################################
 # ################################################################################################################################
 
+class OpenAPIChannelConfigObject:
+    def __init__(self):
+        self._config_attrs = []
+        self.id = -1
+        self.name = ''
+        self.is_active = True
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'channel-openapi'
     template = 'zato/channel/openapi.html'
     service_name = 'zato.generic.connection.get-list'
-    output_class = None
+    output_class = OpenAPIChannelConfigObject
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
