@@ -333,7 +333,6 @@ class BaseView:
             'cluster_id':self.cluster_id,
             'paginate': getattr(self, 'paginate', False),
         })
-
         initial_input_dict = {}
         self.populate_initial_input_dict(initial_input_dict)
         self.input.update(initial_input_dict)
@@ -433,8 +432,6 @@ class Index(BaseView):
             # Auto-populate the field if it exists
             if self.wrapper_type:
                 request['wrapper_type'] = self.wrapper_type
-
-            logger.info('Invoking `%s` with `%s`', service_name, request)
 
             return func(service_name, request)
 
