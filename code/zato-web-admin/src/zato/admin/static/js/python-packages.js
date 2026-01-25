@@ -126,11 +126,26 @@ $.fn.zato.python_packages.showTestResults = function(results) {
     $('.button-container').after(html);
 };
 
+$.fn.zato.python_packages.countPackages = function(requirements) {
+    var lines = requirements.split('\n');
+    var count = 0;
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (line && !line.startsWith('#') && !line.startsWith('-')) {
+            count++;
+        }
+    }
+    return count;
+};
+
 $.fn.zato.python_packages.handleSaveClick = function() {
     var requirements = $('#requirements').val().trim();
     if (!requirements) {
         return;
     }
+
+    var packageCount = $.fn.zato.python_packages.countPackages(requirements);
+    $.fn.zato.python_packages.lastPackageCount = packageCount;
 
     var button = $(this);
     button.prop('disabled', true);
@@ -159,7 +174,8 @@ $.fn.zato.python_packages.handleSaveClick = function() {
         }),
         contentType: 'application/json',
         success: function(response) {
-            $.fn.zato.settings.updateProgress('configure', 'completed', 'Packages installed');
+            var installedText = $.fn.zato.python_packages.lastPackageCount === 1 ? 'Package installed' : 'Packages installed';
+            $.fn.zato.settings.updateProgress('configure', 'completed', installedText);
 
             $('#progress-install').removeClass('hidden');
             $.fn.zato.python_packages.runRestartSteps(button);
@@ -191,7 +207,7 @@ $.fn.zato.python_packages.runRestartSteps = function(button) {
     config.completedText = 'All components restarted';
     config.completionBadgeSelector = '#progress-install .info-message';
     config.baseUrl = '/zato/python-packages';
-    config.completionBadgeText = 'Packages installed successfully';
+    config.completionBadgeText = $.fn.zato.python_packages.lastPackageCount === 1 ? 'Package installed successfully' : 'Packages installed successfully';
 
     $.fn.zato.settings.executeSteps(config);
 };
