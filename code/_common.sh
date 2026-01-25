@@ -23,30 +23,22 @@ function apply_patches() {
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/dialects/postgresql/pg8000.py.diff
     patch --forward -p0 -d $localpath/eggs < $localpath/patches/pg8000/core.py.diff
 
-    #
-    # On SUSE, SQLAlchemy installs to lib64 instead of lib.
-    #
-    if [[ -e "$localpath/eggs64" && "$(type -p zypper)" ]]
-    then
-        patch --forward -p0 -d $localpath/eggs64 < $localpath/patches/sqlalchemy/sql/crud.py.diff || true
-    else
-        patch --forward -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/crud.py.diff || true
-    fi
+    patch --forward -p0 -d $localpath/eggs < $localpath/patches/sqlalchemy/sql/crud.py.diff || true
 }
 
-# Install libraries using pip
+# Install libraries using uv
 function pip_install() {
     # Path to code/ can be specified
     localpath="${1:-.}"
+    local uv_bin="$CURDIR/support-linux/bin/uv"
 
     echo "*** Installing updates ***"
 
-    $localpath/bin/pip install \
-        --no-warn-script-location   \
+    $uv_bin pip install \
         -r $CURDIR/requirements.txt
 
     # zato-common must be first.
-    $localpath/bin/pip install \
+    $uv_bin pip install \
         -e $CURDIR/zato-common      \
         -e $CURDIR/zato-agent       \
         -e $CURDIR/zato-broker      \
@@ -60,7 +52,7 @@ function pip_install() {
         -e $CURDIR/zato-testing
 
     # Delete packages no longer needed
-    $localpath/bin/pip uninstall -y \
+    $uv_bin pip uninstall \
         imbox \
         pycrypto \
         python-keyczar \
