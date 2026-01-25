@@ -116,6 +116,7 @@ class Create(AdminService):
                 input.username = sec_base.username
 
                 input.action = PUBSUB.PERMISSION_CREATE.value
+                input.cid = self.cid
 
                 self.response.payload.id = permission.id
                 self.response.payload.name = sec_base.name
@@ -170,6 +171,7 @@ class Edit(AdminService):
                 input.username = permission.sec_base.username
 
                 input.action = PUBSUB.PERMISSION_EDIT.value
+                input.cid = self.cid
 
                 self.response.payload.id = permission.id
                 self.response.payload.name = permission.sec_base.name
@@ -208,6 +210,7 @@ class Delete(AdminService):
                 raise
             else:
                 self.request.input.action = PUBSUB.PERMISSION_DELETE.value
+                self.request.input.cid = self.cid
 
                 self.broker_client.publish(self.request.input)
                 self.broker_client.publish_to_pubsub(self.request.input)
