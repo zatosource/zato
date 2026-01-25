@@ -286,6 +286,7 @@
                                         <a class="menu-link" href="#">Channels &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
+                                            <li class="child"><a class="menu-link" href="{% url "channel-openapi" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-openapi">OpenAPI</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
                                         </ul>
                                     </li>

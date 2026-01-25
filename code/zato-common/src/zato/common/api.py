@@ -741,6 +741,7 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
+            CHANNEL_OPENAPI = 'channel-openapi'
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
