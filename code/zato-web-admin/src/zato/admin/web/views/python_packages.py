@@ -14,9 +14,6 @@ import threading
 from logging import getLogger
 from traceback import format_exc
 
-# redis
-import redis
-
 # requests
 import requests
 
@@ -47,7 +44,8 @@ updater = Updater(updater_config)
 # ################################################################################################################################
 # ################################################################################################################################
 
-requirements_file_path = '/tmp/user.txt'
+hot_deploy_requirements_path = '/opt/hot-deploy/python-reqs/requirements.txt'
+user_requirements_path = '/tmp/zato-user-packages.txt'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -280,16 +278,10 @@ def save_config(req):
 
         requirements_text = config_data.get('requirements', '')
 
-        with open(requirements_file_path, 'w') as f:
+        with open(user_requirements_path, 'w') as f:
             f.write(requirements_text)
 
-        logger.info('save_config: saved requirements to %s', requirements_file_path)
-
-        try:
-            r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-            r.set('zato:python_packages:requirements', requirements_text)
-        except Exception:
-            logger.error('save_config redis error: %s', format_exc())
+        logger.info('save_config: saved requirements to %s', user_requirements_path)
 
         curdir = os.path.dirname(os.path.abspath(__file__))
         code_dir = os.path.abspath(os.path.join(curdir, '..', '..', '..', '..', '..', '..'))
@@ -303,7 +295,7 @@ def save_config(req):
             return json_response(response_data, success=False)
 
         result = subprocess.run(
-            [uv_bin, 'pip', 'install', '-r', requirements_file_path],
+            [uv_bin, 'pip', 'install', '-r', user_requirements_path],
             cwd=code_dir,
             capture_output=True,
             text=True
@@ -341,23 +333,21 @@ def index(req):
 
     requirements = ''
 
-    try:
-        r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-        logger.info('index: connecting to redis')
-
-        requirements = r.get('zato:python_packages:requirements') or ''
-        logger.info('index: requirements from redis length: %d', len(requirements))
-
-    except Exception:
-        logger.error('index: redis error: %s', format_exc())
-
-    if not requirements and os.path.exists(requirements_file_path):
+    if os.path.exists(hot_deploy_requirements_path):
         try:
-            with open(requirements_file_path, 'r') as f:
+            with open(hot_deploy_requirements_path, 'r') as f:
                 requirements = f.read()
-            logger.info('index: requirements from file length: %d', len(requirements))
+            logger.info('index: requirements from hot-deploy length: %d', len(requirements))
         except Exception:
-            logger.error('index: file read error: %s', format_exc())
+            logger.error('index: hot-deploy file read error: %s', format_exc())
+
+    if not requirements and os.path.exists(user_requirements_path):
+        try:
+            with open(user_requirements_path, 'r') as f:
+                requirements = f.read()
+            logger.info('index: requirements from user file length: %d', len(requirements))
+        except Exception:
+            logger.error('index: user file read error: %s', format_exc())
 
     return TemplateResponse(req, 'zato/settings/python-packages/index.html', {
         'page_config': python_packages_page_config,
