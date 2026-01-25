@@ -622,7 +622,7 @@ input:checked + .toggle-slider:before {
 }
 
 .progress-item:last-child.error-state {
-    border-bottom: none;
+    border-bottom: 4px dotted #cc0000;
 }
 
 .progress-item.hidden {
