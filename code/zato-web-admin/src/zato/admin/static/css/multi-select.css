@@ -54,3 +54,18 @@ label.toggle:hover {
     padding-top:3px;
     padding-bottom:3px;
 }
+
+.multi-checkbox-filter {
+    width: 100%;
+    margin-bottom: 5px;
+    padding: 3px;
+}
+
+.multi-checkbox-row {
+    cursor: pointer;
+}
+
+.loading-message {
+    font-style: italic;
+    color: #666;
+}
