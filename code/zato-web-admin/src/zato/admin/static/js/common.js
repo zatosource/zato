@@ -718,7 +718,9 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow,
         }
     }
 
-    div.prev().text(title); // prev() is a .ui-dialog-titlebar
+    div.prev().css('cursor', 'move');
+    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + title + '</span>'); // prev() is a .ui-dialog-titlebar
+    div.prev().find('.ui-dialog-title-text').on('mousedown', function(e) { e.stopPropagation(); });
     div.dialog('open');
 
     $.fn.zato.turn_selects_into_chosen(div_id);
