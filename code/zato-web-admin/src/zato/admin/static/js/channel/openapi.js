@@ -135,7 +135,7 @@ $.fn.zato.channel.openapi.loadRestChannels = function(containerId) {
     var cluster_id = $('#cluster_id').val();
 
     $.ajax({
-        url: '/zato/pubsub/subscription/get-rest-channels/',
+        url: '/zato/channel/openapi/get-rest-channels/',
         type: 'GET',
         data: {
             cluster_id: cluster_id
