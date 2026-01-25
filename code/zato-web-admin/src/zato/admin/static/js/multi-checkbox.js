@@ -23,7 +23,7 @@
         }
 
         var initialState;
-        if ($checkbox.hasClass('indeterminate')) {
+        if ($checkbox.hasClass('disabled')) {
             initialState = State.Disabled;
         } else if ($checkbox.prop('checked')) {
             initialState = State.On;
@@ -42,10 +42,10 @@
 
             var currentState = $checkbox.data('tri-state');
             var actualChecked = $checkbox.prop('checked');
-            var actualIndeterminate = $checkbox.hasClass('indeterminate');
+            var actualDisabled = $checkbox.hasClass('disabled');
 
             var actualState = currentState;
-            if (actualIndeterminate) {
+            if (actualDisabled) {
                 actualState = State.Disabled;
             } else if (actualChecked) {
                 actualState = State.On;
@@ -60,7 +60,7 @@
 
             var newState = (currentState + 1) % 3;
             $checkbox.data('tri-state', newState);
-            $checkbox.removeClass('indeterminate');
+            $checkbox.removeClass('disabled');
 
             switch (newState) {
                 case State.Off:
@@ -71,7 +71,7 @@
                     break;
                 case State.Disabled:
                     $checkbox.prop('checked', false);
-                    $checkbox.addClass('indeterminate');
+                    $checkbox.addClass('disabled');
                     break;
             }
 
@@ -101,7 +101,7 @@
         var $checkbox = $(checkbox);
 
         $checkbox.data('tri-state', state);
-        $checkbox.removeClass('indeterminate');
+        $checkbox.removeClass('disabled');
 
         switch (state) {
             case State.Off:
@@ -112,7 +112,7 @@
                 break;
             case State.Disabled:
                 $checkbox.prop('checked', false);
-                $checkbox.addClass('indeterminate');
+                $checkbox.addClass('disabled');
                 break;
         }
     }
@@ -161,13 +161,13 @@
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
             var checkboxId = 'item_checkbox_' + item.id;
-            var indeterminateClass = item.state === State.Disabled ? ' indeterminate' : '';
+            var disabledClass = item.state === State.Disabled ? ' disabled' : '';
             var checkedAttr = item.state === State.On ? ' checked' : '';
             var linkTextLower = (item.linkText || '').toLowerCase();
             var descriptionLower = (item.description || '').toLowerCase();
 
             html += '<tr class="multi-checkbox-row" data-checkbox-id="' + checkboxId + '" data-link-text="' + linkTextLower + '" data-description="' + descriptionLower + '">';
-            html += '<td><input type="checkbox" id="' + checkboxId + '" name="' + inputName + '" value="' + item.id + '" class="tri-state' + indeterminateClass + '"' + checkedAttr + '></td>';
+            html += '<td><input type="checkbox" id="' + checkboxId + '" name="' + inputName + '" value="' + item.id + '" class="tri-state' + disabledClass + '"' + checkedAttr + '></td>';
             html += '<td>';
 
             if (item.link) {

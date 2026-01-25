@@ -101,3 +101,9 @@ label.toggle:hover {
     font-style: italic;
     color: #666;
 }
+
+.tri-state.disabled {
+    opacity: 0.6;
+    outline: 2px solid #999;
+    outline-offset: 1px;
+}
