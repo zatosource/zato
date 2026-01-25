@@ -268,7 +268,8 @@
     {% comment %} PubSub Common Topics JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/common-topics.js"></script>
 
-
+    {% comment %} Multi-checkbox component {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/multi-checkbox.js"></script>
 
     {% comment %} PubSub Subscription {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/pubsub/subscription.js"></script>
@@ -459,6 +460,15 @@
                                 <span id="push-service-create" style="width:50%; display:none;">
                                     {{ create_form.push_service_name }}
                                 </span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:top">
+                                REST channels
+                            </td>
+                            <td id="td_rest_channels_list" style="min-height: 25px; vertical-align: middle;">
+                                <div class="multi-select-div" id="rest-channels-div"><table class="multi-select-table"><tr><td colspan="2"><span style="font-style: italic; color: #666;">Loading REST channels...</span></td></tr></table></div>
                             </td>
                         </tr>
 

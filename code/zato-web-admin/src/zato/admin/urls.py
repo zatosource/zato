@@ -18,6 +18,7 @@ from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.channel import amqp_ as channel_amqp
+from zato.admin.web.views.channel import openapi as channel_openapi
 from zato.admin.web.views.cloud import confluence as cloud_confluence
 from zato.admin.web.views.cloud import jira as cloud_jira
 from zato.admin.web.views.cloud import microsoft_365 as cloud_microsoft_365
@@ -384,6 +385,22 @@ urlpatterns += [
         login_required(channel_amqp.edit), name='channel-amqp-edit'),
     url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_amqp.Delete()), name=channel_amqp.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. OpenAPI
+
+    url(r'^zato/channel/openapi/$',
+        login_required(channel_openapi.Index()), name=channel_openapi.Index.url_name),
+    url(r'^zato/channel/openapi/create/$',
+        login_required(channel_openapi.Create()), name=channel_openapi.Create.url_name),
+    url(r'^zato/channel/openapi/edit/$',
+        login_required(channel_openapi.Edit()), name=channel_openapi.Edit.url_name),
+    url(r'^zato/channel/openapi/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_openapi.Delete()), name=channel_openapi.Delete.url_name),
     ]
 
 # ################################################################################################################################
@@ -812,6 +829,8 @@ urlpatterns += [
         login_required(subscription.get_service_list), name='pubsub-subscription-get-service-list'),
     url(r'^zato/pubsub/subscription/get-topics-by-security/$',
         login_required(subscription.get_topics_by_security), name='pubsub-subscription-get-topics-by-security'),
+    url(r'^zato/pubsub/subscription/get-rest-channels/$',
+        login_required(subscription.get_rest_channels), name='pubsub-subscription-get-rest-channels'),
     path('zato/pubsub/subscription/sec-def-topic-sub-list/<int:sec_base_id>/cluster/<int:cluster_id>/',
         login_required(subscription.sec_def_topic_sub_list),
         name='pubsub-subscription-sec-def-topic-sub-list'),

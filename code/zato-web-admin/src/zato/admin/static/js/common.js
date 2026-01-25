@@ -55,6 +55,8 @@ $.namespace('zato.cache.builtin');
 $.namespace('zato.cache.builtin.entries');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
+$.namespace('zato.channel.openapi');
+$.namespace('zato.channel.openapi.data_table');
 $.namespace('zato.cloud');
 $.namespace('zato.cloud.confluence');
 $.namespace('zato.cloud.jira');
