@@ -57,6 +57,7 @@ from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
@@ -168,6 +169,9 @@ class WorkerStore(_WorkerStoreBase):
         # To expedite look-ups
         self._simple_types = simple_types
 
+        # Generic connections - Channel - OpenAPI
+        self.channel_openapi = {}
+
         # Generic connections - Cloud - Confluence
         self.cloud_confluence = {}
 
@@ -209,6 +213,7 @@ class WorkerStore(_WorkerStoreBase):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: self.channel_openapi,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: self.cloud_microsoft_365,
@@ -218,6 +223,7 @@ class WorkerStore(_WorkerStoreBase):
         }
 
         self._generic_conn_handler = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: ChannelOpenAPIWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: CloudMicrosoft365Wrapper,
