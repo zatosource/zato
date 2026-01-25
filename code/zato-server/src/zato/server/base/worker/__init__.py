@@ -1733,4 +1733,15 @@ class WorkerStore(_WorkerStoreBase):
         self.pubsub_consumer_backend.on_broker_msg_PUBSUB_TOPIC_DELETE(msg)
 
 # ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
+        pass
+
+    def on_broker_msg_PUBSUB_PERMISSION_EDIT(self, msg:'bunch_') -> 'None':
+        pass
+
+    def on_broker_msg_PUBSUB_PERMISSION_DELETE(self, msg:'bunch_') -> 'None':
+        pass
+
+# ################################################################################################################################
 # ################################################################################################################################
