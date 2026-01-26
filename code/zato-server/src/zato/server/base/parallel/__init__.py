@@ -969,10 +969,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
+        self._post_initialize()
+
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _post_initialize(self) -> 'None':
+        pass
 
 # ################################################################################################################################
 
