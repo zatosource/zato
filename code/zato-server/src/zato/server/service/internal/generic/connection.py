@@ -135,11 +135,7 @@ class _CreateEdit(_BaseService):
 
     def handle(self) -> 'None':
 
-        self.logger.info('[connection.py] _CreateEdit.handle called, is_create=%s, is_edit=%s', self.is_create, self.is_edit)
-        self.logger.info('[connection.py] raw_request: %s', self.request.raw_request)
-
         data = deepcopy(self.request.input)
-        self.logger.info('[connection.py] initial data from request.input: %s', data)
 
         # Build a reusable flag indicating that a secret was sent on input.
         secret = data.get('secret', ZATO_NONE)
@@ -219,12 +215,7 @@ class _CreateEdit(_BaseService):
             data['sec_def_type_name'] = sec_def_type_name
             data['security_name'] = security_name
 
-        self.logger.info('[connection.py] data before from_dict: %s', data)
-        self.logger.info('[connection.py] rest_channel_list in data: %s', data.get('rest_channel_list'))
-
         conn = GenericConnection.from_dict(data)
-
-        self.logger.info('[connection.py] conn.opaque after from_dict: %s', conn.opaque)
 
         with closing(self.server.odb.session()) as session:
 
@@ -255,9 +246,6 @@ class _CreateEdit(_BaseService):
                 conn.secret = secret
 
             conn_dict = conn.to_sql_dict()
-
-            self.logger.info('[connection.py] conn_dict from to_sql_dict: %s', conn_dict)
-            self.logger.info('[connection.py] opaque1 value: %s', conn_dict.get('opaque1'))
 
             # This will be needed in case this is a rename
             old_name = model.name
@@ -399,18 +387,14 @@ class GetList(AdminService):
             _meta.update(search_result.to_dict())
 
             for item in search_result:
-                self.logger.info('[connection.py GetList] item.opaque1: %s', getattr(item, 'opaque1', None))
                 conn = GenericConnection.from_model(item)
-                self.logger.info('[connection.py GetList] conn.opaque after from_model: %s', conn.opaque)
                 conn_dict = conn.to_dict()
-                self.logger.info('[connection.py GetList] conn_dict.rest_channel_list: %s', conn_dict.get('rest_channel_list'))
                 self._enrich_conn_dict(conn_dict)
                 cast_('anylist', out['response']).append(conn_dict)
 
         # Results are already included in the list of out['response'] elements
         _ = _meta.pop('result', None)
 
-        self.logger.info('[connection.py GetList] final response: %s', out)
         self.response.payload = dumps(out)
 
 # ################################################################################################################################

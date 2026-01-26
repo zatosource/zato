@@ -162,7 +162,6 @@ $.fn.zato.channel.openapi.updateSlug = function(nameInputId, hiddenInputId, disp
 $.fn.zato.channel.openapi.loadRestChannels = function(containerId, channelStates) {
     var cluster_id = $('#cluster_id').val();
     channelStates = channelStates || {};
-    console.log('[openapi.js] loadRestChannels called with containerId:', containerId, 'channelStates:', JSON.stringify(channelStates));
 
     $.ajax({
         url: '/zato/channel/openapi/get-rest-channels/',
@@ -171,7 +170,6 @@ $.fn.zato.channel.openapi.loadRestChannels = function(containerId, channelStates
             cluster_id: cluster_id
         },
         success: function(response) {
-            console.log('[openapi.js] loadRestChannels got response:', JSON.stringify(response));
             if (response.rest_channels && response.rest_channels.length > 0) {
                 var items = [];
                 for (var i = 0; i < response.rest_channels.length; i++) {
@@ -183,7 +181,6 @@ $.fn.zato.channel.openapi.loadRestChannels = function(containerId, channelStates
                     } else if (savedState === 'disabled') {
                         state = $.fn.zato.multi_checkbox.State.Disabled;
                     }
-                    console.log('[openapi.js] channel.id:', channel.id, 'savedState:', savedState, 'state:', state);
                     items.push({
                         id: channel.id,
                         state: state,
@@ -208,7 +205,6 @@ $.fn.zato.channel.openapi.loadRestChannels = function(containerId, channelStates
             }
         },
         error: function(xhr, status, error) {
-            console.log('loadRestChannels error:', status, error);
             $('#' + containerId).html(
                 '<table class="multi-select-table"><tr><td colspan="2">' +
                 '<span class="multi-select-message">Error loading REST channels</span>' +
@@ -221,14 +217,11 @@ $.fn.zato.channel.openapi.loadRestChannels = function(containerId, channelStates
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.openapi.loadRestChannelsForEdit = function(containerId, channelId) {
-    console.log('[openapi.js] loadRestChannelsForEdit called with containerId:', containerId, 'channelId:', channelId);
     var instance = $.fn.zato.data_table.data[channelId];
-    console.log('[openapi.js] instance from data_table:', JSON.stringify(instance));
     var channelStates = {};
 
     if (instance && instance.rest_channel_list) {
         var raw = instance.rest_channel_list;
-        console.log('[openapi.js] raw rest_channel_list:', raw);
         var channelList = [];
         if (typeof raw === 'string' && raw.length > 0) {
             var parsed = JSON.parse(raw);
@@ -242,7 +235,6 @@ $.fn.zato.channel.openapi.loadRestChannelsForEdit = function(containerId, channe
             var item = channelList[i];
             channelStates[String(item.id)] = item.state;
         }
-        console.log('[openapi.js] parsed channelStates:', JSON.stringify(channelStates));
     }
     $.fn.zato.channel.openapi.loadRestChannels(containerId, channelStates);
 }
