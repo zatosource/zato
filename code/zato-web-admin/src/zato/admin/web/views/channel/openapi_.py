@@ -42,12 +42,21 @@ class OpenAPIChannelConfigObject:
         self.id = -1
         self.name = ''
         self.is_active = True
+        self.is_public = False
         self.url_path = ''
         self.rest_channel_list = []
 
     @property
     def rest_channel_list_json(self):
         return dumps(self.rest_channel_list or [])
+
+    @property
+    def channel_count(self):
+        count = 0
+        for item in (self.rest_channel_list or []):
+            if item.get('state') == 'on':
+                count += 1
+        return count
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,7 +92,9 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = 'id', 'name', 'is_active', 'url_path'
+        input_optional = 'is_public',
         output_required = 'id', 'name'
+        output_optional = 'rest_channel_list',
 
 # ################################################################################################################################
 
@@ -111,6 +122,19 @@ class _CreateEdit(CreateEdit):
 
     def success_message(self, item):
         return 'Successfully {} OpenAPI channel `{}`'.format(self.verb, item.name)
+
+# ################################################################################################################################
+
+    def post_process_return_data(self, return_data):
+        rest_channel_list_raw = self.req.POST.getlist('rest_channel_list')
+        if rest_channel_list_raw:
+            rest_channel_list = []
+            for item_json in rest_channel_list_raw:
+                rest_channel_list.append(loads(item_json))
+            return_data['rest_channel_list'] = dumps(rest_channel_list)
+        else:
+            return_data['rest_channel_list'] = '[]'
+        return return_data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -189,7 +213,7 @@ def generate_openapi(req):
 
         services_info = []
         for item in rest_channel_list:
-            if item.get('state') in ('on', 'disabled'):
+            if item.get('state') == 'on':
                 rest_channel_id_str = str(item.get('id'))
                 rest_channel = rest_channels_by_id.get(rest_channel_id_str)
                 if rest_channel:

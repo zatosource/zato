@@ -82,6 +82,9 @@ $.fn.zato.channel.openapi.edit = function(id) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.openapi.data_table.new_row = function(item, data, include_tr) {
+    console.log('new_row called with item:', JSON.stringify(item));
+    console.log('new_row called with data:', JSON.stringify(data));
+
     var row = '';
 
     if(include_tr) {
@@ -93,17 +96,52 @@ $.fn.zato.channel.openapi.data_table.new_row = function(item, data, include_tr) 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
+    var is_public = item.is_public == true;
+
+    var rest_channel_list = data.rest_channel_list || item.rest_channel_list || '[]';
+    console.log('rest_channel_list raw:', rest_channel_list);
+    console.log('rest_channel_list type:', typeof rest_channel_list);
+
+    if(typeof rest_channel_list === 'string') {
+        try {
+            rest_channel_list = JSON.parse(rest_channel_list);
+            console.log('rest_channel_list parsed:', JSON.stringify(rest_channel_list));
+        } catch(e) {
+            console.log('rest_channel_list parse error:', e);
+            rest_channel_list = [];
+        }
+    }
+    var channel_count = 0;
+    for(var i = 0; i < rest_channel_list.length; i++) {
+        console.log('channel item:', JSON.stringify(rest_channel_list[i]), 'state:', rest_channel_list[i].state);
+        if(rest_channel_list[i].state === 'on') {
+            channel_count++;
+        }
+    }
+    console.log('channel_count:', channel_count);
+
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', item.url_path || '');
+    row += String.format("<td style='text-align:center'>{0}</td>", is_active ? 'Yes' : 'No');
+    row += String.format("<td style='text-align:center'>{0}</td>", is_public ? 'Yes' : 'No');
+    row += String.format("<td style='text-align:center'>{0}</td>", channel_count);
+    row += String.format("<td style='text-align:center'>{0}</td>", item.url_path || '');
     row += String.format('<td><a href="/zato/channel/openapi/generate/?cluster_id={0}&channel_id={1}">Download OpenAPI</a></td>', $('#cluster_id').val(), item.id);
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.openapi.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.openapi.delete_({0});'>Delete</a>", item.id));
 
+    var rest_channel_list_for_storage = data.rest_channel_list || item.rest_channel_list || '[]';
+    console.log('[new_row] rest_channel_list_for_storage:', rest_channel_list_for_storage);
+
+    if(data.rest_channel_list && $.fn.zato.data_table.data[item.id]) {
+        $.fn.zato.data_table.data[item.id].rest_channel_list = data.rest_channel_list;
+        console.log('[new_row] Updated data_table.data[' + item.id + '].rest_channel_list to:', data.rest_channel_list);
+    }
+
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", item.rest_channel_list || '[]');
+    row += String.format("<td class='ignore'>{0}</td>", item.is_public);
+    row += String.format("<td class='ignore'>{0}</td>", rest_channel_list_for_storage);
     row += String.format("<td class='ignore'>{0}</td>", item.url_path || '');
 
     if(include_tr) {
@@ -220,25 +258,33 @@ $.fn.zato.channel.openapi.loadRestChannels = function(containerId, channelStates
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.channel.openapi.loadRestChannelsForEdit = function(containerId, channelId) {
+    console.log('[loadRestChannelsForEdit] channelId:', channelId);
     var instance = $.fn.zato.data_table.data[channelId];
+    console.log('[loadRestChannelsForEdit] instance:', instance);
+    console.log('[loadRestChannelsForEdit] instance.rest_channel_list:', instance ? instance.rest_channel_list : 'no instance');
     var channelStates = {};
 
     if (instance && instance.rest_channel_list) {
         var raw = instance.rest_channel_list;
+        console.log('[loadRestChannelsForEdit] raw:', raw);
+        console.log('[loadRestChannelsForEdit] raw type:', typeof raw);
         var channelList = [];
         if (typeof raw === 'string' && raw.length > 0) {
             var parsed = JSON.parse(raw);
+            console.log('[loadRestChannelsForEdit] parsed:', JSON.stringify(parsed));
             channelList = Array.isArray(parsed) ? parsed : [parsed];
         } else if (Array.isArray(raw)) {
             channelList = raw;
         } else if (typeof raw === 'object') {
             channelList = [raw];
         }
+        console.log('[loadRestChannelsForEdit] channelList:', JSON.stringify(channelList));
         for (var i = 0; i < channelList.length; i++) {
             var item = channelList[i];
             channelStates[String(item.id)] = item.state;
         }
     }
+    console.log('[loadRestChannelsForEdit] channelStates:', JSON.stringify(channelStates));
     $.fn.zato.channel.openapi.loadRestChannels(containerId, channelStates);
 }
 
