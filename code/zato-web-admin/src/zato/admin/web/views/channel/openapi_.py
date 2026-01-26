@@ -10,6 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import os
 from json import dumps, loads
+from traceback import format_exc
+
+# Redis
+import redis
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -32,6 +36,38 @@ def get_openapi_path_prefix():
     if not prefix.endswith('/'):
         prefix = prefix + '/'
     return prefix
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_redis_client():
+    return redis.Redis(host='localhost', port=6379, decode_responses=True)
+
+def get_openapi_cache_key(channel_id):
+    return f'zato:openapi:channel:{channel_id}'
+
+def get_cached_openapi(channel_id):
+    try:
+        client = get_redis_client()
+        return client.get(get_openapi_cache_key(channel_id))
+    except Exception:
+        logger.warning('Could not get OpenAPI from cache: %s', format_exc())
+        return None
+
+def set_cached_openapi(channel_id, yaml_output):
+    try:
+        client = get_redis_client()
+        client.set(get_openapi_cache_key(channel_id), yaml_output)
+    except Exception:
+        logger.warning('Could not cache OpenAPI: %s', format_exc())
+
+def clear_openapi_cache(channel_id):
+    try:
+        client = get_redis_client()
+        client.delete(get_openapi_cache_key(channel_id))
+        logger.info('Cleared OpenAPI cache for channel %s', channel_id)
+    except Exception:
+        logger.warning('Could not clear OpenAPI cache: %s', format_exc())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -151,6 +187,13 @@ class Edit(_CreateEdit):
     form_prefix = 'edit-'
     service_name = 'zato.generic.connection.edit'
 
+    def post_process_return_data(self, return_data):
+        return_data = super().post_process_return_data(return_data)
+        channel_id = return_data.get('id')
+        if channel_id:
+            clear_openapi_cache(channel_id)
+        return return_data
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -159,6 +202,9 @@ class Delete(_Delete):
     error_message = 'Could not delete OpenAPI channel'
     service_name = 'zato.generic.connection.delete'
 
+    def on_before_delete(self, item_id):
+        clear_openapi_cache(item_id)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -166,6 +212,13 @@ class Delete(_Delete):
 def generate_openapi(req):
     cluster_id = req.GET['cluster_id']
     channel_id = req.GET['channel_id']
+
+    cached = get_cached_openapi(channel_id)
+    if cached:
+        logger.info('Returning OpenAPI from cache for channel %s', channel_id)
+        response = HttpResponse(cached, content_type='application/x-yaml')
+        response['Content-Disposition'] = f'attachment; filename="openapi-{channel_id}.yaml"'
+        return response
 
     try:
         channel_response = req.zato.client.invoke('zato.generic.connection.get-list', {
@@ -225,19 +278,23 @@ def generate_openapi(req):
                         source_path = None
                         if hasattr(source_info, 'data') and source_info.data:
                             source_path = source_info.data.get('source_path') if isinstance(source_info.data, dict) else getattr(source_info.data, 'source_path', None)
+                        security_name = getattr(rest_channel, 'security_name', None) or getattr(rest_channel, 'sec_def', None)
                         services_info.append({
                             'name': rest_channel.service_name,
                             'url_path': rest_channel.url_path,
                             'http_method': getattr(rest_channel, 'method', 'POST') or 'POST',
                             'source_path': source_path,
+                            'security_name': security_name,
                         })
-                    except Exception as e:
-                        logger.warning('Could not get source info for service %s: %s', rest_channel.service_name, e)
+                    except Exception:
+                        logger.warning('Could not get source info for service %s: %s', rest_channel.service_name, format_exc())
+                        security_name = getattr(rest_channel, 'security_name', None) or getattr(rest_channel, 'sec_def', None)
                         services_info.append({
                             'name': rest_channel.service_name,
                             'url_path': rest_channel.url_path,
                             'http_method': getattr(rest_channel, 'method', 'POST') or 'POST',
                             'source_path': None,
+                            'security_name': security_name,
                         })
 
         file_paths = []
@@ -267,14 +324,26 @@ def generate_openapi(req):
             if schema:
                 service.update(schema)
 
+        security_schemes = {}
+        for service in services_info:
+            security_name = service.get('security_name')
+            if security_name and security_name not in security_schemes:
+                security_schemes[security_name] = {
+                    'type': 'http',
+                    'scheme': 'basic'
+                }
+
         openapi_spec = {
             'openapi': '3.1.0',
             'info': {
-                'title': channel.name if hasattr(channel, 'name') else 'API',
+                'title': channel['name'] if isinstance(channel, dict) else channel.name,
                 'version': '1.0.0'
             },
             'paths': {},
-            'components': {'schemas': {}}
+            'components': {
+                'schemas': {},
+                'securitySchemes': security_schemes
+            }
         }
 
         openapi_generator = OpenAPIGenerator(type_mapper=scanner.type_mapper)
@@ -293,6 +362,10 @@ def generate_openapi(req):
                 }
             }
 
+            security_name = service.get('security_name')
+            if security_name:
+                operation['security'] = [{security_name: []}]
+
             if service.get('input'):
                 try:
                     request_schema = openapi_generator._create_request_schema(service['input'], scan_results['models'])
@@ -307,8 +380,8 @@ def generate_openapi(req):
                             'required': is_required,
                             'content': {'application/json': {'schema': request_schema}}
                         }
-                except Exception as e:
-                    logger.warning('Could not create request schema for %s: %s', service['name'], e)
+                except Exception:
+                    logger.warning('Could not create request schema for %s: %s', service['name'], format_exc())
 
             if service.get('output'):
                 try:
@@ -317,8 +390,8 @@ def generate_openapi(req):
                         operation['responses']['200']['content'] = {
                             'application/json': {'schema': response_schema}
                         }
-                except Exception as e:
-                    logger.warning('Could not create response schema for %s: %s', service['name'], e)
+                except Exception:
+                    logger.warning('Could not create response schema for %s: %s', service['name'], format_exc())
 
             if path not in openapi_spec['paths']:
                 openapi_spec['paths'][path] = {}
@@ -330,14 +403,18 @@ def generate_openapi(req):
 
         yaml_output = yaml.dump(openapi_spec, sort_keys=False, allow_unicode=True)
 
+        set_cached_openapi(channel_id, yaml_output)
+
+        channel_name = channel['name'] if isinstance(channel, dict) else channel.name
+        logger.info('Generated OpenAPI for channel %s (%s)', channel_id, channel_name)
         response = HttpResponse(yaml_output, content_type='application/x-yaml')
-        response['Content-Disposition'] = f'attachment; filename="{channel.name if hasattr(channel, "name") else "openapi"}.yaml"'
+        response['Content-Disposition'] = f'attachment; filename="{channel_name}.yaml"'
         return response
 
-    except Exception as e:
-        logger.error('generate_openapi error: %s', e, exc_info=True)
+    except Exception:
+        logger.error('generate_openapi error: %s', format_exc())
         return HttpResponseServerError(
-            dumps({'error': str(e) or 'Error generating OpenAPI spec'}),
+            dumps({'error': format_exc()}),
             content_type='application/json'
         )
 
@@ -370,11 +447,11 @@ def get_rest_channels(req):
             }),
             content_type='application/json'
         )
-    except Exception as e:
-        logger.error('get_rest_channels error: %s', e)
+    except Exception:
+        logger.error('get_rest_channels error: %s', format_exc())
         return HttpResponseServerError(
             dumps({
-                'error': str(e) or 'Error retrieving REST channels'
+                'error': format_exc()
             }),
             content_type='application/json'
         )
