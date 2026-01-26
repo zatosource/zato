@@ -12,9 +12,6 @@ import os
 from json import dumps, loads
 from traceback import format_exc
 
-# Redis
-import redis
-
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 
@@ -40,36 +37,7 @@ def get_openapi_path_prefix():
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_redis_client():
-    return redis.Redis(host='localhost', port=6379, decode_responses=True)
-
-def get_openapi_cache_key(channel_id):
-    return f'zato:openapi:channel:{channel_id}'
-
-def get_cached_openapi(channel_id):
-    try:
-        client = get_redis_client()
-        return client.get(get_openapi_cache_key(channel_id))
-    except Exception:
-        logger.warning('Could not get OpenAPI from cache: %s', format_exc())
-        return None
-
-def set_cached_openapi(channel_id, yaml_output):
-    try:
-        client = get_redis_client()
-        client.set(get_openapi_cache_key(channel_id), yaml_output)
-    except Exception:
-        logger.warning('Could not cache OpenAPI: %s', format_exc())
-
-def clear_openapi_cache(channel_id):
-    try:
-        client = get_redis_client()
-        client.delete(get_openapi_cache_key(channel_id))
-        logger.info('Cleared OpenAPI cache for channel %s', channel_id)
-    except Exception:
-        logger.warning('Could not clear OpenAPI cache: %s', format_exc())
-
-def build_openapi_spec(req, cluster_id, channel_id, channel_name, rest_channel_list):
+def build_openapi_spec(req, cluster_id, channel_name, rest_channel_list):
     from zato.openapi.generator.io_scanner import IOScanner
     from zato.openapi.generator.openapi_ import OpenAPIGenerator
     import yaml
@@ -223,9 +191,6 @@ def build_openapi_spec(req, cluster_id, channel_id, channel_name, rest_channel_l
 
     yaml_output = yaml.dump(openapi_spec, sort_keys=False, allow_unicode=True)
 
-    set_cached_openapi(channel_id, yaml_output)
-    logger.info('Generated OpenAPI for channel %s (%s)', channel_id, channel_name)
-
     return yaml_output
 
 # ################################################################################################################################
@@ -328,18 +293,7 @@ class _CreateEdit(CreateEdit):
                 rest_channel_list.append(loads(item_json))
             return_data['rest_channel_list'] = dumps(rest_channel_list)
         else:
-            rest_channel_list = []
             return_data['rest_channel_list'] = '[]'
-
-        channel_id = return_data.get('id')
-        channel_name = return_data.get('name')
-        cluster_id = self.req.zato.cluster_id
-        if channel_id and cluster_id:
-            try:
-                build_openapi_spec(self.req, cluster_id, channel_id, channel_name, rest_channel_list)
-            except Exception:
-                logger.warning('Could not generate OpenAPI on save: %s', format_exc())
-
         return return_data
 
 # ################################################################################################################################
@@ -365,27 +319,59 @@ class Delete(_Delete):
     error_message = 'Could not delete OpenAPI channel'
     service_name = 'zato.generic.connection.delete'
 
-    def on_before_delete(self, item_id):
-        clear_openapi_cache(item_id)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
 def generate_openapi(req):
+    cluster_id = req.GET['cluster_id']
     channel_id = req.GET['channel_id']
 
-    cached = get_cached_openapi(channel_id)
-    if cached:
-        logger.info('Returning OpenAPI from cache for channel %s', channel_id)
-        response = HttpResponse(cached, content_type='application/x-yaml')
-        response['Content-Disposition'] = f'attachment; filename="openapi-{channel_id}.yaml"'
+    try:
+        channel_response = req.zato.client.invoke('zato.generic.connection.get-list', {
+            'cluster_id': cluster_id,
+            'type_': GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI,
+        })
+
+        channel = None
+        channel_id_int = int(channel_id)
+        response_data = channel_response.data
+        if isinstance(response_data, dict):
+            response_data = response_data.get('response', [])
+        for item in response_data:
+            if item['id'] == channel_id_int:
+                channel = item
+                break
+
+        if not channel:
+            return HttpResponseServerError(
+                dumps({'error': 'OpenAPI channel not found'}),
+                content_type='application/json'
+            )
+
+        channel_name = channel['name'] if isinstance(channel, dict) else channel.name
+
+        rest_channel_list = []
+        raw = channel.get('rest_channel_list') if isinstance(channel, dict) else getattr(channel, 'rest_channel_list', None)
+        if raw:
+            if isinstance(raw, str):
+                rest_channel_list = loads(raw)
+            else:
+                rest_channel_list = raw
+
+        yaml_output = build_openapi_spec(req, cluster_id, channel_name, rest_channel_list)
+
+        logger.info('Generated OpenAPI for channel %s (%s)', channel_id, channel_name)
+        response = HttpResponse(yaml_output, content_type='application/x-yaml')
+        response['Content-Disposition'] = f'attachment; filename="{channel_name}.yaml"'
         return response
 
-    return HttpResponseServerError(
-        dumps({'error': 'OpenAPI not found in cache - please save the channel first'}),
-        content_type='application/json'
-    )
+    except Exception:
+        logger.error('generate_openapi error: %s', format_exc())
+        return HttpResponseServerError(
+            dumps({'error': format_exc()}),
+            content_type='application/json'
+        )
 
 # ################################################################################################################################
 # ################################################################################################################################
