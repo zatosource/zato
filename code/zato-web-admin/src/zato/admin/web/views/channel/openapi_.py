@@ -99,18 +99,13 @@ class _CreateEdit(CreateEdit):
 # ################################################################################################################################
 
     def pre_process_input_dict(self, input_dict):
-        logger.info('[openapi_.py] pre_process_input_dict called, method=%s', self.req.method)
-        logger.info('[openapi_.py] POST data: %s', dict(self.req.POST))
         if self.req.method == 'POST':
             rest_channel_list_raw = self.req.POST.getlist('rest_channel_list')
-            logger.info('[openapi_.py] rest_channel_list_raw from POST: %s', rest_channel_list_raw)
             if rest_channel_list_raw:
                 rest_channel_list = []
                 for item_json in rest_channel_list_raw:
                     rest_channel_list.append(loads(item_json))
                 input_dict['rest_channel_list'] = rest_channel_list
-                logger.info('[openapi_.py] added rest_channel_list to input_dict: %s', input_dict['rest_channel_list'])
-        logger.info('[openapi_.py] final input_dict: %s', input_dict)
 
 # ################################################################################################################################
 
