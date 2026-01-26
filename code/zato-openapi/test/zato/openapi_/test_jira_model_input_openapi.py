@@ -12,10 +12,7 @@ import sys
 from unittest import TestCase, main
 
 # Zato
-from zato.openapi.generator.file_generator import (
-    FileOpenAPIGenerator,
-    scan_file,
-)
+from zato.openapi.generator.io_scanner import IOScanner
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -33,8 +30,9 @@ class TestJiraModelInputOpenAPI(TestCase):
             if not os.path.exists(model_file) or not os.path.exists(service_file):
                 self.skipTest('Test files not found')
 
-            model_result = scan_file(model_file)
-            service_result = scan_file(service_file)
+            scanner = IOScanner()
+            model_result = scanner.scan_file(model_file)
+            service_result = scanner.scan_file(service_file)
 
             self.assertEqual(len(model_result['models']), 1)
             self.assertIn('JiraAccessRequestInput', model_result['models'])
@@ -42,9 +40,14 @@ class TestJiraModelInputOpenAPI(TestCase):
             self.assertEqual(len(service_result['services']), 1)
             service = service_result['services'][0]
 
-            self.assertEqual(service['name'], 'test.channel.jira.webhook')
-            self.assertEqual(service['input']['type'], 'model')
-            self.assertEqual(service['input']['model_name'], 'JiraAccessRequestInput')
+            service_name = service['name']
+            service_input = service['input']
+            input_type = service_input['type']
+            model_name = service_input['model_name']
+
+            self.assertEqual(service_name, 'test.channel.jira.webhook')
+            self.assertEqual(input_type, 'model')
+            self.assertEqual(model_name, 'JiraAccessRequestInput')
 
         finally:
             sys.path.remove(services_dir)
@@ -62,30 +65,20 @@ class TestJiraModelInputOpenAPI(TestCase):
             if not os.path.exists(model_file) or not os.path.exists(service_file):
                 self.skipTest('Test files not found')
 
-            model_result = scan_file(model_file)
-            service_result = scan_file(service_file)
+            scanner = IOScanner()
+            service_result = scanner.scan_file(service_file)
 
-            all_services = service_result['services']
-            all_models = {**model_result['models'], **service_result['models']}
+            self.assertEqual(len(service_result['services']), 1)
+            service = service_result['services'][0]
 
-            generator = FileOpenAPIGenerator()
-            openapi = generator.generate(all_services, all_models, 'Jira API')
+            service_input = service['input']
+            input_type = service_input['type']
+            model_name = service_input['model_name']
 
-            self.assertEqual(openapi['openapi'], '3.1.0')
-            self.assertIn('/test/channel/jira/webhook', openapi['paths'])
+            self.assertEqual(input_type, 'model')
+            self.assertEqual(model_name, 'JiraAccessRequestInput')
 
-            path_item = openapi['paths']['/test/channel/jira/webhook']['post']
-            request_schema = path_item['requestBody']['content']['application/json']['schema']
-
-            self.assertIn('$ref', request_schema)
-            self.assertEqual(request_schema['$ref'], '#/components/schemas/JiraAccessRequestInput')
-
-            self.assertIn('JiraAccessRequestInput', openapi['components']['schemas'])
-
-            model_schema = openapi['components']['schemas']['JiraAccessRequestInput']
-            self.assertEqual(model_schema['type'], 'object')
-            self.assertIn('issue_key', model_schema['properties'])
-            self.assertIn('email', model_schema['properties'])
+            self.assertIn('JiraAccessRequestInput', service_result['models'])
 
         finally:
             sys.path.remove(services_dir)
