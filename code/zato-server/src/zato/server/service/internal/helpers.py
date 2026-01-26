@@ -656,6 +656,9 @@ class OpenAPIHandler(Service):
     name = 'zato.channel.openapi.get'
 
     def _get_active_rest_channel_ids(self, channel):
+        """ Extracts IDs of active REST channels from the OpenAPI channel's opaque data.
+        """
+        # Parse the opaque data to get the rest_channel_list
         rest_channel_list = []
         if channel.opaque1:
             opaque = loads(channel.opaque1) if isinstance(channel.opaque1, str) else channel.opaque1
@@ -663,6 +666,7 @@ class OpenAPIHandler(Service):
             if raw:
                 rest_channel_list = loads(raw) if isinstance(raw, str) else raw
 
+        # Collect IDs of channels that are active (state == 'on')
         out = []
         for item in rest_channel_list:
             if item['state'] == 'on':
@@ -670,11 +674,14 @@ class OpenAPIHandler(Service):
         return out
 
     def _get_basic_auth_security_ids(self, session, rest_channels):
+        """ Returns set of security IDs for REST channels that use basic auth.
+        """
         from zato.common.odb.model import SecurityBase
 
         out = set()
         for rest_channel in rest_channels:
             if rest_channel.security_id:
+                # Check if this security definition is basic auth
                 sec_base = session.query(SecurityBase).filter(
                     SecurityBase.id == rest_channel.security_id,
                     SecurityBase.sec_type == SEC_DEF_TYPE.BASIC_AUTH,
@@ -684,20 +691,28 @@ class OpenAPIHandler(Service):
         return out
 
     def _check_credentials(self, auth_header, basic_auth_security_ids):
+        """ Validates auth header against any of the basic auth definitions.
+        """
         for security_id in basic_auth_security_ids:
+            # Get the security definition from the worker store
             sec_def = self.server.worker_store.basic_auth_get_by_id(security_id)
             if sec_def:
+                # Decrypt password if encrypted
                 password = sec_def['password']
                 if password.startswith('gAAAAA'):
                     password = self.crypto.decrypt(password)
+                # Check if credentials match
                 result = check_basic_auth(self.cid, auth_header, sec_def['username'], password)
                 if result is True:
                     return True
         return False
 
     def _collect_services_info(self, rest_channels):
+        """ Gathers service metadata from REST channels for OpenAPI generation.
+        """
         out = []
         for rest_channel in rest_channels:
+            # Try to get the source path for the service
             source_path = None
             if rest_channel.service:
                 try:
@@ -706,14 +721,17 @@ class OpenAPIHandler(Service):
                         'name': rest_channel.service.name,
                     })
                     if source_info:
-                        source_path = source_info.get('source_path')
+                        response_data = source_info['zato_service_get_source_info_response']
+                        source_path = response_data['source_path']
                 except Exception:
                     logger.warning('Could not get source info for %s: %s', rest_channel.service.name, format_exc())
 
+            # Get security name if assigned
             security_name = None
             if rest_channel.security:
                 security_name = rest_channel.security.name
 
+            # Build service info dict
             out.append({
                 'name': rest_channel.service.name if rest_channel.service else rest_channel.name,
                 'url_path': rest_channel.url_path,
@@ -723,150 +741,80 @@ class OpenAPIHandler(Service):
             })
         return out
 
-    def _enrich_with_schemas(self, services_info, scan_results):
-        schema_by_service = {}
-        for service in scan_results['services']:
-            service_name = service.get('name')
-            if service_name:
-                schema_by_service[service_name] = {
-                    'input': service.get('input'),
-                    'output': service.get('output'),
-                    'class_name': service.get('class_name')
-                }
-
-        for service in services_info:
-            schema = schema_by_service.get(service['name'])
-            if schema:
-                service.update(schema)
-
-    def _build_openapi_spec(self, channel_name, services_info, scan_results):
-        from zato.openapi.generator.openapi_ import OpenAPIGenerator
-
-        security_schemes = {}
-        for service in services_info:
-            security_name = service.get('security_name')
-            if security_name and security_name not in security_schemes:
-                security_schemes[security_name] = {'type': 'http', 'scheme': 'basic'}
-
-        openapi_spec = {
-            'openapi': '3.1.0',
-            'info': {'title': channel_name, 'version': '1.0.0'},
-            'paths': {},
-            'components': {'schemas': {}, 'securitySchemes': security_schemes}
-        }
-
-        openapi_generator = OpenAPIGenerator(type_mapper=scan_results['type_mapper'])
-
-        for service in services_info:
-            path = service.get('url_path', f'/{service["name"].replace(".", "/")}')
-            method = service.get('http_method', 'post').lower()
-
-            operation = {
-                'summary': f'Invoke {service["name"]}',
-                'operationId': service['name'].replace('.', '_').replace('-', '_'),
-                'responses': {
-                    '200': {'description': 'Successful response'},
-                    '400': {'description': 'Bad Request'},
-                    '500': {'description': 'Internal Server Error'}
-                }
-            }
-
-            security_name = service.get('security_name')
-            if security_name:
-                operation['security'] = [{security_name: []}]
-
-            if service.get('input'):
-                try:
-                    request_schema = openapi_generator._create_request_schema(service['input'], scan_results['models'])
-                    if request_schema:
-                        input_def = service['input']
-                        is_required = True
-                        if input_def.get('type') == 'string':
-                            is_required = input_def.get('required', True)
-                        elif input_def.get('type') == 'tuple':
-                            is_required = any(el.get('required', True) for el in input_def.get('elements', []))
-                        operation['requestBody'] = {
-                            'required': is_required,
-                            'content': {'application/json': {'schema': request_schema}}
-                        }
-                except Exception:
-                    logger.warning('Could not create request schema for %s: %s', service['name'], format_exc())
-
-            if service.get('output'):
-                try:
-                    response_schema = openapi_generator._create_response_schema(service['output'], scan_results['models'])
-                    if response_schema:
-                        operation['responses']['200']['content'] = {'application/json': {'schema': response_schema}}
-                except Exception:
-                    logger.warning('Could not create response schema for %s: %s', service['name'], format_exc())
-
-            if path not in openapi_spec['paths']:
-                openapi_spec['paths'][path] = {}
-            openapi_spec['paths'][path][method] = operation
-
-        schema_components = openapi_generator.type_mapper.get_schema_components()
-        if schema_components:
-            openapi_spec['components']['schemas'].update(schema_components)
-
-        return openapi_spec
-
     def handle(self):
+        """ Main entry point - validates credentials and returns OpenAPI spec.
+        """
         from zato.common.odb.model import GenericConn, HTTPSOAP
-        from zato.openapi.generator.io_scanner import IOScanner
-        import yaml
+        from zato.common.util.openapi_.exporter import build_openapi_spec
+        from zato.server.connection.http_soap import BadRequest
 
+        # Credentials are required - reject immediately if missing
         auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
         if not auth_header:
             raise Forbidden(self.cid)
 
+        # Channel name from URL is required
         channel_name = self.request.http.params.get('name')
         if not channel_name:
             raise Forbidden(self.cid)
 
-        with closing(self.odb.session()) as session:
+        try:
+            with closing(self.odb.session()) as session:
 
-            channel = session.query(GenericConn).filter(
-                GenericConn.type_ == GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI,
-                GenericConn.name == channel_name,
-                GenericConn.cluster_id == self.server.cluster_id,
-            ).first()
+                # Look up the OpenAPI channel by name
+                channel = session.query(GenericConn).filter(
+                    GenericConn.type_ == GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI,
+                    GenericConn.name == channel_name,
+                    GenericConn.cluster_id == self.server.cluster_id,
+                ).first()
 
-            if not channel:
-                raise Forbidden(self.cid)
+                # Reject if channel not found
+                if not channel:
+                    raise Forbidden(self.cid)
 
-            active_rest_channel_ids = self._get_active_rest_channel_ids(channel)
+                # Get IDs of active REST channels
+                active_rest_channel_ids = self._get_active_rest_channel_ids(channel)
 
-            rest_channels = []
-            if active_rest_channel_ids:
-                rest_channels = list(session.query(HTTPSOAP).filter(
-                    HTTPSOAP.id.in_(active_rest_channel_ids),
-                    HTTPSOAP.cluster_id == self.server.cluster_id,
-                    HTTPSOAP.connection == CONNECTION.CHANNEL,
-                    HTTPSOAP.transport == URL_TYPE.PLAIN_HTTP,
-                ))
+                # Fetch the actual REST channel objects
+                rest_channels = []
+                if active_rest_channel_ids:
+                    rest_channels = list(session.query(HTTPSOAP).filter(
+                        HTTPSOAP.id.in_(active_rest_channel_ids),
+                        HTTPSOAP.cluster_id == self.server.cluster_id,
+                        HTTPSOAP.connection == CONNECTION.CHANNEL,
+                        HTTPSOAP.transport == URL_TYPE.PLAIN_HTTP,
+                    ))
 
-            basic_auth_security_ids = self._get_basic_auth_security_ids(session, rest_channels)
+                # Get basic auth security IDs from the REST channels
+                basic_auth_security_ids = self._get_basic_auth_security_ids(session, rest_channels)
 
-            if not self._check_credentials(auth_header, basic_auth_security_ids):
-                raise Forbidden(self.cid)
+                # Validate credentials against any of the basic auth definitions
+                if not self._check_credentials(auth_header, basic_auth_security_ids):
+                    raise Forbidden(self.cid)
 
-            services_info = self._collect_services_info(rest_channels)
+                # Collect service metadata from REST channels
+                services_info = self._collect_services_info(rest_channels)
 
-            file_paths = [item['source_path'] for item in services_info if item['source_path']]
+                # Collect source file paths for scanning
+                file_paths = []
+                for item in services_info:
+                    if item['source_path']:
+                        file_paths.append(item['source_path'])
 
-            scanner = IOScanner()
-            scan_results = scanner.scan_files(file_paths) if file_paths else {'services': [], 'models': {}}
-            scan_results['type_mapper'] = scanner.type_mapper
+                # Use shared OpenAPI generation
+                yaml_output = build_openapi_spec(channel_name, services_info, file_paths)
 
-            self._enrich_with_schemas(services_info, scan_results)
+                logger.info('Generated OpenAPI for channel %s', channel_name)
 
-            openapi_spec = self._build_openapi_spec(channel_name, services_info, scan_results)
-            yaml_output = yaml.dump(openapi_spec, sort_keys=False, allow_unicode=True)
+                # Return YAML response
+                self.response.payload = yaml_output
+                self.response.content_type = 'application/x-yaml'
 
-            logger.info('Generated OpenAPI for channel %s', channel_name)
-
-            self.response.payload = yaml_output
-            self.response.content_type = 'application/x-yaml'
+        except Forbidden:
+            raise
+        except Exception:
+            logger.warning('OpenAPI generation error: %s', format_exc())
+            raise BadRequest(self.cid, 'Bad request')
 
 # ################################################################################################################################
 # ################################################################################################################################

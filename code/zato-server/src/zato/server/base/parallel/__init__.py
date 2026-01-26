@@ -749,9 +749,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Easier to type
         self = parallel_server
 
-        # Things that are needed before anything else
-        self._pre_initialize()
-
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
 
@@ -828,6 +825,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
+
+        # Things like initializing SQL data on demand
+        self._pre_initialize()
 
         logger.info(
             'Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`',
