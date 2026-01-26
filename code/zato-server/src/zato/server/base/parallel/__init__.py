@@ -749,6 +749,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Easier to type
         self = parallel_server
 
+        # Things that are needed before anything else
+        self._pre_initialize()
+
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
 
@@ -969,8 +972,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
-        self._post_initialize()
-
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
@@ -978,8 +979,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _post_initialize(self) -> 'None':
-        pass
+    def _pre_initialize(self) -> 'None':
+
+        from contextlib import closing
+        from zato.common.util.channel import ensure_openapi_channel_exists
+
+        with closing(self.odb.session()) as session:
+            created = ensure_openapi_channel_exists(session, self.cluster_id)
+            if created:
+                session.commit()
+                logger.info('Created OpenAPI handler channel')
 
 # ################################################################################################################################
 
