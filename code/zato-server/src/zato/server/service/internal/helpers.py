@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from contextlib import closing
 from dataclasses import dataclass
-from http import HTTPStatus
 from io import StringIO
 from json import loads
 from logging import DEBUG, getLogger
@@ -818,15 +817,11 @@ class OpenAPIHandler(Service):
 
         auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
         if not auth_header:
-            self.response.status_code = HTTPStatus.FORBIDDEN
-            self.response.payload = {'error': 'Credentials required'}
-            return
+            raise Forbidden(self.cid)
 
         channel_name = self.request.http.params.get('name')
         if not channel_name:
-            self.response.status_code = HTTPStatus.FORBIDDEN
-            self.response.payload = {'error': 'Channel name is required'}
-            return
+            raise Forbidden(self.cid)
 
         with closing(self.odb.session()) as session:
 
@@ -837,9 +832,7 @@ class OpenAPIHandler(Service):
             ).first()
 
             if not channel:
-                self.response.status_code = HTTPStatus.FORBIDDEN
-                self.response.payload = {'error': 'Channel not found'}
-                return
+                raise Forbidden(self.cid)
 
             active_rest_channel_ids = self._get_active_rest_channel_ids(channel)
 
@@ -855,9 +848,7 @@ class OpenAPIHandler(Service):
             basic_auth_security_ids = self._get_basic_auth_security_ids(session, rest_channels)
 
             if not self._check_credentials(auth_header, basic_auth_security_ids):
-                self.response.status_code = HTTPStatus.FORBIDDEN
-                self.response.payload = {'error': 'Invalid credentials'}
-                return
+                raise Forbidden(self.cid)
 
             services_info = self._collect_services_info(rest_channels)
 
