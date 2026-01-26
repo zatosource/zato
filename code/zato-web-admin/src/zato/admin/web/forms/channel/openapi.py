@@ -17,12 +17,14 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     url_path = forms.CharField(widget=forms.HiddenInput())
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_public = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_public = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 # ################################################################################################################################
 # ################################################################################################################################
