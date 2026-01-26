@@ -8,14 +8,12 @@ This file is a proprietary product, not an open-source one.
 
 # stdlib
 import ast
+import dataclasses
+import importlib.util
 import logging
 import os
-
-# diskcache
-from diskcache import Cache
-
-# tqdm
-from tqdm import tqdm
+import sys
+import typing
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -64,9 +62,9 @@ class IOVisitor(ast.NodeVisitor):
         self.service_output = None
         self.model_fields = {}
 
-        # Check if the class inherits from Service or RESTAdapter
+        # Check if the class inherits from Service, RESTAdapter, or WSXAdapter
         for base in node.bases:
-            if isinstance(base, ast.Name) and base.id in ('Service', 'RESTAdapter'):
+            if isinstance(base, ast.Name) and base.id in ('Service', 'RESTAdapter', 'WSXAdapter'):
                 self.is_service = True
                 break
             # Check if this is a Model class
@@ -458,11 +456,136 @@ class TypeMapper:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def extract_model_fields_recursive(model_class, all_models, visited=None):
+    """ Extract fields from a model class using runtime inspection, recursively resolving nested models.
+    """
+    if visited is None:
+        visited = set()
+
+    model_name = model_class.__name__
+    if model_name in visited:
+        return
+    visited.add(model_name)
+
+    fields = {}
+
+    if dataclasses.is_dataclass(model_class):
+        for field in dataclasses.fields(model_class):
+            field_type_obj = field.type
+            field_type = _get_runtime_type_name(field_type_obj)
+            has_default = field.default is not dataclasses.MISSING or field.default_factory is not dataclasses.MISSING
+            fields[field.name] = {
+                'type': field_type,
+                'default': field.default if field.default is not dataclasses.MISSING else None,
+                'required': not has_default
+            }
+            _extract_nested_models(field_type_obj, all_models, visited)
+    elif hasattr(model_class, '__annotations__'):
+        for field_name, field_type_obj in model_class.__annotations__.items():
+            fields[field_name] = {
+                'type': _get_runtime_type_name(field_type_obj),
+                'default': None,
+                'required': True
+            }
+            _extract_nested_models(field_type_obj, all_models, visited)
+
+    all_models[model_name] = {'fields': fields, 'file_path': 'runtime'}
+
+# ################################################################################################################################
+
+def _get_runtime_type_name(type_hint):
+    """ Convert a runtime type hint to a string representation.
+    """
+    if isinstance(type_hint, str):
+        return type_hint
+
+    origin = typing.get_origin(type_hint)
+    args = typing.get_args(type_hint)
+
+    if origin is list or (hasattr(origin, '__name__') and origin.__name__ == 'list_'):
+        element_type = _get_runtime_type_name(args[0]) if args else 'object'
+        return {'container': 'list', 'element_type': element_type}
+
+    if origin is typing.Union:
+        non_none = [a for a in args if a is not type(None)]
+        if len(non_none) == 1:
+            return {'type': _get_runtime_type_name(non_none[0]), 'optional': True}
+        return 'object'
+
+    if hasattr(type_hint, '__name__'):
+        return type_hint.__name__
+
+    return str(type_hint)
+
+# ################################################################################################################################
+
+def _extract_nested_models(type_hint, all_models, visited):
+    """ Recursively extract nested model classes from a type hint.
+    """
+    if isinstance(type_hint, str):
+        return
+
+    origin = typing.get_origin(type_hint)
+    args = typing.get_args(type_hint)
+
+    if origin is list or origin is typing.Union:
+        for arg in args:
+            _extract_nested_models(arg, all_models, visited)
+        return
+
+    if isinstance(type_hint, type) and hasattr(type_hint, '__annotations__'):
+        if type_hint.__name__ not in all_models and type_hint.__name__ not in visited:
+            extract_model_fields_recursive(type_hint, all_models, visited)
+
+# ################################################################################################################################
+
+def import_module_from_file(file_path):
+    """ Dynamically import a module from a file path.
+    """
+    module_name = os.path.splitext(os.path.basename(file_path))[0]
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    if spec and spec.loader:
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        try:
+            spec.loader.exec_module(module)
+            return module
+        except Exception as e:
+            logger.warning(f'Could not import {file_path}: {e}')
+            return None
+    return None
+
+# ################################################################################################################################
+
+def resolve_model_from_import(model_name, file_path):
+    """ Try to resolve a model class by importing the service file's module.
+    """
+    file_dir = os.path.dirname(file_path)
+    if file_dir not in sys.path:
+        sys.path.insert(0, file_dir)
+
+    try:
+        module = import_module_from_file(file_path)
+        if module:
+            for name, obj in vars(module).items():
+                if name == model_name and isinstance(obj, type):
+                    return obj
+
+            for name, obj in vars(module).items():
+                if isinstance(obj, type) and obj.__name__ == model_name:
+                    return obj
+    except Exception as e:
+        logger.warning(f'Could not resolve model {model_name}: {e}')
+
+    return None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class IOScanner:
     """ Scans directories for Zato services and extracts their I/O information.
     """
-    def __init__(self, cache_dir='/tmp/zato_io_scanner_cache'):
-        self.cache = Cache(cache_dir)
+    def __init__(self):
         self.type_mapper = TypeMapper()
 
     def is_python_file(self, file_path):
@@ -470,21 +593,9 @@ class IOScanner:
         """
         return file_path.endswith('.py')
 
-    def get_file_mtime(self, file_path):
-        """ Get the modification time of a file.
-        """
-        return os.path.getmtime(file_path)
-
     def scan_file(self, file_path):
         """ Scan a single Python file for services and models.
         """
-        # Check cache first
-        mtime = self.get_file_mtime(file_path)
-        cache_key = f'{file_path}:{mtime}'
-        cached = self.cache.get(cache_key)
-        if cached is not None:
-            return cached
-
         result = {'services': [], 'models': {}}
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -492,11 +603,9 @@ class IOScanner:
                 visitor = IOVisitor()
                 visitor.visit(tree)
 
-                # Add file path to all services for better error tracking
                 for service in visitor.services:
                     service['file_path'] = file_path
 
-                # Create a copy of models with file path information
                 models_with_path = {}
                 for model_name, model_info in visitor.models.items():
                     models_with_path[model_name] = {
@@ -507,12 +616,19 @@ class IOScanner:
                 result['services'] = visitor.services
                 result['models'] = models_with_path
 
-            # Store in cache
-            self.cache[cache_key] = result
+                for service in visitor.services:
+                    for io_key in ('input', 'output'):
+                        io_def = service.get(io_key)
+                        if io_def and io_def.get('type') == 'model':
+                            model_name = io_def['model_name']
+                            if model_name not in result['models']:
+                                model_class = resolve_model_from_import(model_name, file_path)
+                                if model_class:
+                                    extract_model_fields_recursive(model_class, result['models'])
+
         except Exception as e:
             error_msg = f'Error parsing {file_path}: {e}'
             logger.error(error_msg)
-            # Add stack trace for better debugging
             logger.error('Stack trace: ', exc_info=True)
 
         return result
@@ -529,11 +645,10 @@ class IOScanner:
                 if self.is_python_file(file):
                     py_files.append(os.path.join(root, file))
 
-        # Scan each Python file with progress bar
-        for file_path in tqdm(py_files, desc=f'Scanning {directory}'):
+        for file_path in py_files:
             file_results = self.scan_file(file_path)
-            all_results['services'].extend(file_results['services']) # type: ignore
-            all_results['models'].update(file_results['models']) # type: ignore
+            all_results['services'].extend(file_results['services'])
+            all_results['models'].update(file_results['models'])
 
         return all_results
 
