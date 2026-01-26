@@ -122,6 +122,25 @@ class OpenAPIGenerator:
                 logger.warning(f'Could not map output model: {e}')
                 raise
 
+        # Handle tuple output
+        elif service_output['type'] == 'tuple':
+            properties = {}
+            required = []
+
+            for element in service_output['elements']:
+                properties[element['name']] = {'type': 'string'}
+                if element.get('required', True):
+                    required.append(element['name'])
+
+            schema = {
+                'type': 'object',
+                'properties': properties
+            }
+            if required:
+                schema['required'] = required
+
+            return schema
+
         # Handle container output like list_[Model]
         elif service_output['type'] == 'container':
             container_type = service_output['container_type']

@@ -278,6 +278,22 @@ class IOVisitor(ast.NodeVisitor):
                         if isinstance(node.value, ast.Name):
                             # Output as a model class
                             self.service_output = {'type': 'model', 'model_name': node.value.id}
+                        elif isinstance(node.value, ast.Tuple):
+                            # Output as a tuple of strings
+                            elts = []
+                            for elt in node.value.elts:
+                                if isinstance(elt, ast.Constant):
+                                    param_value = elt.value
+                                    param_info = {
+                                        'name': param_value,
+                                        'required': True
+                                    }
+                                    if param_value.startswith('-'):
+                                        param_info['name'] = param_value[1:]
+                                        param_info['required'] = False
+                                    elts.append(param_info)
+                            if elts:
+                                self.service_output = {'type': 'tuple', 'elements': elts}
                         elif isinstance(node.value, ast.Subscript):
                             # Handle list_[ModelClass] or similar
                             container_type = self._get_name_from_node(node.value.value)
