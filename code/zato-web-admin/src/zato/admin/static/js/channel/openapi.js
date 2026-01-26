@@ -104,6 +104,7 @@ $.fn.zato.channel.openapi.data_table.new_row = function(item, data, include_tr) 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.rest_channel_list || '[]');
+    row += String.format("<td class='ignore'>{0}</td>", item.url_path || '');
 
     if(include_tr) {
         row += '</tr>';
