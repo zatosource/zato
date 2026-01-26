@@ -123,32 +123,6 @@ class TestService(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestOpenAPIGenerator(TestCase):
-
-    def test_generate_openapi_no_io(self):
-        self.skipTest('OpenAPIGenerator requires different API - use integration tests instead')
-
-        self.assertEqual(openapi['openapi'], '3.1.0')
-        self.assertEqual(openapi['info']['title'], 'Test API')
-        self.assertIn('/test/no/io', openapi['paths'])
-
-        path_item = openapi['paths']['/test/no/io']['post']
-        request_schema = path_item['requestBody']['content']['application/json']['schema']
-        response_schema = path_item['responses']['200']['content']['application/json']['schema']
-
-        self.assertEqual(request_schema['type'], 'object')
-        self.assertTrue(request_schema.get('additionalProperties'))
-        self.assertEqual(response_schema['type'], 'object')
-        self.assertTrue(response_schema.get('additionalProperties'))
-
-# ################################################################################################################################
-
-    def test_generate_openapi_tuple_input(self):
-        self.skipTest('OpenAPIGenerator requires different API - use integration tests instead')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class TestScanFile(TestCase):
 
     def test_scan_wsx_service_file(self):
