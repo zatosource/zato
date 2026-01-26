@@ -652,6 +652,18 @@ class IOScanner:
 
         return all_results
 
+    def scan_files(self, file_paths):
+        """ Scan multiple files for services and models.
+        """
+        all_results = {'services': [], 'models': {}}
+        for file_path in file_paths:
+            if self.is_python_file(file_path):
+                file_results = self.scan_file(file_path)
+                all_results['services'].extend(file_results['services'])
+                all_results['models'].update(file_results['models'])
+
+        return all_results
+
     def scan_directories(self, directories):
         """ Scan multiple directories for services and models.
         """
@@ -659,10 +671,7 @@ class IOScanner:
         for directory in directories:
             results = self.scan_directory(directory)
             all_results['services'].extend(results['services'])
-
-            # Preserve file path information when merging models
-            for model_name, model_info in results['models'].items():
-                all_results['models'][model_name] = model_info
+            all_results['models'].update(results['models'])
 
         return all_results
 
