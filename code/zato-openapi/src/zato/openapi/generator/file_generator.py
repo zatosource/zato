@@ -9,9 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import argparse
 import ast
+import dataclasses
+import importlib.util
 import logging
 import os
 import sys
+import typing
 
 # PyYAML
 import yaml
@@ -330,6 +333,157 @@ class FileOpenAPIGenerator:
 # ################################################################################################################################
 # ################################################################################################################################
 
+def extract_model_fields_recursive(model_class, all_models, visited=None):
+    """ Extract fields from a model class using runtime inspection, recursively resolving nested models.
+    """
+    if visited is None:
+        visited = set()
+
+    model_name = model_class.__name__
+    if model_name in visited:
+        return
+    visited.add(model_name)
+
+    fields = {}
+
+    if dataclasses.is_dataclass(model_class):
+        for field in dataclasses.fields(model_class):
+            field_type_obj = field.type
+            field_type = _get_type_name(field_type_obj)
+            has_default = field.default is not dataclasses.MISSING or field.default_factory is not dataclasses.MISSING
+            fields[field.name] = {
+                'type': field_type,
+                'default': field.default if field.default is not dataclasses.MISSING else None,
+                'required': not has_default
+            }
+            _extract_nested_models(field_type_obj, all_models, visited)
+    elif hasattr(model_class, '__annotations__'):
+        for field_name, field_type_obj in model_class.__annotations__.items():
+            fields[field_name] = {
+                'type': _get_type_name(field_type_obj),
+                'default': None,
+                'required': True
+            }
+            _extract_nested_models(field_type_obj, all_models, visited)
+
+    all_models[model_name] = fields
+
+# ################################################################################################################################
+
+def _extract_nested_models(type_hint, all_models, visited):
+    """ Recursively extract nested model classes from a type hint.
+    """
+    if isinstance(type_hint, str):
+        return
+
+    origin = typing.get_origin(type_hint)
+    args = typing.get_args(type_hint)
+
+    if origin is list or origin is typing.Union:
+        for arg in args:
+            _extract_nested_models(arg, all_models, visited)
+        return
+
+    if isinstance(type_hint, type) and hasattr(type_hint, '__annotations__'):
+        if type_hint.__name__ not in all_models and type_hint.__name__ not in visited:
+            extract_model_fields_recursive(type_hint, all_models, visited)
+
+# ################################################################################################################################
+
+def extract_model_fields(model_class):
+    """ Extract fields from a model class (non-recursive, for backward compatibility).
+    """
+    fields = {}
+
+    if dataclasses.is_dataclass(model_class):
+        for field in dataclasses.fields(model_class):
+            field_type = _get_type_name(field.type)
+            has_default = field.default is not dataclasses.MISSING or field.default_factory is not dataclasses.MISSING
+            fields[field.name] = {
+                'type': field_type,
+                'default': field.default if field.default is not dataclasses.MISSING else None,
+                'required': not has_default
+            }
+    elif hasattr(model_class, '__annotations__'):
+        for field_name, field_type in model_class.__annotations__.items():
+            fields[field_name] = {
+                'type': _get_type_name(field_type),
+                'default': None,
+                'required': True
+            }
+
+    return fields
+
+# ################################################################################################################################
+
+def _get_type_name(type_hint):
+    """ Convert a type hint to a string representation.
+    """
+    if isinstance(type_hint, str):
+        return type_hint
+
+    origin = typing.get_origin(type_hint)
+    args = typing.get_args(type_hint)
+
+    if origin is list or (hasattr(origin, '__name__') and origin.__name__ == 'list_'):
+        element_type = _get_type_name(args[0]) if args else 'object'
+        return {'container': 'list', 'element_type': element_type}
+
+    if origin is typing.Union:
+        non_none = [a for a in args if a is not type(None)]
+        if len(non_none) == 1:
+            return {'type': _get_type_name(non_none[0]), 'optional': True}
+        return 'object'
+
+    if hasattr(type_hint, '__name__'):
+        return type_hint.__name__
+
+    return str(type_hint)
+
+# ################################################################################################################################
+
+def import_module_from_file(file_path):
+    """ Dynamically import a module from a file path.
+    """
+    module_name = os.path.splitext(os.path.basename(file_path))[0]
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    if spec and spec.loader:
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        try:
+            spec.loader.exec_module(module)
+            return module
+        except Exception as e:
+            logger.warning(f'Could not import {file_path}: {e}')
+            return None
+    return None
+
+# ################################################################################################################################
+
+def resolve_model_from_import(model_name, file_path):
+    """ Try to resolve a model class by importing the service file's module.
+    """
+    file_dir = os.path.dirname(file_path)
+    if file_dir not in sys.path:
+        sys.path.insert(0, file_dir)
+
+    try:
+        module = import_module_from_file(file_path)
+        if module:
+            for name, obj in vars(module).items():
+                if name == model_name and isinstance(obj, type):
+                    return obj
+
+            for name, obj in vars(module).items():
+                if isinstance(obj, type) and obj.__name__ == model_name:
+                    return obj
+    except Exception as e:
+        logger.warning(f'Could not resolve model {model_name}: {e}')
+
+    return None
+
+# ################################################################################################################################
+
 def scan_file(file_path):
     """ Scan a Python file for services and models.
     """
@@ -339,9 +493,21 @@ def scan_file(file_path):
     visitor = FileIOVisitor()
     visitor.visit(tree)
 
+    models = dict(visitor.models)
+
+    for service in visitor.services:
+        for io_key in ('input', 'output'):
+            io_def = service.get(io_key)
+            if io_def and io_def.get('type') == 'model':
+                model_name = io_def['model_name']
+                if model_name not in models:
+                    model_class = resolve_model_from_import(model_name, file_path)
+                    if model_class:
+                        extract_model_fields_recursive(model_class, models)
+
     return {
         'services': visitor.services,
-        'models': visitor.models
+        'models': models
     }
 
 # ################################################################################################################################
