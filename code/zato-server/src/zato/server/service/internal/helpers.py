@@ -816,11 +816,17 @@ class OpenAPIHandler(Service):
         from zato.openapi.generator.io_scanner import IOScanner
         import yaml
 
+        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        if not auth_header:
+            self.response.status_code = HTTPStatus.FORBIDDEN
+            self.response.payload = {'error': 'Credentials required'}
+            return
+
         channel_name = self.request.http.params.get('name')
         if not channel_name:
-            raise Forbidden(self.cid, 'Channel name is required')
-
-        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+            self.response.status_code = HTTPStatus.FORBIDDEN
+            self.response.payload = {'error': 'Channel name is required'}
+            return
 
         with closing(self.odb.session()) as session:
 
@@ -831,7 +837,9 @@ class OpenAPIHandler(Service):
             ).first()
 
             if not channel:
-                raise Forbidden(self.cid, 'Channel not found')
+                self.response.status_code = HTTPStatus.FORBIDDEN
+                self.response.payload = {'error': 'Channel not found'}
+                return
 
             active_rest_channel_ids = self._get_active_rest_channel_ids(channel)
 
