@@ -8,10 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from contextlib import closing
 from dataclasses import dataclass
+from http import HTTPStatus
 from io import StringIO
+from json import loads
 from logging import DEBUG, getLogger
 from tempfile import gettempdir
+from traceback import format_exc
 from unittest import TestCase
 
 # Prometheus
@@ -23,8 +27,9 @@ from zato.common.typing_ import cast_, intnone, list_, optional
 from zato.common.util.api import utcnow
 from zato.common.util.open_ import open_w
 from zato.server.commands import CommandResult, Config
-from zato.common.api import SEC_DEF_TYPE
-from zato.server.connection.http_soap import Unauthorized
+from zato.common.api import CONNECTION, GENERIC, SEC_DEF_TYPE, URL_TYPE
+from zato.common.util.auth import check_basic_auth
+from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.service import Model, Service
 
 # ################################################################################################################################
@@ -641,6 +646,227 @@ class CommandsService(Service):
         test_suite.test_invoke_async_core()
 
         self.response.payload = 'OK'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class OpenAPIHandler(Service):
+    """ Returns OpenAPI specification for a given OpenAPI channel.
+    Requires basic auth credentials matching one of the REST channels in the OpenAPI channel.
+    """
+    name = 'zato.channel.openapi.get'
+
+    def handle(self):
+
+        from zato.common.odb.model import GenericConn, HTTPSOAP, SecurityBase
+        from zato.openapi.generator.io_scanner import IOScanner
+        from zato.openapi.generator.openapi_ import OpenAPIGenerator
+        import yaml
+
+        channel_name = self.request.http.params.get('name')
+        if not channel_name:
+            raise Forbidden(self.cid, 'Channel name is required')
+
+        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+
+        with closing(self.odb.session()) as session:
+
+            channel = session.query(GenericConn).filter(
+                GenericConn.type_ == GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI,
+                GenericConn.name == channel_name,
+                GenericConn.cluster_id == self.server.cluster_id,
+            ).first()
+
+            if not channel:
+                raise Forbidden(self.cid, 'Channel not found')
+
+            rest_channel_list = []
+            if channel.opaque1:
+                opaque = loads(channel.opaque1) if isinstance(channel.opaque1, str) else channel.opaque1
+                raw = opaque.get('rest_channel_list')
+                if raw:
+                    rest_channel_list = loads(raw) if isinstance(raw, str) else raw
+
+            active_rest_channel_ids = []
+            for item in rest_channel_list:
+                if item['state'] == 'on':
+                    active_rest_channel_ids.append(int(item['id']))
+
+            if not active_rest_channel_ids:
+                raise Forbidden(self.cid, 'No active REST channels')
+
+            rest_channels = session.query(HTTPSOAP).filter(
+                HTTPSOAP.id.in_(active_rest_channel_ids),
+                HTTPSOAP.cluster_id == self.server.cluster_id,
+                HTTPSOAP.connection == CONNECTION.CHANNEL,
+                HTTPSOAP.transport == URL_TYPE.PLAIN_HTTP,
+            ).all()
+
+            basic_auth_security_ids = set()
+            for rest_channel in rest_channels:
+                if rest_channel.security_id:
+                    sec_base = session.query(SecurityBase).filter(
+                        SecurityBase.id == rest_channel.security_id
+                    ).first()
+                    if sec_base and sec_base.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+                        basic_auth_security_ids.add(rest_channel.security_id)
+
+            is_authenticated = False
+
+            for security_id in basic_auth_security_ids:
+                sec_def = self.server.worker_store.basic_auth_get_by_id(security_id)
+                if sec_def:
+                    password = sec_def['password']
+                    if password.startswith('gAAAAA'):
+                        password = self.crypto.decrypt(password)
+                    result = check_basic_auth(
+                        self.cid,
+                        auth_header,
+                        sec_def['username'],
+                        password
+                    )
+                    if result is True:
+                        is_authenticated = True
+                        break
+
+            if not is_authenticated:
+                self.response.status_code = HTTPStatus.FORBIDDEN
+                self.response.payload = {'error': 'Invalid credentials'}
+                return
+
+            services_info = []
+            for rest_channel in rest_channels:
+                if rest_channel.id in active_rest_channel_ids:
+                    source_path = None
+                    if rest_channel.service:
+                        try:
+                            source_info = self.invoke('zato.service.get-source-info', {
+                                'cluster_id': self.server.cluster_id,
+                                'name': rest_channel.service.name,
+                            })
+                            if source_info:
+                                source_path = source_info.get('source_path')
+                        except Exception:
+                            logger.warning('Could not get source info for %s: %s', rest_channel.service.name, format_exc())
+
+                    security_name = None
+                    if rest_channel.security:
+                        security_name = rest_channel.security.name
+
+                    services_info.append({
+                        'name': rest_channel.service.name if rest_channel.service else rest_channel.name,
+                        'url_path': rest_channel.url_path,
+                        'http_method': rest_channel.method or 'POST',
+                        'source_path': source_path,
+                        'security_name': security_name,
+                    })
+
+            file_paths = []
+            for item in services_info:
+                if item['source_path']:
+                    file_paths.append(item['source_path'])
+
+            scanner = IOScanner()
+            scan_results = scanner.scan_files(file_paths) if file_paths else {'services': [], 'models': {}}
+
+            schema_by_service = {}
+            for service in scan_results['services']:
+                service_name = service.get('name')
+                if service_name:
+                    schema_by_service[service_name] = {
+                        'input': service.get('input'),
+                        'output': service.get('output'),
+                        'class_name': service.get('class_name')
+                    }
+
+            for service in services_info:
+                schema = schema_by_service.get(service['name'])
+                if schema:
+                    service.update(schema)
+
+            security_schemes = {}
+            for service in services_info:
+                security_name = service.get('security_name')
+                if security_name and security_name not in security_schemes:
+                    security_schemes[security_name] = {
+                        'type': 'http',
+                        'scheme': 'basic'
+                    }
+
+            openapi_spec = {
+                'openapi': '3.1.0',
+                'info': {
+                    'title': channel_name,
+                    'version': '1.0.0'
+                },
+                'paths': {},
+                'components': {
+                    'schemas': {},
+                    'securitySchemes': security_schemes
+                }
+            }
+
+            openapi_generator = OpenAPIGenerator(type_mapper=scanner.type_mapper)
+
+            for service in services_info:
+                path = service.get('url_path', f'/{service["name"].replace(".", "/")}')
+                method = service.get('http_method', 'post').lower()
+
+                operation = {
+                    'summary': f'Invoke {service["name"]}',
+                    'operationId': service['name'].replace('.', '_').replace('-', '_'),
+                    'responses': {
+                        '200': {'description': 'Successful response'},
+                        '400': {'description': 'Bad Request'},
+                        '500': {'description': 'Internal Server Error'}
+                    }
+                }
+
+                security_name = service.get('security_name')
+                if security_name:
+                    operation['security'] = [{security_name: []}]
+
+                if service.get('input'):
+                    try:
+                        request_schema = openapi_generator._create_request_schema(service['input'], scan_results['models'])
+                        if request_schema:
+                            input_def = service['input']
+                            is_required = True
+                            if input_def.get('type') == 'string':
+                                is_required = input_def.get('required', True)
+                            elif input_def.get('type') == 'tuple':
+                                is_required = any(el.get('required', True) for el in input_def.get('elements', []))
+                            operation['requestBody'] = {
+                                'required': is_required,
+                                'content': {'application/json': {'schema': request_schema}}
+                            }
+                    except Exception:
+                        logger.warning('Could not create request schema for %s: %s', service['name'], format_exc())
+
+                if service.get('output'):
+                    try:
+                        response_schema = openapi_generator._create_response_schema(service['output'], scan_results['models'])
+                        if response_schema:
+                            operation['responses']['200']['content'] = {
+                                'application/json': {'schema': response_schema}
+                            }
+                    except Exception:
+                        logger.warning('Could not create response schema for %s: %s', service['name'], format_exc())
+
+                if path not in openapi_spec['paths']:
+                    openapi_spec['paths'][path] = {}
+                openapi_spec['paths'][path][method] = operation
+
+            schema_components = openapi_generator.type_mapper.get_schema_components()
+            if schema_components:
+                openapi_spec['components']['schemas'].update(schema_components)
+
+            yaml_output = yaml.dump(openapi_spec, sort_keys=False, allow_unicode=True)
+
+            logger.info('Generated OpenAPI for channel %s', channel_name)
+
+            self.response.payload = yaml_output
+            self.response.content_type = 'application/x-yaml'
 
 # ################################################################################################################################
 # ################################################################################################################################

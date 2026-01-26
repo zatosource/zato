@@ -114,6 +114,10 @@ class Create(ZatoCommand):
             metrics_service = Service(None, metrics_service_name, True, metrics_service_name, True, cluster)
             session.add(metrics_service)
 
+            openapi_handler_service_name = 'zato.server.service.internal.helpers.OpenAPIHandler'
+            openapi_handler_service = Service(None, openapi_handler_service_name, True, openapi_handler_service_name, True, cluster)
+            session.add(openapi_handler_service)
+
             ping_service = self.add_ping_service(session, cluster)
 
             # Create channels
@@ -121,6 +125,7 @@ class Create(ZatoCommand):
             self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
             self.add_metrics_channel(session, cluster, metrics_service)
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
+            self.add_openapi_handler_channel(session, cluster, openapi_handler_service)
 
             # Add other configurations
             self.add_default_caches(session, cluster)
@@ -366,5 +371,21 @@ class Create(ZatoCommand):
             'plain_http', None, '/api/log/streaming/status', None, '', None, DATA_FORMAT.JSON,
             service=service, cluster=cluster, security=security)
         session.add(status_channel)
+
+# ################################################################################################################################
+
+    def add_openapi_handler_channel(self, session, cluster, service):
+        """ Adds a channel for OpenAPI specification retrieval.
+        """
+
+        # Zato
+        from zato.common.api import DATA_FORMAT
+        from zato.common.odb.model import HTTPSOAP
+
+        channel = HTTPSOAP(
+            None, 'zato.channel.openapi.get', True, True, 'channel',
+            'plain_http', None, '/openapi/{name}', None, '', None, DATA_FORMAT.JSON,
+            service=service, cluster=cluster)
+        session.add(channel)
 
 # ################################################################################################################################
