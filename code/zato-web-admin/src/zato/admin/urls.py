@@ -403,6 +403,8 @@ urlpatterns += [
         login_required(channel_openapi.Delete()), name=channel_openapi.Delete.url_name),
     url(r'^zato/channel/openapi/get-rest-channels/$',
         login_required(channel_openapi.get_rest_channels), name='channel-openapi-get-rest-channels'),
+    url(r'^zato/channel/openapi/generate/$',
+        login_required(channel_openapi.generate_openapi), name='channel-openapi-generate'),
     ]
 
 # ################################################################################################################################

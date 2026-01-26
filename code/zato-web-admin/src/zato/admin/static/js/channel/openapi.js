@@ -96,7 +96,7 @@ $.fn.zato.channel.openapi.data_table.new_row = function(item, data, include_tr) 
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.url_path || '');
-    row += '<td><a href="#">Download OpenAPI</a></td>';
+    row += String.format('<td><a href="/zato/channel/openapi/generate/?cluster_id={0}&channel_id={1}">Download OpenAPI</a></td>', $('#cluster_id').val(), item.id);
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.openapi.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.openapi.delete_({0});'>Delete</a>", item.id));
