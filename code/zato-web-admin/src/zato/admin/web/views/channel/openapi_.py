@@ -54,7 +54,7 @@ class OpenAPIChannelConfigObject:
     def channel_count(self):
         count = 0
         for item in (self.rest_channel_list or []):
-            if item.get('state') == 'on':
+            if item['state'] == 'on':
                 count += 1
         return count
 
@@ -213,8 +213,8 @@ def generate_openapi(req):
 
         services_info = []
         for item in rest_channel_list:
-            if item.get('state') == 'on':
-                rest_channel_id_str = str(item.get('id'))
+            if item['state'] == 'on':
+                rest_channel_id_str = str(item['id'])
                 rest_channel = rest_channels_by_id.get(rest_channel_id_str)
                 if rest_channel:
                     try:
