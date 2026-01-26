@@ -164,8 +164,8 @@ class Delete(_Delete):
 
 @method_allowed('GET')
 def generate_openapi(req):
-    cluster_id = req.GET.get('cluster_id')
-    channel_id = req.GET.get('channel_id')
+    cluster_id = req.GET['cluster_id']
+    channel_id = req.GET['channel_id']
 
     try:
         channel_response = req.zato.client.invoke('zato.generic.connection.get-list', {
@@ -240,7 +240,10 @@ def generate_openapi(req):
                             'source_path': None,
                         })
 
-        file_paths = [s['source_path'] for s in services_info if s.get('source_path')]
+        file_paths = []
+        for item in services_info:
+            if item['source_path']:
+                file_paths.append(item['source_path'])
 
         from zato.openapi.generator.io_scanner import IOScanner
         from zato.openapi.generator.openapi_ import OpenAPIGenerator
@@ -343,7 +346,7 @@ def generate_openapi(req):
 
 @method_allowed('GET')
 def get_rest_channels(req):
-    cluster_id = req.GET.get('cluster_id')
+    cluster_id = req.GET['cluster_id']
 
     try:
         response = req.zato.client.invoke('zato.http-soap.get-list', {
