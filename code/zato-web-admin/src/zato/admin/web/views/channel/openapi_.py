@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
-from json import dumps
+from json import dumps, loads
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -43,6 +43,11 @@ class OpenAPIChannelConfigObject:
         self.name = ''
         self.is_active = True
         self.url_path = ''
+        self.rest_channel_list = []
+
+    @property
+    def rest_channel_list_json(self):
+        return dumps(self.rest_channel_list or [])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -90,6 +95,22 @@ class _CreateEdit(CreateEdit):
         initial_input_dict['is_outconn'] = False
         initial_input_dict['recv_timeout'] = 250
         initial_input_dict['pool_size'] = 20
+
+# ################################################################################################################################
+
+    def pre_process_input_dict(self, input_dict):
+        logger.info('[openapi_.py] pre_process_input_dict called, method=%s', self.req.method)
+        logger.info('[openapi_.py] POST data: %s', dict(self.req.POST))
+        if self.req.method == 'POST':
+            rest_channel_list_raw = self.req.POST.getlist('rest_channel_list')
+            logger.info('[openapi_.py] rest_channel_list_raw from POST: %s', rest_channel_list_raw)
+            if rest_channel_list_raw:
+                rest_channel_list = []
+                for item_json in rest_channel_list_raw:
+                    rest_channel_list.append(loads(item_json))
+                input_dict['rest_channel_list'] = rest_channel_list
+                logger.info('[openapi_.py] added rest_channel_list to input_dict: %s', input_dict['rest_channel_list'])
+        logger.info('[openapi_.py] final input_dict: %s', input_dict)
 
 # ################################################################################################################################
 
