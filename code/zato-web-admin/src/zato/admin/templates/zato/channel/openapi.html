@@ -28,6 +28,8 @@
 
             'name',
             '_is_active',
+            'url_path',
+            '_openapi',
 
             '_edit',
             '_delete',
@@ -69,6 +71,8 @@
 
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">URL path</a></th>
+                        <th><a href="#">OpenAPI</a></th>
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -87,6 +91,8 @@
 
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.url_path }}</td>
+                        <td><a href="#">Download OpenAPI</a></td>
 
                         <td><a href="javascript:$.fn.zato.channel.openapi.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.openapi.delete_('{{ item.id }}')">Delete</a></td>
@@ -99,7 +105,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='8'>No results</td>
+                        <td colspan='10'>No results</td>
                     </tr>
                 {% endif %}
 
