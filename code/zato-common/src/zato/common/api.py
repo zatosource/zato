@@ -102,7 +102,7 @@ generic_attrs = (
     'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',
     'max_wait_time', 'oauth_def', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout',
-    'security_group_count', 'security_group_member_count', 'gateway_service_list',
+    'security_group_count', 'security_group_member_count', 'gateway_service_list', 'rest_channel_list',
 )
 
 # ################################################################################################################################
