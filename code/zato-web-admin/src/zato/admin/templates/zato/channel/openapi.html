@@ -37,6 +37,7 @@
             'id',
             'is_active',
             'rest_channel_list',
+            'url_path',
         ]
     }
     </script>
@@ -79,6 +80,7 @@
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -100,6 +102,7 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.rest_channel_list_json }}</td>
+                        <td class='ignore'>{{ item.url_path }}</td>
 
                     </tr>
                 {% endfor %}
