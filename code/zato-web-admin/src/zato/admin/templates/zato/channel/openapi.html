@@ -6,6 +6,7 @@
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-checkbox.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -33,6 +34,7 @@
 
             'id',
             'is_active',
+            'rest_channel_list',
         ]
     }
     </script>
@@ -91,6 +93,7 @@
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.rest_channel_list_json }}</td>
 
                     </tr>
                 {% endfor %}

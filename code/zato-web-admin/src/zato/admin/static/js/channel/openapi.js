@@ -27,7 +27,8 @@ $(document).ready(function() {
     });
 
     $('#edit-div').dialog('option', 'open', function() {
-        $.fn.zato.channel.openapi.loadRestChannels('id_edit-rest-channels-div');
+        var id = $('#id_edit-id').val();
+        $.fn.zato.channel.openapi.loadRestChannelsForEdit('id_edit-rest-channels-div', id);
         $.fn.zato.channel.openapi.updateSlug('id_edit-name', 'id_edit-url_path', 'id_edit-url_path_display');
     });
 
@@ -38,6 +39,32 @@ $(document).ready(function() {
     $('#id_edit-name').on('input', function() {
         $.fn.zato.channel.openapi.updateSlug('id_edit-name', 'id_edit-url_path', 'id_edit-url_path_display');
     });
+
+    var originalOnSubmit = $.fn.zato.data_table.on_submit;
+    $.fn.zato.data_table.on_submit = function(action) {
+        var containerId = action === 'create' ? '#rest-channels-div' : '#id_edit-rest-channels-div';
+        var $form = $(containerId).closest('form');
+
+        $form.find('input[name="rest_channel_list"]').remove();
+
+        $(containerId + ' input[name="rest_channel_id"]:checked:not(.disabled)').each(function() {
+            var $checkbox = $(this);
+            var channelId = $checkbox.val();
+            var dataObj = {id: channelId, state: 'on'};
+            var dataStr = JSON.stringify(dataObj).replace(/"/g, '&quot;');
+            $form.append('<input type="hidden" name="rest_channel_list" value="' + dataStr + '">');
+        });
+
+        $(containerId + ' input[name="rest_channel_id"].disabled').each(function() {
+            var $checkbox = $(this);
+            var channelId = $checkbox.val();
+            var dataObj = {id: channelId, state: 'disabled'};
+            var dataStr = JSON.stringify(dataObj).replace(/"/g, '&quot;');
+            $form.append('<input type="hidden" name="rest_channel_list" value="' + dataStr + '">');
+        });
+
+        return originalOnSubmit.call(this, action);
+    };
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -74,6 +101,7 @@ $.fn.zato.channel.openapi.data_table.new_row = function(item, data, include_tr) 
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", item.rest_channel_list || '[]');
 
     if(include_tr) {
         row += '</tr>';
@@ -131,8 +159,10 @@ $.fn.zato.channel.openapi.updateSlug = function(nameInputId, hiddenInputId, disp
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.channel.openapi.loadRestChannels = function(containerId) {
+$.fn.zato.channel.openapi.loadRestChannels = function(containerId, channelStates) {
     var cluster_id = $('#cluster_id').val();
+    channelStates = channelStates || {};
+    console.log('[openapi.js] loadRestChannels called with containerId:', containerId, 'channelStates:', JSON.stringify(channelStates));
 
     $.ajax({
         url: '/zato/channel/openapi/get-rest-channels/',
@@ -141,13 +171,22 @@ $.fn.zato.channel.openapi.loadRestChannels = function(containerId) {
             cluster_id: cluster_id
         },
         success: function(response) {
+            console.log('[openapi.js] loadRestChannels got response:', JSON.stringify(response));
             if (response.rest_channels && response.rest_channels.length > 0) {
                 var items = [];
                 for (var i = 0; i < response.rest_channels.length; i++) {
                     var channel = response.rest_channels[i];
+                    var savedState = channelStates[String(channel.id)];
+                    var state = $.fn.zato.multi_checkbox.State.Off;
+                    if (savedState === 'on') {
+                        state = $.fn.zato.multi_checkbox.State.On;
+                    } else if (savedState === 'disabled') {
+                        state = $.fn.zato.multi_checkbox.State.Disabled;
+                    }
+                    console.log('[openapi.js] channel.id:', channel.id, 'savedState:', savedState, 'state:', state);
                     items.push({
                         id: channel.id,
-                        state: $.fn.zato.multi_checkbox.State.Off,
+                        state: state,
                         link: '/zato/http-soap/?cluster=' + cluster_id + '&connection=channel&transport=plain_http&query=' + encodeURIComponent(channel.name),
                         linkText: channel.name,
                         description: channel.url_path
@@ -177,6 +216,35 @@ $.fn.zato.channel.openapi.loadRestChannels = function(containerId) {
             );
         }
     });
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.channel.openapi.loadRestChannelsForEdit = function(containerId, channelId) {
+    console.log('[openapi.js] loadRestChannelsForEdit called with containerId:', containerId, 'channelId:', channelId);
+    var instance = $.fn.zato.data_table.data[channelId];
+    console.log('[openapi.js] instance from data_table:', JSON.stringify(instance));
+    var channelStates = {};
+
+    if (instance && instance.rest_channel_list) {
+        var raw = instance.rest_channel_list;
+        console.log('[openapi.js] raw rest_channel_list:', raw);
+        var channelList = [];
+        if (typeof raw === 'string' && raw.length > 0) {
+            var parsed = JSON.parse(raw);
+            channelList = Array.isArray(parsed) ? parsed : [parsed];
+        } else if (Array.isArray(raw)) {
+            channelList = raw;
+        } else if (typeof raw === 'object') {
+            channelList = [raw];
+        }
+        for (var i = 0; i < channelList.length; i++) {
+            var item = channelList[i];
+            channelStates[String(item.id)] = item.state;
+        }
+        console.log('[openapi.js] parsed channelStates:', JSON.stringify(channelStates));
+    }
+    $.fn.zato.channel.openapi.loadRestChannels(containerId, channelStates);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
