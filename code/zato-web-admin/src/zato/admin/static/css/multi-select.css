@@ -3,8 +3,8 @@
     overflow: scroll;
     overflow-y: auto;
     overflow-x: auto;
-    height:130px;
-    background-color:#fff;
+    height:169px;
+    background-color:#fffefb;
 }
 
 .multi-select-input
@@ -13,6 +13,10 @@
     width:100%;
     border:none;
     background-color:#e6e6e6
+}
+
+.multi-select-table {
+    width: 100%;
 }
 
 .multi-select-table td {
@@ -53,4 +57,81 @@ label.toggle:hover {
     text-shadow: none;
     padding-top:3px;
     padding-bottom:3px;
+}
+
+.multi-checkbox-filter {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #3498db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: linear-gradient(to bottom, #fff, #f8f9fa);
+    transition: border-color 0.2s, background 0.2s;
+    outline: none;
+}
+
+.multi-checkbox-filter:focus {
+    border-color: #2980b9;
+    background: #fff;
+}
+
+.multi-checkbox-filter::placeholder {
+    color: #aaa;
+    font-style: italic;
+}
+
+.multi-checkbox-filter-row {
+    background-color: transparent !important;
+}
+
+.multi-checkbox-filter-row td {
+    padding: 4px 4px 4px 4px;
+}
+
+.multi-checkbox-row {
+    cursor: pointer;
+}
+
+.multi-checkbox-row:hover {
+    background-color: #f5f0e8 !important;
+    border-top: none !important;
+}
+
+.loading-message {
+    font-style: italic;
+    color: #666;
+}
+
+.tri-state.disabled {
+    opacity: 0.6;
+    outline: 2px solid #999;
+    outline-offset: 1px;
+}
+
+.url-path-display {
+    font-family: monospace;
+    color: #333;
+}
+
+.form-label-cell {
+    vertical-align: middle;
+    width: 17%;
+}
+
+.form-label-cell-narrow {
+    vertical-align: middle;
+}
+
+.form-label-cell-top {
+    vertical-align: top;
+    padding-top: 5px;
+}
+
+.form-value-cell-multi {
+    min-height: 25px;
+    vertical-align: middle;
+}
+
+.form-buttons-cell {
+    text-align: right;
 }

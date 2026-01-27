@@ -146,8 +146,8 @@ class TestEnmasseChannelRESTExporter(TestCase):
                     'service': channel_def.get('service'),
                 }
 
-                # Add optional fields if present in the template
-                if 'data_format' in channel_def:
+                # Add optional fields if present in the template and not default value
+                if 'data_format' in channel_def and channel_def.get('data_format') != 'json':
                     channel_required['data_format'] = channel_def.get('data_format')
 
                 # Add groups if present (special handling for security groups)

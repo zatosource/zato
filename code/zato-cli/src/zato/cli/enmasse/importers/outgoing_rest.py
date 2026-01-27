@@ -135,7 +135,7 @@ class OutgoingRESTImporter:
         outgoing.ping_method = outgoing_def.get('ping_method', 'GET')
         outgoing.pool_size = outgoing_def.get('pool_size', 20)
         outgoing.timeout = outgoing_def.get('timeout', 60)
-        outgoing.data_format = outgoing_def.get('data_format', 'json')
+        outgoing.data_format = outgoing_def.get('data_format') or None
 
         for key, value in outgoing_def.items():
             if key not in ['security', 'security_name']:

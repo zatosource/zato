@@ -92,7 +92,7 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'method': params.get(prefix + 'method'),
         'soap_action': params.get(prefix + 'soap_action', ''),
         'soap_version': params.get(prefix + 'soap_version', None),
-        'data_format': params.get(prefix + 'data_format', None) or DATA_FORMAT.JSON,
+        'data_format': params.get(prefix + 'data_format') or None,
         'service': params.get(prefix + 'service'),
         'ping_method': params.get(prefix + 'ping_method'),
         'pool_size': params.get(prefix + 'pool_size'),

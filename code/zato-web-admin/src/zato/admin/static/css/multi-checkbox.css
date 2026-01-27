@@ -1,0 +1,42 @@
+input[type="checkbox"].tri-state {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #666;
+    border-radius: 3px;
+    position: relative;
+    cursor: pointer;
+    background: white;
+}
+
+input[type="checkbox"].tri-state:checked {
+    background: #063c65;
+    border-color: #063c65;
+}
+
+input[type="checkbox"].tri-state:checked::after {
+    content: '✓';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+input[type="checkbox"].tri-state.disabled {
+    background: #999;
+    border-color: #999;
+}
+
+input[type="checkbox"].tri-state.disabled::after {
+    content: 'x';
+    position: absolute;
+    left: 2px;
+    top: -2px;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+}
