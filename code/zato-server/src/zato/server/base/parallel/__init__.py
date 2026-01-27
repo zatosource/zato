@@ -826,6 +826,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # SQL post-processing
         ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
 
+        # Things like initializing SQL data on demand
+        self._pre_initialize()
+
         logger.info(
             'Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`',
             self.name, self.cluster_name, self.pid, 's' if use_tls else '', self.preferred_address, self.port)
@@ -973,6 +976,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.log_environment_details()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _pre_initialize(self) -> 'None':
+
+        from contextlib import closing
+        from zato.common.util.channel import ensure_openapi_channel_exists
+
+        with closing(self.odb.session()) as session:
+            created = ensure_openapi_channel_exists(session, self.cluster_id)
+            if created:
+                session.commit()
+                logger.info('Created OpenAPI handler channel')
 
 # ################################################################################################################################
 
