@@ -28,7 +28,7 @@
 
             'name',
             '_is_active',
-            '_is_public',
+            {% if 0 %}'_is_public',{% endif %}
             '_channel_count',
             'url_path',
             '_openapi',
@@ -38,7 +38,7 @@
 
             'id',
             'is_active',
-            'is_public',
+            {% if 0 %}'is_public',{% endif %}
             'rest_channel_list',
             'url_path',
         ]
@@ -75,7 +75,7 @@
 
                         <th><a href="#">Name</a></th>
                         <th style="text-align:center"><a href="#">Active</a></th>
-                        <th style="text-align:center"><a href="#">Public</a></th>
+                        {% if 0 %}<th style="text-align:center"><a href="#">Public</a></th>{% endif %}
                         <th style="text-align:center"><a href="#">Channel(s)</a></th>
                         <th style="text-align:center"><a href="#">URL path</a></th>
                         <th><a href="#">OpenAPI</a></th>
@@ -99,7 +99,7 @@
 
                         <td>{{ item.name }}</td>
                         <td style="text-align:center">{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td style="text-align:center">{{ item.is_public|yesno:'Yes,No' }}</td>
+                        {% if 0 %}<td style="text-align:center">{{ item.is_public|yesno:'Yes,No' }}</td>{% endif %}
                         <td style="text-align:center">{{ item.channel_count }}</td>
                         <td style="text-align:center">{{ item.url_path }}</td>
                         <td><a href="/zato/channel/openapi/generate/?cluster_id={{ cluster_id }}&channel_id={{ item.id }}">Download OpenAPI</a></td>
@@ -109,7 +109,7 @@
 
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.is_public }}</td>
+                        {% if 0 %}<td class='ignore'>{{ item.is_public }}</td>{% endif %}
                         <td class='ignore'>{{ item.rest_channel_list_json }}</td>
                         <td class='ignore'>{{ item.url_path }}</td>
 
@@ -158,14 +158,14 @@
                             </td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
-                        <tr>
+                        {% if 0 %}<tr>
                             <td class="form-label-cell-narrow">
                                 <label for="id_is_public">
                                 Public
                                 </label>
                             </td>
                             <td>{{ create_form.is_public }}</td>
-                        </tr>
+                        </tr>{% endif %}
                         <tr>
                             <td class="form-label-cell-top">
                                 REST channels
@@ -217,14 +217,14 @@
                             </td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
-                        <tr>
+                        {% if 0 %}<tr>
                             <td class="form-label-cell-narrow">
                                 <label for="id_edit-is_public">
                                 Public
                                 </label>
                             </td>
                             <td>{{ edit_form.is_public }}</td>
-                        </tr>
+                        </tr>{% endif %}
                         <tr>
                             <td class="form-label-cell-top">
                                 REST channels
