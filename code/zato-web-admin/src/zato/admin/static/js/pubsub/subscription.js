@@ -319,6 +319,9 @@ $(document).ready(function() {
         $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility('create', null);
         $.fn.zato.pubsub.subscription.populateRestEndpoints('create', null);
 
+        // Load REST channels
+        $.fn.zato.pubsub.subscription.loadRestChannels();
+
         // Add event handler for security definition change
         $('#id_sec_base_id').change(function() {
             $.fn.zato.pubsub.on_sec_def_changed();
@@ -611,6 +614,56 @@ $.fn.zato.pubsub.subscription.populateRestEndpoints = function(form_type, select
             // Remove loading spinner
             $container.find('.loading-spinner').remove();
             $endpointSelect.append('<option value="">Error loading endpoints</option>');
+        }
+    });
+}
+
+// Function to load REST channels using multi-checkbox component
+$.fn.zato.pubsub.subscription.loadRestChannels = function() {
+    var cluster_id = $('#cluster_id').val();
+    var containerId = 'rest-channels-div';
+
+    $.ajax({
+        url: '/zato/pubsub/subscription/get-rest-channels/',
+        type: 'GET',
+        data: {
+            cluster_id: cluster_id
+        },
+        success: function(response) {
+            if (response.rest_channels && response.rest_channels.length > 0) {
+                var items = [];
+                for (var i = 0; i < response.rest_channels.length; i++) {
+                    var channel = response.rest_channels[i];
+                    items.push({
+                        id: channel.id,
+                        state: $.fn.zato.multi_checkbox.State.Off,
+                        link: '/zato/http-soap/?cluster=' + cluster_id + '&connection=channel&transport=plain_http&query=' + encodeURIComponent(channel.name),
+                        linkText: channel.name,
+                        description: channel.url_path
+                    });
+                }
+
+                $.fn.zato.multi_checkbox.render({
+                    containerId: containerId,
+                    items: items,
+                    inputName: 'rest_channel_id',
+                    emptyMessage: 'No REST channels available'
+                });
+            } else {
+                $('#' + containerId).html(
+                    '<table class="multi-select-table"><tr><td colspan="2">' +
+                    '<span class="multi-select-message">No REST channels available</span>' +
+                    '</td></tr></table>'
+                );
+            }
+        },
+        error: function(xhr, status, error) {
+            console.log('loadRestChannels error:', status, error);
+            $('#' + containerId).html(
+                '<table class="multi-select-table"><tr><td colspan="2">' +
+                '<span class="multi-select-message">Error loading REST channels</span>' +
+                '</td></tr></table>'
+            );
         }
     });
 }
