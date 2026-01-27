@@ -119,7 +119,7 @@ class EnmasseTestCase(BaseEnmasseTestCase):
             _ = self.invoke_enmasse(import_path)
 
             # Now export the data
-            _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type='channel_rest,security,elastic_search')
+            _ = self.invoke_enmasse(export_path, is_import=False, is_export=True, include_type='channel_rest,security,elastic_search,channel_openapi')
 
             # Read back both files
             with open(import_path, 'r') as f:

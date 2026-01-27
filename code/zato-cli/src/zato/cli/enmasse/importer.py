@@ -36,6 +36,7 @@ from zato.cli.enmasse.importers.outgoing_soap import OutgoingSOAPImporter
 from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
 from zato.cli.enmasse.importers.pubsub_permission import PubSubPermissionImporter
 from zato.cli.enmasse.importers.pubsub_subscription import PubSubSubscriptionImporter
+from zato.cli.enmasse.importers.channel_openapi import ChannelOpenAPIImporter
 from zato.common.odb.model import Cluster
 
 # ################################################################################################################################
@@ -102,6 +103,7 @@ class EnmasseYAMLImporter:
         self.pubsub_topic_defs = {}
         self.pubsub_permission_defs = {}
         self.pubsub_subscription_defs = {}
+        self.channel_openapi_defs = {}
         self.objects = {}
         self.cluster = None
 
@@ -129,6 +131,7 @@ class EnmasseYAMLImporter:
         self.pubsub_topic_importer = PubSubTopicImporter(self)
         self.pubsub_permission_importer = PubSubPermissionImporter(self)
         self.pubsub_subscription_importer = PubSubSubscriptionImporter(self)
+        self.channel_openapi_importer = ChannelOpenAPIImporter(self)
 
 # ################################################################################################################################
 
@@ -685,6 +688,24 @@ class EnmasseYAMLImporter:
 
 # ################################################################################################################################
 
+    def sync_channel_openapi(self, channel_list:'list', session:'SASession') -> 'tuple':
+        """ Synchronizes OpenAPI channel definitions from a YAML configuration with the database.
+        """
+        if not channel_list:
+            return [], []
+
+        count = len(channel_list)
+        noun = 'definition' if count == 1 else 'definitions'
+        logger.info(f'Processing {count} OpenAPI channel {noun}')
+
+        channel_created, channel_updated = self.channel_openapi_importer.sync_channel_openapi(channel_list, session)
+
+        logger.info('Processed OpenAPI channel definitions: created=%d updated=%d', len(channel_created), len(channel_updated))
+
+        return channel_created, channel_updated
+
+# ################################################################################################################################
+
     def sync_from_yaml(
         self,
         yaml_config:'stranydict',
@@ -857,6 +878,13 @@ class EnmasseYAMLImporter:
             self.created_objects['pubsub_subscription'] = pubsub_subscription_created
         if pubsub_subscription_updated:
             self.updated_objects['pubsub_subscription'] = pubsub_subscription_updated
+
+        # Process OpenAPI channel definitions (depends on REST channels)
+        channel_openapi_created, channel_openapi_updated = self.sync_channel_openapi(yaml_config.get('channel_openapi', []), session)
+        if channel_openapi_created:
+            self.created_objects['channel_openapi'] = channel_openapi_created
+        if channel_openapi_updated:
+            self.updated_objects['channel_openapi'] = channel_openapi_updated
 
         logger.info('YAML synchronization completed')
 

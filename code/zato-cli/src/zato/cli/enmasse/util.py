@@ -190,6 +190,7 @@ def get_top_level_order() -> 'strlist':
         'pubsub_topic',
         'pubsub_permission',
         'pubsub_subscription',
+        'channel_openapi',
     ]
 
 # ################################################################################################################################
@@ -220,6 +221,7 @@ def get_object_order(object_type:'str') -> 'strlist':
     order['pubsub_topic'] = 'name', 'description'
     order['pubsub_permission'] = 'security', 'pub', 'sub'
     order['pubsub_subscription'] = 'security', 'delivery_type', 'push_rest_endpoint', 'push_service', 'max_retry_time', 'topic_list'
+    order['channel_openapi'] = 'name', 'is_active', 'url_path', 'rest_channel_list:list'
 
     return order[object_type]
 

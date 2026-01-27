@@ -311,6 +311,19 @@ pubsub_subscription:
     topic_list:
       - enmasse.topic.3
 
+channel_openapi:
+
+  - name: enmasse.channel.openapi.1
+    is_active: true
+    url_path: /openapi/enmasse-1
+    rest_channel_list:
+      - enmasse.channel.rest.1
+      - enmasse.channel.rest.2
+
+  - name: enmasse.channel.openapi.2
+    is_active: true
+    url_path: /openapi/enmasse-2
+
 """
 
 # ################################################################################################################################

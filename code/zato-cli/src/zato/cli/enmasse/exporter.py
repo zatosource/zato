@@ -19,6 +19,7 @@ from zato.cli.enmasse.exporters.scheduler import SchedulerExporter
 from zato.cli.enmasse.exporters.security import SecurityExporter
 from zato.cli.enmasse.exporters.sql import SQLExporter
 from zato.cli.enmasse.exporters.channel_rest import ChannelExporter
+from zato.cli.enmasse.exporters.channel_openapi import ChannelOpenAPIExporter
 from zato.cli.enmasse.exporters.jira import JiraExporter
 from zato.cli.enmasse.exporters.ldap import LDAPExporter
 from zato.cli.enmasse.exporters.microsoft_365 import Microsoft365Exporter
@@ -75,6 +76,7 @@ class EnmasseYAMLExporter:
         self.pubsub_topic_exporter = PubSubTopicExporter(self)
         self.pubsub_permission_exporter = PubSubPermissionExporter(self)
         self.pubsub_subscription_exporter = PubSubSubscriptionExporter(self)
+        self.channel_openapi_exporter = ChannelOpenAPIExporter(self)
 
 # ################################################################################################################################
 
@@ -259,6 +261,15 @@ class EnmasseYAMLExporter:
 
 # ################################################################################################################################
 
+    def export_channel_openapi(self, session:'SASession') -> 'list':
+        """ Exports OpenAPI channel definitions.
+        """
+        _ = self.get_cluster(session)
+        channel_openapi_list = self.channel_openapi_exporter.export(session, self.cluster_id)
+        return channel_openapi_list
+
+# ################################################################################################################################
+
     def export_to_dict(self, session:'SASession') -> 'stranydict':
         """ Exports all configured Zato objects to a dictionary.
             This dictionary can then be serialized to YAML.
@@ -362,6 +373,10 @@ class EnmasseYAMLExporter:
         if pubsub_subscription_defs:
             output_dict['pubsub_subscription'] = pubsub_subscription_defs
 
+        # Export OpenAPI channel definitions
+        channel_openapi_defs = self.export_channel_openapi(session)
+        if channel_openapi_defs:
+            output_dict['channel_openapi'] = channel_openapi_defs
 
         logger.info('Successfully exported objects to dictionary format: %s', output_dict)
         return output_dict

@@ -1,0 +1,254 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}OpenAPI channels{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/multi-checkbox.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/multi-checkbox.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/channel/openapi.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+
+            'name',
+            '_is_active',
+            {% if 0 %}'_is_public',{% endif %}
+            '_channel_count',
+            'url_path',
+            '_openapi',
+
+            '_edit',
+            '_delete',
+
+            'id',
+            'is_active',
+            {% if 0 %}'is_public',{% endif %}
+            'rest_channel_list',
+            'url_path',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">OpenAPI channels</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% with has_generic="1" generic_type="channel-openapi" %}
+    {% include "zato/search-form.html" with page_prompt="Show channels"%}
+{% endwith %}
+
+    {% if cluster_id %}
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.channel.openapi.create()">Create an OpenAPI channel</a>
+        </div>
+
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th style="text-align:center"><a href="#">Active</a></th>
+                        {% if 0 %}<th style="text-align:center"><a href="#">Public</a></th>{% endif %}
+                        <th style="text-align:center"><a href="#">Channel(s)</a></th>
+                        <th style="text-align:center"><a href="#">URL path</a></th>
+                        <th><a href="#">OpenAPI</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.name }}</td>
+                        <td style="text-align:center">{{ item.is_active|yesno:'Yes,No' }}</td>
+                        {% if 0 %}<td style="text-align:center">{{ item.is_public|yesno:'Yes,No' }}</td>{% endif %}
+                        <td style="text-align:center">{{ item.channel_count }}</td>
+                        <td style="text-align:center">{{ item.url_path }}</td>
+                        <td><a href="/zato/channel/openapi/generate/?cluster_id={{ cluster_id }}&channel_id={{ item.id }}">Download OpenAPI</a></td>
+
+                        <td><a href="javascript:$.fn.zato.channel.openapi.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.channel.openapi.delete_('{{ item.id }}')">Delete</a></td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        {% if 0 %}<td class='ignore'>{{ item.is_public }}</td>{% endif %}
+                        <td class='ignore'>{{ item.rest_channel_list_json }}</td>
+                        <td class='ignore'>{{ item.url_path }}</td>
+
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='10'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "channel-openapi-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td class="form-label-cell">
+                                <label for="id_name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="form-label-cell-narrow">
+                                <label>
+                                URL path
+                                </label>
+                            </td>
+                            <td>
+                                <span id="id_url_path_display" class="url-path-display">{{ openapi_path_prefix }}</span>
+                                {{ create_form.url_path }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="form-label-cell-narrow">
+                                <label for="id_is_active">
+                                Active
+                                </label>
+                            </td>
+                            <td>{{ create_form.is_active }}</td>
+                        </tr>
+                        {% if 0 %}<tr>
+                            <td class="form-label-cell-narrow">
+                                <label for="id_is_public">
+                                Public
+                                </label>
+                            </td>
+                            <td>{{ create_form.is_public }}</td>
+                        </tr>{% endif %}
+                        <tr>
+                            <td class="form-label-cell-top">
+                                REST channels
+                            </td>
+                            <td id="td_rest_channels_list" class="form-value-cell-multi">
+                                <div class="multi-select-div" id="rest-channels-div"><table class="multi-select-table"><tr><td colspan="2"><span class="loading-message">Loading REST channels...</span></td></tr></table></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="form-buttons-cell">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form novalidate action="{% url "channel-openapi-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td class="form-label-cell">
+                                <label for="id_name">
+                                Name
+                                </label>
+                            </td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="form-label-cell-narrow">
+                                <label>
+                                URL path
+                                </label>
+                            </td>
+                            <td>
+                                <span id="id_edit-url_path_display" class="url-path-display">{{ openapi_path_prefix }}</span>
+                                {{ edit_form.url_path }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="form-label-cell-narrow">
+                                <label for="id_edit-is_active">
+                                Active
+                                </label>
+                            </td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+                        {% if 0 %}<tr>
+                            <td class="form-label-cell-narrow">
+                                <label for="id_edit-is_public">
+                                Public
+                                </label>
+                            </td>
+                            <td>{{ edit_form.is_public }}</td>
+                        </tr>{% endif %}
+                        <tr>
+                            <td class="form-label-cell-top">
+                                REST channels
+                            </td>
+                            <td id="id_edit-td_rest_channels_list" class="form-value-cell-multi">
+                                <div class="multi-select-div" id="id_edit-rest-channels-div"><table class="multi-select-table"><tr><td colspan="2"><span class="loading-message">Loading REST channels...</span></td></tr></table></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="form-buttons-cell">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+        {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
