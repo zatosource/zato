@@ -40,11 +40,11 @@ cy-tests:
 cli-tests:
 	cd $(CURDIR)/code/zato-cli && make run-tests
 
-openapi:
-	py -m zato.openapi.generator.cli $(filter-out $@,$(MAKECMDGOALS))
+enmasse-tests:
+	cd $(CURDIR)/code/zato-cli && make run-tests
 
-openapi-server-run:
-	py $(CURDIR)/code/zato-openapi/src/zato/openapi/app/run.py
+openapi-tests:
+	cd $(CURDIR)/code/zato-openapi && $(CURDIR)/code/bin/py -m unittest discover -s test/zato/openapi_ -p 'test_*.py' -v
 
 %:
 	@:

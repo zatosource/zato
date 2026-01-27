@@ -114,6 +114,10 @@ class Create(ZatoCommand):
             metrics_service = Service(None, metrics_service_name, True, metrics_service_name, True, cluster)
             session.add(metrics_service)
 
+            from zato.common.util.channel import create_openapi_channel, openapi_service_name
+            openapi_handler_service = Service(None, openapi_service_name, True, openapi_service_name, True, cluster)
+            session.add(openapi_handler_service)
+
             ping_service = self.add_ping_service(session, cluster)
 
             # Create channels
@@ -121,6 +125,7 @@ class Create(ZatoCommand):
             self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
             self.add_metrics_channel(session, cluster, metrics_service)
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
+            create_openapi_channel(session, cluster, openapi_handler_service)
 
             # Add other configurations
             self.add_default_caches(session, cluster)
