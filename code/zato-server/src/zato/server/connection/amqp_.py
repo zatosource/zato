@@ -13,10 +13,14 @@ from logging import getLogger
 from socket import error as socket_error
 from ssl import SSLError
 from traceback import format_exc, format_tb
+from urllib.parse import urlparse
 
 # amqp
 from amqp import spec
 from amqp.exceptions import ConsumerCancelled
+
+# Azure Service Bus
+from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
 # gevent
 from gevent import sleep, spawn
@@ -90,6 +94,21 @@ no_ack = {
 
 def _is_tls_config(config:'Bunch') -> 'bool':
     return config.conn_url.startswith('amqps://')
+
+# ################################################################################################################################
+
+def _is_azure_service_bus(address:'str') -> 'bool':
+    return 'servicebus.windows.net' in address
+
+# ################################################################################################################################
+
+def _build_azure_conn_string(address:'str', username:'str', password:'str') -> 'str':
+    parsed = urlparse(address)
+    host = parsed.hostname or ''
+    result = f'Endpoint=sb://{host}/;SharedAccessKeyName={username};SharedAccessKey={password}'
+    logger.info(f'_build_azure_conn_string: address={address}, host={host}, username={username}')
+    logger.info(f'_build_azure_conn_string: result={result}')
+    return result
 
 # ################################################################################################################################
 
@@ -238,6 +257,102 @@ class Producer:
     def stop(self):
         for pool in self.pool.values():
             pool.connections.force_close_all()
+
+# ################################################################################################################################
+
+class AzureServiceBusProducer:
+    def __init__(self, config:'Bunch') -> 'None':
+        self.config = config
+        self.name = config.name
+        logger.info(f'AzureServiceBusProducer.__init__: name={self.name}, queue={config.queue}')
+        logger.info(f'AzureServiceBusProducer.__init__: azure_conn_str={config.azure_conn_str}')
+        self.client = ServiceBusClient.from_connection_string(config.azure_conn_str)
+        self.sender = self.client.get_queue_sender(config.queue)
+
+    def publish(self, msg:'str', **kwargs:'any_') -> 'None':
+        service_bus_msg = ServiceBusMessage(msg)
+        self.sender.send_messages(service_bus_msg)
+
+    def stop(self) -> 'None':
+        self.sender.close()
+        self.client.close()
+
+# ################################################################################################################################
+
+class AzureServiceBusConsumer:
+    def __init__(self, config:'Bunch', on_amqp_message:'callable_') -> 'None':
+        self.cid = new_cid_queue_consumer()
+        self.config = config
+        self.name = config.name
+        self.on_amqp_message = on_amqp_message
+        self._keep_running = True
+        self.is_stopped = True
+        self.is_connected = False
+        self.start_called = False
+        self.client = None
+        self.receiver = None
+
+    @property
+    def keep_running(self) -> 'bool':
+        return self._keep_running
+
+    @keep_running.setter
+    def keep_running(self, value:'bool') -> 'None':
+        self._keep_running = value
+
+    def start(self) -> 'None':
+        self.start_called = True
+        self.is_stopped = False
+
+        logger.info(f'[{self.cid}] AzureServiceBusConsumer.start: queue={self.config.queue}')
+        logger.info(f'[{self.cid}] AzureServiceBusConsumer.start: azure_conn_str={self.config.azure_conn_str}')
+
+        try:
+            self.client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
+            self.receiver = self.client.get_queue_receiver(self.config.queue, max_wait_time=5)
+            self.is_connected = True
+            logger.info(f'[{self.cid}] AzureServiceBusConsumer connected')
+
+            while self.keep_running:
+                try:
+                    for msg in self.receiver:
+                        if not self.keep_running:
+                            break
+                        try:
+                            body = str(msg)
+                            self.on_amqp_message(body, msg, self.name, self.config)
+                            self.receiver.complete_message(msg)
+                        except Exception:
+                            logger.warning(f'[{self.cid}] {format_exc()}')
+                except Exception:
+                    if self.keep_running:
+                        logger.warning(f'[{self.cid}] Azure consumer error: {format_exc()}')
+                        sleep(2)
+
+        except Exception:
+            logger.warning(f'[{self.cid}] Azure consumer startup error: {format_exc()}')
+        finally:
+            self.is_stopped = True
+
+    def stop(self) -> 'None':
+        self.keep_running = False
+        if self.receiver:
+            self.receiver.close()
+        if self.client:
+            self.client.close()
+        self.is_stopped = True
+
+    def wait_until_connected(self, timeout:'int'=1) -> 'bool':
+        return wait_for_predicate(
+            self._is_connected,
+            timeout=timeout,
+            interval=0.01,
+            log_msg_details=f'Azure consumer `{self.name}` to connect',
+            needs_log=True,
+        )
+
+    def _is_connected(self) -> 'bool':
+        return self.is_connected
 
 # ################################################################################################################################
 
@@ -555,20 +670,36 @@ class ConnectorAMQP(Connector):
         self._consumers = {}
         self._producers = {}
         self.config.conn_url = self._get_conn_string()
+        self.config.is_azure = _is_azure_service_bus(self.config.address)
 
+        logger.info(f'ConnectorAMQP._start: address={self.config.address}')
+        logger.info(f'ConnectorAMQP._start: is_azure={self.config.is_azure}')
+
+        if self.config.is_azure:
+            self.config.azure_conn_str = _build_azure_conn_string(
+                self.config.address, self.config.username, self.config.password
+            )
+            self._start_azure()
+        else:
+            self._start_amqp()
+
+    def _start_azure(self):
+        try:
+            logger.info(f'ConnectorAMQP._start_azure: testing connection')
+            client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
+            client.close()
+            self.is_connected = True
+            logger.info(f'ConnectorAMQP._start_azure: connected OK')
+        except Exception:
+            logger.warning(f'Azure Service Bus connection test failed: {format_exc()}')
+            self.is_connected = False
+
+    def _start_amqp(self):
         self.is_connected = True
 
         test_conn:'KombuAMQPConnection' = self._get_conn_class('test-conn', _is_tls_config(self.config))(self.config.conn_url)
         _ = test_conn.connect()
         self.is_connected = test_conn.connected
-
-        # Close the connection object which was needed only to confirm that the remote end can be reached.
-        # Then in run-time, when connections are needed by producers or consumers, they will be opened by kombu anyway.
-        # In this manner we can at least know rightaway that something is wrong with the connection's definition
-        # without having to wait for a producer/consumer to be first time used. Naturally, it is possible
-        # that the connection will work now but then it won't when it's needed but this is unrelated to the fact
-        # that if we can already report that the connection won't work now, then we should do it so that an error message
-        # can be logged as early as possible.
 
         close_connection(self.cid, test_conn)
 
@@ -632,6 +763,8 @@ class ConnectorAMQP(Connector):
     def _enrich_channel_config(self, config:'Bunch') -> 'None':
         config.conn_class = self._get_conn_class('channel/{}'.format(config.name), _is_tls_config(self.config))
         config.conn_url = self.config.conn_url
+        config.is_azure = self.config.is_azure
+        config.azure_conn_str = getattr(self.config, 'azure_conn_str', None)
 
 # ################################################################################################################################
 
@@ -659,7 +792,8 @@ class ConnectorAMQP(Connector):
     def _create_consumer(self, config:'Bunch') -> 'None':
         """ Creates an AMQP consumer for a specific queue and starts it.
         """
-        consumer = Consumer(config, self.on_amqp_message)
+        consumer_class = AzureServiceBusConsumer if config.is_azure else Consumer
+        consumer = consumer_class(config, self.on_amqp_message)
         self._consumers.setdefault(config.name, []).append(consumer)
 
         if config.is_active:
@@ -668,12 +802,15 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _create_producers(self, config:'Bunch') -> 'None':
-        """ Creates outgoing AMQP producers using kombu.
+        """ Creates outgoing AMQP producers.
         """
         config.conn_url = self.config.conn_url
+        config.is_azure = self.config.is_azure
+        config.azure_conn_str = getattr(self.config, 'azure_conn_str', None)
         config.get_conn_class_func = self._get_conn_class
-        producer = Producer(config)
-        self._producers[config.name] = producer
+
+        producer_class = AzureServiceBusProducer if config.is_azure else Producer
+        self._producers[config.name] = producer_class(config)
 
 # ################################################################################################################################
 
@@ -841,6 +978,12 @@ class ConnectorAMQP(Connector):
         if not outconn_config['is_active']:
             raise Inactive(f'Connection is inactive `{out_name}` ({self._get_conn_string(False)})')
 
+        producer = self._producers[out_name]
+
+        # Azure Service Bus uses a simpler interface
+        if outconn_config.is_azure:
+            return producer.publish(msg)
+
         acquire_block = kwargs.pop('acquire_block', True)
         acquire_timeout = kwargs.pop('acquire_block', None)
 
@@ -860,7 +1003,7 @@ class ConnectorAMQP(Connector):
         if properties:
             kwargs.update(properties)
 
-        with self._producers[out_name].acquire(acquire_block, acquire_timeout) as producer:
-            return producer.publish(msg, headers=headers, **kwargs)
+        with producer.acquire(acquire_block, acquire_timeout) as kombu_producer:
+            return kombu_producer.publish(msg, headers=headers, **kwargs)
 
 # ################################################################################################################################
