@@ -16,10 +16,10 @@ from zato.common.api import AMQP
 class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
-    queue = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    queue = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     consumer_tag_prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     pool_size = forms.CharField(
         initial=AMQP.DEFAULT.POOL_SIZE, widget=forms.TextInput(attrs={'style':'width:10%', 'class':'required'}))
