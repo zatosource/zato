@@ -13,7 +13,7 @@ from logging import getLogger
 from socket import error as socket_error
 from ssl import SSLError
 from traceback import format_exc, format_tb
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 # amqp
 from amqp import spec
@@ -105,7 +105,8 @@ def _is_azure_service_bus(address:'str') -> 'bool':
 def _build_azure_conn_string(address:'str', username:'str', password:'str') -> 'str':
     parsed = urlparse(address)
     host = parsed.hostname or ''
-    result = f'Endpoint=sb://{host}/;SharedAccessKeyName={username};SharedAccessKey={password}'
+    password_decoded = unquote(password)
+    result = f'Endpoint=sb://{host}/;SharedAccessKeyName={username};SharedAccessKey={password_decoded}'
     logger.info(f'_build_azure_conn_string: address={address}, host={host}, username={username}')
     logger.info(f'_build_azure_conn_string: result={result}')
     return result
@@ -279,6 +280,21 @@ class AzureServiceBusProducer:
 
 # ################################################################################################################################
 
+class _AzureMessageWrapper:
+    _state = 'RECEIVED'
+
+    def __init__(self, msg, receiver):
+        self._msg = msg
+        self._receiver = receiver
+
+    def ack(self):
+        self._receiver.complete_message(self._msg)
+
+    def reject(self):
+        self._receiver.abandon_message(self._msg)
+
+# ################################################################################################################################
+
 class AzureServiceBusConsumer:
     def __init__(self, config:'Bunch', on_amqp_message:'callable_') -> 'None':
         self.cid = new_cid_queue_consumer()
@@ -320,8 +336,8 @@ class AzureServiceBusConsumer:
                             break
                         try:
                             body = str(msg)
-                            self.on_amqp_message(body, msg, self.name, self.config)
-                            self.receiver.complete_message(msg)
+                            wrapped_msg = _AzureMessageWrapper(msg, self.receiver)
+                            self.on_amqp_message(body, wrapped_msg, self.name, self.config)
                         except Exception:
                             logger.warning(f'[{self.cid}] {format_exc()}')
                 except Exception:
