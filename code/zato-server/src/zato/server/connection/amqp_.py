@@ -281,7 +281,6 @@ class AzureServiceBusProducer:
 # ################################################################################################################################
 
 class _AzureMessageWrapper:
-    _state = 'RECEIVED'
 
     def __init__(self, msg, receiver):
         self._msg = msg
