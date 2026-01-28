@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, openapi_, python_packages, scheduler, service, updates
+from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, openapi_, python_packages, rules, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -941,6 +941,27 @@ urlpatterns += [
     url(r'^zato/python-packages/restart-dashboard$',
         login_required(python_packages.restart_dashboard), name='settings-python-packages-restart-dashboard'),
 ]
+# ################################################################################################################################
+# ################################################################################################################################
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Rule engine
+
+    url(r'^zato/rules/$',
+        login_required(rules.index), name='rules'),
+    url(r'^zato/rules/get-rule-list/$',
+        login_required(rules.get_rule_list), name='rules-get-rule-list'),
+    url(r'^zato/rules/get-rule/(?P<rule_name>.*)/$',
+        login_required(rules.get_rule), name='rules-get-rule'),
+    url(r'^zato/rules/execute/$',
+        login_required(rules.execute_rule), name='rules-execute'),
+    url(r'^zato/rules/reload/$',
+        login_required(rules.reload_rules), name='rules-reload'),
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 

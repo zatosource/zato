@@ -1,0 +1,131 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}{{ page_config.title }}{% endblock %}
+
+{% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/rules.css">
+{% endblock %}
+
+{% block "extra_js" %}
+<script type="text/javascript" src="/static/js/rules.js" nonce="{{ CSP_NONCE }}"></script>
+{% endblock %}
+
+{% block "content" %}
+<div class="rules-container">
+    <div class="rules-layout">
+
+        <div class="rules-sidebar">
+            <div class="sidebar-header">
+                <h3>{{ page_config.containers_title }}</h3>
+                <button class="reload-button" id="reload-button" title="Reload rules">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+                        <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="container-list" id="container-list">
+                <div class="container-empty">Loading...</div>
+            </div>
+        </div>
+
+        <div class="rules-main">
+            <div class="editor-section">
+                <div class="editor-header">
+                    <h3>{{ page_config.section_title }}</h3>
+                    <div class="rule-selector">
+                        <select id="rule-select" class="rule-select">
+                            <option value="">Select a rule...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="editor-wrapper">
+                    <div class="editor-container" id="editor-container">
+                        <div class="line-numbers" id="line-numbers"></div>
+                        <pre class="code-display" id="code-display"><code id="code-content"></code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="execution-section">
+                <div class="execution-header">
+                    <h3>{{ page_config.execute_title }}</h3>
+                </div>
+                <div class="execution-content">
+                    <div class="execution-input">
+                        <label class="execution-label">Input data (json)</label>
+                        <textarea id="execution-data" class="execution-textarea" placeholder='{"key": "value"}'></textarea>
+                    </div>
+                    <div class="execution-controls">
+                        <button class="execute-button" id="execute-button">
+                            <span class="button-text">{{ page_config.execute_button_label }}</span>
+                            <img src="/static/gfx/spinner.svg" class="execute-spinner" id="execute-spinner">
+                        </button>
+                    </div>
+                    <div class="execution-output">
+                        <label class="execution-label">Result</label>
+                        <div class="result-container" id="result-container">
+                            <div class="result-placeholder">Execute a rule to see results</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="rules-info">
+            <div class="info-section">
+                <h3>Rule details</h3>
+                <div class="rule-info-panel" id="rule-info-panel">
+                    <div class="info-placeholder">Select a rule to view details</div>
+                </div>
+            </div>
+            <div class="info-section">
+                <h3>Syntax reference</h3>
+                <div class="syntax-panel">
+                    <div class="syntax-item">
+                        <span class="syntax-keyword">rule</span>
+                        <span class="syntax-desc">Rule name</span>
+                    </div>
+                    <div class="syntax-item">
+                        <span class="syntax-keyword">docs</span>
+                        <span class="syntax-desc">Documentation</span>
+                    </div>
+                    <div class="syntax-item">
+                        <span class="syntax-keyword">defaults</span>
+                        <span class="syntax-desc">Default values</span>
+                    </div>
+                    <div class="syntax-item">
+                        <span class="syntax-keyword">when</span>
+                        <span class="syntax-desc">Conditions</span>
+                    </div>
+                    <div class="syntax-item">
+                        <span class="syntax-keyword">then</span>
+                        <span class="syntax-desc">Actions</span>
+                    </div>
+                    <div class="syntax-divider"></div>
+                    <div class="syntax-item">
+                        <span class="syntax-operator">and</span>
+                        <span class="syntax-desc">Logical and</span>
+                    </div>
+                    <div class="syntax-item">
+                        <span class="syntax-operator">or</span>
+                        <span class="syntax-desc">Logical or</span>
+                    </div>
+                    <div class="syntax-item">
+                        <span class="syntax-operator">not</span>
+                        <span class="syntax-desc">Negation</span>
+                    </div>
+                    <div class="syntax-item">
+                        <span class="syntax-operator">in</span>
+                        <span class="syntax-desc">Membership</span>
+                    </div>
+                    <div class="syntax-item">
+                        <span class="syntax-operator">=~</span>
+                        <span class="syntax-desc">Regex match</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
