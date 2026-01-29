@@ -115,7 +115,7 @@ MEDIA_URL = '/static/'
 ADMIN_MEDIA_PREFIX = '/media/'
 
 CSP_DEFAULT_SRC = ["'none'"]
-CSP_IMG_SRC     = ["'self'", "data:"]
+CSP_IMG_SRC     = ["'self'", "data:", "https://upcdn.io"]
 CSP_STYLE_SRC   = ["'self'"]
 CSP_FONT_SRC   = ["'self'", "data:"]
 CSP_SCRIPT_SRC  = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
