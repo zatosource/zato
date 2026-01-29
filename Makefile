@@ -1,7 +1,10 @@
-.PHONY: build
+.PHONY: build install
 MAKEFLAGS += --silent
 
 default: run-tests
+
+install:
+	$(CURDIR)/code/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out $@,$(MAKECMDGOALS))
 PY_DIR=$(CURDIR)/../bin
 
 static-check:
@@ -49,7 +52,7 @@ openapi-tests:
 %:
 	@:
 
-install-qa-reqs:
+qa-reqs-install:
 	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
 	npx playwright install
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
