@@ -27,6 +27,7 @@ news_url = 'https://raw.githubusercontent.com/zatosource/zato-news/refs/heads/ma
 @method_allowed('GET')
 def get_news(req):
 
+    ini_content = ''
     try:
         response = requests.get(news_url, timeout=10)
         response.raise_for_status()
@@ -39,10 +40,10 @@ def get_news(req):
         for section in config.sections():
             item = {
                 'date': section,
-                'title': config.get(section, 'title', fallback=''),
-                'info': config.get(section, 'info', fallback=''),
-                'gfx': config.get(section, 'gfx', fallback=''),
-                'link': config.get(section, 'link', fallback='#'),
+                'title': config.get(section, 'title'),
+                'info': config.get(section, 'info'),
+                'gfx': config.get(section, 'gfx'),
+                'link': config.get(section, 'link'),
             }
             items.append(item)
 
@@ -51,5 +52,5 @@ def get_news(req):
         return json_response
 
     except Exception as e:
-        logger.warning('Failed to fetch news: %s', e)
+        logger.warning('Failed to fetch news: %s; content: %s', e, ini_content)
         return JsonResponse({'items': [], 'error': str(e)})
