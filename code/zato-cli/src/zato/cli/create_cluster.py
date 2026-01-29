@@ -120,8 +120,13 @@ class Create(ZatoCommand):
 
             ping_service = self.add_ping_service(session, cluster)
 
+            django_gateway_service_name = 'zato.server.service.internal.helpers.DjangoServiceGateway'
+            django_gateway_service = Service(None, django_gateway_service_name, True, django_gateway_service_name, True, cluster)
+            session.add(django_gateway_service)
+
             # Create channels
             self.add_admin_invoke(session, cluster, admin_invoke_service, admin_invoke_sec)
+            self.add_django_channel(session, cluster, django_gateway_service)
             self.add_ide_publisher_channel(session, cluster, ide_publisher_service, ide_publisher_sec)
             self.add_metrics_channel(session, cluster, metrics_service)
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
@@ -371,5 +376,21 @@ class Create(ZatoCommand):
             'plain_http', None, '/api/log/streaming/status', None, '', None, DATA_FORMAT.JSON,
             service=service, cluster=cluster, security=security)
         session.add(status_channel)
+
+# ################################################################################################################################
+
+    def add_django_channel(self, session, cluster, service):
+        """ Adds a channel for Django gateway.
+        """
+
+        # Zato
+        from zato.common.api import DATA_FORMAT
+        from zato.common.odb.model import HTTPSOAP
+
+        channel = HTTPSOAP(
+            None, 'zato.django', True, True, 'channel',
+            'plain_http', None, '/django', None, '', None, DATA_FORMAT.JSON,
+            service=service, cluster=cluster)
+        session.add(channel)
 
 # ################################################################################################################################
