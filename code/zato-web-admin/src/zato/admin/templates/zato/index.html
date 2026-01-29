@@ -239,13 +239,7 @@
                                 newsLoading.style.display = 'none';
                                 newsContainer.classList.add('show');
                             };
-                            let startTime = Date.now();
-                            let delayCheck = setInterval(function() {
-                                if (Date.now() - startTime >= 900) {
-                                    clearInterval(delayCheck);
-                                    showCards();
-                                }
-                            }, 10);
+                            setTimeout(showCards, 300);
                         },
                         error: function() {
                             newsLoading.style.display = 'none';
