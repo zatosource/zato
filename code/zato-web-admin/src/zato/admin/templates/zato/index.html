@@ -85,6 +85,9 @@
     {% endif %}
 
     {% block "extra_css" %}
+    {% if not zato_template_name %}
+    <link rel="stylesheet" type="text/css" href="/static/css/news.css">
+    {% endif %}
     {% endblock %}
 
     {% block "extra_js" %}
@@ -205,6 +208,22 @@
                 setInterval(function() {
                     checkUpdateAvailability();
                 }, 3600000);
+            }
+
+            const isMainPage = window.location.pathname === '/zato/';
+            if (isMainPage) {
+                const newsLoading = document.getElementById('news-loading');
+                const newsContainer = document.getElementById('news-container');
+                if (newsLoading && newsContainer) {
+                    let startTime = Date.now();
+                    let checkInterval = setInterval(function() {
+                        if (Date.now() - startTime >= 500) {
+                            clearInterval(checkInterval);
+                            newsLoading.style.display = 'none';
+                            newsContainer.classList.add('show');
+                        }
+                    }, 50);
+                }
             }
 
         });
@@ -447,6 +466,7 @@
 
                         </ul>
                         <ul class="first-level right">
+                            <li class="first-level right"><a class="menu-link" href="/zato/">News</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/docs/4.1/index.html?v={{ zato_version|cut:"Zato " }}">Docs</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/blog/">Blog</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://www.linkedin.com/company/zatosource/">LinkedIn</a></li>
@@ -468,7 +488,100 @@
 
         <div id="bd">
         <div id="yui-main">
-            <div class="yui-b">{% block "content" %}{% endblock %}</div>
+            <div class="yui-b">{% block "content" %}
+                {% if not zato_template_name %}
+                <div class="news-loading-container" id="news-loading">
+                    <img src="/static/gfx/spinner.svg" class="news-loading-spinner">
+                    <div class="news-loading-text">Loading news ...</div>
+                </div>
+                <div class="news-container" id="news-container">
+                    <div class="news-card">
+                        <div class="news-card-header">Today</div>
+                        <img src="/static/gfx/logo.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">Zato 4.1 released with enhanced API management</div>
+                        <div class="news-card-summary">The latest release brings improved REST channel configuration, better security options, and streamlined deployment workflows for enterprise integration scenarios.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">Yesterday</div>
+                        <img src="/static/gfx/editor/settings.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">New scheduler improvements for batch processing</div>
+                        <div class="news-card-summary">Schedule your integration jobs with greater precision. New cron-like expressions and improved error handling make batch processing more reliable than ever.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">2 days ago</div>
+                        <img src="/static/gfx/editor/play.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">Service hot-deployment now 3x faster</div>
+                        <div class="news-card-summary">Deploy your Python services without restart. The new hot-deployment engine significantly reduces deployment time while maintaining zero-downtime guarantees.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">3 days ago</div>
+                        <img src="/static/gfx/editor/info.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">Enhanced monitoring with Datadog integration</div>
+                        <div class="news-card-summary">Connect your Zato cluster to Datadog for real-time metrics, alerting, and distributed tracing across all your integration services.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">Last week</div>
+                        <img src="/static/gfx/editor/files.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">New file-based configuration management</div>
+                        <div class="news-card-summary">Manage your entire Zato environment through YAML files. Export, version control, and import configurations across development, staging, and production.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">Last week</div>
+                        <img src="/static/gfx/weather_sun.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">Salesforce connector receives major update</div>
+                        <div class="news-card-summary">Improved OAuth 2.0 handling, bulk API support, and streaming API integration make Salesforce connectivity smoother for enterprise CRM integrations.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">Last week</div>
+                        <img src="/static/gfx/weather_clouds.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">Microsoft 365 integration expanded</div>
+                        <div class="news-card-summary">Connect to SharePoint, Teams, and OneDrive with new dedicated channels. Automate document workflows and team notifications through Zato services.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">2 weeks ago</div>
+                        <img src="/static/gfx/control_play_blue.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">AMQP channel performance improvements</div>
+                        <div class="news-card-summary">Message throughput increased by 40% with new connection pooling and prefetch optimizations for high-volume message processing scenarios.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">2 weeks ago</div>
+                        <img src="/static/gfx/clock.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">Rate limiting now supports sliding windows</div>
+                        <div class="news-card-summary">Protect your APIs with more sophisticated rate limiting. Sliding window algorithms provide smoother traffic control compared to fixed windows.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">Last month</div>
+                        <img src="/static/gfx/tick.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">API key rotation made automatic</div>
+                        <div class="news-card-summary">Configure automatic API key rotation policies. Set expiration periods and notification thresholds to maintain security without manual intervention.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">Last month</div>
+                        <img src="/static/gfx/search-icon.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">ElasticSearch connector now supports v8</div>
+                        <div class="news-card-summary">Full compatibility with ElasticSearch 8.x including new security features, improved query performance, and seamless index management from Zato services.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-card-header">Last month</div>
+                        <img src="/static/gfx/stats-alert.png" class="news-card-image" alt="Zato news">
+                        <div class="news-card-title">New alerting system for service health</div>
+                        <div class="news-card-summary">Configure alerts based on response times, error rates, and custom metrics. Receive notifications via email, Slack, or webhook when thresholds are breached.</div>
+                        <div class="news-card-footer"><a href="#" class="news-card-button">Go to details</a></div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endblock %}</div>
         </div>
     </div>
 </div>
