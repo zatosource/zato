@@ -219,7 +219,34 @@ class HTMLService(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ServiceGateway(Service):
+class BaseServiceGateway:
+    """ Common functionality for service gateway classes.
+    """
+
+    def _check_service_allowed(self, service, channel_id):
+
+        with self.server.gateway_services_allowed_lock:
+            allowed_services = self.server.gateway_services_allowed[channel_id]
+
+        if service not in allowed_services:
+            raise Unauthorized(self.cid, 'Unauthorized', 'gateway')
+
+    def _set_sec_def(self, username):
+        self.wsgi_environ['zato.sec_def'] = {
+            'id': None,
+            'name': None,
+            'type': SEC_DEF_TYPE.BASIC_AUTH,
+            'username': username,
+            'impl': None,
+        }
+
+    def _invoke_service(self, service, request):
+        return self.invoke(service, request, wsgi_environ=self.wsgi_environ)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class ServiceGateway(BaseServiceGateway, Service):
     """ Dispatches incoming requests to target services.
     """
     name = 'helpers.service-gateway'
@@ -229,23 +256,53 @@ class ServiceGateway(Service):
         request = self.request.raw_request
         channel_id = self.channel.id
 
-        with self.server.gateway_services_allowed_lock:
-            allowed_services = self.server.gateway_services_allowed[channel_id]
-
-        if service not in allowed_services:
-            raise Unauthorized(self.cid, 'Unauthorized', 'gateway')
+        self._check_service_allowed(service, channel_id)
 
         username = self.wsgi_environ.get('HTTP_X_ZATO_USERNAME', '')
+        self._set_sec_def(username)
 
-        self.wsgi_environ['zato.sec_def'] = {
-            'id': None,
-            'name': None,
-            'type': SEC_DEF_TYPE.BASIC_AUTH,
-            'username': username,
-            'impl': None,
+        self.response.payload = self._invoke_service(service, request)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class DjangoServiceGateway(BaseServiceGateway, Service):
+    """ Dispatches incoming requests to target services for Django clients.
+    """
+    name = 'helpers.django-service-gateway'
+    username = 'django'
+
+    def handle(self) -> 'None':
+
+        password = os.environ.get('Zato_Django_Password') or os.environ.get('Zato_Password')
+        if not password:
+            raise Forbidden(self.cid)
+
+        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        if not auth_header:
+            raise Forbidden(self.cid)
+
+        is_valid = check_basic_auth(self.cid, auth_header, self.username, password)
+        if is_valid is not True:
+            raise Forbidden(self.cid)
+
+        service = self.request.http.params.get('service')
+        request = self.request.raw_request
+
+        django_user = self.wsgi_environ.get('HTTP_X_ZATO_USER', '')
+        correlation_id = self.wsgi_environ.get('HTTP_X_ZATO_CORRELATION_ID', '')
+        forwarded_for = self.wsgi_environ.get('HTTP_X_ZATO_FORWARDED_FOR', '')
+
+        self.wsgi_environ['zato.request_ctx'] = {
+            'django_user': django_user,
+            'correlation_id': correlation_id,
+            'forwarded_for': forwarded_for,
         }
 
-        self.response.payload = self.invoke(service, request, wsgi_environ=self.wsgi_environ)
+        username_for_sec_def = django_user if django_user else self.username
+        self._set_sec_def(username_for_sec_def)
+
+        self.response.payload = self._invoke_service(service, request)
 
 # ################################################################################################################################
 # ################################################################################################################################
