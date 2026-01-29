@@ -228,8 +228,9 @@
                                     card.innerHTML =
                                         '<div class="news-card-header">' + item.date + '</div>' +
                                         '<img src="' + item.gfx + '" class="news-card-image" alt="Zato news">' +
+                                        '<div class="news-card-title">' + item.title + '</div>' +
                                         '<div class="news-card-summary">' + infoText + '</div>' +
-                                        '<div class="news-card-footer"><a href="' + item.link + '" target="_blank" class="news-card-button">Go to details</a></div>';
+                                        '<div class="news-card-footer"><a href="' + item.link + '" target="_blank" class="news-card-button">Learn more</a></div>';
                                     newsContainer.appendChild(card);
                                 });
                             }
