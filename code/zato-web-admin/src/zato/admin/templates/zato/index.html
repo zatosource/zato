@@ -219,23 +219,33 @@
                         url: '/zato/news/get',
                         type: 'GET',
                         success: function(response) {
-                            if (response.items && response.items.length > 0) {
-                                newsContainer.innerHTML = '';
-                                response.items.forEach(function(item) {
-                                    const card = document.createElement('div');
-                                    card.className = 'news-card';
-                                    let infoText = item.info.trim().replace(/\s+/g, ' ');
-                                    card.innerHTML =
-                                        '<div class="news-card-header">' + item.date + '</div>' +
-                                        '<div class="news-card-title">' + item.title + '</div>' +
-                                        '<img src="' + item.gfx + '" class="news-card-image" alt="Zato news">' +
-                                        '<div class="news-card-summary">' + infoText + '</div>' +
-                                        '<div class="news-card-footer"><a href="' + item.link + '" target="_blank" class="news-card-button">Learn more</a></div>';
-                                    newsContainer.appendChild(card);
-                                });
-                            }
-                            newsLoading.style.display = 'none';
-                            newsContainer.classList.add('show');
+                            let showCards = function() {
+                                if (response.items && response.items.length > 0) {
+                                    newsContainer.innerHTML = '';
+                                    response.items.forEach(function(item, index) {
+                                        const card = document.createElement('div');
+                                        card.className = 'news-card';
+                                        card.style.animationDelay = (index * 10) + 'ms';
+                                        let infoText = item.info.trim().replace(/\s+/g, ' ');
+                                        card.innerHTML =
+                                            '<div class="news-card-header">' + item.date + '</div>' +
+                                            '<div class="news-card-title">' + item.title + '</div>' +
+                                            '<img src="' + item.gfx + '" class="news-card-image" alt="Zato news">' +
+                                            '<div class="news-card-summary">' + infoText + '</div>' +
+                                            '<div class="news-card-footer"><a href="' + item.link + '" target="_blank" class="news-card-button">Learn more</a></div>';
+                                        newsContainer.appendChild(card);
+                                    });
+                                }
+                                newsLoading.style.display = 'none';
+                                newsContainer.classList.add('show');
+                            };
+                            let startTime = Date.now();
+                            let delayCheck = setInterval(function() {
+                                if (Date.now() - startTime >= 900) {
+                                    clearInterval(delayCheck);
+                                    showCards();
+                                }
+                            }, 10);
                         },
                         error: function() {
                             newsLoading.style.display = 'none';
