@@ -212,6 +212,11 @@
 
             const isMainPage = window.location.pathname === '/zato/';
             if (isMainPage) {
+                const newsLink = document.querySelector('a.menu-link[href="/zato/"]');
+                if (newsLink) {
+                    newsLink.classList.add('menu-link-active');
+                }
+
                 const newsLoading = document.getElementById('news-loading');
                 const newsContainer = document.getElementById('news-container');
                 if (newsLoading && newsContainer) {
