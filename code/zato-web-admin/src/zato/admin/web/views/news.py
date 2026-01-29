@@ -39,6 +39,7 @@ def get_news(req):
         for section in config.sections():
             item = {
                 'date': section,
+                'title': config.get(section, 'title', fallback=''),
                 'info': config.get(section, 'info', fallback=''),
                 'gfx': config.get(section, 'gfx', fallback=''),
                 'link': config.get(section, 'link', fallback='#'),
