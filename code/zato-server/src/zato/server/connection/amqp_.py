@@ -107,8 +107,6 @@ def _build_azure_conn_string(address:'str', username:'str', password:'str') -> '
     host = parsed.hostname or ''
     password_decoded = unquote(password)
     result = f'Endpoint=sb://{host}/;SharedAccessKeyName={username};SharedAccessKey={password_decoded}'
-    logger.info(f'_build_azure_conn_string: address={address}, host={host}, username={username}')
-    logger.info(f'_build_azure_conn_string: result={result}')
     return result
 
 # ################################################################################################################################
@@ -265,8 +263,6 @@ class AzureServiceBusProducer:
     def __init__(self, config:'Bunch') -> 'None':
         self.config = config
         self.name = config.name
-        logger.info(f'AzureServiceBusProducer.__init__: name={self.name}, queue={config.queue}')
-        logger.info(f'AzureServiceBusProducer.__init__: azure_conn_str={config.azure_conn_str}')
         self.client = ServiceBusClient.from_connection_string(config.azure_conn_str)
         self.sender = self.client.get_queue_sender(config.queue)
 
@@ -319,14 +315,10 @@ class AzureServiceBusConsumer:
         self.start_called = True
         self.is_stopped = False
 
-        logger.info(f'[{self.cid}] AzureServiceBusConsumer.start: queue={self.config.queue}')
-        logger.info(f'[{self.cid}] AzureServiceBusConsumer.start: azure_conn_str={self.config.azure_conn_str}')
-
         try:
             self.client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
             self.receiver = self.client.get_queue_receiver(self.config.queue, max_wait_time=5)
             self.is_connected = True
-            logger.info(f'[{self.cid}] AzureServiceBusConsumer connected')
 
             while self.keep_running:
                 try:
@@ -687,9 +679,6 @@ class ConnectorAMQP(Connector):
         self.config.conn_url = self._get_conn_string()
         self.config.is_azure = _is_azure_service_bus(self.config.address)
 
-        logger.info(f'ConnectorAMQP._start: address={self.config.address}')
-        logger.info(f'ConnectorAMQP._start: is_azure={self.config.is_azure}')
-
         if self.config.is_azure:
             self.config.azure_conn_str = _build_azure_conn_string(
                 self.config.address, self.config.username, self.config.password
@@ -700,11 +689,9 @@ class ConnectorAMQP(Connector):
 
     def _start_azure(self):
         try:
-            logger.info(f'ConnectorAMQP._start_azure: testing connection')
             client = ServiceBusClient.from_connection_string(self.config.azure_conn_str)
             client.close()
             self.is_connected = True
-            logger.info(f'ConnectorAMQP._start_azure: connected OK')
         except Exception:
             logger.warning(f'Azure Service Bus connection test failed: {format_exc()}')
             self.is_connected = False
