@@ -32,6 +32,11 @@ SSL_CA_CERTS = None  # type: ignore
 SSL_CERT_FILE = None # type: ignore
 SSL_KEY_FILE = None  # type: ignore
 
+# Zato Django plugin configuration
+ZATO_URL = os.environ.get('ZATO_URL', 'http://localhost:17010/django')
+ZATO_USERNAME = 'django'
+ZATO_PASSWORD = os.environ.get('Zato_Django_Password') or os.environ.get('Zato_Password', '')
+
 # Zato
 from zato.common.api import TRACE1
 from zato.common.settings_db import SettingsDB
@@ -115,7 +120,7 @@ MEDIA_URL = '/static/'
 ADMIN_MEDIA_PREFIX = '/media/'
 
 CSP_DEFAULT_SRC = ["'none'"]
-CSP_IMG_SRC     = ["'self'", "data:"]
+CSP_IMG_SRC     = ["'self'", "data:", "https://upcdn.io"]
 CSP_STYLE_SRC   = ["'self'"]
 CSP_FONT_SRC   = ["'self'", "data:"]
 CSP_SCRIPT_SRC  = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]

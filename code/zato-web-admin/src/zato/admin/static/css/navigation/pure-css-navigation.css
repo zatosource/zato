@@ -14,13 +14,17 @@
 
 div.nav-container {
    background-color: var(--zato-seablue-light1);
-   height:2.5rem;
+   height: 2.5rem;
    z-index: 9999;
 }
 
 nav.menu {
    background-color:#363636;
    z-index: 9999;
+}
+
+nav.menu ul {
+   line-height: normal;
 }
 
 nav.menu ul.left {
