@@ -23,6 +23,10 @@ nav.menu {
    z-index: 9999;
 }
 
+nav.menu ul {
+   line-height: normal;
+}
+
 nav.menu ul.left {
    float: left;
    width: 60%;
