@@ -62,8 +62,7 @@
 
 .news-card-image {
     width: 100%;
-    height: 160px;
-    object-fit: cover;
+    height: auto;
     border: 1px solid #ddd;
     margin-bottom: 12px;
     background: #f0f0f0;
@@ -90,7 +89,6 @@
 }
 
 a.news-card-button,
-a.news-card-button:hover,
 a.news-card-button:visited,
 a.news-card-button:active,
 a.news-card-button:focus {
@@ -103,9 +101,16 @@ a.news-card-button:focus {
     border: 2px solid #012845;
     border-radius: 4px;
     cursor: pointer;
-    font-family: monospace;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     text-decoration: none !important;
     display: inline-block;
     letter-spacing: 0.5px;
     text-transform: uppercase;
+}
+
+a.news-card-button:hover {
+    background: linear-gradient(135deg, #ffb800 0%, #ffd700 100%) !important;
+    background-color: transparent !important;
+    color: #012845 !important;
+    text-decoration: none !important;
 }
