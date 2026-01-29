@@ -982,13 +982,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def _pre_initialize(self) -> 'None':
 
         from contextlib import closing
-        from zato.common.util.channel import ensure_openapi_channel_exists
+        from zato.common.util.channel import ensure_django_channel_exists, ensure_openapi_channel_exists
 
         with closing(self.odb.session()) as session:
-            created = ensure_openapi_channel_exists(session, self.cluster_id)
-            if created:
+            openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
+            django_created = ensure_django_channel_exists(session, self.cluster_id)
+
+            if openapi_created or django_created:
                 session.commit()
+
+            if openapi_created:
                 logger.info('Created OpenAPI handler channel')
+
+            if django_created:
+                logger.info('Created Django handler channel')
 
 # ################################################################################################################################
 
