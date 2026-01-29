@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, openapi_, python_packages, scheduler, service, updates
+from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -60,6 +60,7 @@ urlpatterns = [
     url(r'^accounts/login/$', main.login, name='login'),
     url(r'^$', main.index_redirect),
     url(r'^zato/$', login_required(main.index), name='main-page'),
+    url(r'^zato/news/get$', login_required(news.get_news), name='news-get'),
     url(r'^logout/$', login_required(main.logout), name='logout'),
     ]
 
