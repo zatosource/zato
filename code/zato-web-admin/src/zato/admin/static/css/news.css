@@ -4,13 +4,6 @@
     --news-card-border: #e8e4c8;
 }
 
-a.menu-link.menu-link-active {
-    background: rgba(255, 255, 255, 0.1);
-    outline: 1px solid rgba(255, 255, 255, 0.3);
-    outline-offset: 4px;
-    border-radius: 3px;
-}
-
 .news-loading-container {
     display: flex;
     flex-direction: column;
