@@ -85,6 +85,9 @@
     {% endif %}
 
     {% block "extra_css" %}
+    {% if not zato_template_name %}
+    <link rel="stylesheet" type="text/css" href="/static/css/news.css">
+    {% endif %}
     {% endblock %}
 
     {% block "extra_js" %}
@@ -205,6 +208,45 @@
                 setInterval(function() {
                     checkUpdateAvailability();
                 }, 3600000);
+            }
+
+            const isMainPage = window.location.pathname === '/zato/';
+            if (isMainPage) {
+                const newsLoading = document.getElementById('news-loading');
+                const newsContainer = document.getElementById('news-container');
+                if (newsLoading && newsContainer) {
+                    $.ajax({
+                        url: '/zato/news/get',
+                        type: 'GET',
+                        success: function(response) {
+                            let showCards = function() {
+                                if (response.items && response.items.length > 0) {
+                                    newsContainer.innerHTML = '';
+                                    response.items.forEach(function(item, index) {
+                                        const card = document.createElement('div');
+                                        card.className = 'news-card';
+                                        card.style.animationDelay = (index * 10) + 'ms';
+                                        let infoText = item.info.trim().replace(/\s+/g, ' ');
+                                        card.innerHTML =
+                                            '<div class="news-card-header">' + item.date + '</div>' +
+                                            '<div class="news-card-title">' + item.title + '</div>' +
+                                            '<img src="' + item.gfx + '" class="news-card-image" alt="Zato news">' +
+                                            '<div class="news-card-summary">' + infoText + '</div>' +
+                                            '<div class="news-card-footer"><a href="' + item.link + '" target="_blank" class="news-card-button">Learn more</a></div>';
+                                        newsContainer.appendChild(card);
+                                    });
+                                }
+                                newsLoading.style.display = 'none';
+                                newsContainer.classList.add('show');
+                            };
+                            setTimeout(showCards, 300);
+                        },
+                        error: function() {
+                            newsLoading.style.display = 'none';
+                            newsContainer.classList.add('show');
+                        }
+                    });
+                }
             }
 
         });
@@ -447,6 +489,7 @@
 
                         </ul>
                         <ul class="first-level right">
+                            <li class="first-level right"><a class="menu-link" href="/zato/">News</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/docs/4.1/index.html?v={{ zato_version|cut:"Zato " }}">Docs</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://zato.io/en/blog/">Blog</a></li>
                             <li class="first-level right"><a class="menu-link" href="https://www.linkedin.com/company/zatosource/">LinkedIn</a></li>
@@ -468,7 +511,15 @@
 
         <div id="bd">
         <div id="yui-main">
-            <div class="yui-b">{% block "content" %}{% endblock %}</div>
+            <div class="yui-b">{% block "content" %}
+                {% if not zato_template_name %}
+                <div class="news-loading-container" id="news-loading">
+                    <img src="/static/gfx/spinner.svg" class="news-loading-spinner">
+                    <div class="news-loading-text">Loading news ...</div>
+                </div>
+                <div class="news-container" id="news-container"></div>
+                {% endif %}
+            {% endblock %}</div>
         </div>
     </div>
 </div>
