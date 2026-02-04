@@ -14,7 +14,7 @@ from logging import getLogger
 from rule_engine.ast import ExpressionBase, LogicExpression
 
 # Zato
-from zato.common.rules.models import MatchResult
+from zato.common.rules.models import MatchResult, resolve_then_values
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -71,7 +71,7 @@ class CachedRule:
         # Build a match result object
         match_result = MatchResult(result)
         if result:
-            match_result.then = self.rule.then
+            match_result.then = resolve_then_values(self.rule.then, data)
             match_result.full_name = self.rule.full_name
 
         return match_result
