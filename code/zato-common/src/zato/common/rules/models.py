@@ -20,6 +20,25 @@ from zato.common.marshal_.api import Model
 # ################################################################################################################################
 # ################################################################################################################################
 
+def resolve_then_values(then_dict, data):
+    """ Resolve variable references in then values against input data.
+    """
+    # type: (dict, dict) -> dict
+    if not then_dict:
+        return then_dict
+
+    resolved = {}
+    for key, value in then_dict.items():
+        if isinstance(value, str) and value in data:
+            resolved[key] = data[value]
+        else:
+            resolved[key] = value
+
+    return resolved
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 if 0:
     from zato.common.typing_ import any_, anydict, dict_, strdict
 
@@ -93,7 +112,7 @@ class Rule(Model):
         # Build a result object
         match_result = MatchResult(has_matched)
         if has_matched:
-            match_result.then = self.then
+            match_result.then = resolve_then_values(self.then, match_data)
             match_result.full_name = self.full_name
 
         return match_result
