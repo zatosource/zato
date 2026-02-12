@@ -337,6 +337,8 @@ Examples:
 
         if main_agent or metrics_agent:
             self.logger.info('Datadog monitoring enabled -> main_agent:%s, metrics_agent:%s', main_agent, metrics_agent)
+        else:
+            self.logger.info('Datadog monitoring not enabled -> main_agent:%s, metrics_agent:%s', main_agent, metrics_agent)
 
         # Read Grafana Cloud config from env vars or Redis
         grafana_cloud_config = {
