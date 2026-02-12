@@ -335,6 +335,9 @@ Examples:
         if metrics_agent:
             env_vars['Zato_Datadog_Metrics_Agent'] = metrics_agent
 
+        if main_agent or metrics_agent:
+            self.logger.info('Datadog monitoring enabled -> main_agent:%s, metrics_agent:%s', main_agent, metrics_agent)
+
         # Read Grafana Cloud config from env vars or Redis
         grafana_cloud_config = {
             'Zato_Grafana_Cloud_Instance_ID': 'zato:grafana_cloud:instance_id',
