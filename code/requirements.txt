@@ -6,7 +6,7 @@ atlassian-python-api==4.0.4
 azure-servicebus==7.14.3
 beautifulsoup4==4.13.4
 boto3==1.38.18
-cffi==1.17.1
+cffi==2.0.0
 chardet==5.2.0
 colorama==0.4.6
 configparser==7.1.0
