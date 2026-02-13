@@ -94,14 +94,17 @@
                 this.widget.style.height = 'auto';
             } else {
                 var position = LLMChatState.loadPosition();
+                var dimensions = LLMChatState.loadDimensions();
+
                 if (position) {
-                    this.widget.style.left = position.left + 'px';
-                    this.widget.style.top = position.top + 'px';
+                    var clampedLeft = Math.max(0, position.left);
+                    var clampedTop = Math.max(0, position.top);
+                    this.widget.style.left = clampedLeft + 'px';
+                    this.widget.style.top = clampedTop + 'px';
                     this.widget.style.right = 'auto';
                     this.widget.style.bottom = 'auto';
                 }
 
-                var dimensions = LLMChatState.loadDimensions();
                 if (dimensions) {
                     this.widget.style.width = dimensions.width + 'px';
                     this.widget.style.height = dimensions.height + 'px';
@@ -277,7 +280,7 @@
 
         handleMouseMove: function(e) {
             if (this.isDragging) {
-                LLMChatResize.handleDrag(this.widget, e, this.dragOffsetX, this.dragOffsetY);
+                LLMChatResize.handleDrag(this.widget, e, this.dragOffsetX, this.dragOffsetY, this.zoomScale);
                 return;
             }
 

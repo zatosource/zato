@@ -12,12 +12,12 @@
             };
         },
 
-        handleDrag: function(widget, e, dragOffsetX, dragOffsetY) {
+        handleDrag: function(widget, e, dragOffsetX, dragOffsetY, zoomScale) {
             var newLeft = e.clientX - dragOffsetX;
             var newTop = e.clientY - dragOffsetY;
 
-            newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - widget.offsetWidth));
-            newTop = Math.max(0, Math.min(newTop, window.innerHeight - widget.offsetHeight));
+            newLeft = Math.max(0, newLeft);
+            newTop = Math.max(0, newTop);
 
             widget.style.left = newLeft + 'px';
             widget.style.top = newTop + 'px';
