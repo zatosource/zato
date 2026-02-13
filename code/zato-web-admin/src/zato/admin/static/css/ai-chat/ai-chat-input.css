@@ -1,21 +1,11 @@
 .ai-chat-input-area {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
     padding: 12px 16px;
     background: #252525;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
-}
-
-.ai-chat-input-area.multiline {
-    flex-direction: column;
-    align-items: stretch;
-}
-
-.ai-chat-input-area.multiline .ai-chat-send-button {
-    align-self: flex-end;
 }
 
 .ai-chat-input-wrapper {
@@ -27,8 +17,17 @@
     overflow: hidden;
 }
 
-.ai-chat-input-area.multiline .ai-chat-input-wrapper {
-    width: 100%;
+.ai-chat-input-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ai-chat-input-toolbar-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .ai-chat-input {
@@ -62,43 +61,67 @@
     box-shadow: none;
 }
 
-.ai-chat-send-button {
-    width: 32px;
-    height: 32px;
+.ai-chat-attach-button {
+    width: 28px;
+    height: 28px;
     padding: 0;
     background: transparent;
-    border: 1px solid transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    transition: background 0.1s ease, border-color 0.1s ease;
+    color: #888;
+}
+
+.ai-chat-attach-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #4a9eff;
+}
+
+.ai-chat-attach-button:active {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.ai-chat-attach-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.ai-chat-send-button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: var(--zato-seablue-light2);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
     transition: background 0.1s ease;
+    color: #fff;
 }
 
 .ai-chat-send-button:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--zato-seablue-light3);
 }
 
 .ai-chat-send-button:active {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--zato-seablue-light1);
 }
 
 .ai-chat-send-icon {
     width: 20px;
     height: 20px;
-    fill: #888;
-}
-
-.ai-chat-send-button:hover .ai-chat-send-icon {
-    fill: #4a9eff;
 }
 
 .ai-chat-model-selector {
-    width: 100%;
-    padding-top: 12px;
-    padding-bottom: 4px;
 }
 
 .ai-chat-model-select {

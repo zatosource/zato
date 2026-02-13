@@ -268,9 +268,15 @@
                 return;
             }
 
-            if (target.classList.contains('ai-chat-send-button')) {
-                var tabId = target.getAttribute('data-tab-id');
+            if (target.classList.contains('ai-chat-send-button') || target.closest('.ai-chat-send-button')) {
+                var button = target.classList.contains('ai-chat-send-button') ? target : target.closest('.ai-chat-send-button');
+                var tabId = button.getAttribute('data-tab-id');
                 this.sendMessage(tabId);
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-attach-button') || target.closest('.ai-chat-attach-button')) {
+                this.showFileDialog();
                 return;
             }
 
@@ -969,6 +975,22 @@
                     self.render();
                 }
             });
+        },
+
+        showFileDialog: function() {
+            console.debug('AIChat.showFileDialog: opening file dialog');
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.style.display = 'none';
+            input.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (file) {
+                    console.debug('AIChat.showFileDialog: file selected:', file.name);
+                }
+                document.body.removeChild(input);
+            });
+            document.body.appendChild(input);
+            input.click();
         }
     };
 

@@ -35,11 +35,6 @@
                     }));
                     if (newBrCount === 0) {
                         inputElement.innerHTML = '';
-                        var inputArea = inputElement.closest('.ai-chat-input-area');
-                        if (inputArea) {
-                            inputArea.classList.remove('multiline');
-                            inputArea.removeAttribute('data-user-multiline');
-                        }
                     }
                     return true;
                 }
@@ -47,31 +42,15 @@
 
             if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();
-                var inputArea = inputElement.closest('.ai-chat-input-area');
-                if (inputArea) {
-                    var brCountBefore = inputElement.querySelectorAll('br').length;
-                    inputArea.classList.add('multiline');
-                    inputArea.setAttribute('data-user-multiline', 'true');
-                    var br = document.createElement('br');
-                    var sel = window.getSelection();
-                    var range = sel.getRangeAt(0);
-                    range.deleteContents();
-                    range.insertNode(br);
-                    range.setStartAfter(br);
-                    range.setEndAfter(br);
-                    sel.removeAllRanges();
-                    sel.addRange(range);
-                    var brCountAfter = inputElement.querySelectorAll('br').length;
-                    console.debug('AIChatInput.handleKeyDown: shift+enter:', JSON.stringify({
-                        brCountBefore: brCountBefore,
-                        brCountAfter: brCountAfter,
-                        innerHTML: inputElement.innerHTML,
-                        inputScrollHeight: inputElement.scrollHeight,
-                        inputOffsetHeight: inputElement.offsetHeight,
-                        inputAreaHeight: inputArea.offsetHeight,
-                        hasMultilineClass: inputArea.classList.contains('multiline')
-                    }));
-                }
+                var br = document.createElement('br');
+                var sel = window.getSelection();
+                var range = sel.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(br);
+                range.setStartAfter(br);
+                range.setEndAfter(br);
+                sel.removeAllRanges();
+                sel.addRange(range);
                 return true;
             }
 
@@ -79,50 +58,9 @@
         },
 
         handleInput: function(e) {
-            if (e.target.classList.contains('ai-chat-input')) {
-                this.updateMultilineState(e.target);
-            }
         },
 
         handleKeyUp: function(e) {
-            var inputElement = e.target.closest('.ai-chat-input');
-            if (inputElement && (e.key === 'Backspace' || e.key === 'Delete')) {
-                this.updateMultilineState(inputElement);
-            }
-        },
-
-        updateMultilineState: function(inputElement) {
-            var inputArea = inputElement.closest('.ai-chat-input-area');
-            if (!inputArea) {
-                return;
-            }
-
-            var text = (inputElement.textContent || '').trim();
-            var brCount = inputElement.querySelectorAll('br').length;
-            var inputHeight = inputElement.scrollHeight;
-            var inputOffsetHeight = inputElement.offsetHeight;
-            var inputAreaHeight = inputArea.offsetHeight;
-            var hasMultilineClass = inputArea.classList.contains('multiline');
-            var userMultiline = inputArea.getAttribute('data-user-multiline');
-
-            console.debug('AIChatInput.updateMultilineState:', JSON.stringify({
-                text: text,
-                textLength: text.length,
-                brCount: brCount,
-                innerHTML: inputElement.innerHTML,
-                inputScrollHeight: inputHeight,
-                inputOffsetHeight: inputOffsetHeight,
-                inputAreaHeight: inputAreaHeight,
-                hasMultilineClass: hasMultilineClass,
-                userMultiline: userMultiline
-            }));
-
-            if (text === '' && brCount === 0) {
-                console.debug('AIChatInput.updateMultilineState: clearing - empty text and no br');
-                inputElement.innerHTML = '';
-                inputArea.classList.remove('multiline');
-                inputArea.removeAttribute('data-user-multiline');
-            }
         },
 
         getMessageText: function(inputElement) {
@@ -131,11 +69,6 @@
 
         clearInput: function(inputElement) {
             inputElement.innerHTML = '';
-            var inputArea = inputElement.closest('.ai-chat-input-area');
-            if (inputArea) {
-                inputArea.classList.remove('multiline');
-                inputArea.removeAttribute('data-user-multiline');
-            }
         }
     };
 
