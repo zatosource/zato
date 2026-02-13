@@ -171,7 +171,7 @@
             html += '<div class="ai-chat-config-provider-name-large">' + provider.name + '</div>';
             html += '</div>';
             html += '<div class="ai-chat-config-input-wrapper">';
-            html += '<input type="text" class="ai-chat-config-api-key-input" placeholder="Paste your API key here" data-provider-id="' + providerId + '">';
+            html += '<input type="text" class="ai-chat-config-api-key-input" placeholder="Paste your API key here" data-provider-id="' + providerId + '" tabindex="0" autofocus>';
             html += '</div>';
             html += '<button class="ai-chat-config-save-button" data-provider-id="' + providerId + '">' + this.buttonLabels[providerId] + '</button>';
             html += '</div>';

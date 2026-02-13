@@ -730,14 +730,25 @@
 
         showKeyInput: function(providerId) {
             console.debug('AIChat.showKeyInput: showing key input for', providerId, 'needsConfig:', this.needsConfig);
+            var self = this;
             this.needsConfig = true;
             this.configMode = 'key-input';
             AIChatConfig.selectedProvider = providerId;
             this.render();
-            var apiKeyInput = this.widget.querySelector('.ai-chat-config-api-key-input');
-            if (apiKeyInput) {
-                apiKeyInput.focus();
-            }
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    console.debug('AIChat.showKeyInput: double requestAnimationFrame callback fired');
+                    var apiKeyInput = self.widget.querySelector('.ai-chat-config-api-key-input');
+                    console.debug('AIChat.showKeyInput: apiKeyInput element:', apiKeyInput);
+                    if (apiKeyInput) {
+                        console.debug('AIChat.showKeyInput: calling focus()');
+                        apiKeyInput.focus();
+                        console.debug('AIChat.showKeyInput: document.activeElement after focus:', document.activeElement);
+                    } else {
+                        console.debug('AIChat.showKeyInput: apiKeyInput not found in DOM');
+                    }
+                });
+            });
         },
 
         showProviderSelection: function() {
