@@ -230,7 +230,7 @@
 .llm-chat-input-area {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
     gap: 8px;
     padding: 12px 16px;
     background: #1f1f1f;
