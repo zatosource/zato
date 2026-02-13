@@ -44,6 +44,7 @@ Location: `/zato-web-admin/src/zato/admin/web/views/ai_chat.py`
 
 - `get_keys` - retrieves API key status for all providers from Redis
 - `save_key` - saves API key to Redis
+- `delete_key` - deletes API key from Redis
 
 ### URL routes
 
@@ -51,6 +52,7 @@ Location: `/zato-web-admin/src/zato/admin/urls.py`
 
 - `/zato/ai-chat/config/get-keys/` - GET API key status for all providers
 - `/zato/ai-chat/config/save-key/` - POST to save API key
+- `/zato/ai-chat/config/delete-key/` - POST to delete API key
 
 ### Redis keys
 
@@ -112,13 +114,21 @@ All JS and CSS files are included here in the correct dependency order.
 - Provider names display as "<strong>Model</strong> · Company" format
 - API key input screen with monospace font and autofocus
 - Configuration UI always centered in the widget regardless of widget size
+- Configuration UI rendered once (not per-tab) to avoid duplicate input elements
 - Back button navigation logic:
-  - When user has an API key configured and clicks "Change provider" or "Change API key": back button returns to chat
+  - When user has an API key configured and clicks "Manage API keys": back button returns to chat
   - When user has no API key and is on provider selection: no back button shown
-  - When user has no API key and is on key input: back button returns to provider selection (no back button on providers)
+  - When user has no API key and is on key input: back button returns to provider selection
 - Settings menu options depend on whether API key is configured:
-  - With key: "Change provider" and "Change API key"
+  - With key: "Manage API keys" (opens key management screen)
   - Without key: "Configure provider" only
+- Manage API keys screen:
+  - Lists all providers with their logos
+  - Shows "Add" button for providers without a key
+  - Shows "Remove" button for providers with a configured key
+  - Clicking "Add" navigates to API key input for that provider
+  - Clicking "Remove" deletes the key and refreshes the list
+  - If all keys are removed, returns to provider selection screen
 - API keys stored in Redis via Django views
 - Button labels use lookup map for extensibility (e.g., "Use Claude", "Use GPT")
 
@@ -209,6 +219,7 @@ Use existing Zato admin session authentication. The Django view will have access
 - Provider names format: "<strong>ModelName</strong> · CompanyName"
 - Settings menu appears on hover (no click required)
 - Back button behavior:
-  - When user has an API key configured and clicks "Change provider" or "Change API key": back button returns to chat
+  - When user has an API key configured and clicks "Manage API keys": back button returns to chat
   - When user has no API key and is on provider selection: no back button shown
   - When user has no API key and is on key input: back button returns to provider selection
+  - When on manage keys screen: back button returns to chat

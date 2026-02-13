@@ -183,7 +183,6 @@
             }
             html += '<div class="ai-chat-config-container">';
             html += '<div class="ai-chat-config-title">Configure your AI provider</div>';
-            html += '<div class="ai-chat-config-subtitle">Select a provider below</div>';
             html += '<div class="ai-chat-config-providers">';
 
             for (var key in this.providers) {
