@@ -23,6 +23,7 @@
         pendingDropIndex: null,
         contextMenu: null,
         preMinimizePosition: null,
+        preMinimizeZoom: 1.0,
         zoomScale: 1.0,
 
         init: function() {
@@ -436,10 +437,54 @@
         },
 
         toggleMinimize: function() {
-            console.debug('LLMChat.toggleMinimize: toggling minimize state');
+            console.debug('LLMChat.toggleMinimize: toggling minimize state, current isMinimized:', this.isMinimized);
             this.isMinimized = !this.isMinimized;
 
+            var widgetRect = this.widget.getBoundingClientRect();
+            var widgetStyles = window.getComputedStyle(this.widget);
+            var headerEl = this.widget.querySelector('.llm-chat-header');
+            var headerRect = headerEl ? headerEl.getBoundingClientRect() : null;
+            var headerStyles = headerEl ? window.getComputedStyle(headerEl) : null;
+
+            console.debug('LLMChat.toggleMinimize: before changes:', JSON.stringify({
+                isMinimized: this.isMinimized,
+                widgetRect: {
+                    left: widgetRect.left,
+                    top: widgetRect.top,
+                    right: widgetRect.right,
+                    bottom: widgetRect.bottom,
+                    width: widgetRect.width,
+                    height: widgetRect.height
+                },
+                widgetOffsetWidth: this.widget.offsetWidth,
+                widgetOffsetHeight: this.widget.offsetHeight,
+                widgetStyleLeft: this.widget.style.left,
+                widgetStyleTop: this.widget.style.top,
+                widgetStyleRight: this.widget.style.right,
+                widgetStyleBottom: this.widget.style.bottom,
+                widgetStyleWidth: this.widget.style.width,
+                widgetStyleHeight: this.widget.style.height,
+                widgetComputedPosition: widgetStyles.position,
+                widgetComputedOverflow: widgetStyles.overflow,
+                widgetComputedTransform: widgetStyles.transform,
+                widgetClassList: Array.from(this.widget.classList),
+                headerRect: headerRect ? {
+                    left: headerRect.left,
+                    top: headerRect.top,
+                    width: headerRect.width,
+                    height: headerRect.height
+                } : null,
+                headerDisplay: headerStyles ? headerStyles.display : null,
+                headerVisibility: headerStyles ? headerStyles.visibility : null,
+                windowInnerWidth: window.innerWidth,
+                windowInnerHeight: window.innerHeight,
+                zoomScale: this.zoomScale
+            }));
+
             if (this.isMinimized) {
+                this.widget.style.transform = '';
+                this.preMinimizeZoom = this.zoomScale;
+
                 var rect = this.widget.getBoundingClientRect();
                 this.preMinimizePosition = {
                     left: rect.left,
@@ -456,6 +501,8 @@
                 this.widget.style.top = 'auto';
                 this.widget.style.width = '200px';
                 this.widget.style.height = 'auto';
+
+                console.debug('LLMChat.toggleMinimize: minimized, saved preMinimizeZoom:', this.preMinimizeZoom);
             } else {
                 this.widget.classList.remove('minimized');
 
@@ -483,10 +530,80 @@
                         this.widget.style.height = '500px';
                     }
                 }
+
+                if (this.preMinimizeZoom && this.preMinimizeZoom !== 1.0) {
+                    this.zoomScale = this.preMinimizeZoom;
+                    LLMChatZoom.applyZoom(this.widget, this.zoomScale);
+                    console.debug('LLMChat.toggleMinimize: restored zoom:', this.zoomScale);
+                }
             }
 
             this.saveState();
             this.render();
+
+            var afterWidgetRect = this.widget.getBoundingClientRect();
+            var afterWidgetStyles = window.getComputedStyle(this.widget);
+            var afterHeaderEl = this.widget.querySelector('.llm-chat-header');
+            var afterHeaderRect = afterHeaderEl ? afterHeaderEl.getBoundingClientRect() : null;
+            var afterHeaderStyles = afterHeaderEl ? window.getComputedStyle(afterHeaderEl) : null;
+            var minimizeBtn = this.widget.querySelector('#llm-chat-minimize');
+            var minimizeBtnRect = minimizeBtn ? minimizeBtn.getBoundingClientRect() : null;
+            var minimizeBtnStyles = minimizeBtn ? window.getComputedStyle(minimizeBtn) : null;
+            var bodyEl = this.widget.querySelector('.llm-chat-body');
+            var bodyStyles = bodyEl ? window.getComputedStyle(bodyEl) : null;
+            var tabsEl = this.widget.querySelector('.llm-chat-tabs');
+            var tabsStyles = tabsEl ? window.getComputedStyle(tabsEl) : null;
+
+            console.debug('LLMChat.toggleMinimize: after changes:', JSON.stringify({
+                isMinimized: this.isMinimized,
+                widgetRect: {
+                    left: afterWidgetRect.left,
+                    top: afterWidgetRect.top,
+                    right: afterWidgetRect.right,
+                    bottom: afterWidgetRect.bottom,
+                    width: afterWidgetRect.width,
+                    height: afterWidgetRect.height
+                },
+                widgetOffsetWidth: this.widget.offsetWidth,
+                widgetOffsetHeight: this.widget.offsetHeight,
+                widgetStyleLeft: this.widget.style.left,
+                widgetStyleTop: this.widget.style.top,
+                widgetStyleRight: this.widget.style.right,
+                widgetStyleBottom: this.widget.style.bottom,
+                widgetStyleWidth: this.widget.style.width,
+                widgetStyleHeight: this.widget.style.height,
+                widgetComputedPosition: afterWidgetStyles.position,
+                widgetComputedOverflow: afterWidgetStyles.overflow,
+                widgetComputedTransform: afterWidgetStyles.transform,
+                widgetClassList: Array.from(this.widget.classList),
+                headerRect: afterHeaderRect ? {
+                    left: afterHeaderRect.left,
+                    top: afterHeaderRect.top,
+                    right: afterHeaderRect.right,
+                    bottom: afterHeaderRect.bottom,
+                    width: afterHeaderRect.width,
+                    height: afterHeaderRect.height
+                } : null,
+                headerDisplay: afterHeaderStyles ? afterHeaderStyles.display : null,
+                headerVisibility: afterHeaderStyles ? afterHeaderStyles.visibility : null,
+                minimizeBtnRect: minimizeBtnRect ? {
+                    left: minimizeBtnRect.left,
+                    top: minimizeBtnRect.top,
+                    right: minimizeBtnRect.right,
+                    bottom: minimizeBtnRect.bottom,
+                    width: minimizeBtnRect.width,
+                    height: minimizeBtnRect.height
+                } : null,
+                minimizeBtnDisplay: minimizeBtnStyles ? minimizeBtnStyles.display : null,
+                minimizeBtnVisibility: minimizeBtnStyles ? minimizeBtnStyles.visibility : null,
+                minimizeBtnInnerHTML: minimizeBtn ? minimizeBtn.innerHTML : null,
+                bodyDisplay: bodyStyles ? bodyStyles.display : null,
+                tabsDisplay: tabsStyles ? tabsStyles.display : null,
+                windowInnerWidth: window.innerWidth,
+                windowInnerHeight: window.innerHeight,
+                zoomScale: this.zoomScale,
+                widgetInnerHTML_length: this.widget.innerHTML.length
+            }));
         },
 
         addTab: function() {
