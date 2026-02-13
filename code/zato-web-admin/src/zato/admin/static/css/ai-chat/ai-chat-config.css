@@ -19,16 +19,10 @@
     font-size: 18px;
     font-weight: 600;
     color: #e0e0e0;
-    margin-bottom: 8px;
+    margin-bottom: 24px;
     text-align: center;
 }
 
-.ai-chat-config-subtitle {
-    font-size: 13px;
-    color: #888;
-    margin-bottom: 32px;
-    text-align: center;
-}
 
 .ai-chat-config-providers {
     display: flex;
@@ -116,7 +110,7 @@
     border-radius: 6px;
     transition: color 0.15s ease, background 0.15s ease;
     position: absolute;
-    top: 50px;
+    top: 60px;
     left: 12px;
 }
 
@@ -249,7 +243,6 @@
     gap: 12px;
     width: 100%;
     max-width: 320px;
-    margin-top: 24px;
 }
 
 .ai-chat-config-key-row {
