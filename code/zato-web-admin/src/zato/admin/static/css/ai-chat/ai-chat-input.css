@@ -231,8 +231,10 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 1;
-    margin-right: 10px;
+    max-width: 70%;
+    margin-right: auto;
+    user-select: text;
+    cursor: text;
 }
 
 .ai-chat-preview-actions {
