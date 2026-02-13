@@ -6,7 +6,7 @@ atlassian-python-api==4.0.4
 azure-servicebus==7.14.3
 beautifulsoup4==4.13.4
 boto3==1.38.18
-cffi==1.17.1
+cffi==2.0.0
 chardet==5.2.0
 colorama==0.4.6
 configparser==7.1.0
@@ -69,7 +69,7 @@ pycparser==2.21
 pycryptodome==3.19.1
 pymongo==4.13.0
 PyMySQL==1.1.1
-pyOpenSSL==25.0.0
+pyOpenSSL==25.3.0
 pyotp==2.6.0
 python-dateutil==2.9.0.post0
 python-editor==1.0.1
