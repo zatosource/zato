@@ -1025,12 +1025,15 @@
             var self = this;
             var input = document.createElement('input');
             input.type = 'file';
+            input.multiple = true;
             input.style.display = 'none';
             input.addEventListener('change', function(e) {
-                var file = e.target.files[0];
-                if (file) {
-                    console.debug('AIChat.showFileDialog: file selected:', file.name);
-                    self.addFileAttachment(file);
+                var files = e.target.files;
+                if (files && files.length > 0) {
+                    console.debug('AIChat.showFileDialog: files selected:', files.length);
+                    for (var i = 0; i < files.length; i++) {
+                        self.addFileAttachment(files[i]);
+                    }
                 }
                 document.body.removeChild(input);
             });
@@ -1160,8 +1163,11 @@
 
             var menu = document.createElement('div');
             menu.className = 'ai-chat-options-menu';
-            menu.innerHTML = '<div class="ai-chat-options-menu-item" data-action="manage-keys">Manage API keys</div>' +
-                '<div class="ai-chat-options-menu-item" data-action="add-files">Add files or photos</div>';
+            menu.innerHTML = '<div class="ai-chat-options-menu-item" data-action="add-files">Add files or images</div>' +
+                '<div class="ai-chat-options-menu-separator"></div>' +
+                '<div class="ai-chat-options-menu-item" data-action="connect-mcp">Connect MCP server</div>' +
+                '<div class="ai-chat-options-menu-separator"></div>' +
+                '<div class="ai-chat-options-menu-item" data-action="manage-keys">Manage API keys</div>';
 
             button.parentNode.style.position = 'relative';
             button.parentNode.appendChild(menu);
@@ -1186,6 +1192,8 @@
                 this.render();
             } else if (action === 'add-files') {
                 this.showFileDialog();
+            } else if (action === 'connect-mcp') {
+                console.debug('AIChat.handleOptionsAction: connect-mcp not yet implemented');
             }
         }
     };
