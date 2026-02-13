@@ -154,6 +154,7 @@
             console.debug('AIChat.render: actual content - providers:', hasProviders, 'keyInput:', hasKeyInput, 'emptyState:', hasEmptyState);
 
             this.initModelDropdown();
+            this.renderAttachments(this.activeTabId);
         },
 
         bindEvents: function() {
@@ -1270,6 +1271,14 @@
             }
             if (!tabId) {
                 return;
+            }
+
+            for (var i = 0; i < this.tabs.length; i++) {
+                if (this.tabs[i].id === tabId) {
+                    AIChatTabState.saveToTab(this.tabs[i]);
+                    AIChatState.saveTabs(this.tabs);
+                    break;
+                }
             }
 
             var attachments = AIChatTabState.getAttachments(tabId);
