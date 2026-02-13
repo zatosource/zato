@@ -183,20 +183,20 @@
                 this.widget.style.top = 'auto';
                 this.widget.style.width = '200px';
                 this.widget.style.height = 'auto';
-            }
+            } else {
+                var position = this.loadPosition();
+                if (position) {
+                    this.widget.style.left = position.left + 'px';
+                    this.widget.style.top = position.top + 'px';
+                    this.widget.style.right = 'auto';
+                    this.widget.style.bottom = 'auto';
+                }
 
-            var position = this.loadPosition();
-            if (position) {
-                this.widget.style.left = position.left + 'px';
-                this.widget.style.top = position.top + 'px';
-                this.widget.style.right = 'auto';
-                this.widget.style.bottom = 'auto';
-            }
-
-            var dimensions = this.loadDimensions();
-            if (dimensions) {
-                this.widget.style.width = dimensions.width + 'px';
-                this.widget.style.height = dimensions.height + 'px';
+                var dimensions = this.loadDimensions();
+                if (dimensions) {
+                    this.widget.style.width = dimensions.width + 'px';
+                    this.widget.style.height = dimensions.height + 'px';
+                }
             }
 
             document.body.appendChild(this.widget);
