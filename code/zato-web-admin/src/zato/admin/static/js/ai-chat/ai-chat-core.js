@@ -150,6 +150,8 @@
             var hasKeyInput = messagesContainer ? !!messagesContainer.querySelector('.ai-chat-config-api-key-input') : false;
             var hasEmptyState = messagesContainer ? !!messagesContainer.querySelector('.ai-chat-empty') : false;
             console.debug('AIChat.render: actual content - providers:', hasProviders, 'keyInput:', hasKeyInput, 'emptyState:', hasEmptyState);
+
+            this.initModelDropdown();
         },
 
         bindEvents: function() {
@@ -214,6 +216,17 @@
             if (target.classList.contains('ai-chat-model-select')) {
                 AIChatConfig.selectedModel = target.value;
                 console.debug('AIChat.handleChange: model selected:', AIChatConfig.selectedModel);
+            }
+        },
+
+        initModelDropdown: function() {
+            var activePanel = this.widget.querySelector('.ai-chat-tab-panel.active');
+            if (!activePanel) {
+                return;
+            }
+            var select = activePanel.querySelector('.ai-chat-model-select');
+            if (select && window.ZatoDropdown && !select.nextElementSibling) {
+                ZatoDropdown.init(select);
             }
         },
 

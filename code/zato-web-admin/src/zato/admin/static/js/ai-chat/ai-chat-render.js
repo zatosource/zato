@@ -127,7 +127,7 @@
             var selectedModel = AIChatConfig.selectedModel || (models.length > 0 ? models[0].id : '');
 
             var html = '<div class="ai-chat-model-selector">';
-            html += '<select class="ai-chat-model-select">';
+            html += '<select class="ai-chat-model-select" id="ai-chat-model-select">';
             for (var i = 0; i < models.length; i++) {
                 var model = models[i];
                 var selected = model.id === selectedModel ? ' selected' : '';

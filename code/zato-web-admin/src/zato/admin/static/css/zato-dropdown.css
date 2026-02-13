@@ -1,0 +1,85 @@
+.zato-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.zato-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #a0a0a0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.zato-dropdown-trigger:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: #222;
+}
+
+.zato-dropdown.open .zato-dropdown-trigger {
+    border-color: #4a9eff;
+    background: #222;
+}
+
+.zato-dropdown-text {
+    flex: 1;
+}
+
+.zato-dropdown-arrow {
+    display: flex;
+    align-items: center;
+    transition: transform 0.15s ease;
+}
+
+.zato-dropdown-arrow svg {
+    width: 12px;
+    height: 12px;
+}
+
+.zato-dropdown.open .zato-dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.zato-dropdown-menu {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 4px;
+    min-width: 100%;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    z-index: 100;
+}
+
+.zato-dropdown.open .zato-dropdown-menu {
+    display: block;
+}
+
+.zato-dropdown-item {
+    padding: 8px 12px;
+    color: #c0c0c0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    white-space: nowrap;
+}
+
+.zato-dropdown-item:hover {
+    background: rgba(74, 158, 255, 0.15);
+    color: #fff;
+}
+
+.zato-dropdown-item.active {
+    background: rgba(74, 158, 255, 0.25);
+    color: #fff;
+}

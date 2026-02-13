@@ -1,0 +1,140 @@
+(function() {
+    'use strict';
+
+    var ZatoDropdown = {
+
+        init: function(selectElement, options) {
+            if (!selectElement) {
+                return null;
+            }
+
+            options = options || {};
+            var container = this.createDropdown(selectElement, options);
+            this.bindEvents(container, selectElement);
+            return container;
+        },
+
+        createDropdown: function(selectElement, options) {
+            var container = document.createElement('div');
+            container.className = 'zato-dropdown';
+            if (options.className) {
+                container.className += ' ' + options.className;
+            }
+
+            var selectedOption = selectElement.options[selectElement.selectedIndex];
+            var selectedText = selectedOption ? selectedOption.text : '';
+            var selectedValue = selectedOption ? selectedOption.value : '';
+
+            container.setAttribute('data-value', selectedValue);
+
+            var trigger = document.createElement('div');
+            trigger.className = 'zato-dropdown-trigger';
+
+            var text = document.createElement('span');
+            text.className = 'zato-dropdown-text';
+            text.textContent = selectedText;
+
+            var arrow = document.createElement('span');
+            arrow.className = 'zato-dropdown-arrow';
+            arrow.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M7 10l5 5 5-5z"/></svg>';
+
+            trigger.appendChild(text);
+            trigger.appendChild(arrow);
+
+            var menu = document.createElement('div');
+            menu.className = 'zato-dropdown-menu';
+
+            for (var i = 0; i < selectElement.options.length; i++) {
+                var opt = selectElement.options[i];
+                var item = document.createElement('div');
+                item.className = 'zato-dropdown-item';
+                if (opt.value === selectedValue) {
+                    item.classList.add('active');
+                }
+                item.setAttribute('data-value', opt.value);
+                item.textContent = opt.text;
+                menu.appendChild(item);
+            }
+
+            container.appendChild(trigger);
+            container.appendChild(menu);
+
+            selectElement.style.display = 'none';
+            selectElement.parentNode.insertBefore(container, selectElement.nextSibling);
+
+            return container;
+        },
+
+        bindEvents: function(container, selectElement) {
+            var trigger = container.querySelector('.zato-dropdown-trigger');
+            var menu = container.querySelector('.zato-dropdown-menu');
+
+            trigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var isOpen = container.classList.contains('open');
+                ZatoDropdown.closeAll();
+                if (!isOpen) {
+                    container.classList.add('open');
+                }
+            });
+
+            menu.addEventListener('click', function(e) {
+                var item = e.target.closest('.zato-dropdown-item');
+                if (item) {
+                    var value = item.getAttribute('data-value');
+                    var text = item.textContent;
+
+                    container.setAttribute('data-value', value);
+                    container.querySelector('.zato-dropdown-text').textContent = text;
+
+                    var items = menu.querySelectorAll('.zato-dropdown-item');
+                    for (var i = 0; i < items.length; i++) {
+                        items[i].classList.remove('active');
+                    }
+                    item.classList.add('active');
+
+                    selectElement.value = value;
+                    var event = document.createEvent('Event');
+                    event.initEvent('change', true, true);
+                    selectElement.dispatchEvent(event);
+
+                    ZatoDropdown.closeAll();
+                    e.stopPropagation();
+                }
+            });
+
+            document.addEventListener('click', function() {
+                container.classList.remove('open');
+            });
+        },
+
+        closeAll: function() {
+            var openDropdowns = document.querySelectorAll('.zato-dropdown.open');
+            for (var i = 0; i < openDropdowns.length; i++) {
+                openDropdowns[i].classList.remove('open');
+            }
+        },
+
+        getValue: function(container) {
+            return container.getAttribute('data-value');
+        },
+
+        setValue: function(container, value) {
+            var item = container.querySelector('.zato-dropdown-item[data-value="' + value + '"]');
+            if (item) {
+                var text = item.textContent;
+                container.setAttribute('data-value', value);
+                container.querySelector('.zato-dropdown-text').textContent = text;
+
+                var items = container.querySelectorAll('.zato-dropdown-item');
+                for (var i = 0; i < items.length; i++) {
+                    items[i].classList.remove('active');
+                }
+                item.classList.add('active');
+            }
+        }
+    };
+
+    window.ZatoDropdown = ZatoDropdown;
+
+})();
