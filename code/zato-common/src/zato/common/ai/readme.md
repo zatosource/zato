@@ -16,15 +16,19 @@ The frontend is complete including provider configuration UI. The backend integr
 Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/`
 
 - `ai-chat-state.js` - localStorage persistence for tabs, position, dimensions, zoom, minimized state
-- `ai-chat-render.js` - HTML building functions for header, tabs, body, messages, input area
+- `ai-chat-render.js` - HTML building functions for header, tabs, body, messages, input area, toolbar
 - `ai-chat-tabs.js` - tab management (add, remove, rename, reorder, drag-drop)
 - `ai-chat-input.js` - contenteditable input handling (shift+enter for newlines, backspace/delete line removal)
 - `ai-chat-resize.js` - widget drag and corner resize
 - `ai-chat-zoom.js` - ctrl+wheel zoom using CSS transform scale
 - `ai-chat-messages.js` - message adding and scrolling
 - `ai-chat-api.js` - backend communication (stub, not implemented)
-- `ai-chat-config.js` - provider configuration UI (provider selection, API key input, settings menu)
+- `ai-chat-config.js` - provider configuration UI, model loading, API key management
 - `ai-chat-core.js` - main entry point, initialization, event binding, state coordination
+
+Location: `/zato-web-admin/src/zato/admin/static/js/`
+
+- `zato-dropdown.js` - reusable custom dropdown component (replaces native select elements)
 
 ### CSS files
 
@@ -33,10 +37,14 @@ Location: `/zato-web-admin/src/zato/admin/static/css/ai-chat/`
 - `ai-chat-base.css` - widget container, body, panels, empty state
 - `ai-chat-header.css` - header bar, tabs, tab buttons, dragging state, settings menu
 - `ai-chat-messages.css` - message bubbles (user, assistant, system roles)
-- `ai-chat-input.css` - input area, contenteditable div, send button
+- `ai-chat-input.css` - input area, contenteditable div, send button, toolbar, options menu
 - `ai-chat-resize.css` - corner resize handles
 - `ai-chat-context-menu.css` - right-click context menu for tab rename
 - `ai-chat-config.css` - provider configuration UI styling
+
+Location: `/zato-web-admin/src/zato/admin/static/css/`
+
+- `zato-dropdown.css` - styles for reusable custom dropdown component
 
 ### Django views
 
@@ -45,6 +53,25 @@ Location: `/zato-web-admin/src/zato/admin/web/views/ai_chat.py`
 - `get_keys` - retrieves API key status for all providers from Redis
 - `save_key` - saves API key to Redis
 - `delete_key` - deletes API key from Redis
+- `get_models` - retrieves available AI models from models.py
+
+### Model definitions
+
+Location: `/zato-common/src/zato/common/ai/models.py`
+
+Models are defined in an INI-style string embedded in Python:
+```python
+models_ini = """
+[claude-opus-4-6]
+provider = anthropic
+name = Claude Opus 4.6
+...
+"""
+```
+
+Helper functions:
+- `get_models_by_provider(provider)` - returns list of models for a provider
+- `get_all_models()` - returns all models grouped by provider
 
 ### URL routes
 
@@ -53,6 +80,7 @@ Location: `/zato-web-admin/src/zato/admin/urls.py`
 - `/zato/ai-chat/config/get-keys/` - GET API key status for all providers
 - `/zato/ai-chat/config/save-key/` - POST to save API key
 - `/zato/ai-chat/config/delete-key/` - POST to delete API key
+- `/zato/ai-chat/config/get-models/` - GET available models for all providers
 
 ### Redis keys
 
@@ -78,8 +106,7 @@ All JS and CSS files are included here in the correct dependency order.
 - Restores to previous position and size
 - Zoom via ctrl+wheel (0.5x to 2.0x scale, resets to 1.0 when minimized)
 - All state persisted to localStorage
-- Settings menu in header (shows on hover, no click required)
-- Settings menu button (hamburger icon) hidden when widget is minimized
+- Header contains only title and minimize button (no settings menu)
 
 ### Tabs
 
@@ -95,10 +122,21 @@ All JS and CSS files are included here in the correct dependency order.
 
 - Contenteditable div (not textarea)
 - Placeholder text when empty
-- Shift+Enter inserts line break and expands to multiline mode
+- Shift+Enter inserts line break
 - Backspace/Delete removes one line at a time when only line breaks remain
 - Enter sends message
-- Send button with arrow icon
+
+### Input toolbar
+
+- Located below the text input area
+- Model selector dropdown on the left (custom ZatoDropdown component)
+- Options button (+) and send button on the right
+- Send button is prominent (36x36px, Zato blue background, white arrow-up icon)
+- Options button opens menu with:
+  - "Manage API keys" - opens key management screen
+  - "Add files or photos" - opens file picker dialog
+- Model selector shows models grouped by provider with separators between providers
+- Each tab stores its own selected model (persisted to localStorage)
 
 ### Messages
 
@@ -119,9 +157,10 @@ All JS and CSS files are included here in the correct dependency order.
   - When user has an API key configured and clicks "Manage API keys": back button returns to chat
   - When user has no API key and is on provider selection: no back button shown
   - When user has no API key and is on key input: back button returns to provider selection
-- Settings menu options depend on whether API key is configured:
-  - With key: "Manage API keys" (opens key management screen)
-  - Without key: "Configure provider" only
+- Options menu accessed via + button in input toolbar (not header)
+- Options menu contains:
+  - "Manage API keys" - opens key management screen
+  - "Add files or photos" - opens file picker dialog
 - Manage API keys screen:
   - Lists all providers with their logos
   - Shows "Add" button for providers without a key
@@ -184,7 +223,7 @@ Use existing Zato admin session authentication. The Django view will have access
 
 ## localStorage keys
 
-- `zato.ai-chat.tabs` - array of tab objects with id, title, messages
+- `zato.ai-chat.tabs` - array of tab objects with id, title, messages, model
 - `zato.ai-chat.active-tab` - id of active tab
 - `zato.ai-chat.position` - {left, top} of widget
 - `zato.ai-chat.dimensions` - {width, height} of widget
@@ -217,9 +256,18 @@ Use existing Zato admin session authentication. The Django view will have access
 - Input fields: dark background (#252525), no white shadows, blue-only focus shadow
 - Buttons: use Zato blue variables, no gradients, no text shadows
 - Provider names format: "<strong>ModelName</strong> · CompanyName"
-- Settings menu appears on hover (no click required)
+- Send button: prominent size (36x36px), Zato blue background, white arrow-up icon
+- Options button: smaller (28px), transparent background, + icon
+- Model selector: custom dropdown (ZatoDropdown), not native select
+- Model dropdown shows separators between different providers
+- Empty state ("Start a conversation") hides scrollbar
 - Back button behavior:
   - When user has an API key configured and clicks "Manage API keys": back button returns to chat
   - When user has no API key and is on provider selection: no back button shown
   - When user has no API key and is on key input: back button returns to provider selection
   - When on manage keys screen: back button returns to chat
+
+## Naming conventions
+
+- Use sentence case for labels, not title case (e.g., "Attach file" not "Attach File")
+- Menu items use sentence case (e.g., "Manage API keys", "Add files or photos")
