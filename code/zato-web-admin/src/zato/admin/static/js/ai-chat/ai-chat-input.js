@@ -9,7 +9,15 @@
                 return false;
             }
 
-            console.debug('AIChatInput.handleKeyDown: key:', e.key, 'shiftKey:', e.shiftKey);
+            var sel = window.getSelection();
+            var cursorInfo = sel.rangeCount > 0 ? {
+                startOffset: sel.getRangeAt(0).startOffset,
+                endOffset: sel.getRangeAt(0).endOffset,
+                collapsed: sel.getRangeAt(0).collapsed,
+                startContainer: sel.getRangeAt(0).startContainer.nodeName,
+                innerHTML: inputElement.innerHTML
+            } : null;
+            console.debug('AIChatInput.handleKeyDown: key:', e.key, 'shiftKey:', e.shiftKey, 'cursor:', JSON.stringify(cursorInfo));
 
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -43,14 +51,17 @@
             if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();
                 var br = document.createElement('br');
-                var sel = window.getSelection();
-                var range = sel.getRangeAt(0);
+                var textNode = document.createTextNode('\u200B');
+                var selEnter = window.getSelection();
+                var range = selEnter.getRangeAt(0);
                 range.deleteContents();
+                range.insertNode(textNode);
                 range.insertNode(br);
-                range.setStartAfter(br);
-                range.setEndAfter(br);
-                sel.removeAllRanges();
-                sel.addRange(range);
+                range.setStart(textNode, 1);
+                range.setEnd(textNode, 1);
+                selEnter.removeAllRanges();
+                selEnter.addRange(range);
+                console.debug('AIChatInput.handleKeyDown: shift+enter inserted br, innerHTML:', inputElement.innerHTML);
                 return true;
             }
 
