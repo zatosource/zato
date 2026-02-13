@@ -29,6 +29,7 @@
         configMode: 'providers',
         settingsMenu: null,
         cameFromChat: false,
+        hadKeyOnEntry: false,
 
         init: function() {
             console.debug('AIChat.init: starting initialization');
@@ -133,7 +134,7 @@
 
             var html = AIChatRender.buildHeaderHtml(this.isMinimized);
             html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
-            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider, this.cameFromChat);
+            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider, this.cameFromChat, this.hadKeyOnEntry);
             html += AIChatRender.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
@@ -722,10 +723,18 @@
         },
 
         handleBackClick: function() {
-            console.debug('AIChat.handleBackClick: cameFromChat:', this.cameFromChat, 'configMode:', this.configMode);
+            console.debug('AIChat.handleBackClick: cameFromChat:', this.cameFromChat, 'configMode:', this.configMode, 'hadKeyOnEntry:', this.hadKeyOnEntry);
             if (this.configMode === 'key-input') {
-                this.showProviderSelection();
-            } else if (this.configMode === 'providers' && this.cameFromChat) {
+                if (this.hadKeyOnEntry) {
+                    this.cameFromChat = false;
+                    this.needsConfig = false;
+                    this.configMode = 'providers';
+                    AIChatConfig.selectedProvider = null;
+                    this.render();
+                } else {
+                    this.showProviderSelection();
+                }
+            } else if (this.configMode === 'providers' && this.cameFromChat && this.hadKeyOnEntry) {
                 this.cameFromChat = false;
                 this.needsConfig = false;
                 this.configMode = 'providers';
@@ -837,6 +846,8 @@
         handleSettingsAction: function(action) {
             console.debug('AIChat.handleSettingsAction: action:', action);
             this.hideSettingsMenu();
+
+            this.hadKeyOnEntry = AIChatConfig.hasAnyKey();
 
             if (action === 'change-provider') {
                 this.cameFromChat = true;

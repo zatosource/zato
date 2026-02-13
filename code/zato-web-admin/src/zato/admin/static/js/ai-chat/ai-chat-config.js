@@ -149,14 +149,22 @@
             return html;
         },
 
-        buildKeyInputHtml: function(providerId) {
+        buildKeyInputHtml: function(providerId, hadKeyOnEntry) {
             var provider = this.providers[providerId];
             if (!provider) return '';
 
-            var html = '<div class="ai-chat-config-back" data-action="back">';
-            html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
-            html += '<span>Back</span>';
-            html += '</div>';
+            var html = '';
+            if (hadKeyOnEntry) {
+                html += '<div class="ai-chat-config-back" data-action="back">';
+                html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
+                html += '<span>Back</span>';
+                html += '</div>';
+            } else {
+                html += '<div class="ai-chat-config-back" data-action="back">';
+                html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
+                html += '<span>Back</span>';
+                html += '</div>';
+            }
             html += '<div class="ai-chat-config-container">';
             html += '<div class="ai-chat-config-provider-header">';
             html += '<div class="ai-chat-config-provider-logo-large">' + provider.logo + '</div>';
