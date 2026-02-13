@@ -11,11 +11,6 @@
 
         buildHeaderHtml: function(isMinimized) {
             var html = '<div class="ai-chat-header" id="ai-chat-header">';
-            if (!isMinimized) {
-                html += '<button class="ai-chat-header-button ai-chat-menu-button" id="ai-chat-menu-button">';
-                html += '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>';
-                html += '</button>';
-            }
             html += '<span class="ai-chat-header-title">AI chat</span>';
             html += '<div class="ai-chat-header-controls">';
             var icon = isMinimized ? '+' : '−';
@@ -118,8 +113,8 @@
             var html = '<div class="ai-chat-input-toolbar">';
             html += this.buildModelSelectorHtml();
             html += '<div class="ai-chat-input-toolbar-buttons">';
-            html += '<button class="ai-chat-attach-button" data-tab-id="' + tab.id + '" aria-label="Attach file">';
-            html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-attach-icon"><path d="M12 4v16m-8-8h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
+            html += '<button class="ai-chat-options-button" data-tab-id="' + tab.id + '" aria-label="Options">';
+            html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-options-icon"><path d="M12 4v16m-8-8h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
             html += '</button>';
             html += '<button class="ai-chat-send-button" data-tab-id="' + tab.id + '" aria-label="Send">';
             html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-send-icon"><path d="M12 19V5m0 0l-7 7m7-7l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
@@ -142,7 +137,8 @@
             for (var i = 0; i < models.length; i++) {
                 var model = models[i];
                 var selected = model.id === selectedModel ? ' selected' : '';
-                html += '<option value="' + model.id + '"' + selected + '>' + model.name + '</option>';
+                var separator = model.isFirst ? ' data-separator="true"' : '';
+                html += '<option value="' + model.id + '"' + selected + separator + '>' + model.name + '</option>';
             }
             html += '</select>';
             html += '</div>';

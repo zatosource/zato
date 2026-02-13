@@ -61,7 +61,7 @@
     box-shadow: none;
 }
 
-.ai-chat-attach-button {
+.ai-chat-options-button {
     width: 28px;
     height: 28px;
     padding: 0;
@@ -75,21 +75,50 @@
     flex-shrink: 0;
     transition: background 0.1s ease, border-color 0.1s ease;
     color: #888;
+    position: relative;
 }
 
-.ai-chat-attach-button:hover {
+.ai-chat-options-button:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
     color: #4a9eff;
 }
 
-.ai-chat-attach-button:active {
+.ai-chat-options-button:active {
     background: rgba(255, 255, 255, 0.15);
 }
 
-.ai-chat-attach-icon {
+.ai-chat-options-icon {
     width: 16px;
     height: 16px;
+}
+
+.ai-chat-options-menu {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 4px;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    z-index: 100;
+    min-width: 160px;
+}
+
+.ai-chat-options-menu-item {
+    padding: 10px 14px;
+    color: #c0c0c0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    white-space: nowrap;
+}
+
+.ai-chat-options-menu-item:hover {
+    background: rgba(74, 158, 255, 0.15);
+    color: #fff;
 }
 
 .ai-chat-send-button {

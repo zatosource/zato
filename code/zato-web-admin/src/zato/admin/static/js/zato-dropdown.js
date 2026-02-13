@@ -46,6 +46,11 @@
 
             for (var i = 0; i < selectElement.options.length; i++) {
                 var opt = selectElement.options[i];
+                if (opt.getAttribute('data-separator') === 'true') {
+                    var separator = document.createElement('div');
+                    separator.className = 'zato-dropdown-separator';
+                    menu.appendChild(separator);
+                }
                 var item = document.createElement('div');
                 item.className = 'zato-dropdown-item';
                 if (opt.value === selectedValue) {

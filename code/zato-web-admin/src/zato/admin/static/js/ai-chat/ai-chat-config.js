@@ -64,10 +64,15 @@
 
         getModelsForConfiguredProviders: function() {
             var result = [];
-            for (var provider in this.configuredKeys) {
+            var providerOrder = ['anthropic', 'openai'];
+            for (var p = 0; p < providerOrder.length; p++) {
+                var provider = providerOrder[p];
                 if (this.configuredKeys[provider] && this.models[provider]) {
                     for (var i = 0; i < this.models[provider].length; i++) {
-                        result.push(this.models[provider][i]);
+                        var model = this.models[provider][i];
+                        model.provider = provider;
+                        model.isFirst = (i === 0 && p > 0);
+                        result.push(model);
                     }
                 }
             }

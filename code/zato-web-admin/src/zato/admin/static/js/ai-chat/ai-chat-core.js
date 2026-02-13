@@ -202,6 +202,7 @@
             document.addEventListener('click', function(e) {
                 self.hideContextMenu();
                 self.hideSettingsMenu();
+                self.hideOptionsMenu();
             });
 
             this.widget.addEventListener('change', function(e) {
@@ -275,8 +276,17 @@
                 return;
             }
 
-            if (target.classList.contains('ai-chat-attach-button') || target.closest('.ai-chat-attach-button')) {
-                this.showFileDialog();
+            if (target.classList.contains('ai-chat-options-button') || target.closest('.ai-chat-options-button')) {
+                this.toggleOptionsMenu();
+                e.stopPropagation();
+                return;
+            }
+
+            var optionsMenuItem = target.closest('.ai-chat-options-menu-item');
+            if (optionsMenuItem) {
+                var action = optionsMenuItem.getAttribute('data-action');
+                this.handleOptionsAction(action);
+                e.stopPropagation();
                 return;
             }
 
@@ -991,6 +1001,49 @@
             });
             document.body.appendChild(input);
             input.click();
+        },
+
+        toggleOptionsMenu: function() {
+            var existing = this.widget.querySelector('.ai-chat-options-menu');
+            if (existing) {
+                existing.parentNode.removeChild(existing);
+                return;
+            }
+
+            var button = this.widget.querySelector('.ai-chat-options-button');
+            if (!button) {
+                return;
+            }
+
+            var menu = document.createElement('div');
+            menu.className = 'ai-chat-options-menu';
+            menu.innerHTML = '<div class="ai-chat-options-menu-item" data-action="manage-keys">Manage API keys</div>' +
+                '<div class="ai-chat-options-menu-item" data-action="add-files">Add files or photos</div>';
+
+            button.parentNode.style.position = 'relative';
+            button.parentNode.appendChild(menu);
+        },
+
+        hideOptionsMenu: function() {
+            var menu = this.widget.querySelector('.ai-chat-options-menu');
+            if (menu) {
+                menu.parentNode.removeChild(menu);
+            }
+        },
+
+        handleOptionsAction: function(action) {
+            console.debug('AIChat.handleOptionsAction:', action);
+            this.hideOptionsMenu();
+
+            if (action === 'manage-keys') {
+                this.cameFromChat = true;
+                this.hadKeyOnEntry = AIChatConfig.hasAnyKey();
+                this.needsConfig = true;
+                this.configMode = 'manage-keys';
+                this.render();
+            } else if (action === 'add-files') {
+                this.showFileDialog();
+            }
         }
     };
 

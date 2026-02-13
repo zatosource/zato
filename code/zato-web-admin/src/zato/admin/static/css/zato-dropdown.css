@@ -83,3 +83,9 @@
     background: rgba(74, 158, 255, 0.25);
     color: #fff;
 }
+
+.zato-dropdown-separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 4px 0;
+}
