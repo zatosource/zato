@@ -14,6 +14,7 @@
         isMinimized: false,
         isDragging: false,
         isResizing: false,
+        resizeDirection: null,
         dragStartX: 0,
         dragStartY: 0,
         dragOffsetX: 0,
@@ -22,6 +23,12 @@
         resizeStartY: 0,
         resizeStartWidth: 0,
         resizeStartHeight: 0,
+        resizeStartLeft: 0,
+        resizeStartTop: 0,
+        isTabDragging: false,
+        draggedTabId: null,
+        draggedTabElement: null,
+        contextMenu: null,
 
         init: function() {
             console.debug('LLMChat.init: starting initialization');
@@ -182,7 +189,7 @@
             var html = this.buildHeaderHtml();
             html += this.buildTabsHtml();
             html += this.buildBodyHtml();
-            html += '<div class="llm-chat-resize-handle" id="llm-chat-resize-handle"></div>';
+            html += this.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
             console.debug('LLMChat.render: widget html set');
@@ -198,13 +205,22 @@
             return html;
         },
 
+        buildResizeHandlesHtml: function() {
+            var html = '';
+            html += '<div class="llm-chat-resize-handle llm-chat-resize-nw" data-direction="nw"></div>';
+            html += '<div class="llm-chat-resize-handle llm-chat-resize-ne" data-direction="ne"></div>';
+            html += '<div class="llm-chat-resize-handle llm-chat-resize-sw" data-direction="sw"></div>';
+            html += '<div class="llm-chat-resize-handle llm-chat-resize-se" data-direction="se"></div>';
+            return html;
+        },
+
         buildTabsHtml: function() {
             var html = '<div class="llm-chat-tabs" id="llm-chat-tabs">';
 
             for (var i = 0; i < this.tabs.length; i++) {
                 var tab = this.tabs[i];
                 var activeClass = tab.id === this.activeTabId ? ' active' : '';
-                html += '<div class="llm-chat-tab' + activeClass + '" data-tab-id="' + tab.id + '">';
+                html += '<div class="llm-chat-tab' + activeClass + '" data-tab-id="' + tab.id + '" draggable="true">';
                 html += '<span class="llm-chat-tab-title">' + this.escapeHtml(tab.title) + '</span>';
                 if (this.tabs.length > 1) {
                     html += '<span class="llm-chat-tab-close" data-tab-id="' + tab.id + '">✕</span>';
@@ -293,6 +309,14 @@
                 self.handleKeyDown(e);
             });
 
+            this.widget.addEventListener('contextmenu', function(e) {
+                self.handleContextMenu(e);
+            });
+
+            document.addEventListener('click', function(e) {
+                self.hideContextMenu();
+            });
+
             console.debug('LLMChat.bindEvents: events bound');
         },
 
@@ -360,14 +384,34 @@
                 return;
             }
 
-            if (target.id === 'llm-chat-resize-handle') {
+            if (target.classList.contains('llm-chat-resize-handle')) {
                 console.debug('LLMChat.handleMouseDown: starting resize');
                 this.isResizing = true;
+                this.resizeDirection = target.getAttribute('data-direction');
                 this.resizeStartX = e.clientX;
                 this.resizeStartY = e.clientY;
                 this.resizeStartWidth = this.widget.offsetWidth;
                 this.resizeStartHeight = this.widget.offsetHeight;
 
+                var rect = this.widget.getBoundingClientRect();
+                this.resizeStartLeft = rect.left;
+                this.resizeStartTop = rect.top;
+                this.widget.style.right = 'auto';
+                this.widget.style.bottom = 'auto';
+                this.widget.style.left = rect.left + 'px';
+                this.widget.style.top = rect.top + 'px';
+
+                e.preventDefault();
+                return;
+            }
+
+            var tabElement = target.closest('.llm-chat-tab');
+            if (tabElement && !target.classList.contains('llm-chat-tab-close')) {
+                console.debug('LLMChat.handleMouseDown: starting tab drag');
+                this.isTabDragging = true;
+                this.draggedTabId = tabElement.getAttribute('data-tab-id');
+                this.draggedTabElement = tabElement;
+                tabElement.classList.add('dragging');
                 e.preventDefault();
                 return;
             }
@@ -389,12 +433,63 @@
             if (this.isResizing) {
                 var deltaX = e.clientX - this.resizeStartX;
                 var deltaY = e.clientY - this.resizeStartY;
+                var dir = this.resizeDirection;
 
-                var newWidth = Math.max(300, this.resizeStartWidth + deltaX);
-                var newHeight = Math.max(200, this.resizeStartHeight + deltaY);
+                var newWidth = this.resizeStartWidth;
+                var newHeight = this.resizeStartHeight;
+                var newLeft = this.resizeStartLeft;
+                var newTop = this.resizeStartTop;
+
+                if (dir === 'se') {
+                    newWidth = Math.max(300, this.resizeStartWidth + deltaX);
+                    newHeight = Math.max(200, this.resizeStartHeight + deltaY);
+                } else if (dir === 'sw') {
+                    newWidth = Math.max(300, this.resizeStartWidth - deltaX);
+                    newHeight = Math.max(200, this.resizeStartHeight + deltaY);
+                    newLeft = this.resizeStartLeft + (this.resizeStartWidth - newWidth);
+                } else if (dir === 'ne') {
+                    newWidth = Math.max(300, this.resizeStartWidth + deltaX);
+                    newHeight = Math.max(200, this.resizeStartHeight - deltaY);
+                    newTop = this.resizeStartTop + (this.resizeStartHeight - newHeight);
+                } else if (dir === 'nw') {
+                    newWidth = Math.max(300, this.resizeStartWidth - deltaX);
+                    newHeight = Math.max(200, this.resizeStartHeight - deltaY);
+                    newLeft = this.resizeStartLeft + (this.resizeStartWidth - newWidth);
+                    newTop = this.resizeStartTop + (this.resizeStartHeight - newHeight);
+                }
 
                 this.widget.style.width = newWidth + 'px';
                 this.widget.style.height = newHeight + 'px';
+                this.widget.style.left = newLeft + 'px';
+                this.widget.style.top = newTop + 'px';
+                return;
+            }
+
+            if (this.isTabDragging && this.draggedTabElement) {
+                var tabsContainer = this.widget.querySelector('#llm-chat-tabs');
+                var tabs = tabsContainer.querySelectorAll('.llm-chat-tab');
+                var draggedRect = this.draggedTabElement.getBoundingClientRect();
+
+                for (var i = 0; i < tabs.length; i++) {
+                    var tab = tabs[i];
+                    if (tab === this.draggedTabElement) continue;
+
+                    var rect = tab.getBoundingClientRect();
+                    var midX = rect.left + rect.width / 2;
+
+                    if (e.clientX < midX && e.clientX > rect.left) {
+                        tabsContainer.insertBefore(this.draggedTabElement, tab);
+                        break;
+                    } else if (e.clientX > midX && e.clientX < rect.right) {
+                        if (tab.nextSibling && tab.nextSibling.classList && tab.nextSibling.classList.contains('llm-chat-tab')) {
+                            tabsContainer.insertBefore(this.draggedTabElement, tab.nextSibling);
+                        } else {
+                            var addButton = tabsContainer.querySelector('.llm-chat-tab-add');
+                            tabsContainer.insertBefore(this.draggedTabElement, addButton);
+                        }
+                        break;
+                    }
+                }
                 return;
             }
         },
@@ -409,18 +504,117 @@
             if (this.isResizing) {
                 console.debug('LLMChat.handleMouseUp: ending resize');
                 this.isResizing = false;
+                this.resizeDirection = null;
                 this.saveDimensions();
+                this.savePosition();
+            }
+
+            if (this.isTabDragging) {
+                console.debug('LLMChat.handleMouseUp: ending tab drag');
+                this.isTabDragging = false;
+
+                if (this.draggedTabElement) {
+                    this.draggedTabElement.classList.remove('dragging');
+                }
+
+                var tabsContainer = this.widget.querySelector('#llm-chat-tabs');
+                var tabElements = tabsContainer.querySelectorAll('.llm-chat-tab');
+                var newOrder = [];
+
+                for (var i = 0; i < tabElements.length; i++) {
+                    var tabId = tabElements[i].getAttribute('data-tab-id');
+                    var tab = this.getTabById(tabId);
+                    if (tab) {
+                        newOrder.push(tab);
+                    }
+                }
+
+                this.tabs = newOrder;
+                this.draggedTabId = null;
+                this.draggedTabElement = null;
+                this.saveState();
+                console.debug('LLMChat.handleMouseUp: tabs reordered:', JSON.stringify(this.tabs.map(function(t) { return t.title; })));
             }
         },
 
         handleKeyDown: function(e) {
             if (e.target.classList.contains('llm-chat-input')) {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
                     e.preventDefault();
                     var tabId = e.target.getAttribute('data-tab-id');
                     console.debug('LLMChat.handleKeyDown: enter pressed in input, tabId:', tabId);
                     this.sendMessage(tabId);
+                } else if (e.key === 'Enter' && e.ctrlKey) {
+                    console.debug('LLMChat.handleKeyDown: ctrl+enter pressed, expanding textarea');
+                    e.target.style.height = 'auto';
+                    e.target.style.height = (e.target.scrollHeight) + 'px';
                 }
+            }
+        },
+
+        handleContextMenu: function(e) {
+            var tabElement = e.target.closest('.llm-chat-tab');
+            if (tabElement) {
+                e.preventDefault();
+                var tabId = tabElement.getAttribute('data-tab-id');
+                console.debug('LLMChat.handleContextMenu: right-click on tab:', tabId);
+                this.showContextMenu(e.clientX, e.clientY, tabId);
+            }
+        },
+
+        showContextMenu: function(x, y, tabId) {
+            console.debug('LLMChat.showContextMenu: showing context menu at:', x, y, 'for tab:', tabId);
+
+            this.hideContextMenu();
+
+            this.contextMenu = document.createElement('div');
+            this.contextMenu.className = 'llm-chat-context-menu';
+            this.contextMenu.innerHTML = '<div class="llm-chat-context-menu-item" data-action="rename" data-tab-id="' + tabId + '">Rename tab</div>';
+
+            this.contextMenu.style.left = x + 'px';
+            this.contextMenu.style.top = y + 'px';
+
+            var self = this;
+            this.contextMenu.addEventListener('click', function(e) {
+                var item = e.target.closest('.llm-chat-context-menu-item');
+                if (item) {
+                    var action = item.getAttribute('data-action');
+                    var tabId = item.getAttribute('data-tab-id');
+                    console.debug('LLMChat.contextMenu click: action:', action, 'tabId:', tabId);
+
+                    if (action === 'rename') {
+                        self.renameTab(tabId);
+                    }
+
+                    self.hideContextMenu();
+                }
+            });
+
+            document.body.appendChild(this.contextMenu);
+        },
+
+        hideContextMenu: function() {
+            if (this.contextMenu && this.contextMenu.parentNode) {
+                this.contextMenu.parentNode.removeChild(this.contextMenu);
+                this.contextMenu = null;
+            }
+        },
+
+        renameTab: function(tabId) {
+            console.debug('LLMChat.renameTab: renaming tab:', tabId);
+
+            var tab = this.getTabById(tabId);
+            if (!tab) {
+                console.debug('LLMChat.renameTab: tab not found');
+                return;
+            }
+
+            var newTitle = prompt('Enter new tab name:', tab.title);
+            if (newTitle && newTitle.trim()) {
+                tab.title = newTitle.trim();
+                console.debug('LLMChat.renameTab: new title:', tab.title);
+                this.saveState();
+                this.render();
             }
         },
 
@@ -430,8 +624,18 @@
 
             if (this.isMinimized) {
                 this.widget.classList.add('minimized');
+                this.widget.style.height = 'auto';
+                this.widget.style.width = '200px';
             } else {
                 this.widget.classList.remove('minimized');
+                var dimensions = this.loadDimensions();
+                if (dimensions) {
+                    this.widget.style.width = dimensions.width + 'px';
+                    this.widget.style.height = dimensions.height + 'px';
+                } else {
+                    this.widget.style.width = '450px';
+                    this.widget.style.height = '500px';
+                }
             }
 
             this.saveState();

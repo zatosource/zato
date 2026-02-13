@@ -137,16 +137,19 @@
 
 .llm-chat-tab-add {
     padding: 10px 12px;
-    background: transparent;
+    background: #252525;
     border: none;
-    color: #666;
+    color: #888;
     font-size: 16px;
     cursor: pointer;
     transition: all 0.2s ease;
+    border-radius: 4px;
+    margin: 4px;
 }
 
 .llm-chat-tab-add:hover {
     color: #4a9eff;
+    background: #333;
 }
 
 .llm-chat-body {
@@ -242,7 +245,7 @@
 }
 
 .llm-chat-input::placeholder {
-    color: #666;
+    color: #999;
 }
 
 .llm-chat-send-button {
@@ -268,27 +271,34 @@
 
 .llm-chat-resize-handle {
     position: absolute;
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
+    background: transparent;
+    z-index: 10;
+}
+
+.llm-chat-resize-nw {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+}
+
+.llm-chat-resize-ne {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+}
+
+.llm-chat-resize-sw {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+}
+
+.llm-chat-resize-se {
     bottom: 0;
     right: 0;
     cursor: nwse-resize;
-    background: transparent;
-}
-
-.llm-chat-resize-handle::before {
-    content: '';
-    position: absolute;
-    bottom: 4px;
-    right: 4px;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid #555;
-    border-bottom: 2px solid #555;
-}
-
-.llm-chat-resize-handle:hover::before {
-    border-color: #888;
 }
 
 .llm-chat-empty {
@@ -318,4 +328,33 @@
 
 .llm-chat-tab-panel.active {
     display: flex;
+}
+
+.llm-chat-tab.dragging {
+    opacity: 0.5;
+    background: #333;
+}
+
+.llm-chat-context-menu {
+    position: fixed;
+    background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    min-width: 120px;
+    padding: 4px 0;
+}
+
+.llm-chat-context-menu-item {
+    padding: 8px 16px;
+    color: #e0e0e0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.llm-chat-context-menu-item:hover {
+    background: rgba(74, 158, 255, 0.2);
+    color: #fff;
 }
