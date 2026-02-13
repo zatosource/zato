@@ -1,20 +1,20 @@
 (function() {
     'use strict';
 
-    var LLMChatInput = {
+    var AIChatInput = {
 
         handleKeyDown: function(e, sendMessageCallback) {
-            var inputElement = e.target.closest('.llm-chat-input');
+            var inputElement = e.target.closest('.ai-chat-input');
             if (!inputElement) {
                 return false;
             }
 
-            console.debug('LLMChatInput.handleKeyDown: key:', e.key, 'shiftKey:', e.shiftKey);
+            console.debug('AIChatInput.handleKeyDown: key:', e.key, 'shiftKey:', e.shiftKey);
 
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 var tabId = inputElement.getAttribute('data-tab-id');
-                console.debug('LLMChatInput.handleKeyDown: enter pressed, tabId:', tabId);
+                console.debug('AIChatInput.handleKeyDown: enter pressed, tabId:', tabId);
                 sendMessageCallback(tabId);
                 return true;
             }
@@ -28,14 +28,14 @@
                     var brToRemove = e.key === 'Backspace' ? brs[brs.length - 1] : brs[0];
                     brToRemove.parentNode.removeChild(brToRemove);
                     var newBrCount = inputElement.querySelectorAll('br').length;
-                    console.debug('LLMChatInput.handleKeyDown:', e.key, 'removed br:', JSON.stringify({
+                    console.debug('AIChatInput.handleKeyDown:', e.key, 'removed br:', JSON.stringify({
                         brCountBefore: brCount,
                         brCountAfter: newBrCount,
                         innerHTML: inputElement.innerHTML
                     }));
                     if (newBrCount === 0) {
                         inputElement.innerHTML = '';
-                        var inputArea = inputElement.closest('.llm-chat-input-area');
+                        var inputArea = inputElement.closest('.ai-chat-input-area');
                         if (inputArea) {
                             inputArea.classList.remove('multiline');
                             inputArea.removeAttribute('data-user-multiline');
@@ -47,7 +47,7 @@
 
             if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();
-                var inputArea = inputElement.closest('.llm-chat-input-area');
+                var inputArea = inputElement.closest('.ai-chat-input-area');
                 if (inputArea) {
                     var brCountBefore = inputElement.querySelectorAll('br').length;
                     inputArea.classList.add('multiline');
@@ -62,7 +62,7 @@
                     sel.removeAllRanges();
                     sel.addRange(range);
                     var brCountAfter = inputElement.querySelectorAll('br').length;
-                    console.debug('LLMChatInput.handleKeyDown: shift+enter:', JSON.stringify({
+                    console.debug('AIChatInput.handleKeyDown: shift+enter:', JSON.stringify({
                         brCountBefore: brCountBefore,
                         brCountAfter: brCountAfter,
                         innerHTML: inputElement.innerHTML,
@@ -79,20 +79,20 @@
         },
 
         handleInput: function(e) {
-            if (e.target.classList.contains('llm-chat-input')) {
+            if (e.target.classList.contains('ai-chat-input')) {
                 this.updateMultilineState(e.target);
             }
         },
 
         handleKeyUp: function(e) {
-            var inputElement = e.target.closest('.llm-chat-input');
+            var inputElement = e.target.closest('.ai-chat-input');
             if (inputElement && (e.key === 'Backspace' || e.key === 'Delete')) {
                 this.updateMultilineState(inputElement);
             }
         },
 
         updateMultilineState: function(inputElement) {
-            var inputArea = inputElement.closest('.llm-chat-input-area');
+            var inputArea = inputElement.closest('.ai-chat-input-area');
             if (!inputArea) {
                 return;
             }
@@ -105,7 +105,7 @@
             var hasMultilineClass = inputArea.classList.contains('multiline');
             var userMultiline = inputArea.getAttribute('data-user-multiline');
 
-            console.debug('LLMChatInput.updateMultilineState:', JSON.stringify({
+            console.debug('AIChatInput.updateMultilineState:', JSON.stringify({
                 text: text,
                 textLength: text.length,
                 brCount: brCount,
@@ -118,7 +118,7 @@
             }));
 
             if (text === '' && brCount === 0) {
-                console.debug('LLMChatInput.updateMultilineState: clearing - empty text and no br');
+                console.debug('AIChatInput.updateMultilineState: clearing - empty text and no br');
                 inputElement.innerHTML = '';
                 inputArea.classList.remove('multiline');
                 inputArea.removeAttribute('data-user-multiline');
@@ -131,7 +131,7 @@
 
         clearInput: function(inputElement) {
             inputElement.innerHTML = '';
-            var inputArea = inputElement.closest('.llm-chat-input-area');
+            var inputArea = inputElement.closest('.ai-chat-input-area');
             if (inputArea) {
                 inputArea.classList.remove('multiline');
                 inputArea.removeAttribute('data-user-multiline');
@@ -139,6 +139,6 @@
         }
     };
 
-    window.LLMChatInput = LLMChatInput;
+    window.AIChatInput = AIChatInput;
 
 })();

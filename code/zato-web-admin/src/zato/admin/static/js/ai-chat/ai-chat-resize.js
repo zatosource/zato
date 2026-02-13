@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    var LLMChatResize = {
+    var AIChatResize = {
 
         startDrag: function(widget, e) {
             var rect = widget.getBoundingClientRect();
@@ -80,6 +80,6 @@
         }
     };
 
-    window.LLMChatResize = LLMChatResize;
+    window.AIChatResize = AIChatResize;
 
 })();

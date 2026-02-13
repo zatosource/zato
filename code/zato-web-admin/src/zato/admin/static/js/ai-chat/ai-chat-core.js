@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    var LLMChat = {
+    var AIChat = {
         widget: null,
         tabs: [],
         activeTabId: null,
@@ -27,62 +27,62 @@
         zoomScale: 1.0,
 
         init: function() {
-            console.debug('LLMChat.init: starting initialization');
+            console.debug('AIChat.init: starting initialization');
 
             this.loadState();
             this.createWidget();
             this.bindEvents();
             this.render();
 
-            console.debug('LLMChat.init: initialization complete');
+            console.debug('AIChat.init: initialization complete');
         },
 
         loadState: function() {
-            console.debug('LLMChat.loadState: loading state from localStorage');
+            console.debug('AIChat.loadState: loading state from localStorage');
 
-            this.tabs = LLMChatState.loadTabs();
+            this.tabs = AIChatState.loadTabs();
             if (!this.tabs || this.tabs.length === 0) {
-                console.debug('LLMChat.loadState: no tabs found, creating default tab');
-                this.tabs = [LLMChatTabs.createDefaultTab()];
+                console.debug('AIChat.loadState: no tabs found, creating default tab');
+                this.tabs = [AIChatTabs.createDefaultTab()];
             }
 
-            this.activeTabId = LLMChatState.loadActiveTabId();
-            if (!this.activeTabId || !LLMChatTabs.getTabById(this.tabs, this.activeTabId)) {
+            this.activeTabId = AIChatState.loadActiveTabId();
+            if (!this.activeTabId || !AIChatTabs.getTabById(this.tabs, this.activeTabId)) {
                 this.activeTabId = this.tabs[0].id;
             }
 
-            this.isMinimized = LLMChatState.loadMinimized();
-            this.preMinimizePosition = LLMChatState.loadPreMinimizePosition();
-            this.zoomScale = LLMChatState.loadZoom();
+            this.isMinimized = AIChatState.loadMinimized();
+            this.preMinimizePosition = AIChatState.loadPreMinimizePosition();
+            this.zoomScale = AIChatState.loadZoom();
         },
 
         saveState: function() {
-            console.debug('LLMChat.saveState: saving state to localStorage');
-            LLMChatState.saveTabs(this.tabs);
-            LLMChatState.saveActiveTabId(this.activeTabId);
-            LLMChatState.saveMinimized(this.isMinimized);
+            console.debug('AIChat.saveState: saving state to localStorage');
+            AIChatState.saveTabs(this.tabs);
+            AIChatState.saveActiveTabId(this.activeTabId);
+            AIChatState.saveMinimized(this.isMinimized);
         },
 
         savePosition: function() {
             if (!this.widget) return;
             var rect = this.widget.getBoundingClientRect();
-            LLMChatState.savePosition({ left: rect.left, top: rect.top });
+            AIChatState.savePosition({ left: rect.left, top: rect.top });
         },
 
         saveDimensions: function() {
             if (!this.widget) return;
-            LLMChatState.saveDimensions({
+            AIChatState.saveDimensions({
                 width: this.widget.offsetWidth,
                 height: this.widget.offsetHeight
             });
         },
 
         createWidget: function() {
-            console.debug('LLMChat.createWidget: creating widget element');
+            console.debug('AIChat.createWidget: creating widget element');
 
             this.widget = document.createElement('div');
-            this.widget.className = 'llm-chat-widget';
-            this.widget.id = 'llm-chat-widget';
+            this.widget.className = 'ai-chat-widget';
+            this.widget.id = 'ai-chat-widget';
 
             if (this.isMinimized) {
                 this.widget.classList.add('minimized');
@@ -93,8 +93,8 @@
                 this.widget.style.width = '200px';
                 this.widget.style.height = 'auto';
             } else {
-                var position = LLMChatState.loadPosition();
-                var dimensions = LLMChatState.loadDimensions();
+                var position = AIChatState.loadPosition();
+                var dimensions = AIChatState.loadDimensions();
 
                 if (position) {
                     var clampedLeft = Math.max(0, position.left);
@@ -111,28 +111,28 @@
                 }
 
                 if (this.zoomScale !== 1.0) {
-                    LLMChatZoom.applyZoom(this.widget, this.zoomScale);
+                    AIChatZoom.applyZoom(this.widget, this.zoomScale);
                 }
             }
 
             document.body.appendChild(this.widget);
-            console.debug('LLMChat.createWidget: widget appended to body');
+            console.debug('AIChat.createWidget: widget appended to body');
         },
 
         render: function() {
-            console.debug('LLMChat.render: rendering widget');
+            console.debug('AIChat.render: rendering widget');
 
-            var html = LLMChatRender.buildHeaderHtml(this.isMinimized);
-            html += LLMChatRender.buildTabsHtml(this.tabs, this.activeTabId);
-            html += LLMChatRender.buildBodyHtml(this.tabs, this.activeTabId);
-            html += LLMChatRender.buildResizeHandlesHtml();
+            var html = AIChatRender.buildHeaderHtml(this.isMinimized);
+            html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
+            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId);
+            html += AIChatRender.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
-            console.debug('LLMChat.render: widget html set');
+            console.debug('AIChat.render: widget html set');
         },
 
         bindEvents: function() {
-            console.debug('LLMChat.bindEvents: binding events');
+            console.debug('AIChat.bindEvents: binding events');
 
             var self = this;
 
@@ -157,11 +157,11 @@
             });
 
             document.addEventListener('input', function(e) {
-                LLMChatInput.handleInput(e);
+                AIChatInput.handleInput(e);
             });
 
             document.addEventListener('keyup', function(e) {
-                LLMChatInput.handleKeyUp(e);
+                AIChatInput.handleKeyUp(e);
             });
 
             this.widget.addEventListener('contextmenu', function(e) {
@@ -176,38 +176,38 @@
                 self.hideContextMenu();
             });
 
-            console.debug('LLMChat.bindEvents: events bound');
+            console.debug('AIChat.bindEvents: events bound');
         },
 
         handleClick: function(e) {
             var target = e.target;
-            console.debug('LLMChat.handleClick: target:', target.className);
+            console.debug('AIChat.handleClick: target:', target.className);
 
-            if (target.id === 'llm-chat-minimize') {
+            if (target.id === 'ai-chat-minimize') {
                 this.toggleMinimize();
                 return;
             }
 
-            if (target.id === 'llm-chat-tab-add') {
+            if (target.id === 'ai-chat-tab-add') {
                 this.addTab();
                 return;
             }
 
-            if (target.classList.contains('llm-chat-tab-close')) {
+            if (target.classList.contains('ai-chat-tab-close')) {
                 var tabId = target.getAttribute('data-tab-id');
                 this.closeTab(tabId);
                 e.stopPropagation();
                 return;
             }
 
-            var tabElement = target.closest('.llm-chat-tab');
-            if (tabElement && !target.classList.contains('llm-chat-tab-close')) {
+            var tabElement = target.closest('.ai-chat-tab');
+            if (tabElement && !target.classList.contains('ai-chat-tab-close')) {
                 var tabId = tabElement.getAttribute('data-tab-id');
                 this.switchTab(tabId);
                 return;
             }
 
-            if (target.classList.contains('llm-chat-send-button')) {
+            if (target.classList.contains('ai-chat-send-button')) {
                 var tabId = target.getAttribute('data-tab-id');
                 this.sendMessage(tabId);
                 return;
@@ -217,8 +217,8 @@
         handleMouseDown: function(e) {
             var target = e.target;
 
-            if (target.id === 'llm-chat-header' || target.closest('#llm-chat-header')) {
-                if (target.classList.contains('llm-chat-header-button')) {
+            if (target.id === 'ai-chat-header' || target.closest('#ai-chat-header')) {
+                if (target.classList.contains('ai-chat-header-button')) {
                     return;
                 }
 
@@ -228,9 +228,9 @@
                     return;
                 }
 
-                console.debug('LLMChat.handleMouseDown: starting drag');
+                console.debug('AIChat.handleMouseDown: starting drag');
                 this.isDragging = true;
-                LLMChatResize.convertToLeftTop(this.widget);
+                AIChatResize.convertToLeftTop(this.widget);
 
                 var rect = this.widget.getBoundingClientRect();
                 this.dragOffsetX = e.clientX - rect.left;
@@ -240,18 +240,18 @@
                 return;
             }
 
-            if (target.classList.contains('llm-chat-resize-handle')) {
-                console.debug('LLMChat.handleMouseDown: starting resize');
-                LLMChatResize.convertToLeftTop(this.widget);
-                this.resizeState = LLMChatResize.startResize(this.widget, e, target.getAttribute('data-direction'));
+            if (target.classList.contains('ai-chat-resize-handle')) {
+                console.debug('AIChat.handleMouseDown: starting resize');
+                AIChatResize.convertToLeftTop(this.widget);
+                this.resizeState = AIChatResize.startResize(this.widget, e, target.getAttribute('data-direction'));
                 this.isResizing = true;
                 e.preventDefault();
                 return;
             }
 
-            var tabElement = target.closest('.llm-chat-tab');
-            if (tabElement && !target.classList.contains('llm-chat-tab-close')) {
-                console.debug('LLMChat.handleMouseDown: starting tab drag');
+            var tabElement = target.closest('.ai-chat-tab');
+            if (tabElement && !target.classList.contains('ai-chat-tab-close')) {
+                console.debug('AIChat.handleMouseDown: starting tab drag');
                 this.isTabDragging = true;
                 this.draggedTabId = tabElement.getAttribute('data-tab-id');
                 this.draggedTabElement = tabElement;
@@ -267,7 +267,7 @@
                 clone.style.width = tabRect.width + 'px';
                 clone.style.left = tabRect.left + 'px';
                 clone.style.top = tabRect.top + 'px';
-                clone.id = 'llm-chat-tab-drag-clone';
+                clone.id = 'ai-chat-tab-drag-clone';
                 document.body.appendChild(clone);
                 this.dragClone = clone;
 
@@ -280,12 +280,12 @@
 
         handleMouseMove: function(e) {
             if (this.isDragging) {
-                LLMChatResize.handleDrag(this.widget, e, this.dragOffsetX, this.dragOffsetY, this.zoomScale);
+                AIChatResize.handleDrag(this.widget, e, this.dragOffsetX, this.dragOffsetY, this.zoomScale);
                 return;
             }
 
             if (this.isResizing && this.resizeState) {
-                LLMChatResize.handleResize(this.widget, e, this.resizeState);
+                AIChatResize.handleResize(this.widget, e, this.resizeState);
                 return;
             }
 
@@ -296,8 +296,8 @@
                 this.dragClone.style.top = newTop + 'px';
 
                 this.pendingDropIndex = null;
-                var tabsContainer = this.widget.querySelector('#llm-chat-tabs');
-                var tabs = tabsContainer.querySelectorAll('.llm-chat-tab');
+                var tabsContainer = this.widget.querySelector('#ai-chat-tabs');
+                var tabs = tabsContainer.querySelectorAll('.ai-chat-tab');
 
                 for (var i = 0; i < tabs.length; i++) {
                     var tab = tabs[i];
@@ -320,13 +320,13 @@
 
         handleMouseUp: function(e) {
             if (this.isDragging) {
-                console.debug('LLMChat.handleMouseUp: ending drag');
+                console.debug('AIChat.handleMouseUp: ending drag');
                 this.isDragging = false;
                 this.savePosition();
             }
 
             if (this.isResizing) {
-                console.debug('LLMChat.handleMouseUp: ending resize');
+                console.debug('AIChat.handleMouseUp: ending resize');
                 this.isResizing = false;
                 this.resizeState = null;
                 this.saveDimensions();
@@ -334,7 +334,7 @@
             }
 
             if (this.isTabDragging) {
-                console.debug('LLMChat.handleMouseUp: ending tab drag');
+                console.debug('AIChat.handleMouseUp: ending tab drag');
                 this.isTabDragging = false;
 
                 if (this.dragClone && this.dragClone.parentNode) {
@@ -346,11 +346,11 @@
                     this.draggedTabElement.style.opacity = '';
                 }
 
-                var tabsContainer = this.widget.querySelector('#llm-chat-tabs');
+                var tabsContainer = this.widget.querySelector('#ai-chat-tabs');
 
                 if (this.pendingDropIndex !== null && this.pendingDropIndex !== undefined) {
-                    var addButton = tabsContainer.querySelector('.llm-chat-tab-add');
-                    var tabs = tabsContainer.querySelectorAll('.llm-chat-tab');
+                    var addButton = tabsContainer.querySelector('.ai-chat-tab-add');
+                    var tabs = tabsContainer.querySelectorAll('.ai-chat-tab');
                     var targetIndex = this.pendingDropIndex;
 
                     if (targetIndex >= tabs.length) {
@@ -360,8 +360,8 @@
                     }
                 }
 
-                var tabElements = tabsContainer.querySelectorAll('.llm-chat-tab');
-                this.tabs = LLMChatTabs.reorderTabs(this.tabs, tabElements);
+                var tabElements = tabsContainer.querySelectorAll('.ai-chat-tab');
+                this.tabs = AIChatTabs.reorderTabs(this.tabs, tabElements);
 
                 this.draggedTabId = null;
                 this.draggedTabElement = null;
@@ -371,41 +371,41 @@
 
         handleKeyDown: function(e) {
             var self = this;
-            LLMChatInput.handleKeyDown(e, function(tabId) {
+            AIChatInput.handleKeyDown(e, function(tabId) {
                 self.sendMessage(tabId);
             });
         },
 
         handleWheel: function(e) {
-            this.zoomScale = LLMChatZoom.handleWheel(this.widget, e, this.zoomScale);
-            LLMChatState.saveZoom(this.zoomScale);
+            this.zoomScale = AIChatZoom.handleWheel(this.widget, e, this.zoomScale);
+            AIChatState.saveZoom(this.zoomScale);
         },
 
         handleContextMenu: function(e) {
-            var tabElement = e.target.closest('.llm-chat-tab');
+            var tabElement = e.target.closest('.ai-chat-tab');
             if (tabElement) {
                 e.preventDefault();
                 var tabId = tabElement.getAttribute('data-tab-id');
-                console.debug('LLMChat.handleContextMenu: right-click on tab:', tabId);
+                console.debug('AIChat.handleContextMenu: right-click on tab:', tabId);
                 this.showContextMenu(e.clientX, e.clientY, tabId);
             }
         },
 
         showContextMenu: function(x, y, tabId) {
-            console.debug('LLMChat.showContextMenu: showing context menu at:', x, y, 'for tab:', tabId);
+            console.debug('AIChat.showContextMenu: showing context menu at:', x, y, 'for tab:', tabId);
 
             this.hideContextMenu();
 
             this.contextMenu = document.createElement('div');
-            this.contextMenu.className = 'llm-chat-context-menu';
-            this.contextMenu.innerHTML = LLMChatRender.buildContextMenuHtml(tabId);
+            this.contextMenu.className = 'ai-chat-context-menu';
+            this.contextMenu.innerHTML = AIChatRender.buildContextMenuHtml(tabId);
 
             this.contextMenu.style.left = x + 'px';
             this.contextMenu.style.top = y + 'px';
 
             var self = this;
             this.contextMenu.addEventListener('click', function(e) {
-                var item = e.target.closest('.llm-chat-context-menu-item');
+                var item = e.target.closest('.ai-chat-context-menu-item');
                 if (item) {
                     var action = item.getAttribute('data-action');
                     var tabId = item.getAttribute('data-tab-id');
@@ -429,27 +429,27 @@
         },
 
         renameTab: function(tabId) {
-            var tab = LLMChatTabs.getTabById(this.tabs, tabId);
+            var tab = AIChatTabs.getTabById(this.tabs, tabId);
             if (!tab) return;
 
             var newTitle = prompt('Enter new tab name:', tab.title);
-            if (LLMChatTabs.renameTab(this.tabs, tabId, newTitle)) {
+            if (AIChatTabs.renameTab(this.tabs, tabId, newTitle)) {
                 this.saveState();
                 this.render();
             }
         },
 
         toggleMinimize: function() {
-            console.debug('LLMChat.toggleMinimize: toggling minimize state, current isMinimized:', this.isMinimized);
+            console.debug('AIChat.toggleMinimize: toggling minimize state, current isMinimized:', this.isMinimized);
             this.isMinimized = !this.isMinimized;
 
             var widgetRect = this.widget.getBoundingClientRect();
             var widgetStyles = window.getComputedStyle(this.widget);
-            var headerEl = this.widget.querySelector('.llm-chat-header');
+            var headerEl = this.widget.querySelector('.ai-chat-header');
             var headerRect = headerEl ? headerEl.getBoundingClientRect() : null;
             var headerStyles = headerEl ? window.getComputedStyle(headerEl) : null;
 
-            console.debug('LLMChat.toggleMinimize: before changes:', JSON.stringify({
+            console.debug('AIChat.toggleMinimize: before changes:', JSON.stringify({
                 isMinimized: this.isMinimized,
                 widgetRect: {
                     left: widgetRect.left,
@@ -495,7 +495,7 @@
                     width: this.widget.offsetWidth,
                     height: this.widget.offsetHeight
                 };
-                LLMChatState.savePreMinimizePosition(this.preMinimizePosition);
+                AIChatState.savePreMinimizePosition(this.preMinimizePosition);
 
                 this.widget.classList.add('minimized');
                 this.widget.style.right = '20px';
@@ -505,7 +505,7 @@
                 this.widget.style.width = '200px';
                 this.widget.style.height = 'auto';
 
-                console.debug('LLMChat.toggleMinimize: minimized, saved preMinimizeZoom:', this.preMinimizeZoom);
+                console.debug('AIChat.toggleMinimize: minimized, saved preMinimizeZoom:', this.preMinimizeZoom);
             } else {
                 this.widget.classList.remove('minimized');
 
@@ -517,8 +517,8 @@
                     this.widget.style.width = this.preMinimizePosition.width + 'px';
                     this.widget.style.height = this.preMinimizePosition.height + 'px';
                 } else {
-                    var dimensions = LLMChatState.loadDimensions();
-                    var position = LLMChatState.loadPosition();
+                    var dimensions = AIChatState.loadDimensions();
+                    var position = AIChatState.loadPosition();
                     if (position) {
                         this.widget.style.left = position.left + 'px';
                         this.widget.style.top = position.top + 'px';
@@ -536,8 +536,8 @@
 
                 if (this.preMinimizeZoom && this.preMinimizeZoom !== 1.0) {
                     this.zoomScale = this.preMinimizeZoom;
-                    LLMChatZoom.applyZoom(this.widget, this.zoomScale);
-                    console.debug('LLMChat.toggleMinimize: restored zoom:', this.zoomScale);
+                    AIChatZoom.applyZoom(this.widget, this.zoomScale);
+                    console.debug('AIChat.toggleMinimize: restored zoom:', this.zoomScale);
                 }
             }
 
@@ -546,18 +546,18 @@
 
             var afterWidgetRect = this.widget.getBoundingClientRect();
             var afterWidgetStyles = window.getComputedStyle(this.widget);
-            var afterHeaderEl = this.widget.querySelector('.llm-chat-header');
+            var afterHeaderEl = this.widget.querySelector('.ai-chat-header');
             var afterHeaderRect = afterHeaderEl ? afterHeaderEl.getBoundingClientRect() : null;
             var afterHeaderStyles = afterHeaderEl ? window.getComputedStyle(afterHeaderEl) : null;
-            var minimizeBtn = this.widget.querySelector('#llm-chat-minimize');
+            var minimizeBtn = this.widget.querySelector('#ai-chat-minimize');
             var minimizeBtnRect = minimizeBtn ? minimizeBtn.getBoundingClientRect() : null;
             var minimizeBtnStyles = minimizeBtn ? window.getComputedStyle(minimizeBtn) : null;
-            var bodyEl = this.widget.querySelector('.llm-chat-body');
+            var bodyEl = this.widget.querySelector('.ai-chat-body');
             var bodyStyles = bodyEl ? window.getComputedStyle(bodyEl) : null;
-            var tabsEl = this.widget.querySelector('.llm-chat-tabs');
+            var tabsEl = this.widget.querySelector('.ai-chat-tabs');
             var tabsStyles = tabsEl ? window.getComputedStyle(tabsEl) : null;
 
-            console.debug('LLMChat.toggleMinimize: after changes:', JSON.stringify({
+            console.debug('AIChat.toggleMinimize: after changes:', JSON.stringify({
                 isMinimized: this.isMinimized,
                 widgetRect: {
                     left: afterWidgetRect.left,
@@ -610,14 +610,14 @@
         },
 
         addTab: function() {
-            var newTab = LLMChatTabs.addTab(this.tabs);
+            var newTab = AIChatTabs.addTab(this.tabs);
             this.activeTabId = newTab.id;
             this.saveState();
             this.render();
         },
 
         closeTab: function(tabId) {
-            var result = LLMChatTabs.closeTab(this.tabs, tabId, this.activeTabId);
+            var result = AIChatTabs.closeTab(this.tabs, tabId, this.activeTabId);
             this.tabs = result.tabs;
             this.activeTabId = result.activeTabId;
             this.saveState();
@@ -632,40 +632,40 @@
         },
 
         sendMessage: function(tabId) {
-            console.debug('LLMChat.sendMessage: sending message for tab:', tabId);
+            console.debug('AIChat.sendMessage: sending message for tab:', tabId);
 
-            var input = this.widget.querySelector('.llm-chat-input[data-tab-id="' + tabId + '"]');
+            var input = this.widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
             if (!input) return;
 
-            var message = LLMChatInput.getMessageText(input);
+            var message = AIChatInput.getMessageText(input);
             if (!message) return;
 
-            var tab = LLMChatTabs.getTabById(this.tabs, tabId);
+            var tab = AIChatTabs.getTabById(this.tabs, tabId);
             if (!tab) return;
 
-            LLMChatMessages.addMessage(tab, 'user', message);
+            AIChatMessages.addMessage(tab, 'user', message);
 
             this.saveState();
             this.render();
 
-            var newInput = this.widget.querySelector('.llm-chat-input[data-tab-id="' + tabId + '"]');
+            var newInput = this.widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
             if (newInput) {
                 newInput.focus();
             }
 
-            var messagesContainer = this.widget.querySelector('.llm-chat-messages[data-tab-id="' + tabId + '"]');
-            LLMChatMessages.scrollToBottom(messagesContainer);
+            var messagesContainer = this.widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            AIChatMessages.scrollToBottom(messagesContainer);
         }
     };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            LLMChat.init();
+            AIChat.init();
         });
     } else {
-        LLMChat.init();
+        AIChat.init();
     }
 
-    window.LLMChat = LLMChat;
+    window.AIChat = AIChat;
 
 })();

@@ -1,10 +1,10 @@
 (function() {
     'use strict';
 
-    var LLMChatMessages = {
+    var AIChatMessages = {
 
         addMessage: function(tab, role, content) {
-            console.debug('LLMChatMessages.addMessage: role:', role, 'content:', content);
+            console.debug('AIChatMessages.addMessage: role:', role, 'content:', content);
             tab.messages.push({
                 role: role,
                 content: content
@@ -22,6 +22,6 @@
         }
     };
 
-    window.LLMChatMessages = LLMChatMessages;
+    window.AIChatMessages = AIChatMessages;
 
 })();

@@ -1,4 +1,4 @@
-.llm-chat-context-menu {
+.ai-chat-context-menu {
     position: fixed;
     background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 100%);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -9,7 +9,7 @@
     padding: 4px 0;
 }
 
-.llm-chat-context-menu-item {
+.ai-chat-context-menu-item {
     padding: 8px 16px;
     color: #e0e0e0;
     font-size: 13px;
@@ -17,7 +17,7 @@
     transition: all 0.15s ease;
 }
 
-.llm-chat-context-menu-item:hover {
+.ai-chat-context-menu-item:hover {
     background: rgba(74, 158, 255, 0.2);
     color: #fff;
 }

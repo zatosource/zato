@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    var LLMChatTabs = {
+    var AIChatTabs = {
 
         generateTabId: function() {
             return 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
@@ -42,24 +42,24 @@
         },
 
         addTab: function(tabs) {
-            console.debug('LLMChatTabs.addTab: adding new tab');
+            console.debug('AIChatTabs.addTab: adding new tab');
             var newTab = this.createNewTab(tabs.length);
             tabs.push(newTab);
-            console.debug('LLMChatTabs.addTab: new tab added:', JSON.stringify(newTab));
+            console.debug('AIChatTabs.addTab: new tab added:', JSON.stringify(newTab));
             return newTab;
         },
 
         closeTab: function(tabs, tabId, activeTabId) {
-            console.debug('LLMChatTabs.closeTab: closing tab:', tabId);
+            console.debug('AIChatTabs.closeTab: closing tab:', tabId);
 
             if (tabs.length <= 1) {
-                console.debug('LLMChatTabs.closeTab: cannot close last tab');
+                console.debug('AIChatTabs.closeTab: cannot close last tab');
                 return { tabs: tabs, activeTabId: activeTabId };
             }
 
             var tabIndex = this.getTabIndex(tabs, tabId);
             if (tabIndex === -1) {
-                console.debug('LLMChatTabs.closeTab: tab not found');
+                console.debug('AIChatTabs.closeTab: tab not found');
                 return { tabs: tabs, activeTabId: activeTabId };
             }
 
@@ -69,24 +69,24 @@
             if (activeTabId === tabId) {
                 var newActiveIndex = Math.min(tabIndex, tabs.length - 1);
                 newActiveTabId = tabs[newActiveIndex].id;
-                console.debug('LLMChatTabs.closeTab: switched to tab:', newActiveTabId);
+                console.debug('AIChatTabs.closeTab: switched to tab:', newActiveTabId);
             }
 
             return { tabs: tabs, activeTabId: newActiveTabId };
         },
 
         renameTab: function(tabs, tabId, newTitle) {
-            console.debug('LLMChatTabs.renameTab: renaming tab:', tabId);
+            console.debug('AIChatTabs.renameTab: renaming tab:', tabId);
 
             var tab = this.getTabById(tabs, tabId);
             if (!tab) {
-                console.debug('LLMChatTabs.renameTab: tab not found');
+                console.debug('AIChatTabs.renameTab: tab not found');
                 return false;
             }
 
             if (newTitle && newTitle.trim()) {
                 tab.title = newTitle.trim();
-                console.debug('LLMChatTabs.renameTab: new title:', tab.title);
+                console.debug('AIChatTabs.renameTab: new title:', tab.title);
                 return true;
             }
             return false;
@@ -101,11 +101,11 @@
                     newOrder.push(tab);
                 }
             }
-            console.debug('LLMChatTabs.reorderTabs: tabs reordered:', JSON.stringify(newOrder.map(function(t) { return t.title; })));
+            console.debug('AIChatTabs.reorderTabs: tabs reordered:', JSON.stringify(newOrder.map(function(t) { return t.title; })));
             return newOrder;
         }
     };
 
-    window.LLMChatTabs = LLMChatTabs;
+    window.AIChatTabs = AIChatTabs;
 
 })();

@@ -1,4 +1,4 @@
-.llm-chat-input-area {
+.ai-chat-input-area {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -9,16 +9,16 @@
     flex-shrink: 0;
 }
 
-.llm-chat-input-area.multiline {
+.ai-chat-input-area.multiline {
     flex-direction: column;
     align-items: stretch;
 }
 
-.llm-chat-input-area.multiline .llm-chat-send-button {
+.ai-chat-input-area.multiline .ai-chat-send-button {
     align-self: flex-end;
 }
 
-.llm-chat-input-wrapper {
+.ai-chat-input-wrapper {
     flex: 1;
     min-width: 0;
     background: transparent;
@@ -27,11 +27,11 @@
     overflow: hidden;
 }
 
-.llm-chat-input-area.multiline .llm-chat-input-wrapper {
+.ai-chat-input-area.multiline .ai-chat-input-wrapper {
     width: 100%;
 }
 
-.llm-chat-input {
+.ai-chat-input {
     min-height: 20px;
     max-height: 200px;
     padding: 10px 12px;
@@ -47,22 +47,22 @@
     white-space: pre-wrap;
 }
 
-.llm-chat-input:empty:before {
+.ai-chat-input:empty:before {
     content: attr(data-placeholder);
     color: #888;
     pointer-events: none;
 }
 
-.llm-chat-input:focus {
+.ai-chat-input:focus {
     outline: none;
 }
 
-.llm-chat-input-wrapper:focus-within {
+.ai-chat-input-wrapper:focus-within {
     border: none;
     box-shadow: none;
 }
 
-.llm-chat-send-button {
+.ai-chat-send-button {
     width: 32px;
     height: 32px;
     padding: 0;
@@ -77,20 +77,20 @@
     transition: background 0.1s ease;
 }
 
-.llm-chat-send-button:hover {
+.ai-chat-send-button:hover {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.llm-chat-send-button:active {
+.ai-chat-send-button:active {
     background: rgba(255, 255, 255, 0.15);
 }
 
-.llm-chat-send-icon {
+.ai-chat-send-icon {
     width: 20px;
     height: 20px;
     fill: #888;
 }
 
-.llm-chat-send-button:hover .llm-chat-send-icon {
+.ai-chat-send-button:hover .ai-chat-send-icon {
     fill: #4a9eff;
 }

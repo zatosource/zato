@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    var LLMChatZoom = {
+    var AIChatZoom = {
 
         handleWheel: function(widget, e, currentScale) {
             if (!e.ctrlKey) {
@@ -13,7 +13,7 @@
             var newScale = Math.max(0.5, Math.min(2.0, currentScale + delta));
             widget.style.transform = 'scale(' + newScale + ')';
             widget.style.transformOrigin = 'top left';
-            console.debug('LLMChatZoom.handleWheel: zoom scale:', newScale);
+            console.debug('AIChatZoom.handleWheel: zoom scale:', newScale);
             return newScale;
         },
 
@@ -28,6 +28,6 @@
         }
     };
 
-    window.LLMChatZoom = LLMChatZoom;
+    window.AIChatZoom = AIChatZoom;
 
 })();
