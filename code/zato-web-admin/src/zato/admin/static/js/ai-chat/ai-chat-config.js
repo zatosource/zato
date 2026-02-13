@@ -24,10 +24,54 @@
         configuredKeys: {},
         isLoading: false,
         selectedProvider: null,
+        models: {},
+        selectedModel: null,
 
         init: function() {
             console.debug('AIChatConfig.init: initializing');
             this.configuredKeys = {};
+            this.models = {};
+            this.loadModels();
+        },
+
+        loadModels: function() {
+            console.debug('AIChatConfig.loadModels: loading models');
+            var self = this;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/zato/ai-chat/config/get-models/', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            self.models = JSON.parse(xhr.responseText);
+                            console.debug('AIChatConfig.loadModels: models loaded', self.models);
+                        } catch (e) {
+                            console.debug('AIChatConfig.loadModels: parse error', e);
+                            self.models = {};
+                        }
+                    } else {
+                        console.debug('AIChatConfig.loadModels: request failed', xhr.status);
+                        self.models = {};
+                    }
+                }
+            };
+
+            xhr.send();
+        },
+
+        getModelsForConfiguredProviders: function() {
+            var result = [];
+            for (var provider in this.configuredKeys) {
+                if (this.configuredKeys[provider] && this.models[provider]) {
+                    for (var i = 0; i < this.models[provider].length; i++) {
+                        result.push(this.models[provider][i]);
+                    }
+                }
+            }
+            return result;
         },
 
         checkConfiguredKeys: function(callback) {

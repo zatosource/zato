@@ -17,6 +17,7 @@ import redis
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.common.ai.models import get_all_models
 from zato.common.json_internal import dumps, loads
 
 # ################################################################################################################################
@@ -113,6 +114,15 @@ def delete_key(req):
         logger.warning('delete_key failed: %s', e)
         result['error'] = str(e)
 
+    return HttpResponse(dumps(result), content_type='application/json')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def get_models(req):
+
+    result = get_all_models()
     return HttpResponse(dumps(result), content_type='application/json')
 
 # ################################################################################################################################

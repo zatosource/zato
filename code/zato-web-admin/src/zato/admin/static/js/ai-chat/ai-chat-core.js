@@ -202,7 +202,19 @@
                 self.hideSettingsMenu();
             });
 
+            this.widget.addEventListener('change', function(e) {
+                self.handleChange(e);
+            });
+
             console.debug('AIChat.bindEvents: events bound');
+        },
+
+        handleChange: function(e) {
+            var target = e.target;
+            if (target.classList.contains('ai-chat-model-select')) {
+                AIChatConfig.selectedModel = target.value;
+                console.debug('AIChat.handleChange: model selected:', AIChatConfig.selectedModel);
+            }
         },
 
         handleClick: function(e) {
