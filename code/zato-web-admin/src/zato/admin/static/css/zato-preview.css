@@ -1,0 +1,147 @@
+.zato-preview-popup {
+    position: fixed;
+    min-width: 300px;
+    min-height: 200px;
+    width: 500px;
+    height: 400px;
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    z-index: 10001;
+    resize: both;
+    overflow: hidden;
+}
+
+.zato-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #333;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: move;
+    flex-shrink: 0;
+}
+
+.zato-preview-title {
+    font-size: 13px;
+    color: #e0e0e0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 70%;
+    margin-right: auto;
+    user-select: text;
+    cursor: text;
+}
+
+.zato-preview-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zato-preview-copy-btn {
+    background: var(--zato-seablue-light2);
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    min-width: 50px;
+    text-align: center;
+}
+
+.zato-preview-copy-btn:hover {
+    background: var(--zato-seablue-light3);
+}
+
+.zato-preview-close {
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.zato-preview-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.zato-preview-close svg {
+    width: 16px;
+    height: 16px;
+}
+
+.zato-preview-content {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+}
+
+.zato-preview-text {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    color: #c0c0c0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.zato-preview-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.zato-preview-pdf-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.zato-preview-pdf {
+    max-width: 100%;
+    display: block;
+}
+
+.zato-preview-word {
+    font-size: 13px;
+    color: #c0c0c0;
+    line-height: 1.6;
+}
+
+.zato-preview-word p {
+    margin: 0 0 10px 0;
+}
+
+.zato-preview-word h1,
+.zato-preview-word h2,
+.zato-preview-word h3 {
+    color: #e0e0e0;
+    margin: 15px 0 10px 0;
+}
+
+.zato-preview-unavailable {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: #fff;
+    font-size: 14px;
+}
