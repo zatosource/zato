@@ -41,16 +41,19 @@ def get_keys(req):
     result = {
         'keys': {
             'anthropic': False,
-            'openai': False
+            'openai': False,
+            'google': False
         }
     }
 
     try:
         anthropic_key = redis_client.get(REDIS_KEY_PREFIX + 'anthropic')
         openai_key = redis_client.get(REDIS_KEY_PREFIX + 'openai')
+        google_key = redis_client.get(REDIS_KEY_PREFIX + 'google')
 
         result['keys']['anthropic'] = bool(anthropic_key)
         result['keys']['openai'] = bool(openai_key)
+        result['keys']['google'] = bool(google_key)
 
     except Exception as e:
         logger.warning('get_keys failed: %s', e)
@@ -72,7 +75,7 @@ def save_key(req):
         provider = data.get('provider')
         api_key = data.get('api_key')
 
-        if provider not in ('anthropic', 'openai'):
+        if provider not in ('anthropic', 'openai', 'google'):
             result['error'] = 'Invalid provider'
             return HttpResponse(dumps(result), content_type='application/json', status=400)
 
@@ -103,7 +106,7 @@ def delete_key(req):
         data = loads(req.body)
         provider = data.get('provider')
 
-        if provider not in ('anthropic', 'openai'):
+        if provider not in ('anthropic', 'openai', 'google'):
             result['error'] = 'Invalid provider'
             return HttpResponse(dumps(result), content_type='application/json', status=400)
 

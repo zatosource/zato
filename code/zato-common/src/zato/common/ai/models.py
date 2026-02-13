@@ -22,29 +22,21 @@ name = Claude Opus 4.6
 provider = anthropic
 name = Claude Sonnet 4.5
 
-[gpt-5.2]
-provider = openai
-name = GPT-5.2
-
 [gpt-5.2-pro]
 provider = openai
 name = GPT-5.2 Pro
 
-[gpt-5-mini]
+[gpt-5.2]
 provider = openai
-name = GPT-5 Mini
+name = GPT-5.2
 
-[gpt-5-nano]
-provider = openai
-name = GPT-5 Nano
+[gemini-2.5-pro]
+provider = google
+name = Gemini 2.5 Pro
 
-[gpt-4.1]
-provider = openai
-name = GPT-4.1
-
-[gpt-4.1-mini]
-provider = openai
-name = GPT-4.1 Mini
+[gemini-2.5-flash]
+provider = google
+name = Gemini 2.5 Flash
 """
 
 # ################################################################################################################################
@@ -77,6 +69,7 @@ def get_all_models():
     result = {
         'anthropic': [],
         'openai': [],
+        'google': [],
     }
 
     for section in parser.sections():

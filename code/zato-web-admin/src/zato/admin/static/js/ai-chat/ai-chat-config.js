@@ -3,11 +3,6 @@
 
     var AIChatConfig = {
 
-        buttonLabels: {
-            anthropic: 'Use Claude',
-            openai: 'Use GPT'
-        },
-
         providers: {
             anthropic: {
                 id: 'anthropic',
@@ -18,6 +13,11 @@
                 id: 'openai',
                 name: '<strong>GPT</strong> · OpenAI',
                 logo: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.896zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></svg>'
+            },
+            google: {
+                id: 'google',
+                name: '<strong>Gemini</strong> · Google',
+                logo: '<svg viewBox="0 0 24 24" fill="url(#gemini-gradient)"><defs><linearGradient id="gemini-gradient" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#1a73e8"/><stop offset="50%" stop-color="#6c47ff"/><stop offset="100%" stop-color="#f28b82"/></linearGradient></defs><path d="M12 0c.3 0 .55.2.62.49a16.8 16.8 0 00.86 2.55c.93 2.16 2.2 4.05 3.82 5.67 1.62 1.62 3.51 2.9 5.67 3.83.85.37 1.72.67 2.55.86.29.07.48.32.48.62s-.2.55-.49.62a16.8 16.8 0 00-2.55.86c-2.16.93-4.05 2.2-5.67 3.82-1.62 1.62-2.9 3.51-3.82 5.67-.37.85-.67 1.72-.86 2.55-.07.29-.32.48-.62.48s-.55-.2-.62-.49a16.8 16.8 0 00-.86-2.55c-.93-2.16-2.2-4.05-3.82-5.67-1.62-1.62-3.51-2.9-5.67-3.82a16.8 16.8 0 00-2.55-.86A.64.64 0 010 12c0-.3.2-.55.49-.62a16.8 16.8 0 002.55-.86c2.16-.93 4.05-2.2 5.67-3.82 1.62-1.62 2.9-3.51 3.83-5.67.36-.85.66-1.72.85-2.55A.64.64 0 0112 0z"/></svg>'
             }
         },
 
@@ -64,7 +64,7 @@
 
         getModelsForConfiguredProviders: function() {
             var result = [];
-            var providerOrder = ['anthropic', 'openai'];
+            var providerOrder = ['anthropic', 'openai', 'google'];
             for (var p = 0; p < providerOrder.length; p++) {
                 var provider = providerOrder[p];
                 if (this.configuredKeys[provider] && this.models[provider]) {
@@ -271,7 +271,7 @@
             html += '<div class="ai-chat-config-input-wrapper">';
             html += '<input type="text" class="ai-chat-config-api-key-input" placeholder="Paste your API key here" data-provider-id="' + providerId + '" tabindex="0" autofocus>';
             html += '</div>';
-            html += '<button class="ai-chat-config-save-button" data-provider-id="' + providerId + '">' + this.buttonLabels[providerId] + '</button>';
+            html += '<button class="ai-chat-config-save-button" data-provider-id="' + providerId + '">Save API key</button>';
             html += '</div>';
             return html;
         },

@@ -56,14 +56,16 @@ UI modules:
 
 File handling modules:
 - `ai-chat-attachments.js` - attachment icons, rendering, file handling, size limits
-- `ai-chat-preview.js` - file preview popup (PDF, Word, images, text, copy to clipboard)
+- `ai-chat-preview.js` - thin wrapper around ZatoPreview for attachment previews
 
 Backend communication:
 - `ai-chat-api.js` - backend communication (stub, not implemented)
 
 Location: `/zato-web-admin/src/zato/admin/static/js/`
 
-- `zato-dropdown.js` - reusable custom dropdown component (replaces native select elements)
+Reusable components:
+- `zato-dropdown.js` - custom dropdown component (replaces native select elements)
+- `zato-preview.js` - file preview popup component (draggable, supports PDF/Word/images/text, copy to clipboard)
 
 ### CSS files
 
@@ -79,7 +81,9 @@ Location: `/zato-web-admin/src/zato/admin/static/css/ai-chat/`
 
 Location: `/zato-web-admin/src/zato/admin/static/css/`
 
-- `zato-dropdown.css` - styles for reusable custom dropdown component
+Reusable component styles:
+- `zato-dropdown.css` - styles for custom dropdown component
+- `zato-preview.css` - styles for file preview popup component
 
 ### Django views
 
