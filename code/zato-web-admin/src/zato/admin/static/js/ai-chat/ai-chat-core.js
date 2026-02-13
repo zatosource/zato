@@ -1389,7 +1389,8 @@
             popup.style.left = (100 + offsetX) + 'px';
             popup.style.top = (100 + offsetY) + 'px';
 
-            var isImage = attachment.type && attachment.type.indexOf('image') === 0;
+            var supportedImageTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp'];
+            var isImage = attachment.type && supportedImageTypes.indexOf(attachment.type) !== -1;
             var isPdf = attachment.type === 'application/pdf' || attachment.name.toLowerCase().endsWith('.pdf');
             var isWord = attachment.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
                          attachment.name.toLowerCase().endsWith('.docx');
@@ -1398,12 +1399,13 @@
                 attachment.type === 'application/json' || 
                 attachment.type === 'application/javascript' ||
                 attachment.type === 'application/xml');
-            var canPreview = isImage || isPdf || isWord || isEmail || isText || (attachment.content && typeof attachment.content === 'string');
+            var canPreview = isImage || isPdf || isWord || isEmail || isText;
 
-            var html = '<div class="ai-chat-preview-header">';
+            var html = '';
+            html += '<div class="ai-chat-preview-header">';
             html += '<div class="ai-chat-preview-title">' + attachment.name + '</div>';
             html += '<div class="ai-chat-preview-actions">';
-            if (canPreview && !isImage) {
+            if (canPreview) {
                 html += '<button class="ai-chat-preview-copy-btn">Copy</button>';
             }
             html += '<button class="ai-chat-preview-close">';
@@ -1452,7 +1454,24 @@
             var copyBtn = popup.querySelector('.ai-chat-preview-copy-btn');
             if (copyBtn) {
                 copyBtn.addEventListener('click', function() {
-                    if (isPdf) {
+                    if (isImage) {
+                        var img = popup.querySelector('.ai-chat-preview-image');
+                        if (img) {
+                            var canvas = document.createElement('canvas');
+                            canvas.width = img.naturalWidth;
+                            canvas.height = img.naturalHeight;
+                            var ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            canvas.toBlob(function(blob) {
+                                navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]).then(function() {
+                                    copyBtn.textContent = 'Copied';
+                                    setTimeout(function() {
+                                        copyBtn.textContent = 'Copy';
+                                    }, 1500);
+                                });
+                            });
+                        }
+                    } else if (isPdf) {
                         self.extractPdfText(attachment, function(text) {
                             navigator.clipboard.writeText(text).then(function() {
                                 copyBtn.textContent = 'Copied';
@@ -1460,6 +1479,15 @@
                                     copyBtn.textContent = 'Copy';
                                 }, 1500);
                             });
+                        });
+                    } else if (isWord) {
+                        var wordDiv = popup.querySelector('.ai-chat-preview-word');
+                        var text = wordDiv ? wordDiv.innerText : '';
+                        navigator.clipboard.writeText(text).then(function() {
+                            copyBtn.textContent = 'Copied';
+                            setTimeout(function() {
+                                copyBtn.textContent = 'Copy';
+                            }, 1500);
                         });
                     } else {
                         navigator.clipboard.writeText(attachment.content).then(function() {
