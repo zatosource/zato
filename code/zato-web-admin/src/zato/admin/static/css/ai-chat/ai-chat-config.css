@@ -190,17 +190,20 @@
 
 .ai-chat-config-save-button {
     padding: 12px 32px;
-    background: linear-gradient(135deg, #2a4a6a 0%, #1e3a5a 100%);
-    border: 1px solid rgba(74, 158, 255, 0.2);
+    background: var(--zato-seablue-light2) !important;
+    background-image: none !important;
+    border: none;
     border-radius: 8px;
-    color: #e0e0e0;
+    color: #fff;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
+    text-shadow: none !important;
 }
 
 .ai-chat-config-save-button:hover {
-    background: linear-gradient(135deg, #3a5a7a 0%, #2a4a6a 100%);
+    background: var(--zato-seablue-light3) !important;
+    background-image: none !important;
 }
 
 .ai-chat-config-save-button:disabled {
