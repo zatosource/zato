@@ -9,23 +9,57 @@ directly from any page in the admin panel. The widget has a dark theme.
 
 The frontend is complete including provider configuration UI. The backend integration is not yet implemented.
 
+## Architecture decisions
+
+### API key storage
+
+API keys are stored server-side in Redis, not in the browser's localStorage. This means:
+- Keys never leave the server
+- The browser only knows whether a key exists (boolean), not its value
+- When chat is implemented, the browser will send messages to Django views which will fetch the key from Redis and make the API call
+
+### Streaming approach
+
+The existing `log_streaming.py` view demonstrates the SSE (Server-Sent Events) pattern using:
+- `StreamingHttpResponse` with `content_type='text/event-stream'`
+- A generator function that yields SSE-formatted messages
+- Redis pub/sub for real-time data
+
+This same pattern can be used for AI chat streaming responses.
+
 ## File locations
 
 ### JavaScript files
 
 Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/`
 
+Core modules:
+- `ai-chat-core.js` - main entry point, initialization, event binding, click handling, tab/message operations
 - `ai-chat-state.js` - localStorage persistence for widget state
 - `ai-chat-tab-state.js` - per-tab state manager (model, attachments, etc.)
 - `ai-chat-render.js` - HTML building functions for header, tabs, body, messages, input area, toolbar
-- `ai-chat-tabs.js` - tab management (add, remove, rename, reorder, drag-drop)
-- `ai-chat-input.js` - contenteditable input handling (shift+enter for newlines, backspace/delete line removal)
-- `ai-chat-resize.js` - widget drag and corner resize
-- `ai-chat-zoom.js` - ctrl+wheel zoom using CSS transform scale
-- `ai-chat-messages.js` - message adding and scrolling
-- `ai-chat-api.js` - backend communication (stub, not implemented)
 - `ai-chat-config.js` - provider configuration UI, model loading, API key management
-- `ai-chat-core.js` - main entry point, initialization, event binding, state coordination
+
+Widget modules:
+- `ai-chat-widget.js` - widget creation, position/dimension management, minimize/restore
+- `ai-chat-drag.js` - widget drag, resize, tab reordering
+- `ai-chat-zoom.js` - ctrl+wheel zoom using CSS transform scale
+- `ai-chat-resize.js` - resize state management and calculations
+
+UI modules:
+- `ai-chat-tabs.js` - tab management (add, remove, rename, reorder)
+- `ai-chat-input.js` - contenteditable input handling (shift+enter for newlines, backspace/delete line removal)
+- `ai-chat-messages.js` - message adding and scrolling
+- `ai-chat-context-menu.js` - right-click context menu for tab rename
+- `ai-chat-settings.js` - settings menu, API key save/remove
+- `ai-chat-options-menu.js` - options menu (add files, MCP, manage keys)
+
+File handling modules:
+- `ai-chat-attachments.js` - attachment icons, rendering, file handling, size limits
+- `ai-chat-preview.js` - file preview popup (PDF, Word, images, text, copy to clipboard)
+
+Backend communication:
+- `ai-chat-api.js` - backend communication (stub, not implemented)
 
 Location: `/zato-web-admin/src/zato/admin/static/js/`
 
@@ -144,8 +178,32 @@ All JS and CSS files are included here in the correct dependency order.
 - Pasting text longer than 8000 characters converts it to an attachment
 - Attachments displayed as cards above the input area
 - Each attachment shows: file icon, name, size, remove button
-- Files selected via "Add files or photos" also become attachments
+- Files selected via "Add files or images" also become attachments
 - Attachments can be removed by clicking the X button
+- Attachments persist across page reloads (saved to localStorage with tabs)
+- Maximum file size: 10 MB
+- Drag and drop files from file manager anywhere onto the widget to add as attachments
+- Visual feedback: widget border turns blue dashed when dragging files over it
+
+### File preview
+
+- Click any attachment to open a preview popup
+- Preview popup is draggable by header (except over the title text)
+- Title text is selectable for copying the filename
+- Multiple previews can be open simultaneously (stacked with offset)
+- Clicking an already-open attachment brings its preview to front instead of opening duplicate
+- Close with X button or Escape key (closes topmost preview)
+- Supported preview types:
+  - Images (PNG, JPEG, GIF, WebP, SVG, BMP) - displayed inline
+  - PDFs - all pages rendered using pdf.js
+  - Word documents (.docx) - rendered using mammoth.js
+  - Text files (plain text, JSON, JavaScript, XML, etc.) - displayed in monospace
+- Unsupported formats show "Preview not available" message
+- Copy button copies content to clipboard:
+  - Images: copies image data via canvas
+  - PDFs: extracts and copies text from all pages
+  - Word documents: copies rendered text
+  - Text files: copies raw content
 
 ### Messages
 
