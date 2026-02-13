@@ -162,10 +162,11 @@
         },
 
         formatSize: function(size) {
-            if (size >= 1000000) {
-                return (size / 1000000).toFixed(1) + ' MB';
-            } else if (size >= 1000) {
-                return Math.round(size / 1000) + ' KB';
+            if (size >= 1048576) {
+                var mb = size / 1048576;
+                return (mb === Math.floor(mb) ? mb.toFixed(0) : mb.toFixed(1)) + ' MB';
+            } else if (size >= 1024) {
+                return Math.round(size / 1024) + ' KB';
             } else {
                 return size + ' B';
             }
