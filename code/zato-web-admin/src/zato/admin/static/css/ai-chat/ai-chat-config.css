@@ -115,7 +115,9 @@
     padding: 6px 10px;
     border-radius: 6px;
     transition: color 0.15s ease, background 0.15s ease;
-    margin-bottom: 12px;
+    position: absolute;
+    top: 50px;
+    left: 12px;
 }
 
 .ai-chat-config-back:hover {
@@ -247,7 +249,7 @@
     gap: 12px;
     width: 100%;
     max-width: 320px;
-    margin-top: 16px;
+    margin-top: 24px;
 }
 
 .ai-chat-config-key-row {
