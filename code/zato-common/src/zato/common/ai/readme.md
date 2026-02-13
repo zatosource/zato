@@ -1,4 +1,4 @@
-# AI chat widget for Zato Dashboard
+# AI chat widget for Zato dashboard
 
 ## Overview
 
@@ -42,15 +42,22 @@ Location: `/zato-web-admin/src/zato/admin/static/css/ai-chat/`
 
 Location: `/zato-web-admin/src/zato/admin/web/views/ai_chat.py`
 
-- `get_api_key` - retrieves API key status from Redis
-- `save_api_key` - saves API key to Redis
+- `get_keys` - retrieves API key status for all providers from Redis
+- `save_key` - saves API key to Redis
 
 ### URL routes
 
 Location: `/zato-web-admin/src/zato/admin/urls.py`
 
-- `/zato/ai-chat/config/get-key/<provider>/` - GET API key status
-- `/zato/ai-chat/config/save-key/<provider>/` - POST to save API key
+- `/zato/ai-chat/config/get-keys/` - GET API key status for all providers
+- `/zato/ai-chat/config/save-key/` - POST to save API key
+
+### Redis keys
+
+- `zato.ai-chat.api-key.anthropic` - Anthropic API key
+- `zato.ai-chat.api-key.openai` - OpenAI API key
+
+To delete keys from Redis: `redis-cli DEL zato.ai-chat.api-key.anthropic zato.ai-chat.api-key.openai`
 
 ### HTML template
 
@@ -70,6 +77,7 @@ All JS and CSS files are included here in the correct dependency order.
 - Zoom via ctrl+wheel (0.5x to 2.0x scale, resets to 1.0 when minimized)
 - All state persisted to localStorage
 - Settings menu in header (shows on hover, no click required)
+- Settings menu button (hamburger icon) hidden when widget is minimized
 
 ### Tabs
 
@@ -77,8 +85,9 @@ All JS and CSS files are included here in the correct dependency order.
 - Add new tab with + button
 - Close tab with X button (cannot close last tab)
 - Rename tab via right-click context menu
-- Drag-drop to reorder tabs
+- Drag-drop to reorder tabs (with 5px threshold to prevent accidental drags)
 - Active tab highlighted with blue underline
+- Tabs bar hidden when no API key is configured
 
 ### Input area
 
@@ -101,9 +110,15 @@ All JS and CSS files are included here in the correct dependency order.
 
 - Provider selection screen with Claude (Anthropic) and GPT (OpenAI)
 - Provider names display as "<strong>Model</strong> · Company" format
-- API key input screen with monospace font
-- Back button navigation (from key input to providers, from providers to chat when applicable)
-- Settings menu with "Change provider" and "Change API key" options
+- API key input screen with monospace font and autofocus
+- Configuration UI always centered in the widget regardless of widget size
+- Back button navigation logic:
+  - When user has an API key configured and clicks "Change provider" or "Change API key": back button returns to chat
+  - When user has no API key and is on provider selection: no back button shown
+  - When user has no API key and is on key input: back button returns to provider selection (no back button on providers)
+- Settings menu options depend on whether API key is configured:
+  - With key: "Change provider" and "Change API key"
+  - Without key: "Configure provider" only
 - API keys stored in Redis via Django views
 - Button labels use lookup map for extensibility (e.g., "Use Claude", "Use GPT")
 
@@ -194,5 +209,6 @@ Use existing Zato admin session authentication. The Django view will have access
 - Provider names format: "<strong>ModelName</strong> · CompanyName"
 - Settings menu appears on hover (no click required)
 - Back button behavior:
-  - From key-input screen: goes to provider selection
-  - From provider selection (when came from chat): goes back to chat
+  - When user has an API key configured and clicks "Change provider" or "Change API key": back button returns to chat
+  - When user has no API key and is on provider selection: no back button shown
+  - When user has no API key and is on key input: back button returns to provider selection
