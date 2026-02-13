@@ -41,6 +41,15 @@
     flex-shrink: 0;
 }
 
+.llm-chat-widget.minimized .llm-chat-header {
+    cursor: pointer;
+}
+
+.llm-chat-widget.minimized .llm-chat-header:hover .llm-chat-header-button {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
 .llm-chat-header-title {
     font-size: 14px;
     font-weight: 600;
