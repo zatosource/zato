@@ -1,13 +1,18 @@
+.ai-chat-messages:has(.ai-chat-config-container) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
 .ai-chat-config-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100%;
     width: 100%;
     padding: 24px;
     box-sizing: border-box;
-    margin-top: -5%;
 }
 
 .ai-chat-config-title {
