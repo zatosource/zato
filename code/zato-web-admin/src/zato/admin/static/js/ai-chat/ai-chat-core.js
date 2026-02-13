@@ -1379,12 +1379,17 @@
             popup.style.top = (100 + offsetY) + 'px';
 
             var isImage = attachment.type && attachment.type.indexOf('image') === 0;
+            var isText = attachment.type && (attachment.type.indexOf('text') === 0 || 
+                attachment.type === 'application/json' || 
+                attachment.type === 'application/javascript' ||
+                attachment.type === 'application/xml');
+            var canPreview = isImage || isText || (attachment.content && typeof attachment.content === 'string');
 
             var html = '<div class="ai-chat-preview-header">';
             html += '<div class="ai-chat-preview-title">' + attachment.name + '</div>';
             html += '<div class="ai-chat-preview-actions">';
-            if (!isImage) {
-                html += '<button class="ai-chat-preview-copy-btn">Copy all</button>';
+            if (canPreview && !isImage) {
+                html += '<button class="ai-chat-preview-copy-btn">Copy</button>';
             }
             html += '<button class="ai-chat-preview-close">';
             html += '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
@@ -1392,7 +1397,9 @@
             html += '</div>';
             html += '</div>';
             html += '<div class="ai-chat-preview-content">';
-            if (isImage) {
+            if (!canPreview) {
+                html += '<div class="ai-chat-preview-unavailable">Preview not available</div>';
+            } else if (isImage) {
                 html += '<img class="ai-chat-preview-image" src="' + attachment.content + '" alt="' + attachment.name + '">';
             } else {
                 html += '<pre class="ai-chat-preview-text"></pre>';
@@ -1421,9 +1428,9 @@
             if (copyBtn) {
                 copyBtn.addEventListener('click', function() {
                     navigator.clipboard.writeText(attachment.content).then(function() {
-                        copyBtn.textContent = 'Copied!';
+                        copyBtn.textContent = 'Copied';
                         setTimeout(function() {
-                            copyBtn.textContent = 'Copy all';
+                            copyBtn.textContent = 'Copy';
                         }, 1500);
                     });
                 });
