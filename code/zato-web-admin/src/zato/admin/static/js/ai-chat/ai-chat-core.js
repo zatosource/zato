@@ -296,7 +296,8 @@
             }
 
             if (target.classList.contains('ai-chat-options-button') || target.closest('.ai-chat-options-button')) {
-                this.toggleOptionsMenu();
+                var optionsBtn = target.classList.contains('ai-chat-options-button') ? target : target.closest('.ai-chat-options-button');
+                this.toggleOptionsMenu(optionsBtn);
                 e.stopPropagation();
                 return;
             }
@@ -1141,14 +1142,18 @@
             container.innerHTML = html;
         },
 
-        toggleOptionsMenu: function() {
+        toggleOptionsMenu: function(clickedButton) {
             var existing = this.widget.querySelector('.ai-chat-options-menu');
             if (existing) {
                 existing.parentNode.removeChild(existing);
                 return;
             }
 
-            var button = this.widget.querySelector('.ai-chat-options-button');
+            var button = clickedButton;
+            if (!button) {
+                var activePanel = this.widget.querySelector('.ai-chat-tab-panel[data-tab-id="' + this.activeTabId + '"]');
+                button = activePanel ? activePanel.querySelector('.ai-chat-options-button') : null;
+            }
             if (!button) {
                 return;
             }
