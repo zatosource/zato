@@ -137,7 +137,9 @@
             console.debug('AIChat.render: rendering widget, needsConfig:', this.needsConfig, 'configMode:', this.configMode, 'selectedProvider:', AIChatConfig.selectedProvider);
 
             var html = AIChatRender.buildHeaderHtml(this.isMinimized);
-            html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
+            if (!this.needsConfig) {
+                html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
+            }
             html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider, this.cameFromChat, this.hadKeyOnEntry);
             html += AIChatRender.buildResizeHandlesHtml();
 
@@ -847,7 +849,7 @@
             if (!header) return;
 
             this.settingsMenu = document.createElement('div');
-            this.settingsMenu.innerHTML = AIChatConfig.buildSettingsMenuHtml();
+            this.settingsMenu.innerHTML = AIChatConfig.buildSettingsMenuHtml(AIChatConfig.hasAnyKey());
             this.settingsMenu.firstChild.style.position = 'absolute';
             this.settingsMenu.firstChild.style.top = (header.offsetHeight + 4) + 'px';
             this.settingsMenu.firstChild.style.left = '12px';

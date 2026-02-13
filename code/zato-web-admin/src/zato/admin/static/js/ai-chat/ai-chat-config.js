@@ -178,14 +178,20 @@
             return html;
         },
 
-        buildSettingsMenuHtml: function() {
+        buildSettingsMenuHtml: function(hasKey) {
             var html = '<div class="ai-chat-settings-menu">';
-            html += '<div class="ai-chat-settings-menu-item" data-action="change-provider">';
-            html += '<span>Change provider</span>';
-            html += '</div>';
-            html += '<div class="ai-chat-settings-menu-item" data-action="change-api-key">';
-            html += '<span>Change API key</span>';
-            html += '</div>';
+            if (hasKey) {
+                html += '<div class="ai-chat-settings-menu-item" data-action="change-provider">';
+                html += '<span>Change provider</span>';
+                html += '</div>';
+                html += '<div class="ai-chat-settings-menu-item" data-action="change-api-key">';
+                html += '<span>Change API key</span>';
+                html += '</div>';
+            } else {
+                html += '<div class="ai-chat-settings-menu-item" data-action="change-provider">';
+                html += '<span>Configure provider</span>';
+                html += '</div>';
+            }
             html += '</div>';
             return html;
         }
