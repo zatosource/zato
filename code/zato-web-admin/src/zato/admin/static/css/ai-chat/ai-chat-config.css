@@ -158,19 +158,19 @@
 
 .ai-chat-config-input-wrapper {
     width: 100%;
-    max-width: 320px;
+    max-width: 400px;
     margin-bottom: 20px;
 }
 
 .ai-chat-config-api-key-input {
     width: 100%;
-    padding: 14px 16px;
+    padding: 16px 24px;
     background-color: #252525 !important;
     border: 1px solid #444 !important;
     border-radius: 8px;
     color: #c0c0c0 !important;
-    font-size: 13px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    font-size: 14px;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Consolas', monospace !important;
     outline: none;
     transition: border-color 0.15s ease;
     box-sizing: border-box;
