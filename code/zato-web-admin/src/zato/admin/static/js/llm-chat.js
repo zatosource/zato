@@ -439,7 +439,17 @@
                 this.isTabDragging = true;
                 this.draggedTabId = tabElement.getAttribute('data-tab-id');
                 this.draggedTabElement = tabElement;
+
+                var tabRect = tabElement.getBoundingClientRect();
+                this.tabDragOffsetX = e.clientX - tabRect.left;
+                this.tabDragOffsetY = e.clientY - tabRect.top;
+                this.tabOriginalWidth = tabRect.width;
+
+                tabElement.style.width = tabRect.width + 'px';
+                tabElement.style.left = tabRect.left + 'px';
+                tabElement.style.top = tabRect.top + 'px';
                 tabElement.classList.add('dragging');
+
                 e.preventDefault();
                 return;
             }
@@ -494,26 +504,29 @@
             }
 
             if (this.isTabDragging && this.draggedTabElement) {
+                var newLeft = e.clientX - this.tabDragOffsetX;
+                var newTop = e.clientY - this.tabDragOffsetY;
+                this.draggedTabElement.style.left = newLeft + 'px';
+                this.draggedTabElement.style.top = newTop + 'px';
+
                 var tabsContainer = this.widget.querySelector('#llm-chat-tabs');
-                var tabs = tabsContainer.querySelectorAll('.llm-chat-tab');
-                var draggedRect = this.draggedTabElement.getBoundingClientRect();
+                var tabs = tabsContainer.querySelectorAll('.llm-chat-tab:not(.dragging)');
 
                 for (var i = 0; i < tabs.length; i++) {
                     var tab = tabs[i];
-                    if (tab === this.draggedTabElement) continue;
-
                     var rect = tab.getBoundingClientRect();
                     var midX = rect.left + rect.width / 2;
 
-                    if (e.clientX < midX && e.clientX > rect.left) {
-                        tabsContainer.insertBefore(this.draggedTabElement, tab);
-                        break;
-                    } else if (e.clientX > midX && e.clientX < rect.right) {
-                        if (tab.nextSibling && tab.nextSibling.classList && tab.nextSibling.classList.contains('llm-chat-tab')) {
-                            tabsContainer.insertBefore(this.draggedTabElement, tab.nextSibling);
+                    if (e.clientX > rect.left && e.clientX < rect.right) {
+                        if (e.clientX < midX) {
+                            tabsContainer.insertBefore(this.draggedTabElement, tab);
                         } else {
-                            var addButton = tabsContainer.querySelector('.llm-chat-tab-add');
-                            tabsContainer.insertBefore(this.draggedTabElement, addButton);
+                            if (tab.nextSibling && !tab.nextSibling.classList.contains('llm-chat-tab-add')) {
+                                tabsContainer.insertBefore(this.draggedTabElement, tab.nextSibling);
+                            } else {
+                                var addButton = tabsContainer.querySelector('.llm-chat-tab-add');
+                                tabsContainer.insertBefore(this.draggedTabElement, addButton);
+                            }
                         }
                         break;
                     }
@@ -543,6 +556,9 @@
 
                 if (this.draggedTabElement) {
                     this.draggedTabElement.classList.remove('dragging');
+                    this.draggedTabElement.style.left = '';
+                    this.draggedTabElement.style.top = '';
+                    this.draggedTabElement.style.width = '';
                 }
 
                 var tabsContainer = this.widget.querySelector('#llm-chat-tabs');

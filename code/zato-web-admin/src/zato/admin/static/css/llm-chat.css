@@ -146,7 +146,7 @@
 
 .llm-chat-tab-add {
     padding: 10px 12px;
-    background: #252525;
+    background: #2d2d2d;
     border: none;
     color: #888;
     font-size: 16px;
@@ -154,11 +154,13 @@
     transition: all 0.2s ease;
     border-radius: 4px;
     margin: 4px;
+    text-shadow: none;
 }
 
 .llm-chat-tab-add:hover {
     color: #4a9eff;
     background: #333;
+    text-shadow: none;
 }
 
 .llm-chat-body {
@@ -340,11 +342,13 @@
 }
 
 .llm-chat-tab.dragging {
-    opacity: 0.6;
-    background: rgba(74, 158, 255, 0.3);
-    position: relative;
-    z-index: 100;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    opacity: 0.8;
+    background: rgba(74, 158, 255, 0.4);
+    position: fixed;
+    z-index: 10000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    transform: scale(1.05);
 }
 
 .llm-chat-context-menu {
