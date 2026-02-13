@@ -1095,7 +1095,11 @@
             };
 
             var isImage = file.type && file.type.indexOf('image') === 0;
-            if (isImage) {
+            var isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            var isWord = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+                         file.name.toLowerCase().endsWith('.docx');
+
+            if (isImage || isPdf || isWord) {
                 reader.readAsDataURL(file);
             } else {
                 reader.readAsText(file);
@@ -1295,7 +1299,14 @@
             var html = '';
             for (var i = 0; i < attachments.length; i++) {
                 var att = attachments[i];
-                var sizeStr = att.size > 1000 ? Math.round(att.size / 1000) + ' KB' : att.size + ' B';
+                var sizeStr;
+                if (att.size >= 1000000) {
+                    sizeStr = (att.size / 1000000).toFixed(1) + ' MB';
+                } else if (att.size >= 1000) {
+                    sizeStr = Math.round(att.size / 1000) + ' KB';
+                } else {
+                    sizeStr = att.size + ' B';
+                }
                 var icon = this.getAttachmentIcon(att.type, att.name);
                 html += '<div class="ai-chat-attachment" data-attachment-id="' + att.id + '">';
                 html += '<div class="ai-chat-attachment-icon">';
@@ -1379,16 +1390,20 @@
             popup.style.top = (100 + offsetY) + 'px';
 
             var isImage = attachment.type && attachment.type.indexOf('image') === 0;
+            var isPdf = attachment.type === 'application/pdf' || attachment.name.toLowerCase().endsWith('.pdf');
+            var isWord = attachment.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+                         attachment.name.toLowerCase().endsWith('.docx');
+            var isEmail = attachment.name.toLowerCase().endsWith('.eml') || attachment.name.toLowerCase().endsWith('.msg');
             var isText = attachment.type && (attachment.type.indexOf('text') === 0 || 
                 attachment.type === 'application/json' || 
                 attachment.type === 'application/javascript' ||
                 attachment.type === 'application/xml');
-            var canPreview = isImage || isText || (attachment.content && typeof attachment.content === 'string');
+            var canPreview = isImage || isPdf || isWord || isEmail || isText || (attachment.content && typeof attachment.content === 'string');
 
             var html = '<div class="ai-chat-preview-header">';
             html += '<div class="ai-chat-preview-title">' + attachment.name + '</div>';
             html += '<div class="ai-chat-preview-actions">';
-            if (canPreview && !isImage) {
+            if (canPreview && !isImage && !isPdf) {
                 html += '<button class="ai-chat-preview-copy-btn">Copy</button>';
             }
             html += '<button class="ai-chat-preview-close">';
@@ -1401,6 +1416,10 @@
                 html += '<div class="ai-chat-preview-unavailable">Preview not available</div>';
             } else if (isImage) {
                 html += '<img class="ai-chat-preview-image" src="' + attachment.content + '" alt="' + attachment.name + '">';
+            } else if (isPdf) {
+                html += '<canvas class="ai-chat-preview-pdf"></canvas>';
+            } else if (isWord) {
+                html += '<div class="ai-chat-preview-word"></div>';
             } else {
                 html += '<pre class="ai-chat-preview-text"></pre>';
             }
@@ -1408,9 +1427,15 @@
 
             popup.innerHTML = html;
 
-            if (!isImage) {
+            if (isPdf) {
+                this.renderPdfPreview(popup, attachment);
+            } else if (isWord) {
+                this.renderWordPreview(popup, attachment);
+            } else if (!isImage) {
                 var preEl = popup.querySelector('.ai-chat-preview-text');
-                preEl.textContent = attachment.content;
+                if (preEl) {
+                    preEl.textContent = attachment.content;
+                }
             }
 
             document.body.appendChild(popup);
@@ -1470,6 +1495,75 @@
             for (var i = 0; i < this.previewPopups.length; i++) {
                 this.previewPopups[i].style.zIndex = baseZ + i;
             }
+        },
+
+        renderPdfPreview: function(popup, attachment) {
+            var canvas = popup.querySelector('.ai-chat-preview-pdf');
+            if (!canvas || typeof pdfjsLib === 'undefined') {
+                var content = popup.querySelector('.ai-chat-preview-content');
+                if (content) {
+                    content.innerHTML = '<div class="ai-chat-preview-unavailable">Preview not available</div>';
+                }
+                return;
+            }
+
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/js/libs/pdf.worker.min.js';
+
+            var base64 = attachment.content.split(',')[1];
+            var binary = atob(base64);
+            var len = binary.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            pdfjsLib.getDocument({ data: bytes }).promise.then(function(pdf) {
+                pdf.getPage(1).then(function(page) {
+                    var viewport = page.getViewport({ scale: 1.0 });
+                    var containerWidth = popup.querySelector('.ai-chat-preview-content').clientWidth - 24;
+                    var scale = containerWidth / viewport.width;
+                    var scaledViewport = page.getViewport({ scale: scale });
+
+                    canvas.width = scaledViewport.width;
+                    canvas.height = scaledViewport.height;
+
+                    var ctx = canvas.getContext('2d');
+                    page.render({ canvasContext: ctx, viewport: scaledViewport });
+                });
+            }).catch(function() {
+                var content = popup.querySelector('.ai-chat-preview-content');
+                if (content) {
+                    content.innerHTML = '<div class="ai-chat-preview-unavailable">Preview not available</div>';
+                }
+            });
+        },
+
+        renderWordPreview: function(popup, attachment) {
+            var wordDiv = popup.querySelector('.ai-chat-preview-word');
+            if (!wordDiv || typeof mammoth === 'undefined') {
+                var content = popup.querySelector('.ai-chat-preview-content');
+                if (content) {
+                    content.innerHTML = '<div class="ai-chat-preview-unavailable">Preview not available</div>';
+                }
+                return;
+            }
+
+            var base64 = attachment.content.split(',')[1];
+            var binary = atob(base64);
+            var len = binary.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            mammoth.convertToHtml({ arrayBuffer: bytes.buffer }).then(function(result) {
+                wordDiv.innerHTML = result.value;
+            }).catch(function() {
+                var content = popup.querySelector('.ai-chat-preview-content');
+                if (content) {
+                    content.innerHTML = '<div class="ai-chat-preview-unavailable">Preview not available</div>';
+                }
+            });
         },
 
         makePreviewDraggable: function(popup, handle) {

@@ -305,6 +305,28 @@
     object-fit: contain;
 }
 
+.ai-chat-preview-pdf {
+    max-width: 100%;
+    display: block;
+}
+
+.ai-chat-preview-word {
+    font-size: 13px;
+    color: #c0c0c0;
+    line-height: 1.6;
+}
+
+.ai-chat-preview-word p {
+    margin: 0 0 10px 0;
+}
+
+.ai-chat-preview-word h1,
+.ai-chat-preview-word h2,
+.ai-chat-preview-word h3 {
+    color: #e0e0e0;
+    margin: 15px 0 10px 0;
+}
+
 .ai-chat-preview-unavailable {
     display: flex;
     align-items: center;
@@ -331,7 +353,7 @@
 
 .ai-chat-attachment-size {
     font-size: 10px;
-    color: #666;
+    color: #888;
 }
 
 .ai-chat-attachment-remove {
