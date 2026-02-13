@@ -511,10 +511,15 @@
             }
 
             if (this.isTabDragging && this.dragClone) {
+                console.debug('handleMouseMove tab drag: e.clientX:', e.clientX, 'e.clientY:', e.clientY);
+                console.debug('handleMouseMove tab drag: tabDragOffsetX:', this.tabDragOffsetX, 'tabDragOffsetY:', this.tabDragOffsetY);
                 var newLeft = e.clientX - this.tabDragOffsetX;
                 var newTop = e.clientY - this.tabDragOffsetY;
+                console.debug('handleMouseMove tab drag: newLeft:', newLeft, 'newTop:', newTop);
+                console.debug('handleMouseMove tab drag: dragClone current left:', this.dragClone.style.left, 'top:', this.dragClone.style.top);
                 this.dragClone.style.left = newLeft + 'px';
                 this.dragClone.style.top = newTop + 'px';
+                console.debug('handleMouseMove tab drag: dragClone after set left:', this.dragClone.style.left, 'top:', this.dragClone.style.top);
 
                 this.pendingDropIndex = null;
                 var tabsContainer = this.widget.querySelector('#llm-chat-tabs');
