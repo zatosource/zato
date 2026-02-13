@@ -662,17 +662,27 @@
 
             var text = (inputElement.textContent || '').trim();
             var brCount = inputElement.querySelectorAll('br').length;
+            var inputHeight = inputElement.scrollHeight;
+            var inputOffsetHeight = inputElement.offsetHeight;
+            var inputAreaHeight = inputArea.offsetHeight;
+            var hasMultilineClass = inputArea.classList.contains('multiline');
+            var userMultiline = inputArea.getAttribute('data-user-multiline');
+            
+            console.debug('LLMChat.updateMultilineState:', JSON.stringify({
+                text: text,
+                textLength: text.length,
+                brCount: brCount,
+                innerHTML: inputElement.innerHTML,
+                inputScrollHeight: inputHeight,
+                inputOffsetHeight: inputOffsetHeight,
+                inputAreaHeight: inputAreaHeight,
+                hasMultilineClass: hasMultilineClass,
+                userMultiline: userMultiline
+            }));
             
             if (text === '' && brCount === 0) {
+                console.debug('LLMChat.updateMultilineState: clearing - empty text and no br');
                 inputElement.innerHTML = '';
-                inputArea.classList.remove('multiline');
-                inputArea.removeAttribute('data-user-multiline');
-                return;
-            }
-            
-            if (brCount > 0) {
-                inputArea.classList.add('multiline');
-            } else {
                 inputArea.classList.remove('multiline');
                 inputArea.removeAttribute('data-user-multiline');
             }
