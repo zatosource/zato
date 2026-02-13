@@ -131,7 +131,24 @@
                 return '';
             }
 
-            var selectedModel = tab.model || (models.length > 0 ? models[0].id : '');
+            var selectedModel = tab.model || '';
+            var selectedModelValid = false;
+            var firstEnabledModel = null;
+
+            for (var i = 0; i < models.length; i++) {
+                if (!models[i].disabled) {
+                    if (firstEnabledModel === null) {
+                        firstEnabledModel = models[i].id;
+                    }
+                    if (models[i].id === selectedModel) {
+                        selectedModelValid = true;
+                    }
+                }
+            }
+
+            if (!selectedModelValid && firstEnabledModel) {
+                selectedModel = firstEnabledModel;
+            }
 
             var html = '<div class="ai-chat-model-selector">';
             html += '<select class="ai-chat-model-select" data-tab-id="' + tab.id + '">';

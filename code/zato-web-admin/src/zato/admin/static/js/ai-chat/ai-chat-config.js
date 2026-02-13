@@ -113,7 +113,7 @@
         },
 
         hasAnyKey: function() {
-            return this.configuredKeys.anthropic || this.configuredKeys.openai;
+            return this.configuredKeys.anthropic || this.configuredKeys.openai || this.configuredKeys.google;
         },
 
         saveKey: function(providerId, apiKey, callback) {

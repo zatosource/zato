@@ -125,8 +125,9 @@ Location: `/zato-web-admin/src/zato/admin/urls.py`
 
 - `zato.ai-chat.api-key.anthropic` - Anthropic API key
 - `zato.ai-chat.api-key.openai` - OpenAI API key
+- `zato.ai-chat.api-key.google` - Google Gemini API key
 
-To delete keys from Redis: `redis-cli DEL zato.ai-chat.api-key.anthropic zato.ai-chat.api-key.openai`
+To delete all keys from Redis: `redis-cli DEL zato.ai-chat.api-key.anthropic zato.ai-chat.api-key.openai zato.ai-chat.api-key.google`
 
 ### HTML template
 
@@ -219,9 +220,10 @@ All JS and CSS files are included here in the correct dependency order.
 
 ### Provider configuration
 
-- Provider selection screen with Claude (Anthropic) and GPT (OpenAI)
+- Provider selection screen with Claude (Anthropic), GPT (OpenAI), and Gemini (Google)
 - Provider names display as "<strong>Model</strong> · Company" format
 - API key input screen with monospace font and autofocus
+- Save button label is generic "Save API key" for all providers
 - Configuration UI always centered in the widget regardless of widget size
 - Configuration UI rendered once (not per-tab) to avoid duplicate input elements
 - Back button navigation logic:
@@ -240,7 +242,10 @@ All JS and CSS files are included here in the correct dependency order.
   - Clicking "Remove" deletes the key and refreshes the list
   - If all keys are removed, returns to provider selection screen
 - API keys stored in Redis via Django views
-- Button labels use lookup map for extensibility (e.g., "Use Claude", "Use GPT")
+- Model dropdown shows all models from all providers
+- Models without configured API keys appear dimmed (grayed out) but visible
+- Dimmed models cannot be selected until their provider's API key is added
+- When a previously selected model becomes unavailable, automatically selects first available model
 
 ## Next steps - backend integration
 
@@ -326,8 +331,13 @@ Use existing Zato admin session authentication. The Django view will have access
 - Provider configuration UI must be vertically centered automatically (flexbox, no hardcoded positions)
 - Back button positioned absolutely at top-left of messages container
 - API key input uses monospace font
-- Button labels stored in lookup map for extensibility (not if/else)
-- When adding new providers, add entry to buttonLabels map in ai-chat-config.js
+- When adding new providers:
+  1. Add provider object to `AIChatConfig.providers` in ai-chat-config.js
+  2. Add provider to `providerOrder` array in `getModelsForConfiguredProviders`
+  3. Add provider to `hasAnyKey()` check
+  4. Add models to models.py with provider field
+  5. Add provider to `get_all_models()` result dict in models.py
+  6. Add provider to Django views (get_keys, save_key, delete_key)
 
 ## UI styling rules
 
