@@ -90,3 +90,30 @@ def save_key(req):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@method_allowed('POST')
+def delete_key(req):
+
+    result = {
+        'success': False
+    }
+
+    try:
+        data = loads(req.body)
+        provider = data.get('provider')
+
+        if provider not in ('anthropic', 'openai'):
+            result['error'] = 'Invalid provider'
+            return HttpResponse(dumps(result), content_type='application/json', status=400)
+
+        redis_client.delete(REDIS_KEY_PREFIX + provider)
+        result['success'] = True
+
+    except Exception as e:
+        logger.warning('delete_key failed: %s', e)
+        result['error'] = str(e)
+
+    return HttpResponse(dumps(result), content_type='application/json')
+
+# ################################################################################################################################
+# ################################################################################################################################

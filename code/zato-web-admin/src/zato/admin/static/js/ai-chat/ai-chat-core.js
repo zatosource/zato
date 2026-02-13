@@ -784,11 +784,22 @@
             console.debug('AIChat.saveApiKey: saving key for', providerId);
             var self = this;
 
-            var input = this.widget.querySelector('.ai-chat-config-api-key-input');
-            if (!input) return;
+            var input = this.widget.querySelector('.ai-chat-config-api-key-input[data-provider-id="' + providerId + '"]');
+            console.debug('AIChat.saveApiKey: input element:', input);
+            console.debug('AIChat.saveApiKey: input.value:', input ? input.value : 'N/A');
+            console.debug('AIChat.saveApiKey: input.getAttribute("value"):', input ? input.getAttribute('value') : 'N/A');
+            console.debug('AIChat.saveApiKey: all inputs:', this.widget.querySelectorAll('input'));
+            if (!input) {
+                console.debug('AIChat.saveApiKey: no input element found');
+                return;
+            }
 
             var apiKey = input.value.trim();
-            if (!apiKey) return;
+            console.debug('AIChat.saveApiKey: apiKey length:', apiKey.length);
+            if (!apiKey) {
+                console.debug('AIChat.saveApiKey: apiKey is empty');
+                return;
+            }
 
             var saveButton = this.widget.querySelector('.ai-chat-config-save-button');
             if (saveButton) {
@@ -902,6 +913,41 @@
                 if (firstConfiguredProvider) {
                     this.showKeyInput(firstConfiguredProvider);
                 }
+            } else if (action === 'remove-api-key') {
+                this.removeApiKey();
+            }
+        },
+
+        removeApiKey: function() {
+            console.debug('AIChat.removeApiKey: removing configured keys');
+            var self = this;
+
+            var providersToDelete = [];
+            if (AIChatConfig.configuredKeys.anthropic) {
+                providersToDelete.push('anthropic');
+            }
+            if (AIChatConfig.configuredKeys.openai) {
+                providersToDelete.push('openai');
+            }
+
+            if (providersToDelete.length === 0) {
+                return;
+            }
+
+            var deleted = 0;
+            var total = providersToDelete.length;
+
+            for (var i = 0; i < providersToDelete.length; i++) {
+                AIChatConfig.deleteKey(providersToDelete[i], function(success) {
+                    deleted++;
+                    if (deleted === total) {
+                        self.needsConfig = true;
+                        self.configMode = 'providers';
+                        self.cameFromChat = false;
+                        self.hadKeyOnEntry = false;
+                        self.render();
+                    }
+                });
             }
         }
     };

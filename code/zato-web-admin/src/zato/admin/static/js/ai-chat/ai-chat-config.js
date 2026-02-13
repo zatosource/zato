@@ -71,6 +71,7 @@
             var self = this;
 
             var csrfToken = this.getCsrfToken();
+            console.debug('AIChatConfig.saveKey: csrfToken:', csrfToken ? 'present' : 'missing');
 
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '/zato/ai-chat/config/save-key/', true);
@@ -80,7 +81,9 @@
             }
 
             xhr.onreadystatechange = function() {
+                console.debug('AIChatConfig.saveKey: readyState:', xhr.readyState, 'status:', xhr.status);
                 if (xhr.readyState === 4) {
+                    console.debug('AIChatConfig.saveKey: responseText:', xhr.responseText);
                     if (xhr.status === 200) {
                         try {
                             var response = JSON.parse(xhr.responseText);
@@ -106,10 +109,12 @@
                 }
             };
 
+            console.debug('AIChatConfig.saveKey: sending request');
             xhr.send(JSON.stringify({
                 provider: providerId,
                 api_key: apiKey
             }));
+            console.debug('AIChatConfig.saveKey: request sent');
         },
 
         getCsrfToken: function() {
@@ -121,6 +126,51 @@
                 }
             }
             return null;
+        },
+
+        deleteKey: function(providerId, callback) {
+            console.debug('AIChatConfig.deleteKey: deleting key for', providerId);
+            var self = this;
+
+            var csrfToken = this.getCsrfToken();
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/zato/ai-chat/config/delete-key/', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            if (csrfToken) {
+                xhr.setRequestHeader('X-CSRFToken', csrfToken);
+            }
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response.success) {
+                                self.configuredKeys[providerId] = false;
+                                console.debug('AIChatConfig.deleteKey: key deleted successfully');
+                            }
+                            if (callback) {
+                                callback(response.success);
+                            }
+                        } catch (e) {
+                            console.debug('AIChatConfig.deleteKey: parse error', e);
+                            if (callback) {
+                                callback(false);
+                            }
+                        }
+                    } else {
+                        console.debug('AIChatConfig.deleteKey: request failed', xhr.status);
+                        if (callback) {
+                            callback(false);
+                        }
+                    }
+                }
+            };
+
+            xhr.send(JSON.stringify({
+                provider: providerId
+            }));
         },
 
         buildProviderSelectionHtml: function(showBackButton) {
@@ -186,6 +236,9 @@
                 html += '</div>';
                 html += '<div class="ai-chat-settings-menu-item" data-action="change-api-key">';
                 html += '<span>Change API key</span>';
+                html += '</div>';
+                html += '<div class="ai-chat-settings-menu-item" data-action="remove-api-key">';
+                html += '<span>Remove API key</span>';
                 html += '</div>';
             } else {
                 html += '<div class="ai-chat-settings-menu-item" data-action="change-provider">';

@@ -56,15 +56,26 @@
         buildBodyHtml: function(tabs, activeTabId, needsConfig, configMode, selectedProvider, cameFromChat, hadKeyOnEntry) {
             var html = '<div class="ai-chat-body">';
 
-            for (var i = 0; i < tabs.length; i++) {
-                var tab = tabs[i];
-                var activeClass = tab.id === activeTabId ? ' active' : '';
-                html += '<div class="ai-chat-tab-panel' + activeClass + '" data-tab-id="' + tab.id + '">';
-                html += this.buildMessagesHtml(tab, needsConfig, configMode, selectedProvider, cameFromChat, hadKeyOnEntry);
-                if (!needsConfig) {
-                    html += this.buildInputAreaHtml(tab);
+            if (needsConfig) {
+                html += '<div class="ai-chat-tab-panel active">';
+                html += '<div class="ai-chat-messages">';
+                if (configMode === 'key-input' && selectedProvider) {
+                    html += AIChatConfig.buildKeyInputHtml(selectedProvider, hadKeyOnEntry);
+                } else {
+                    var showBackOnProviders = cameFromChat && hadKeyOnEntry;
+                    html += AIChatConfig.buildProviderSelectionHtml(showBackOnProviders);
                 }
                 html += '</div>';
+                html += '</div>';
+            } else {
+                for (var i = 0; i < tabs.length; i++) {
+                    var tab = tabs[i];
+                    var activeClass = tab.id === activeTabId ? ' active' : '';
+                    html += '<div class="ai-chat-tab-panel' + activeClass + '" data-tab-id="' + tab.id + '">';
+                    html += this.buildMessagesHtml(tab, needsConfig, configMode, selectedProvider, cameFromChat, hadKeyOnEntry);
+                    html += this.buildInputAreaHtml(tab);
+                    html += '</div>';
+                }
             }
 
             html += '</div>';
@@ -74,14 +85,7 @@
         buildMessagesHtml: function(tab, needsConfig, configMode, selectedProvider, cameFromChat, hadKeyOnEntry) {
             var html = '<div class="ai-chat-messages" data-tab-id="' + tab.id + '">';
 
-            if (needsConfig) {
-                if (configMode === 'key-input' && selectedProvider) {
-                    html += AIChatConfig.buildKeyInputHtml(selectedProvider, hadKeyOnEntry);
-                } else {
-                    var showBackOnProviders = cameFromChat && hadKeyOnEntry;
-                    html += AIChatConfig.buildProviderSelectionHtml(showBackOnProviders);
-                }
-            } else if (tab.messages.length === 0) {
+            if (tab.messages.length === 0) {
                 html += '<div class="ai-chat-empty">';
                 html += '<div class="ai-chat-empty-icon">💬</div>';
                 html += '<div>Start a conversation</div>';

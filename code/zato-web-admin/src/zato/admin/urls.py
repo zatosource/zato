@@ -960,6 +960,8 @@ urlpatterns += [
         login_required(ai_chat.get_keys), name='ai-chat-config-get-keys'),
     url(r'^zato/ai-chat/config/save-key/$',
         login_required(ai_chat.save_key), name='ai-chat-config-save-key'),
+    url(r'^zato/ai-chat/config/delete-key/$',
+        login_required(ai_chat.delete_key), name='ai-chat-config-delete-key'),
 ]
 
 # ################################################################################################################################
