@@ -203,6 +203,7 @@
     font-size: 13px;
     line-height: 1.5;
     max-width: 85%;
+    width: fit-content;
 }
 
 .llm-chat-message.user {
@@ -233,7 +234,7 @@
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    background: #1f1f1f;
+    background: #252525;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
 }
