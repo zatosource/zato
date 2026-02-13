@@ -621,16 +621,16 @@
                     var tabId = inputElement.getAttribute('data-tab-id');
                     console.debug('LLMChat.handleKeyDown: enter pressed in input, tabId:', tabId);
                     this.sendMessage(tabId);
-                } else if (e.key === 'Backspace') {
+                } else if (e.key === 'Backspace' || e.key === 'Delete') {
                     var text = (inputElement.textContent || '').trim();
                     var brCount = inputElement.querySelectorAll('br').length;
                     if (text === '' && brCount > 0) {
                         e.preventDefault();
                         var brs = inputElement.querySelectorAll('br');
-                        var lastBr = brs[brs.length - 1];
-                        lastBr.parentNode.removeChild(lastBr);
+                        var brToRemove = e.key === 'Backspace' ? brs[brs.length - 1] : brs[0];
+                        brToRemove.parentNode.removeChild(brToRemove);
                         var newBrCount = inputElement.querySelectorAll('br').length;
-                        console.debug('LLMChat.handleKeyDown: backspace removed br:', JSON.stringify({
+                        console.debug('LLMChat.handleKeyDown:', e.key, 'removed br:', JSON.stringify({
                             brCountBefore: brCount,
                             brCountAfter: newBrCount,
                             innerHTML: inputElement.innerHTML
