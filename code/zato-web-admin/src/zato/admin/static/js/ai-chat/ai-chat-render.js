@@ -11,7 +11,7 @@
 
         buildHeaderHtml: function(isMinimized) {
             var html = '<div class="ai-chat-header" id="ai-chat-header">';
-            html += '<button class="ai-chat-header-button ai-chat-menu-button" id="ai-chat-menu-button" title="Menu">';
+            html += '<button class="ai-chat-header-button ai-chat-menu-button" id="ai-chat-menu-button">';
             html += '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>';
             html += '</button>';
             html += '<span class="ai-chat-header-title">AI chat</span>';
@@ -51,14 +51,14 @@
             return html;
         },
 
-        buildBodyHtml: function(tabs, activeTabId, needsConfig) {
+        buildBodyHtml: function(tabs, activeTabId, needsConfig, configMode, selectedProvider) {
             var html = '<div class="ai-chat-body">';
 
             for (var i = 0; i < tabs.length; i++) {
                 var tab = tabs[i];
                 var activeClass = tab.id === activeTabId ? ' active' : '';
                 html += '<div class="ai-chat-tab-panel' + activeClass + '" data-tab-id="' + tab.id + '">';
-                html += this.buildMessagesHtml(tab, needsConfig);
+                html += this.buildMessagesHtml(tab, needsConfig, configMode, selectedProvider);
                 if (!needsConfig) {
                     html += this.buildInputAreaHtml(tab);
                 }
@@ -69,11 +69,15 @@
             return html;
         },
 
-        buildMessagesHtml: function(tab, needsConfig) {
+        buildMessagesHtml: function(tab, needsConfig, configMode, selectedProvider) {
             var html = '<div class="ai-chat-messages" data-tab-id="' + tab.id + '">';
 
             if (needsConfig) {
-                html += AIChatConfig.buildProviderSelectionHtml();
+                if (configMode === 'key-input' && selectedProvider) {
+                    html += AIChatConfig.buildKeyInputHtml(selectedProvider);
+                } else {
+                    html += AIChatConfig.buildProviderSelectionHtml();
+                }
             } else if (tab.messages.length === 0) {
                 html += '<div class="ai-chat-empty">';
                 html += '<div class="ai-chat-empty-icon">💬</div>';

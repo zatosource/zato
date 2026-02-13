@@ -128,11 +128,11 @@
         },
 
         render: function() {
-            console.debug('AIChat.render: rendering widget, needsConfig:', this.needsConfig, 'configMode:', this.configMode);
+            console.debug('AIChat.render: rendering widget, needsConfig:', this.needsConfig, 'configMode:', this.configMode, 'selectedProvider:', AIChatConfig.selectedProvider);
 
             var html = AIChatRender.buildHeaderHtml(this.isMinimized);
             html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
-            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig);
+            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider);
             html += AIChatRender.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
@@ -152,6 +152,10 @@
             this.widget.addEventListener('click', function(e) {
                 self.handleClick(e);
             });
+
+            this.widget.addEventListener('mouseenter', function(e) {
+                self.handleMouseEnter(e);
+            }, true);
 
             this.widget.addEventListener('mousedown', function(e) {
                 self.handleMouseDown(e);
@@ -202,11 +206,6 @@
                 return;
             }
 
-            if (target.id === 'ai-chat-menu-button' || target.closest('#ai-chat-menu-button')) {
-                this.toggleSettingsMenu();
-                e.stopPropagation();
-                return;
-            }
 
             var settingsMenuItem = target.closest('.ai-chat-settings-menu-item');
             if (settingsMenuItem) {
@@ -244,6 +243,7 @@
             var providerEl = target.closest('.ai-chat-config-provider');
             if (providerEl) {
                 var providerId = providerEl.getAttribute('data-provider-id');
+                console.debug('AIChat.handleClick: provider clicked, providerId:', providerId);
                 this.showKeyInput(providerId);
                 return;
             }
@@ -705,35 +705,19 @@
         },
 
         showKeyInput: function(providerId) {
-            console.debug('AIChat.showKeyInput: showing key input for', providerId);
+            console.debug('AIChat.showKeyInput: showing key input for', providerId, 'needsConfig:', this.needsConfig);
+            this.needsConfig = true;
             this.configMode = 'key-input';
             AIChatConfig.selectedProvider = providerId;
-
-            var messagesContainer = this.widget.querySelector('.ai-chat-messages');
-            if (messagesContainer) {
-                var newHtml = AIChatConfig.buildKeyInputHtml(providerId);
-                messagesContainer.innerHTML = newHtml;
-                var actualContent = messagesContainer.querySelector('.ai-chat-config-api-key-input');
-                console.debug('AIChat.showKeyInput: innerHTML set, api-key-input found:', !!actualContent);
-            } else {
-                console.debug('AIChat.showKeyInput: messagesContainer not found');
-            }
+            this.render();
         },
 
         showProviderSelection: function() {
             console.debug('AIChat.showProviderSelection: showing provider selection');
+            this.needsConfig = true;
             this.configMode = 'providers';
             AIChatConfig.selectedProvider = null;
-
-            var messagesContainer = this.widget.querySelector('.ai-chat-messages');
-            if (messagesContainer) {
-                var newHtml = AIChatConfig.buildProviderSelectionHtml();
-                messagesContainer.innerHTML = newHtml;
-                var actualContent = messagesContainer.querySelector('.ai-chat-config-providers');
-                console.debug('AIChat.showProviderSelection: innerHTML set, providers found:', !!actualContent);
-            } else {
-                console.debug('AIChat.showProviderSelection: messagesContainer not found');
-            }
+            this.render();
         },
 
         saveApiKey: function(providerId) {
@@ -796,6 +780,13 @@
             }
         },
 
+        handleMouseEnter: function(e) {
+            var target = e.target;
+            if (target.id === 'ai-chat-menu-button' || target.closest('#ai-chat-menu-button')) {
+                this.showSettingsMenu();
+            }
+        },
+
         toggleSettingsMenu: function() {
             console.debug('AIChat.toggleSettingsMenu: toggling settings menu');
             if (this.settingsMenu) {
@@ -841,6 +832,15 @@
                 this.needsConfig = true;
                 this.configMode = 'providers';
                 this.render();
+                var firstConfiguredProvider = null;
+                if (AIChatConfig.configuredKeys.anthropic) {
+                    firstConfiguredProvider = 'anthropic';
+                } else if (AIChatConfig.configuredKeys.openai) {
+                    firstConfiguredProvider = 'openai';
+                }
+                if (firstConfiguredProvider) {
+                    this.showKeyInput(firstConfiguredProvider);
+                }
             }
         }
     };
