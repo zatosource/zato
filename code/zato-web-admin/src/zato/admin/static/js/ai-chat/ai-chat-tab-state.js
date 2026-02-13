@@ -49,7 +49,18 @@
 
         addAttachment: function(tabId, attachment) {
             var state = this.getState(tabId);
-            state.attachments.push(attachment);
+            var existingIndex = -1;
+            for (var i = 0; i < state.attachments.length; i++) {
+                if (state.attachments[i].name === attachment.name) {
+                    existingIndex = i;
+                    break;
+                }
+            }
+            if (existingIndex >= 0) {
+                state.attachments[existingIndex] = attachment;
+            } else {
+                state.attachments.push(attachment);
+            }
         },
 
         removeAttachment: function(tabId, attachmentId) {

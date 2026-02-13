@@ -320,6 +320,21 @@
                 return;
             }
 
+            var attachmentEl = target.closest('.ai-chat-attachment');
+            if (attachmentEl && !target.closest('.ai-chat-attachment-remove')) {
+                var attId = attachmentEl.getAttribute('data-attachment-id');
+                var attTabPanel = attachmentEl.closest('.ai-chat-tab-panel');
+                var attTabId = attTabPanel ? attTabPanel.getAttribute('data-tab-id') : this.activeTabId;
+                var attachments = AIChatTabState.getAttachments(attTabId);
+                for (var i = 0; i < attachments.length; i++) {
+                    if (attachments[i].id === attId) {
+                        this.showPreview(attachments[i]);
+                        break;
+                    }
+                }
+                return;
+            }
+
             var providerEl = target.closest('.ai-chat-config-provider');
             if (providerEl) {
                 var providerId = providerEl.getAttribute('data-provider-id');
@@ -526,6 +541,14 @@
 
         handleKeyDown: function(e) {
             var self = this;
+
+            if (e.key === 'Escape') {
+                if (this.closeTopPreview()) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+
             AIChatInput.handleKeyDown(e, function(tabId) {
                 self.sendMessage(tabId);
             });
@@ -1070,26 +1093,171 @@
                 AIChatTabState.createAttachmentFromFile(tabId, file, e.target.result);
                 self.renderAttachments(tabId);
             };
-            reader.readAsText(file);
+
+            var isImage = file.type && file.type.indexOf('image') === 0;
+            if (isImage) {
+                reader.readAsDataURL(file);
+            } else {
+                reader.readAsText(file);
+            }
         },
 
-        getAttachmentIcon: function(mimeType) {
-            if (mimeType && mimeType.indexOf('image') === 0) {
-                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>';
+        fileIconMap: {
+            'application/json': 'JSON-1.svg',
+            'application/javascript': 'JSX.svg',
+            'text/javascript': 'JSX.svg',
+            'application/pdf': 'Adobe-Acrobat.svg',
+            'text/html': 'DOM.svg',
+            'text/xml': 'Default.svg',
+            'application/xml': 'Default.svg',
+            'text/css': 'Stylus.svg',
+            'text/plain': 'Default.svg',
+            'text/markdown': 'MarkdownLint.svg',
+            'text/x-python': 'Python.svg',
+            'application/x-python': 'Python.svg',
+            'text/x-java': 'Default.svg',
+            'text/x-c': 'Default.svg',
+            'text/x-c++': 'C++.svg',
+            'text/x-ruby': 'RubyGems.svg',
+            'text/x-go': 'Go.svg',
+            'text/x-rust': 'Default.svg',
+            'text/x-typescript': 'TypeScript.svg',
+            'text/x-sql': 'SQLite.svg',
+            'text/x-yaml': 'YAML.svg',
+            'text/yaml': 'YAML.svg',
+            'application/x-yaml': 'YAML.svg',
+            'text/x-sh': 'Terminal.svg',
+            'application/x-sh': 'Terminal.svg',
+            'image/png': 'Image.svg',
+            'image/jpeg': 'Image.svg',
+            'image/gif': 'Image.svg',
+            'image/svg+xml': 'Default.svg',
+            'image/webp': 'Image.svg',
+            'application/zip': 'Brotli.svg',
+            'application/x-tar': 'Brotli.svg',
+            'application/gzip': 'Brotli.svg',
+            'application/x-rar-compressed': 'Brotli.svg',
+            'video/mp4': 'Video.svg',
+            'video/webm': 'Video.svg',
+            'audio/mpeg': 'Audacity.svg',
+            'audio/wav': 'Audacity.svg',
+            'application/msword': 'Microsoft-Word.svg',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Microsoft-Word.svg',
+            'application/vnd.ms-excel': 'Microsoft-Excel.svg',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Microsoft-Excel.svg',
+            'application/vnd.ms-powerpoint': 'Microsoft-PowerPoint.svg',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'Microsoft-PowerPoint.svg'
+        },
+
+        extensionIconMap: {
+            'js': 'JSX.svg',
+            'jsx': 'JSX.svg',
+            'ts': 'TypeScript.svg',
+            'tsx': 'TSX.svg',
+            'json': 'JSON-1.svg',
+            'py': 'Python.svg',
+            'rb': 'RubyGems.svg',
+            'java': 'Default.svg',
+            'c': 'Default.svg',
+            'cpp': 'C++.svg',
+            'h': 'Default.svg',
+            'hpp': 'C++.svg',
+            'go': 'Go.svg',
+            'rs': 'Default.svg',
+            'php': 'PHP.svg',
+            'html': 'DOM.svg',
+            'htm': 'DOM.svg',
+            'css': 'Stylus.svg',
+            'scss': 'Stylus.svg',
+            'sass': 'Stylus.svg',
+            'less': 'Stylus.svg',
+            'xml': 'Default.svg',
+            'yaml': 'YAML.svg',
+            'yml': 'YAML.svg',
+            'md': 'MarkdownLint.svg',
+            'markdown': 'MarkdownLint.svg',
+            'txt': 'Default.svg',
+            'pdf': 'Adobe-Acrobat.svg',
+            'doc': 'Microsoft-Word.svg',
+            'docx': 'Microsoft-Word.svg',
+            'xls': 'Microsoft-Excel.svg',
+            'xlsx': 'Microsoft-Excel.svg',
+            'ppt': 'Microsoft-PowerPoint.svg',
+            'pptx': 'Microsoft-PowerPoint.svg',
+            'sql': 'SQLite.svg',
+            'sh': 'Terminal.svg',
+            'bash': 'Terminal.svg',
+            'zsh': 'Terminal.svg',
+            'png': 'Image.svg',
+            'jpg': 'Image.svg',
+            'jpeg': 'Image.svg',
+            'gif': 'Image.svg',
+            'svg': 'Default.svg',
+            'webp': 'Image.svg',
+            'ico': 'Image.svg',
+            'zip': 'Brotli.svg',
+            'tar': 'Brotli.svg',
+            'gz': 'Brotli.svg',
+            'rar': 'Brotli.svg',
+            '7z': 'Brotli.svg',
+            'mp4': 'Video.svg',
+            'webm': 'Video.svg',
+            'avi': 'Video.svg',
+            'mov': 'Video.svg',
+            'mp3': 'Audacity.svg',
+            'wav': 'Audacity.svg',
+            'ogg': 'Audacity.svg',
+            'vue': 'Vue.svg',
+            'svelte': 'Svelte.svg',
+            'dockerfile': 'Docker.svg',
+            'gradle': 'Gradle.svg',
+            'toml': 'TOML.svg',
+            'ini': 'Config.svg',
+            'cfg': 'Config.svg',
+            'conf': 'Config.svg',
+            'env': 'dotenv.svg',
+            'eslintrc': 'ESLint.svg',
+            'prettierrc': 'Prettier.svg',
+            'lua': 'Lua.svg',
+            'kt': 'Kotlin.svg',
+            'scala': 'Default.svg',
+            'groovy': 'Groovy.svg',
+            'r': 'R.svg',
+            'jl': 'Julia.svg',
+            'ex': 'Default.svg',
+            'exs': 'Default.svg',
+            'erl': 'Default.svg',
+            'hs': 'Default.svg',
+            'elm': 'Elm.svg',
+            'clj': 'ClojureJS.svg',
+            'cljs': 'ClojureJS.svg'
+        },
+
+        getAttachmentIcon: function(mimeType, fileName) {
+            var iconFile = 'Default.svg';
+
+            if (fileName) {
+                var ext = fileName.split('.').pop().toLowerCase();
+                if (this.extensionIconMap[ext]) {
+                    iconFile = this.extensionIconMap[ext];
+                }
             }
-            if (mimeType && (mimeType.indexOf('json') !== -1 || mimeType.indexOf('javascript') !== -1)) {
-                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>';
+
+            if (mimeType && this.fileIconMap[mimeType]) {
+                iconFile = this.fileIconMap[mimeType];
+            } else if (mimeType) {
+                if (mimeType.indexOf('image') === 0) {
+                    iconFile = 'Image.svg';
+                } else if (mimeType.indexOf('video') === 0) {
+                    iconFile = 'Video.svg';
+                } else if (mimeType.indexOf('audio') === 0) {
+                    iconFile = 'Audio.svg';
+                } else if (mimeType.indexOf('text') === 0) {
+                    iconFile = 'Default.svg';
+                }
             }
-            if (mimeType && mimeType.indexOf('html') !== -1) {
-                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.56l-7.35 3.86 1.41-8.18L.48 7.88l8.21-1.19L12 .5l3.31 6.19 8.21 1.19-5.58 5.36 1.41 8.18z"/></svg>';
-            }
-            if (mimeType && mimeType.indexOf('xml') !== -1) {
-                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.89 3L14.85 3.4 11.11 21 9.15 20.6 12.89 3M19.59 12L16 8.41 17.41 7 22 11.59V12.41L17.41 17 16 15.59 19.59 12M4.41 12L8 15.59 6.59 17 2 12.41V11.59L6.59 7 8 8.41 4.41 12Z"/></svg>';
-            }
-            if (mimeType && mimeType.indexOf('pdf') !== -1) {
-                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>';
-            }
-            return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>';
+
+            return '<img src="/static/file-icons/svg/' + iconFile + '" alt="" class="ai-chat-attachment-icon-img">';
         },
 
         renderAttachments: function(tabId) {
@@ -1128,7 +1296,7 @@
             for (var i = 0; i < attachments.length; i++) {
                 var att = attachments[i];
                 var sizeStr = att.size > 1000 ? Math.round(att.size / 1000) + ' KB' : att.size + ' B';
-                var icon = this.getAttachmentIcon(att.type);
+                var icon = this.getAttachmentIcon(att.type, att.name);
                 html += '<div class="ai-chat-attachment" data-attachment-id="' + att.id + '">';
                 html += '<div class="ai-chat-attachment-icon">';
                 html += icon;
@@ -1195,6 +1363,135 @@
             } else if (action === 'connect-mcp') {
                 console.debug('AIChat.handleOptionsAction: connect-mcp not yet implemented');
             }
+        },
+
+        previewPopups: [],
+
+        showPreview: function(attachment) {
+            var self = this;
+            var popup = document.createElement('div');
+            popup.className = 'ai-chat-preview-popup';
+            popup.setAttribute('data-attachment-id', attachment.id);
+
+            var offsetX = this.previewPopups.length * 30;
+            var offsetY = this.previewPopups.length * 30;
+            popup.style.left = (100 + offsetX) + 'px';
+            popup.style.top = (100 + offsetY) + 'px';
+
+            var isImage = attachment.type && attachment.type.indexOf('image') === 0;
+
+            var html = '<div class="ai-chat-preview-header">';
+            html += '<div class="ai-chat-preview-title">' + attachment.name + '</div>';
+            html += '<div class="ai-chat-preview-actions">';
+            if (!isImage) {
+                html += '<button class="ai-chat-preview-copy-btn">Copy all</button>';
+            }
+            html += '<button class="ai-chat-preview-close">';
+            html += '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+            html += '</button>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="ai-chat-preview-content">';
+            if (isImage) {
+                html += '<img class="ai-chat-preview-image" src="' + attachment.content + '" alt="' + attachment.name + '">';
+            } else {
+                html += '<pre class="ai-chat-preview-text"></pre>';
+            }
+            html += '</div>';
+
+            popup.innerHTML = html;
+
+            if (!isImage) {
+                var preEl = popup.querySelector('.ai-chat-preview-text');
+                preEl.textContent = attachment.content;
+            }
+
+            document.body.appendChild(popup);
+            this.previewPopups.push(popup);
+
+            var header = popup.querySelector('.ai-chat-preview-header');
+            this.makePreviewDraggable(popup, header);
+
+            var closeBtn = popup.querySelector('.ai-chat-preview-close');
+            closeBtn.addEventListener('click', function() {
+                self.closePreview(popup);
+            });
+
+            var copyBtn = popup.querySelector('.ai-chat-preview-copy-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', function() {
+                    navigator.clipboard.writeText(attachment.content).then(function() {
+                        copyBtn.textContent = 'Copied!';
+                        setTimeout(function() {
+                            copyBtn.textContent = 'Copy all';
+                        }, 1500);
+                    });
+                });
+            }
+
+            popup.addEventListener('mousedown', function() {
+                self.bringPreviewToFront(popup);
+            });
+        },
+
+        closePreview: function(popup) {
+            var idx = this.previewPopups.indexOf(popup);
+            if (idx >= 0) {
+                this.previewPopups.splice(idx, 1);
+            }
+            if (popup.parentNode) {
+                popup.parentNode.removeChild(popup);
+            }
+        },
+
+        closeTopPreview: function() {
+            if (this.previewPopups.length > 0) {
+                var topPopup = this.previewPopups[this.previewPopups.length - 1];
+                this.closePreview(topPopup);
+                return true;
+            }
+            return false;
+        },
+
+        bringPreviewToFront: function(popup) {
+            var idx = this.previewPopups.indexOf(popup);
+            if (idx >= 0 && idx < this.previewPopups.length - 1) {
+                this.previewPopups.splice(idx, 1);
+                this.previewPopups.push(popup);
+            }
+            var baseZ = 10001;
+            for (var i = 0; i < this.previewPopups.length; i++) {
+                this.previewPopups[i].style.zIndex = baseZ + i;
+            }
+        },
+
+        makePreviewDraggable: function(popup, handle) {
+            var isDragging = false;
+            var startX, startY, startLeft, startTop;
+
+            handle.addEventListener('mousedown', function(e) {
+                if (e.target.closest('.ai-chat-preview-close') || e.target.closest('.ai-chat-preview-copy-btn')) {
+                    return;
+                }
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startLeft = popup.offsetLeft;
+                startTop = popup.offsetTop;
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                var dx = e.clientX - startX;
+                var dy = e.clientY - startY;
+                popup.style.left = (startLeft + dx) + 'px';
+                popup.style.top = (startTop + dy) + 'px';
+            });
+
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
         }
     };
 

@@ -11,7 +11,7 @@
 .ai-chat-input-wrapper {
     flex: 1;
     min-width: 0;
-    background: transparent;
+    background: #333333;
     border-radius: 4px;
     border: none;
     overflow: hidden;
@@ -101,7 +101,7 @@
     background: #1a1a1a;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
     overflow: hidden;
     z-index: 100;
     min-width: 160px;
@@ -170,6 +170,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    cursor: pointer;
     padding: 8px 10px;
     background: #1a1a1a;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -187,6 +188,119 @@
 .ai-chat-attachment-icon svg {
     width: 100%;
     height: 100%;
+}
+
+.ai-chat-attachment-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: invert(52%) sepia(98%) saturate(1226%) hue-rotate(190deg) brightness(101%) contrast(101%);
+}
+
+.ai-chat-preview-popup {
+    position: fixed;
+    min-width: 300px;
+    min-height: 200px;
+    width: 500px;
+    height: 400px;
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    z-index: 10001;
+    resize: both;
+    overflow: hidden;
+}
+
+.ai-chat-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #333;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: move;
+    flex-shrink: 0;
+}
+
+.ai-chat-preview-title {
+    font-size: 13px;
+    color: #e0e0e0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    margin-right: 10px;
+}
+
+.ai-chat-preview-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-chat-preview-copy-btn {
+    background: rgba(74, 158, 255, 0.2);
+    border: none;
+    border-radius: 4px;
+    color: #4a9eff;
+    font-size: 11px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+
+.ai-chat-preview-copy-btn:hover {
+    background: rgba(74, 158, 255, 0.35);
+}
+
+.ai-chat-preview-close {
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ai-chat-preview-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.ai-chat-preview-close svg {
+    width: 16px;
+    height: 16px;
+}
+
+.ai-chat-preview-content {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+}
+
+.ai-chat-preview-text {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    color: #c0c0c0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.ai-chat-preview-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 .ai-chat-attachment-info {
