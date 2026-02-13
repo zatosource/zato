@@ -2,6 +2,11 @@
     flex: 1 1 0;
     overflow-y: auto;
     padding: 16px;
+    min-height: 0;
+}
+
+.ai-chat-messages:has(.ai-chat-empty) {
+    overflow-y: hidden;
     background: #1a1a1a;
     min-height: 50px;
     position: relative;

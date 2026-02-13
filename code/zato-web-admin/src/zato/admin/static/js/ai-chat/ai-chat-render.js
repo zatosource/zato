@@ -106,12 +106,13 @@
             html += '<div class="ai-chat-input" data-tab-id="' + tab.id + '" contenteditable="true" data-placeholder="Type a message .."></div>';
             html += '</div>';
             html += this.buildInputToolbarHtml(tab);
+            html += '</div>';
             return html;
         },
 
         buildInputToolbarHtml: function(tab) {
             var html = '<div class="ai-chat-input-toolbar">';
-            html += this.buildModelSelectorHtml();
+            html += this.buildModelSelectorHtml(tab);
             html += '<div class="ai-chat-input-toolbar-buttons">';
             html += '<button class="ai-chat-options-button" data-tab-id="' + tab.id + '" aria-label="Options">';
             html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-options-icon"><path d="M12 4v16m-8-8h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
@@ -124,16 +125,16 @@
             return html;
         },
 
-        buildModelSelectorHtml: function() {
+        buildModelSelectorHtml: function(tab) {
             var models = AIChatConfig.getModelsForConfiguredProviders();
             if (models.length === 0) {
                 return '';
             }
 
-            var selectedModel = AIChatConfig.selectedModel || (models.length > 0 ? models[0].id : '');
+            var selectedModel = tab.model || (models.length > 0 ? models[0].id : '');
 
             var html = '<div class="ai-chat-model-selector">';
-            html += '<select class="ai-chat-model-select" id="ai-chat-model-select">';
+            html += '<select class="ai-chat-model-select" data-tab-id="' + tab.id + '">';
             for (var i = 0; i < models.length; i++) {
                 var model = models[i];
                 var selected = model.id === selectedModel ? ' selected' : '';

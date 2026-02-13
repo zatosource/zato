@@ -215,8 +215,16 @@
         handleChange: function(e) {
             var target = e.target;
             if (target.classList.contains('ai-chat-model-select')) {
-                AIChatConfig.selectedModel = target.value;
-                console.debug('AIChat.handleChange: model selected:', AIChatConfig.selectedModel);
+                var tabId = target.getAttribute('data-tab-id');
+                var modelId = target.value;
+                console.debug('AIChat.handleChange: model selected:', modelId, 'for tab:', tabId);
+                for (var i = 0; i < this.tabs.length; i++) {
+                    if (this.tabs[i].id === tabId) {
+                        this.tabs[i].model = modelId;
+                        AIChatState.saveTabs(this.tabs);
+                        break;
+                    }
+                }
             }
         },
 
@@ -226,7 +234,11 @@
                 return;
             }
             var select = activePanel.querySelector('.ai-chat-model-select');
-            if (select && window.ZatoDropdown && !select.nextElementSibling) {
+            if (select && window.ZatoDropdown) {
+                var existingDropdown = activePanel.querySelector('.zato-dropdown');
+                if (existingDropdown) {
+                    existingDropdown.parentNode.removeChild(existingDropdown);
+                }
                 ZatoDropdown.init(select);
             }
         },
