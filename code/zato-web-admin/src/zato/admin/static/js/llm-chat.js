@@ -334,6 +334,10 @@
                 self.handleKeyDown(e);
             });
 
+            document.addEventListener('input', function(e) {
+                self.handleInput(e);
+            });
+
             this.widget.addEventListener('contextmenu', function(e) {
                 self.handleContextMenu(e);
             });
@@ -612,6 +616,40 @@
                     var tabId = e.target.getAttribute('data-tab-id');
                     console.debug('LLMChat.handleKeyDown: enter pressed in input, tabId:', tabId);
                     this.sendMessage(tabId);
+                }
+            }
+        },
+
+        handleInput: function(e) {
+            if (e.target.classList.contains('llm-chat-input')) {
+                var inputArea = e.target.closest('.llm-chat-input-area');
+                if (!inputArea) {
+                    return;
+                }
+
+                var text = (e.target.textContent || '').trim();
+                if (text === '') {
+                    e.target.innerHTML = '';
+                    inputArea.classList.remove('multiline');
+                    return;
+                }
+
+                var clone = e.target.cloneNode(true);
+                clone.style.position = 'absolute';
+                clone.style.visibility = 'hidden';
+                clone.style.height = 'auto';
+                clone.style.width = e.target.offsetWidth + 'px';
+                document.body.appendChild(clone);
+                var contentHeight = clone.scrollHeight;
+                document.body.removeChild(clone);
+
+                var singleLineHeight = 40;
+                var isMultiline = contentHeight > singleLineHeight;
+
+                if (isMultiline) {
+                    inputArea.classList.add('multiline');
+                } else {
+                    inputArea.classList.remove('multiline');
                 }
             }
         },
