@@ -128,7 +128,7 @@
         },
 
         render: function() {
-            console.debug('AIChat.render: rendering widget, needsConfig:', this.needsConfig);
+            console.debug('AIChat.render: rendering widget, needsConfig:', this.needsConfig, 'configMode:', this.configMode);
 
             var html = AIChatRender.buildHeaderHtml(this.isMinimized);
             html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
@@ -136,7 +136,12 @@
             html += AIChatRender.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
-            console.debug('AIChat.render: widget html set');
+
+            var messagesContainer = this.widget.querySelector('.ai-chat-messages');
+            var hasProviders = messagesContainer ? !!messagesContainer.querySelector('.ai-chat-config-providers') : false;
+            var hasKeyInput = messagesContainer ? !!messagesContainer.querySelector('.ai-chat-config-api-key-input') : false;
+            var hasEmptyState = messagesContainer ? !!messagesContainer.querySelector('.ai-chat-empty') : false;
+            console.debug('AIChat.render: actual content - providers:', hasProviders, 'keyInput:', hasKeyInput, 'emptyState:', hasEmptyState);
         },
 
         bindEvents: function() {
@@ -706,7 +711,12 @@
 
             var messagesContainer = this.widget.querySelector('.ai-chat-messages');
             if (messagesContainer) {
-                messagesContainer.innerHTML = AIChatConfig.buildKeyInputHtml(providerId);
+                var newHtml = AIChatConfig.buildKeyInputHtml(providerId);
+                messagesContainer.innerHTML = newHtml;
+                var actualContent = messagesContainer.querySelector('.ai-chat-config-api-key-input');
+                console.debug('AIChat.showKeyInput: innerHTML set, api-key-input found:', !!actualContent);
+            } else {
+                console.debug('AIChat.showKeyInput: messagesContainer not found');
             }
         },
 
@@ -717,7 +727,12 @@
 
             var messagesContainer = this.widget.querySelector('.ai-chat-messages');
             if (messagesContainer) {
-                messagesContainer.innerHTML = AIChatConfig.buildProviderSelectionHtml();
+                var newHtml = AIChatConfig.buildProviderSelectionHtml();
+                messagesContainer.innerHTML = newHtml;
+                var actualContent = messagesContainer.querySelector('.ai-chat-config-providers');
+                console.debug('AIChat.showProviderSelection: innerHTML set, providers found:', !!actualContent);
+            } else {
+                console.debug('AIChat.showProviderSelection: messagesContainer not found');
             }
         },
 
