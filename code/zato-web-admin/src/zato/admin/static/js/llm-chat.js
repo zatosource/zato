@@ -625,6 +625,7 @@
                     e.preventDefault();
                     var inputArea = inputElement.closest('.llm-chat-input-area');
                     if (inputArea) {
+                        var brCountBefore = inputElement.querySelectorAll('br').length;
                         inputArea.classList.add('multiline');
                         inputArea.setAttribute('data-user-multiline', 'true');
                         var br = document.createElement('br');
@@ -636,6 +637,16 @@
                         range.setEndAfter(br);
                         sel.removeAllRanges();
                         sel.addRange(range);
+                        var brCountAfter = inputElement.querySelectorAll('br').length;
+                        console.debug('LLMChat.handleKeyDown: shift+enter:', JSON.stringify({
+                            brCountBefore: brCountBefore,
+                            brCountAfter: brCountAfter,
+                            innerHTML: inputElement.innerHTML,
+                            inputScrollHeight: inputElement.scrollHeight,
+                            inputOffsetHeight: inputElement.offsetHeight,
+                            inputAreaHeight: inputArea.offsetHeight,
+                            hasMultilineClass: inputArea.classList.contains('multiline')
+                        }));
                     }
                 }
             }
