@@ -444,11 +444,18 @@
                 this.tabDragOffsetX = e.clientX - tabRect.left;
                 this.tabDragOffsetY = e.clientY - tabRect.top;
                 this.tabOriginalWidth = tabRect.width;
+                this.tabOriginalIndex = Array.from(tabElement.parentNode.children).indexOf(tabElement);
 
-                tabElement.style.width = tabRect.width + 'px';
-                tabElement.style.left = tabRect.left + 'px';
-                tabElement.style.top = tabRect.top + 'px';
-                tabElement.classList.add('dragging');
+                var clone = tabElement.cloneNode(true);
+                clone.classList.add('dragging');
+                clone.style.width = tabRect.width + 'px';
+                clone.style.left = tabRect.left + 'px';
+                clone.style.top = tabRect.top + 'px';
+                clone.id = 'llm-chat-tab-drag-clone';
+                document.body.appendChild(clone);
+                this.dragClone = clone;
+
+                tabElement.style.opacity = '0.3';
 
                 e.preventDefault();
                 return;
@@ -503,30 +510,27 @@
                 return;
             }
 
-            if (this.isTabDragging && this.draggedTabElement) {
+            if (this.isTabDragging && this.dragClone) {
                 var newLeft = e.clientX - this.tabDragOffsetX;
                 var newTop = e.clientY - this.tabDragOffsetY;
-                this.draggedTabElement.style.left = newLeft + 'px';
-                this.draggedTabElement.style.top = newTop + 'px';
+                this.dragClone.style.left = newLeft + 'px';
+                this.dragClone.style.top = newTop + 'px';
 
+                this.pendingDropIndex = null;
                 var tabsContainer = this.widget.querySelector('#llm-chat-tabs');
-                var tabs = tabsContainer.querySelectorAll('.llm-chat-tab:not(.dragging)');
+                var tabs = tabsContainer.querySelectorAll('.llm-chat-tab');
 
                 for (var i = 0; i < tabs.length; i++) {
                     var tab = tabs[i];
+                    if (tab === this.draggedTabElement) continue;
                     var rect = tab.getBoundingClientRect();
                     var midX = rect.left + rect.width / 2;
 
                     if (e.clientX > rect.left && e.clientX < rect.right) {
                         if (e.clientX < midX) {
-                            tabsContainer.insertBefore(this.draggedTabElement, tab);
+                            this.pendingDropIndex = Array.from(tabsContainer.children).indexOf(tab);
                         } else {
-                            if (tab.nextSibling && !tab.nextSibling.classList.contains('llm-chat-tab-add')) {
-                                tabsContainer.insertBefore(this.draggedTabElement, tab.nextSibling);
-                            } else {
-                                var addButton = tabsContainer.querySelector('.llm-chat-tab-add');
-                                tabsContainer.insertBefore(this.draggedTabElement, addButton);
-                            }
+                            this.pendingDropIndex = Array.from(tabsContainer.children).indexOf(tab) + 1;
                         }
                         break;
                     }
@@ -554,14 +558,29 @@
                 console.debug('LLMChat.handleMouseUp: ending tab drag');
                 this.isTabDragging = false;
 
+                if (this.dragClone && this.dragClone.parentNode) {
+                    this.dragClone.parentNode.removeChild(this.dragClone);
+                    this.dragClone = null;
+                }
+
                 if (this.draggedTabElement) {
-                    this.draggedTabElement.classList.remove('dragging');
-                    this.draggedTabElement.style.left = '';
-                    this.draggedTabElement.style.top = '';
-                    this.draggedTabElement.style.width = '';
+                    this.draggedTabElement.style.opacity = '';
                 }
 
                 var tabsContainer = this.widget.querySelector('#llm-chat-tabs');
+
+                if (this.pendingDropIndex !== null && this.pendingDropIndex !== undefined) {
+                    var addButton = tabsContainer.querySelector('.llm-chat-tab-add');
+                    var tabs = tabsContainer.querySelectorAll('.llm-chat-tab');
+                    var targetIndex = this.pendingDropIndex;
+
+                    if (targetIndex >= tabs.length) {
+                        tabsContainer.insertBefore(this.draggedTabElement, addButton);
+                    } else {
+                        tabsContainer.insertBefore(this.draggedTabElement, tabs[targetIndex]);
+                    }
+                }
+
                 var tabElements = tabsContainer.querySelectorAll('.llm-chat-tab');
                 var newOrder = [];
 
