@@ -7,7 +7,7 @@ directly from any page in the admin panel. The widget has a dark theme.
 
 ## Current status
 
-The frontend is complete. The backend integration is not yet implemented.
+The frontend is complete including provider configuration UI. The backend integration is not yet implemented.
 
 ## File locations
 
@@ -23,6 +23,7 @@ Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/`
 - `ai-chat-zoom.js` - ctrl+wheel zoom using CSS transform scale
 - `ai-chat-messages.js` - message adding and scrolling
 - `ai-chat-api.js` - backend communication (stub, not implemented)
+- `ai-chat-config.js` - provider configuration UI (provider selection, API key input, settings menu)
 - `ai-chat-core.js` - main entry point, initialization, event binding, state coordination
 
 ### CSS files
@@ -30,11 +31,26 @@ Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/`
 Location: `/zato-web-admin/src/zato/admin/static/css/ai-chat/`
 
 - `ai-chat-base.css` - widget container, body, panels, empty state
-- `ai-chat-header.css` - header bar, tabs, tab buttons, dragging state
+- `ai-chat-header.css` - header bar, tabs, tab buttons, dragging state, settings menu
 - `ai-chat-messages.css` - message bubbles (user, assistant, system roles)
 - `ai-chat-input.css` - input area, contenteditable div, send button
 - `ai-chat-resize.css` - corner resize handles
 - `ai-chat-context-menu.css` - right-click context menu for tab rename
+- `ai-chat-config.css` - provider configuration UI styling
+
+### Django views
+
+Location: `/zato-web-admin/src/zato/admin/web/views/ai_chat.py`
+
+- `get_api_key` - retrieves API key status from Redis
+- `save_api_key` - saves API key to Redis
+
+### URL routes
+
+Location: `/zato-web-admin/src/zato/admin/urls.py`
+
+- `/zato/ai-chat/config/get-key/<provider>/` - GET API key status
+- `/zato/ai-chat/config/save-key/<provider>/` - POST to save API key
 
 ### HTML template
 
@@ -53,6 +69,7 @@ All JS and CSS files are included here in the correct dependency order.
 - Restores to previous position and size
 - Zoom via ctrl+wheel (0.5x to 2.0x scale, resets to 1.0 when minimized)
 - All state persisted to localStorage
+- Settings menu in header (shows on hover, no click required)
 
 ### Tabs
 
@@ -79,6 +96,16 @@ All JS and CSS files are included here in the correct dependency order.
 - System messages centered with yellow-tinted background
 - Messages sized to fit content (not full width)
 - Auto-scroll to bottom on new message
+
+### Provider configuration
+
+- Provider selection screen with Claude (Anthropic) and GPT (OpenAI)
+- Provider names display as "<strong>Model</strong> · Company" format
+- API key input screen with monospace font
+- Back button navigation (from key input to providers, from providers to chat when applicable)
+- Settings menu with "Change provider" and "Change API key" options
+- API keys stored in Redis via Django views
+- Button labels use lookup map for extensibility (e.g., "Use Claude", "Use GPT")
 
 ## Next steps - backend integration
 
@@ -146,3 +173,26 @@ Use existing Zato admin session authentication. The Django view will have access
 - All modules use IIFE pattern and attach to window object
 - Debug logging via console.debug with module prefix
 - No global variables except the module objects on window
+- No global variable assignments, no window object assignments except module exports
+- No icons in menus unless explicitly requested
+- No tooltips on buttons unless explicitly requested
+- No text shadows anywhere
+- No fade effects or transitions on tab switching
+- No hover jump effects on provider cards
+- Use Zato CSS variables for button colors (--zato-seablue, --zato-seablue-light1, etc.)
+- Provider configuration UI must be vertically centered automatically (flexbox, no hardcoded positions)
+- Back button positioned absolutely at top-left of messages container
+- API key input uses monospace font
+- Button labels stored in lookup map for extensibility (not if/else)
+- When adding new providers, add entry to buttonLabels map in ai-chat-config.js
+
+## UI styling rules
+
+- Dark theme throughout
+- Input fields: dark background (#252525), no white shadows, blue-only focus shadow
+- Buttons: use Zato blue variables, no gradients, no text shadows
+- Provider names format: "<strong>ModelName</strong> · CompanyName"
+- Settings menu appears on hover (no click required)
+- Back button behavior:
+  - From key-input screen: goes to provider selection
+  - From provider selection (when came from chat): goes back to chat
