@@ -21,6 +21,10 @@
         tabOriginalWidth: 0,
         tabOriginalIndex: 0,
         pendingDropIndex: null,
+        tabDragStartX: 0,
+        tabDragStartY: 0,
+        tabDragThreshold: 5,
+        tabDragActivated: false,
         contextMenu: null,
         preMinimizePosition: null,
         preMinimizeZoom: 1.0,
@@ -300,27 +304,19 @@
 
             var tabElement = target.closest('.ai-chat-tab');
             if (tabElement && !target.classList.contains('ai-chat-tab-close')) {
-                console.debug('AIChat.handleMouseDown: starting tab drag');
+                console.debug('AIChat.handleMouseDown: preparing potential tab drag');
                 this.isTabDragging = true;
+                this.tabDragActivated = false;
                 this.draggedTabId = tabElement.getAttribute('data-tab-id');
                 this.draggedTabElement = tabElement;
+                this.tabDragStartX = e.clientX;
+                this.tabDragStartY = e.clientY;
 
                 var tabRect = tabElement.getBoundingClientRect();
                 this.tabDragOffsetX = e.clientX - tabRect.left;
                 this.tabDragOffsetY = e.clientY - tabRect.top;
                 this.tabOriginalWidth = tabRect.width;
                 this.tabOriginalIndex = Array.from(tabElement.parentNode.children).indexOf(tabElement);
-
-                var clone = tabElement.cloneNode(true);
-                clone.classList.add('dragging');
-                clone.style.width = tabRect.width + 'px';
-                clone.style.left = tabRect.left + 'px';
-                clone.style.top = tabRect.top + 'px';
-                clone.id = 'ai-chat-tab-drag-clone';
-                document.body.appendChild(clone);
-                this.dragClone = clone;
-
-                tabElement.style.opacity = '0.3';
 
                 e.preventDefault();
                 return;
@@ -338,7 +334,31 @@
                 return;
             }
 
-            if (this.isTabDragging && this.dragClone) {
+            if (this.isTabDragging) {
+                if (!this.tabDragActivated) {
+                    var dx = e.clientX - this.tabDragStartX;
+                    var dy = e.clientY - this.tabDragStartY;
+                    var distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < this.tabDragThreshold) {
+                        return;
+                    }
+                    this.tabDragActivated = true;
+                    var tabRect = this.draggedTabElement.getBoundingClientRect();
+                    var clone = this.draggedTabElement.cloneNode(true);
+                    clone.classList.add('dragging');
+                    clone.style.width = tabRect.width + 'px';
+                    clone.style.left = tabRect.left + 'px';
+                    clone.style.top = tabRect.top + 'px';
+                    clone.id = 'ai-chat-tab-drag-clone';
+                    document.body.appendChild(clone);
+                    this.dragClone = clone;
+                    this.draggedTabElement.style.opacity = '0.3';
+                }
+
+                if (!this.dragClone) {
+                    return;
+                }
+
                 var newLeft = e.clientX - this.tabDragOffsetX;
                 var newTop = e.clientY - this.tabDragOffsetY;
                 this.dragClone.style.left = newLeft + 'px';
@@ -383,38 +403,38 @@
             }
 
             if (this.isTabDragging) {
-                console.debug('AIChat.handleMouseUp: ending tab drag');
+                console.debug('AIChat.handleMouseUp: ending tab drag, activated:', this.tabDragActivated);
                 this.isTabDragging = false;
 
-                if (this.dragClone && this.dragClone.parentNode) {
-                    this.dragClone.parentNode.removeChild(this.dragClone);
-                    this.dragClone = null;
-                }
+                if (this.tabDragActivated) {
+                    if (this.dragClone && this.dragClone.parentNode) {
+                        this.dragClone.parentNode.removeChild(this.dragClone);
+                        this.dragClone = null;
+                    }
 
-                if (this.draggedTabElement) {
-                    this.draggedTabElement.style.opacity = '';
-                }
+                    if (this.draggedTabElement) {
+                        this.draggedTabElement.style.opacity = '';
+                    }
 
-                var tabsContainer = this.widget.querySelector('#ai-chat-tabs');
-
-                if (this.pendingDropIndex !== null && this.pendingDropIndex !== undefined) {
-                    var addButton = tabsContainer.querySelector('.ai-chat-tab-add');
-                    var tabs = tabsContainer.querySelectorAll('.ai-chat-tab');
-                    var targetIndex = this.pendingDropIndex;
-
-                    if (targetIndex >= tabs.length) {
-                        tabsContainer.insertBefore(this.draggedTabElement, addButton);
-                    } else {
-                        tabsContainer.insertBefore(this.draggedTabElement, tabs[targetIndex]);
+                    if (this.pendingDropIndex !== null && this.pendingDropIndex !== undefined) {
+                        var draggedTabIndex = AIChatTabs.getTabIndex(this.tabs, this.draggedTabId);
+                        if (draggedTabIndex !== -1 && draggedTabIndex !== this.pendingDropIndex) {
+                            var tab = this.tabs.splice(draggedTabIndex, 1)[0];
+                            var insertAt = this.pendingDropIndex;
+                            if (insertAt > draggedTabIndex) {
+                                insertAt = insertAt - 1;
+                            }
+                            this.tabs.splice(insertAt, 0, tab);
+                            console.debug('AIChatTabs: moved tab from', draggedTabIndex, 'to', insertAt);
+                            this.saveState();
+                            this.render();
+                        }
                     }
                 }
 
-                var tabElements = tabsContainer.querySelectorAll('.ai-chat-tab');
-                this.tabs = AIChatTabs.reorderTabs(this.tabs, tabElements);
-
                 this.draggedTabId = null;
                 this.draggedTabElement = null;
-                this.saveState();
+                this.tabDragActivated = false;
             }
         },
 
