@@ -154,7 +154,7 @@
             console.debug('AIChat.render: actual content - providers:', hasProviders, 'keyInput:', hasKeyInput, 'emptyState:', hasEmptyState);
 
             this.initModelDropdown();
-            this.renderAttachments(this.activeTabId);
+            AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
         },
 
         bindEvents: function() {
@@ -317,7 +317,7 @@
                 var tabPanel = removeBtn.closest('.ai-chat-tab-panel');
                 var tabId = tabPanel ? tabPanel.getAttribute('data-tab-id') : this.activeTabId;
                 AIChatTabState.removeAttachment(tabId, attachmentId);
-                this.renderAttachments(tabId);
+                AIChatAttachments.render(this.widget, tabId, this.tabs);
                 return;
             }
 
@@ -329,7 +329,7 @@
                 var attachments = AIChatTabState.getAttachments(attTabId);
                 for (var i = 0; i < attachments.length; i++) {
                     if (attachments[i].id === attId) {
-                        this.showPreview(attachments[i]);
+                        AIChatPreview.show(attachments[i]);
                         break;
                     }
                 }
@@ -544,7 +544,7 @@
             var self = this;
 
             if (e.key === 'Escape') {
-                if (this.closeTopPreview()) {
+                if (AIChatPreview.closeTop()) {
                     e.preventDefault();
                     return;
                 }
@@ -810,7 +810,7 @@
             this.activeTabId = tabId;
             this.saveState();
             this.render();
-            this.renderAttachments(tabId);
+            AIChatAttachments.render(this.widget, tabId, this.tabs);
         },
 
         sendMessage: function(tabId) {
@@ -1073,7 +1073,7 @@
 
             var self = this;
             var handled = AIChatInput.handlePaste(e, function(attachment, tabId) {
-                self.renderAttachments(tabId);
+                AIChatAttachments.render(self.widget, tabId, self.tabs);
             });
 
             if (handled) {
@@ -1089,248 +1089,9 @@
                 return;
             }
 
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                AIChatTabState.createAttachmentFromFile(tabId, file, e.target.result);
-                self.renderAttachments(tabId);
-            };
-
-            var isImage = file.type && file.type.indexOf('image') === 0;
-            var isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-            var isWord = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
-                         file.name.toLowerCase().endsWith('.docx');
-
-            if (isImage || isPdf || isWord) {
-                reader.readAsDataURL(file);
-            } else {
-                reader.readAsText(file);
-            }
-        },
-
-        fileIconMap: {
-            'application/json': 'JSON-1.svg',
-            'application/javascript': 'JSX.svg',
-            'text/javascript': 'JSX.svg',
-            'application/pdf': 'Adobe-Acrobat.svg',
-            'text/html': 'DOM.svg',
-            'text/xml': 'Default.svg',
-            'application/xml': 'Default.svg',
-            'text/css': 'Stylus.svg',
-            'text/plain': 'Default.svg',
-            'text/markdown': 'MarkdownLint.svg',
-            'text/x-python': 'Python.svg',
-            'application/x-python': 'Python.svg',
-            'text/x-java': 'Default.svg',
-            'text/x-c': 'Default.svg',
-            'text/x-c++': 'C++.svg',
-            'text/x-ruby': 'RubyGems.svg',
-            'text/x-go': 'Go.svg',
-            'text/x-rust': 'Default.svg',
-            'text/x-typescript': 'TypeScript.svg',
-            'text/x-sql': 'SQLite.svg',
-            'text/x-yaml': 'YAML.svg',
-            'text/yaml': 'YAML.svg',
-            'application/x-yaml': 'YAML.svg',
-            'text/x-sh': 'Terminal.svg',
-            'application/x-sh': 'Terminal.svg',
-            'image/png': 'Image.svg',
-            'image/jpeg': 'Image.svg',
-            'image/gif': 'Image.svg',
-            'image/svg+xml': 'Default.svg',
-            'image/webp': 'Image.svg',
-            'application/zip': 'Brotli.svg',
-            'application/x-tar': 'Brotli.svg',
-            'application/gzip': 'Brotli.svg',
-            'application/x-rar-compressed': 'Brotli.svg',
-            'video/mp4': 'Video.svg',
-            'video/webm': 'Video.svg',
-            'audio/mpeg': 'Audacity.svg',
-            'audio/wav': 'Audacity.svg',
-            'application/msword': 'Microsoft-Word.svg',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Microsoft-Word.svg',
-            'application/vnd.ms-excel': 'Microsoft-Excel.svg',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Microsoft-Excel.svg',
-            'application/vnd.ms-powerpoint': 'Microsoft-PowerPoint.svg',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'Microsoft-PowerPoint.svg'
-        },
-
-        extensionIconMap: {
-            'js': 'JSX.svg',
-            'jsx': 'JSX.svg',
-            'ts': 'TypeScript.svg',
-            'tsx': 'TSX.svg',
-            'json': 'JSON-1.svg',
-            'py': 'Python.svg',
-            'rb': 'RubyGems.svg',
-            'java': 'Default.svg',
-            'c': 'Default.svg',
-            'cpp': 'C++.svg',
-            'h': 'Default.svg',
-            'hpp': 'C++.svg',
-            'go': 'Go.svg',
-            'rs': 'Default.svg',
-            'php': 'PHP.svg',
-            'html': 'DOM.svg',
-            'htm': 'DOM.svg',
-            'css': 'Stylus.svg',
-            'scss': 'Stylus.svg',
-            'sass': 'Stylus.svg',
-            'less': 'Stylus.svg',
-            'xml': 'Default.svg',
-            'yaml': 'YAML.svg',
-            'yml': 'YAML.svg',
-            'md': 'MarkdownLint.svg',
-            'markdown': 'MarkdownLint.svg',
-            'txt': 'Default.svg',
-            'pdf': 'Adobe-Acrobat.svg',
-            'doc': 'Microsoft-Word.svg',
-            'docx': 'Microsoft-Word.svg',
-            'xls': 'Microsoft-Excel.svg',
-            'xlsx': 'Microsoft-Excel.svg',
-            'ppt': 'Microsoft-PowerPoint.svg',
-            'pptx': 'Microsoft-PowerPoint.svg',
-            'sql': 'SQLite.svg',
-            'sh': 'Terminal.svg',
-            'bash': 'Terminal.svg',
-            'zsh': 'Terminal.svg',
-            'png': 'Image.svg',
-            'jpg': 'Image.svg',
-            'jpeg': 'Image.svg',
-            'gif': 'Image.svg',
-            'svg': 'Default.svg',
-            'webp': 'Image.svg',
-            'ico': 'Image.svg',
-            'zip': 'Brotli.svg',
-            'tar': 'Brotli.svg',
-            'gz': 'Brotli.svg',
-            'rar': 'Brotli.svg',
-            '7z': 'Brotli.svg',
-            'mp4': 'Video.svg',
-            'webm': 'Video.svg',
-            'avi': 'Video.svg',
-            'mov': 'Video.svg',
-            'mp3': 'Audacity.svg',
-            'wav': 'Audacity.svg',
-            'ogg': 'Audacity.svg',
-            'vue': 'Vue.svg',
-            'svelte': 'Svelte.svg',
-            'dockerfile': 'Docker.svg',
-            'gradle': 'Gradle.svg',
-            'toml': 'TOML.svg',
-            'ini': 'Config.svg',
-            'cfg': 'Config.svg',
-            'conf': 'Config.svg',
-            'env': 'dotenv.svg',
-            'eslintrc': 'ESLint.svg',
-            'prettierrc': 'Prettier.svg',
-            'lua': 'Lua.svg',
-            'kt': 'Kotlin.svg',
-            'scala': 'Default.svg',
-            'groovy': 'Groovy.svg',
-            'r': 'R.svg',
-            'jl': 'Julia.svg',
-            'ex': 'Default.svg',
-            'exs': 'Default.svg',
-            'erl': 'Default.svg',
-            'hs': 'Default.svg',
-            'elm': 'Elm.svg',
-            'clj': 'ClojureJS.svg',
-            'cljs': 'ClojureJS.svg'
-        },
-
-        getAttachmentIcon: function(mimeType, fileName) {
-            var iconFile = 'Default.svg';
-
-            if (fileName) {
-                var ext = fileName.split('.').pop().toLowerCase();
-                if (this.extensionIconMap[ext]) {
-                    iconFile = this.extensionIconMap[ext];
-                }
-            }
-
-            if (mimeType && this.fileIconMap[mimeType]) {
-                iconFile = this.fileIconMap[mimeType];
-            } else if (mimeType) {
-                if (mimeType.indexOf('image') === 0) {
-                    iconFile = 'Image.svg';
-                } else if (mimeType.indexOf('video') === 0) {
-                    iconFile = 'Video.svg';
-                } else if (mimeType.indexOf('audio') === 0) {
-                    iconFile = 'Audio.svg';
-                } else if (mimeType.indexOf('text') === 0) {
-                    iconFile = 'Default.svg';
-                }
-            }
-
-            return '<img src="/static/file-icons/svg/' + iconFile + '" alt="" class="ai-chat-attachment-icon-img">';
-        },
-
-        renderAttachments: function(tabId) {
-            if (!tabId) {
-                tabId = this.activeTabId;
-            }
-            if (!tabId) {
-                return;
-            }
-
-            for (var i = 0; i < this.tabs.length; i++) {
-                if (this.tabs[i].id === tabId) {
-                    AIChatTabState.saveToTab(this.tabs[i]);
-                    AIChatState.saveTabs(this.tabs);
-                    break;
-                }
-            }
-
-            var attachments = AIChatTabState.getAttachments(tabId);
-            var tabPanel = this.widget.querySelector('.ai-chat-tab-panel[data-tab-id="' + tabId + '"]');
-            if (!tabPanel) {
-                return;
-            }
-            var container = tabPanel.querySelector('.ai-chat-attachments');
-
-            if (attachments.length === 0) {
-                if (container) {
-                    container.parentNode.removeChild(container);
-                }
-                return;
-            }
-
-            if (!container) {
-                var inputArea = tabPanel.querySelector('.ai-chat-input-area');
-                if (!inputArea) {
-                    return;
-                }
-                container = document.createElement('div');
-                container.className = 'ai-chat-attachments';
-                inputArea.insertBefore(container, inputArea.firstChild);
-            }
-
-            var html = '';
-            for (var i = 0; i < attachments.length; i++) {
-                var att = attachments[i];
-                var sizeStr;
-                if (att.size >= 1000000) {
-                    sizeStr = (att.size / 1000000).toFixed(1) + ' MB';
-                } else if (att.size >= 1000) {
-                    sizeStr = Math.round(att.size / 1000) + ' KB';
-                } else {
-                    sizeStr = att.size + ' B';
-                }
-                var icon = this.getAttachmentIcon(att.type, att.name);
-                html += '<div class="ai-chat-attachment" data-attachment-id="' + att.id + '">';
-                html += '<div class="ai-chat-attachment-icon">';
-                html += icon;
-                html += '</div>';
-                html += '<div class="ai-chat-attachment-info">';
-                html += '<div class="ai-chat-attachment-name">' + att.name + '</div>';
-                html += '<div class="ai-chat-attachment-size">' + sizeStr + '</div>';
-                html += '</div>';
-                html += '<button class="ai-chat-attachment-remove" data-attachment-id="' + att.id + '" aria-label="Remove">';
-                html += '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
-                html += '</button>';
-                html += '</div>';
-            }
-            container.innerHTML = html;
+            AIChatAttachments.addFile(file, tabId, function() {
+                AIChatAttachments.render(self.widget, tabId, self.tabs);
+            });
         },
 
         toggleOptionsMenu: function(clickedButton) {
@@ -1383,313 +1144,6 @@
             } else if (action === 'connect-mcp') {
                 console.debug('AIChat.handleOptionsAction: connect-mcp not yet implemented');
             }
-        },
-
-        previewPopups: [],
-
-        showPreview: function(attachment) {
-            var self = this;
-            var popup = document.createElement('div');
-            popup.className = 'ai-chat-preview-popup';
-            popup.setAttribute('data-attachment-id', attachment.id);
-
-            var offsetX = this.previewPopups.length * 30;
-            var offsetY = this.previewPopups.length * 30;
-            popup.style.left = (100 + offsetX) + 'px';
-            popup.style.top = (100 + offsetY) + 'px';
-
-            var supportedImageTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp'];
-            var isImage = attachment.type && supportedImageTypes.indexOf(attachment.type) !== -1;
-            var isPdf = attachment.type === 'application/pdf' || attachment.name.toLowerCase().endsWith('.pdf');
-            var isWord = attachment.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
-                         attachment.name.toLowerCase().endsWith('.docx');
-            var isEmail = attachment.name.toLowerCase().endsWith('.eml') || attachment.name.toLowerCase().endsWith('.msg');
-            var isText = attachment.type && (attachment.type.indexOf('text') === 0 || 
-                attachment.type === 'application/json' || 
-                attachment.type === 'application/javascript' ||
-                attachment.type === 'application/xml');
-            var canPreview = isImage || isPdf || isWord || isEmail || isText;
-
-            var html = '';
-            html += '<div class="ai-chat-preview-header">';
-            html += '<div class="ai-chat-preview-title">' + attachment.name + '</div>';
-            html += '<div class="ai-chat-preview-actions">';
-            if (canPreview) {
-                html += '<button class="ai-chat-preview-copy-btn">Copy</button>';
-            }
-            html += '<button class="ai-chat-preview-close">';
-            html += '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
-            html += '</button>';
-            html += '</div>';
-            html += '</div>';
-            html += '<div class="ai-chat-preview-content">';
-            if (!canPreview) {
-                html += '<div class="ai-chat-preview-unavailable">Preview not available</div>';
-            } else if (isImage) {
-                html += '<img class="ai-chat-preview-image" src="' + attachment.content + '" alt="' + attachment.name + '">';
-            } else if (isPdf) {
-                html += '<div class="ai-chat-preview-pdf-container"></div>';
-            } else if (isWord) {
-                html += '<div class="ai-chat-preview-word"></div>';
-            } else {
-                html += '<pre class="ai-chat-preview-text"></pre>';
-            }
-            html += '</div>';
-
-            popup.innerHTML = html;
-
-            if (isPdf) {
-                this.renderPdfPreview(popup, attachment);
-            } else if (isWord) {
-                this.renderWordPreview(popup, attachment);
-            } else if (!isImage) {
-                var preEl = popup.querySelector('.ai-chat-preview-text');
-                if (preEl) {
-                    preEl.textContent = attachment.content;
-                }
-            }
-
-            document.body.appendChild(popup);
-            this.previewPopups.push(popup);
-
-            var header = popup.querySelector('.ai-chat-preview-header');
-            this.makePreviewDraggable(popup, header);
-
-            var closeBtn = popup.querySelector('.ai-chat-preview-close');
-            closeBtn.addEventListener('click', function() {
-                self.closePreview(popup);
-            });
-
-            var copyBtn = popup.querySelector('.ai-chat-preview-copy-btn');
-            if (copyBtn) {
-                copyBtn.addEventListener('click', function() {
-                    if (isImage) {
-                        var img = popup.querySelector('.ai-chat-preview-image');
-                        if (img) {
-                            var canvas = document.createElement('canvas');
-                            canvas.width = img.naturalWidth;
-                            canvas.height = img.naturalHeight;
-                            var ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0);
-                            canvas.toBlob(function(blob) {
-                                navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]).then(function() {
-                                    copyBtn.textContent = 'Copied';
-                                    setTimeout(function() {
-                                        copyBtn.textContent = 'Copy';
-                                    }, 1500);
-                                });
-                            });
-                        }
-                    } else if (isPdf) {
-                        self.extractPdfText(attachment, function(text) {
-                            navigator.clipboard.writeText(text).then(function() {
-                                copyBtn.textContent = 'Copied';
-                                setTimeout(function() {
-                                    copyBtn.textContent = 'Copy';
-                                }, 1500);
-                            });
-                        });
-                    } else if (isWord) {
-                        var wordDiv = popup.querySelector('.ai-chat-preview-word');
-                        var text = wordDiv ? wordDiv.innerText : '';
-                        navigator.clipboard.writeText(text).then(function() {
-                            copyBtn.textContent = 'Copied';
-                            setTimeout(function() {
-                                copyBtn.textContent = 'Copy';
-                            }, 1500);
-                        });
-                    } else {
-                        navigator.clipboard.writeText(attachment.content).then(function() {
-                            copyBtn.textContent = 'Copied';
-                            setTimeout(function() {
-                                copyBtn.textContent = 'Copy';
-                            }, 1500);
-                        });
-                    }
-                });
-            }
-
-            popup.addEventListener('mousedown', function() {
-                self.bringPreviewToFront(popup);
-            });
-        },
-
-        closePreview: function(popup) {
-            var idx = this.previewPopups.indexOf(popup);
-            if (idx >= 0) {
-                this.previewPopups.splice(idx, 1);
-            }
-            if (popup.parentNode) {
-                popup.parentNode.removeChild(popup);
-            }
-        },
-
-        closeTopPreview: function() {
-            if (this.previewPopups.length > 0) {
-                var topPopup = this.previewPopups[this.previewPopups.length - 1];
-                this.closePreview(topPopup);
-                return true;
-            }
-            return false;
-        },
-
-        bringPreviewToFront: function(popup) {
-            var idx = this.previewPopups.indexOf(popup);
-            if (idx >= 0 && idx < this.previewPopups.length - 1) {
-                this.previewPopups.splice(idx, 1);
-                this.previewPopups.push(popup);
-            }
-            var baseZ = 10001;
-            for (var i = 0; i < this.previewPopups.length; i++) {
-                this.previewPopups[i].style.zIndex = baseZ + i;
-            }
-        },
-
-        extractPdfText: function(attachment, callback) {
-            if (typeof pdfjsLib === 'undefined') {
-                callback('');
-                return;
-            }
-
-            var base64 = attachment.content.split(',')[1];
-            var binary = atob(base64);
-            var len = binary.length;
-            var bytes = new Uint8Array(len);
-            for (var i = 0; i < len; i++) {
-                bytes[i] = binary.charCodeAt(i);
-            }
-
-            pdfjsLib.getDocument({ data: bytes }).promise.then(function(pdf) {
-                var numPages = pdf.numPages;
-                var textParts = [];
-                var pagesProcessed = 0;
-
-                for (var pageNum = 1; pageNum <= numPages; pageNum++) {
-                    (function(pageNum) {
-                        pdf.getPage(pageNum).then(function(page) {
-                            page.getTextContent().then(function(textContent) {
-                                var pageText = textContent.items.map(function(item) {
-                                    return item.str;
-                                }).join(' ');
-                                textParts[pageNum - 1] = pageText;
-                                pagesProcessed++;
-                                if (pagesProcessed === numPages) {
-                                    callback(textParts.join('\n\n'));
-                                }
-                            });
-                        });
-                    })(pageNum);
-                }
-            }).catch(function() {
-                callback('');
-            });
-        },
-
-        renderPdfPreview: function(popup, attachment) {
-            var container = popup.querySelector('.ai-chat-preview-pdf-container');
-            if (!container || typeof pdfjsLib === 'undefined') {
-                var content = popup.querySelector('.ai-chat-preview-content');
-                if (content) {
-                    content.innerHTML = '<div class="ai-chat-preview-unavailable">Preview not available</div>';
-                }
-                return;
-            }
-
-            pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/js/libs/pdf.worker.min.js';
-
-            var base64 = attachment.content.split(',')[1];
-            var binary = atob(base64);
-            var len = binary.length;
-            var bytes = new Uint8Array(len);
-            for (var i = 0; i < len; i++) {
-                bytes[i] = binary.charCodeAt(i);
-            }
-
-            pdfjsLib.getDocument({ data: bytes }).promise.then(function(pdf) {
-                var numPages = pdf.numPages;
-                var containerWidth = popup.querySelector('.ai-chat-preview-content').clientWidth - 24;
-
-                for (var pageNum = 1; pageNum <= numPages; pageNum++) {
-                    (function(pageNum) {
-                        pdf.getPage(pageNum).then(function(page) {
-                            var viewport = page.getViewport({ scale: 1.0 });
-                            var scale = containerWidth / viewport.width;
-                            var scaledViewport = page.getViewport({ scale: scale });
-
-                            var canvas = document.createElement('canvas');
-                            canvas.className = 'ai-chat-preview-pdf';
-                            canvas.width = scaledViewport.width;
-                            canvas.height = scaledViewport.height;
-                            container.appendChild(canvas);
-
-                            var ctx = canvas.getContext('2d');
-                            page.render({ canvasContext: ctx, viewport: scaledViewport });
-                        });
-                    })(pageNum);
-                }
-            }).catch(function() {
-                var content = popup.querySelector('.ai-chat-preview-content');
-                if (content) {
-                    content.innerHTML = '<div class="ai-chat-preview-unavailable">Preview not available</div>';
-                }
-            });
-        },
-
-        renderWordPreview: function(popup, attachment) {
-            var wordDiv = popup.querySelector('.ai-chat-preview-word');
-            if (!wordDiv || typeof mammoth === 'undefined') {
-                var content = popup.querySelector('.ai-chat-preview-content');
-                if (content) {
-                    content.innerHTML = '<div class="ai-chat-preview-unavailable">Preview not available</div>';
-                }
-                return;
-            }
-
-            var base64 = attachment.content.split(',')[1];
-            var binary = atob(base64);
-            var len = binary.length;
-            var bytes = new Uint8Array(len);
-            for (var i = 0; i < len; i++) {
-                bytes[i] = binary.charCodeAt(i);
-            }
-
-            mammoth.convertToHtml({ arrayBuffer: bytes.buffer }).then(function(result) {
-                wordDiv.innerHTML = result.value;
-            }).catch(function() {
-                var content = popup.querySelector('.ai-chat-preview-content');
-                if (content) {
-                    content.innerHTML = '<div class="ai-chat-preview-unavailable">Preview not available</div>';
-                }
-            });
-        },
-
-        makePreviewDraggable: function(popup, handle) {
-            var isDragging = false;
-            var startX, startY, startLeft, startTop;
-
-            handle.addEventListener('mousedown', function(e) {
-                if (e.target.closest('.ai-chat-preview-close') || e.target.closest('.ai-chat-preview-copy-btn')) {
-                    return;
-                }
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                startLeft = popup.offsetLeft;
-                startTop = popup.offsetTop;
-                e.preventDefault();
-            });
-
-            document.addEventListener('mousemove', function(e) {
-                if (!isDragging) return;
-                var dx = e.clientX - startX;
-                var dy = e.clientY - startY;
-                popup.style.left = (startLeft + dx) + 'px';
-                popup.style.top = (startTop + dy) + 'px';
-            });
-
-            document.addEventListener('mouseup', function() {
-                isDragging = false;
-            });
         }
     };
 
