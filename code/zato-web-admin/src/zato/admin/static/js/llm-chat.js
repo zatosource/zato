@@ -338,6 +338,10 @@
                 self.handleInput(e);
             });
 
+            document.addEventListener('keyup', function(e) {
+                self.handleKeyUp(e);
+            });
+
             this.widget.addEventListener('contextmenu', function(e) {
                 self.handleContextMenu(e);
             });
@@ -609,48 +613,68 @@
         },
 
         handleKeyDown: function(e) {
-            console.debug('LLMChat.handleKeyDown: key:', e.key, 'ctrlKey:', e.ctrlKey, 'target:', e.target.className);
-            if (e.target.classList.contains('llm-chat-input')) {
+            console.debug('LLMChat.handleKeyDown: key:', e.key, 'shiftKey:', e.shiftKey, 'target:', e.target.tagName, e.target.className);
+            var inputElement = e.target.closest('.llm-chat-input');
+            if (inputElement) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    var tabId = e.target.getAttribute('data-tab-id');
+                    var tabId = inputElement.getAttribute('data-tab-id');
                     console.debug('LLMChat.handleKeyDown: enter pressed in input, tabId:', tabId);
                     this.sendMessage(tabId);
+                } else if (e.key === 'Enter' && e.shiftKey) {
+                    e.preventDefault();
+                    var inputArea = inputElement.closest('.llm-chat-input-area');
+                    if (inputArea) {
+                        inputArea.classList.add('multiline');
+                        inputArea.setAttribute('data-user-multiline', 'true');
+                        var br = document.createElement('br');
+                        var sel = window.getSelection();
+                        var range = sel.getRangeAt(0);
+                        range.deleteContents();
+                        range.insertNode(br);
+                        range.setStartAfter(br);
+                        range.setEndAfter(br);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    }
                 }
             }
         },
 
         handleInput: function(e) {
             if (e.target.classList.contains('llm-chat-input')) {
-                var inputArea = e.target.closest('.llm-chat-input-area');
-                if (!inputArea) {
-                    return;
-                }
+                this.updateMultilineState(e.target);
+            }
+        },
 
-                var text = (e.target.textContent || '').trim();
-                if (text === '') {
-                    e.target.innerHTML = '';
-                    inputArea.classList.remove('multiline');
-                    return;
-                }
+        handleKeyUp: function(e) {
+            var inputElement = e.target.closest('.llm-chat-input');
+            if (inputElement && (e.key === 'Backspace' || e.key === 'Delete')) {
+                this.updateMultilineState(inputElement);
+            }
+        },
 
-                var clone = e.target.cloneNode(true);
-                clone.style.position = 'absolute';
-                clone.style.visibility = 'hidden';
-                clone.style.height = 'auto';
-                clone.style.width = e.target.offsetWidth + 'px';
-                document.body.appendChild(clone);
-                var contentHeight = clone.scrollHeight;
-                document.body.removeChild(clone);
+        updateMultilineState: function(inputElement) {
+            var inputArea = inputElement.closest('.llm-chat-input-area');
+            if (!inputArea) {
+                return;
+            }
 
-                var singleLineHeight = 40;
-                var isMultiline = contentHeight > singleLineHeight;
-
-                if (isMultiline) {
-                    inputArea.classList.add('multiline');
-                } else {
-                    inputArea.classList.remove('multiline');
-                }
+            var text = (inputElement.textContent || '').trim();
+            var brCount = inputElement.querySelectorAll('br').length;
+            
+            if (text === '' && brCount === 0) {
+                inputElement.innerHTML = '';
+                inputArea.classList.remove('multiline');
+                inputArea.removeAttribute('data-user-multiline');
+                return;
+            }
+            
+            if (brCount > 0) {
+                inputArea.classList.add('multiline');
+            } else {
+                inputArea.classList.remove('multiline');
+                inputArea.removeAttribute('data-user-multiline');
             }
         },
 
