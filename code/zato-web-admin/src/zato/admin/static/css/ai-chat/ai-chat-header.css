@@ -1,6 +1,5 @@
 .ai-chat-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
     background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
@@ -8,6 +7,11 @@
     cursor: move;
     user-select: none;
     flex-shrink: 0;
+    gap: 10px;
+}
+
+.ai-chat-header-controls {
+    margin-left: auto;
 }
 
 .ai-chat-widget.minimized .ai-chat-header {
@@ -29,6 +33,49 @@
 .ai-chat-header-controls {
     display: flex;
     gap: 8px;
+}
+
+.ai-chat-menu-button svg {
+    width: 14px;
+    height: 14px;
+}
+
+.ai-chat-settings-menu {
+    position: absolute;
+    top: 100%;
+    left: 12px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px 0;
+    min-width: 180px;
+    z-index: 10001;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.ai-chat-settings-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: #c0c0c0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ai-chat-settings-menu-item:hover {
+    background: rgba(99, 179, 237, 0.1);
+    color: #fff;
+}
+
+.ai-chat-settings-menu-item svg {
+    color: #888;
+    transition: color 0.15s ease;
+}
+
+.ai-chat-settings-menu-item:hover svg {
+    color: #63b3ed;
 }
 
 .ai-chat-header-button {

@@ -27,6 +27,7 @@
         zoomScale: 1.0,
         needsConfig: true,
         configMode: 'providers',
+        settingsMenu: null,
 
         init: function() {
             console.debug('AIChat.init: starting initialization');
@@ -181,6 +182,7 @@
 
             document.addEventListener('click', function(e) {
                 self.hideContextMenu();
+                self.hideSettingsMenu();
             });
 
             console.debug('AIChat.bindEvents: events bound');
@@ -192,6 +194,20 @@
 
             if (target.id === 'ai-chat-minimize') {
                 this.toggleMinimize();
+                return;
+            }
+
+            if (target.id === 'ai-chat-menu-button' || target.closest('#ai-chat-menu-button')) {
+                this.toggleSettingsMenu();
+                e.stopPropagation();
+                return;
+            }
+
+            var settingsMenuItem = target.closest('.ai-chat-settings-menu-item');
+            if (settingsMenuItem) {
+                var action = settingsMenuItem.getAttribute('data-action');
+                this.handleSettingsAction(action);
+                e.stopPropagation();
                 return;
             }
 
@@ -762,6 +778,54 @@
                     }
                 };
                 requestAnimationFrame(checkAndRender);
+            }
+        },
+
+        toggleSettingsMenu: function() {
+            console.debug('AIChat.toggleSettingsMenu: toggling settings menu');
+            if (this.settingsMenu) {
+                this.hideSettingsMenu();
+            } else {
+                this.showSettingsMenu();
+            }
+        },
+
+        showSettingsMenu: function() {
+            console.debug('AIChat.showSettingsMenu: showing settings menu');
+            this.hideSettingsMenu();
+
+            var header = this.widget.querySelector('.ai-chat-header');
+            if (!header) return;
+
+            this.settingsMenu = document.createElement('div');
+            this.settingsMenu.innerHTML = AIChatConfig.buildSettingsMenuHtml();
+            this.settingsMenu.firstChild.style.position = 'absolute';
+            this.settingsMenu.firstChild.style.top = (header.offsetHeight + 4) + 'px';
+            this.settingsMenu.firstChild.style.left = '12px';
+
+            this.widget.appendChild(this.settingsMenu.firstChild);
+            this.settingsMenu = this.widget.querySelector('.ai-chat-settings-menu');
+        },
+
+        hideSettingsMenu: function() {
+            if (this.settingsMenu && this.settingsMenu.parentNode) {
+                this.settingsMenu.parentNode.removeChild(this.settingsMenu);
+                this.settingsMenu = null;
+            }
+        },
+
+        handleSettingsAction: function(action) {
+            console.debug('AIChat.handleSettingsAction: action:', action);
+            this.hideSettingsMenu();
+
+            if (action === 'change-provider') {
+                this.needsConfig = true;
+                this.configMode = 'providers';
+                this.render();
+            } else if (action === 'change-api-key') {
+                this.needsConfig = true;
+                this.configMode = 'providers';
+                this.render();
             }
         }
     };

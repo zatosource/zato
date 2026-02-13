@@ -11,6 +11,9 @@
 
         buildHeaderHtml: function(isMinimized) {
             var html = '<div class="ai-chat-header" id="ai-chat-header">';
+            html += '<button class="ai-chat-header-button ai-chat-menu-button" id="ai-chat-menu-button" title="Menu">';
+            html += '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>';
+            html += '</button>';
             html += '<span class="ai-chat-header-title">AI chat</span>';
             html += '<div class="ai-chat-header-controls">';
             var icon = isMinimized ? '+' : '−';

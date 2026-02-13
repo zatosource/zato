@@ -156,6 +156,20 @@
             html += '<button class="ai-chat-config-save-button" data-provider-id="' + providerId + '">Save API key</button>';
             html += '</div>';
             return html;
+        },
+
+        buildSettingsMenuHtml: function() {
+            var html = '<div class="ai-chat-settings-menu">';
+            html += '<div class="ai-chat-settings-menu-item" data-action="change-provider">';
+            html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>';
+            html += '<span>Change provider</span>';
+            html += '</div>';
+            html += '<div class="ai-chat-settings-menu-item" data-action="change-api-key">';
+            html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>';
+            html += '<span>Change API key</span>';
+            html += '</div>';
+            html += '</div>';
+            return html;
         }
     };
 
