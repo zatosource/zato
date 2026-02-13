@@ -6,6 +6,7 @@
     var STORAGE_KEY_POSITION = 'zato.llm-chat.position';
     var STORAGE_KEY_DIMENSIONS = 'zato.llm-chat.dimensions';
     var STORAGE_KEY_MINIMIZED = 'zato.llm-chat.minimized';
+    var STORAGE_KEY_PRE_MINIMIZE_POSITION = 'zato.llm-chat.pre-minimize-position';
 
     var LLMChat = {
         widget: null,
@@ -29,6 +30,7 @@
         draggedTabId: null,
         draggedTabElement: null,
         contextMenu: null,
+        preMinimizePosition: null,
 
         init: function() {
             console.debug('LLMChat.init: starting initialization');
@@ -77,6 +79,18 @@
             var minimizedStr = localStorage.getItem(STORAGE_KEY_MINIMIZED);
             this.isMinimized = minimizedStr === 'true';
             console.debug('LLMChat.loadState: isMinimized:', this.isMinimized);
+
+            var preMinPosJson = localStorage.getItem(STORAGE_KEY_PRE_MINIMIZE_POSITION);
+            console.debug('LLMChat.loadState: preMinPosJson:', preMinPosJson);
+            if (preMinPosJson) {
+                try {
+                    this.preMinimizePosition = JSON.parse(preMinPosJson);
+                    console.debug('LLMChat.loadState: preMinimizePosition:', JSON.stringify(this.preMinimizePosition));
+                } catch (e) {
+                    console.debug('LLMChat.loadState: failed to parse preMinimizePosition');
+                    this.preMinimizePosition = null;
+                }
+            }
         },
 
         saveState: function() {
@@ -163,6 +177,12 @@
 
             if (this.isMinimized) {
                 this.widget.classList.add('minimized');
+                this.widget.style.right = '20px';
+                this.widget.style.bottom = '20px';
+                this.widget.style.left = 'auto';
+                this.widget.style.top = 'auto';
+                this.widget.style.width = '200px';
+                this.widget.style.height = 'auto';
             }
 
             var position = this.loadPosition();
@@ -199,7 +219,8 @@
             var html = '<div class="llm-chat-header" id="llm-chat-header">';
             html += '<span class="llm-chat-header-title">LLM chat</span>';
             html += '<div class="llm-chat-header-controls">';
-            html += '<button class="llm-chat-header-button" id="llm-chat-minimize" title="Minimize">−</button>';
+            var icon = this.isMinimized ? '+' : '−';
+            html += '<button class="llm-chat-header-button" id="llm-chat-minimize" title="Minimize">' + icon + '</button>';
             html += '</div>';
             html += '</div>';
             return html;
@@ -365,6 +386,13 @@
 
             if (target.id === 'llm-chat-header' || target.closest('#llm-chat-header')) {
                 if (target.classList.contains('llm-chat-header-button')) {
+                    return;
+                }
+
+                if (this.isMinimized) {
+                    console.debug('LLMChat.handleMouseDown: widget is minimized, expanding instead of dragging');
+                    this.toggleMinimize();
+                    e.preventDefault();
                     return;
                 }
 
@@ -545,9 +573,12 @@
                     console.debug('LLMChat.handleKeyDown: enter pressed in input, tabId:', tabId);
                     this.sendMessage(tabId);
                 } else if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
                     console.debug('LLMChat.handleKeyDown: ctrl+enter pressed, expanding textarea');
-                    e.target.style.height = 'auto';
-                    e.target.style.height = (e.target.scrollHeight) + 'px';
+                    var currentHeight = e.target.offsetHeight;
+                    var newHeight = currentHeight + 50;
+                    e.target.style.height = newHeight + 'px';
+                    console.debug('LLMChat.handleKeyDown: textarea height changed from', currentHeight, 'to', newHeight);
                 }
             }
         },
@@ -623,22 +654,55 @@
             this.isMinimized = !this.isMinimized;
 
             if (this.isMinimized) {
+                var rect = this.widget.getBoundingClientRect();
+                this.preMinimizePosition = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: this.widget.offsetWidth,
+                    height: this.widget.offsetHeight
+                };
+                localStorage.setItem(STORAGE_KEY_PRE_MINIMIZE_POSITION, JSON.stringify(this.preMinimizePosition));
+                console.debug('LLMChat.toggleMinimize: saved preMinimizePosition:', JSON.stringify(this.preMinimizePosition));
+
                 this.widget.classList.add('minimized');
-                this.widget.style.height = 'auto';
+                this.widget.style.right = '20px';
+                this.widget.style.bottom = '20px';
+                this.widget.style.left = 'auto';
+                this.widget.style.top = 'auto';
                 this.widget.style.width = '200px';
+                this.widget.style.height = 'auto';
             } else {
                 this.widget.classList.remove('minimized');
-                var dimensions = this.loadDimensions();
-                if (dimensions) {
-                    this.widget.style.width = dimensions.width + 'px';
-                    this.widget.style.height = dimensions.height + 'px';
+
+                if (this.preMinimizePosition) {
+                    this.widget.style.left = this.preMinimizePosition.left + 'px';
+                    this.widget.style.top = this.preMinimizePosition.top + 'px';
+                    this.widget.style.right = 'auto';
+                    this.widget.style.bottom = 'auto';
+                    this.widget.style.width = this.preMinimizePosition.width + 'px';
+                    this.widget.style.height = this.preMinimizePosition.height + 'px';
+                    console.debug('LLMChat.toggleMinimize: restored to preMinimizePosition:', JSON.stringify(this.preMinimizePosition));
                 } else {
-                    this.widget.style.width = '450px';
-                    this.widget.style.height = '500px';
+                    var dimensions = this.loadDimensions();
+                    var position = this.loadPosition();
+                    if (position) {
+                        this.widget.style.left = position.left + 'px';
+                        this.widget.style.top = position.top + 'px';
+                        this.widget.style.right = 'auto';
+                        this.widget.style.bottom = 'auto';
+                    }
+                    if (dimensions) {
+                        this.widget.style.width = dimensions.width + 'px';
+                        this.widget.style.height = dimensions.height + 'px';
+                    } else {
+                        this.widget.style.width = '450px';
+                        this.widget.style.height = '500px';
+                    }
                 }
             }
 
             this.saveState();
+            this.render();
             console.debug('LLMChat.toggleMinimize: isMinimized:', this.isMinimized);
         },
 

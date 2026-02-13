@@ -331,8 +331,11 @@
 }
 
 .llm-chat-tab.dragging {
-    opacity: 0.5;
-    background: #333;
+    opacity: 0.6;
+    background: rgba(74, 158, 255, 0.3);
+    position: relative;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .llm-chat-context-menu {
