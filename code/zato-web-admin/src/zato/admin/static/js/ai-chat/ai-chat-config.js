@@ -123,8 +123,15 @@
             return null;
         },
 
-        buildProviderSelectionHtml: function() {
-            var html = '<div class="ai-chat-config-container">';
+        buildProviderSelectionHtml: function(showBackButton) {
+            var html = '';
+            if (showBackButton) {
+                html += '<div class="ai-chat-config-back">';
+                html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
+                html += '<span>Back</span>';
+                html += '</div>';
+            }
+            html += '<div class="ai-chat-config-container">';
             html += '<div class="ai-chat-config-title">Configure your AI provider</div>';
             html += '<div class="ai-chat-config-subtitle">Select a provider below</div>';
             html += '<div class="ai-chat-config-providers">';

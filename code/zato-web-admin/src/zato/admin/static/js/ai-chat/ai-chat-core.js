@@ -28,6 +28,7 @@
         needsConfig: true,
         configMode: 'providers',
         settingsMenu: null,
+        cameFromChat: false,
 
         init: function() {
             console.debug('AIChat.init: starting initialization');
@@ -132,7 +133,7 @@
 
             var html = AIChatRender.buildHeaderHtml(this.isMinimized);
             html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
-            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider);
+            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider, this.cameFromChat);
             html += AIChatRender.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
@@ -250,7 +251,7 @@
 
             var backEl = target.closest('.ai-chat-config-back');
             if (backEl) {
-                this.showProviderSelection();
+                this.handleBackClick();
                 return;
             }
 
@@ -720,6 +721,19 @@
             this.render();
         },
 
+        handleBackClick: function() {
+            console.debug('AIChat.handleBackClick: cameFromChat:', this.cameFromChat, 'configMode:', this.configMode);
+            if (this.configMode === 'key-input') {
+                this.showProviderSelection();
+            } else if (this.configMode === 'providers' && this.cameFromChat) {
+                this.cameFromChat = false;
+                this.needsConfig = false;
+                this.configMode = 'providers';
+                AIChatConfig.selectedProvider = null;
+                this.render();
+            }
+        },
+
         saveApiKey: function(providerId) {
             console.debug('AIChat.saveApiKey: saving key for', providerId);
             var self = this;
@@ -825,13 +839,12 @@
             this.hideSettingsMenu();
 
             if (action === 'change-provider') {
+                this.cameFromChat = true;
                 this.needsConfig = true;
                 this.configMode = 'providers';
                 this.render();
             } else if (action === 'change-api-key') {
-                this.needsConfig = true;
-                this.configMode = 'providers';
-                this.render();
+                this.cameFromChat = true;
                 var firstConfiguredProvider = null;
                 if (AIChatConfig.configuredKeys.anthropic) {
                     firstConfiguredProvider = 'anthropic';

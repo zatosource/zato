@@ -164,19 +164,20 @@
 
 .ai-chat-config-api-key-input {
     width: 100%;
-    padding: 16px 24px;
+    padding: 16px 10px 16px 10px !important;
     background-color: #252525 !important;
     border: 1px solid #444 !important;
     border-radius: 8px;
     color: #c0c0c0 !important;
     font-size: 14px;
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Consolas', monospace !important;
-    outline: none;
-    transition: border-color 0.15s ease;
+    outline: none !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
     box-sizing: border-box;
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+    box-shadow: none !important;
 }
 
 .ai-chat-config-api-key-input::placeholder {
@@ -186,6 +187,8 @@
 .ai-chat-config-api-key-input:focus {
     border-color: #4a9eff !important;
     background-color: #252525 !important;
+    box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.3) !important;
+    outline: none !important;
 }
 
 .ai-chat-config-save-button {

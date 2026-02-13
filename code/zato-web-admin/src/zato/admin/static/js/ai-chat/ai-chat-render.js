@@ -51,14 +51,14 @@
             return html;
         },
 
-        buildBodyHtml: function(tabs, activeTabId, needsConfig, configMode, selectedProvider) {
+        buildBodyHtml: function(tabs, activeTabId, needsConfig, configMode, selectedProvider, cameFromChat) {
             var html = '<div class="ai-chat-body">';
 
             for (var i = 0; i < tabs.length; i++) {
                 var tab = tabs[i];
                 var activeClass = tab.id === activeTabId ? ' active' : '';
                 html += '<div class="ai-chat-tab-panel' + activeClass + '" data-tab-id="' + tab.id + '">';
-                html += this.buildMessagesHtml(tab, needsConfig, configMode, selectedProvider);
+                html += this.buildMessagesHtml(tab, needsConfig, configMode, selectedProvider, cameFromChat);
                 if (!needsConfig) {
                     html += this.buildInputAreaHtml(tab);
                 }
@@ -69,14 +69,14 @@
             return html;
         },
 
-        buildMessagesHtml: function(tab, needsConfig, configMode, selectedProvider) {
+        buildMessagesHtml: function(tab, needsConfig, configMode, selectedProvider, cameFromChat) {
             var html = '<div class="ai-chat-messages" data-tab-id="' + tab.id + '">';
 
             if (needsConfig) {
                 if (configMode === 'key-input' && selectedProvider) {
                     html += AIChatConfig.buildKeyInputHtml(selectedProvider);
                 } else {
-                    html += AIChatConfig.buildProviderSelectionHtml();
+                    html += AIChatConfig.buildProviderSelectionHtml(cameFromChat);
                 }
             } else if (tab.messages.length === 0) {
                 html += '<div class="ai-chat-empty">';
