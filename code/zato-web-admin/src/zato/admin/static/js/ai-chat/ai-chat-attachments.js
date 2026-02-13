@@ -229,7 +229,14 @@
             container.innerHTML = html;
         },
 
+        maxFileSize: 10 * 1024 * 1024,
+
         addFile: function(file, tabId, callback) {
+            if (file.size > this.maxFileSize) {
+                alert('File "' + file.name + '" exceeds the maximum size of ' + this.formatSize(this.maxFileSize));
+                return;
+            }
+
             var reader = new FileReader();
             reader.onload = function(e) {
                 AIChatTabState.createAttachmentFromFile(tabId, file, e.target.result);

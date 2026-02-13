@@ -23,6 +23,12 @@
     resize: none;
 }
 
+.ai-chat-widget.drag-over {
+    outline: 2px dashed var(--zato-seablue-light2, #4a9eff);
+    outline-offset: -2px;
+    background: linear-gradient(145deg, #1a2a3a 0%, #2d3d4d 100%);
+}
+
 .ai-chat-widget.minimized .ai-chat-body,
 .ai-chat-widget.minimized .ai-chat-tabs,
 .ai-chat-widget.minimized .ai-chat-resize-handle {

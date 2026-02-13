@@ -99,6 +99,32 @@
                 });
             });
 
+            this.widget.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.widget.classList.add('drag-over');
+            });
+
+            this.widget.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.widget.classList.remove('drag-over');
+            });
+
+            this.widget.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.widget.classList.remove('drag-over');
+                var files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                    for (var i = 0; i < files.length; i++) {
+                        AIChatAttachments.addFile(files[i], self.activeTabId, function() {
+                            AIChatAttachments.render(self.widget, self.activeTabId, self.tabs);
+                        });
+                    }
+                }
+            });
+
             document.addEventListener('mousemove', function(e) {
                 AIChatDrag.handleMouseMove(e, self.widget, self.zoomScale);
             });
