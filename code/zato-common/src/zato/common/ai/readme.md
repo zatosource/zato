@@ -15,7 +15,8 @@ The frontend is complete including provider configuration UI. The backend integr
 
 Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/`
 
-- `ai-chat-state.js` - localStorage persistence for tabs, position, dimensions, zoom, minimized state
+- `ai-chat-state.js` - localStorage persistence for widget state
+- `ai-chat-tab-state.js` - per-tab state manager (model, attachments, etc.)
 - `ai-chat-render.js` - HTML building functions for header, tabs, body, messages, input area, toolbar
 - `ai-chat-tabs.js` - tab management (add, remove, rename, reorder, drag-drop)
 - `ai-chat-input.js` - contenteditable input handling (shift+enter for newlines, backspace/delete line removal)
@@ -138,6 +139,14 @@ All JS and CSS files are included here in the correct dependency order.
 - Model selector shows models grouped by provider with separators between providers
 - Each tab stores its own selected model (persisted to localStorage)
 
+### Attachments
+
+- Pasting text longer than 8000 characters converts it to an attachment
+- Attachments displayed as cards above the input area
+- Each attachment shows: file icon, name, size, remove button
+- Files selected via "Add files or photos" also become attachments
+- Attachments can be removed by clicking the X button
+
 ### Messages
 
 - User messages aligned right with blue gradient background
@@ -230,6 +239,14 @@ Use existing Zato admin session authentication. The Django view will have access
 - `zato.ai-chat.minimized` - "true" or "false"
 - `zato.ai-chat.pre-minimize-position` - {left, top, width, height} before minimizing
 - `zato.ai-chat.zoom` - zoom scale (0.5 to 2.0)
+
+## Debug flags
+
+- `AIChatInput.debugKeystrokes` - set to `true` to enable detailed keystroke logging with cursor position info (default: `false`)
+
+## Configuration
+
+- `AIChatInput.pasteToAttachmentThreshold` - character count threshold for converting pasted text to attachment (default: `8000`)
 
 ## Code style notes
 

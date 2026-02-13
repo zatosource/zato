@@ -60,6 +60,8 @@
                 this.tabs = [AIChatTabs.createDefaultTab()];
             }
 
+            AIChatTabState.loadFromTabs(this.tabs);
+
             this.activeTabId = AIChatState.loadActiveTabId();
             if (!this.activeTabId || !AIChatTabs.getTabById(this.tabs, this.activeTabId)) {
                 this.activeTabId = this.tabs[0].id;
@@ -183,6 +185,10 @@
                 self.handleKeyDown(e);
             });
 
+            this.widget.addEventListener('paste', function(e) {
+                self.handlePaste(e);
+            });
+
             document.addEventListener('input', function(e) {
                 AIChatInput.handleInput(e);
             });
@@ -218,9 +224,10 @@
                 var tabId = target.getAttribute('data-tab-id');
                 var modelId = target.value;
                 console.debug('AIChat.handleChange: model selected:', modelId, 'for tab:', tabId);
+                AIChatTabState.setModel(tabId, modelId);
                 for (var i = 0; i < this.tabs.length; i++) {
                     if (this.tabs[i].id === tabId) {
-                        this.tabs[i].model = modelId;
+                        AIChatTabState.saveToTab(this.tabs[i]);
                         AIChatState.saveTabs(this.tabs);
                         break;
                     }
@@ -299,6 +306,16 @@
                 var action = optionsMenuItem.getAttribute('data-action');
                 this.handleOptionsAction(action);
                 e.stopPropagation();
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-attachment-remove') || target.closest('.ai-chat-attachment-remove')) {
+                var removeBtn = target.classList.contains('ai-chat-attachment-remove') ? target : target.closest('.ai-chat-attachment-remove');
+                var attachmentId = removeBtn.getAttribute('data-attachment-id');
+                var tabPanel = removeBtn.closest('.ai-chat-tab-panel');
+                var tabId = tabPanel ? tabPanel.getAttribute('data-tab-id') : this.activeTabId;
+                AIChatTabState.removeAttachment(tabId, attachmentId);
+                this.renderAttachments(tabId);
                 return;
             }
 
@@ -748,12 +765,14 @@
 
         addTab: function() {
             var newTab = AIChatTabs.addTab(this.tabs);
+            AIChatTabState.initTab(newTab.id);
             this.activeTabId = newTab.id;
             this.saveState();
             this.render();
         },
 
         closeTab: function(tabId) {
+            AIChatTabState.removeTab(tabId);
             var result = AIChatTabs.closeTab(this.tabs, tabId, this.activeTabId);
             this.tabs = result.tabs;
             this.activeTabId = result.activeTabId;
@@ -766,6 +785,7 @@
             this.activeTabId = tabId;
             this.saveState();
             this.render();
+            this.renderAttachments(tabId);
         },
 
         sendMessage: function(tabId) {
@@ -1001,6 +1021,7 @@
 
         showFileDialog: function() {
             console.debug('AIChat.showFileDialog: opening file dialog');
+            var self = this;
             var input = document.createElement('input');
             input.type = 'file';
             input.style.display = 'none';
@@ -1008,11 +1029,116 @@
                 var file = e.target.files[0];
                 if (file) {
                     console.debug('AIChat.showFileDialog: file selected:', file.name);
+                    self.addFileAttachment(file);
                 }
                 document.body.removeChild(input);
             });
             document.body.appendChild(input);
             input.click();
+        },
+
+        handlePaste: function(e) {
+            var inputElement = e.target.closest('.ai-chat-input');
+            if (!inputElement) {
+                return;
+            }
+
+            var self = this;
+            var handled = AIChatInput.handlePaste(e, function(attachment, tabId) {
+                self.renderAttachments(tabId);
+            });
+
+            if (handled) {
+                console.debug('AIChat.handlePaste: paste converted to attachment');
+            }
+        },
+
+        addFileAttachment: function(file) {
+            var self = this;
+            var tabId = this.activeTabId;
+            if (!tabId) {
+                console.debug('AIChat.addFileAttachment: no active tab');
+                return;
+            }
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                AIChatTabState.createAttachmentFromFile(tabId, file, e.target.result);
+                self.renderAttachments(tabId);
+            };
+            reader.readAsText(file);
+        },
+
+        getAttachmentIcon: function(mimeType) {
+            if (mimeType && mimeType.indexOf('image') === 0) {
+                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>';
+            }
+            if (mimeType && (mimeType.indexOf('json') !== -1 || mimeType.indexOf('javascript') !== -1)) {
+                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>';
+            }
+            if (mimeType && mimeType.indexOf('html') !== -1) {
+                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.56l-7.35 3.86 1.41-8.18L.48 7.88l8.21-1.19L12 .5l3.31 6.19 8.21 1.19-5.58 5.36 1.41 8.18z"/></svg>';
+            }
+            if (mimeType && mimeType.indexOf('xml') !== -1) {
+                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.89 3L14.85 3.4 11.11 21 9.15 20.6 12.89 3M19.59 12L16 8.41 17.41 7 22 11.59V12.41L17.41 17 16 15.59 19.59 12M4.41 12L8 15.59 6.59 17 2 12.41V11.59L6.59 7 8 8.41 4.41 12Z"/></svg>';
+            }
+            if (mimeType && mimeType.indexOf('pdf') !== -1) {
+                return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>';
+            }
+            return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>';
+        },
+
+        renderAttachments: function(tabId) {
+            if (!tabId) {
+                tabId = this.activeTabId;
+            }
+            if (!tabId) {
+                return;
+            }
+
+            var attachments = AIChatTabState.getAttachments(tabId);
+            var tabPanel = this.widget.querySelector('.ai-chat-tab-panel[data-tab-id="' + tabId + '"]');
+            if (!tabPanel) {
+                return;
+            }
+            var container = tabPanel.querySelector('.ai-chat-attachments');
+
+            if (attachments.length === 0) {
+                if (container) {
+                    container.parentNode.removeChild(container);
+                }
+                return;
+            }
+
+            if (!container) {
+                var inputArea = tabPanel.querySelector('.ai-chat-input-area');
+                if (!inputArea) {
+                    return;
+                }
+                container = document.createElement('div');
+                container.className = 'ai-chat-attachments';
+                inputArea.insertBefore(container, inputArea.firstChild);
+            }
+
+            var html = '';
+            for (var i = 0; i < attachments.length; i++) {
+                var att = attachments[i];
+                var sizeStr = att.size > 1000 ? Math.round(att.size / 1000) + ' KB' : att.size + ' B';
+                var icon = this.getAttachmentIcon(att.type);
+                html += '<div class="ai-chat-attachment" data-attachment-id="' + att.id + '">';
+                html += '<div class="ai-chat-attachment-icon">';
+                html += icon;
+                html += '</div>';
+                html += '<div class="ai-chat-attachment-info">';
+                html += '<div class="ai-chat-attachment-name">' + att.name + '</div>';
+                html += '<div class="ai-chat-attachment-size">' + sizeStr + '</div>';
+                html += '</div>';
+                html += '<button class="ai-chat-attachment-remove" data-attachment-id="' + att.id + '" aria-label="Remove">';
+                html += '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+                html += '</button>';
+                html += '</div>';
+            }
+            container.innerHTML = html;
         },
 
         toggleOptionsMenu: function() {
