@@ -305,6 +305,12 @@
     object-fit: contain;
 }
 
+.ai-chat-preview-pdf-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 .ai-chat-preview-pdf {
     max-width: 100%;
     display: block;

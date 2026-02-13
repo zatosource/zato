@@ -1403,7 +1403,7 @@
             var html = '<div class="ai-chat-preview-header">';
             html += '<div class="ai-chat-preview-title">' + attachment.name + '</div>';
             html += '<div class="ai-chat-preview-actions">';
-            if (canPreview && !isImage && !isPdf) {
+            if (canPreview && !isImage) {
                 html += '<button class="ai-chat-preview-copy-btn">Copy</button>';
             }
             html += '<button class="ai-chat-preview-close">';
@@ -1417,7 +1417,7 @@
             } else if (isImage) {
                 html += '<img class="ai-chat-preview-image" src="' + attachment.content + '" alt="' + attachment.name + '">';
             } else if (isPdf) {
-                html += '<canvas class="ai-chat-preview-pdf"></canvas>';
+                html += '<div class="ai-chat-preview-pdf-container"></div>';
             } else if (isWord) {
                 html += '<div class="ai-chat-preview-word"></div>';
             } else {
@@ -1452,12 +1452,23 @@
             var copyBtn = popup.querySelector('.ai-chat-preview-copy-btn');
             if (copyBtn) {
                 copyBtn.addEventListener('click', function() {
-                    navigator.clipboard.writeText(attachment.content).then(function() {
-                        copyBtn.textContent = 'Copied';
-                        setTimeout(function() {
-                            copyBtn.textContent = 'Copy';
-                        }, 1500);
-                    });
+                    if (isPdf) {
+                        self.extractPdfText(attachment, function(text) {
+                            navigator.clipboard.writeText(text).then(function() {
+                                copyBtn.textContent = 'Copied';
+                                setTimeout(function() {
+                                    copyBtn.textContent = 'Copy';
+                                }, 1500);
+                            });
+                        });
+                    } else {
+                        navigator.clipboard.writeText(attachment.content).then(function() {
+                            copyBtn.textContent = 'Copied';
+                            setTimeout(function() {
+                                copyBtn.textContent = 'Copy';
+                            }, 1500);
+                        });
+                    }
                 });
             }
 
@@ -1497,9 +1508,49 @@
             }
         },
 
+        extractPdfText: function(attachment, callback) {
+            if (typeof pdfjsLib === 'undefined') {
+                callback('');
+                return;
+            }
+
+            var base64 = attachment.content.split(',')[1];
+            var binary = atob(base64);
+            var len = binary.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            pdfjsLib.getDocument({ data: bytes }).promise.then(function(pdf) {
+                var numPages = pdf.numPages;
+                var textParts = [];
+                var pagesProcessed = 0;
+
+                for (var pageNum = 1; pageNum <= numPages; pageNum++) {
+                    (function(pageNum) {
+                        pdf.getPage(pageNum).then(function(page) {
+                            page.getTextContent().then(function(textContent) {
+                                var pageText = textContent.items.map(function(item) {
+                                    return item.str;
+                                }).join(' ');
+                                textParts[pageNum - 1] = pageText;
+                                pagesProcessed++;
+                                if (pagesProcessed === numPages) {
+                                    callback(textParts.join('\n\n'));
+                                }
+                            });
+                        });
+                    })(pageNum);
+                }
+            }).catch(function() {
+                callback('');
+            });
+        },
+
         renderPdfPreview: function(popup, attachment) {
-            var canvas = popup.querySelector('.ai-chat-preview-pdf');
-            if (!canvas || typeof pdfjsLib === 'undefined') {
+            var container = popup.querySelector('.ai-chat-preview-pdf-container');
+            if (!container || typeof pdfjsLib === 'undefined') {
                 var content = popup.querySelector('.ai-chat-preview-content');
                 if (content) {
                     content.innerHTML = '<div class="ai-chat-preview-unavailable">Preview not available</div>';
@@ -1518,18 +1569,27 @@
             }
 
             pdfjsLib.getDocument({ data: bytes }).promise.then(function(pdf) {
-                pdf.getPage(1).then(function(page) {
-                    var viewport = page.getViewport({ scale: 1.0 });
-                    var containerWidth = popup.querySelector('.ai-chat-preview-content').clientWidth - 24;
-                    var scale = containerWidth / viewport.width;
-                    var scaledViewport = page.getViewport({ scale: scale });
+                var numPages = pdf.numPages;
+                var containerWidth = popup.querySelector('.ai-chat-preview-content').clientWidth - 24;
 
-                    canvas.width = scaledViewport.width;
-                    canvas.height = scaledViewport.height;
+                for (var pageNum = 1; pageNum <= numPages; pageNum++) {
+                    (function(pageNum) {
+                        pdf.getPage(pageNum).then(function(page) {
+                            var viewport = page.getViewport({ scale: 1.0 });
+                            var scale = containerWidth / viewport.width;
+                            var scaledViewport = page.getViewport({ scale: scale });
 
-                    var ctx = canvas.getContext('2d');
-                    page.render({ canvasContext: ctx, viewport: scaledViewport });
-                });
+                            var canvas = document.createElement('canvas');
+                            canvas.className = 'ai-chat-preview-pdf';
+                            canvas.width = scaledViewport.width;
+                            canvas.height = scaledViewport.height;
+                            container.appendChild(canvas);
+
+                            var ctx = canvas.getContext('2d');
+                            page.render({ canvasContext: ctx, viewport: scaledViewport });
+                        });
+                    })(pageNum);
+                }
             }).catch(function() {
                 var content = popup.querySelector('.ai-chat-preview-content');
                 if (content) {
