@@ -139,7 +139,8 @@
                 var model = models[i];
                 var selected = model.id === selectedModel ? ' selected' : '';
                 var separator = model.isFirst ? ' data-separator="true"' : '';
-                html += '<option value="' + model.id + '"' + selected + separator + '>' + model.name + '</option>';
+                var disabled = model.disabled ? ' disabled data-disabled="true"' : '';
+                html += '<option value="' + model.id + '"' + selected + separator + disabled + '>' + model.name + '</option>';
             }
             html += '</select>';
             html += '</div>';

@@ -56,6 +56,9 @@
                 if (opt.value === selectedValue) {
                     item.classList.add('active');
                 }
+                if (opt.disabled || opt.getAttribute('data-disabled') === 'true') {
+                    item.classList.add('disabled');
+                }
                 item.setAttribute('data-value', opt.value);
                 item.textContent = opt.text;
                 menu.appendChild(item);
@@ -86,6 +89,11 @@
             menu.addEventListener('click', function(e) {
                 var item = e.target.closest('.zato-dropdown-item');
                 if (item) {
+                    if (item.classList.contains('disabled')) {
+                        e.stopPropagation();
+                        return;
+                    }
+
                     var value = item.getAttribute('data-value');
                     var text = item.textContent;
 

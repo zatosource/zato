@@ -84,6 +84,16 @@
     color: #fff;
 }
 
+.zato-dropdown-item.disabled {
+    color: #555;
+    cursor: not-allowed;
+}
+
+.zato-dropdown-item.disabled:hover {
+    background: transparent;
+    color: #555;
+}
+
 .zato-dropdown-separator {
     height: 1px;
     background: rgba(255, 255, 255, 0.1);
