@@ -4,6 +4,7 @@
     padding: 16px;
     background: #1a1a1a;
     min-height: 50px;
+    position: relative;
 }
 
 .ai-chat-messages::-webkit-scrollbar {
