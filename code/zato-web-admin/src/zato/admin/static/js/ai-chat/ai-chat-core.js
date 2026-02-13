@@ -734,6 +734,10 @@
             this.configMode = 'key-input';
             AIChatConfig.selectedProvider = providerId;
             this.render();
+            var apiKeyInput = this.widget.querySelector('.ai-chat-config-api-key-input');
+            if (apiKeyInput) {
+                apiKeyInput.focus();
+            }
         },
 
         showProviderSelection: function() {
