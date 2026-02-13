@@ -784,6 +784,12 @@
                 } else {
                     this.showProviderSelection();
                 }
+            } else if (this.configMode === 'manage-keys') {
+                this.cameFromChat = false;
+                this.needsConfig = false;
+                this.configMode = 'providers';
+                AIChatConfig.selectedProvider = null;
+                this.render();
             } else if (this.configMode === 'providers' && this.cameFromChat && this.hadKeyOnEntry) {
                 this.cameFromChat = false;
                 this.needsConfig = false;
