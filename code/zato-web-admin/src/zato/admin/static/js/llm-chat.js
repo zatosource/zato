@@ -621,6 +621,29 @@
                     var tabId = inputElement.getAttribute('data-tab-id');
                     console.debug('LLMChat.handleKeyDown: enter pressed in input, tabId:', tabId);
                     this.sendMessage(tabId);
+                } else if (e.key === 'Backspace') {
+                    var text = (inputElement.textContent || '').trim();
+                    var brCount = inputElement.querySelectorAll('br').length;
+                    if (text === '' && brCount > 0) {
+                        e.preventDefault();
+                        var brs = inputElement.querySelectorAll('br');
+                        var lastBr = brs[brs.length - 1];
+                        lastBr.parentNode.removeChild(lastBr);
+                        var newBrCount = inputElement.querySelectorAll('br').length;
+                        console.debug('LLMChat.handleKeyDown: backspace removed br:', JSON.stringify({
+                            brCountBefore: brCount,
+                            brCountAfter: newBrCount,
+                            innerHTML: inputElement.innerHTML
+                        }));
+                        if (newBrCount === 0) {
+                            inputElement.innerHTML = '';
+                            var inputArea = inputElement.closest('.llm-chat-input-area');
+                            if (inputArea) {
+                                inputArea.classList.remove('multiline');
+                                inputArea.removeAttribute('data-user-multiline');
+                            }
+                        }
+                    }
                 } else if (e.key === 'Enter' && e.shiftKey) {
                     e.preventDefault();
                     var inputArea = inputElement.closest('.llm-chat-input-area');
