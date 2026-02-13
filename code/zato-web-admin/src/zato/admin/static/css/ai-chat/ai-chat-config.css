@@ -242,3 +242,72 @@
     font-weight: 500;
     color: #48bb78;
 }
+
+.ai-chat-config-keys-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+    margin-top: 16px;
+}
+
+.ai-chat-config-key-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+.ai-chat-config-key-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ai-chat-config-key-logo {
+    width: 24px;
+    height: 24px;
+    color: #63b3ed;
+}
+
+.ai-chat-config-key-logo svg {
+    width: 100%;
+    height: 100%;
+}
+
+.ai-chat-config-key-provider {
+    font-size: 14px;
+    color: #d0d0d0;
+}
+
+.ai-chat-config-key-action {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-shadow: none !important;
+}
+
+.ai-chat-config-key-remove {
+    background: rgba(229, 62, 62, 0.15);
+    color: #fc8181;
+}
+
+.ai-chat-config-key-remove:hover {
+    background: rgba(229, 62, 62, 0.25);
+}
+
+.ai-chat-config-key-add {
+    background: var(--zato-seablue-light2);
+    color: #fff;
+}
+
+.ai-chat-config-key-add:hover {
+    background: var(--zato-seablue-light3);
+}

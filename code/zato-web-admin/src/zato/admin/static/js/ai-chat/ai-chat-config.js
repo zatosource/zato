@@ -231,20 +231,47 @@
         buildSettingsMenuHtml: function(hasKey) {
             var html = '<div class="ai-chat-settings-menu">';
             if (hasKey) {
-                html += '<div class="ai-chat-settings-menu-item" data-action="change-provider">';
-                html += '<span>Change provider</span>';
-                html += '</div>';
-                html += '<div class="ai-chat-settings-menu-item" data-action="change-api-key">';
-                html += '<span>Change API key</span>';
-                html += '</div>';
-                html += '<div class="ai-chat-settings-menu-item" data-action="remove-api-key">';
-                html += '<span>Remove API key</span>';
+                html += '<div class="ai-chat-settings-menu-item" data-action="manage-keys">';
+                html += '<span>Manage API keys</span>';
                 html += '</div>';
             } else {
                 html += '<div class="ai-chat-settings-menu-item" data-action="change-provider">';
                 html += '<span>Configure provider</span>';
                 html += '</div>';
             }
+            html += '</div>';
+            return html;
+        },
+
+        buildManageKeysHtml: function(cameFromChat) {
+            var html = '';
+            if (cameFromChat) {
+                html += '<div class="ai-chat-config-back">';
+                html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
+                html += '<span>Back</span>';
+                html += '</div>';
+            }
+            html += '<div class="ai-chat-config-container">';
+            html += '<div class="ai-chat-config-title">Manage API keys</div>';
+            html += '<div class="ai-chat-config-keys-list">';
+
+            for (var key in this.providers) {
+                var provider = this.providers[key];
+                var isConfigured = this.configuredKeys[key];
+                html += '<div class="ai-chat-config-key-row">';
+                html += '<div class="ai-chat-config-key-info">';
+                html += '<div class="ai-chat-config-key-logo">' + provider.logo + '</div>';
+                html += '<div class="ai-chat-config-key-provider">' + provider.name + '</div>';
+                html += '</div>';
+                if (isConfigured) {
+                    html += '<button class="ai-chat-config-key-action ai-chat-config-key-remove" data-provider-id="' + key + '">Remove</button>';
+                } else {
+                    html += '<button class="ai-chat-config-key-action ai-chat-config-key-add" data-provider-id="' + key + '">Add</button>';
+                }
+                html += '</div>';
+            }
+
+            html += '</div>';
             html += '</div>';
             return html;
         }

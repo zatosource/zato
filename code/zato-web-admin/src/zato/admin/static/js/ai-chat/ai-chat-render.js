@@ -61,6 +61,8 @@
                 html += '<div class="ai-chat-messages">';
                 if (configMode === 'key-input' && selectedProvider) {
                     html += AIChatConfig.buildKeyInputHtml(selectedProvider, hadKeyOnEntry);
+                } else if (configMode === 'manage-keys') {
+                    html += AIChatConfig.buildManageKeysHtml(cameFromChat);
                 } else {
                     var showBackOnProviders = cameFromChat && hadKeyOnEntry;
                     html += AIChatConfig.buildProviderSelectionHtml(showBackOnProviders);

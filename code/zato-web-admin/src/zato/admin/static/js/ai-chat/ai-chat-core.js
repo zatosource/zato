@@ -218,7 +218,8 @@
             var settingsMenuItem = target.closest('.ai-chat-settings-menu-item');
             if (settingsMenuItem) {
                 var action = settingsMenuItem.getAttribute('data-action');
-                this.handleSettingsAction(action);
+                var providerId = settingsMenuItem.getAttribute('data-provider-id');
+                this.handleSettingsAction(action, providerId);
                 e.stopPropagation();
                 return;
             }
@@ -265,6 +266,18 @@
             if (target.classList.contains('ai-chat-config-save-button')) {
                 var providerId = target.getAttribute('data-provider-id');
                 this.saveApiKey(providerId);
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-config-key-remove')) {
+                var providerId = target.getAttribute('data-provider-id');
+                this.removeApiKey(providerId);
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-config-key-add')) {
+                var providerId = target.getAttribute('data-provider-id');
+                this.showKeyInput(providerId);
                 return;
             }
         },
@@ -891,8 +904,8 @@
             }
         },
 
-        handleSettingsAction: function(action) {
-            console.debug('AIChat.handleSettingsAction: action:', action);
+        handleSettingsAction: function(action, providerId) {
+            console.debug('AIChat.handleSettingsAction: action:', action, 'providerId:', providerId);
             this.hideSettingsMenu();
 
             this.hadKeyOnEntry = AIChatConfig.hasAnyKey();
@@ -902,53 +915,29 @@
                 this.needsConfig = true;
                 this.configMode = 'providers';
                 this.render();
-            } else if (action === 'change-api-key') {
+            } else if (action === 'manage-keys') {
                 this.cameFromChat = true;
-                var firstConfiguredProvider = null;
-                if (AIChatConfig.configuredKeys.anthropic) {
-                    firstConfiguredProvider = 'anthropic';
-                } else if (AIChatConfig.configuredKeys.openai) {
-                    firstConfiguredProvider = 'openai';
-                }
-                if (firstConfiguredProvider) {
-                    this.showKeyInput(firstConfiguredProvider);
-                }
-            } else if (action === 'remove-api-key') {
-                this.removeApiKey();
+                this.needsConfig = true;
+                this.configMode = 'manage-keys';
+                this.render();
             }
         },
 
-        removeApiKey: function() {
-            console.debug('AIChat.removeApiKey: removing configured keys');
+        removeApiKey: function(providerId) {
+            console.debug('AIChat.removeApiKey: removing key for', providerId);
             var self = this;
 
-            var providersToDelete = [];
-            if (AIChatConfig.configuredKeys.anthropic) {
-                providersToDelete.push('anthropic');
-            }
-            if (AIChatConfig.configuredKeys.openai) {
-                providersToDelete.push('openai');
-            }
-
-            if (providersToDelete.length === 0) {
-                return;
-            }
-
-            var deleted = 0;
-            var total = providersToDelete.length;
-
-            for (var i = 0; i < providersToDelete.length; i++) {
-                AIChatConfig.deleteKey(providersToDelete[i], function(success) {
-                    deleted++;
-                    if (deleted === total) {
+            AIChatConfig.deleteKey(providerId, function(success) {
+                if (success) {
+                    if (!AIChatConfig.hasAnyKey()) {
                         self.needsConfig = true;
                         self.configMode = 'providers';
                         self.cameFromChat = false;
                         self.hadKeyOnEntry = false;
-                        self.render();
                     }
-                });
-            }
+                    self.render();
+                }
+            });
         }
     };
 
