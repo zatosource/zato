@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
+from zato.admin.web.views import account, ai_chat, datadog, grafana_cloud, http_soap, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -947,6 +947,19 @@ urlpatterns += [
 
 urlpatterns += [
     url(r'^static/(?P<path>.*)$', static_serve, {'document_root': settings.MEDIA_ROOT}),
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # AI chat configuration
+
+    url(r'^zato/ai-chat/config/get-keys/$',
+        login_required(ai_chat.get_keys), name='ai-chat-config-get-keys'),
+    url(r'^zato/ai-chat/config/save-key/$',
+        login_required(ai_chat.save_key), name='ai-chat-config-save-key'),
 ]
 
 # ################################################################################################################################

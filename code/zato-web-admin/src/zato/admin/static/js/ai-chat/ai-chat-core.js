@@ -25,16 +25,23 @@
         preMinimizePosition: null,
         preMinimizeZoom: 1.0,
         zoomScale: 1.0,
+        needsConfig: true,
+        configMode: 'providers',
 
         init: function() {
             console.debug('AIChat.init: starting initialization');
+            var self = this;
 
+            AIChatConfig.init();
             this.loadState();
             this.createWidget();
             this.bindEvents();
-            this.render();
 
-            console.debug('AIChat.init: initialization complete');
+            AIChatConfig.checkConfiguredKeys(function(hasKeys) {
+                self.needsConfig = !hasKeys;
+                self.render();
+                console.debug('AIChat.init: initialization complete, needsConfig:', self.needsConfig);
+            });
         },
 
         loadState: function() {
@@ -120,11 +127,11 @@
         },
 
         render: function() {
-            console.debug('AIChat.render: rendering widget');
+            console.debug('AIChat.render: rendering widget, needsConfig:', this.needsConfig);
 
             var html = AIChatRender.buildHeaderHtml(this.isMinimized);
             html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
-            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId);
+            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig);
             html += AIChatRender.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
@@ -210,6 +217,25 @@
             if (target.classList.contains('ai-chat-send-button')) {
                 var tabId = target.getAttribute('data-tab-id');
                 this.sendMessage(tabId);
+                return;
+            }
+
+            var providerEl = target.closest('.ai-chat-config-provider');
+            if (providerEl) {
+                var providerId = providerEl.getAttribute('data-provider-id');
+                this.showKeyInput(providerId);
+                return;
+            }
+
+            var backEl = target.closest('.ai-chat-config-back');
+            if (backEl) {
+                this.showProviderSelection();
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-config-save-button')) {
+                var providerId = target.getAttribute('data-provider-id');
+                this.saveApiKey(providerId);
                 return;
             }
         },
@@ -655,6 +681,88 @@
 
             var messagesContainer = this.widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
             AIChatMessages.scrollToBottom(messagesContainer);
+        },
+
+        showKeyInput: function(providerId) {
+            console.debug('AIChat.showKeyInput: showing key input for', providerId);
+            this.configMode = 'key-input';
+            AIChatConfig.selectedProvider = providerId;
+
+            var messagesContainer = this.widget.querySelector('.ai-chat-messages');
+            if (messagesContainer) {
+                messagesContainer.innerHTML = AIChatConfig.buildKeyInputHtml(providerId);
+            }
+        },
+
+        showProviderSelection: function() {
+            console.debug('AIChat.showProviderSelection: showing provider selection');
+            this.configMode = 'providers';
+            AIChatConfig.selectedProvider = null;
+
+            var messagesContainer = this.widget.querySelector('.ai-chat-messages');
+            if (messagesContainer) {
+                messagesContainer.innerHTML = AIChatConfig.buildProviderSelectionHtml();
+            }
+        },
+
+        saveApiKey: function(providerId) {
+            console.debug('AIChat.saveApiKey: saving key for', providerId);
+            var self = this;
+
+            var input = this.widget.querySelector('.ai-chat-config-api-key-input');
+            if (!input) return;
+
+            var apiKey = input.value.trim();
+            if (!apiKey) return;
+
+            var saveButton = this.widget.querySelector('.ai-chat-config-save-button');
+            if (saveButton) {
+                saveButton.disabled = true;
+                saveButton.textContent = 'Saving...';
+            }
+
+            AIChatConfig.saveKey(providerId, apiKey, function(success) {
+                if (success) {
+                    self.showConfigSuccess();
+                } else {
+                    if (saveButton) {
+                        saveButton.disabled = false;
+                        saveButton.textContent = 'Save API key';
+                    }
+                }
+            });
+        },
+
+        showConfigSuccess: function() {
+            console.debug('AIChat.showConfigSuccess: showing success');
+            var self = this;
+
+            var messagesContainer = this.widget.querySelector('.ai-chat-messages');
+            if (messagesContainer) {
+                var html = '<div class="ai-chat-config-container">';
+                html += '<div class="ai-chat-config-success">';
+                html += '<div class="ai-chat-config-success-icon">';
+                html += '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>';
+                html += '</div>';
+                html += '<div class="ai-chat-config-success-text">API key saved</div>';
+                html += '</div>';
+                html += '</div>';
+                messagesContainer.innerHTML = html;
+
+                self.needsConfig = false;
+                self.configMode = 'providers';
+
+                var transitionDelay = 800;
+                var startTime = Date.now();
+                var checkAndRender = function() {
+                    if (Date.now() - startTime >= transitionDelay) {
+                        self.render();
+                    } else {
+                        requestAnimationFrame(checkAndRender);
+                    }
+                };
+                requestAnimationFrame(checkAndRender);
+            }
         }
     };
 

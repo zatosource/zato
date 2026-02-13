@@ -48,15 +48,17 @@
             return html;
         },
 
-        buildBodyHtml: function(tabs, activeTabId) {
+        buildBodyHtml: function(tabs, activeTabId, needsConfig) {
             var html = '<div class="ai-chat-body">';
 
             for (var i = 0; i < tabs.length; i++) {
                 var tab = tabs[i];
                 var activeClass = tab.id === activeTabId ? ' active' : '';
                 html += '<div class="ai-chat-tab-panel' + activeClass + '" data-tab-id="' + tab.id + '">';
-                html += this.buildMessagesHtml(tab);
-                html += this.buildInputAreaHtml(tab);
+                html += this.buildMessagesHtml(tab, needsConfig);
+                if (!needsConfig) {
+                    html += this.buildInputAreaHtml(tab);
+                }
                 html += '</div>';
             }
 
@@ -64,10 +66,12 @@
             return html;
         },
 
-        buildMessagesHtml: function(tab) {
+        buildMessagesHtml: function(tab, needsConfig) {
             var html = '<div class="ai-chat-messages" data-tab-id="' + tab.id + '">';
 
-            if (tab.messages.length === 0) {
+            if (needsConfig) {
+                html += AIChatConfig.buildProviderSelectionHtml();
+            } else if (tab.messages.length === 0) {
                 html += '<div class="ai-chat-empty">';
                 html += '<div class="ai-chat-empty-icon">💬</div>';
                 html += '<div>Start a conversation</div>';
