@@ -6,8 +6,6 @@
         connections: {},
 
         connect: function(tabId, model, messages, callbacks) {
-            console.debug('AIChatSSE.connect: tabId:', tabId, 'model:', model);
-
             var self = this;
 
             if (this.connections[tabId]) {
@@ -16,7 +14,6 @@
 
             var csrfToken = this.getCsrfToken();
             if (!csrfToken) {
-                console.error('AIChatSSE.connect: CSRF token not found');
                 if (callbacks.onError) {
                     callbacks.onError('CSRF token not found');
                 }
@@ -73,7 +70,6 @@
                         processStream();
 
                     }).catch(function(error) {
-                        console.error('AIChatSSE.processStream: error:', error);
                         self.handleError(tabId, error, callbacks);
                     });
                 }
@@ -81,7 +77,6 @@
                 processStream();
 
             }).catch(function(error) {
-                console.error('AIChatSSE.connect: fetch error:', error);
                 self.handleError(tabId, error, callbacks);
             });
         },
@@ -103,7 +98,6 @@
                 try {
                     data = JSON.parse(dataStr);
                 } catch (e) {
-                    console.error('AIChatSSE.processLine: JSON parse error:', e);
                     return;
                 }
 
@@ -112,8 +106,6 @@
         },
 
         handleEvent: function(eventType, data, tabId, callbacks) {
-            console.debug('AIChatSSE.handleEvent: type:', eventType, 'data:', data);
-
             if (eventType === 'chunk') {
                 if (callbacks.onChunk) {
                     callbacks.onChunk(data.text);
@@ -122,7 +114,6 @@
                 if (callbacks.onComplete) {
                     var inputTokens = data.input_tokens || 0;
                     var outputTokens = data.output_tokens || 0;
-                    console.log('AIChatSSE done: input_tokens=' + inputTokens + ' output_tokens=' + outputTokens + ' data=', data);
                     callbacks.onComplete(inputTokens, outputTokens);
                 }
                 this.disconnect(tabId);
@@ -135,7 +126,6 @@
         },
 
         handleDisconnect: function(tabId, callbacks) {
-            console.debug('AIChatSSE.handleDisconnect: tabId:', tabId);
             delete this.connections[tabId];
             if (callbacks.onComplete) {
                 callbacks.onComplete();
@@ -143,7 +133,6 @@
         },
 
         handleError: function(tabId, error, callbacks) {
-            console.error('AIChatSSE.handleError: tabId:', tabId, 'error:', error);
             this.disconnect(tabId);
             if (callbacks.onError) {
                 callbacks.onError(error.message || String(error));
@@ -151,8 +140,6 @@
         },
 
         disconnect: function(tabId) {
-            console.debug('AIChatSSE.disconnect: tabId:', tabId);
-
             var connection = this.connections[tabId];
             if (connection) {
                 connection.active = false;
@@ -160,7 +147,6 @@
                     try {
                         connection.reader.cancel();
                     } catch (e) {
-                        console.debug('AIChatSSE.disconnect: reader cancel error:', e);
                     }
                 }
                 delete this.connections[tabId];
@@ -168,7 +154,6 @@
         },
 
         disconnectAll: function() {
-            console.debug('AIChatSSE.disconnectAll');
             var tabIds = Object.keys(this.connections);
             for (var i = 0; i < tabIds.length; i++) {
                 this.disconnect(tabIds[i]);

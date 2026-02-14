@@ -6,7 +6,6 @@
         streamingMessages: {},
 
         addMessage: function(tab, role, content) {
-            console.debug('AIChatMessages.addMessage: role:', role, 'content:', content);
             tab.messages.push({
                 role: role,
                 content: content,
@@ -15,8 +14,6 @@
         },
 
         startStreamingMessage: function(tab, tabId) {
-            console.debug('AIChatMessages.startStreamingMessage: tabId:', tabId);
-
             var messageId = 'streaming-' + tabId;
 
             tab.messages.push({
@@ -53,8 +50,6 @@
         },
 
         finishStreamingMessage: function(tab, tabId) {
-            console.debug('AIChatMessages.finishStreamingMessage: tabId:', tabId);
-
             var streaming = this.streamingMessages[tabId];
             if (!streaming) {
                 return;
@@ -73,8 +68,6 @@
         },
 
         cancelStreamingMessage: function(tab, tabId) {
-            console.debug('AIChatMessages.cancelStreamingMessage: tabId:', tabId);
-
             var streaming = this.streamingMessages[tabId];
             if (!streaming) {
                 return;

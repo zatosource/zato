@@ -4,8 +4,6 @@
     var AIChatAPI = {
 
         streamMessage: function(tabId, model, messages, callbacks) {
-            console.debug('AIChatAPI.streamMessage: tabId:', tabId, 'model:', model);
-
             AIChatSSE.connect(tabId, model, messages, {
                 onChunk: function(text) {
                     if (callbacks.onChunk) {
@@ -26,7 +24,6 @@
         },
 
         cancelStream: function(tabId) {
-            console.debug('AIChatAPI.cancelStream: tabId:', tabId);
             AIChatSSE.disconnect(tabId);
         },
 

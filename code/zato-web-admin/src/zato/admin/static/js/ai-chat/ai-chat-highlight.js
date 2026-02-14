@@ -3,38 +3,37 @@
 
     var AIChatHighlight = {
 
-        cssLoaded: false,
-        cssVersion: 2,
-        cache: {},
+        hljsLoaded: false,
+        hljsLoading: false,
 
         init: function() {
-            this.loadCSS();
+            this.loadHighlightJs();
         },
 
-        loadCSS: function() {
-            if (this.cssLoaded) {
+        loadHighlightJs: function() {
+            if (this.hljsLoaded || this.hljsLoading) {
                 return;
             }
+            this.hljsLoading = true;
 
             var self = this;
 
-            fetch('/zato/ai-chat/highlight/css/', {
-                method: 'GET',
-                headers: {
-                    'X-CSRFToken': this.getCsrfToken()
-                }
-            }).then(function(response) {
-                return response.json();
-            }).then(function(data) {
-                if (data.css) {
-                    var style = document.createElement('style');
-                    style.textContent = data.css;
-                    document.head.appendChild(style);
-                    self.cssLoaded = true;
-                }
-            }).catch(function(error) {
-                console.error('AIChatHighlight.loadCSS error:', error);
-            });
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = '/static/css/ai-chat/hljs-atom-one-dark.css';
+            document.head.appendChild(link);
+
+            var script = document.createElement('script');
+            script.src = '/static/js/ai-chat/hljs.min.js';
+            script.onload = function() {
+                self.hljsLoaded = true;
+                self.hljsLoading = false;
+            };
+            script.onerror = function() {
+                self.hljsLoading = false;
+                console.error('Failed to load highlight.js');
+            };
+            document.head.appendChild(script);
         },
 
         highlightCodeBlocks: function(container) {
@@ -42,39 +41,22 @@
                 return;
             }
 
-            var self = this;
-
             var codeBlocks = container.querySelectorAll('pre code');
             for (var i = 0; i < codeBlocks.length; i++) {
                 this.processCodeElement(codeBlocks[i]);
             }
-
-            var inlineCode = container.querySelectorAll('code:not(pre code)');
-            for (var j = 0; j < inlineCode.length; j++) {
-                this.processCodeElement(inlineCode[j]);
-            }
         },
 
         processCodeElement: function(codeEl) {
-            if (codeEl.classList.contains('highlighted')) {
+            if (codeEl.classList.contains('hljs')) {
                 return;
             }
 
-            var language = this.getLanguageFromClass(codeEl);
-            var code = codeEl.textContent;
-
-            if (!code.trim()) {
+            if (!this.hljsLoaded || typeof hljs === 'undefined') {
                 return;
             }
 
-            var cacheKey = language + ':' + code;
-            if (this.cache[cacheKey]) {
-                codeEl.innerHTML = this.cache[cacheKey];
-                codeEl.classList.add('highlighted');
-                return;
-            }
-
-            this.highlightCode(codeEl, code, language);
+            hljs.highlightElement(codeEl);
         },
 
         getLanguageFromClass: function(codeEl) {
@@ -86,49 +68,6 @@
                 }
             }
             return '';
-        },
-
-        highlightCode: function(codeEl, code, language) {
-            var self = this;
-
-            fetch('/zato/ai-chat/highlight/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCsrfToken()
-                },
-                body: JSON.stringify({
-                    code: code,
-                    language: language
-                })
-            }).then(function(response) {
-                return response.json();
-            }).then(function(data) {
-                if (data.html) {
-                    var cacheKey = language + ':' + code;
-                    self.cache[cacheKey] = data.html;
-                    codeEl.innerHTML = data.html;
-                    codeEl.classList.add('highlighted');
-                }
-            }).catch(function(error) {
-                console.error('AIChatHighlight.highlightCode error:', error);
-            });
-        },
-
-        getCsrfToken: function() {
-            var cookieValue = null;
-            var name = 'csrftoken';
-            if (document.cookie && document.cookie !== '') {
-                var cookies = document.cookie.split(';');
-                for (var i = 0; i < cookies.length; i++) {
-                    var cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
         }
     };
 
