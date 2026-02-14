@@ -130,11 +130,33 @@
     background: rgba(229, 62, 62, 0.1);
 }
 
-.ai-chat-mcp-add-section {
-    padding-top: 16px;
-    margin-bottom: 16px;
-    text-align: center;
+.ai-chat-mcp-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     width: 100%;
+    max-width: 400px;
+    margin-bottom: 16px;
+}
+
+.ai-chat-mcp-header-row .ai-chat-config-title {
+    margin-bottom: 0;
+}
+
+.ai-chat-mcp-add-btn {
+    padding: 5px 12px;
+    font-size: 10px;
+    font-weight: 500;
+    background: var(--zato-seablue-light2, #3182ce);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-shadow: none !important;
+}
+
+.ai-chat-mcp-add-btn:hover {
+    background: var(--zato-seablue-light3, #4299e1);
 }
 
 .ai-chat-mcp-loading {
