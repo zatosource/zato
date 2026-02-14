@@ -67,6 +67,14 @@
             this.initModelDropdown();
             AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
             this.scrollActiveTabToBottom();
+            this.highlightCode();
+        },
+
+        highlightCode: function() {
+            var messagesContainer = this.widget.querySelector('.ai-chat-messages[data-tab-id="' + this.activeTabId + '"]');
+            if (messagesContainer && window.AIChatHighlight) {
+                AIChatHighlight.highlightCodeBlocks(messagesContainer);
+            }
         },
 
         scrollActiveTabToBottom: function() {

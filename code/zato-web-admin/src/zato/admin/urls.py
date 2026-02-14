@@ -15,6 +15,7 @@ from zato.admin import settings
 from zato.admin.web.util import static_serve
 from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.ai import chat as ai_chat
+from zato.admin.web.views.ai import highlight as ai_highlight
 from zato.admin.web.views.ai import stream as ai_stream
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
@@ -971,6 +972,13 @@ urlpatterns += [
 
     url(r'^zato/ai-chat/invoke/$',
         login_required(ai_stream.invoke), name='ai-chat-invoke'),
+
+    # AI chat syntax highlighting
+
+    url(r'^zato/ai-chat/highlight/$',
+        login_required(ai_highlight.highlight_code), name='ai-chat-highlight'),
+    url(r'^zato/ai-chat/highlight/css/$',
+        login_required(ai_highlight.get_pygments_css), name='ai-chat-highlight-css'),
 ]
 
 # ################################################################################################################################
