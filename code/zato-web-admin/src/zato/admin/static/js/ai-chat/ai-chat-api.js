@@ -12,9 +12,9 @@
                         callbacks.onChunk(text);
                     }
                 },
-                onComplete: function() {
+                onComplete: function(inputTokens, outputTokens) {
                     if (callbacks.onComplete) {
-                        callbacks.onComplete();
+                        callbacks.onComplete(inputTokens, outputTokens);
                     }
                 },
                 onError: function(error) {

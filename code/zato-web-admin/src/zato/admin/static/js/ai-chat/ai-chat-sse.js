@@ -122,6 +122,7 @@
                 if (callbacks.onComplete) {
                     var inputTokens = data.input_tokens || 0;
                     var outputTokens = data.output_tokens || 0;
+                    console.log('AIChatSSE done: input_tokens=' + inputTokens + ' output_tokens=' + outputTokens + ' data=', data);
                     callbacks.onComplete(inputTokens, outputTokens);
                 }
                 this.disconnect(tabId);

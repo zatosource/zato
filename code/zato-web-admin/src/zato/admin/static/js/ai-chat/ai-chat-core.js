@@ -531,11 +531,14 @@
                     self.updateStreamingMessage(tabId);
                 },
                 onComplete: function(inputTokens, outputTokens) {
+                    console.log('onComplete: inputTokens=' + inputTokens + ' outputTokens=' + outputTokens);
                     if (inputTokens > 0) {
                         AIChatTabState.addTokensOut(tabId, inputTokens);
+                        console.log('after addTokensOut: ' + AIChatTabState.getTokensOut(tabId));
                     }
                     if (outputTokens > 0) {
                         AIChatTabState.addTokensIn(tabId, outputTokens);
+                        console.log('after addTokensIn: ' + AIChatTabState.getTokensIn(tabId));
                     }
 
                     AIChatMessages.finishStreamingMessage(tab, tabId);
