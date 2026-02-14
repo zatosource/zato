@@ -147,7 +147,7 @@
 
             var content = AIChatMessages.getStreamingContent(tabId);
             if (content && content.trim()) {
-                AIChatMessages.finishStreamingMessage(tab, tabId);
+                AIChatMessages.finishStreamingMessage(tab, tabId, true);
             } else {
                 AIChatMessages.cancelStreamingMessage(tab, tabId);
             }
@@ -159,6 +159,77 @@
             if (input) {
                 input.focus();
             }
+        },
+
+        continueMessage: function(widget, core, tabId, messageIndex) {
+            var tab = AIChatTabs.getTabById(core.tabs, tabId);
+            if (!tab) return;
+
+            var msg = tab.messages[messageIndex];
+            if (!msg || !msg.interrupted) return;
+
+            if (AIChatMessages.isStreaming(tabId)) {
+                return;
+            }
+
+            var model = AIChatTabState.getModel(tabId);
+            if (!model) {
+                var models = AIChatConfig.getModelsForConfiguredProviders();
+                for (var i = 0; i < models.length; i++) {
+                    if (!models[i].disabled) {
+                        model = models[i].id;
+                        break;
+                    }
+                }
+            }
+
+            if (!model) {
+                return;
+            }
+
+            msg.interrupted = false;
+            msg.streaming = true;
+            msg.id = 'streaming-' + tabId;
+
+            AIChatMessages.streamingMessages[tabId] = {
+                messageId: msg.id,
+                content: msg.content
+            };
+
+            core.saveState();
+            core.render();
+
+            var self = this;
+            var apiMessages = this.buildApiMessages(tab);
+
+            AIChatAPI.streamMessage(tabId, model, apiMessages, {
+                onChunk: function(text) {
+                    AIChatMessages.appendToStreamingMessage(tabId, text);
+                    self.updateStreamingMessage(widget, tabId);
+                },
+                onComplete: function(inputTokens, outputTokens) {
+                    if (inputTokens > 0) {
+                        AIChatTabState.addTokensOut(tabId, inputTokens);
+                    }
+                    if (outputTokens > 0) {
+                        AIChatTabState.addTokensIn(tabId, outputTokens);
+                    }
+
+                    AIChatMessages.finishStreamingMessage(tab, tabId);
+                    core.saveState();
+                    core.render();
+
+                    var input = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
+                    if (input) {
+                        input.focus();
+                    }
+                },
+                onError: function(error) {
+                    AIChatMessages.finishStreamingMessage(tab, tabId, true);
+                    core.saveState();
+                    core.render();
+                }
+            });
         }
     };
 

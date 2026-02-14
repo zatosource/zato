@@ -49,7 +49,7 @@
             return streaming.content;
         },
 
-        finishStreamingMessage: function(tab, tabId) {
+        finishStreamingMessage: function(tab, tabId, interrupted) {
             var streaming = this.streamingMessages[tabId];
             if (!streaming) {
                 return;
@@ -59,6 +59,9 @@
                 if (tab.messages[i].id === streaming.messageId) {
                     tab.messages[i].content = streaming.content;
                     tab.messages[i].streaming = false;
+                    if (interrupted) {
+                        tab.messages[i].interrupted = true;
+                    }
                     delete tab.messages[i].id;
                     break;
                 }

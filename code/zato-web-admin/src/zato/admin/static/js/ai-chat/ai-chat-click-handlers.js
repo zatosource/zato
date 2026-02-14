@@ -123,6 +123,12 @@
                 return;
             }
 
+            if (target.classList.contains('ai-chat-message-continue')) {
+                var messageIndex = parseInt(target.getAttribute('data-message-index'), 10);
+                AIChatStreaming.continueMessage(widget, core, core.activeTabId, messageIndex);
+                return;
+            }
+
             if (target.classList.contains('ai-chat-attachment-remove') || target.closest('.ai-chat-attachment-remove')) {
                 var removeBtn = target.classList.contains('ai-chat-attachment-remove') ? target : target.closest('.ai-chat-attachment-remove');
                 var attachmentId = removeBtn.getAttribute('data-attachment-id');

@@ -175,6 +175,9 @@
                         html += '<button class="ai-chat-message-copy">Copy</button>';
                         html += '</div>';
                     }
+                    if (msg.interrupted) {
+                        html += '<div class="ai-chat-message-continue" data-message-index="' + i + '">Continue</div>';
+                    }
                     html += '</div>';
                 }
             }
@@ -203,7 +206,7 @@
             html += '</button>';
             if (isStreaming) {
                 html += '<button class="ai-chat-send-button ai-chat-stop-button" data-tab-id="' + tab.id + '" aria-label="Stop">';
-                html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-send-icon"><rect x="6" y="6" width="12" height="12" fill="currentColor"/></svg>';
+                html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-send-icon"><rect x="5" y="5" width="14" height="14" fill="currentColor"/></svg>';
                 html += '</button>';
             } else {
                 html += '<button class="ai-chat-send-button" data-tab-id="' + tab.id + '" aria-label="Send">';
