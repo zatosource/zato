@@ -489,9 +489,12 @@
                     this.widget.style.width = this.preMaximizeState.width;
                     this.widget.style.height = this.preMaximizeState.height;
                 }
+                if (this.preMaximizeZoomScale) {
+                    this.zoomScale = this.preMaximizeZoomScale;
+                    this.widget.style.transform = 'scale(' + this.zoomScale + ')';
+                }
                 this.widget.style.borderRadius = '';
-                document.body.style.overflow = '';
-                document.documentElement.style.overflow = '';
+                document.documentElement.classList.remove('ai-chat-maximized');
                 this.isMaximized = false;
             } else {
                 this.preMaximizeState = {
@@ -500,14 +503,15 @@
                     width: this.widget.style.width,
                     height: this.widget.style.height
                 };
-                var scale = this.zoomScale || 1;
+                this.preMaximizeZoomScale = this.zoomScale;
+                this.widget.style.transform = 'scale(1)';
+                this.zoomScale = 1;
                 this.widget.style.left = '0px';
                 this.widget.style.top = '0px';
-                this.widget.style.width = (window.innerWidth / scale) + 'px';
-                this.widget.style.height = (window.innerHeight / scale) + 'px';
+                this.widget.style.width = window.innerWidth + 'px';
+                this.widget.style.height = window.innerHeight + 'px';
                 this.widget.style.borderRadius = '0';
-                document.body.style.overflow = 'hidden';
-                document.documentElement.style.overflow = 'hidden';
+                document.documentElement.classList.add('ai-chat-maximized');
                 this.isMaximized = true;
             }
             this.render();

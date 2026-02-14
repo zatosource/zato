@@ -78,6 +78,11 @@ html {
     scrollbar-gutter: stable;
 }
 
+html.ai-chat-maximized {
+    overflow: hidden !important;
+    scrollbar-gutter: auto !important;
+}
+
 body {
     color: black;
     background: #fff
