@@ -2,6 +2,7 @@
     flex: 1 1 0;
     overflow-y: auto;
     padding: 16px;
+    padding-top: 6px;
     min-height: 0;
     border-top: 10px solid transparent;
 }
