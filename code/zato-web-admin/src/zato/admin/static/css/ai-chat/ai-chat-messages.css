@@ -385,7 +385,7 @@
 .ai-chat-message-continue {
     position: absolute;
     left: calc(100% + 8px);
-    bottom: 6px;
+    bottom: 9px;
     font-size: 11px;
     color: rgba(150, 210, 170, 0.7);
     cursor: pointer;
