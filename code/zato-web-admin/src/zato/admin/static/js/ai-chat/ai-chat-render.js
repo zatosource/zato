@@ -90,6 +90,12 @@
                 } else if (configMode === 'add-mcp') {
                     console.log('AIChatRender.buildBodyHtml: rendering add-mcp');
                     html += AIChatMCP.buildAddServerHtml();
+                } else if (configMode === 'mcp-detail') {
+                    console.log('AIChatRender.buildBodyHtml: rendering mcp-detail');
+                    html += AIChatMCP.buildServerDetailHtml(AIChatMCP.selectedServer, AIChatMCP.selectedServerTools, AIChatMCP.loadingTools);
+                } else if (configMode === 'edit-mcp') {
+                    console.log('AIChatRender.buildBodyHtml: rendering edit-mcp');
+                    html += AIChatMCP.buildEditServerHtml(AIChatMCP.selectedServer);
                 } else {
                     console.log('AIChatRender.buildBodyHtml: rendering providers');
                     var showBackOnProviders = cameFromChat && hadKeyOnEntry;

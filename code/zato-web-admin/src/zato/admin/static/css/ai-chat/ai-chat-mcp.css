@@ -1,37 +1,193 @@
 .ai-chat-mcp-empty {
-    color: #888;
+    color: var(--ai-chat-text-secondary);
     text-align: center;
     padding: 40px 20px;
     text-shadow: none !important;
 }
 
-.ai-chat-mcp-server-name {
-    color: #d0d0d0;
+.ai-chat-mcp-server-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--ai-chat-bg-light);
+    border: 1px solid var(--ai-chat-border-subtle);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.ai-chat-mcp-server-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+    flex: 1;
+}
+
+.ai-chat-mcp-server-name-link {
+    color: var(--ai-chat-link-color);
     font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    text-shadow: none !important;
+}
+
+.ai-chat-mcp-server-name-link:hover {
+    color: var(--ai-chat-link-hover);
+    text-decoration: underline;
+}
+
+.ai-chat-mcp-server-endpoint {
+    color: var(--ai-chat-text-secondary);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: none !important;
+}
+
+.ai-chat-mcp-server-url {
+    color: var(--ai-chat-text-secondary);
+    font-size: 12px;
+    text-align: center;
+    margin-bottom: 20px;
     text-shadow: none !important;
 }
 
 .ai-chat-mcp-server-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     flex-shrink: 0;
 }
 
-.ai-chat-mcp-toggle {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
+.ai-chat-mcp-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
 }
 
-.ai-chat-mcp-toggle input {
-    width: 16px;
-    height: 16px;
+.ai-chat-mcp-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.ai-chat-mcp-slider {
+    position: absolute;
     cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--ai-chat-toggle-off);
+    transition: 0.2s;
+    border-radius: 20px;
+}
+
+.ai-chat-mcp-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #888;
+    transition: 0.2s;
+    border-radius: 50%;
+}
+
+.ai-chat-mcp-switch input:checked + .ai-chat-mcp-slider {
+    background-color: var(--ai-chat-toggle-on);
+}
+
+.ai-chat-mcp-switch input:checked + .ai-chat-mcp-slider:before {
+    transform: translateX(16px);
+    background-color: #fff;
+}
+
+.ai-chat-mcp-edit-btn,
+.ai-chat-mcp-remove-btn {
+    background: transparent;
+    border: none;
+    color: #666;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-chat-mcp-edit-btn:hover {
+    color: #63b3ed;
+    background: rgba(99, 179, 237, 0.1);
+}
+
+.ai-chat-mcp-remove-btn:hover {
+    color: #fc8181;
+    background: rgba(229, 62, 62, 0.1);
 }
 
 .ai-chat-mcp-add-section {
     padding-top: 16px;
     margin-top: 16px;
     text-align: center;
+}
+
+.ai-chat-mcp-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 20px;
+    color: var(--ai-chat-text-secondary);
+    text-shadow: none !important;
+}
+
+.ai-chat-mcp-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--ai-chat-toggle-off);
+    border-top-color: var(--ai-chat-toggle-on);
+    border-radius: 50%;
+    animation: ai-chat-mcp-spin 0.8s linear infinite;
+}
+
+@keyframes ai-chat-mcp-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.ai-chat-mcp-tools-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+.ai-chat-mcp-tool {
+    padding: 12px;
+    background: var(--ai-chat-bg-light);
+    border: 1px solid var(--ai-chat-border-subtle);
+    border-radius: 6px;
+}
+
+.ai-chat-mcp-tool-name {
+    color: var(--ai-chat-link-color);
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    text-shadow: none !important;
+}
+
+.ai-chat-mcp-tool-desc {
+    color: var(--ai-chat-text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+    text-shadow: none !important;
 }

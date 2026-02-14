@@ -441,6 +441,34 @@
                 return;
             }
 
+            var mcpBack = target.closest('#ai-chat-mcp-back');
+            if (mcpBack) {
+                console.log('AIChatCore.handleClick: mcp-back clicked, target=', target, 'mcpBack=', mcpBack);
+                this.needsConfig = false;
+                this.configMode = 'providers';
+                this.render();
+                return;
+            }
+
+            var mcpDetailBack = target.closest('#ai-chat-mcp-detail-back');
+            if (mcpDetailBack) {
+                console.log('AIChatCore.handleClick: mcp-detail-back clicked');
+                AIChatMCP.selectedServer = null;
+                AIChatMCP.selectedServerTools = [];
+                this.configMode = 'manage-mcp';
+                this.render();
+                return;
+            }
+
+            var mcpEditBack = target.closest('#ai-chat-mcp-edit-back');
+            if (mcpEditBack) {
+                console.log('AIChatCore.handleClick: mcp-edit-back clicked');
+                AIChatMCP.selectedServer = null;
+                this.configMode = 'manage-mcp';
+                this.render();
+                return;
+            }
+
             var backEl = target.closest('.ai-chat-config-back');
             if (backEl) {
                 AIChatSettings.handleBackClick(this.configMode, this.cameFromChat, this.hadKeyOnEntry, {
@@ -458,15 +486,6 @@
                         self.render();
                     }
                 });
-                return;
-            }
-
-            var mcpBack = target.closest('#ai-chat-mcp-back');
-            if (mcpBack) {
-                console.log('AIChatCore.handleClick: mcp-back clicked, target=', target, 'mcpBack=', mcpBack);
-                this.needsConfig = false;
-                this.configMode = 'providers';
-                this.render();
                 return;
             }
 
@@ -518,17 +537,19 @@
                 return;
             }
 
-            if (target.classList.contains('ai-chat-mcp-remove')) {
-                var serverId = target.getAttribute('data-server-id');
-                console.log('AIChatCore.handleClick: mcp-remove clicked, serverId=', serverId);
-                AIChatMCP.removeServer(serverId, function() {
-                    self.render();
+            var mcpRemoveBtn = target.closest('.ai-chat-mcp-remove-btn');
+            if (mcpRemoveBtn) {
+                ZatoConfirmButton.handleClick(mcpRemoveBtn, function(serverId) {
+                    console.log('AIChatCore.handleClick: mcp-remove confirmed, serverId=', serverId);
+                    AIChatMCP.removeServer(serverId, function() {
+                        self.render();
+                    });
                 });
                 return;
             }
 
             if (target.classList.contains('ai-chat-mcp-enabled')) {
-                var serverEl = target.closest('.ai-chat-config-key-row');
+                var serverEl = target.closest('.ai-chat-mcp-server-row');
                 var serverId = serverEl ? serverEl.getAttribute('data-server-id') : null;
                 if (serverId) {
                     var enabled = target.checked;
@@ -537,6 +558,53 @@
                         self.render();
                     });
                 }
+                return;
+            }
+
+            var mcpServerNameLink = target.closest('.ai-chat-mcp-server-name-link');
+            if (mcpServerNameLink) {
+                var serverId = mcpServerNameLink.getAttribute('data-server-id');
+                console.log('AIChatCore.handleClick: mcp-server-name clicked, serverId=', serverId);
+                AIChatMCP.selectedServer = AIChatMCP.getServerById(serverId);
+                AIChatMCP.loadingTools = true;
+                AIChatMCP.selectedServerTools = [];
+                this.configMode = 'mcp-detail';
+                this.render();
+                AIChatMCP.loadToolsForServer(serverId, function() {
+                    self.render();
+                });
+                return;
+            }
+
+            var mcpEditBtn = target.closest('.ai-chat-mcp-edit-btn');
+            if (mcpEditBtn) {
+                var serverId = mcpEditBtn.getAttribute('data-item-id');
+                console.log('AIChatCore.handleClick: mcp-edit clicked, serverId=', serverId);
+                AIChatMCP.selectedServer = AIChatMCP.getServerById(serverId);
+                this.configMode = 'edit-mcp';
+                this.render();
+                return;
+            }
+
+            var mcpEditSave = target.closest('#ai-chat-mcp-edit-save');
+            if (mcpEditSave) {
+                var serverId = mcpEditSave.getAttribute('data-server-id');
+                var endpointInput = this.widget.querySelector('#ai-chat-mcp-edit-endpoint');
+                var newEndpoint = endpointInput ? endpointInput.value.trim() : '';
+
+                if (!newEndpoint) {
+                    console.log('AIChatCore.handleClick: mcp-edit-save missing endpoint');
+                    return;
+                }
+
+                var newName = AIChatMCP.extractNameFromUrl(newEndpoint);
+                console.log('AIChatCore.handleClick: mcp-edit-save updating server', serverId, 'endpoint=', newEndpoint, 'name=', newName);
+
+                AIChatMCP.updateServer(serverId, { endpoint: newEndpoint, name: newName }, function() {
+                    AIChatMCP.selectedServer = null;
+                    self.configMode = 'manage-mcp';
+                    self.render();
+                });
                 return;
             }
 
@@ -552,24 +620,28 @@
                 return;
             }
 
-            if (target.classList.contains('ai-chat-config-key-remove')) {
-                var providerId = target.getAttribute('data-provider-id');
-                AIChatSettings.removeApiKey(providerId, {
-                    onNoKeysLeft: function() {
-                        self.needsConfig = true;
-                        self.configMode = 'providers';
-                        self.cameFromChat = false;
-                        self.hadKeyOnEntry = false;
-                    },
-                    onSuccess: function() {
-                        self.render();
-                    }
+            var configKeyRemove = target.closest('.ai-chat-config-key-remove');
+            if (configKeyRemove) {
+                ZatoConfirmButton.handleClick(configKeyRemove, function(providerId) {
+                    console.log('AIChatCore.handleClick: config-key-remove confirmed, providerId=', providerId);
+                    AIChatSettings.removeApiKey(providerId, {
+                        onNoKeysLeft: function() {
+                            self.needsConfig = true;
+                            self.configMode = 'providers';
+                            self.cameFromChat = false;
+                            self.hadKeyOnEntry = false;
+                        },
+                        onSuccess: function() {
+                            self.render();
+                        }
+                    });
                 });
                 return;
             }
 
-            if (target.classList.contains('ai-chat-config-key-add')) {
-                var providerId = target.getAttribute('data-provider-id');
+            var configKeyAdd = target.closest('.ai-chat-config-key-add');
+            if (configKeyAdd) {
+                var providerId = configKeyAdd.getAttribute('data-item-id');
                 this.needsConfig = true;
                 this.configMode = 'key-input';
                 AIChatSettings.showKeyInput(this.widget, providerId, function() {

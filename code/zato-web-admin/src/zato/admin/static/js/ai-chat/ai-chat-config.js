@@ -307,16 +307,18 @@
             for (var key in this.providers) {
                 var provider = this.providers[key];
                 var isConfigured = this.configuredKeys[key];
-                html += '<div class="ai-chat-config-key-row">';
+                html += '<div class="ai-chat-config-key-row" data-provider-id="' + key + '">';
                 html += '<div class="ai-chat-config-key-info">';
                 html += '<div class="ai-chat-config-key-logo">' + provider.logo + '</div>';
                 html += '<div class="ai-chat-config-key-provider">' + provider.name + '</div>';
                 html += '</div>';
+                html += '<div class="ai-chat-config-key-actions">';
                 if (isConfigured) {
-                    html += '<button class="ai-chat-config-key-action ai-chat-config-key-remove" data-provider-id="' + key + '">Remove</button>';
+                    html += ZatoConfirmButton.buildRemoveHtml(key, 'ai-chat-config-key-remove');
                 } else {
-                    html += '<button class="ai-chat-config-key-action ai-chat-config-key-add" data-provider-id="' + key + '">Add</button>';
+                    html += '<button class="zato-confirm-btn ai-chat-config-key-add" data-item-id="' + key + '"><span class="zato-confirm-text">Add</span></button>';
                 }
+                html += '</div>';
                 html += '</div>';
             }
 

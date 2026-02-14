@@ -1,0 +1,45 @@
+.zato-confirm-btn {
+    padding: 6px 0;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    width: 60px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.zato-confirm-btn:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.zato-confirm-edit {
+    background: transparent;
+    color: var(--ai-chat-text-secondary);
+    border: 1px solid var(--ai-chat-text-dim);
+}
+
+.zato-confirm-edit:hover {
+    color: var(--ai-chat-link-color);
+    border-color: var(--ai-chat-link-color);
+    background: rgba(99, 179, 237, 0.1);
+}
+
+.zato-confirm-remove {
+    background: var(--ai-chat-error-bg);
+    color: var(--ai-chat-error-color);
+}
+
+.zato-confirm-remove:hover {
+    background: var(--ai-chat-error-hover);
+}
+
+.zato-confirm-remove.zato-confirm-confirming {
+    background: var(--ai-chat-error-hover);
+    color: var(--ai-chat-error-color);
+}
