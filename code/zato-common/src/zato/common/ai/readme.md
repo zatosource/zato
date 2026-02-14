@@ -7,7 +7,7 @@ directly from any page in the admin panel. The widget has a dark theme.
 
 ## Current status
 
-The frontend is complete including provider configuration UI. The backend integration is not yet implemented.
+The frontend and backend are complete. Chat streaming works with Anthropic, OpenAI, and Google providers.
 
 ## Architecture decisions
 
@@ -62,6 +62,15 @@ Backend communication:
 - `ai-chat-sse.js` - SSE connection management (connect, disconnect, event parsing)
 - `ai-chat-api.js` - high-level API for streaming messages
 
+Markdown and syntax highlighting:
+- `ai-chat-highlight.js` - frontend Pygments syntax highlighting integration
+
+Location: `/zato-web-admin/src/zato/admin/static/js/libs/`
+
+Third-party libraries:
+- `marked.min.js` - markdown parser
+- `marked-emoji.min.js` - emoji shortcode extension for marked.js
+
 Location: `/zato-web-admin/src/zato/admin/static/js/`
 
 Reusable components:
@@ -106,6 +115,10 @@ Location: `/zato-web-admin/src/zato/admin/web/views/ai/`
 - `stream.py` - SSE streaming endpoint:
   - `invoke` - POST endpoint that streams chat responses via SSE
 
+- `highlight.py` - syntax highlighting endpoints:
+  - `highlight_code` - POST endpoint that highlights code using Pygments
+  - `get_pygments_css` - GET endpoint that returns Pygments CSS styles
+
 ### LLM clients
 
 Location: `/zato-web-admin/src/zato/admin/web/views/ai/llm/`
@@ -143,6 +156,8 @@ Location: `/zato-web-admin/src/zato/admin/urls.py`
 - `/zato/ai-chat/config/delete-key/` - POST to delete API key
 - `/zato/ai-chat/config/get-models/` - GET available models for all providers
 - `/zato/ai-chat/invoke/` - POST to stream chat response via SSE
+- `/zato/ai-chat/highlight/` - POST to highlight code using Pygments
+- `/zato/ai-chat/highlight/css/` - GET Pygments CSS styles
 
 ### Redis keys
 
@@ -240,6 +255,26 @@ All JS and CSS files are included here in the correct dependency order.
 - System messages centered with yellow-tinted background
 - Messages sized to fit content (not full width)
 - Auto-scroll to bottom on new message
+- Markdown rendering using marked.js library
+- Syntax highlighting for code blocks using Pygments (backend)
+- Emoji shortcodes supported (e.g., `:smile:` → 😀, `:fire:` → 🔥)
+- Full timestamp display (YYYY-MM-DD HH:MM:SS format)
+- Copy button on each message to copy content to clipboard
+
+### Token counters
+
+- Display "Tok out: X" and "Tok in: X" next to model dropdown
+- Tracks actual token counts from LLM API responses (not estimates)
+- Tok out = input tokens sent to LLM (cumulative per tab)
+- Tok in = output tokens received from LLM (cumulative per tab)
+- Numbers humanized for readability (e.g., 1.2k, 15k, 1.5M)
+- Token counts persisted per tab in localStorage
+
+### Streaming
+
+- Real-time streaming of LLM responses via SSE
+- Markdown rendered live as chunks arrive
+- Input field automatically focused after response completes
 
 ### Provider configuration
 
@@ -270,59 +305,28 @@ All JS and CSS files are included here in the correct dependency order.
 - Dimmed models cannot be selected until their provider's API key is added
 - When a previously selected model becomes unavailable, automatically selects first available model
 
-## Next steps - backend integration
+## Logging
 
-### Service to implement
+### Backend logging
 
-Service name: `zato.server.service.internal.ai.chat.invoke`
+The Anthropic client logs all requests and responses at INFO level:
+- `Anthropic request: model=X messages=[...]` - full request with all messages
+- `Anthropic event: X data=Y` - each SSE event from the API
+- `Anthropic input_tokens: X` - input token count from API
+- `Anthropic output_tokens: X` - output token count from API
+- `Anthropic complete: input_tokens=X output_tokens=Y` - final token counts
 
-Request format (JSON):
-```json
-{
-    "chat_id": "string",
-    "message": "string"
-}
-```
+### Frontend logging
 
-Response format (JSON):
-```json
-{
-    "response": "string"
-}
-```
-
-### Frontend changes needed
-
-The file `ai-chat-api.js` contains stub functions that need to be implemented:
-
-1. `sendMessage(message, tabId, onSuccess, onError)` - send message to backend, call onSuccess with response
-2. `streamMessage(message, tabId, onChunk, onComplete, onError)` - for streaming responses (optional)
-
-The `ai-chat-core.js` `sendMessage` method currently only adds the user message to the tab and re-renders. It needs to:
-
-1. Call `AIChatAPI.sendMessage()` with the message
-2. Show a loading indicator while waiting
-3. On success, add the assistant response to the tab
-4. On error, show an error message
-
-### API endpoint
-
-A Django view is needed in zato-web-admin to proxy requests to the Zato service. The frontend will POST to this endpoint.
-
-Suggested URL: `/zato/ai-chat/invoke/`
-
-The view should:
-1. Accept POST with JSON body containing `chat_id` and `message`
-2. Invoke the `zato.server.service.internal.ai.chat.invoke` service
-3. Return the response JSON
-
-### Authentication
-
-Use existing Zato admin session authentication. The Django view will have access to the authenticated user.
+The frontend logs token data to browser console:
+- `AIChatSSE done: input_tokens=X output_tokens=Y data=...` - token data received
+- `onComplete: inputTokens=X outputTokens=Y` - tokens passed to handler
+- `after addTokensOut: X` - cumulative output tokens
+- `after addTokensIn: X` - cumulative input tokens
 
 ## localStorage keys
 
-- `zato.ai-chat.tabs` - array of tab objects with id, title, messages, model
+- `zato.ai-chat.tabs` - array of tab objects with id, title, messages, model, tokensIn, tokensOut
 - `zato.ai-chat.active-tab` - id of active tab
 - `zato.ai-chat.position` - {left, top} of widget
 - `zato.ai-chat.dimensions` - {width, height} of widget

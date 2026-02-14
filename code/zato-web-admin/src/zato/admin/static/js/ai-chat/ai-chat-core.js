@@ -32,6 +32,20 @@
                 self.render();
                 console.debug('AIChat.init: initialization complete, needsConfig:', self.needsConfig);
             });
+
+            window.addEventListener('focus', function() {
+                self.focusInputIfNotMinimized();
+            });
+        },
+
+        focusInputIfNotMinimized: function() {
+            if (this.isMinimized || this.needsConfig) {
+                return;
+            }
+            var input = this.widget.querySelector('.ai-chat-input[data-tab-id="' + this.activeTabId + '"]');
+            if (input) {
+                input.focus();
+            }
         },
 
         loadState: function() {
@@ -588,7 +602,16 @@
             if (!contentEl) return;
 
             var content = AIChatMessages.getStreamingContent(tabId);
-            contentEl.innerHTML = marked.parse(content);
+            var html = marked.parse(content);
+            if (typeof markedEmoji !== 'undefined') {
+                if (markedEmoji.convertAsciiEmoticons) {
+                    html = markedEmoji.convertAsciiEmoticons(html);
+                }
+                if (markedEmoji.wrapUnicodeEmojis) {
+                    html = markedEmoji.wrapUnicodeEmojis(html);
+                }
+            }
+            contentEl.innerHTML = html;
 
             AIChatMessages.scrollToBottom(messagesContainer);
         }

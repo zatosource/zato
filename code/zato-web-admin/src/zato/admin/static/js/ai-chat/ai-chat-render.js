@@ -111,19 +111,46 @@
                     html += '<div class="ai-chat-message-content">';
                     if (msg.streaming) {
                         var streamingContent = AIChatMessages.getStreamingContent(tab.id);
-                        html += marked.parse(streamingContent);
+                        var parsedHtml = marked.parse(streamingContent);
+                        if (typeof markedEmoji !== 'undefined' && markedEmoji.wrapUnicodeEmojis) {
+                            parsedHtml = markedEmoji.wrapUnicodeEmojis(parsedHtml);
+                        }
+                        html += parsedHtml;
                     } else if (msg.role === 'assistant') {
-                        html += marked.parse(msg.content);
+                        var parsedHtml = marked.parse(msg.content);
+                        if (typeof markedEmoji !== 'undefined') {
+                            if (markedEmoji.convertAsciiEmoticons) {
+                                parsedHtml = markedEmoji.convertAsciiEmoticons(parsedHtml);
+                            }
+                            if (markedEmoji.wrapUnicodeEmojis) {
+                                parsedHtml = markedEmoji.wrapUnicodeEmojis(parsedHtml);
+                            }
+                        }
+                        html += parsedHtml;
                     } else {
-                        html += this.escapeHtml(msg.content);
+                        var userHtml = this.escapeHtml(msg.content);
+                        if (typeof markedEmoji !== 'undefined') {
+                            if (markedEmoji.convertShortcodes) {
+                                userHtml = markedEmoji.convertShortcodes(userHtml);
+                            }
+                            if (markedEmoji.convertAsciiEmoticons) {
+                                userHtml = markedEmoji.convertAsciiEmoticons(userHtml);
+                            }
+                            if (markedEmoji.wrapUnicodeEmojis) {
+                                userHtml = markedEmoji.wrapUnicodeEmojis(userHtml);
+                            }
+                        }
+                        html += userHtml;
                     }
                     html += '</div>';
-                    html += '<div class="ai-chat-message-footer">';
-                    if (timestamp) {
-                        html += '<span class="ai-chat-message-time">' + this.formatTime(timestamp) + '</span>';
+                    if (!msg.streaming) {
+                        html += '<div class="ai-chat-message-footer">';
+                        if (timestamp) {
+                            html += '<span class="ai-chat-message-time">' + this.formatTime(timestamp) + '</span>';
+                        }
+                        html += '<button class="ai-chat-message-copy">Copy</button>';
+                        html += '</div>';
                     }
-                    html += '<button class="ai-chat-message-copy">Copy</button>';
-                    html += '</div>';
                     html += '</div>';
                 }
             }
