@@ -84,7 +84,9 @@
 .ai-chat-options-button:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
-    color: #4a9eff;
+    color: #fff;
+    box-shadow: none;
+    outline: none;
 }
 
 .ai-chat-options-button:active {
