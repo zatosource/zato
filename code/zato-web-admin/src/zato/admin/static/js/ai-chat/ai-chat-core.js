@@ -25,6 +25,7 @@
             }
 
             AIChatConfig.init();
+            AIChatZoom.init();
             this.loadState();
             this.widget = AIChatWidget.create(this.isMinimized, this.zoomScale);
             if (this.isMaximized) {
@@ -97,6 +98,7 @@
             AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
             this.scrollActiveTabToBottom();
             this.highlightCode();
+            AIChatZoom.applyAllZoneZooms(this.widget);
         },
 
         highlightCode: function() {
