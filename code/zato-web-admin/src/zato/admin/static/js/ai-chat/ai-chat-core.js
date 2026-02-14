@@ -42,10 +42,7 @@
             if (this.isMinimized || this.needsConfig) {
                 return;
             }
-            var input = this.widget.querySelector('.ai-chat-input[data-tab-id="' + this.activeTabId + '"]');
-            if (input) {
-                input.focus();
-            }
+            this.focusInput(this.activeTabId);
         },
 
         loadState: function() {
@@ -471,6 +468,7 @@
             this.activeTabId = newTab.id;
             this.saveState();
             this.render();
+            this.focusInput(newTab.id);
         },
 
         closeTab: function(tabId) {
@@ -488,6 +486,14 @@
             this.saveState();
             this.render();
             AIChatAttachments.render(this.widget, tabId, this.tabs);
+            this.focusInput(tabId);
+        },
+
+        focusInput: function(tabId) {
+            var input = this.widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
+            if (input) {
+                input.focus();
+            }
         },
 
         sendMessage: function(tabId) {
