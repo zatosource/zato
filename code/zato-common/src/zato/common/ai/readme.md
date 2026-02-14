@@ -87,12 +87,20 @@ Reusable component styles:
 
 ### Django views
 
-Location: `/zato-web-admin/src/zato/admin/web/views/ai_chat.py`
+Location: `/zato-web-admin/src/zato/admin/web/views/ai/`
 
-- `get_keys` - retrieves API key status for all providers from Redis
-- `save_key` - saves API key to Redis
-- `delete_key` - deletes API key from Redis
-- `get_models` - retrieves available AI models from models.py
+- `common.py` - shared utilities:
+  - `Providers` - tuple of valid provider names (single source of truth)
+  - `get_redis_client()` - returns Redis client instance
+  - `is_valid_provider()` - validates provider name
+  - `get_api_key()` / `set_api_key()` / `delete_api_key()` - Redis key operations
+  - `get_all_api_key_status()` - returns dict of provider -> bool
+
+- `chat.py` - chat configuration endpoints:
+  - `get_keys` - retrieves API key status for all providers
+  - `save_key` - saves API key to Redis
+  - `delete_key` - deletes API key from Redis
+  - `get_models` - retrieves available AI models from models.py
 
 ### Model definitions
 

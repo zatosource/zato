@@ -1,22 +1,21 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from http.client import BAD_REQUEST
 from logging import getLogger
 
 # Django
 from django.http import HttpResponse
 
-# Redis
-import redis
-
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.admin.web.views.ai.common import delete_api_key, get_all_api_key_status, is_valid_provider, set_api_key
 from zato.common.ai.models import get_all_models
 from zato.common.json_internal import dumps, loads
 
@@ -28,45 +27,25 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
-
-REDIS_KEY_PREFIX = 'zato.ai-chat.api-key.'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 @method_allowed('GET')
-def get_keys(req):
-
-    result = {
-        'keys': {
-            'anthropic': False,
-            'openai': False,
-            'google': False
-        }
+def get_keys(req) -> 'HttpResponse':
+    """ Returns API key status for all providers.
+    """
+    out = {
+        'keys': get_all_api_key_status()
     }
 
-    try:
-        anthropic_key = redis_client.get(REDIS_KEY_PREFIX + 'anthropic')
-        openai_key = redis_client.get(REDIS_KEY_PREFIX + 'openai')
-        google_key = redis_client.get(REDIS_KEY_PREFIX + 'google')
-
-        result['keys']['anthropic'] = bool(anthropic_key)
-        result['keys']['openai'] = bool(openai_key)
-        result['keys']['google'] = bool(google_key)
-
-    except Exception as e:
-        logger.warning('get_keys failed: %s', e)
-
-    return HttpResponse(dumps(result), content_type='application/json')
+    response = dumps(out)
+    return HttpResponse(response, content_type='application/json')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def save_key(req):
-
-    result = {
+def save_key(req) -> 'HttpResponse':
+    """ Saves an API key for a provider.
+    """
+    out = {
         'success': False
     }
 
@@ -75,30 +54,34 @@ def save_key(req):
         provider = data.get('provider')
         api_key = data.get('api_key')
 
-        if provider not in ('anthropic', 'openai', 'google'):
-            result['error'] = 'Invalid provider'
-            return HttpResponse(dumps(result), content_type='application/json', status=400)
+        if not is_valid_provider(provider):
+            out['error'] = 'Invalid provider'
+            response = dumps(out)
+            return HttpResponse(response, content_type='application/json', status=BAD_REQUEST)
 
         if not api_key:
-            result['error'] = 'API key is required'
-            return HttpResponse(dumps(result), content_type='application/json', status=400)
+            out['error'] = 'API key is required'
+            response = dumps(out)
+            return HttpResponse(response, content_type='application/json', status=BAD_REQUEST)
 
-        redis_client.set(REDIS_KEY_PREFIX + provider, api_key)
-        result['success'] = True
+        set_api_key(provider, api_key)
+        out['success'] = True
 
     except Exception as e:
         logger.warning('save_key failed: %s', e)
-        result['error'] = str(e)
+        out['error'] = str(e)
 
-    return HttpResponse(dumps(result), content_type='application/json')
+    response = dumps(out)
+    return HttpResponse(response, content_type='application/json')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def delete_key(req):
-
-    result = {
+def delete_key(req) -> 'HttpResponse':
+    """ Deletes an API key for a provider.
+    """
+    out = {
         'success': False
     }
 
@@ -106,27 +89,31 @@ def delete_key(req):
         data = loads(req.body)
         provider = data.get('provider')
 
-        if provider not in ('anthropic', 'openai', 'google'):
-            result['error'] = 'Invalid provider'
-            return HttpResponse(dumps(result), content_type='application/json', status=400)
+        if not is_valid_provider(provider):
+            out['error'] = 'Invalid provider'
+            response = dumps(out)
+            return HttpResponse(response, content_type='application/json', status=BAD_REQUEST)
 
-        redis_client.delete(REDIS_KEY_PREFIX + provider)
-        result['success'] = True
+        delete_api_key(provider)
+        out['success'] = True
 
     except Exception as e:
         logger.warning('delete_key failed: %s', e)
-        result['error'] = str(e)
+        out['error'] = str(e)
 
-    return HttpResponse(dumps(result), content_type='application/json')
+    response = dumps(out)
+    return HttpResponse(response, content_type='application/json')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def get_models(req):
-
-    result = get_all_models()
-    return HttpResponse(dumps(result), content_type='application/json')
+def get_models(req) -> 'HttpResponse':
+    """ Returns all available models grouped by provider.
+    """
+    out = get_all_models()
+    response = dumps(out)
+    return HttpResponse(response, content_type='application/json')
 
 # ################################################################################################################################
 # ################################################################################################################################
