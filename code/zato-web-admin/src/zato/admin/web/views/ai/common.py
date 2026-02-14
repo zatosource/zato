@@ -39,7 +39,8 @@ def get_api_key(provider:'str') -> 'str | None':
     """ Returns the API key for a provider or None if not set.
     """
     client = get_redis_client()
-    out = client.get(Redis_Key_Prefix_API_Key + provider)
+    key = Redis_Key_Prefix_API_Key + provider
+    out = client.get(key)
     return out
 
 # ################################################################################################################################
@@ -48,7 +49,8 @@ def set_api_key(provider:'str', api_key:'str') -> 'None':
     """ Sets the API key for a provider.
     """
     client = get_redis_client()
-    client.set(Redis_Key_Prefix_API_Key + provider, api_key)
+    key = Redis_Key_Prefix_API_Key + provider
+    client.set(key, api_key)
 
 # ################################################################################################################################
 
@@ -56,7 +58,8 @@ def delete_api_key(provider:'str') -> 'None':
     """ Deletes the API key for a provider.
     """
     client = get_redis_client()
-    client.delete(Redis_Key_Prefix_API_Key + provider)
+    key = Redis_Key_Prefix_API_Key + provider
+    client.delete(key)
 
 # ################################################################################################################################
 

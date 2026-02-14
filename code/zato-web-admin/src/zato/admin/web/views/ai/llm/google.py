@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from logging import getLogger
+from traceback import format_exc
 from urllib.request import Request, urlopen
 
 # Zato
@@ -47,7 +48,8 @@ class GoogleClient(BaseLLMClient):
             'contents': contents,
         }
 
-        body_bytes = json.dumps(body).encode('utf-8')
+        body_json = json.dumps(body)
+        body_bytes = body_json.encode('utf-8')
 
         request = Request(url, data=body_bytes, headers=headers, method='POST')
 
@@ -73,21 +75,24 @@ class GoogleClient(BaseLLMClient):
                     if not candidates:
                         continue
 
-                    content = candidates[0].get('content', {})
+                    first_candidate = candidates[0]
+
+                    content = first_candidate.get('content', {})
                     parts = content.get('parts', [])
 
                     for part in parts:
                         text = part.get('text', '')
                         if text:
-                            yield self._format_chunk(text)
+                            chunk = self._format_chunk(text)
+                            yield chunk
 
-                    finish_reason = candidates[0].get('finishReason')
+                    finish_reason = first_candidate.get('finishReason')
                     if finish_reason == 'STOP':
                         yield self._format_done()
                         return
 
         except Exception as e:
-            logger.warning('Google Gemini API error: %s', e)
+            logger.warning('Google Gemini API error: %s', format_exc())
             yield self._format_error(e)
 
 # ################################################################################################################################

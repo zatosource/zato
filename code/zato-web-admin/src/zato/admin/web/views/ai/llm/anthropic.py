@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from logging import getLogger
+from traceback import format_exc
 from urllib.request import Request, urlopen
 
 # Zato
@@ -48,7 +49,8 @@ class AnthropicClient(BaseLLMClient):
             'messages': messages,
         }
 
-        body_bytes = json.dumps(body).encode('utf-8')
+        body_json = json.dumps(body)
+        body_bytes = body_json.encode('utf-8')
 
         request = Request(API_URL, data=body_bytes, headers=headers, method='POST')
 
@@ -80,7 +82,8 @@ class AnthropicClient(BaseLLMClient):
                         delta = data.get('delta', {})
                         text = delta.get('text', '')
                         if text:
-                            yield self._format_chunk(text)
+                            chunk = self._format_chunk(text)
+                            yield chunk
 
                     elif event_type == 'message_stop':
                         yield self._format_done()
@@ -89,11 +92,12 @@ class AnthropicClient(BaseLLMClient):
                     elif event_type == 'error':
                         error_data = data.get('error', {})
                         error_msg = error_data.get('message', 'Unknown error')
-                        yield self._format_error(error_msg)
+                        error_response = self._format_error(error_msg)
+                        yield error_response
                         return
 
         except Exception as e:
-            logger.warning('Anthropic API error: %s', e)
+            logger.warning('Anthropic API error: %s', format_exc())
             yield self._format_error(e)
 
 # ################################################################################################################################

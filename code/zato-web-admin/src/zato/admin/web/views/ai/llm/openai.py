@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from logging import getLogger
+from traceback import format_exc
 from urllib.request import Request, urlopen
 
 # Zato
@@ -45,7 +46,8 @@ class OpenAIClient(BaseLLMClient):
             'messages': messages,
         }
 
-        body_bytes = json.dumps(body).encode('utf-8')
+        body_json = json.dumps(body)
+        body_bytes = body_json.encode('utf-8')
 
         request = Request(API_URL, data=body_bytes, headers=headers, method='POST')
 
@@ -75,19 +77,22 @@ class OpenAIClient(BaseLLMClient):
                     if not choices:
                         continue
 
-                    delta = choices[0].get('delta', {})
+                    first_choice = choices[0]
+
+                    delta = first_choice.get('delta', {})
                     content = delta.get('content', '')
 
                     if content:
-                        yield self._format_chunk(content)
+                        chunk = self._format_chunk(content)
+                        yield chunk
 
-                    finish_reason = choices[0].get('finish_reason')
+                    finish_reason = first_choice.get('finish_reason')
                     if finish_reason == 'stop':
                         yield self._format_done()
                         return
 
         except Exception as e:
-            logger.warning('OpenAI API error: %s', e)
+            logger.warning('OpenAI API error: %s', format_exc())
             yield self._format_error(e)
 
 # ################################################################################################################################

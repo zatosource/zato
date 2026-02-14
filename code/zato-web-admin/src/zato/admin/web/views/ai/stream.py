@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from traceback import format_exc
 
 # Django
 from django.http import StreamingHttpResponse
@@ -59,31 +60,36 @@ def _stream_response(model_id:'str', messages:'list') -> 'generator_':
     provider = _get_provider_for_model(model_id)
 
     if not provider:
-        error_event = _format_sse_event('error', {'message': f'Unknown model: {model_id}'})
+        error_data = {'message': f'Unknown model: {model_id}'}
+        error_event = _format_sse_event('error', error_data)
         yield error_event
         return
 
     api_key = get_api_key(provider)
 
     if not api_key:
-        error_event = _format_sse_event('error', {'message': f'No API key configured for {provider}'})
+        error_data = {'message': f'No API key configured for {provider}'}
+        error_event = _format_sse_event('error', error_data)
         yield error_event
         return
 
     try:
         client = get_llm_client(provider, api_key)
     except ValueError as e:
-        error_event = _format_sse_event('error', {'message': str(e)})
+        error_msg = str(e)
+        error_data = {'message': error_msg}
+        error_event = _format_sse_event('error', error_data)
         yield error_event
         return
 
     try:
-        for response in client.stream_chat(model_id, messages):
-            response_type = response.get('type', '')
-            content = response.get('content', '')
+        for llm_response in client.stream_chat(model_id, messages):
+            response_type = llm_response.get('type', '')
+            content = llm_response.get('content', '')
 
             if response_type == 'chunk':
-                chunk_event = _format_sse_event('chunk', {'text': content})
+                chunk_data = {'text': content}
+                chunk_event = _format_sse_event('chunk', chunk_data)
                 yield chunk_event
 
             elif response_type == 'done':
@@ -92,13 +98,16 @@ def _stream_response(model_id:'str', messages:'list') -> 'generator_':
                 return
 
             elif response_type == 'error':
-                error_event = _format_sse_event('error', {'message': content})
+                error_data = {'message': content}
+                error_event = _format_sse_event('error', error_data)
                 yield error_event
                 return
 
     except Exception as e:
-        logger.warning('Stream error: %s', e)
-        error_event = _format_sse_event('error', {'message': str(e)})
+        logger.warning('Stream error: %s', format_exc())
+        error_msg = str(e)
+        error_data = {'message': error_msg}
+        error_event = _format_sse_event('error', error_data)
         yield error_event
 
 # ################################################################################################################################
