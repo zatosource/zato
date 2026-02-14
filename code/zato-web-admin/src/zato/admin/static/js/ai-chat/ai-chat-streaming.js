@@ -144,7 +144,14 @@
             if (!tab) return;
 
             AIChatAPI.cancelStream(tabId);
-            AIChatMessages.finishStreamingMessage(tab, tabId);
+
+            var content = AIChatMessages.getStreamingContent(tabId);
+            if (content && content.trim()) {
+                AIChatMessages.finishStreamingMessage(tab, tabId);
+            } else {
+                AIChatMessages.cancelStreamingMessage(tab, tabId);
+            }
+
             core.saveState();
             core.render();
 
