@@ -385,20 +385,15 @@
 .ai-chat-message-continue {
     position: absolute;
     left: calc(100% + 8px);
-    bottom: -4px;
-    padding: 3px 10px;
+    bottom: 6px;
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.5);
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 4px;
+    color: rgba(150, 210, 170, 0.7);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
     white-space: nowrap;
 }
 
 .ai-chat-message-continue:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(190, 235, 205, 0.9);
 }
 
 .ai-chat-message.streaming .ai-chat-message-footer {

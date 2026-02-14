@@ -180,9 +180,9 @@
                         }
                         html += '<button class="ai-chat-message-copy">Copy</button>';
                         html += '</div>';
-                    }
-                    if (msg.interrupted) {
-                        html += '<div class="ai-chat-message-continue" data-message-index="' + i + '">Continue</div>';
+                        if (msg.interrupted) {
+                            html += '<span class="ai-chat-message-continue" data-message-index="' + i + '">Continue</span>';
+                        }
                     }
                     html += '</div>';
                 }
