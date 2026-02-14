@@ -25,13 +25,21 @@
                 messages: messages
             });
 
+            var abortController = new AbortController();
+
+            self.connections[tabId] = {
+                abortController: abortController,
+                active: true
+            };
+
             fetch('/zato/ai-chat/invoke/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: body
+                body: body,
+                signal: abortController.signal
             }).then(function(response) {
                 if (!response.ok) {
                     throw new Error('HTTP ' + response.status);
@@ -41,10 +49,9 @@
                 var decoder = new TextDecoder();
                 var buffer = '';
 
-                self.connections[tabId] = {
-                    reader: reader,
-                    active: true
-                };
+                if (self.connections[tabId]) {
+                    self.connections[tabId].reader = reader;
+                }
 
                 function processStream() {
                     if (!self.connections[tabId] || !self.connections[tabId].active) {
@@ -143,6 +150,12 @@
             var connection = this.connections[tabId];
             if (connection) {
                 connection.active = false;
+                if (connection.abortController) {
+                    try {
+                        connection.abortController.abort();
+                    } catch (e) {
+                    }
+                }
                 if (connection.reader) {
                     try {
                         connection.reader.cancel();
