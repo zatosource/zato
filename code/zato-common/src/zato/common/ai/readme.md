@@ -182,9 +182,19 @@ All JS and CSS files are included here in the correct dependency order.
 - Resizable from all four corners (minimum 300x200)
 - Minimizes to bottom-right corner (200px wide, header only)
 - Restores to previous position and size
-- Zoom via ctrl+wheel (0.5x to 2.0x scale, resets to 1.0 when minimized)
+- Zone-based zoom via ctrl+wheel:
+  - Hover over messages area to zoom chat bubbles
+  - Hover over input field to zoom text input
+  - Hover over input area (model selector, attachments) to zoom that section
+  - Each zone has independent zoom level (0.7x to 1.5x)
+  - Zone zoom levels persisted to localStorage
+- Maximize button next to minimize button
+- Double-click title bar to maximize/restore
+- Maximized state persists across page refresh
+- Widget resizes automatically when browser enters/exits fullscreen (F11)
 - All state persisted to localStorage
-- Header contains only title and minimize button (no settings menu)
+- Header shows "AI chat" tag only when minimized
+- Environment name tag displayed if Zato_Env_Name env variable is set
 
 ### Tabs
 
@@ -258,8 +268,12 @@ All JS and CSS files are included here in the correct dependency order.
 - Markdown rendering using marked.js library
 - Syntax highlighting for code blocks using Pygments (backend)
 - Emoji shortcodes supported (e.g., `:smile:` → 😀, `:fire:` → 🔥)
+- ASCII emoticons supported (e.g., `:)` → 😊, `<3` → ❤️)
+- Emoji tooltips show shortcode on hover
+- Live emoji conversion in input field as you type
 - Full timestamp display (YYYY-MM-DD HH:MM:SS format)
 - Copy button on each message to copy content to clipboard
+- Timestamp and copy button hidden during streaming, only cursor shown
 
 ### Token counters
 
@@ -275,6 +289,7 @@ All JS and CSS files are included here in the correct dependency order.
 - Real-time streaming of LLM responses via SSE
 - Markdown rendered live as chunks arrive
 - Input field automatically focused after response completes
+- Input field focused on page load, tab switch, and window focus
 
 ### Provider configuration
 
@@ -331,8 +346,11 @@ The frontend logs token data to browser console:
 - `zato.ai-chat.position` - {left, top} of widget
 - `zato.ai-chat.dimensions` - {width, height} of widget
 - `zato.ai-chat.minimized` - "true" or "false"
+- `zato.ai-chat.maximized` - "true" or "false"
 - `zato.ai-chat.pre-minimize-position` - {left, top, width, height} before minimizing
-- `zato.ai-chat.zoom` - zoom scale (0.5 to 2.0)
+- `zato.ai-chat.pre-maximize-state` - {left, top, width, height} before maximizing
+- `zato.ai-chat.zoom` - zoom scale (legacy, no longer used for widget zoom)
+- `zato.ai-chat.zone-zoom` - {messages, inputArea, input} zone zoom scales
 
 ## Debug flags
 
