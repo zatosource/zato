@@ -106,6 +106,18 @@
     color: rgba(220, 235, 255, 0.9) !important;
 }
 
+.ai-chat-message.assistant .ai-chat-message-time {
+    color: rgba(150, 210, 170, 0.7);
+}
+
+.ai-chat-message.assistant .ai-chat-message-copy {
+    color: rgba(150, 210, 170, 0.7) !important;
+}
+
+.ai-chat-message.assistant .ai-chat-message-copy:hover {
+    color: rgba(190, 235, 205, 0.9) !important;
+}
+
 .ai-chat-message-copy {
     background: none !important;
     background-image: none !important;
