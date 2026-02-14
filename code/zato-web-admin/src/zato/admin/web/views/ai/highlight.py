@@ -61,7 +61,7 @@ def highlight_code(req) -> 'JsonResponse':
         lexer = get_lexer_by_name('text', stripall=True)
 
     try:
-        highlighted = highlight(code, lexer, formatter)
+        highlighted = highlight(code, lexer, formatter).rstrip('\n')
     except Exception:
         highlighted = code
 

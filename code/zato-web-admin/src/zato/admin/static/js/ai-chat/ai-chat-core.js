@@ -18,6 +18,10 @@
             console.debug('AIChat.init: starting initialization');
             var self = this;
 
+            if (typeof markedEmoji !== 'undefined' && markedEmoji.markedEmoji) {
+                marked.use(markedEmoji.markedEmoji());
+            }
+
             AIChatConfig.init();
             this.loadState();
             this.widget = AIChatWidget.create(this.isMinimized, this.zoomScale);
@@ -511,9 +515,6 @@
 
             var apiMessages = this.buildApiMessages(tab);
 
-            var outTokens = this.estimateTokens(apiMessages);
-            AIChatTabState.addTokensOut(tabId, outTokens);
-
             AIChatMessages.startStreamingMessage(tab, tabId);
 
             this.saveState();
@@ -529,14 +530,22 @@
                     AIChatMessages.appendToStreamingMessage(tabId, text);
                     self.updateStreamingMessage(tabId);
                 },
-                onComplete: function() {
-                    var responseContent = AIChatMessages.getStreamingContent(tabId);
-                    var inTokens = self.estimateTokensFromText(responseContent);
-                    AIChatTabState.addTokensIn(tabId, inTokens);
+                onComplete: function(inputTokens, outputTokens) {
+                    if (inputTokens > 0) {
+                        AIChatTabState.addTokensOut(tabId, inputTokens);
+                    }
+                    if (outputTokens > 0) {
+                        AIChatTabState.addTokensIn(tabId, outputTokens);
+                    }
 
                     AIChatMessages.finishStreamingMessage(tab, tabId);
                     self.saveState();
                     self.render();
+
+                    var input = self.widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
+                    if (input) {
+                        input.focus();
+                    }
                 },
                 onError: function(error) {
                     AIChatMessages.cancelStreamingMessage(tab, tabId);
@@ -579,19 +588,6 @@
             contentEl.innerHTML = marked.parse(content);
 
             AIChatMessages.scrollToBottom(messagesContainer);
-        },
-
-        estimateTokens: function(messages) {
-            var totalChars = 0;
-            for (var i = 0; i < messages.length; i++) {
-                var msg = messages[i];
-                totalChars += (msg.content || '').length;
-            }
-            return Math.ceil(totalChars / 4);
-        },
-
-        estimateTokensFromText: function(text) {
-            return Math.ceil((text || '').length / 4);
         }
     };
 

@@ -52,7 +52,12 @@ class AnthropicClient(BaseLLMClient):
         body_json = json.dumps(body)
         body_bytes = body_json.encode('utf-8')
 
+        logger.info('Anthropic request: model=%s messages=%s', model, json.dumps(messages, indent=2))
+
         request = Request(API_URL, data=body_bytes, headers=headers, method='POST')
+
+        input_tokens = 0
+        output_tokens = 0
 
         try:
             with urlopen(request) as response:
@@ -78,7 +83,20 @@ class AnthropicClient(BaseLLMClient):
 
                     event_type = data.get('type', '')
 
-                    if event_type == 'content_block_delta':
+                    logger.info('Anthropic event: %s data=%s', event_type, data_str)
+
+                    if event_type == 'message_start':
+                        message = data.get('message', {})
+                        usage = message.get('usage', {})
+                        input_tokens = usage.get('input_tokens', 0)
+                        logger.info('Anthropic input_tokens: %d', input_tokens)
+
+                    elif event_type == 'message_delta':
+                        usage = data.get('usage', {})
+                        output_tokens = usage.get('output_tokens', 0)
+                        logger.info('Anthropic output_tokens: %d', output_tokens)
+
+                    elif event_type == 'content_block_delta':
                         delta = data.get('delta', {})
                         text = delta.get('text', '')
                         if text:
@@ -86,7 +104,8 @@ class AnthropicClient(BaseLLMClient):
                             yield chunk
 
                     elif event_type == 'message_stop':
-                        yield self._format_done()
+                        logger.info('Anthropic complete: input_tokens=%d output_tokens=%d', input_tokens, output_tokens)
+                        yield self._format_done(input_tokens, output_tokens)
                         return
 
                     elif event_type == 'error':

@@ -120,7 +120,9 @@
                 }
             } else if (eventType === 'done') {
                 if (callbacks.onComplete) {
-                    callbacks.onComplete();
+                    var inputTokens = data.input_tokens || 0;
+                    var outputTokens = data.output_tokens || 0;
+                    callbacks.onComplete(inputTokens, outputTokens);
                 }
                 this.disconnect(tabId);
             } else if (eventType === 'error') {

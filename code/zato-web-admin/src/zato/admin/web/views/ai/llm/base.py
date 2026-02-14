@@ -56,12 +56,14 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
-    def _format_done(self) -> 'dict':
+    def _format_done(self, input_tokens:'int'=0, output_tokens:'int'=0) -> 'dict':
         """ Formats a done response.
         """
         out = {
             'type': 'done',
-            'content': ''
+            'content': '',
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens
         }
         return out
 

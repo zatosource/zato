@@ -93,7 +93,11 @@ def _stream_response(model_id:'str', messages:'list') -> 'generator_':
                 yield chunk_event
 
             elif response_type == 'done':
-                done_event = _format_sse_event('done', {})
+                done_data = {
+                    'input_tokens': llm_response.get('input_tokens', 0),
+                    'output_tokens': llm_response.get('output_tokens', 0)
+                }
+                done_event = _format_sse_event('done', done_data)
                 yield done_event
                 return
 
