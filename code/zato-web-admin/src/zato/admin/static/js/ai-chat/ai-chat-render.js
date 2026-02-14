@@ -9,6 +9,17 @@
             return div.innerHTML;
         },
 
+        formatTime: function(timestamp) {
+            if (!timestamp) {
+                return '';
+            }
+            var date = new Date(timestamp);
+            var hours = date.getHours();
+            var minutes = date.getMinutes();
+            var pad = function(n) { return n < 10 ? '0' + n : n; };
+            return pad(hours) + ':' + pad(minutes);
+        },
+
         buildHeaderHtml: function(isMinimized) {
             var html = '<div class="ai-chat-header" id="ai-chat-header">';
             html += '<span class="ai-chat-header-title">AI chat</span>';
@@ -91,14 +102,23 @@
                 for (var i = 0; i < tab.messages.length; i++) {
                     var msg = tab.messages[i];
                     var streamingClass = msg.streaming ? ' streaming' : '';
-                    html += '<div class="ai-chat-message ' + msg.role + streamingClass + '">';
+                    var timestamp = msg.timestamp || '';
+                    html += '<div class="ai-chat-message ' + msg.role + streamingClass + '" data-timestamp="' + timestamp + '">';
                     html += '<div class="ai-chat-message-content">';
                     if (msg.streaming) {
                         var streamingContent = AIChatMessages.getStreamingContent(tab.id);
                         html += this.escapeHtml(streamingContent);
+                    } else if (msg.role === 'assistant') {
+                        html += AIChatMarkdown.render(msg.content);
                     } else {
                         html += this.escapeHtml(msg.content);
                     }
+                    html += '</div>';
+                    html += '<div class="ai-chat-message-footer">';
+                    if (timestamp) {
+                        html += '<span class="ai-chat-message-time">' + this.formatTime(timestamp) + '</span>';
+                    }
+                    html += '<button class="ai-chat-message-copy">Copy</button>';
                     html += '</div>';
                     html += '</div>';
                 }

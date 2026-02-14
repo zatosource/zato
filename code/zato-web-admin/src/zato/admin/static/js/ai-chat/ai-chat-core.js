@@ -65,6 +65,12 @@
             this.widget.innerHTML = html;
             this.initModelDropdown();
             AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
+            this.scrollActiveTabToBottom();
+        },
+
+        scrollActiveTabToBottom: function() {
+            var messagesContainer = this.widget.querySelector('.ai-chat-messages[data-tab-id="' + this.activeTabId + '"]');
+            AIChatMessages.scrollToBottom(messagesContainer);
         },
 
         initModelDropdown: function() {
@@ -297,6 +303,23 @@
                     }
                 });
                 e.stopPropagation();
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-message-copy')) {
+                var messageEl = target.closest('.ai-chat-message');
+                if (messageEl) {
+                    var contentEl = messageEl.querySelector('.ai-chat-message-content');
+                    if (contentEl) {
+                        var text = contentEl.textContent || contentEl.innerText;
+                        navigator.clipboard.writeText(text).then(function() {
+                            target.textContent = 'Copied';
+                            setTimeout(function() {
+                                target.textContent = 'Copy';
+                            }, 1000);
+                        });
+                    }
+                }
                 return;
             }
 

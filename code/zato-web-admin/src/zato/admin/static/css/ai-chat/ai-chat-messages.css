@@ -77,6 +77,108 @@
 }
 
 .ai-chat-message-content {
-    white-space: pre-wrap;
     word-break: break-word;
+}
+
+.ai-chat-message-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    font-size: 11px;
+}
+
+.ai-chat-message-time {
+    color: #888;
+}
+
+.ai-chat-message-copy {
+    background: none !important;
+    background-image: none !important;
+    border: none !important;
+    cursor: pointer;
+    padding: 0;
+    font-size: 11px;
+    color: #666;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.ai-chat-message-copy:hover,
+.ai-chat-message-copy:focus,
+.ai-chat-message-copy:active {
+    background: none !important;
+    background-image: none !important;
+    color: #999;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.ai-chat-message-content code {
+    background: #1a1a1a;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.ai-chat-message-content pre {
+    background: #1a1a1a;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+.ai-chat-message-content pre code {
+    background: none;
+    padding: 0;
+}
+
+.ai-chat-message-content strong {
+    font-weight: 600;
+}
+
+.ai-chat-message-content em {
+    font-style: italic;
+}
+
+.ai-chat-message-content a {
+    color: #6ba3d6;
+    text-decoration: none;
+}
+
+.ai-chat-message-content a:hover {
+    text-decoration: underline;
+}
+
+.ai-chat-message-content ul,
+.ai-chat-message-content ol {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.ai-chat-message-content li {
+    margin: 4px 0;
+}
+
+.ai-chat-table {
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 12px;
+    width: 100%;
+}
+
+.ai-chat-table th,
+.ai-chat-table td {
+    border: 1px solid #444;
+    padding: 6px 10px;
+    text-align: left;
+}
+
+.ai-chat-table th {
+    background: #2a2a2a;
+    font-weight: 600;
 }

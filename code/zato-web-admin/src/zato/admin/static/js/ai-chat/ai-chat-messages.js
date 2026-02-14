@@ -9,7 +9,8 @@
             console.debug('AIChatMessages.addMessage: role:', role, 'content:', content);
             tab.messages.push({
                 role: role,
-                content: content
+                content: content,
+                timestamp: Date.now()
             });
         },
 
@@ -22,7 +23,8 @@
                 id: messageId,
                 role: 'assistant',
                 content: '',
-                streaming: true
+                streaming: true,
+                timestamp: Date.now()
             });
 
             this.streamingMessages[tabId] = {
