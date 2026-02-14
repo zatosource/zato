@@ -40,10 +40,16 @@
                 self.focusInputIfNotMinimized();
             });
 
+            var resizeTimeout = null;
             window.addEventListener('resize', function() {
                 if (self.isMaximized) {
-                    self.widget.style.width = window.innerWidth + 'px';
-                    self.widget.style.height = window.innerHeight + 'px';
+                    if (resizeTimeout) {
+                        clearTimeout(resizeTimeout);
+                    }
+                    resizeTimeout = setTimeout(function() {
+                        self.widget.style.width = window.innerWidth + 'px';
+                        self.widget.style.height = window.innerHeight + 'px';
+                    }, 50);
                 }
             });
         },
@@ -486,7 +492,7 @@
 
         toggleMaximize: function() {
             if (this.isMinimized) {
-                return;
+                this.toggleMinimize();
             }
 
             if (this.isMaximized) {
