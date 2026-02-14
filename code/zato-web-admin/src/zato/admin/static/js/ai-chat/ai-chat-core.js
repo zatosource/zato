@@ -805,6 +805,7 @@
             this.activeTabId = result.activeTabId;
             this.saveState();
             this.render();
+            this.focusInput(this.activeTabId);
         },
 
         switchTab: function(tabId) {
@@ -934,6 +935,12 @@
             var contentEl = streamingEl.querySelector('.ai-chat-message-content');
             if (!contentEl) return;
 
+            var existingHighlighted = contentEl.querySelectorAll('pre code.highlighted');
+            var highlightedHtml = [];
+            for (var i = 0; i < existingHighlighted.length; i++) {
+                highlightedHtml.push(existingHighlighted[i].parentElement.outerHTML);
+            }
+
             var content = AIChatMessages.getStreamingContent(tabId);
             var html = marked.parse(content);
             if (typeof markedEmoji !== 'undefined') {
@@ -946,7 +953,33 @@
             }
             contentEl.innerHTML = html;
 
+            var newPreElements = contentEl.querySelectorAll('pre');
+            for (var j = 0; j < highlightedHtml.length && j < newPreElements.length; j++) {
+                newPreElements[j].outerHTML = highlightedHtml[j];
+            }
+
+            this.highlightCompleteCodeBlocks(contentEl, content, highlightedHtml.length);
+
             AIChatMessages.scrollToBottom(messagesContainer);
+        },
+
+        highlightCompleteCodeBlocks: function(contentEl, rawContent, alreadyHighlightedCount) {
+            if (!window.AIChatHighlight) return;
+
+            var codeBlockRegex = /```(\w*)\n[\s\S]*?```/g;
+            var completeBlocks = rawContent.match(codeBlockRegex);
+            if (!completeBlocks) return;
+
+            var codeElements = contentEl.querySelectorAll('pre code');
+            var completeCount = completeBlocks.length;
+            var startIndex = alreadyHighlightedCount || 0;
+
+            for (var i = startIndex; i < codeElements.length && i < completeCount; i++) {
+                var codeEl = codeElements[i];
+                if (!codeEl.classList.contains('highlighted')) {
+                    AIChatHighlight.processCodeElement(codeEl);
+                }
+            }
         }
     };
 

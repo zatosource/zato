@@ -91,18 +91,18 @@
         },
 
         applyAllZoneZooms: function(widget) {
-            var messagesEl = widget.querySelector('.ai-chat-messages');
-            var inputAreaEl = widget.querySelector('.ai-chat-input-area');
-            var inputEl = widget.querySelector('.ai-chat-input');
+            var messagesEls = widget.querySelectorAll('.ai-chat-messages');
+            var inputAreaEls = widget.querySelectorAll('.ai-chat-input-area');
+            var inputEls = widget.querySelectorAll('.ai-chat-input');
 
-            if (messagesEl) {
-                messagesEl.style.fontSize = (this.zoneScales.messages * 100) + '%';
+            for (var i = 0; i < messagesEls.length; i++) {
+                messagesEls[i].style.fontSize = (this.zoneScales.messages * 100) + '%';
             }
-            if (inputAreaEl) {
-                inputAreaEl.style.fontSize = (this.zoneScales.inputArea * 100) + '%';
+            for (var j = 0; j < inputAreaEls.length; j++) {
+                inputAreaEls[j].style.fontSize = (this.zoneScales.inputArea * 100) + '%';
             }
-            if (inputEl) {
-                inputEl.style.fontSize = (this.zoneScales.input * 100) + '%';
+            for (var k = 0; k < inputEls.length; k++) {
+                inputEls[k].style.fontSize = (this.zoneScales.input * 100) + '%';
             }
         },
 
