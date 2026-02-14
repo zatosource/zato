@@ -296,7 +296,7 @@
 
             if (loading) {
                 html += '<div class="ai-chat-mcp-loading">';
-                html += '<div class="ai-chat-mcp-spinner"></div>';
+                html += '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">';
                 html += '<span>Loading tools...</span>';
                 html += '</div>';
             } else if (tools && tools.length > 0) {
@@ -327,7 +327,7 @@
             html += '<div class="ai-chat-config-title">Edit ' + server.name + '</div>';
 
             html += '<div class="ai-chat-config-input-wrapper">';
-            html += '<input type="text" class="ai-chat-config-api-key-input" id="ai-chat-mcp-edit-endpoint" value="' + server.endpoint + '" placeholder="Endpoint URL">';
+            html += '<input type="text" class="ai-chat-config-api-key-input" id="ai-chat-mcp-edit-endpoint" value="' + server.endpoint + '" placeholder="Endpoint URL" autofocus>';
             html += '</div>';
 
             html += '<button class="ai-chat-config-save-button" id="ai-chat-mcp-edit-save" data-server-id="' + server.id + '">Save changes</button>';
@@ -347,7 +347,7 @@
             html += '<div class="ai-chat-config-title">Add an MCP server</div>';
 
             html += '<div class="ai-chat-config-input-wrapper">';
-            html += '<input type="text" class="ai-chat-config-api-key-input" id="ai-chat-mcp-endpoint" placeholder="Endpoint URL, e.g. https://zato.io/mcp">';
+            html += '<input type="text" class="ai-chat-config-api-key-input" id="ai-chat-mcp-endpoint" placeholder="Endpoint URL, e.g. https://zato.io/mcp" autofocus>';
             html += '</div>';
 
             html += '<button class="ai-chat-config-save-button" id="ai-chat-mcp-save">Save server</button>';

@@ -92,10 +92,18 @@
                     html += AIChatMCP.buildAddServerHtml();
                 } else if (configMode === 'mcp-detail') {
                     console.log('AIChatRender.buildBodyHtml: rendering mcp-detail');
-                    html += AIChatMCP.buildServerDetailHtml(AIChatMCP.selectedServer, AIChatMCP.selectedServerTools, AIChatMCP.loadingTools);
+                    if (AIChatMCP.selectedServer) {
+                        html += AIChatMCP.buildServerDetailHtml(AIChatMCP.selectedServer, AIChatMCP.selectedServerTools, AIChatMCP.loadingTools);
+                    } else {
+                        html += AIChatMCP.buildManageServersHtml();
+                    }
                 } else if (configMode === 'edit-mcp') {
                     console.log('AIChatRender.buildBodyHtml: rendering edit-mcp');
-                    html += AIChatMCP.buildEditServerHtml(AIChatMCP.selectedServer);
+                    if (AIChatMCP.selectedServer) {
+                        html += AIChatMCP.buildEditServerHtml(AIChatMCP.selectedServer);
+                    } else {
+                        html += AIChatMCP.buildManageServersHtml();
+                    }
                 } else {
                     console.log('AIChatRender.buildBodyHtml: rendering providers');
                     var showBackOnProviders = cameFromChat && hadKeyOnEntry;

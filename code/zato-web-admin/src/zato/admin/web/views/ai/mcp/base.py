@@ -46,7 +46,7 @@ class MCPClient:
         self.endpoint = endpoint
         self.auth_type = auth_type
         self.auth_data = auth_data or {}
-        self._session_url = None
+        self._session_id = None
 
 # ################################################################################################################################
 
@@ -220,6 +220,9 @@ class MCPClient:
         headers['Accept'] = 'application/json, text/event-stream'
         headers['User-Agent'] = 'Zato-MCP-Client'
 
+        if self._session_id:
+            headers['mcp-session-id'] = self._session_id
+
         body = json.dumps(payload)
 
         logger.info('MCP request to %s: %s', self.endpoint, body)
@@ -227,6 +230,11 @@ class MCPClient:
         try:
             conn.request('POST', path, body=body, headers=headers)
             response = conn.getresponse()
+
+            session_id = response.getheader('mcp-session-id')
+            if session_id:
+                self._session_id = session_id
+                logger.info('MCP session ID: %s', session_id)
 
             if response.status >= 400:
                 error_body = response.read().decode('utf-8')

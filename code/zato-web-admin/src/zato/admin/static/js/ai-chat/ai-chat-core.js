@@ -25,6 +25,7 @@
             }
 
             AIChatConfig.init();
+            AIChatMCP.init();
             AIChatZoom.init();
             this.loadState();
             this.widget = AIChatWidget.create(this.isMinimized, this.zoomScale);
@@ -127,6 +128,13 @@
             this.scrollActiveTabToBottom();
             this.highlightCode();
             AIChatZoom.applyAllZoneZooms(this.widget);
+
+            var input = this.widget.querySelector('#ai-chat-mcp-endpoint') ||
+                        this.widget.querySelector('#ai-chat-mcp-edit-endpoint') ||
+                        this.widget.querySelector('.ai-chat-config-api-key-input');
+            if (input) {
+                input.focus();
+            }
         },
 
         highlightCode: function() {
@@ -554,7 +562,16 @@
                 }
 
                 console.log('AIChatCore.handleClick: mcp-save adding server endpoint=', endpoint);
+
+                var saveBtn = mcpSave;
+                var originalText = saveBtn.textContent;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon" alt="">Connecting...';
+
                 AIChatMCP.addServer({endpoint: endpoint}, function(servers, error) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+
                     if (error) {
                         console.warn('AIChatCore.handleClick: mcp-save error', error);
                         AIChatError.show(error);
@@ -626,10 +643,22 @@
                     return;
                 }
 
-                var newName = AIChatMCP.extractNameFromUrl(newEndpoint);
-                console.log('AIChatCore.handleClick: mcp-edit-save updating server', serverId, 'endpoint=', newEndpoint, 'name=', newName);
+                console.log('AIChatCore.handleClick: mcp-edit-save updating server', serverId, 'endpoint=', newEndpoint);
 
-                AIChatMCP.updateServer(serverId, { endpoint: newEndpoint, name: newName }, function() {
+                var saveBtn = mcpEditSave;
+                var originalText = saveBtn.textContent;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon" alt="">Saving...';
+
+                AIChatMCP.updateServer(serverId, { endpoint: newEndpoint }, function(servers, error) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+
+                    if (error) {
+                        console.warn('AIChatCore.handleClick: mcp-edit-save error', error);
+                        AIChatError.show(error);
+                        return;
+                    }
                     AIChatMCP.selectedServer = null;
                     self.configMode = 'manage-mcp';
                     self.render();

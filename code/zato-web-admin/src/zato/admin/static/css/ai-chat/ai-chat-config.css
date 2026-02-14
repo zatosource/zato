@@ -212,8 +212,8 @@
 }
 
 .ai-chat-config-save-button:disabled {
-    opacity: 0.5;
     cursor: not-allowed;
+    color: #fff;
 }
 
 .ai-chat-config-success {
