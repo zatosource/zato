@@ -1,0 +1,37 @@
+.ai-chat-mcp-empty {
+    color: #888;
+    text-align: center;
+    padding: 40px 20px;
+    text-shadow: none !important;
+}
+
+.ai-chat-mcp-server-name {
+    color: #d0d0d0;
+    font-size: 14px;
+    text-shadow: none !important;
+}
+
+.ai-chat-mcp-server-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.ai-chat-mcp-toggle {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.ai-chat-mcp-toggle input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.ai-chat-mcp-add-section {
+    padding-top: 16px;
+    margin-top: 16px;
+    text-align: center;
+}

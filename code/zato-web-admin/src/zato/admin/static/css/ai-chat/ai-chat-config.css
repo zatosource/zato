@@ -21,6 +21,7 @@
     color: #e0e0e0;
     margin-bottom: 24px;
     text-align: center;
+    text-shadow: none !important;
 }
 
 
@@ -93,6 +94,7 @@
     position: relative;
     z-index: 1;
     transition: color 0.2s ease;
+    text-shadow: none !important;
 }
 
 .ai-chat-config-provider:hover .ai-chat-config-provider-name {
@@ -112,6 +114,7 @@
     position: absolute;
     top: 60px;
     left: 12px;
+    text-shadow: none !important;
 }
 
 .ai-chat-config-back:hover {
@@ -275,6 +278,7 @@
 .ai-chat-config-key-provider {
     font-size: 14px;
     color: #d0d0d0;
+    text-shadow: none !important;
 }
 
 .ai-chat-config-key-action {

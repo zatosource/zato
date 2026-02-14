@@ -17,6 +17,7 @@ from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log
 from zato.admin.web.views.ai import chat as ai_chat
 from zato.admin.web.views.ai import highlight as ai_highlight
 from zato.admin.web.views.ai import stream as ai_stream
+from zato.admin.web.views.ai.mcp import views as ai_mcp
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -979,6 +980,21 @@ urlpatterns += [
         login_required(ai_highlight.highlight_code), name='ai-chat-highlight'),
     url(r'^zato/ai-chat/highlight/css/$',
         login_required(ai_highlight.get_pygments_css), name='ai-chat-highlight-css'),
+
+    # AI chat MCP servers
+
+    url(r'^zato/ai-chat/mcp/servers/$',
+        login_required(ai_mcp.get_servers), name='ai-chat-mcp-servers'),
+    url(r'^zato/ai-chat/mcp/servers/add/$',
+        login_required(ai_mcp.add_server), name='ai-chat-mcp-add-server'),
+    url(r'^zato/ai-chat/mcp/servers/remove/$',
+        login_required(ai_mcp.remove_server), name='ai-chat-mcp-remove-server'),
+    url(r'^zato/ai-chat/mcp/servers/update/$',
+        login_required(ai_mcp.update_server), name='ai-chat-mcp-update-server'),
+    url(r'^zato/ai-chat/mcp/tools/$',
+        login_required(ai_mcp.get_tools), name='ai-chat-mcp-tools'),
+    url(r'^zato/ai-chat/mcp/invoke/$',
+        login_required(ai_mcp.invoke_tool), name='ai-chat-mcp-invoke'),
 ]
 
 # ################################################################################################################################

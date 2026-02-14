@@ -86,6 +86,8 @@
         },
 
         render: function() {
+            console.log('AIChatCore.render: needsConfig=', this.needsConfig, 'configMode=', this.configMode, 'cameFromChat=', this.cameFromChat);
+
             var html = AIChatRender.buildHeaderHtml(this.isMinimized, this.isMaximized);
             if (!this.needsConfig) {
                 html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
@@ -94,6 +96,7 @@
             html += AIChatRender.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
+            console.log('AIChatCore.render: innerHTML set, checking for MCP elements:', this.widget.querySelector('#ai-chat-mcp-add'), this.widget.querySelector('#ai-chat-mcp-back'));
             this.initModelDropdown();
             AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
             this.scrollActiveTabToBottom();
@@ -202,6 +205,19 @@
                         return;
                     }
                 }
+
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    var mcpEndpoint = e.target.closest('#ai-chat-mcp-endpoint');
+                    if (mcpEndpoint) {
+                        e.preventDefault();
+                        var saveBtn = self.widget.querySelector('#ai-chat-mcp-save');
+                        if (saveBtn) {
+                            saveBtn.click();
+                        }
+                        return;
+                    }
+                }
+
                 AIChatInput.handleKeyDown(e, function(tabId) {
                     self.sendMessage(tabId);
                 });
@@ -272,6 +288,8 @@
         handleClick: function(e) {
             var target = e.target;
             var self = this;
+
+            console.log('AIChatCore.handleClick: target=', target, 'target.id=', target.id, 'target.className=', target.className, 'configMode=', this.configMode);
 
             if (target.id === 'ai-chat-minimize') {
                 this.toggleMinimize();
@@ -355,6 +373,14 @@
                         AIChatOptionsMenu.showFileDialog(self.activeTabId, function() {
                             AIChatAttachments.render(self.widget, self.activeTabId, self.tabs);
                         });
+                    },
+                    onManageMCP: function() {
+                        self.cameFromChat = true;
+                        self.needsConfig = true;
+                        self.configMode = 'manage-mcp';
+                        AIChatMCP.loadServers(function() {
+                            self.render();
+                        });
                     }
                 });
                 e.stopPropagation();
@@ -432,6 +458,85 @@
                         self.render();
                     }
                 });
+                return;
+            }
+
+            var mcpBack = target.closest('#ai-chat-mcp-back');
+            if (mcpBack) {
+                console.log('AIChatCore.handleClick: mcp-back clicked, target=', target, 'mcpBack=', mcpBack);
+                this.needsConfig = false;
+                this.configMode = 'providers';
+                this.render();
+                return;
+            }
+
+            var mcpAdd = target.closest('#ai-chat-mcp-add');
+            if (mcpAdd) {
+                console.log('AIChatCore.handleClick: mcp-add clicked, target=', target, 'mcpAdd=', mcpAdd);
+                this.configMode = 'add-mcp';
+                this.render();
+                return;
+            }
+
+            var mcpAddBack = target.closest('#ai-chat-mcp-add-back');
+            if (mcpAddBack) {
+                console.log('AIChatCore.handleClick: mcp-add-back clicked, target=', target, 'mcpAddBack=', mcpAddBack);
+                this.configMode = 'manage-mcp';
+                this.render();
+                return;
+            }
+
+            var mcpSave = target.closest('#ai-chat-mcp-save');
+            if (mcpSave) {
+                console.log('AIChatCore.handleClick: mcp-save clicked, target=', target, 'mcpSave=', mcpSave);
+                var endpointInput = this.widget.querySelector('#ai-chat-mcp-endpoint');
+
+                var endpoint = endpointInput ? endpointInput.value.trim() : '';
+
+                if (!endpoint) {
+                    console.log('AIChatCore.handleClick: mcp-save missing endpoint');
+                    return;
+                }
+
+                var name = AIChatMCP.extractNameFromUrl(endpoint);
+                var serverId = AIChatMCP.generateServerId(name);
+                var serverConfig = {
+                    id: serverId,
+                    type: serverId,
+                    name: name,
+                    endpoint: endpoint,
+                    auth_type: 'none',
+                    auth_data: {},
+                    enabled: true
+                };
+
+                console.log('AIChatCore.handleClick: mcp-save adding server', serverConfig);
+                AIChatMCP.addServer(serverConfig, function() {
+                    self.configMode = 'manage-mcp';
+                    self.render();
+                });
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-mcp-remove')) {
+                var serverId = target.getAttribute('data-server-id');
+                console.log('AIChatCore.handleClick: mcp-remove clicked, serverId=', serverId);
+                AIChatMCP.removeServer(serverId, function() {
+                    self.render();
+                });
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-mcp-enabled')) {
+                var serverEl = target.closest('.ai-chat-config-key-row');
+                var serverId = serverEl ? serverEl.getAttribute('data-server-id') : null;
+                if (serverId) {
+                    var enabled = target.checked;
+                    console.log('AIChatCore.handleClick: mcp-enabled toggled, serverId=', serverId, 'enabled=', enabled);
+                    AIChatMCP.updateServer(serverId, { enabled: enabled }, function() {
+                        self.render();
+                    });
+                }
                 return;
             }
 

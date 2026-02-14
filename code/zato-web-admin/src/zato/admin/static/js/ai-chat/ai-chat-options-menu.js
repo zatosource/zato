@@ -23,7 +23,7 @@
             menu.className = 'ai-chat-options-menu';
             menu.innerHTML = '<div class="ai-chat-options-menu-item" data-action="add-files">Add files or images</div>' +
                 '<div class="ai-chat-options-menu-separator"></div>' +
-                '<div class="ai-chat-options-menu-item" data-action="connect-mcp">Connect MCP server</div>' +
+                '<div class="ai-chat-options-menu-item" data-action="connect-mcp">Manage MCP servers</div>' +
                 '<div class="ai-chat-options-menu-separator"></div>' +
                 '<div class="ai-chat-options-menu-item" data-action="manage-keys">Manage API keys</div>';
 
@@ -44,7 +44,7 @@
             } else if (action === 'add-files') {
                 callbacks.onAddFiles();
             } else if (action === 'connect-mcp') {
-                console.debug('AIChatOptionsMenu: connect-mcp not yet implemented');
+                callbacks.onManageMCP();
             }
         },
 
