@@ -1,0 +1,374 @@
+(function() {
+    'use strict';
+
+    var AIChatClickHandlers = {
+
+        handleClick: function(e, widget, core) {
+            var target = e.target;
+
+            if (target.id === 'ai-chat-minimize') {
+                AIChatWindow.toggleMinimize(widget, core);
+                return;
+            }
+
+            if (target.id === 'ai-chat-maximize') {
+                AIChatWindow.toggleMaximize(widget, core);
+                return;
+            }
+
+            var settingsMenuItem = target.closest('.ai-chat-settings-menu-item');
+            if (settingsMenuItem) {
+                var action = settingsMenuItem.getAttribute('data-action');
+                AIChatSettings.handleAction(action, null, {
+                    onChangeProvider: function(hadKey) {
+                        core.hadKeyOnEntry = hadKey;
+                        core.cameFromChat = true;
+                        core.needsConfig = true;
+                        core.configMode = 'providers';
+                        core.render();
+                    },
+                    onManageKeys: function(hadKey) {
+                        core.hadKeyOnEntry = hadKey;
+                        core.cameFromChat = true;
+                        core.needsConfig = true;
+                        core.configMode = 'manage-keys';
+                        core.render();
+                    }
+                });
+                e.stopPropagation();
+                return;
+            }
+
+            if (target.id === 'ai-chat-tab-add') {
+                AIChatTabActions.addTab(widget, core);
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-tab-close')) {
+                var tabId = target.getAttribute('data-tab-id');
+                AIChatTabActions.closeTab(widget, core, tabId);
+                e.stopPropagation();
+                return;
+            }
+
+            var tabElement = target.closest('.ai-chat-tab');
+            if (tabElement && !target.classList.contains('ai-chat-tab-close')) {
+                var tabId = tabElement.getAttribute('data-tab-id');
+                AIChatTabActions.switchTab(widget, core, tabId);
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-send-button') || target.closest('.ai-chat-send-button')) {
+                var button = target.classList.contains('ai-chat-send-button') ? target : target.closest('.ai-chat-send-button');
+                var tabId = button.getAttribute('data-tab-id');
+                AIChatStreaming.sendMessage(widget, core, tabId);
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-options-button') || target.closest('.ai-chat-options-button')) {
+                var optionsBtn = target.classList.contains('ai-chat-options-button') ? target : target.closest('.ai-chat-options-button');
+                AIChatOptionsMenu.toggle(widget, core.activeTabId, optionsBtn);
+                e.stopPropagation();
+                return;
+            }
+
+            var optionsMenuItem = target.closest('.ai-chat-options-menu-item');
+            if (optionsMenuItem) {
+                var action = optionsMenuItem.getAttribute('data-action');
+                AIChatOptionsMenu.hide(widget);
+                AIChatOptionsMenu.handleAction(action, {
+                    onManageKeys: function() {
+                        core.cameFromChat = true;
+                        core.hadKeyOnEntry = AIChatConfig.hasAnyKey();
+                        core.needsConfig = true;
+                        core.configMode = 'manage-keys';
+                        core.render();
+                    },
+                    onAddFiles: function() {
+                        AIChatOptionsMenu.showFileDialog(core.activeTabId, function() {
+                            AIChatAttachments.render(widget, core.activeTabId, core.tabs);
+                        });
+                    },
+                    onManageMCP: function() {
+                        core.cameFromChat = true;
+                        core.needsConfig = true;
+                        core.configMode = 'manage-mcp';
+                        AIChatMCP.loadServers(function() {
+                            core.render();
+                        });
+                    }
+                });
+                e.stopPropagation();
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-message-copy')) {
+                var messageEl = target.closest('.ai-chat-message');
+                if (messageEl) {
+                    var contentEl = messageEl.querySelector('.ai-chat-message-content');
+                    if (contentEl) {
+                        var text = contentEl.textContent || contentEl.innerText;
+                        navigator.clipboard.writeText(text).then(function() {
+                            target.textContent = 'Copied';
+                            setTimeout(function() {
+                                target.textContent = 'Copy';
+                            }, 1000);
+                        });
+                    }
+                }
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-attachment-remove') || target.closest('.ai-chat-attachment-remove')) {
+                var removeBtn = target.classList.contains('ai-chat-attachment-remove') ? target : target.closest('.ai-chat-attachment-remove');
+                var attachmentId = removeBtn.getAttribute('data-attachment-id');
+                var tabPanel = removeBtn.closest('.ai-chat-tab-panel');
+                var tabId = tabPanel ? tabPanel.getAttribute('data-tab-id') : core.activeTabId;
+                AIChatTabState.removeAttachment(tabId, attachmentId);
+                AIChatAttachments.render(widget, tabId, core.tabs);
+                return;
+            }
+
+            var attachmentEl = target.closest('.ai-chat-attachment');
+            if (attachmentEl && !target.closest('.ai-chat-attachment-remove')) {
+                var attId = attachmentEl.getAttribute('data-attachment-id');
+                var attTabPanel = attachmentEl.closest('.ai-chat-tab-panel');
+                var attTabId = attTabPanel ? attTabPanel.getAttribute('data-tab-id') : core.activeTabId;
+                var attachments = AIChatTabState.getAttachments(attTabId);
+                for (var i = 0; i < attachments.length; i++) {
+                    if (attachments[i].id === attId) {
+                        AIChatPreview.show(attachments[i]);
+                        break;
+                    }
+                }
+                return;
+            }
+
+            var providerEl = target.closest('.ai-chat-config-provider');
+            if (providerEl) {
+                var providerId = providerEl.getAttribute('data-provider-id');
+                core.needsConfig = true;
+                core.configMode = 'key-input';
+                AIChatSettings.showKeyInput(widget, providerId, function() {
+                    core.render();
+                });
+                return;
+            }
+
+            var mcpBack = target.closest('#ai-chat-mcp-back');
+            if (mcpBack) {
+                core.needsConfig = false;
+                core.configMode = 'providers';
+                core.render();
+                return;
+            }
+
+            var mcpDetailBack = target.closest('#ai-chat-mcp-detail-back');
+            if (mcpDetailBack) {
+                AIChatMCP.selectedServer = null;
+                AIChatMCP.selectedServerTools = [];
+                core.configMode = 'manage-mcp';
+                core.render();
+                return;
+            }
+
+            var mcpEditBack = target.closest('#ai-chat-mcp-edit-back');
+            if (mcpEditBack) {
+                AIChatMCP.selectedServer = null;
+                core.configMode = 'manage-mcp';
+                core.render();
+                return;
+            }
+
+            var mcpAddBack = target.closest('#ai-chat-mcp-add-back');
+            if (mcpAddBack) {
+                core.configMode = 'manage-mcp';
+                core.render();
+                return;
+            }
+
+            var backEl = target.closest('.ai-chat-config-back');
+            if (backEl) {
+                AIChatSettings.handleBackClick(core.configMode, core.cameFromChat, core.hadKeyOnEntry, {
+                    onReturnToChat: function() {
+                        core.cameFromChat = false;
+                        core.needsConfig = false;
+                        core.configMode = 'providers';
+                        AIChatConfig.selectedProvider = null;
+                        core.render();
+                    },
+                    onShowProviders: function() {
+                        core.needsConfig = true;
+                        core.configMode = 'providers';
+                        AIChatConfig.selectedProvider = null;
+                        core.render();
+                    }
+                });
+                return;
+            }
+
+            var mcpAdd = target.closest('#ai-chat-mcp-add');
+            if (mcpAdd) {
+                core.configMode = 'add-mcp';
+                core.render();
+                return;
+            }
+
+            var mcpSave = target.closest('#ai-chat-mcp-save');
+            if (mcpSave) {
+                var endpointInput = widget.querySelector('#ai-chat-mcp-endpoint');
+                var endpoint = endpointInput ? endpointInput.value.trim() : '';
+
+                if (!endpoint) {
+                    return;
+                }
+
+                var saveBtn = mcpSave;
+                var originalText = saveBtn.textContent;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon" alt="">Connecting...';
+
+                AIChatMCP.addServer({endpoint: endpoint}, function(servers, error) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+
+                    if (error) {
+                        AIChatError.show(error);
+                        return;
+                    }
+                    core.configMode = 'manage-mcp';
+                    core.render();
+                });
+                return;
+            }
+
+            var mcpRemoveBtn = target.closest('.ai-chat-mcp-remove-btn');
+            if (mcpRemoveBtn) {
+                ZatoConfirmButton.handleClick(mcpRemoveBtn, function(serverId) {
+                    AIChatMCP.removeServer(serverId, function() {
+                        core.render();
+                    });
+                });
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-mcp-enabled')) {
+                var serverEl = target.closest('.ai-chat-mcp-server-row');
+                var serverId = serverEl ? serverEl.getAttribute('data-server-id') : null;
+                if (serverId) {
+                    var enabled = target.checked;
+                    AIChatMCP.updateServer(serverId, { enabled: enabled }, function() {
+                        core.render();
+                    });
+                }
+                return;
+            }
+
+            var mcpServerNameLink = target.closest('.ai-chat-mcp-server-name-link');
+            if (mcpServerNameLink) {
+                var serverId = mcpServerNameLink.getAttribute('data-server-id');
+                AIChatMCP.selectedServer = AIChatMCP.getServerById(serverId);
+                AIChatMCP.loadingTools = true;
+                AIChatMCP.selectedServerTools = [];
+                core.configMode = 'mcp-detail';
+                core.render();
+                AIChatMCP.loadToolsForServer(serverId, function() {
+                    core.render();
+                });
+                return;
+            }
+
+            var mcpEditBtn = target.closest('.ai-chat-mcp-edit-btn');
+            if (mcpEditBtn) {
+                var serverId = mcpEditBtn.getAttribute('data-item-id');
+                AIChatMCP.selectedServer = AIChatMCP.getServerById(serverId);
+                core.configMode = 'edit-mcp';
+                core.render();
+                return;
+            }
+
+            var mcpEditSave = target.closest('#ai-chat-mcp-edit-save');
+            if (mcpEditSave) {
+                var serverId = mcpEditSave.getAttribute('data-server-id');
+                var endpointInput = widget.querySelector('#ai-chat-mcp-edit-endpoint');
+                var newEndpoint = endpointInput ? endpointInput.value.trim() : '';
+
+                if (!newEndpoint) {
+                    return;
+                }
+
+                var saveBtn = mcpEditSave;
+                var originalText = saveBtn.textContent;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon" alt="">Saving...';
+
+                AIChatMCP.updateServer(serverId, { endpoint: newEndpoint }, function(servers, error) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+
+                    if (error) {
+                        AIChatError.show(error);
+                        return;
+                    }
+                    AIChatMCP.selectedServer = null;
+                    core.configMode = 'manage-mcp';
+                    core.render();
+                });
+                return;
+            }
+
+            if (target.classList.contains('ai-chat-config-save-button')) {
+                var providerId = target.getAttribute('data-provider-id');
+                AIChatSettings.saveApiKey(widget, providerId, function() {
+                    core.needsConfig = false;
+                    core.configMode = 'providers';
+                    AIChatSettings.showConfigSuccess(widget, function() {
+                        core.render();
+                    });
+                });
+                return;
+            }
+
+            var configKeyRemove = target.closest('.ai-chat-config-key-remove');
+            if (configKeyRemove) {
+                ZatoConfirmButton.handleClick(configKeyRemove, function(providerId) {
+                    AIChatSettings.removeApiKey(providerId, {
+                        onNoKeysLeft: function() {
+                            core.needsConfig = true;
+                            core.configMode = 'providers';
+                            core.cameFromChat = false;
+                            core.hadKeyOnEntry = false;
+                        },
+                        onSuccess: function() {
+                            core.render();
+                        }
+                    });
+                });
+                return;
+            }
+
+            var configKeyAdd = target.closest('.ai-chat-config-key-add');
+            if (configKeyAdd) {
+                var providerId = configKeyAdd.getAttribute('data-item-id');
+                core.needsConfig = true;
+                core.configMode = 'key-input';
+                AIChatConfig.selectedProvider = providerId;
+                core.render();
+                return;
+            }
+
+            var configKeyEdit = target.closest('.ai-chat-config-key-edit');
+            if (configKeyEdit) {
+                var providerId = configKeyEdit.getAttribute('data-item-id');
+                core.needsConfig = true;
+                core.configMode = 'key-input';
+                AIChatConfig.selectedProvider = providerId;
+                core.render();
+                return;
+            }
+        }
+    };
+
+    window.AIChatClickHandlers = AIChatClickHandlers;
+
+})();
