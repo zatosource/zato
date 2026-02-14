@@ -37,7 +37,7 @@ Core modules:
 - `ai-chat-core.js` - main entry point, initialization, event binding, click handling, tab/message operations
 - `ai-chat-state.js` - localStorage persistence for widget state
 - `ai-chat-tab-state.js` - per-tab state manager (model, attachments, etc.)
-- `ai-chat-render.js` - HTML building functions for header, tabs, body, messages, input area, toolbar
+- `ai-chat-render.js` - HTML building functions for header, tabs, body, messages, input area, footer
 - `ai-chat-config.js` - provider configuration UI, model loading, API key management
 
 Widget modules:
@@ -84,7 +84,7 @@ Location: `/zato-web-admin/src/zato/admin/static/css/ai-chat/`
 - `ai-chat-base.css` - widget container, body, panels, empty state
 - `ai-chat-header.css` - header bar, tabs, tab buttons, dragging state, settings menu
 - `ai-chat-messages.css` - message bubbles (user, assistant, system roles)
-- `ai-chat-input.css` - input area, contenteditable div, send button, toolbar, options menu
+- `ai-chat-input.css` - input area, contenteditable div, send button, footer, options menu
 - `ai-chat-resize.css` - corner resize handles
 - `ai-chat-context-menu.css` - right-click context menu for tab rename
 - `ai-chat-config.css` - provider configuration UI styling
@@ -214,7 +214,7 @@ All JS and CSS files are included here in the correct dependency order.
 - Backspace/Delete removes one line at a time when only line breaks remain
 - Enter sends message
 
-### Input toolbar
+### Input footer
 
 - Located below the text input area
 - Model selector dropdown on the left (custom ZatoDropdown component)
@@ -223,8 +223,10 @@ All JS and CSS files are included here in the correct dependency order.
 - Options button opens menu with:
   - "Manage API keys" - opens key management screen
   - "Add files or photos" - opens file picker dialog
+  - "Manage MCP servers" - opens MCP server management screen
 - Model selector shows models grouped by provider with separators between providers
 - Each tab stores its own selected model (persisted to localStorage)
+- Footer has max-width of 600px and is centered on wide screens
 
 ### Attachments
 
@@ -303,10 +305,11 @@ All JS and CSS files are included here in the correct dependency order.
   - When user has an API key configured and clicks "Manage API keys": back button returns to chat
   - When user has no API key and is on provider selection: no back button shown
   - When user has no API key and is on key input: back button returns to provider selection
-- Options menu accessed via + button in input toolbar (not header)
+- Options menu accessed via + button in input footer (not header)
 - Options menu contains:
   - "Manage API keys" - opens key management screen
   - "Add files or photos" - opens file picker dialog
+  - "Manage MCP servers" - opens MCP server management screen
 - Manage API keys screen:
   - Lists all providers with their logos
   - Shows "Add" button for providers without a key
@@ -435,6 +438,7 @@ Location: `/zato-web-admin/src/zato/admin/static/css/ai-chat/ai-chat-mcp.css`
 
 Location: `/zato-web-admin/src/zato/admin/web/views/ai/mcp/`
 
+- `base.py` - MCPClient class implementing JSON-RPC 2.0 over HTTP with SSE
 - `registry.py` - MCPRegistry class for managing servers in Redis
 - `views.py` - Django views for MCP server CRUD and tool invocation
 
@@ -455,10 +459,27 @@ Location: `/zato-web-admin/src/zato/admin/web/views/ai/mcp/`
 
 - "Manage MCP servers" option in the options menu
 - Server list with toggle switch (enable/disable), edit and remove buttons
-- "Add server" button in header row (right side of title)
+- Empty state shows "No MCP servers configured" with centered "Add server" button
+- "Add server" button in header row (right side of title) when servers exist
 - Click server name to view list of available tools
 - Edit server endpoint via edit button
 - Remove confirmation: click "Remove" → shows "Really?" for 2.2 seconds → click again to confirm
+- Add/edit forms auto-focus the endpoint input field
+- Save button shows spinner with "Connecting..." / "Saving..." while processing
+- Error popup displays full error message (draggable, resizable, dark theme)
+- URL validation: rejects invalid URLs and shows error message
+- Tool descriptions displayed in lighter color (#c0c0c0) for readability
+
+### MCP protocol
+
+- Generic MCP client implementing JSON-RPC 2.0 over HTTP with SSE
+- Initialize handshake with `initialize` method to get server info and capabilities
+- Session ID captured from `mcp-session-id` response header and sent with subsequent requests
+- Tools fetched via `tools/list` method
+- Tool invocation via `tools/call` method
+- User-Agent header: `Zato-MCP-Client`
+- Accept header: `application/json, text/event-stream`
+- Full tracebacks logged on errors
 
 ## Reusable confirm button component
 
@@ -504,3 +525,32 @@ The current config screen (manage-mcp, manage-keys, add-mcp, etc.) is persisted 
 
 - Backspace on config pages (when not in input field) triggers back button
 - Enter in MCP endpoint input submits the form
+- Escape closes error popup
+
+## Reusable assets
+
+### Spinner
+
+Location: `/zato-web-admin/src/zato/admin/static/img/spinner.svg`
+
+SVG spinner with `currentColor` fill for easy color customization via CSS.
+
+Usage:
+```html
+<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon" alt="">
+```
+
+CSS classes:
+- `.ai-chat-spinner-icon` - 16x16, white (via CSS filter), for inline use in buttons
+- `.ai-chat-spinner-icon.ai-chat-spinner-large` - 24x24 variant for loading states
+
+### Error popup
+
+Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/ai-chat-error.js`
+
+`AIChatError.show(message)` - displays a draggable, resizable error popup with:
+- Dark theme matching the widget
+- Close button styled like header buttons
+- Textarea for error message (readonly, monospace)
+- Escape key to close
+- Handles both string and object error messages
