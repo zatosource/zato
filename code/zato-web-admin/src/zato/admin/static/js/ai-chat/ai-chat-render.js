@@ -30,8 +30,7 @@
             html += '<div class="ai-chat-header-controls">';
             var minIcon = isMinimized ? '+' : '−';
             html += '<button class="ai-chat-header-button" id="ai-chat-minimize" title="Minimize">' + minIcon + '</button>';
-            var maxIcon = isMaximized ? '❐' : '□';
-            html += '<button class="ai-chat-header-button" id="ai-chat-maximize" title="Maximize">' + maxIcon + '</button>';
+            html += '<button class="ai-chat-header-button" id="ai-chat-maximize" title="Maximize">□</button>';
             html += '</div>';
             html += '</div>';
             return html;

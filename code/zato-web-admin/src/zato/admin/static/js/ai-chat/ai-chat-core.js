@@ -489,6 +489,9 @@
                     this.widget.style.width = this.preMaximizeState.width;
                     this.widget.style.height = this.preMaximizeState.height;
                 }
+                this.widget.style.borderRadius = '';
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
                 this.isMaximized = false;
             } else {
                 this.preMaximizeState = {
@@ -502,6 +505,9 @@
                 this.widget.style.top = '0px';
                 this.widget.style.width = (window.innerWidth / scale) + 'px';
                 this.widget.style.height = (window.innerHeight / scale) + 'px';
+                this.widget.style.borderRadius = '0';
+                document.body.style.overflow = 'hidden';
+                document.documentElement.style.overflow = 'hidden';
                 this.isMaximized = true;
             }
             this.render();
