@@ -471,6 +471,23 @@
 
         toggleMinimize: function() {
             var self = this;
+
+            if (this.isMaximized && !this.isMinimized) {
+                if (this.preMaximizeState) {
+                    this.widget.style.left = this.preMaximizeState.left;
+                    this.widget.style.top = this.preMaximizeState.top;
+                    this.widget.style.width = this.preMaximizeState.width;
+                    this.widget.style.height = this.preMaximizeState.height;
+                }
+                if (this.preMaximizeZoomScale) {
+                    this.zoomScale = this.preMaximizeZoomScale;
+                    this.widget.style.transform = 'scale(' + this.zoomScale + ')';
+                }
+                this.widget.classList.remove('maximized');
+                document.documentElement.classList.remove('ai-chat-maximized');
+                this.isMaximized = false;
+            }
+
             var result = AIChatWidget.toggleMinimize(
                 this.widget,
                 this.isMinimized,

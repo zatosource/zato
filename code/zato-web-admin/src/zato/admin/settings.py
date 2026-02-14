@@ -156,6 +156,7 @@ TEMPLATES = [{
             'django.template.context_processors.tz',
             'django.contrib.messages.context_processors.messages',
             'csp.context_processors.nonce',
+            'zato.admin.context_processors.zato_env_name',
         ],
         'loaders': ['django.template.loaders.filesystem.Loader']
     },
