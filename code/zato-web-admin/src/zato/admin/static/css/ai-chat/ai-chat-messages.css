@@ -62,6 +62,18 @@
     max-width: 100%;
 }
 
+.ai-chat-message.system .ai-chat-message-time {
+    color: rgba(230, 180, 180, 0.7);
+}
+
+.ai-chat-message.system .ai-chat-message-copy {
+    color: rgba(230, 180, 180, 0.7) !important;
+}
+
+.ai-chat-message.system .ai-chat-message-copy:hover {
+    color: rgba(255, 210, 210, 0.9) !important;
+}
+
 .ai-chat-message.streaming {
     position: relative;
 }

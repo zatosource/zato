@@ -6,8 +6,10 @@
         tabs: [],
         activeTabId: null,
         isMinimized: false,
+        isMaximized: false,
         preMinimizePosition: null,
         preMinimizeZoom: 1.0,
+        preMaximizeState: null,
         zoomScale: 1.0,
         needsConfig: true,
         configMode: 'providers',
@@ -73,7 +75,7 @@
         },
 
         render: function() {
-            var html = AIChatRender.buildHeaderHtml(this.isMinimized);
+            var html = AIChatRender.buildHeaderHtml(this.isMinimized, this.isMaximized);
             if (!this.needsConfig) {
                 html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
             }
@@ -129,6 +131,13 @@
                 AIChatDrag.handleMouseDown(e, self.widget, self.isMinimized, self.zoomScale, function() {
                     self.toggleMinimize();
                 });
+            });
+
+            this.widget.addEventListener('dblclick', function(e) {
+                var header = e.target.closest('#ai-chat-header');
+                if (header && !e.target.closest('.ai-chat-header-button')) {
+                    self.toggleMaximize();
+                }
             });
 
             this.widget.addEventListener('dragover', function(e) {
@@ -251,6 +260,11 @@
 
             if (target.id === 'ai-chat-minimize') {
                 this.toggleMinimize();
+                return;
+            }
+
+            if (target.id === 'ai-chat-maximize') {
+                this.toggleMaximize();
                 return;
             }
 
@@ -460,6 +474,36 @@
             this.preMinimizeZoom = result.preMinimizeZoom;
             this.saveState();
             this.render();
+        },
+
+        toggleMaximize: function() {
+            if (this.isMinimized) {
+                return;
+            }
+
+            if (this.isMaximized) {
+                if (this.preMaximizeState) {
+                    this.widget.style.left = this.preMaximizeState.left;
+                    this.widget.style.top = this.preMaximizeState.top;
+                    this.widget.style.width = this.preMaximizeState.width;
+                    this.widget.style.height = this.preMaximizeState.height;
+                }
+                this.isMaximized = false;
+            } else {
+                this.preMaximizeState = {
+                    left: this.widget.style.left,
+                    top: this.widget.style.top,
+                    width: this.widget.style.width,
+                    height: this.widget.style.height
+                };
+                this.widget.style.left = '0px';
+                this.widget.style.top = '0px';
+                this.widget.style.width = '100vw';
+                this.widget.style.height = '100vh';
+                this.isMaximized = true;
+            }
+            this.render();
+            this.focusInput(this.activeTabId);
         },
 
         addTab: function() {
