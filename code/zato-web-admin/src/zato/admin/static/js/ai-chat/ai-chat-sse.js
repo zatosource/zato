@@ -77,6 +77,9 @@
                         processStream();
 
                     }).catch(function(error) {
+                        if (error.name === 'AbortError') {
+                            return;
+                        }
                         self.handleError(tabId, error, callbacks);
                     });
                 }
@@ -84,6 +87,9 @@
                 processStream();
 
             }).catch(function(error) {
+                if (error.name === 'AbortError') {
+                    return;
+                }
                 self.handleError(tabId, error, callbacks);
             });
         },
