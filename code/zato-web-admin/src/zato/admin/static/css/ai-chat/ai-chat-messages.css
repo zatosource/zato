@@ -90,6 +90,7 @@
 
 .ai-chat-message-time {
     color: #888;
+    cursor: pointer;
 }
 
 .ai-chat-message-copy {

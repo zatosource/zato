@@ -306,6 +306,25 @@
                 return;
             }
 
+            if (target.classList.contains('ai-chat-message-time')) {
+                var messageEl = target.closest('.ai-chat-message');
+                if (messageEl) {
+                    var timestamp = messageEl.getAttribute('data-timestamp');
+                    if (timestamp) {
+                        var date = new Date(parseInt(timestamp, 10));
+                        var isoString = date.toISOString().replace('T', ' ').replace('Z', '');
+                        var offset = -date.getTimezoneOffset();
+                        var offsetHours = Math.floor(Math.abs(offset) / 60);
+                        var offsetMinutes = Math.abs(offset) % 60;
+                        var offsetSign = offset >= 0 ? '+' : '-';
+                        var pad = function(n) { return n < 10 ? '0' + n : n; };
+                        var tzString = offsetSign + pad(offsetHours) + ':' + pad(offsetMinutes);
+                        target.textContent = isoString.substring(0, 19) + ' ' + tzString;
+                    }
+                }
+                return;
+            }
+
             if (target.classList.contains('ai-chat-message-copy')) {
                 var messageEl = target.closest('.ai-chat-message');
                 if (messageEl) {
