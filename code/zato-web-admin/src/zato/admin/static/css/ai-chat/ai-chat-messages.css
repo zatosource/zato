@@ -208,3 +208,48 @@
     background: #2a2a2a;
     font-weight: 600;
 }
+
+.ai-chat-message-content h1,
+.ai-chat-message-content h2,
+.ai-chat-message-content h3,
+.ai-chat-message-content h4,
+.ai-chat-message-content h5,
+.ai-chat-message-content h6 {
+    margin: 8px 0 4px 0;
+    font-weight: 600;
+}
+
+.ai-chat-message-content h1 { font-size: 1.4em; }
+.ai-chat-message-content h2 { font-size: 1.3em; }
+.ai-chat-message-content h3 { font-size: 1.2em; }
+.ai-chat-message-content h4 { font-size: 1.1em; }
+.ai-chat-message-content h5 { font-size: 1.05em; }
+.ai-chat-message-content h6 { font-size: 1em; }
+
+.ai-chat-message-content blockquote {
+    border-left: 3px solid #555;
+    margin: 8px 0;
+    padding-left: 12px;
+    color: #aaa;
+}
+
+.ai-chat-message-content hr {
+    border: none;
+    border-top: 1px solid #444;
+    margin: 12px 0;
+}
+
+.ai-chat-message-content del {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.ai-chat-message-content img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin: 8px 0;
+}
+
+.ai-chat-message-content input[type="checkbox"] {
+    margin-right: 6px;
+}

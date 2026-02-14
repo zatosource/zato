@@ -13,9 +13,16 @@
             html = this.renderCodeBlocks(html);
             html = this.renderInlineCode(html);
             html = this.renderTables(html);
+            html = this.renderBlockquotes(html);
+            html = this.renderHeaders(html);
+            html = this.renderHorizontalRules(html);
+            html = this.renderStrikethrough(html);
+            html = this.renderBoldItalic(html);
             html = this.renderBold(html);
             html = this.renderItalic(html);
+            html = this.renderImages(html);
             html = this.renderLinks(html);
+            html = this.renderCheckboxes(html);
             html = this.renderLists(html);
             html = this.renderLineBreaks(html);
 
@@ -30,14 +37,111 @@
 
         renderCodeBlocks: function(html) {
             var pattern = /```(\w*)\n([\s\S]*?)```/g;
-            return html.replace(pattern, function(match, lang, code) {
+            html = html.replace(pattern, function(match, lang, code) {
                 var langClass = lang ? ' class="language-' + lang + '"' : '';
                 return '<pre><code' + langClass + '>' + code.trim() + '</code></pre>';
             });
+
+            var indentedPattern = /(?:^|\n)((?:    .+\n?)+)/g;
+            html = html.replace(indentedPattern, function(match, code) {
+                var cleanCode = code.replace(/^    /gm, '');
+                return '\n<pre><code>' + cleanCode.trim() + '</code></pre>\n';
+            });
+
+            return html;
         },
 
         renderInlineCode: function(html) {
             return html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        },
+
+        renderHeaders: function(html) {
+            html = html.replace(/^###### (.+)$/gm, '<h6>$1</h6>');
+            html = html.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
+            html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+            return html;
+        },
+
+        renderBlockquotes: function(html) {
+            var lines = html.split('\n');
+            var out = [];
+            var quoteDepth = 0;
+
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                var match = line.match(/^(>+)\s*(.*)$/);
+
+                if (match) {
+                    var depth = match[1].length;
+                    var content = match[2];
+
+                    while (quoteDepth < depth) {
+                        out.push('<blockquote>');
+                        quoteDepth++;
+                    }
+                    while (quoteDepth > depth) {
+                        out.push('</blockquote>');
+                        quoteDepth--;
+                    }
+                    out.push(content);
+                } else {
+                    while (quoteDepth > 0) {
+                        out.push('</blockquote>');
+                        quoteDepth--;
+                    }
+                    out.push(line);
+                }
+            }
+
+            while (quoteDepth > 0) {
+                out.push('</blockquote>');
+                quoteDepth--;
+            }
+
+            return out.join('\n');
+        },
+
+        renderHorizontalRules: function(html) {
+            return html.replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '<hr>');
+        },
+
+        renderStrikethrough: function(html) {
+            return html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+        },
+
+        renderBoldItalic: function(html) {
+            html = html.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+            html = html.replace(/___([^_]+)___/g, '<strong><em>$1</em></strong>');
+            return html;
+        },
+
+        renderBold: function(html) {
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+            return html;
+        },
+
+        renderItalic: function(html) {
+            html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+            return html;
+        },
+
+        renderImages: function(html) {
+            return html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+        },
+
+        renderLinks: function(html) {
+            return html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        },
+
+        renderCheckboxes: function(html) {
+            html = html.replace(/\[x\]/gi, '<input type="checkbox" checked disabled>');
+            html = html.replace(/\[ \]/g, '<input type="checkbox" disabled>');
+            return html;
         },
 
         renderTables: function(html) {
@@ -92,22 +196,6 @@
             return html;
         },
 
-        renderBold: function(html) {
-            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-            return html;
-        },
-
-        renderItalic: function(html) {
-            html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-            html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
-            return html;
-        },
-
-        renderLinks: function(html) {
-            return html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-        },
-
         renderLists: function(html) {
             var lines = html.split('\n');
             var out = [];
@@ -116,7 +204,7 @@
 
             for (var i = 0; i < lines.length; i++) {
                 var line = lines[i];
-                var ulMatch = line.match(/^(\s*)[-*]\s+(.+)$/);
+                var ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
                 var olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
 
                 if (ulMatch) {
@@ -157,7 +245,16 @@
         },
 
         renderLineBreaks: function(html) {
-            return html.replace(/\n/g, '<br>');
+            html = html.replace(/<\/h([1-6])>\n/g, '</h$1>');
+            html = html.replace(/<\/blockquote>\n/g, '</blockquote>');
+            html = html.replace(/<\/li>\n/g, '</li>');
+            html = html.replace(/<\/ul>\n/g, '</ul>');
+            html = html.replace(/<\/ol>\n/g, '</ol>');
+            html = html.replace(/<\/table>\n/g, '</table>');
+            html = html.replace(/<\/pre>\n/g, '</pre>');
+            html = html.replace(/<hr>\n/g, '<hr>');
+            html = html.replace(/\n/g, '<br>');
+            return html;
         }
     };
 
