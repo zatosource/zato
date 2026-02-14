@@ -239,9 +239,12 @@
             });
 
             this.widget.addEventListener('wheel', function(e) {
+                if (e.ctrlKey) {
+                    e.preventDefault();
+                }
                 self.zoomScale = AIChatZoom.handleWheel(self.widget, e, self.zoomScale);
                 AIChatState.saveZoom(self.zoomScale);
-            }, { passive: false });
+            }, { passive: false, capture: true });
 
             document.addEventListener('click', function(e) {
                 AIChatContextMenu.hide();

@@ -41,18 +41,21 @@
             }
 
             e.preventDefault();
+            e.stopPropagation();
 
             var target = e.target;
             var zone = this.detectZone(target, widget);
 
-            if (zone) {
-                var delta = e.deltaY > 0 ? -0.05 : 0.05;
-                var newScale = Math.max(0.7, Math.min(1.5, this.zoneScales[zone] + delta));
-                this.zoneScales[zone] = newScale;
-                this.applyZoneZoom(widget, zone);
-                this.saveZoneScales();
-                console.debug('AIChatZoom.handleWheel: zone:', zone, 'scale:', newScale);
+            if (!zone) {
+                zone = 'messages';
             }
+
+            var delta = e.deltaY > 0 ? -0.05 : 0.05;
+            var newScale = Math.max(0.7, Math.min(1.5, this.zoneScales[zone] + delta));
+            this.zoneScales[zone] = newScale;
+            this.applyZoneZoom(widget, zone);
+            this.saveZoneScales();
+            console.debug('AIChatZoom.handleWheel: zone:', zone, 'scale:', newScale);
 
             return currentScale;
         },
