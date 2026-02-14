@@ -412,11 +412,11 @@
     width: 18px;
     height: 18px;
     padding: 0;
-    border: 1px solid rgba(150, 210, 170, 0.4) !important;
+    border: 1px solid rgba(150, 210, 170, 0.3) !important;
     border-radius: 3px;
     background: none !important;
     background-image: none !important;
-    color: rgba(150, 210, 170, 0.5) !important;
+    color: rgba(150, 210, 170, 0.4) !important;
     cursor: pointer;
     box-shadow: none !important;
     text-shadow: none !important;
@@ -425,8 +425,8 @@
 .ai-chat-message-stop:hover,
 .ai-chat-message-stop:focus,
 .ai-chat-message-stop:active {
-    border-color: rgba(150, 210, 170, 0.5) !important;
-    color: rgba(150, 210, 170, 0.6) !important;
+    border-color: rgba(150, 210, 170, 0.7) !important;
+    color: rgba(150, 210, 170, 0.8) !important;
     background: none !important;
     background-image: none !important;
     box-shadow: none !important;
