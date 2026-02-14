@@ -40,18 +40,6 @@
                 self.focusInputIfNotMinimized();
             });
 
-            var resizeTimeout = null;
-            window.addEventListener('resize', function() {
-                if (self.isMaximized) {
-                    if (resizeTimeout) {
-                        clearTimeout(resizeTimeout);
-                    }
-                    resizeTimeout = setTimeout(function() {
-                        self.widget.style.width = window.innerWidth + 'px';
-                        self.widget.style.height = window.innerHeight + 'px';
-                    }, 50);
-                }
-            });
         },
 
         focusInputIfNotMinimized: function() {
@@ -506,7 +494,7 @@
                     this.zoomScale = this.preMaximizeZoomScale;
                     this.widget.style.transform = 'scale(' + this.zoomScale + ')';
                 }
-                this.widget.style.borderRadius = '';
+                this.widget.classList.remove('maximized');
                 document.documentElement.classList.remove('ai-chat-maximized');
                 this.isMaximized = false;
             } else {
@@ -517,13 +505,8 @@
                     height: this.widget.style.height
                 };
                 this.preMaximizeZoomScale = this.zoomScale;
-                this.widget.style.transform = 'scale(1)';
                 this.zoomScale = 1;
-                this.widget.style.left = '0px';
-                this.widget.style.top = '0px';
-                this.widget.style.width = window.innerWidth + 'px';
-                this.widget.style.height = window.innerHeight + 'px';
-                this.widget.style.borderRadius = '0';
+                this.widget.classList.add('maximized');
                 document.documentElement.classList.add('ai-chat-maximized');
                 this.isMaximized = true;
             }
