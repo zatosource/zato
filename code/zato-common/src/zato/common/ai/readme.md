@@ -37,7 +37,7 @@ Core modules:
 - `ai-chat-core.js` - main entry point, initialization, state management, render orchestration
 - `ai-chat-events.js` - event binding and delegation to other modules
 - `ai-chat-click-handlers.js` - click event handler logic for all UI elements
-- `ai-chat-streaming.js` - message sending, streaming, and live syntax highlighting
+- `ai-chat-streaming.js` - message sending, streaming, stop/continue, and live syntax highlighting
 - `ai-chat-tab-actions.js` - tab operations (add, close, switch, focus)
 - `ai-chat-window.js` - window state management (minimize, maximize)
 - `ai-chat-state.js` - localStorage persistence for widget state
@@ -302,6 +302,14 @@ All JS and CSS files are included here in the correct dependency order.
 - Markdown rendered live as chunks arrive
 - Input field automatically focused after response completes
 - Input field focused on page load, tab switch, and window focus
+- Stop button appears in two places during streaming:
+  - Footer send button transforms into stop button (square icon)
+  - Message footer shows stop button (small square with border) in place of Copy button
+- Clicking stop aborts the stream immediately (uses AbortController)
+- If stopped with content: message is kept with "Continue" link to the right of the bubble
+- If stopped without content: empty assistant message is removed
+- Continue link resumes streaming into the same message bubble (not a new one)
+- AbortError is silently ignored (no error message shown when stopping)
 
 ### Provider configuration
 
