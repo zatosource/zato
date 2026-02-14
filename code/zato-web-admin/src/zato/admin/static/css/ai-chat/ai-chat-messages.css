@@ -3,6 +3,7 @@
     overflow-y: auto;
     padding: 16px;
     min-height: 0;
+    border-top: 10px solid transparent;
 }
 
 .ai-chat-messages:has(.ai-chat-empty) {
