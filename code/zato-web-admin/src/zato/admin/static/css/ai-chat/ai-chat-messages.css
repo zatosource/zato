@@ -384,8 +384,8 @@
 
 .ai-chat-message-continue {
     position: absolute;
-    right: -70px;
-    bottom: 0;
+    right: 0;
+    bottom: -20px;
     padding: 3px 10px;
     font-size: 11px;
     color: rgba(255, 255, 255, 0.5);
@@ -405,17 +405,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    margin-left: auto;
     padding: 0;
     border: none;
-    border-radius: 4px;
-    background: #2e7d32;
-    color: white;
+    background: none;
+    color: rgba(150, 210, 170, 0.7);
     cursor: pointer;
-    transition: background 0.15s;
+    font-size: 11px;
 }
 
 .ai-chat-message-stop:hover {
-    background: #388e3c;
+    color: rgba(190, 235, 205, 0.9);
 }
