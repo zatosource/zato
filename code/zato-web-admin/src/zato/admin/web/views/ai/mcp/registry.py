@@ -115,19 +115,37 @@ class MCPRegistry:
 # ################################################################################################################################
 
     @classmethod
-    def update_server(cls, server_id:'str', updates:'anydict') -> 'bool':
+    def update_server(cls, server_id:'str', updates:'anydict') -> 'anydict':
         """ Updates an MCP server configuration.
+        Returns dict with 'success' and optionally 'error'.
         """
         servers = cls.get_servers()
+
+        new_endpoint = updates.get('endpoint')
+        if new_endpoint:
+            temp_client = MCPClient(server_id, new_endpoint)
+            server_info = temp_client.get_server_info()
+
+            if 'error' in server_info:
+                error_msg = server_info.get('error', {})
+                if isinstance(error_msg, dict):
+                    error_msg = error_msg.get('message', str(error_msg))
+                return {'success': False, 'error': error_msg}
+
+            name = server_info.get('name', '')
+            if not name:
+                return {'success': False, 'error': 'Could not get server name from endpoint'}
+
+            updates['name'] = name
 
         for server in servers:
             if server.get('id') == server_id:
                 server.update(updates)
                 cls.save_servers(servers)
                 logger.info('MCP server updated: %s', server_id)
-                return True
+                return {'success': True}
 
-        return False
+        return {'success': False, 'error': 'Server not found'}
 
 # ################################################################################################################################
 

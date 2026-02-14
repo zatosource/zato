@@ -103,12 +103,12 @@ def update_server(req:'HttpRequest') -> 'JsonResponse':
     if not server_id:
         return JsonResponse({'success': False, 'error': 'Server ID is required'}, status=400)
 
-    success = MCPRegistry.update_server(server_id, updates)
+    result = MCPRegistry.update_server(server_id, updates)
 
-    if success:
+    if result.get('success'):
         return JsonResponse({'success': True})
     else:
-        return JsonResponse({'success': False, 'error': 'Server not found'}, status=404)
+        return JsonResponse({'success': False, 'error': result.get('error', 'Update failed')}, status=400)
 
 # ################################################################################################################################
 
