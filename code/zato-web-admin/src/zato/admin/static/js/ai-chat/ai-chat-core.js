@@ -563,7 +563,7 @@
             if (!contentEl) return;
 
             var content = AIChatMessages.getStreamingContent(tabId);
-            contentEl.textContent = content;
+            contentEl.innerHTML = marked.parse(content);
 
             AIChatMessages.scrollToBottom(messagesContainer);
         },

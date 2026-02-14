@@ -107,9 +107,9 @@
                     html += '<div class="ai-chat-message-content">';
                     if (msg.streaming) {
                         var streamingContent = AIChatMessages.getStreamingContent(tab.id);
-                        html += this.escapeHtml(streamingContent);
+                        html += marked.parse(streamingContent);
                     } else if (msg.role === 'assistant') {
-                        html += AIChatMarkdown.render(msg.content);
+                        html += marked.parse(msg.content);
                     } else {
                         html += this.escapeHtml(msg.content);
                     }
