@@ -13,6 +13,7 @@
         configMode: 'providers',
         cameFromChat: false,
         hadKeyOnEntry: false,
+        showFullTimestamps: false,
 
         init: function() {
             console.debug('AIChat.init: starting initialization');
@@ -307,21 +308,7 @@
             }
 
             if (target.classList.contains('ai-chat-message-time')) {
-                var messageEl = target.closest('.ai-chat-message');
-                if (messageEl) {
-                    var timestamp = messageEl.getAttribute('data-timestamp');
-                    if (timestamp) {
-                        var date = new Date(parseInt(timestamp, 10));
-                        var isoString = date.toISOString().replace('T', ' ').replace('Z', '');
-                        var offset = -date.getTimezoneOffset();
-                        var offsetHours = Math.floor(Math.abs(offset) / 60);
-                        var offsetMinutes = Math.abs(offset) % 60;
-                        var offsetSign = offset >= 0 ? '+' : '-';
-                        var pad = function(n) { return n < 10 ? '0' + n : n; };
-                        var tzString = offsetSign + pad(offsetHours) + ':' + pad(offsetMinutes);
-                        target.textContent = isoString.substring(0, 19) + ' ' + tzString;
-                    }
-                }
+                this.toggleAllTimestamps();
                 return;
             }
 
@@ -579,6 +566,39 @@
             contentEl.textContent = content;
 
             AIChatMessages.scrollToBottom(messagesContainer);
+        },
+
+        toggleAllTimestamps: function() {
+            this.showFullTimestamps = !this.showFullTimestamps;
+            var timeElements = this.widget.querySelectorAll('.ai-chat-message-time');
+
+            for (var i = 0; i < timeElements.length; i++) {
+                var timeEl = timeElements[i];
+                var messageEl = timeEl.closest('.ai-chat-message');
+                if (!messageEl) continue;
+
+                var timestamp = messageEl.getAttribute('data-timestamp');
+                if (!timestamp) continue;
+
+                var ts = parseInt(timestamp, 10);
+                var date = new Date(ts);
+
+                if (this.showFullTimestamps) {
+                    var isoString = date.toISOString().replace('T', ' ').replace('Z', '');
+                    var offset = -date.getTimezoneOffset();
+                    var offsetHours = Math.floor(Math.abs(offset) / 60);
+                    var offsetMinutes = Math.abs(offset) % 60;
+                    var offsetSign = offset >= 0 ? '+' : '-';
+                    var pad = function(n) { return n < 10 ? '0' + n : n; };
+                    var tzString = offsetSign + pad(offsetHours) + ':' + pad(offsetMinutes);
+                    timeEl.textContent = isoString.substring(0, 19) + ' ' + tzString;
+                } else {
+                    var hours = date.getHours();
+                    var minutes = date.getMinutes();
+                    var pad2 = function(n) { return n < 10 ? '0' + n : n; };
+                    timeEl.textContent = pad2(hours) + ':' + pad2(minutes);
+                }
+            }
         }
     };
 
