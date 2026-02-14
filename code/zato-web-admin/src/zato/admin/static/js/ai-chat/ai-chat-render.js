@@ -194,15 +194,22 @@
         },
 
         buildInputFooterHtml: function(tab) {
+            var isStreaming = AIChatMessages.isStreaming(tab.id);
             var html = '<div class="ai-chat-input-footer">';
             html += this.buildModelSelectorHtml(tab);
             html += '<div class="ai-chat-input-footer-buttons">';
             html += '<button class="ai-chat-options-button" data-tab-id="' + tab.id + '" aria-label="Options">';
             html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-options-icon"><path d="M12 4v16m-8-8h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
             html += '</button>';
-            html += '<button class="ai-chat-send-button" data-tab-id="' + tab.id + '" aria-label="Send">';
-            html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-send-icon"><path d="M12 19V5m0 0l-7 7m7-7l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
-            html += '</button>';
+            if (isStreaming) {
+                html += '<button class="ai-chat-send-button ai-chat-stop-button" data-tab-id="' + tab.id + '" aria-label="Stop">';
+                html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-send-icon"><rect x="6" y="6" width="12" height="12" fill="currentColor"/></svg>';
+                html += '</button>';
+            } else {
+                html += '<button class="ai-chat-send-button" data-tab-id="' + tab.id + '" aria-label="Send">';
+                html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-send-icon"><path d="M12 19V5m0 0l-7 7m7-7l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+                html += '</button>';
+            }
             html += '</div>';
             html += '</div>';
             return html;

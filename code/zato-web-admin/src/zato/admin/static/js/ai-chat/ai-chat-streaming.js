@@ -137,6 +137,21 @@
                 return;
             }
             AIChatHighlight.highlightCodeBlocks(contentEl);
+        },
+
+        stopMessage: function(widget, core, tabId) {
+            var tab = AIChatTabs.getTabById(core.tabs, tabId);
+            if (!tab) return;
+
+            AIChatAPI.cancelStream(tabId);
+            AIChatMessages.finishStreamingMessage(tab, tabId);
+            core.saveState();
+            core.render();
+
+            var input = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
+            if (input) {
+                input.focus();
+            }
         }
     };
 

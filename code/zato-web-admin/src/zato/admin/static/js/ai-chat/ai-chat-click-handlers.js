@@ -61,7 +61,11 @@
             if (target.classList.contains('ai-chat-send-button') || target.closest('.ai-chat-send-button')) {
                 var button = target.classList.contains('ai-chat-send-button') ? target : target.closest('.ai-chat-send-button');
                 var tabId = button.getAttribute('data-tab-id');
-                AIChatStreaming.sendMessage(widget, core, tabId);
+                if (button.classList.contains('ai-chat-stop-button')) {
+                    AIChatStreaming.stopMessage(widget, core, tabId);
+                } else {
+                    AIChatStreaming.sendMessage(widget, core, tabId);
+                }
                 return;
             }
 
