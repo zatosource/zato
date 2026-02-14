@@ -553,20 +553,11 @@
                     return;
                 }
 
-                var name = AIChatMCP.extractNameFromUrl(endpoint);
-                var serverId = AIChatMCP.generateServerId(name);
-                var serverConfig = {
-                    id: serverId,
-                    type: serverId,
-                    name: name,
-                    endpoint: endpoint,
-                    auth_type: 'none',
-                    auth_data: {},
-                    enabled: true
-                };
-
-                console.log('AIChatCore.handleClick: mcp-save adding server', serverConfig);
-                AIChatMCP.addServer(serverConfig, function() {
+                console.log('AIChatCore.handleClick: mcp-save adding server endpoint=', endpoint);
+                AIChatMCP.addServer({endpoint: endpoint}, function(servers, error) {
+                    if (error) {
+                        console.warn('AIChatCore.handleClick: mcp-save error', error);
+                    }
                     self.configMode = 'manage-mcp';
                     self.render();
                 });

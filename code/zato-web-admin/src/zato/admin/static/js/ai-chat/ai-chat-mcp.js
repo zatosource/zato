@@ -354,24 +354,6 @@
             html += '</div>';
 
             return html;
-        },
-
-        extractNameFromUrl: function(url) {
-            try {
-                var parsed = new URL(url);
-                var host = parsed.hostname;
-                var parts = host.split('.');
-                if (parts.length >= 2) {
-                    return parts[parts.length - 2];
-                }
-                return host;
-            } catch (e) {
-                return 'mcp-server';
-            }
-        },
-
-        generateServerId: function(name) {
-            return name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
         }
     };
 

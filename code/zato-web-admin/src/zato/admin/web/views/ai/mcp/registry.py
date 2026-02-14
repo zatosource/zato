@@ -8,14 +8,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import uuid
 from logging import getLogger
 
 # Zato
 from zato.admin.web.views.ai.common import get_redis_client
-from zato.admin.web.views.ai.mcp.zato import ZatoMCPClient
+from zato.admin.web.views.ai.mcp.base import MCPClient
 
 if 0:
-    from zato.admin.web.views.ai.mcp.base import BaseMCPClient
     from zato.common.typing_ import anydict, anylist
 
 # ################################################################################################################################
@@ -31,18 +31,6 @@ REDIS_KEY_MCP_SERVERS = 'zato.ai-chat.mcp-servers'
 class MCPRegistry:
     """ Registry for MCP servers. Stores server configurations in Redis.
     """
-
-    _client_classes = {
-        'zato': ZatoMCPClient,
-    }
-
-# ################################################################################################################################
-
-    @classmethod
-    def register_client_class(cls, server_id:'str', client_class:'type') -> 'None':
-        """ Registers a client class for a server type.
-        """
-        cls._client_classes[server_id] = client_class
 
 # ################################################################################################################################
 
@@ -73,19 +61,28 @@ class MCPRegistry:
 # ################################################################################################################################
 
     @classmethod
-    def add_server(cls, server_id:'str', server_type:'str', endpoint:'str', name:'str',
-                   auth_type:'str'='none', auth_data:'anydict | None'=None) -> 'bool':
-        """ Adds an MCP server to the registry.
+    def add_server_from_endpoint(cls, endpoint:'str', auth_type:'str'='none',
+                                  auth_data:'anydict | None'=None) -> 'anydict':
+        """ Adds an MCP server by fetching its info from the endpoint.
+        Returns the server config or error dict.
         """
+        server_id = str(uuid.uuid4())[:8]
+        temp_client = MCPClient(server_id, endpoint, auth_type, auth_data)
+
+        server_info = temp_client.get_server_info()
+        name = server_info.get('name', '')
+
+        if not name:
+            return {'error': 'Could not get server name from endpoint'}
+
         servers = cls.get_servers()
 
         for server in servers:
-            if server.get('id') == server_id:
-                return False
+            if server.get('endpoint') == endpoint:
+                return {'error': 'Server with this endpoint already exists'}
 
         server_config = {
             'id': server_id,
-            'type': server_type,
             'endpoint': endpoint,
             'name': name,
             'auth_type': auth_type,
@@ -96,7 +93,7 @@ class MCPRegistry:
         servers.append(server_config)
         cls.save_servers(servers)
         logger.info('MCP server added: %s (%s)', name, endpoint)
-        return True
+        return {'success': True, 'server': server_config}
 
 # ################################################################################################################################
 
@@ -134,20 +131,17 @@ class MCPRegistry:
 # ################################################################################################################################
 
     @classmethod
-    def get_client(cls, server_id:'str') -> 'BaseMCPClient | None':
+    def get_client(cls, server_id:'str') -> 'MCPClient | None':
         """ Returns an MCP client instance for a server.
         """
         servers = cls.get_servers()
 
         for server in servers:
             if server.get('id') == server_id and server.get('enabled'):
-                server_type = server.get('type', server_id)
-                client_class = cls._client_classes.get(server_type)
-
-                if client_class:
-                    endpoint = server.get('endpoint', '')
-                    auth_data = server.get('auth_data', {})
-                    return client_class(endpoint, auth_data)
+                endpoint = server.get('endpoint', '')
+                auth_type = server.get('auth_type', 'none')
+                auth_data = server.get('auth_data', {})
+                return MCPClient(server_id, endpoint, auth_type, auth_data)
 
         return None
 

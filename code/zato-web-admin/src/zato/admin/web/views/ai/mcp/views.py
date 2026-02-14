@@ -39,7 +39,7 @@ def get_servers(req:'HttpRequest') -> 'JsonResponse':
 
 @method_allowed('POST')
 def add_server(req:'HttpRequest') -> 'JsonResponse':
-    """ Adds an MCP server.
+    """ Adds an MCP server by fetching its info from the endpoint.
     """
     try:
         body = loads(req.body)
@@ -47,25 +47,19 @@ def add_server(req:'HttpRequest') -> 'JsonResponse':
         logger.warning('Invalid request body: %s', e)
         return JsonResponse({'success': False, 'error': 'Invalid request body'}, status=400)
 
-    server_id = body.get('id', '')
-    server_type = body.get('type', '')
     endpoint = body.get('endpoint', '')
-    name = body.get('name', '')
     auth_type = body.get('auth_type', 'none')
     auth_data = body.get('auth_data', {})
 
-    if not server_id or not endpoint or not name:
-        return JsonResponse({'success': False, 'error': 'Missing required fields'}, status=400)
+    if not endpoint:
+        return JsonResponse({'success': False, 'error': 'Endpoint is required'}, status=400)
 
-    if not server_type:
-        server_type = server_id
+    result = MCPRegistry.add_server_from_endpoint(endpoint, auth_type, auth_data)
 
-    success = MCPRegistry.add_server(server_id, server_type, endpoint, name, auth_type, auth_data)
-
-    if success:
-        return JsonResponse({'success': True})
+    if result.get('success'):
+        return JsonResponse({'success': True, 'server': result.get('server')})
     else:
-        return JsonResponse({'success': False, 'error': 'Server already exists'}, status=400)
+        return JsonResponse({'success': False, 'error': result.get('error', 'Unknown error')}, status=400)
 
 # ################################################################################################################################
 
