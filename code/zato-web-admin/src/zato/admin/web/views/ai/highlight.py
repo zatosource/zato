@@ -53,11 +53,17 @@ def highlight_code(req) -> 'JsonResponse':
         if language:
             lexer = get_lexer_by_name(language, stripall=True)
         else:
-            lexer = guess_lexer(code)
+            try:
+                lexer = guess_lexer(code)
+            except ClassNotFound:
+                lexer = get_lexer_by_name('python', stripall=True)
     except ClassNotFound:
         lexer = get_lexer_by_name('text', stripall=True)
 
-    highlighted = highlight(code, lexer, formatter)
+    try:
+        highlighted = highlight(code, lexer, formatter)
+    except Exception:
+        highlighted = code
 
     out = {
         'html': highlighted

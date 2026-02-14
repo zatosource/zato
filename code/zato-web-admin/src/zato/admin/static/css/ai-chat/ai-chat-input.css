@@ -157,6 +157,21 @@
 }
 
 .ai-chat-model-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ai-chat-token-counters {
+    display: flex;
+    gap: 10px;
+    font-size: 11px;
+    color: #888;
+}
+
+.ai-chat-token-out,
+.ai-chat-token-in {
+    white-space: nowrap;
 }
 
 .ai-chat-attachments {

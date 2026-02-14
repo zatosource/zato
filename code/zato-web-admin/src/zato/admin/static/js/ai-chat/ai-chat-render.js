@@ -14,10 +14,14 @@
                 return '';
             }
             var date = new Date(timestamp);
-            var hours = date.getHours();
-            var minutes = date.getMinutes();
             var pad = function(n) { return n < 10 ? '0' + n : n; };
-            return pad(hours) + ':' + pad(minutes);
+            var year = date.getFullYear();
+            var month = pad(date.getMonth() + 1);
+            var day = pad(date.getDate());
+            var hours = pad(date.getHours());
+            var minutes = pad(date.getMinutes());
+            var seconds = pad(date.getSeconds());
+            return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
         },
 
         buildHeaderHtml: function(isMinimized) {
@@ -188,7 +192,18 @@
                 html += '<option value="' + model.id + '"' + selected + separator + disabled + '>' + model.name + '</option>';
             }
             html += '</select>';
+            html += this.buildTokenCountersHtml(tab);
             html += '</div>';
+            return html;
+        },
+
+        buildTokenCountersHtml: function(tab) {
+            var tokensIn = AIChatTabState.getTokensIn(tab.id);
+            var tokensOut = AIChatTabState.getTokensOut(tab.id);
+            var html = '<span class="ai-chat-token-counters" data-tab-id="' + tab.id + '">';
+            html += '<span class="ai-chat-token-out">Tok out: ' + AIChatTabState.humanizeNumber(tokensOut) + '</span>';
+            html += '<span class="ai-chat-token-in">Tok in: ' + AIChatTabState.humanizeNumber(tokensIn) + '</span>';
+            html += '</span>';
             return html;
         },
 

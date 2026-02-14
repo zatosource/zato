@@ -13,7 +13,6 @@
         configMode: 'providers',
         cameFromChat: false,
         hadKeyOnEntry: false,
-        showFullTimestamps: false,
 
         init: function() {
             console.debug('AIChat.init: starting initialization');
@@ -50,6 +49,9 @@
         },
 
         saveState: function() {
+            for (var i = 0; i < this.tabs.length; i++) {
+                AIChatTabState.saveToTab(this.tabs[i]);
+            }
             AIChatState.saveTabs(this.tabs);
             AIChatState.saveActiveTabId(this.activeTabId);
             AIChatState.saveMinimized(this.isMinimized);
@@ -315,10 +317,6 @@
                 return;
             }
 
-            if (target.classList.contains('ai-chat-message-time')) {
-                this.toggleAllTimestamps();
-                return;
-            }
 
             if (target.classList.contains('ai-chat-message-copy')) {
                 var messageEl = target.closest('.ai-chat-message');
@@ -513,6 +511,9 @@
 
             var apiMessages = this.buildApiMessages(tab);
 
+            var outTokens = this.estimateTokens(apiMessages);
+            AIChatTabState.addTokensOut(tabId, outTokens);
+
             AIChatMessages.startStreamingMessage(tab, tabId);
 
             this.saveState();
@@ -529,6 +530,10 @@
                     self.updateStreamingMessage(tabId);
                 },
                 onComplete: function() {
+                    var responseContent = AIChatMessages.getStreamingContent(tabId);
+                    var inTokens = self.estimateTokensFromText(responseContent);
+                    AIChatTabState.addTokensIn(tabId, inTokens);
+
                     AIChatMessages.finishStreamingMessage(tab, tabId);
                     self.saveState();
                     self.render();
@@ -576,37 +581,17 @@
             AIChatMessages.scrollToBottom(messagesContainer);
         },
 
-        toggleAllTimestamps: function() {
-            this.showFullTimestamps = !this.showFullTimestamps;
-            var timeElements = this.widget.querySelectorAll('.ai-chat-message-time');
-
-            for (var i = 0; i < timeElements.length; i++) {
-                var timeEl = timeElements[i];
-                var messageEl = timeEl.closest('.ai-chat-message');
-                if (!messageEl) continue;
-
-                var timestamp = messageEl.getAttribute('data-timestamp');
-                if (!timestamp) continue;
-
-                var ts = parseInt(timestamp, 10);
-                var date = new Date(ts);
-
-                if (this.showFullTimestamps) {
-                    var isoString = date.toISOString().replace('T', ' ').replace('Z', '');
-                    var offset = -date.getTimezoneOffset();
-                    var offsetHours = Math.floor(Math.abs(offset) / 60);
-                    var offsetMinutes = Math.abs(offset) % 60;
-                    var offsetSign = offset >= 0 ? '+' : '-';
-                    var pad = function(n) { return n < 10 ? '0' + n : n; };
-                    var tzString = offsetSign + pad(offsetHours) + ':' + pad(offsetMinutes);
-                    timeEl.textContent = isoString.substring(0, 19) + ' ' + tzString;
-                } else {
-                    var hours = date.getHours();
-                    var minutes = date.getMinutes();
-                    var pad2 = function(n) { return n < 10 ? '0' + n : n; };
-                    timeEl.textContent = pad2(hours) + ':' + pad2(minutes);
-                }
+        estimateTokens: function(messages) {
+            var totalChars = 0;
+            for (var i = 0; i < messages.length; i++) {
+                var msg = messages[i];
+                totalChars += (msg.content || '').length;
             }
+            return Math.ceil(totalChars / 4);
+        },
+
+        estimateTokensFromText: function(text) {
+            return Math.ceil((text || '').length / 4);
         }
     };
 

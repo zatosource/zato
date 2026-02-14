@@ -43,31 +43,38 @@
             }
 
             var self = this;
+
             var codeBlocks = container.querySelectorAll('pre code');
-
             for (var i = 0; i < codeBlocks.length; i++) {
-                var codeEl = codeBlocks[i];
-
-                if (codeEl.classList.contains('highlighted')) {
-                    continue;
-                }
-
-                var language = this.getLanguageFromClass(codeEl);
-                var code = codeEl.textContent;
-
-                if (!code.trim()) {
-                    continue;
-                }
-
-                var cacheKey = language + ':' + code;
-                if (this.cache[cacheKey]) {
-                    codeEl.innerHTML = this.cache[cacheKey];
-                    codeEl.classList.add('highlighted');
-                    continue;
-                }
-
-                this.highlightCode(codeEl, code, language);
+                this.processCodeElement(codeBlocks[i]);
             }
+
+            var inlineCode = container.querySelectorAll('code:not(pre code)');
+            for (var j = 0; j < inlineCode.length; j++) {
+                this.processCodeElement(inlineCode[j]);
+            }
+        },
+
+        processCodeElement: function(codeEl) {
+            if (codeEl.classList.contains('highlighted')) {
+                return;
+            }
+
+            var language = this.getLanguageFromClass(codeEl);
+            var code = codeEl.textContent;
+
+            if (!code.trim()) {
+                return;
+            }
+
+            var cacheKey = language + ':' + code;
+            if (this.cache[cacheKey]) {
+                codeEl.innerHTML = this.cache[cacheKey];
+                codeEl.classList.add('highlighted');
+                return;
+            }
+
+            this.highlightCode(codeEl, code, language);
         },
 
         getLanguageFromClass: function(codeEl) {

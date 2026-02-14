@@ -17,7 +17,9 @@
             return {
                 tabId: tabId,
                 model: null,
-                attachments: []
+                attachments: [],
+                tokensIn: 0,
+                tokensOut: 0
             };
         },
 
@@ -119,6 +121,12 @@
                 if (tab.attachments) {
                     this.tabStates[tab.id].attachments = tab.attachments;
                 }
+                if (tab.tokensIn) {
+                    this.tabStates[tab.id].tokensIn = tab.tokensIn;
+                }
+                if (tab.tokensOut) {
+                    this.tabStates[tab.id].tokensOut = tab.tokensOut;
+                }
             }
         },
 
@@ -126,6 +134,38 @@
             var state = this.getState(tab.id);
             tab.model = state.model;
             tab.attachments = state.attachments;
+            tab.tokensIn = state.tokensIn;
+            tab.tokensOut = state.tokensOut;
+        },
+
+        getTokensIn: function(tabId) {
+            var state = this.getState(tabId);
+            return state.tokensIn || 0;
+        },
+
+        getTokensOut: function(tabId) {
+            var state = this.getState(tabId);
+            return state.tokensOut || 0;
+        },
+
+        addTokensIn: function(tabId, count) {
+            var state = this.getState(tabId);
+            state.tokensIn = (state.tokensIn || 0) + count;
+        },
+
+        addTokensOut: function(tabId, count) {
+            var state = this.getState(tabId);
+            state.tokensOut = (state.tokensOut || 0) + count;
+        },
+
+        humanizeNumber: function(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            }
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+            }
+            return num.toString();
         }
     };
 
