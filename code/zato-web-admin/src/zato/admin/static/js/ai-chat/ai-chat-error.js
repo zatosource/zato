@@ -9,6 +9,11 @@
                 existing.remove();
             }
 
+            var messageText = message;
+            if (typeof message === 'object') {
+                messageText = message.message || JSON.stringify(message);
+            }
+
             var popup = document.createElement('div');
             popup.className = 'ai-chat-error-popup';
 
@@ -18,7 +23,7 @@
             html += '<button class="ai-chat-error-close">&times;</button>';
             html += '</div>';
             html += '<div class="ai-chat-error-body">';
-            html += '<textarea class="ai-chat-error-message" readonly>' + this.escapeHtml(message) + '</textarea>';
+            html += '<textarea class="ai-chat-error-message" readonly>' + this.escapeHtml(messageText) + '</textarea>';
             html += '</div>';
 
             popup.innerHTML = html;

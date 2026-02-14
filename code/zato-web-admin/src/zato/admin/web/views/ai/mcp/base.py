@@ -210,10 +210,19 @@ class MCPClient:
         port = parsed.port or (443 if parsed.scheme == 'https' else 80)
         path = parsed.path or '/'
 
+        if not host:
+            error_msg = f'Invalid endpoint URL: {self.endpoint}'
+            logger.warning('MCP request error: %s', error_msg)
+            return {'error': {'message': error_msg}}
+
         if parsed.scheme == 'https':
             conn = HTTPSConnection(host, port, timeout=30)
-        else:
+        elif parsed.scheme == 'http':
             conn = HTTPConnection(host, port, timeout=30)
+        else:
+            error_msg = f'Invalid URL scheme: {parsed.scheme or "none"} (must be http or https)'
+            logger.warning('MCP request error: %s', error_msg)
+            return {'error': {'message': error_msg}}
 
         headers = self._get_auth_headers()
         headers['Content-Type'] = 'application/json'
