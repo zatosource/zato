@@ -19,15 +19,14 @@
 }
 
 .zato-confirm-edit {
-    background: rgba(163, 163, 163, 0.13);
-    color: #a3a3a3;
-    border: 1px solid rgba(163, 163, 163, 0.33);
+    background: rgba(180, 180, 180, 0.13);
+    color: #b8b8b8;
+    border: 1px solid transparent;
 }
 
 .zato-confirm-edit:hover {
-    color: #c0c0c0;
-    border-color: #c0c0c0;
-    background: rgba(163, 163, 163, 0.25);
+    color: #b8b8b8;
+    background: rgba(180, 180, 180, 0.25);
 }
 
 .zato-confirm-remove {

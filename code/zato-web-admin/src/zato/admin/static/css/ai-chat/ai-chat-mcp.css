@@ -57,7 +57,7 @@
 .ai-chat-mcp-server-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     flex-shrink: 0;
 }
 
@@ -132,8 +132,9 @@
 
 .ai-chat-mcp-add-section {
     padding-top: 16px;
-    margin-top: 16px;
+    margin-bottom: 16px;
     text-align: center;
+    width: 100%;
 }
 
 .ai-chat-mcp-loading {

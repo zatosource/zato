@@ -245,7 +245,7 @@
     flex-direction: column;
     gap: 12px;
     width: 100%;
-    max-width: 320px;
+    max-width: 400px;
 }
 
 .ai-chat-config-key-row {
@@ -266,7 +266,7 @@
 
 .ai-chat-config-key-actions {
     display: flex;
-    gap: 8px;
+    gap: 16px;
 }
 
 .ai-chat-config-key-logo {

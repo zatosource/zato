@@ -250,6 +250,9 @@
             html += '</div>';
             html += '<div class="ai-chat-config-container">';
             html += '<div class="ai-chat-config-title">MCP servers</div>';
+            html += '<div class="ai-chat-mcp-add-section">';
+            html += '<button class="ai-chat-config-save-button" id="ai-chat-mcp-add">Add an MCP server</button>';
+            html += '</div>';
             html += '<div class="ai-chat-config-keys-list">';
 
             if (this.servers.length === 0) {
@@ -274,9 +277,6 @@
                 }
             }
 
-            html += '</div>';
-            html += '<div class="ai-chat-mcp-add-section">';
-            html += '<button class="ai-chat-config-save-button" id="ai-chat-mcp-add">Add an MCP server</button>';
             html += '</div>';
             html += '</div>';
 
