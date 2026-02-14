@@ -50,7 +50,7 @@
             var timerId = setTimeout(function() {
                 ZatoConfirmButton.reset(button);
                 button.removeAttribute('data-timer-id');
-            }, 3000);
+            }, 2200);
 
             button.setAttribute('data-timer-id', timerId.toString());
             return true;

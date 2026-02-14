@@ -405,3 +405,102 @@ The frontend logs token data to browser console:
 
 - Use sentence case for labels, not title case (e.g., "Attach file" not "Attach File")
 - Menu items use sentence case (e.g., "Manage API keys", "Add files or photos")
+
+## MCP (Model Context Protocol) integration
+
+### Overview
+
+The widget supports connecting to MCP servers to extend LLM capabilities with external tools.
+
+### MCP JavaScript module
+
+Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/ai-chat-mcp.js`
+
+- `AIChatMCP.servers` - array of configured MCP servers
+- `AIChatMCP.loadServers(callback)` - loads servers from backend
+- `AIChatMCP.addServer(endpoint, callback)` - adds a new server (name extracted from URL)
+- `AIChatMCP.removeServer(serverId, callback)` - removes a server
+- `AIChatMCP.updateServer(serverId, updates, callback)` - updates server settings
+- `AIChatMCP.getTools(callback)` - retrieves tools from all enabled servers
+- `AIChatMCP.buildManageServersHtml()` - builds the server management UI
+- `AIChatMCP.buildServerDetailHtml(server, tools, loading)` - builds server detail view with tools list
+- `AIChatMCP.buildAddServerHtml()` - builds the add server form
+- `AIChatMCP.buildEditServerHtml(server)` - builds the edit server form
+
+### MCP CSS
+
+Location: `/zato-web-admin/src/zato/admin/static/css/ai-chat/ai-chat-mcp.css`
+
+### MCP backend
+
+Location: `/zato-web-admin/src/zato/admin/web/views/ai/mcp/`
+
+- `registry.py` - MCPRegistry class for managing servers in Redis
+- `views.py` - Django views for MCP server CRUD and tool invocation
+
+### MCP URL routes
+
+- `/zato/ai-chat/mcp/servers/` - GET list of servers
+- `/zato/ai-chat/mcp/add/` - POST to add a server
+- `/zato/ai-chat/mcp/remove/` - POST to remove a server
+- `/zato/ai-chat/mcp/update/` - POST to update a server
+- `/zato/ai-chat/mcp/tools/` - GET tools from all enabled servers
+- `/zato/ai-chat/mcp/invoke/` - POST to invoke a tool
+
+### MCP Redis key
+
+- `zato.ai-chat.mcp-servers` - JSON array of MCP server configurations
+
+### MCP UI features
+
+- "Manage MCP servers" option in the options menu
+- Server list with toggle switch (enable/disable), edit and remove buttons
+- "Add server" button in header row (right side of title)
+- Click server name to view list of available tools
+- Edit server endpoint via edit button
+- Remove confirmation: click "Remove" → shows "Really?" for 2.2 seconds → click again to confirm
+
+## Reusable confirm button component
+
+Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/ai-chat-confirm.js`
+
+`ZatoConfirmButton` - reusable component for Edit/Remove buttons with confirmation flow:
+- `ZatoConfirmButton.buildEditHtml(itemId, extraClass)` - builds edit button HTML
+- `ZatoConfirmButton.buildRemoveHtml(itemId, extraClass)` - builds remove button HTML
+- `ZatoConfirmButton.handleClick(button, onConfirm)` - handles click with confirmation
+- `ZatoConfirmButton.reset(button)` - resets button to initial state
+
+Confirmation flow:
+1. First click changes "Remove" to "Really?" with lighter background
+2. If no second click within 2.2 seconds, reverts to "Remove"
+3. Second click within timeout triggers the removal action
+4. Timer ID stored on button element (data-timer-id) for independent operation
+
+CSS: `/zato-web-admin/src/zato/admin/static/css/ai-chat/ai-chat-confirm.css`
+
+## CSS variables
+
+Location: `/zato-web-admin/src/zato/admin/static/css/ai-chat/ai-chat-variables.css`
+
+Common colors defined as CSS variables:
+- `--ai-chat-bg-dark`, `--ai-chat-bg-medium`, `--ai-chat-bg-light` - background colors
+- `--ai-chat-text-primary`, `--ai-chat-text-secondary`, `--ai-chat-text-muted`, `--ai-chat-text-dim` - text colors
+- `--ai-chat-border-subtle`, `--ai-chat-border-light` - border colors
+- `--ai-chat-link-color`, `--ai-chat-link-hover` - link colors
+- `--ai-chat-user-bg`, `--ai-chat-user-border`, `--ai-chat-user-accent` - user message colors
+- `--ai-chat-assistant-bg`, `--ai-chat-assistant-border`, `--ai-chat-assistant-accent` - assistant message colors
+- `--ai-chat-env-tag-bg`, `--ai-chat-env-tag-border` - environment tag colors
+- `--ai-chat-error-bg`, `--ai-chat-error-color`, `--ai-chat-error-hover` - error/remove button colors
+- `--ai-chat-toggle-on`, `--ai-chat-toggle-off` - toggle switch colors
+
+## Config mode persistence
+
+The current config screen (manage-mcp, manage-keys, add-mcp, etc.) is persisted to localStorage:
+- Key: `zato.ai-chat.config-mode`
+- On page refresh, user returns to the same config screen they were on
+- Cleared when returning to chat or provider selection
+
+## Keyboard shortcuts
+
+- Backspace on config pages (when not in input field) triggers back button
+- Enter in MCP endpoint input submits the form
