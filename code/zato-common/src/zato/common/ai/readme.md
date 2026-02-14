@@ -34,7 +34,12 @@ This same pattern can be used for AI chat streaming responses.
 Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/`
 
 Core modules:
-- `ai-chat-core.js` - main entry point, initialization, event binding, click handling, tab/message operations
+- `ai-chat-core.js` - main entry point, initialization, state management, render orchestration
+- `ai-chat-events.js` - event binding and delegation to other modules
+- `ai-chat-click-handlers.js` - click event handler logic for all UI elements
+- `ai-chat-streaming.js` - message sending, streaming, and live syntax highlighting
+- `ai-chat-tab-actions.js` - tab operations (add, close, switch, focus)
+- `ai-chat-window.js` - window state management (minimize, maximize)
 - `ai-chat-state.js` - localStorage persistence for widget state
 - `ai-chat-tab-state.js` - per-tab state manager (model, attachments, etc.)
 - `ai-chat-render.js` - HTML building functions for header, tabs, body, messages, input area, footer
@@ -62,8 +67,12 @@ Backend communication:
 - `ai-chat-sse.js` - SSE connection management (connect, disconnect, event parsing)
 - `ai-chat-api.js` - high-level API for streaming messages
 
-Markdown and syntax highlighting:
-- `ai-chat-highlight.js` - frontend Pygments syntax highlighting integration
+Syntax highlighting:
+- `ai-chat-highlight.js` - client-side syntax highlighting using highlight.js
+- `hljs.min.js` - highlight.js library
+
+Syntax highlighting CSS:
+- Location: `/zato-web-admin/src/zato/admin/static/css/ai-chat/hljs-atom-one-dark.css`
 
 Location: `/zato-web-admin/src/zato/admin/static/js/libs/`
 
@@ -268,7 +277,8 @@ All JS and CSS files are included here in the correct dependency order.
 - Messages sized to fit content (not full width)
 - Auto-scroll to bottom on new message
 - Markdown rendering using marked.js library
-- Syntax highlighting for code blocks using Pygments (backend)
+- Syntax highlighting for code blocks using highlight.js (client-side, atom-one-dark theme)
+- Live syntax highlighting during streaming (highlights as code arrives)
 - Emoji shortcodes supported (e.g., `:smile:` → 😀, `:fire:` → 🔥)
 - ASCII emoticons supported (e.g., `:)` → 😊, `<3` → ❤️)
 - Emoji tooltips show shortcode on hover
