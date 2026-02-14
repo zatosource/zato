@@ -505,6 +505,14 @@
                 return;
             }
 
+            var mcpAddBack = target.closest('#ai-chat-mcp-add-back');
+            if (mcpAddBack) {
+                console.log('AIChatCore.handleClick: mcp-add-back clicked');
+                this.configMode = 'manage-mcp';
+                this.render();
+                return;
+            }
+
             var backEl = target.closest('.ai-chat-config-back');
             if (backEl) {
                 AIChatSettings.handleBackClick(this.configMode, this.cameFromChat, this.hadKeyOnEntry, {
@@ -529,14 +537,6 @@
             if (mcpAdd) {
                 console.log('AIChatCore.handleClick: mcp-add clicked, target=', target, 'mcpAdd=', mcpAdd);
                 this.configMode = 'add-mcp';
-                this.render();
-                return;
-            }
-
-            var mcpAddBack = target.closest('#ai-chat-mcp-add-back');
-            if (mcpAddBack) {
-                console.log('AIChatCore.handleClick: mcp-add-back clicked, target=', target, 'mcpAddBack=', mcpAddBack);
-                this.configMode = 'manage-mcp';
                 this.render();
                 return;
             }
