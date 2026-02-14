@@ -27,7 +27,9 @@
         buildHeaderHtml: function(isMinimized, isMaximized) {
             var html = '<div class="ai-chat-header" id="ai-chat-header">';
             html += '<div class="ai-chat-header-tags">';
-            html += '<span class="ai-chat-header-tag ai-chat-header-tag-primary">AI chat</span>';
+            if (isMinimized) {
+                html += '<span class="ai-chat-header-tag ai-chat-header-tag-primary">AI chat</span>';
+            }
             if (typeof ZatoEnvName !== 'undefined' && ZatoEnvName) {
                 html += '<span class="ai-chat-header-tag ai-chat-header-tag-env">' + ZatoEnvName + '</span>';
             }
