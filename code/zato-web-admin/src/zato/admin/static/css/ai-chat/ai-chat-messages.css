@@ -32,6 +32,7 @@
 }
 
 .ai-chat-message {
+    position: relative;
     margin-bottom: 12px;
     padding: 10px 14px;
     border-radius: 8px;
@@ -382,9 +383,9 @@
 }
 
 .ai-chat-message-continue {
-    display: inline-block;
-    float: right;
-    margin-top: 6px;
+    position: absolute;
+    right: -70px;
+    bottom: 0;
     padding: 3px 10px;
     font-size: 11px;
     color: rgba(255, 255, 255, 0.5);
@@ -392,9 +393,29 @@
     border-radius: 4px;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
 }
 
 .ai-chat-message-continue:hover {
     background: rgba(255, 255, 255, 0.15);
     color: rgba(255, 255, 255, 0.8);
+}
+
+.ai-chat-message-stop {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: #2e7d32;
+    color: white;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.ai-chat-message-stop:hover {
+    background: #388e3c;
 }

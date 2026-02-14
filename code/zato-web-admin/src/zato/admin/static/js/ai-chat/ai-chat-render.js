@@ -167,7 +167,13 @@
                         html += userHtml;
                     }
                     html += '</div>';
-                    if (!msg.streaming) {
+                    if (msg.streaming) {
+                        html += '<div class="ai-chat-message-footer">';
+                        html += '<button class="ai-chat-message-stop" data-tab-id="' + tab.id + '">';
+                        html += '<svg viewBox="0 0 24 24" width="14" height="14"><rect x="5" y="5" width="14" height="14" fill="currentColor"/></svg>';
+                        html += '</button>';
+                        html += '</div>';
+                    } else {
                         html += '<div class="ai-chat-message-footer">';
                         if (timestamp) {
                             html += '<span class="ai-chat-message-time">' + this.formatTime(timestamp) + '</span>';

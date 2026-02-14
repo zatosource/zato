@@ -129,6 +129,13 @@
                 return;
             }
 
+            if (target.classList.contains('ai-chat-message-stop') || target.closest('.ai-chat-message-stop')) {
+                var stopBtn = target.classList.contains('ai-chat-message-stop') ? target : target.closest('.ai-chat-message-stop');
+                var tabId = stopBtn.getAttribute('data-tab-id');
+                AIChatStreaming.stopMessage(widget, core, tabId);
+                return;
+            }
+
             if (target.classList.contains('ai-chat-attachment-remove') || target.closest('.ai-chat-attachment-remove')) {
                 var removeBtn = target.classList.contains('ai-chat-attachment-remove') ? target : target.closest('.ai-chat-attachment-remove');
                 var attachmentId = removeBtn.getAttribute('data-attachment-id');
