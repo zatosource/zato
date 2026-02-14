@@ -28,14 +28,12 @@
         selectedModel: null,
 
         init: function() {
-            console.debug('AIChatConfig.init: initializing');
             this.configuredKeys = {};
             this.models = {};
             this.loadModels();
         },
 
         loadModels: function() {
-            console.debug('AIChatConfig.loadModels: loading models');
             var self = this;
 
             var xhr = new XMLHttpRequest();
@@ -47,13 +45,10 @@
                     if (xhr.status === 200) {
                         try {
                             self.models = JSON.parse(xhr.responseText);
-                            console.debug('AIChatConfig.loadModels: models loaded', self.models);
                         } catch (e) {
-                            console.debug('AIChatConfig.loadModels: parse error', e);
                             self.models = {};
                         }
                     } else {
-                        console.debug('AIChatConfig.loadModels: request failed', xhr.status);
                         self.models = {};
                     }
                 }
@@ -81,7 +76,6 @@
         },
 
         checkConfiguredKeys: function(callback) {
-            console.debug('AIChatConfig.checkConfiguredKeys: checking keys');
             var self = this;
 
             var xhr = new XMLHttpRequest();
@@ -94,13 +88,10 @@
                         try {
                             var response = JSON.parse(xhr.responseText);
                             self.configuredKeys = response.keys || {};
-                            console.debug('AIChatConfig.checkConfiguredKeys: keys loaded', self.configuredKeys);
                         } catch (e) {
-                            console.debug('AIChatConfig.checkConfiguredKeys: parse error', e);
                             self.configuredKeys = {};
                         }
                     } else {
-                        console.debug('AIChatConfig.checkConfiguredKeys: request failed', xhr.status);
                         self.configuredKeys = {};
                     }
                     if (callback) {
@@ -117,11 +108,9 @@
         },
 
         saveKey: function(providerId, apiKey, callback) {
-            console.debug('AIChatConfig.saveKey: saving key for', providerId);
             var self = this;
 
             var csrfToken = this.getCsrfToken();
-            console.debug('AIChatConfig.saveKey: csrfToken:', csrfToken ? 'present' : 'missing');
 
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '/zato/ai-chat/config/save-key/', true);
@@ -131,27 +120,22 @@
             }
 
             xhr.onreadystatechange = function() {
-                console.debug('AIChatConfig.saveKey: readyState:', xhr.readyState, 'status:', xhr.status);
                 if (xhr.readyState === 4) {
-                    console.debug('AIChatConfig.saveKey: responseText:', xhr.responseText);
                     if (xhr.status === 200) {
                         try {
                             var response = JSON.parse(xhr.responseText);
                             if (response.success) {
                                 self.configuredKeys[providerId] = true;
-                                console.debug('AIChatConfig.saveKey: key saved successfully');
                             }
                             if (callback) {
                                 callback(response.success);
                             }
                         } catch (e) {
-                            console.debug('AIChatConfig.saveKey: parse error', e);
                             if (callback) {
                                 callback(false);
                             }
                         }
                     } else {
-                        console.debug('AIChatConfig.saveKey: request failed', xhr.status);
                         if (callback) {
                             callback(false);
                         }
@@ -159,12 +143,10 @@
                 }
             };
 
-            console.debug('AIChatConfig.saveKey: sending request');
             xhr.send(JSON.stringify({
                 provider: providerId,
                 api_key: apiKey
             }));
-            console.debug('AIChatConfig.saveKey: request sent');
         },
 
         getCsrfToken: function() {
@@ -179,7 +161,6 @@
         },
 
         deleteKey: function(providerId, callback) {
-            console.debug('AIChatConfig.deleteKey: deleting key for', providerId);
             var self = this;
 
             var csrfToken = this.getCsrfToken();
@@ -198,19 +179,16 @@
                             var response = JSON.parse(xhr.responseText);
                             if (response.success) {
                                 self.configuredKeys[providerId] = false;
-                                console.debug('AIChatConfig.deleteKey: key deleted successfully');
                             }
                             if (callback) {
                                 callback(response.success);
                             }
                         } catch (e) {
-                            console.debug('AIChatConfig.deleteKey: parse error', e);
                             if (callback) {
                                 callback(false);
                             }
                         }
                     } else {
-                        console.debug('AIChatConfig.deleteKey: request failed', xhr.status);
                         if (callback) {
                             callback(false);
                         }

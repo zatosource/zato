@@ -26,7 +26,6 @@
                         input: parsed.input || 1.0
                     };
                 } catch (e) {
-                    console.debug('AIChatZoom.loadZoneScales: failed to parse');
                 }
             }
         },
@@ -55,7 +54,6 @@
             this.zoneScales[zone] = newScale;
             this.applyZoneZoom(widget, zone);
             this.saveZoneScales();
-            console.debug('AIChatZoom.handleWheel: zone:', zone, 'scale:', newScale);
 
             return currentScale;
         },

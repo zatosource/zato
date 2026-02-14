@@ -72,40 +72,32 @@
         },
 
         buildBodyHtml: function(tabs, activeTabId, needsConfig, configMode, selectedProvider, cameFromChat, hadKeyOnEntry) {
-            console.log('AIChatRender.buildBodyHtml: needsConfig=', needsConfig, 'configMode=', configMode);
             var html = '<div class="ai-chat-body">';
 
             if (needsConfig) {
                 html += '<div class="ai-chat-tab-panel active">';
                 html += '<div class="ai-chat-messages">';
                 if (configMode === 'key-input' && selectedProvider) {
-                    console.log('AIChatRender.buildBodyHtml: rendering key-input');
                     html += AIChatConfig.buildKeyInputHtml(selectedProvider, hadKeyOnEntry);
                 } else if (configMode === 'manage-keys') {
-                    console.log('AIChatRender.buildBodyHtml: rendering manage-keys');
                     html += AIChatConfig.buildManageKeysHtml(cameFromChat);
                 } else if (configMode === 'manage-mcp') {
-                    console.log('AIChatRender.buildBodyHtml: rendering manage-mcp');
                     html += AIChatMCP.buildManageServersHtml();
                 } else if (configMode === 'add-mcp') {
-                    console.log('AIChatRender.buildBodyHtml: rendering add-mcp');
                     html += AIChatMCP.buildAddServerHtml();
                 } else if (configMode === 'mcp-detail') {
-                    console.log('AIChatRender.buildBodyHtml: rendering mcp-detail');
                     if (AIChatMCP.selectedServer) {
                         html += AIChatMCP.buildServerDetailHtml(AIChatMCP.selectedServer, AIChatMCP.selectedServerTools, AIChatMCP.loadingTools);
                     } else {
                         html += AIChatMCP.buildManageServersHtml();
                     }
                 } else if (configMode === 'edit-mcp') {
-                    console.log('AIChatRender.buildBodyHtml: rendering edit-mcp');
                     if (AIChatMCP.selectedServer) {
                         html += AIChatMCP.buildEditServerHtml(AIChatMCP.selectedServer);
                     } else {
                         html += AIChatMCP.buildManageServersHtml();
                     }
                 } else {
-                    console.log('AIChatRender.buildBodyHtml: rendering providers');
                     var showBackOnProviders = cameFromChat && hadKeyOnEntry;
                     html += AIChatConfig.buildProviderSelectionHtml(showBackOnProviders);
                 }

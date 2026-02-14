@@ -15,21 +15,18 @@
     var AIChatState = {
 
         loadTabs: function() {
-            console.debug('AIChatState.loadTabs: loading tabs from localStorage');
             var tabsJson = localStorage.getItem(STORAGE_KEY_TABS);
 
             if (tabsJson) {
                 try {
                     return JSON.parse(tabsJson);
                 } catch (e) {
-                    console.debug('AIChatState.loadTabs: failed to parse tabs');
                 }
             }
             return null;
         },
 
         saveTabs: function(tabs) {
-            console.debug('AIChatState.saveTabs: saving tabs');
             localStorage.setItem(STORAGE_KEY_TABS, JSON.stringify(tabs));
         },
 
@@ -43,39 +40,33 @@
 
         loadPosition: function() {
             var positionJson = localStorage.getItem(STORAGE_KEY_POSITION);
-            console.debug('AIChatState.loadPosition: positionJson:', positionJson);
 
             if (positionJson) {
                 try {
                     return JSON.parse(positionJson);
                 } catch (e) {
-                    console.debug('AIChatState.loadPosition: failed to parse position');
                 }
             }
             return null;
         },
 
         savePosition: function(position) {
-            console.debug('AIChatState.savePosition: saving position:', JSON.stringify(position));
             localStorage.setItem(STORAGE_KEY_POSITION, JSON.stringify(position));
         },
 
         loadDimensions: function() {
             var dimensionsJson = localStorage.getItem(STORAGE_KEY_DIMENSIONS);
-            console.debug('AIChatState.loadDimensions: dimensionsJson:', dimensionsJson);
 
             if (dimensionsJson) {
                 try {
                     return JSON.parse(dimensionsJson);
                 } catch (e) {
-                    console.debug('AIChatState.loadDimensions: failed to parse dimensions');
                 }
             }
             return null;
         },
 
         saveDimensions: function(dimensions) {
-            console.debug('AIChatState.saveDimensions: saving dimensions:', JSON.stringify(dimensions));
             localStorage.setItem(STORAGE_KEY_DIMENSIONS, JSON.stringify(dimensions));
         },
 
@@ -115,20 +106,17 @@
 
         loadPreMinimizePosition: function() {
             var preMinPosJson = localStorage.getItem(STORAGE_KEY_PRE_MINIMIZE_POSITION);
-            console.debug('AIChatState.loadPreMinimizePosition: preMinPosJson:', preMinPosJson);
 
             if (preMinPosJson) {
                 try {
                     return JSON.parse(preMinPosJson);
                 } catch (e) {
-                    console.debug('AIChatState.loadPreMinimizePosition: failed to parse');
                 }
             }
             return null;
         },
 
         savePreMinimizePosition: function(position) {
-            console.debug('AIChatState.savePreMinimizePosition:', JSON.stringify(position));
             localStorage.setItem(STORAGE_KEY_PRE_MINIMIZE_POSITION, JSON.stringify(position));
         },
 

@@ -21,13 +21,11 @@
                     startContainer: sel.getRangeAt(0).startContainer.nodeName,
                     innerHTML: inputElement.innerHTML
                 } : null;
-                console.debug('AIChatInput.handleKeyDown: key:', e.key, 'shiftKey:', e.shiftKey, 'cursor:', JSON.stringify(cursorInfo));
             }
 
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 var tabId = inputElement.getAttribute('data-tab-id');
-                console.debug('AIChatInput.handleKeyDown: enter pressed, tabId:', tabId);
                 sendMessageCallback(tabId);
                 return true;
             }
@@ -41,11 +39,6 @@
                     var brToRemove = e.key === 'Backspace' ? brs[brs.length - 1] : brs[0];
                     brToRemove.parentNode.removeChild(brToRemove);
                     var newBrCount = inputElement.querySelectorAll('br').length;
-                    console.debug('AIChatInput.handleKeyDown:', e.key, 'removed br:', JSON.stringify({
-                        brCountBefore: brCount,
-                        brCountAfter: newBrCount,
-                        innerHTML: inputElement.innerHTML
-                    }));
                     if (newBrCount === 0) {
                         inputElement.innerHTML = '';
                     }
@@ -66,7 +59,6 @@
                 range.setEnd(textNode, 1);
                 selEnter.removeAllRanges();
                 selEnter.addRange(range);
-                console.debug('AIChatInput.handleKeyDown: shift+enter inserted br, innerHTML:', inputElement.innerHTML);
                 return true;
             }
 
@@ -200,11 +192,9 @@
                 var inputElement = e.target.closest('.ai-chat-input');
                 var tabId = inputElement ? inputElement.getAttribute('data-tab-id') : null;
                 if (!tabId) {
-                    console.debug('AIChatInput.handlePaste: no tabId found');
                     return false;
                 }
 
-                console.debug('AIChatInput.handlePaste: converting to attachment, length:', pastedText.length, 'tabId:', tabId);
 
                 var attachment = AIChatTabState.createAttachmentFromPaste(tabId, pastedText);
 

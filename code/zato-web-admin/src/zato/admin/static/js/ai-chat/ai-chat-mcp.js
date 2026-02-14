@@ -48,7 +48,6 @@
                 self.selectedServerTools = (data.tools || []).filter(function(t) {
                     return t._mcp_server_id === serverId;
                 });
-                console.log('AIChatMCP.loadToolsForServer: loaded', self.selectedServerTools.length, 'tools for', serverId);
                 if (callback) {
                     callback(self.selectedServerTools);
                 }
@@ -75,7 +74,6 @@
             })
             .then(function(data) {
                 self.servers = data.servers || [];
-                console.debug('AIChatMCP.loadServers: loaded', self.servers.length, 'servers');
                 if (callback) {
                     callback(self.servers);
                 }
@@ -104,7 +102,6 @@
             var self = this;
             var csrfToken = this.getCsrfToken();
 
-            console.log('AIChatMCP.addServer: adding server', serverConfig, 'csrfToken=', csrfToken ? 'present' : 'missing');
 
             var headers = {
                 'Content-Type': 'application/json'
@@ -120,11 +117,9 @@
                 body: JSON.stringify(serverConfig)
             })
             .then(function(response) {
-                console.log('AIChatMCP.addServer: response status', response.status);
                 return response.json();
             })
             .then(function(data) {
-                console.log('AIChatMCP.addServer: response data', data);
                 if (data.success) {
                     self.loadServers(callback);
                 } else {
@@ -228,7 +223,6 @@
             })
             .then(function(data) {
                 var tools = data.tools || [];
-                console.debug('AIChatMCP.getTools: loaded', tools.length, 'tools');
                 if (callback) {
                     callback(tools);
                 }
@@ -242,7 +236,6 @@
         },
 
         buildManageServersHtml: function() {
-            console.log('AIChatMCP.buildManageServersHtml: called, servers=', this.servers);
             var html = '';
             html += '<div class="ai-chat-config-back" id="ai-chat-mcp-back">';
             html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
@@ -337,7 +330,6 @@
         },
 
         buildAddServerHtml: function() {
-            console.log('AIChatMCP.buildAddServerHtml: called');
             var html = '';
             html += '<div class="ai-chat-config-back" id="ai-chat-mcp-add-back">';
             html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';

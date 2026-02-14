@@ -17,7 +17,6 @@
         hadKeyOnEntry: false,
 
         init: function() {
-            console.debug('AIChat.init: starting initialization');
             var self = this;
 
             if (typeof markedEmoji !== 'undefined' && markedEmoji.markedEmoji) {
@@ -36,10 +35,8 @@
             this.bindEvents();
 
             var savedConfigMode = AIChatState.loadConfigMode();
-            console.log('AIChat.init: savedConfigMode=', savedConfigMode);
 
             AIChatConfig.checkConfiguredKeys(function(hasKeys) {
-                console.log('AIChat.init: hasKeys=', hasKeys, 'savedConfigMode=', savedConfigMode);
                 if (savedConfigMode) {
                     self.needsConfig = true;
                     self.configMode = savedConfigMode;
@@ -51,12 +48,10 @@
                 if (self.configMode === 'manage-mcp' || self.configMode === 'add-mcp' || self.configMode === 'manage-keys') {
                     AIChatMCP.loadServers(function() {
                         self.render();
-                        console.debug('AIChat.init: initialization complete, needsConfig:', self.needsConfig);
                         self.focusInputIfNotMinimized();
                     });
                 } else {
                     self.render();
-                    console.debug('AIChat.init: initialization complete, needsConfig:', self.needsConfig);
                     self.focusInputIfNotMinimized();
                 }
             });
@@ -106,7 +101,6 @@
         },
 
         render: function() {
-            console.log('AIChatCore.render: needsConfig=', this.needsConfig, 'configMode=', this.configMode, 'cameFromChat=', this.cameFromChat);
 
             if (this.needsConfig && this.configMode && this.configMode !== 'providers') {
                 AIChatState.saveConfigMode(this.configMode);
@@ -122,7 +116,6 @@
             html += AIChatRender.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
-            console.log('AIChatCore.render: innerHTML set, checking for MCP elements:', this.widget.querySelector('#ai-chat-mcp-add'), this.widget.querySelector('#ai-chat-mcp-back'));
             this.initModelDropdown();
             AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
             this.scrollActiveTabToBottom();
@@ -333,7 +326,6 @@
             var target = e.target;
             var self = this;
 
-            console.log('AIChatCore.handleClick: target=', target, 'target.id=', target.id, 'target.className=', target.className, 'configMode=', this.configMode);
 
             if (target.id === 'ai-chat-minimize') {
                 this.toggleMinimize();
@@ -487,7 +479,6 @@
 
             var mcpBack = target.closest('#ai-chat-mcp-back');
             if (mcpBack) {
-                console.log('AIChatCore.handleClick: mcp-back clicked, target=', target, 'mcpBack=', mcpBack);
                 this.needsConfig = false;
                 this.configMode = 'providers';
                 this.render();
@@ -496,7 +487,6 @@
 
             var mcpDetailBack = target.closest('#ai-chat-mcp-detail-back');
             if (mcpDetailBack) {
-                console.log('AIChatCore.handleClick: mcp-detail-back clicked');
                 AIChatMCP.selectedServer = null;
                 AIChatMCP.selectedServerTools = [];
                 this.configMode = 'manage-mcp';
@@ -506,7 +496,6 @@
 
             var mcpEditBack = target.closest('#ai-chat-mcp-edit-back');
             if (mcpEditBack) {
-                console.log('AIChatCore.handleClick: mcp-edit-back clicked');
                 AIChatMCP.selectedServer = null;
                 this.configMode = 'manage-mcp';
                 this.render();
@@ -515,7 +504,6 @@
 
             var mcpAddBack = target.closest('#ai-chat-mcp-add-back');
             if (mcpAddBack) {
-                console.log('AIChatCore.handleClick: mcp-add-back clicked');
                 this.configMode = 'manage-mcp';
                 this.render();
                 return;
@@ -543,7 +531,6 @@
 
             var mcpAdd = target.closest('#ai-chat-mcp-add');
             if (mcpAdd) {
-                console.log('AIChatCore.handleClick: mcp-add clicked, target=', target, 'mcpAdd=', mcpAdd);
                 this.configMode = 'add-mcp';
                 this.render();
                 return;
@@ -551,17 +538,14 @@
 
             var mcpSave = target.closest('#ai-chat-mcp-save');
             if (mcpSave) {
-                console.log('AIChatCore.handleClick: mcp-save clicked, target=', target, 'mcpSave=', mcpSave);
                 var endpointInput = this.widget.querySelector('#ai-chat-mcp-endpoint');
 
                 var endpoint = endpointInput ? endpointInput.value.trim() : '';
 
                 if (!endpoint) {
-                    console.log('AIChatCore.handleClick: mcp-save missing endpoint');
                     return;
                 }
 
-                console.log('AIChatCore.handleClick: mcp-save adding server endpoint=', endpoint);
 
                 var saveBtn = mcpSave;
                 var originalText = saveBtn.textContent;
@@ -586,7 +570,6 @@
             var mcpRemoveBtn = target.closest('.ai-chat-mcp-remove-btn');
             if (mcpRemoveBtn) {
                 ZatoConfirmButton.handleClick(mcpRemoveBtn, function(serverId) {
-                    console.log('AIChatCore.handleClick: mcp-remove confirmed, serverId=', serverId);
                     AIChatMCP.removeServer(serverId, function() {
                         self.render();
                     });
@@ -599,7 +582,6 @@
                 var serverId = serverEl ? serverEl.getAttribute('data-server-id') : null;
                 if (serverId) {
                     var enabled = target.checked;
-                    console.log('AIChatCore.handleClick: mcp-enabled toggled, serverId=', serverId, 'enabled=', enabled);
                     AIChatMCP.updateServer(serverId, { enabled: enabled }, function() {
                         self.render();
                     });
@@ -610,7 +592,6 @@
             var mcpServerNameLink = target.closest('.ai-chat-mcp-server-name-link');
             if (mcpServerNameLink) {
                 var serverId = mcpServerNameLink.getAttribute('data-server-id');
-                console.log('AIChatCore.handleClick: mcp-server-name clicked, serverId=', serverId);
                 AIChatMCP.selectedServer = AIChatMCP.getServerById(serverId);
                 AIChatMCP.loadingTools = true;
                 AIChatMCP.selectedServerTools = [];
@@ -625,7 +606,6 @@
             var mcpEditBtn = target.closest('.ai-chat-mcp-edit-btn');
             if (mcpEditBtn) {
                 var serverId = mcpEditBtn.getAttribute('data-item-id');
-                console.log('AIChatCore.handleClick: mcp-edit clicked, serverId=', serverId);
                 AIChatMCP.selectedServer = AIChatMCP.getServerById(serverId);
                 this.configMode = 'edit-mcp';
                 this.render();
@@ -639,11 +619,9 @@
                 var newEndpoint = endpointInput ? endpointInput.value.trim() : '';
 
                 if (!newEndpoint) {
-                    console.log('AIChatCore.handleClick: mcp-edit-save missing endpoint');
                     return;
                 }
 
-                console.log('AIChatCore.handleClick: mcp-edit-save updating server', serverId, 'endpoint=', newEndpoint);
 
                 var saveBtn = mcpEditSave;
                 var originalText = saveBtn.textContent;
@@ -681,7 +659,6 @@
             var configKeyRemove = target.closest('.ai-chat-config-key-remove');
             if (configKeyRemove) {
                 ZatoConfirmButton.handleClick(configKeyRemove, function(providerId) {
-                    console.log('AIChatCore.handleClick: config-key-remove confirmed, providerId=', providerId);
                     AIChatSettings.removeApiKey(providerId, {
                         onNoKeysLeft: function() {
                             self.needsConfig = true;
@@ -837,7 +814,6 @@
             if (!tab) return;
 
             if (AIChatMessages.isStreaming(tabId)) {
-                console.debug('AIChat.sendMessage: already streaming for tab:', tabId);
                 return;
             }
 

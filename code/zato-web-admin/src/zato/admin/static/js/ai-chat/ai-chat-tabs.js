@@ -42,24 +42,19 @@
         },
 
         addTab: function(tabs) {
-            console.debug('AIChatTabs.addTab: adding new tab');
             var newTab = this.createNewTab(tabs.length);
             tabs.push(newTab);
-            console.debug('AIChatTabs.addTab: new tab added:', JSON.stringify(newTab));
             return newTab;
         },
 
         closeTab: function(tabs, tabId, activeTabId) {
-            console.debug('AIChatTabs.closeTab: closing tab:', tabId);
 
             if (tabs.length <= 1) {
-                console.debug('AIChatTabs.closeTab: cannot close last tab');
                 return { tabs: tabs, activeTabId: activeTabId };
             }
 
             var tabIndex = this.getTabIndex(tabs, tabId);
             if (tabIndex === -1) {
-                console.debug('AIChatTabs.closeTab: tab not found');
                 return { tabs: tabs, activeTabId: activeTabId };
             }
 
@@ -69,24 +64,20 @@
             if (activeTabId === tabId) {
                 var newActiveIndex = Math.min(tabIndex, tabs.length - 1);
                 newActiveTabId = tabs[newActiveIndex].id;
-                console.debug('AIChatTabs.closeTab: switched to tab:', newActiveTabId);
             }
 
             return { tabs: tabs, activeTabId: newActiveTabId };
         },
 
         renameTab: function(tabs, tabId, newTitle) {
-            console.debug('AIChatTabs.renameTab: renaming tab:', tabId);
 
             var tab = this.getTabById(tabs, tabId);
             if (!tab) {
-                console.debug('AIChatTabs.renameTab: tab not found');
                 return false;
             }
 
             if (newTitle && newTitle.trim()) {
                 tab.title = newTitle.trim();
-                console.debug('AIChatTabs.renameTab: new title:', tab.title);
                 return true;
             }
             return false;
@@ -101,7 +92,6 @@
                     newOrder.push(tab);
                 }
             }
-            console.debug('AIChatTabs.reorderTabs: tabs reordered:', JSON.stringify(newOrder.map(function(t) { return t.title; })));
             return newOrder;
         }
     };
