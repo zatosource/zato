@@ -249,15 +249,16 @@
             html += '<span>Back</span>';
             html += '</div>';
             html += '<div class="ai-chat-config-container">';
-            html += '<div class="ai-chat-mcp-header-row">';
-            html += '<div class="ai-chat-config-title">MCP servers</div>';
-            html += '<button class="ai-chat-mcp-add-btn" id="ai-chat-mcp-add">Add server</button>';
-            html += '</div>';
-            html += '<div class="ai-chat-config-keys-list">';
 
             if (this.servers.length === 0) {
-                html += '<div class="ai-chat-mcp-empty">No MCP servers configured</div>';
+                html += '<div class="ai-chat-config-title">No MCP servers configured</div>';
+                html += '<button class="ai-chat-config-save-button" id="ai-chat-mcp-add">Add server</button>';
             } else {
+                html += '<div class="ai-chat-mcp-header-row">';
+                html += '<div class="ai-chat-config-title">MCP servers</div>';
+                html += '<button class="ai-chat-mcp-add-btn" id="ai-chat-mcp-add">Add server</button>';
+                html += '</div>';
+                html += '<div class="ai-chat-config-keys-list">';
                 for (var i = 0; i < this.servers.length; i++) {
                     var server = this.servers[i];
                     html += '<div class="ai-chat-mcp-server-row" data-server-id="' + server.id + '">';
@@ -275,9 +276,9 @@
                     html += '</div>';
                     html += '</div>';
                 }
+                html += '</div>';
             }
 
-            html += '</div>';
             html += '</div>';
 
             return html;
@@ -349,7 +350,7 @@
             html += '<input type="text" class="ai-chat-config-api-key-input" id="ai-chat-mcp-endpoint" placeholder="Endpoint URL, e.g. https://zato.io/mcp">';
             html += '</div>';
 
-            html += '<button class="ai-chat-config-save-button" id="ai-chat-mcp-save">Add server</button>';
+            html += '<button class="ai-chat-config-save-button" id="ai-chat-mcp-save">Save server</button>';
 
             html += '</div>';
 

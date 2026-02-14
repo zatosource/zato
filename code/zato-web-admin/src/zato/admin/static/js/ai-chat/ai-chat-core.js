@@ -557,6 +557,8 @@
                 AIChatMCP.addServer({endpoint: endpoint}, function(servers, error) {
                     if (error) {
                         console.warn('AIChatCore.handleClick: mcp-save error', error);
+                        AIChatError.show(error);
+                        return;
                     }
                     self.configMode = 'manage-mcp';
                     self.render();

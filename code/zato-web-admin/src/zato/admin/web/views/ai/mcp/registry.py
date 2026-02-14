@@ -73,7 +73,8 @@ class MCPRegistry:
         name = server_info.get('name', '')
 
         if not name:
-            return {'error': 'Could not get server name from endpoint'}
+            error_msg = server_info.get('error', 'Could not get server name from endpoint')
+            return {'error': error_msg}
 
         servers = cls.get_servers()
 
