@@ -10,6 +10,7 @@
     var STORAGE_KEY_PRE_MINIMIZE_POSITION = 'zato.ai-chat.pre-minimize-position';
     var STORAGE_KEY_PRE_MAXIMIZE_STATE = 'zato.ai-chat.pre-maximize-state';
     var STORAGE_KEY_ZOOM = 'zato.ai-chat.zoom';
+    var STORAGE_KEY_CONFIG_MODE = 'zato.ai-chat.config-mode';
 
     var AIChatState = {
 
@@ -144,6 +145,18 @@
 
         saveZoom: function(zoomScale) {
             localStorage.setItem(STORAGE_KEY_ZOOM, zoomScale.toString());
+        },
+
+        loadConfigMode: function() {
+            return localStorage.getItem(STORAGE_KEY_CONFIG_MODE) || null;
+        },
+
+        saveConfigMode: function(configMode) {
+            if (configMode) {
+                localStorage.setItem(STORAGE_KEY_CONFIG_MODE, configMode);
+            } else {
+                localStorage.removeItem(STORAGE_KEY_CONFIG_MODE);
+            }
         }
     };
 

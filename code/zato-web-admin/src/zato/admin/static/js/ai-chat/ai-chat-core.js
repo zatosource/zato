@@ -34,11 +34,30 @@
             }
             this.bindEvents();
 
+            var savedConfigMode = AIChatState.loadConfigMode();
+            console.log('AIChat.init: savedConfigMode=', savedConfigMode);
+
             AIChatConfig.checkConfiguredKeys(function(hasKeys) {
-                self.needsConfig = !hasKeys;
-                self.render();
-                console.debug('AIChat.init: initialization complete, needsConfig:', self.needsConfig);
-                self.focusInputIfNotMinimized();
+                console.log('AIChat.init: hasKeys=', hasKeys, 'savedConfigMode=', savedConfigMode);
+                if (savedConfigMode) {
+                    self.needsConfig = true;
+                    self.configMode = savedConfigMode;
+                    self.cameFromChat = true;
+                } else {
+                    self.needsConfig = !hasKeys;
+                }
+
+                if (self.configMode === 'manage-mcp' || self.configMode === 'add-mcp' || self.configMode === 'manage-keys') {
+                    AIChatMCP.loadServers(function() {
+                        self.render();
+                        console.debug('AIChat.init: initialization complete, needsConfig:', self.needsConfig);
+                        self.focusInputIfNotMinimized();
+                    });
+                } else {
+                    self.render();
+                    console.debug('AIChat.init: initialization complete, needsConfig:', self.needsConfig);
+                    self.focusInputIfNotMinimized();
+                }
             });
 
             window.addEventListener('focus', function() {
@@ -87,6 +106,12 @@
 
         render: function() {
             console.log('AIChatCore.render: needsConfig=', this.needsConfig, 'configMode=', this.configMode, 'cameFromChat=', this.cameFromChat);
+
+            if (this.needsConfig && this.configMode && this.configMode !== 'providers') {
+                AIChatState.saveConfigMode(this.configMode);
+            } else {
+                AIChatState.saveConfigMode(null);
+            }
 
             var html = AIChatRender.buildHeaderHtml(this.isMinimized, this.isMaximized);
             if (!this.needsConfig) {
@@ -215,6 +240,17 @@
                             saveBtn.click();
                         }
                         return;
+                    }
+                }
+
+                if (e.key === 'Backspace') {
+                    var isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+                    if (!isInput) {
+                        var backBtn = self.widget.querySelector('.ai-chat-config-back');
+                        if (backBtn) {
+                            e.preventDefault();
+                            backBtn.click();
+                        }
                     }
                 }
 
@@ -644,9 +680,18 @@
                 var providerId = configKeyAdd.getAttribute('data-item-id');
                 this.needsConfig = true;
                 this.configMode = 'key-input';
-                AIChatSettings.showKeyInput(this.widget, providerId, function() {
-                    self.render();
-                });
+                AIChatConfig.selectedProvider = providerId;
+                this.render();
+                return;
+            }
+
+            var configKeyEdit = target.closest('.ai-chat-config-key-edit');
+            if (configKeyEdit) {
+                var providerId = configKeyEdit.getAttribute('data-item-id');
+                this.needsConfig = true;
+                this.configMode = 'key-input';
+                AIChatConfig.selectedProvider = providerId;
+                this.render();
                 return;
             }
         },

@@ -2,17 +2,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    overflow-y: auto;
 }
 
 .ai-chat-config-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     width: 100%;
     padding: 24px;
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .ai-chat-config-title {
@@ -262,6 +264,11 @@
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.ai-chat-config-key-actions {
+    display: flex;
+    gap: 8px;
 }
 
 .ai-chat-config-key-logo {
