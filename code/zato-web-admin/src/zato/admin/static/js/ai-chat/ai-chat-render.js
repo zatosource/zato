@@ -196,15 +196,15 @@
             html += '<div class="ai-chat-input-wrapper">';
             html += '<div class="ai-chat-input" data-tab-id="' + tab.id + '" contenteditable="true" data-placeholder="Type a message .."></div>';
             html += '</div>';
-            html += this.buildInputToolbarHtml(tab);
+            html += this.buildInputFooterHtml(tab);
             html += '</div>';
             return html;
         },
 
-        buildInputToolbarHtml: function(tab) {
-            var html = '<div class="ai-chat-input-toolbar">';
+        buildInputFooterHtml: function(tab) {
+            var html = '<div class="ai-chat-input-footer">';
             html += this.buildModelSelectorHtml(tab);
-            html += '<div class="ai-chat-input-toolbar-buttons">';
+            html += '<div class="ai-chat-input-footer-buttons">';
             html += '<button class="ai-chat-options-button" data-tab-id="' + tab.id + '" aria-label="Options">';
             html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-options-icon"><path d="M12 4v16m-8-8h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
             html += '</button>';

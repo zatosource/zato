@@ -17,7 +17,7 @@
     overflow: hidden;
 }
 
-.ai-chat-input-toolbar {
+.ai-chat-input-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -27,7 +27,7 @@
     width: 100%;
 }
 
-.ai-chat-input-toolbar-buttons {
+.ai-chat-input-footer-buttons {
     display: flex;
     align-items: center;
     gap: 4px;
