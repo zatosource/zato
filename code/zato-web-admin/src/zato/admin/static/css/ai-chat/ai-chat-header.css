@@ -23,11 +23,30 @@
     color: #fff;
 }
 
-.ai-chat-header-title {
-    font-size: 14px;
+.ai-chat-header-tags {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ai-chat-header-tag {
+    font-size: 12px;
     font-weight: 600;
-    color: #ffffff;
+    padding: 4px 10px;
+    border-radius: 4px;
     letter-spacing: 0.3px;
+}
+
+.ai-chat-header-tag-primary {
+    background: rgba(74, 158, 255, 0.25);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(74, 158, 255, 0.4);
+}
+
+.ai-chat-header-tag-env {
+    background: rgba(80, 200, 120, 0.25);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(80, 200, 120, 0.4);
 }
 
 .ai-chat-header-controls {

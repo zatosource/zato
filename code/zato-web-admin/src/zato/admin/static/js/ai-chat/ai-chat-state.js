@@ -6,7 +6,9 @@
     var STORAGE_KEY_POSITION = 'zato.ai-chat.position';
     var STORAGE_KEY_DIMENSIONS = 'zato.ai-chat.dimensions';
     var STORAGE_KEY_MINIMIZED = 'zato.ai-chat.minimized';
+    var STORAGE_KEY_MAXIMIZED = 'zato.ai-chat.maximized';
     var STORAGE_KEY_PRE_MINIMIZE_POSITION = 'zato.ai-chat.pre-minimize-position';
+    var STORAGE_KEY_PRE_MAXIMIZE_STATE = 'zato.ai-chat.pre-maximize-state';
     var STORAGE_KEY_ZOOM = 'zato.ai-chat.zoom';
 
     var AIChatState = {
@@ -83,6 +85,31 @@
 
         saveMinimized: function(isMinimized) {
             localStorage.setItem(STORAGE_KEY_MINIMIZED, isMinimized.toString());
+        },
+
+        loadMaximized: function() {
+            var maximizedStr = localStorage.getItem(STORAGE_KEY_MAXIMIZED);
+            return maximizedStr === 'true';
+        },
+
+        saveMaximized: function(isMaximized) {
+            localStorage.setItem(STORAGE_KEY_MAXIMIZED, isMaximized.toString());
+        },
+
+        loadPreMaximizeState: function() {
+            var stateJson = localStorage.getItem(STORAGE_KEY_PRE_MAXIMIZE_STATE);
+            if (stateJson) {
+                try {
+                    return JSON.parse(stateJson);
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        },
+
+        savePreMaximizeState: function(state) {
+            localStorage.setItem(STORAGE_KEY_PRE_MAXIMIZE_STATE, JSON.stringify(state));
         },
 
         loadPreMinimizePosition: function() {

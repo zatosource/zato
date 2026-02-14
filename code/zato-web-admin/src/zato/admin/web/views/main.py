@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from os import environ
 
 # Django
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
@@ -41,7 +42,8 @@ def index_redirect(req):
 
 @method_allowed('GET')
 def index(req):
-    return TemplateResponse(req, 'zato/index.html')
+    zato_env_name = environ.get('Zato_Env_Name', '')
+    return TemplateResponse(req, 'zato/index.html', {'zato_env_name': zato_env_name})
 
 # ################################################################################################################################
 

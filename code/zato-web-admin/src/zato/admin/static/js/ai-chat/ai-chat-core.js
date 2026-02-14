@@ -27,6 +27,10 @@
             AIChatConfig.init();
             this.loadState();
             this.widget = AIChatWidget.create(this.isMinimized, this.zoomScale);
+            if (this.isMaximized) {
+                this.widget.classList.add('maximized');
+                document.documentElement.classList.add('ai-chat-maximized');
+            }
             this.bindEvents();
 
             AIChatConfig.checkConfiguredKeys(function(hasKeys) {
@@ -63,7 +67,9 @@
             }
 
             this.isMinimized = AIChatState.loadMinimized();
+            this.isMaximized = AIChatState.loadMaximized();
             this.preMinimizePosition = AIChatState.loadPreMinimizePosition();
+            this.preMaximizeState = AIChatState.loadPreMaximizeState();
             this.zoomScale = AIChatState.loadZoom();
         },
 
@@ -74,6 +80,8 @@
             AIChatState.saveTabs(this.tabs);
             AIChatState.saveActiveTabId(this.activeTabId);
             AIChatState.saveMinimized(this.isMinimized);
+            AIChatState.saveMaximized(this.isMaximized);
+            AIChatState.savePreMaximizeState(this.preMaximizeState);
         },
 
         render: function() {
@@ -510,6 +518,7 @@
                 document.documentElement.classList.add('ai-chat-maximized');
                 this.isMaximized = true;
             }
+            this.saveState();
             this.render();
             this.focusInput(this.activeTabId);
         },

@@ -26,7 +26,12 @@
 
         buildHeaderHtml: function(isMinimized, isMaximized) {
             var html = '<div class="ai-chat-header" id="ai-chat-header">';
-            html += '<span class="ai-chat-header-title">AI chat</span>';
+            html += '<div class="ai-chat-header-tags">';
+            html += '<span class="ai-chat-header-tag ai-chat-header-tag-primary">AI chat</span>';
+            if (typeof ZatoEnvName !== 'undefined' && ZatoEnvName) {
+                html += '<span class="ai-chat-header-tag ai-chat-header-tag-env">' + ZatoEnvName + '</span>';
+            }
+            html += '</div>';
             html += '<div class="ai-chat-header-controls">';
             var minIcon = isMinimized ? '+' : '−';
             html += '<button class="ai-chat-header-button" id="ai-chat-minimize" title="Minimize">' + minIcon + '</button>';

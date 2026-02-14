@@ -53,6 +53,9 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-context-menu.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-settings.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-options-menu.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript">
+        var ZatoEnvName = "{{ zato_env_name|default:'' }}";
+    </script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-core.js"></script>
 
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-base.css" />
