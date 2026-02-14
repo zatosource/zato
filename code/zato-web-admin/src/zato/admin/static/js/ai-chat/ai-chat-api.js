@@ -3,27 +3,35 @@
 
     var AIChatAPI = {
 
-        sendMessage: function(message, tabId, onSuccess, onError) {
-            console.debug('AIChatAPI.sendMessage: sending message for tab:', tabId);
-            console.debug('AIChatAPI.sendMessage: message:', message);
+        streamMessage: function(tabId, model, messages, callbacks) {
+            console.debug('AIChatAPI.streamMessage: tabId:', tabId, 'model:', model);
 
-            // TODO: implement actual API call to backend
-            // for now, just log and call success callback
-            if (onSuccess) {
-                onSuccess({
-                    role: 'assistant',
-                    content: 'API not yet implemented'
-                });
-            }
+            AIChatSSE.connect(tabId, model, messages, {
+                onChunk: function(text) {
+                    if (callbacks.onChunk) {
+                        callbacks.onChunk(text);
+                    }
+                },
+                onComplete: function() {
+                    if (callbacks.onComplete) {
+                        callbacks.onComplete();
+                    }
+                },
+                onError: function(error) {
+                    if (callbacks.onError) {
+                        callbacks.onError(error);
+                    }
+                }
+            });
         },
 
-        streamMessage: function(message, tabId, onChunk, onComplete, onError) {
-            console.debug('AIChatAPI.streamMessage: streaming message for tab:', tabId);
+        cancelStream: function(tabId) {
+            console.debug('AIChatAPI.cancelStream: tabId:', tabId);
+            AIChatSSE.disconnect(tabId);
+        },
 
-            // TODO: implement streaming API call
-            if (onComplete) {
-                onComplete();
-            }
+        isStreaming: function(tabId) {
+            return AIChatSSE.isConnected(tabId);
         }
     };
 

@@ -90,8 +90,16 @@
             } else {
                 for (var i = 0; i < tab.messages.length; i++) {
                     var msg = tab.messages[i];
-                    html += '<div class="ai-chat-message ' + msg.role + '">';
-                    html += this.escapeHtml(msg.content);
+                    var streamingClass = msg.streaming ? ' streaming' : '';
+                    html += '<div class="ai-chat-message ' + msg.role + streamingClass + '">';
+                    html += '<div class="ai-chat-message-content">';
+                    if (msg.streaming) {
+                        var streamingContent = AIChatMessages.getStreamingContent(tab.id);
+                        html += this.escapeHtml(streamingContent);
+                    } else {
+                        html += this.escapeHtml(msg.content);
+                    }
+                    html += '</div>';
                     html += '</div>';
                 }
             }

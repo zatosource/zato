@@ -60,3 +60,23 @@
     text-align: center;
     max-width: 100%;
 }
+
+.ai-chat-message.streaming {
+    position: relative;
+}
+
+.ai-chat-message.streaming::after {
+    content: '▋';
+    animation: blink 1s infinite;
+    margin-left: 2px;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+.ai-chat-message-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+}

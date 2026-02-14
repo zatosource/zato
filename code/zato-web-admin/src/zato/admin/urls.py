@@ -15,6 +15,7 @@ from zato.admin import settings
 from zato.admin.web.util import static_serve
 from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.ai import chat as ai_chat
+from zato.admin.web.views.ai import stream as ai_stream
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -965,6 +966,11 @@ urlpatterns += [
         login_required(ai_chat.delete_key), name='ai-chat-config-delete-key'),
     url(r'^zato/ai-chat/config/get-models/$',
         login_required(ai_chat.get_models), name='ai-chat-config-get-models'),
+
+    # AI chat streaming
+
+    url(r'^zato/ai-chat/invoke/$',
+        login_required(ai_stream.invoke), name='ai-chat-invoke'),
 ]
 
 # ################################################################################################################################

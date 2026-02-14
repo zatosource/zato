@@ -438,6 +438,8 @@
         },
 
         sendMessage: function(tabId) {
+            var self = this;
+
             var input = this.widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
             if (!input) return;
 
@@ -447,7 +449,34 @@
             var tab = AIChatTabs.getTabById(this.tabs, tabId);
             if (!tab) return;
 
+            if (AIChatMessages.isStreaming(tabId)) {
+                console.debug('AIChat.sendMessage: already streaming for tab:', tabId);
+                return;
+            }
+
             AIChatMessages.addMessage(tab, 'user', message);
+
+            var model = AIChatTabState.getModel(tabId);
+            if (!model) {
+                var models = AIChatConfig.getModelsForConfiguredProviders();
+                for (var i = 0; i < models.length; i++) {
+                    if (!models[i].disabled) {
+                        model = models[i].id;
+                        break;
+                    }
+                }
+            }
+
+            if (!model) {
+                AIChatMessages.addMessage(tab, 'system', 'No model selected');
+                this.saveState();
+                this.render();
+                return;
+            }
+
+            var apiMessages = this.buildApiMessages(tab);
+
+            AIChatMessages.startStreamingMessage(tab, tabId);
 
             this.saveState();
             this.render();
@@ -457,7 +486,56 @@
                 newInput.focus();
             }
 
+            AIChatAPI.streamMessage(tabId, model, apiMessages, {
+                onChunk: function(text) {
+                    AIChatMessages.appendToStreamingMessage(tabId, text);
+                    self.updateStreamingMessage(tabId);
+                },
+                onComplete: function() {
+                    AIChatMessages.finishStreamingMessage(tab, tabId);
+                    self.saveState();
+                    self.render();
+                },
+                onError: function(error) {
+                    AIChatMessages.cancelStreamingMessage(tab, tabId);
+                    AIChatMessages.addMessage(tab, 'system', 'Error: ' + error);
+                    self.saveState();
+                    self.render();
+                }
+            });
+        },
+
+        buildApiMessages: function(tab) {
+            var out = [];
+
+            for (var i = 0; i < tab.messages.length; i++) {
+                var msg = tab.messages[i];
+                if (msg.role === 'user' || msg.role === 'assistant') {
+                    if (!msg.streaming) {
+                        out.push({
+                            role: msg.role,
+                            content: msg.content
+                        });
+                    }
+                }
+            }
+
+            return out;
+        },
+
+        updateStreamingMessage: function(tabId) {
             var messagesContainer = this.widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            if (!messagesContainer) return;
+
+            var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+            if (!streamingEl) return;
+
+            var contentEl = streamingEl.querySelector('.ai-chat-message-content');
+            if (!contentEl) return;
+
+            var content = AIChatMessages.getStreamingContent(tabId);
+            contentEl.textContent = content;
+
             AIChatMessages.scrollToBottom(messagesContainer);
         }
     };

@@ -59,7 +59,8 @@ File handling modules:
 - `ai-chat-preview.js` - thin wrapper around ZatoPreview for attachment previews
 
 Backend communication:
-- `ai-chat-api.js` - backend communication (stub, not implemented)
+- `ai-chat-sse.js` - SSE connection management (connect, disconnect, event parsing)
+- `ai-chat-api.js` - high-level API for streaming messages
 
 Location: `/zato-web-admin/src/zato/admin/static/js/`
 
@@ -102,6 +103,19 @@ Location: `/zato-web-admin/src/zato/admin/web/views/ai/`
   - `delete_key` - deletes API key from Redis
   - `get_models` - retrieves available AI models from models.py
 
+- `stream.py` - SSE streaming endpoint:
+  - `invoke` - POST endpoint that streams chat responses via SSE
+
+### LLM clients
+
+Location: `/zato-web-admin/src/zato/admin/web/views/ai/llm/`
+
+- `base.py` - abstract base class for LLM clients
+- `anthropic.py` - Anthropic Claude API client
+- `openai.py` - OpenAI GPT API client
+- `google.py` - Google Gemini API client
+- `factory.py` - factory function to get client by provider name
+
 ### Model definitions
 
 Location: `/zato-common/src/zato/common/ai/models.py`
@@ -128,6 +142,7 @@ Location: `/zato-web-admin/src/zato/admin/urls.py`
 - `/zato/ai-chat/config/save-key/` - POST to save API key
 - `/zato/ai-chat/config/delete-key/` - POST to delete API key
 - `/zato/ai-chat/config/get-models/` - GET available models for all providers
+- `/zato/ai-chat/invoke/` - POST to stream chat response via SSE
 
 ### Redis keys
 
