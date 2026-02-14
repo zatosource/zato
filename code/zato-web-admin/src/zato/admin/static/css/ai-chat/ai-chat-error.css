@@ -10,14 +10,19 @@
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     z-index: 100001;
+    resize: both;
+    overflow: auto;
+    min-width: 300px;
+    min-height: 150px;
 }
 
 .ai-chat-error-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    padding: 8px 12px;
     border-bottom: 1px solid #333;
+    cursor: move;
 }
 
 .ai-chat-error-title {
@@ -27,26 +32,36 @@
 }
 
 .ai-chat-error-close {
-    background: none;
+    background: transparent;
     border: none;
-    color: #888;
-    font-size: 20px;
+    color: #999;
+    font-size: 16px;
     cursor: pointer;
     padding: 0;
-    line-height: 1;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
 }
 
 .ai-chat-error-close:hover {
+    background: rgba(255, 255, 255, 0.1);
     color: #fff;
 }
 
 .ai-chat-error-body {
-    padding: 16px;
+    padding: 12px;
+    height: calc(100% - 45px);
+    box-sizing: border-box;
 }
 
 .ai-chat-error-message {
     width: 100%;
-    min-height: 100px;
+    height: 100%;
+    min-height: 80px;
     background: #252525;
     border: 1px solid #333;
     border-radius: 4px;
@@ -54,11 +69,11 @@
     font-family: monospace;
     font-size: 12px;
     padding: 12px;
-    resize: vertical;
+    resize: none;
     box-sizing: border-box;
 }
 
 .ai-chat-error-message:focus {
     outline: none;
-    border-color: #555;
+    border-color: #333;
 }

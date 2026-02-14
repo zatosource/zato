@@ -40,6 +40,32 @@
                     document.removeEventListener('keydown', handler);
                 }
             });
+
+            var header = popup.querySelector('.ai-chat-error-header');
+            var isDragging = false;
+            var dragOffsetX = 0;
+            var dragOffsetY = 0;
+
+            header.addEventListener('mousedown', function(e) {
+                if (e.target === closeBtn) return;
+                isDragging = true;
+                var rect = popup.getBoundingClientRect();
+                dragOffsetX = e.clientX - rect.left;
+                dragOffsetY = e.clientY - rect.top;
+                popup.style.transform = 'none';
+                popup.style.left = rect.left + 'px';
+                popup.style.top = rect.top + 'px';
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                popup.style.left = (e.clientX - dragOffsetX) + 'px';
+                popup.style.top = (e.clientY - dragOffsetY) + 'px';
+            });
+
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
         },
 
         escapeHtml: function(text) {
