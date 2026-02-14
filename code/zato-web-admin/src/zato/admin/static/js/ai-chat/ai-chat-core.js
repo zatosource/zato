@@ -33,6 +33,7 @@
                 self.needsConfig = !hasKeys;
                 self.render();
                 console.debug('AIChat.init: initialization complete, needsConfig:', self.needsConfig);
+                self.focusInputIfNotMinimized();
             });
 
             window.addEventListener('focus', function() {
@@ -496,10 +497,11 @@
                     width: this.widget.style.width,
                     height: this.widget.style.height
                 };
+                var scale = this.zoomScale || 1;
                 this.widget.style.left = '0px';
                 this.widget.style.top = '0px';
-                this.widget.style.width = '100vw';
-                this.widget.style.height = '100vh';
+                this.widget.style.width = (window.innerWidth / scale) + 'px';
+                this.widget.style.height = (window.innerHeight / scale) + 'px';
                 this.isMaximized = true;
             }
             this.render();
