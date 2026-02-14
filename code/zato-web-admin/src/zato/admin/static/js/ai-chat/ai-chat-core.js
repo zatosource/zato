@@ -39,6 +39,13 @@
             window.addEventListener('focus', function() {
                 self.focusInputIfNotMinimized();
             });
+
+            window.addEventListener('resize', function() {
+                if (self.isMaximized) {
+                    self.widget.style.width = window.innerWidth + 'px';
+                    self.widget.style.height = window.innerHeight + 'px';
+                }
+            });
         },
 
         focusInputIfNotMinimized: function() {
