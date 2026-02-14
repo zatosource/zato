@@ -19,15 +19,15 @@
 }
 
 .zato-confirm-edit {
-    background: transparent;
-    color: var(--ai-chat-text-secondary);
-    border: 1px solid var(--ai-chat-text-dim);
+    background: rgba(255, 200, 100, 0.1);
+    color: #e0b050;
+    border: 1px solid rgba(255, 200, 100, 0.3);
 }
 
 .zato-confirm-edit:hover {
-    color: var(--ai-chat-link-color);
-    border-color: var(--ai-chat-link-color);
-    background: rgba(99, 179, 237, 0.1);
+    color: #f0c060;
+    border-color: #f0c060;
+    background: rgba(255, 200, 100, 0.2);
 }
 
 .zato-confirm-remove {
