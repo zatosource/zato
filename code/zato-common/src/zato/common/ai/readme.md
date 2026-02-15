@@ -555,14 +555,11 @@ Location: `/zato-web-admin/src/zato/admin/web/views/ai/tools/`
 4. The enmasse importer creates or updates the object in the database
 5. The result is returned to the LLM which reports success or failure to the user
 
-### Tool selection
+### Tool batching
 
-To avoid sending all tool schemas (which would consume many tokens), the system uses a two-step approach:
+When the LLM calls multiple enmasse tools in the same response (e.g., create_security + create_channel_rest), they are batched into a single enmasse YAML file and executed in one CLI call. This ensures dependent objects (like a channel referencing a security definition) are created together.
 
-1. First, the LLM is asked which enmasse tools are needed for the user's request
-2. Only the selected tool schemas are sent with the main request
-
-This is handled by `_select_enmasse_tools()` in each LLM client, using the prompt from `/zato-common/src/zato/common/ai/prompts/tool_selection.md`.
+This is handled by `_execute_tools_batched()` in each LLM client and `execute_enmasse_batch()` in the executor.
 
 ### Service validation
 
