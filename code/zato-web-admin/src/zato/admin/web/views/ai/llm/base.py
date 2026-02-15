@@ -13,6 +13,7 @@ from traceback import format_exc
 
 # Zato
 from zato.admin.web.views.ai.mcp.registry import MCPRegistry
+from zato.admin.web.views.ai.llm.execution import get_recent_executions
 from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools, is_delete_tool, is_update_tool
 from zato.admin.web.views.ai.tools.executor import execute_enmasse_batch, is_enmasse_tool
 from zato.admin.web.views.ai.tools.delete_executor import execute_delete_tool
@@ -36,12 +37,40 @@ class BaseLLMClient(ABC):
     """ Base class for LLM clients.
     """
 
-    def __init__(self, api_key:'str', zato_client:'any_'=None, cluster_id:'int'=None, cluster:'any_'=None) -> 'None':
+    def __init__(self, api_key:'str', zato_client:'any_'=None, cluster_id:'int'=None, cluster:'any_'=None, session_id:'str'='') -> 'None':
         self.api_key = api_key
         self.zato_client = zato_client
         self.cluster_id = cluster_id
         self.cluster = cluster
+        self.session_id = session_id
         self.system_prompt = get_system_prompt()
+
+# ################################################################################################################################
+
+    def _build_execution_history_context(self) -> 'str':
+        """ Builds execution history context from Redis for injection into conversation.
+        """
+        if not self.session_id:
+            return ''
+
+        executions = get_recent_executions(self.session_id, limit=20)
+        if not executions:
+            return ''
+
+        lines = ['Recent tool executions in this session:']
+        for execution in executions:
+            tool_name = execution.get('tool_name', '')
+            success = execution.get('success', False)
+            args = execution.get('arguments', {})
+            name = args.get('name', '')
+            status = 'succeeded' if success else 'failed'
+            lines.append(f'- {tool_name}: {name} ({status})')
+
+        lines.append('')
+        lines.append('When answering questions about what was created/updated/deleted, refer ONLY to this list.')
+
+        out = '\n'.join(lines)
+        return out
 
 # ################################################################################################################################
 

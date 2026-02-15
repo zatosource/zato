@@ -624,13 +624,23 @@ The LLM will call:
 
 ## Execution grounding (anti-hallucination)
 
-The LLM can hallucinate about tool executions - e.g., announcing "Creating 3 objects" but only executing 2 tool calls, then fabricating the third in its response. This is mitigated through an execution-receipt architecture.
+The LLM can hallucinate about tool executions - e.g., announcing "Creating 3 objects" but only executing 2 tool calls, then fabricating the third in its response. This is mitigated through a three-layer execution-receipt architecture.
+
+### Architecture layers
+
+1. **System prompt constraints** - Forbid pre-announcing counts, require grounding in execution log
+2. **Ground-truth injection** - After all tools execute, inject authoritative log before final LLM response
+3. **Deterministic fallback** - Verify final response against log, append correction if fabrication detected
+4. **Database persistence** - Store execution records for cross-turn recall
 
 ### How it works
 
 1. **ExecutionLog** (Pydantic model) tracks all tool executions with: tool_name, arguments, result, success, error
-2. After tools execute, a ground-truth message is injected into the conversation before the LLM generates its final response
-3. System prompt constraints forbid pre-announcing counts and require responses to be based only on the execution log
+2. Execution log accumulates across all iterations within a single user turn
+3. After the tool-calling loop exits, ground-truth message is injected once
+4. LLM generates final response with no tools available (prevents further calls)
+5. Response is verified against execution log; if issues found, deterministic correction is appended
+6. Execution records are persisted to database for cross-turn recall
 
 ### Ground-truth message format
 
@@ -647,10 +657,28 @@ Base your response ONLY on the operations listed above.
 Do NOT claim any operation occurred that is not in this log.
 ```
 
+### Response verification
+
+After the LLM generates its final response, `verify_response()` checks for:
+- Count mismatches (e.g., "created 3 objects" when only 2 succeeded)
+- Fabricated object names not in the execution log
+
+If issues are detected, `build_deterministic_response()` generates a guaranteed-accurate summary that is appended to the response.
+
+### Redis persistence
+
+Execution records are stored in Redis sorted sets with:
+- Key: `zato.ai-chat.tool-execution.<session_id>`
+- Score: timestamp (for ordering)
+- Value: JSON with `tool_name`, `arguments`, `result`, `success`, `error`, `timestamp`
+- TTL: 2 weeks
+
+This enables cross-turn recall: when the user asks "what did you create?" in a later turn, the LLM can query Redis rather than relying on conversation history that may have scrolled out of context.
+
 ### Files involved
 
-- `execution.py` - `ToolRecord` and `ExecutionLog` Pydantic models
-- `anthropic.py`, `openai.py`, `google.py` - create `ExecutionLog`, pass to `_execute_tools_batched()`, inject ground-truth message
+- `execution.py` - `ToolRecord`, `ExecutionLog` Pydantic models, `get_recent_executions()` function
+- `anthropic.py`, `openai.py`, `google.py` - create `ExecutionLog`, accumulate across iterations, inject ground-truth, verify response, persist to Redis
 - `enmasse_tools.md` - system prompt rules forbidding count announcements
 
 ### System prompt constraints

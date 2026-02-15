@@ -54,7 +54,7 @@ def _format_sse_event(event_type:'str', data:'dict') -> 'str':
 
 # ################################################################################################################################
 
-def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None, cluster_id:'int'=None, cluster:'any_'=None) -> 'generator_':
+def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None, cluster_id:'int'=None, cluster:'any_'=None, session_id:'str'='') -> 'generator_':
     """ Generator that yields SSE events for a chat stream.
     """
     provider = _get_provider_for_model(model_id)
@@ -74,7 +74,7 @@ def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None, c
         return
 
     try:
-        client = get_llm_client(provider, api_key, zato_client, cluster_id, cluster)
+        client = get_llm_client(provider, api_key, zato_client, cluster_id, cluster, session_id)
     except ValueError as e:
         error_msg = str(e)
         error_data = {'message': error_msg}
@@ -176,7 +176,9 @@ def invoke(req) -> 'StreamingHttpResponse':
         cluster = getattr(zato_obj, 'cluster', None)
         zato_client = zato_obj.client
 
-    response = StreamingHttpResponse(_stream_response(model_id, messages, zato_client, cluster_id, cluster), content_type='text/event-stream')
+    session_id = body.get('session_id', '') or req.session.session_key or ''
+
+    response = StreamingHttpResponse(_stream_response(model_id, messages, zato_client, cluster_id, cluster, session_id), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
 

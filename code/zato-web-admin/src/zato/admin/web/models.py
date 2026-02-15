@@ -74,3 +74,4 @@ class ClusterColorMarker(models.Model):
             self.__class__.__name__, hex(id(self)), self.user_profile, self.cluster_id, self.color)
 
     __unicode__ = __repr__
+

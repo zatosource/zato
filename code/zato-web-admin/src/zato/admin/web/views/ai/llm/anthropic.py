@@ -57,8 +57,7 @@ class AnthropicClient(BaseLLMClient):
 
             tool_calls = result.get('tool_calls', [])
             if not tool_calls:
-                yield self._format_done(total_input_tokens, total_output_tokens)
-                return
+                break
 
             assistant_content = result.get('assistant_content', [])
             working_messages.append({'role': 'assistant', 'content': assistant_content})
@@ -66,11 +65,7 @@ class AnthropicClient(BaseLLMClient):
             tool_results = self._execute_tools_batched(tool_calls, all_tools, execution_log)
             working_messages.append({'role': 'user', 'content': tool_results})
 
-            ground_truth = execution_log.build_ground_truth_message()
-            if ground_truth:
-                working_messages.append({'role': 'user', 'content': [{'type': 'text', 'text': ground_truth}]})
-                logger.info('Injected ground-truth execution log')
-
+        if execution_log.records:
             object_changes = execution_log.get_object_changes()
             logger.info('Object changes to yield: %s', object_changes)
             for change in object_changes:
@@ -78,9 +73,35 @@ class AnthropicClient(BaseLLMClient):
                 logger.info('Yielding object_changed event: %s', event)
                 yield event
 
-            execution_log.clear()
+            ground_truth = execution_log.build_ground_truth_message()
+            working_messages.append({'role': 'user', 'content': [{'type': 'text', 'text': ground_truth}]})
+            logger.info('Injected ground-truth execution log with %d records', len(execution_log.records))
+
+            result = yield from self._stream_single_request(model, working_messages, [])
+            total_input_tokens += result.get('input_tokens', 0)
+            total_output_tokens += result.get('output_tokens', 0)
+
+            response_text = self._extract_response_text(result.get('assistant_content', []))
+            issues = execution_log.verify_response(response_text)
+            if issues:
+                logger.warning('Response verification failed: %s', issues)
+                correction = '\n\n---\n' + execution_log.build_deterministic_response()
+                yield self._format_chunk(correction)
+
+            if self.session_id:
+                execution_log.persist(self.session_id)
 
         yield self._format_done(total_input_tokens, total_output_tokens)
+
+# ################################################################################################################################
+
+    def _extract_response_text(self, assistant_content:'list') -> 'str':
+        """ Extracts text from assistant content blocks. """
+        parts = []
+        for block in assistant_content:
+            if isinstance(block, dict) and block.get('type') == 'text':
+                parts.append(block.get('text', ''))
+        return ' '.join(parts)
 
 # ################################################################################################################################
 
@@ -201,7 +222,11 @@ class AnthropicClient(BaseLLMClient):
         }
 
         if self.system_prompt:
-            body['system'] = self.system_prompt
+            system_prompt = self.system_prompt
+            execution_history = self._build_execution_history_context()
+            if execution_history:
+                system_prompt = system_prompt + '\n\n' + execution_history
+            body['system'] = system_prompt
 
         if tools:
             body['tools'] = tools
