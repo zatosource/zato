@@ -499,6 +499,63 @@ Location: `/zato-web-admin/src/zato/admin/web/views/ai/mcp/`
 - Accept header: `application/json, text/event-stream`
 - Full tracebacks logged on errors
 
+## Enmasse tools for LLM
+
+The AI chat widget includes built-in tools that allow the LLM to create Zato objects directly via enmasse. These tools are automatically available to all LLM providers (Anthropic, OpenAI, Google).
+
+### Available tools
+
+- `create_security` - creates security definitions (API key, basic auth, bearer token, NTLM)
+- `create_channel_rest` - creates REST channels (HTTP endpoints)
+- `create_outgoing_rest` - creates outgoing REST connections
+- `create_scheduler` - creates scheduler jobs
+- `create_sql` - creates SQL connection pools
+- `create_cache` - creates cache definitions
+- `create_groups` - creates security groups
+- `create_email_smtp` - creates SMTP email connections
+- `create_email_imap` - creates IMAP email connections
+- `create_odoo` - creates Odoo ERP connections
+- `create_elastic_search` - creates ElasticSearch connections
+- `create_confluence` - creates Confluence connections
+- `create_jira` - creates Jira connections
+- `create_ldap` - creates LDAP connections
+- `create_microsoft_365` - creates Microsoft 365 connections
+- `create_outgoing_soap` - creates outgoing SOAP connections
+- `create_pubsub_topic` - creates publish/subscribe topics
+- `create_pubsub_subscription` - creates topic subscriptions
+- `create_pubsub_permission` - creates topic permissions
+- `create_channel_openapi` - creates REST channels from OpenAPI specs
+
+### Tool files
+
+Location: `/zato-web-admin/src/zato/admin/web/views/ai/tools/`
+
+- `definitions.py` - tool definitions with JSON schemas for each object type
+- `executor.py` - executes tool calls by running enmasse import
+
+### How it works
+
+1. When the LLM receives a request to create a Zato object, it calls the appropriate tool
+2. The tool executor converts the tool arguments to enmasse YAML format
+3. The enmasse importer creates or updates the object in the database
+4. The result is returned to the LLM which reports success or failure to the user
+
+### Example usage
+
+User: "Create an API key called MyAPIKey"
+
+The LLM will call:
+```json
+{
+  "name": "create_security",
+  "input": {
+    "name": "MyAPIKey",
+    "type": "apikey",
+    "is_active": true
+  }
+}
+```
+
 ## Reusable confirm button component
 
 Location: `/zato-web-admin/src/zato/admin/static/js/ai-chat/ai-chat-confirm.js`

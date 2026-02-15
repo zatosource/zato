@@ -15,6 +15,8 @@ from urllib.request import Request, urlopen
 # Zato
 from zato.admin.web.views.ai.llm.base import BaseLLMClient
 from zato.admin.web.views.ai.mcp.registry import MCPRegistry
+from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools
+from zato.admin.web.views.ai.tools.executor import execute_enmasse_tool
 
 if 0:
     from zato.common.typing_ import anylist, generator_
@@ -36,10 +38,10 @@ class AnthropicClient(BaseLLMClient):
     """
 
     def stream_chat(self, model:'str', messages:'list') -> 'generator_':
-        """ Streams chat completion responses from Anthropic with MCP tool support.
+        """ Streams chat completion responses from Anthropic with MCP and enmasse tool support.
         """
-        mcp_tools = self._get_mcp_tools()
-        anthropic_tools = self._convert_tools_to_anthropic_format(mcp_tools)
+        all_tools = self._get_all_tools()
+        anthropic_tools = self._convert_tools_to_anthropic_format(all_tools)
 
         working_messages = list(messages)
         total_input_tokens = 0
@@ -66,7 +68,7 @@ class AnthropicClient(BaseLLMClient):
 
             tool_results = []
             for tool_call in tool_calls:
-                tool_result = self._execute_tool(tool_call, mcp_tools)
+                tool_result = self._execute_tool(tool_call, all_tools)
                 tool_results.append({
                     'type': 'tool_result',
                     'tool_use_id': tool_call['id'],
@@ -90,6 +92,28 @@ class AnthropicClient(BaseLLMClient):
 
 # ################################################################################################################################
 
+    def _get_enmasse_tools(self) -> 'anylist':
+        """ Gets all enmasse tools for creating Zato objects.
+        """
+        tools = get_enmasse_tools()
+        out = []
+        for tool in tools:
+            tool_copy = dict(tool)
+            tool_copy['_enmasse_tool'] = True
+            out.append(tool_copy)
+        return out
+
+# ################################################################################################################################
+
+    def _get_all_tools(self) -> 'anylist':
+        """ Gets all available tools (MCP + enmasse).
+        """
+        mcp_tools = self._get_mcp_tools()
+        enmasse_tools = self._get_enmasse_tools()
+        return mcp_tools + enmasse_tools
+
+# ################################################################################################################################
+
     def _convert_tools_to_anthropic_format(self, mcp_tools:'anylist') -> 'anylist':
         """ Converts MCP tools to Anthropic tool format.
         """
@@ -107,20 +131,35 @@ class AnthropicClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _execute_tool(self, tool_call:'dict', mcp_tools:'anylist') -> 'dict':
-        """ Executes a tool call via MCP.
+    def _execute_tool(self, tool_call:'dict', all_tools:'anylist') -> 'dict':
+        """ Executes a tool call via MCP or enmasse.
         """
         tool_name = tool_call.get('name', '')
         arguments = tool_call.get('input', {})
 
-        server_id = None
-        for tool in mcp_tools:
+        tool_def = None
+        for tool in all_tools:
             if tool.get('name') == tool_name:
-                server_id = tool.get('_mcp_server_id')
+                tool_def = tool
                 break
 
-        if not server_id:
+        if not tool_def:
             return {'error': f'Tool {tool_name} not found'}
+
+        is_enmasse = tool_def.get('_enmasse_tool', False)
+
+        if is_enmasse:
+            try:
+                result = execute_enmasse_tool(tool_name, arguments)
+                logger.info('Enmasse tool %s result: %s', tool_name, result)
+                return result
+            except Exception as e:
+                logger.warning('Enmasse tool %s error: %s', tool_name, format_exc())
+                return {'error': str(e)}
+
+        server_id = tool_def.get('_mcp_server_id')
+        if not server_id:
+            return {'error': f'MCP server not found for tool {tool_name}'}
 
         client = MCPRegistry.get_client(server_id)
         if not client:
@@ -131,7 +170,7 @@ class AnthropicClient(BaseLLMClient):
             logger.info('MCP tool %s result: %s', tool_name, result)
             return result
         except Exception as e:
-            logger.warning('MCP tool %s error: %s', tool_name, e)
+            logger.warning('MCP tool %s error: %s', tool_name, format_exc())
             return {'error': str(e)}
 
 # ################################################################################################################################
