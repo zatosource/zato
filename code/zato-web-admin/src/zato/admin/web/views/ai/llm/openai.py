@@ -72,6 +72,7 @@ class OpenAIClient(BaseLLMClient):
             working_messages.extend(tool_messages)
 
             yield self._format_tool_progress('done', total=len(tool_calls), completed=len(tool_calls), message='Done')
+            yield self._format_chunk('\n\n')
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()

@@ -73,6 +73,7 @@ class AnthropicClient(BaseLLMClient):
             done_event = self._format_tool_progress('done', total=len(tool_calls), completed=len(tool_calls), message='Done')
             logger.info('Yielding tool_progress done event: %s', done_event)
             yield done_event
+            yield self._format_chunk('\n\n')
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()
