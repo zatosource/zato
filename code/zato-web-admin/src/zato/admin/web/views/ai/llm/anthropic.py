@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 from zato.admin.web.views.ai.llm.base import BaseLLMClient
 from zato.admin.web.views.ai.mcp.registry import MCPRegistry
 from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools
-from zato.admin.web.views.ai.tools.executor import execute_enmasse_tool
+from zato.admin.web.views.ai.tools import executor as enmasse_executor
 
 if 0:
     from zato.common.typing_ import anylist, generator_
@@ -150,7 +150,7 @@ class AnthropicClient(BaseLLMClient):
 
         if is_enmasse:
             try:
-                result = execute_enmasse_tool(tool_name, arguments)
+                result = enmasse_executor.execute_enmasse_tool(tool_name, arguments, self.zato_client)
                 logger.info('Enmasse tool %s result: %s', tool_name, result)
                 return result
             except Exception as e:

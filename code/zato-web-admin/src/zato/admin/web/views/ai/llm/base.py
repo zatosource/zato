@@ -19,8 +19,9 @@ class BaseLLMClient(ABC):
     """ Base class for LLM clients.
     """
 
-    def __init__(self, api_key:'str') -> 'None':
+    def __init__(self, api_key:'str', zato_client:'any_'=None) -> 'None':
         self.api_key = api_key
+        self.zato_client = zato_client
 
 # ################################################################################################################################
 

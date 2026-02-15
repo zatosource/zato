@@ -16,12 +16,12 @@ from django.http import StreamingHttpResponse
 # Zato
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views.ai.common import get_api_key, is_valid_provider
-from zato.admin.web.views.ai.llm.factory import get_llm_client
+from zato.admin.web.views.ai.llm.core import get_llm_client
 from zato.common.ai.models import get_all_models
 from zato.common.json_internal import dumps, loads
 
 if 0:
-    from zato.common.typing_ import generator_
+    from zato.common.typing_ import any_, generator_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,7 +54,7 @@ def _format_sse_event(event_type:'str', data:'dict') -> 'str':
 
 # ################################################################################################################################
 
-def _stream_response(model_id:'str', messages:'list') -> 'generator_':
+def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None) -> 'generator_':
     """ Generator that yields SSE events for a chat stream.
     """
     provider = _get_provider_for_model(model_id)
@@ -74,7 +74,7 @@ def _stream_response(model_id:'str', messages:'list') -> 'generator_':
         return
 
     try:
-        client = get_llm_client(provider, api_key)
+        client = get_llm_client(provider, api_key, zato_client)
     except ValueError as e:
         error_msg = str(e)
         error_data = {'message': error_msg}
@@ -158,7 +158,11 @@ def invoke(req) -> 'StreamingHttpResponse':
         response['X-Accel-Buffering'] = 'no'
         return response
 
-    response = StreamingHttpResponse(_stream_response(model_id, messages), content_type='text/event-stream')
+    zato_client = getattr(req, 'zato', None)
+    if zato_client:
+        zato_client = zato_client.client
+
+    response = StreamingHttpResponse(_stream_response(model_id, messages, zato_client), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
 
