@@ -198,8 +198,7 @@
                 progressEl.innerHTML = '<span class="ai-tool-checkmark">✓</span> ' + data.message;
                 progressEl.classList.remove('ai-tool-running');
                 progressEl.classList.add('ai-tool-done');
-                streamingEl.classList.remove('hide-cursor');
-                console.log('[SSE-TRACE] set progressEl to done state, restored cursor');
+                console.log('[SSE-TRACE] set progressEl to done state, cursor stays hidden');
             }
 
             AIChatMessages.scrollToBottom(messagesContainer);
