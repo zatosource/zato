@@ -125,7 +125,11 @@
             console.log('[SSE] handleEvent:', eventType, data);
             if (eventType === 'chunk') {
                 if (callbacks.onChunk) {
-                    callbacks.onChunk(data.text);
+                    var text = data.text;
+                    if (text.trim() === 'Done.' || text.trim() === 'Done') {
+                        return;
+                    }
+                    callbacks.onChunk(text);
                 }
             } else if (eventType === 'done') {
                 if (callbacks.onComplete) {

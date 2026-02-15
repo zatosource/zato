@@ -24,14 +24,6 @@
 * Never tell the user anything like "The logs show the issue clearly." or "The problem is clear" or similar. This would be
   like insulting the user, you must never do it.
 
-## Response format
-
-* When you have done something - always say only "Done.". Do not say anything else. This will be a cue for the user to test
-  things. Do not tell the user to test it, only say "Done.", unless you cannot do something, then yes, explain that,
-  or if the user asks you a question, then answer it. Otherwise, only say "Done." and nothing else.
-
-* To confirm it, be silent, only say "Done.", unless there is a problem the user needs to know about, or if the user asks you a question.
-
 ## Text formatting
 
 * Always use sentence case in headers or names, e.g. "This is a chapter header", not "This Is a Chapter Header" (title case).
