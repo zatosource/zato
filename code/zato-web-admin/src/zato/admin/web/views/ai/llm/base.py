@@ -135,6 +135,21 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
+    def _format_tool_progress(self, status:'str', total:'int'=0, completed:'int'=0, message:'str'='') -> 'dict':
+        """ Formats a tool progress event for UI spinner/progress display.
+        status: 'start', 'progress', 'done'
+        """
+        out = {
+            'type': 'tool_progress',
+            'status': status,
+            'total': total,
+            'completed': completed,
+            'message': message
+        }
+        return out
+
+# ################################################################################################################################
+
     def _get_mcp_tools(self) -> 'anylist':
         """ Gets all tools from enabled MCP servers.
         """

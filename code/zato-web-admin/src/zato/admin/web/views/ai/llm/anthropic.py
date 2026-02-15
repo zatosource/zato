@@ -62,8 +62,13 @@ class AnthropicClient(BaseLLMClient):
             assistant_content = result.get('assistant_content', [])
             working_messages.append({'role': 'assistant', 'content': assistant_content})
 
+            obj_word = 'object' if len(tool_calls) == 1 else 'objects'
+            yield self._format_tool_progress('start', total=len(tool_calls), completed=0, message=f'Creating {len(tool_calls)} {obj_word}...')
+
             tool_results = self._execute_tools_batched(tool_calls, all_tools, execution_log)
             working_messages.append({'role': 'user', 'content': tool_results})
+
+            yield self._format_tool_progress('done', total=len(tool_calls), completed=len(tool_calls), message='Done')
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()

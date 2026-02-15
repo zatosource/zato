@@ -60,6 +60,9 @@
                     AIChatMessages.appendToStreamingMessage(tabId, text);
                     self.updateStreamingMessage(widget, tabId);
                 },
+                onToolProgress: function(data) {
+                    self.handleToolProgress(widget, tabId, data);
+                },
                 onComplete: function(inputTokens, outputTokens) {
                     AIChatWaiting.stopCycling(tabId);
 
@@ -154,6 +157,42 @@
             AIChatHighlight.highlightCodeBlocks(contentEl);
         },
 
+        handleToolProgress: function(widget, tabId, data) {
+            var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            if (!messagesContainer) {
+                return;
+            }
+
+            var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+            if (!streamingEl) {
+                return;
+            }
+
+            var contentEl = streamingEl.querySelector('.ai-chat-message-content');
+            if (!contentEl) {
+                return;
+            }
+
+            var progressEl = contentEl.querySelector('.ai-tool-progress');
+            if (!progressEl) {
+                progressEl = document.createElement('div');
+                progressEl.className = 'ai-tool-progress';
+                contentEl.appendChild(progressEl);
+            }
+
+            if (data.status === 'start') {
+                progressEl.innerHTML = '<span class="ai-tool-spinner"></span> ' + data.message;
+                progressEl.classList.remove('ai-tool-done');
+                progressEl.classList.add('ai-tool-running');
+            } else if (data.status === 'done') {
+                progressEl.innerHTML = '<span class="ai-tool-checkmark">✓</span> ' + data.message;
+                progressEl.classList.remove('ai-tool-running');
+                progressEl.classList.add('ai-tool-done');
+            }
+
+            AIChatMessages.scrollToBottom(messagesContainer);
+        },
+
         stopMessage: function(widget, core, tabId) {
             var tab = AIChatTabs.getTabById(core.tabs, tabId);
             if (!tab) return;
@@ -222,6 +261,9 @@
                 onChunk: function(text) {
                     AIChatMessages.appendToStreamingMessage(tabId, text);
                     self.updateStreamingMessage(widget, tabId);
+                },
+                onToolProgress: function(data) {
+                    self.handleToolProgress(widget, tabId, data);
                 },
                 onComplete: function(inputTokens, outputTokens) {
                     AIChatWaiting.stopCycling(tabId);

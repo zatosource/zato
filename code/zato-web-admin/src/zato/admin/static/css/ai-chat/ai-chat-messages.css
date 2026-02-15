@@ -464,3 +464,43 @@
     width: 10px;
     height: 10px;
 }
+
+.ai-tool-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    background: rgba(100, 100, 100, 0.2);
+}
+
+.ai-tool-progress.ai-tool-running {
+    color: #7eb8da;
+}
+
+.ai-tool-progress.ai-tool-done {
+    color: #8fbc8f;
+}
+
+.ai-tool-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(126, 184, 218, 0.3);
+    border-top-color: #7eb8da;
+    border-radius: 50%;
+    animation: ai-tool-spin 0.8s linear infinite;
+}
+
+@keyframes ai-tool-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.ai-tool-checkmark {
+    color: #8fbc8f;
+    font-weight: bold;
+}

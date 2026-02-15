@@ -139,6 +139,11 @@
             } else if (eventType === 'object_changed') {
                 console.log('[SSE] object_changed event received:', data);
                 this.handleObjectChanged(data);
+            } else if (eventType === 'tool_progress') {
+                console.log('[SSE] tool_progress event received:', data);
+                if (callbacks.onToolProgress) {
+                    callbacks.onToolProgress(data);
+                }
             }
         },
 
