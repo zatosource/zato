@@ -84,7 +84,11 @@
 }
 
 .zato-row-highlight {
-    animation: zato-pulse 0.5s ease-in-out 3;
+    animation: zato-pulse 0.6s ease-in-out 2;
+}
+
+.zato-row-highlight td {
+    animation: zato-text-pulse 0.6s ease-in-out 2;
 }
 
 .zato-row-deleting {
@@ -93,7 +97,12 @@
 
 @keyframes zato-pulse {
     0%, 100% { background-color: inherit; }
-    50% { background-color: #ffffcc; }
+    50% { background-color: #ffeb3b; }
+}
+
+@keyframes zato-text-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
 @keyframes zato-fade-out {

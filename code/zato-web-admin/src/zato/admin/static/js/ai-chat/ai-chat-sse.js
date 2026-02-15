@@ -200,7 +200,8 @@
                         newRow.classList.add('zato-row-highlight');
                         setTimeout(function() {
                             newRow.classList.remove('zato-row-highlight');
-                        }, 2000);
+                            newRow.classList.add('updated');
+                        }, 1200);
                     }
                 })
                 .catch(function(error) {
