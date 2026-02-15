@@ -83,9 +83,14 @@
 
 .ai-chat-message.streaming.has-content .ai-chat-message-content::after {
     content: '▋';
-    animation: blink 1s infinite;
+    animation: blink-cursor 1s infinite;
     margin-left: 2px;
-    opacity: 0.5;
+    color: #33ff66;
+}
+
+@keyframes blink-cursor {
+    0%, 50% { opacity: 0.7; }
+    51%, 100% { opacity: 0; }
 }
 
 @keyframes blink {
@@ -101,7 +106,8 @@
 
 .ai-chat-waiting-cursor {
     display: inline-block;
-    animation: blink 1s infinite;
+    animation: blink-cursor 1s infinite;
+    color: #33ff66;
 }
 
 .ai-chat-waiting-text {

@@ -120,11 +120,13 @@
 
 .ai-chat-tabs {
     display: flex;
+    align-items: center;
     background: #1f1f1f;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding: 0 8px;
     flex-shrink: 0;
     overflow-x: auto;
+    height: 42px;
 }
 
 .ai-chat-tabs::-webkit-scrollbar {
