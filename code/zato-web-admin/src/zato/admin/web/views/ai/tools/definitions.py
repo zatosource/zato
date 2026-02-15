@@ -906,31 +906,55 @@ tool_create_channel_openapi = {
 # ################################################################################################################################
 # ################################################################################################################################
 
+_all_tools = {
+    'create_security': tool_create_security,
+    'create_channel_rest': tool_create_channel_rest,
+    'create_outgoing_rest': tool_create_outgoing_rest,
+    'create_scheduler': tool_create_scheduler,
+    'create_sql': tool_create_sql,
+    'create_cache': tool_create_cache,
+    'create_groups': tool_create_groups,
+    'create_email_smtp': tool_create_email_smtp,
+    'create_email_imap': tool_create_email_imap,
+    'create_odoo': tool_create_odoo,
+    'create_elastic_search': tool_create_elastic_search,
+    'create_confluence': tool_create_confluence,
+    'create_jira': tool_create_jira,
+    'create_ldap': tool_create_ldap,
+    'create_microsoft_365': tool_create_microsoft_365,
+    'create_outgoing_soap': tool_create_outgoing_soap,
+    'create_pubsub_topic': tool_create_pubsub_topic,
+    'create_pubsub_subscription': tool_create_pubsub_subscription,
+    'create_pubsub_permission': tool_create_pubsub_permission,
+    'create_channel_openapi': tool_create_channel_openapi,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_all_tools() -> 'anylist':
     """ Returns all available enmasse tools for LLM integration.
     """
-    return [
-        tool_create_security,
-        tool_create_channel_rest,
-        tool_create_outgoing_rest,
-        tool_create_scheduler,
-        tool_create_sql,
-        tool_create_cache,
-        tool_create_groups,
-        tool_create_email_smtp,
-        tool_create_email_imap,
-        tool_create_odoo,
-        tool_create_elastic_search,
-        tool_create_confluence,
-        tool_create_jira,
-        tool_create_ldap,
-        tool_create_microsoft_365,
-        tool_create_outgoing_soap,
-        tool_create_pubsub_topic,
-        tool_create_pubsub_subscription,
-        tool_create_pubsub_permission,
-        tool_create_channel_openapi,
-    ]
+    return list(_all_tools.values())
+
+# ################################################################################################################################
+
+def get_tools_by_name(tool_names:'anylist') -> 'anylist':
+    """ Returns only the tools matching the given names.
+    """
+    out = []
+    for name in tool_names:
+        tool = _all_tools.get(name)
+        if tool:
+            out.append(tool)
+    return out
+
+# ################################################################################################################################
+
+def get_all_tool_names() -> 'anylist':
+    """ Returns all available tool names.
+    """
+    return list(_all_tools.keys())
 
 # ################################################################################################################################
 # ################################################################################################################################

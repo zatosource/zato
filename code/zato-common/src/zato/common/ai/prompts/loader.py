@@ -22,18 +22,22 @@ def get_system_prompt() -> 'str':
     """
     prompt_parts = []
 
-    common_path = _prompts_dir / 'common.md'
-    if common_path.exists():
-        content = common_path.read_text(encoding='utf-8')
-        prompt_parts.append(content.strip())
-
-    enmasse_tools_path = _prompts_dir / 'enmasse_tools.md'
-    if enmasse_tools_path.exists():
-        content = enmasse_tools_path.read_text(encoding='utf-8')
+    for md_file in sorted(_prompts_dir.glob('*.md')):
+        if md_file.name.startswith('internal'):
+            continue
+        content = md_file.read_text(encoding='utf-8')
         prompt_parts.append(content.strip())
 
     out = '\n\n'.join(prompt_parts)
     return out
+
+# ################################################################################################################################
+
+def get_tool_selection_prompt() -> 'str':
+    """ Loads and returns the tool selection prompt.
+    """
+    tool_selection_path = _prompts_dir / 'tool_selection.md'
+    return tool_selection_path.read_text(encoding='utf-8').strip()
 
 # ################################################################################################################################
 # ################################################################################################################################

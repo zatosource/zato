@@ -411,8 +411,10 @@ class CommandsFacade:
 
 # ################################################################################################################################
 
-    def run_enmasse_sync_import(self, file_path:'str | Path') -> 'CommandResult':
+    def run_enmasse_sync_import(self, file_path:'str | Path', missing_wait_time:'int'=None) -> 'CommandResult':
         command = f'enmasse --import --input {file_path} {self.server.base_dir} --verbose'
+        if missing_wait_time is not None:
+            command += f' --missing-wait-time {missing_wait_time}'
         result = self.run_zato_cli_sync(command, callback=self._on_enmasse_completed)
         return result
 

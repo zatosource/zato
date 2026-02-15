@@ -322,24 +322,12 @@ def wait_for_services(
     start_time = utcnow()
     should_log = False
     last_log_time = utcnow()
+    db_service_names = set()
 
     try:
         # Keep checking until all services are found or timeout is reached
         while True:
             current_time = utcnow()
-
-            # Check if timeout has been reached
-            elapsed_seconds = (current_time - start_time).total_seconds()
-            # Ensure both are float for comparison
-            if elapsed_seconds > float(timeout_seconds):
-                logger.warning(f'Timeout of {timeout_seconds} seconds reached while waiting for {service_label}')
-                return False
-
-            # Determine if we should start logging based on elapsed time
-            # Ensure both are float for comparison
-            if not should_log and elapsed_seconds >= float(log_after_seconds):
-                should_log = True
-                logger.info(f'Still waiting for {service_label} after {log_after_seconds} seconds')
 
             # Get list of all available non-internal services
             db_services = service_list(session, 1, return_internal=False)
@@ -357,6 +345,17 @@ def wait_for_services(
                 logger.info(f'All required {service_label} found in the database')
                 return True
 
+            # Check if timeout has been reached
+            elapsed_seconds = (current_time - start_time).total_seconds()
+            if elapsed_seconds > float(timeout_seconds):
+                missing_list = sorted(missing_services)
+                raise Exception(f'Service does not exist: {missing_list}')
+
+            # Determine if we should start logging based on elapsed time
+            if not should_log and elapsed_seconds >= float(log_after_seconds):
+                should_log = True
+                logger.info(f'Still waiting for {service_label} after {log_after_seconds} seconds')
+
             # Log missing services and wait before retrying (but not too frequently)
             missing_count = len(missing_services)
             missing_label = 'service' if missing_count == 1 else 'services'
@@ -368,8 +367,7 @@ def wait_for_services(
             time.sleep(0.1)
 
     except Exception:
-        logger.error(f'Exception while waiting for services: {format_exc()}')
-        return False
+        raise
 
     finally:
         # Always close the session

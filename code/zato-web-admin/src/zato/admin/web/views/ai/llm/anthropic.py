@@ -15,7 +15,7 @@ from urllib.request import Request, urlopen
 # Zato
 from zato.admin.web.views.ai.llm.base import BaseLLMClient
 from zato.admin.web.views.ai.mcp.registry import MCPRegistry
-from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools
+from zato.admin.web.views.ai.tools.definitions import get_tools_by_name
 from zato.admin.web.views.ai.tools import executor as enmasse_executor
 
 if 0:
@@ -40,7 +40,8 @@ class AnthropicClient(BaseLLMClient):
     def stream_chat(self, model:'str', messages:'list') -> 'generator_':
         """ Streams chat completion responses from Anthropic with MCP and enmasse tool support.
         """
-        all_tools = self._get_all_tools()
+        enmasse_tool_names = self._select_enmasse_tools(model, messages)
+        all_tools = self._get_all_tools(enmasse_tool_names)
         anthropic_tools = self._convert_tools_to_anthropic_format(all_tools)
 
         working_messages = list(messages)
@@ -92,10 +93,10 @@ class AnthropicClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _get_enmasse_tools(self) -> 'anylist':
-        """ Gets all enmasse tools for creating Zato objects.
+    def _get_enmasse_tools(self, tool_names:'anylist') -> 'anylist':
+        """ Gets enmasse tools by name.
         """
-        tools = get_enmasse_tools()
+        tools = get_tools_by_name(tool_names)
         out = []
         for tool in tools:
             tool_copy = dict(tool)
@@ -105,12 +106,69 @@ class AnthropicClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _get_all_tools(self) -> 'anylist':
-        """ Gets all available tools (MCP + enmasse).
+    def _get_all_tools(self, enmasse_tool_names:'anylist'=None) -> 'anylist':
+        """ Gets all available tools (MCP + selected enmasse).
         """
         mcp_tools = self._get_mcp_tools()
-        enmasse_tools = self._get_enmasse_tools()
+        if enmasse_tool_names:
+            enmasse_tools = self._get_enmasse_tools(enmasse_tool_names)
+        else:
+            enmasse_tools = []
         return mcp_tools + enmasse_tools
+
+# ################################################################################################################################
+
+    def _select_enmasse_tools(self, model:'str', messages:'list') -> 'anylist':
+        """ Asks the LLM which enmasse tools are needed for this request.
+        """
+        if not self.tool_selection_prompt:
+            return []
+
+        last_user_message = ''
+        for msg in reversed(messages):
+            if msg.get('role') == 'user':
+                last_user_message = msg.get('content', '')
+                break
+
+        if not last_user_message:
+            return []
+
+        selection_messages = [
+            {'role': 'user', 'content': last_user_message}
+        ]
+
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': self.api_key,
+            'anthropic-version': API_Version,
+        }
+
+        body = {
+            'model': model,
+            'max_tokens': 256,
+            'system': self.tool_selection_prompt,
+            'messages': selection_messages,
+        }
+
+        body_json = json.dumps(body)
+        body_bytes = body_json.encode('utf-8')
+
+        try:
+            request = Request(API_URL, data=body_bytes, headers=headers, method='POST')
+            with urlopen(request) as response:
+                response_data = json.loads(response.read().decode('utf-8'))
+
+            content = response_data.get('content', [])
+            if content and content[0].get('type') == 'text':
+                text = content[0].get('text', '').strip()
+                tool_names = json.loads(text)
+                if isinstance(tool_names, list):
+                    logger.info('Selected enmasse tools: %s', tool_names)
+                    return tool_names
+        except Exception as e:
+            logger.warning('Tool selection failed: %s', e)
+
+        return []
 
 # ################################################################################################################################
 
@@ -150,7 +208,7 @@ class AnthropicClient(BaseLLMClient):
 
         if is_enmasse:
             try:
-                result = enmasse_executor.execute_enmasse_tool(tool_name, arguments, self.zato_client)
+                result = enmasse_executor.execute_enmasse_tool(tool_name, arguments)
                 logger.info('Enmasse tool %s result: %s', tool_name, result)
                 return result
             except Exception as e:

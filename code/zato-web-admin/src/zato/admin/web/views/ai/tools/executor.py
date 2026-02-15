@@ -7,6 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import os
+import subprocess
+import tempfile
 from logging import getLogger
 from traceback import format_exc
 
@@ -14,7 +17,7 @@ from traceback import format_exc
 import yaml
 
 if 0:
-    from zato.common.typing_ import any_, anydict
+    from zato.common.typing_ import anydict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -50,8 +53,8 @@ _tool_to_enmasse_key = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def execute_enmasse_tool(tool_name:'str', arguments:'anydict', zato_client:'any_') -> 'anydict':
-    """ Executes a single enmasse tool via the Zato server invoker.
+def execute_enmasse_tool(tool_name:'str', arguments:'anydict') -> 'anydict':
+    """ Executes a single enmasse tool via the CLI.
     """
     logger.info('Executing tool: %s with arguments: %s', tool_name, arguments)
 
@@ -66,14 +69,30 @@ def execute_enmasse_tool(tool_name:'str', arguments:'anydict', zato_client:'any_
         yaml_config = {enmasse_key: [arguments]}
         file_content = yaml.dump(yaml_config)
 
-        response = zato_client.invoke('zato.server.invoker', {
-            'func_name': 'import_enmasse',
-            'file_content': file_content,
-            'file_name': 'ai-tool.yaml'
-        })
+        logger.info('Running enmasse CLI with file_content: %s', file_content)
 
-        response_str = str(response.data) if response.data else ''
-        is_ok = 'Enmasse OK' in response_str
+        server_path = os.path.expanduser('~/env/qs-1/server1')
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
+            temp_file.write(file_content)
+            temp_file_path = temp_file.name
+
+        command = f'zato enmasse --import --input {temp_file_path} {server_path} --verbose --missing-wait-time 2'
+        logger.info('Running command: %s', command)
+
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        logger.info('Command exit code: %s', result.returncode)
+        logger.info('Command stdout: %s', result.stdout)
+        logger.info('Command stderr: %s', result.stderr)
+
+        is_ok = 'Enmasse OK' in result.stdout
 
         if is_ok:
             return {
@@ -81,10 +100,17 @@ def execute_enmasse_tool(tool_name:'str', arguments:'anydict', zato_client:'any_
                 'message': f'Created {enmasse_key} object successfully'
             }
         else:
+            error_msg = result.stderr or result.stdout or 'Enmasse import failed'
             return {
                 'success': False,
-                'error': 'Enmasse import failed'
+                'error': error_msg
             }
+
+    except subprocess.TimeoutExpired:
+        return {
+            'success': False,
+            'error': 'Enmasse command timed out after 30 seconds'
+        }
 
     except Exception:
         error_msg = format_exc()

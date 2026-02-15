@@ -1025,7 +1025,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def import_enmasse(self, file_content:'str', file_name:'str') -> 'str':
+    def import_enmasse(self, file_content:'str', file_name:'str', missing_wait_time:'int'=None) -> 'str':
 
         # stdlib
         import json
@@ -1043,7 +1043,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             temp_file_path = temp_file.name
 
         try:
-            result = commands.run_enmasse_sync_import(temp_file_path)
+            result = commands.run_enmasse_sync_import(temp_file_path, missing_wait_time=missing_wait_time)
 
             response = {
                 'is_ok': result.is_ok,
