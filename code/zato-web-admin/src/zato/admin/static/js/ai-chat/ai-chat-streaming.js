@@ -192,12 +192,14 @@
                 progressEl.innerHTML = '<span class="ai-tool-spinner"></span> ' + data.message;
                 progressEl.classList.remove('ai-tool-done');
                 progressEl.classList.add('ai-tool-running');
-                console.log('[SSE-TRACE] set progressEl to running state');
+                streamingEl.classList.add('hide-cursor');
+                console.log('[SSE-TRACE] set progressEl to running state, hid cursor');
             } else if (data.status === 'done') {
                 progressEl.innerHTML = '<span class="ai-tool-checkmark">✓</span> ' + data.message;
                 progressEl.classList.remove('ai-tool-running');
                 progressEl.classList.add('ai-tool-done');
-                console.log('[SSE-TRACE] set progressEl to done state');
+                streamingEl.classList.remove('hide-cursor');
+                console.log('[SSE-TRACE] set progressEl to done state, restored cursor');
             }
 
             AIChatMessages.scrollToBottom(messagesContainer);

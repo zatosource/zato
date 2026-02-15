@@ -155,6 +155,7 @@ class ExecutionLog(BaseModel):
         lines.append('')
         lines.append('Base your response ONLY on the operations listed above.')
         lines.append('Do NOT claim any operation occurred that is not in this log.')
+        lines.append('Do NOT say "Done" or "Done." - the UI already shows completion status.')
 
         out = '\n'.join(lines)
         return out

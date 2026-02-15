@@ -78,21 +78,6 @@ class OpenAIClient(BaseLLMClient):
             for change in object_changes:
                 yield self._format_object_changed(change['action'], change['object_id'], change['object_name'])
 
-            ground_truth = execution_log.build_ground_truth_message()
-            working_messages.append({'role': 'user', 'content': ground_truth})
-            logger.info('Injected ground-truth execution log with %d records', len(execution_log.records))
-
-            result = yield from self._stream_single_request(model, working_messages, [])
-            total_input_tokens += result.get('input_tokens', 0)
-            total_output_tokens += result.get('output_tokens', 0)
-
-            response_text = result.get('assistant_content', '')
-            issues = execution_log.verify_response(response_text)
-            if issues:
-                logger.warning('Response verification failed: %s', issues)
-                correction = '\n\n---\n' + execution_log.build_deterministic_response()
-                yield self._format_chunk(correction)
-
             if self.session_id:
                 execution_log.persist(self.session_id)
 

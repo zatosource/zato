@@ -229,6 +229,22 @@
                         }
                     }
 
+                    if (!oldRow && objectName) {
+                        console.log('[SSE-TRACE] looking for oldRow by objectName in current DOM');
+                        var currentTbody = document.querySelector('#data-table tbody');
+                        if (currentTbody) {
+                            var currentTds = currentTbody.querySelectorAll('td');
+                            for (var m = 0; m < currentTds.length; m++) {
+                                var currentTdText = currentTds[m].textContent.trim();
+                                if (currentTdText === objectName) {
+                                    oldRow = currentTds[m].closest('tr');
+                                    console.log('[SSE-TRACE] found oldRow by name in current DOM, tr id:', oldRow ? oldRow.id : 'no id');
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
                     console.log('[SSE-TRACE] final: newRow found=' + !!newRow + ', oldRow found=' + !!oldRow);
                     if (newRow) {
                         console.log('[SSE-TRACE] newRow id:', newRow.id, 'newRow HTML preview:', newRow.outerHTML.substring(0, 200));

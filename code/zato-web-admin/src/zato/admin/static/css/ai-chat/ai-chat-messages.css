@@ -88,6 +88,10 @@
     color: #33ff66;
 }
 
+.ai-chat-message.streaming.has-content.hide-cursor .ai-chat-message-content::after {
+    display: none;
+}
+
 @keyframes blink-cursor {
     0%, 50% { opacity: 0.7; }
     51%, 100% { opacity: 0; }
