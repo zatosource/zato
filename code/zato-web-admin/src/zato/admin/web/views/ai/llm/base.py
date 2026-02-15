@@ -150,6 +150,25 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
+    def _yield_tool_progress_start(self, count:'int') -> 'generator_':
+        """ Yields a tool progress start event.
+        """
+        obj_word = 'object' if count == 1 else 'objects'
+        msg = f'Creating {count} {obj_word}...'
+        yield self._format_tool_progress('start', total=count, completed=0, message=msg)
+
+# ################################################################################################################################
+
+    def _yield_tool_progress_done(self, count:'int') -> 'generator_':
+        """ Yields a tool progress done event followed by a newline chunk.
+        """
+        obj_word = 'object' if count == 1 else 'objects'
+        msg = f'Created {count} {obj_word}'
+        yield self._format_tool_progress('done', total=count, completed=count, message=msg)
+        yield self._format_chunk('\n\n')
+
+# ################################################################################################################################
+
     def _get_mcp_tools(self) -> 'anylist':
         """ Gets all tools from enabled MCP servers.
         """

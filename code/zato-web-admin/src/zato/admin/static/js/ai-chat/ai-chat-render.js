@@ -158,9 +158,14 @@
                                 parsedHtml = markedEmoji.wrapUnicodeEmojis(parsedHtml);
                             }
                         }
-                        var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span class="ai-tool-checkmark">✓</span> Done</div>';
-                        parsedHtml = parsedHtml.replace('<p>[TOOL_DONE]</p>', toolDoneHtml);
-                        parsedHtml = parsedHtml.replace('[TOOL_DONE]', toolDoneHtml);
+                        var toolDoneRegex = /\[TOOL_DONE:([^\]]+)\]/;
+                        var toolDoneMatch = toolDoneRegex.exec(parsedHtml);
+                        if (toolDoneMatch) {
+                            var doneMessage = toolDoneMatch[1];
+                            var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span class="ai-tool-checkmark">✓</span> ' + doneMessage + '</div>';
+                            parsedHtml = parsedHtml.replace(/<p>\[TOOL_DONE:[^\]]+\]<\/p>/g, toolDoneHtml);
+                            parsedHtml = parsedHtml.replace(/\[TOOL_DONE:[^\]]+\]/g, toolDoneHtml);
+                        }
                         html += parsedHtml;
                     } else {
                         var userHtml = this.escapeHtml(msg.content);

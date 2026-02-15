@@ -149,17 +149,19 @@
                 }
             }
 
-            var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span class="ai-tool-checkmark">✓</span> Done</div>';
-            var hasToolDone = html.indexOf('[TOOL_DONE]') !== -1;
-            console.log('[SSE-TRACE] html has [TOOL_DONE]:', hasToolDone, 'progressOuterHTML:', !!progressOuterHTML);
-            if (progressOuterHTML) {
-                html = html.replace('<p>[TOOL_DONE]</p>', progressOuterHTML);
-                html = html.replace('[TOOL_DONE]', progressOuterHTML);
-            } else {
-                html = html.replace('<p>[TOOL_DONE]</p>', toolDoneHtml);
-                html = html.replace('[TOOL_DONE]', toolDoneHtml);
+            var toolDoneRegex = /\[TOOL_DONE:([^\]]+)\]/g;
+            var toolDoneMatch = toolDoneRegex.exec(html);
+            if (toolDoneMatch) {
+                var doneMessage = toolDoneMatch[1];
+                var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span class="ai-tool-checkmark">✓</span> ' + doneMessage + '</div>';
+                if (progressOuterHTML) {
+                    html = html.replace(/<p>\[TOOL_DONE:[^\]]+\]<\/p>/g, progressOuterHTML);
+                    html = html.replace(/\[TOOL_DONE:[^\]]+\]/g, progressOuterHTML);
+                } else {
+                    html = html.replace(/<p>\[TOOL_DONE:[^\]]+\]<\/p>/g, toolDoneHtml);
+                    html = html.replace(/\[TOOL_DONE:[^\]]+\]/g, toolDoneHtml);
+                }
             }
-            console.log('[SSE-TRACE] html after replace still has [TOOL_DONE]:', html.indexOf('[TOOL_DONE]') !== -1);
 
             contentEl.innerHTML = html;
 
@@ -216,7 +218,7 @@
                 progressEl.innerHTML = '<span class="ai-tool-checkmark">✓</span> ' + data.message;
                 progressEl.classList.remove('ai-tool-running');
                 progressEl.classList.add('ai-tool-done');
-                AIChatMessages.appendToStreamingMessage(tabId, '\n\n[TOOL_DONE]');
+                AIChatMessages.appendToStreamingMessage(tabId, '\n\n[TOOL_DONE:' + data.message + ']');
                 console.log('[SSE-TRACE] set progressEl to done state, cursor stays hidden');
             }
 
