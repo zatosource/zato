@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from logging import getLogger
+from time import sleep
 from traceback import format_exc
 
 # Django
@@ -57,6 +58,9 @@ def _format_sse_event(event_type:'str', data:'dict') -> 'str':
 def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None) -> 'generator_':
     """ Generator that yields SSE events for a chat stream.
     """
+    # testing delay - remove after testing
+    sleep(30)
+
     provider = _get_provider_for_model(model_id)
 
     if not provider:

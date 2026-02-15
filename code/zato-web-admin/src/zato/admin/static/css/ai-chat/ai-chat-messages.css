@@ -81,7 +81,7 @@
     position: relative;
 }
 
-.ai-chat-message.streaming .ai-chat-message-content::after {
+.ai-chat-message.streaming.has-content .ai-chat-message-content::after {
     content: '▋';
     animation: blink 1s infinite;
     margin-left: 2px;
@@ -90,6 +90,32 @@
 @keyframes blink {
     0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0; }
+}
+
+.ai-chat-waiting-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ai-chat-waiting-cursor {
+    display: inline-block;
+    animation: blink 1s infinite;
+}
+
+.ai-chat-waiting-text {
+    display: inline-block;
+    background: linear-gradient(90deg, #6a9a6a 0%, #a0d0a0 50%, #6a9a6a 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shine 2s linear infinite;
+}
+
+@keyframes shine {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
 }
 
 .ai-chat-message-content {

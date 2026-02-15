@@ -44,6 +44,11 @@
             core.saveState();
             core.render();
 
+            var waitingEl = widget.querySelector('.ai-chat-waiting-indicator');
+            if (waitingEl) {
+                AIChatWaiting.startCycling(tabId, waitingEl);
+            }
+
             var newInput = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
             if (newInput) {
                 newInput.focus();
@@ -56,6 +61,8 @@
                     self.updateStreamingMessage(widget, tabId);
                 },
                 onComplete: function(inputTokens, outputTokens) {
+                    AIChatWaiting.stopCycling(tabId);
+
                     if (inputTokens > 0) {
                         AIChatTabState.addTokensOut(tabId, inputTokens);
                     }
@@ -73,6 +80,7 @@
                     }
                 },
                 onError: function(error) {
+                    AIChatWaiting.stopCycling(tabId);
                     AIChatMessages.cancelStreamingMessage(tab, tabId);
                     AIChatMessages.addMessage(tab, 'system', 'Error: ' + error);
                     core.saveState();
@@ -116,6 +124,13 @@
             }
 
             var content = AIChatMessages.getStreamingContent(tabId);
+
+            AIChatWaiting.stopCycling(tabId);
+
+            if (!streamingEl.classList.contains('has-content')) {
+                streamingEl.classList.add('has-content');
+            }
+
             var html = marked.parse(content);
             if (typeof markedEmoji !== 'undefined') {
                 if (markedEmoji.convertAsciiEmoticons) {
@@ -143,6 +158,7 @@
             var tab = AIChatTabs.getTabById(core.tabs, tabId);
             if (!tab) return;
 
+            AIChatWaiting.stopCycling(tabId);
             AIChatAPI.cancelStream(tabId);
 
             var content = AIChatMessages.getStreamingContent(tabId);
@@ -208,6 +224,8 @@
                     self.updateStreamingMessage(widget, tabId);
                 },
                 onComplete: function(inputTokens, outputTokens) {
+                    AIChatWaiting.stopCycling(tabId);
+
                     if (inputTokens > 0) {
                         AIChatTabState.addTokensOut(tabId, inputTokens);
                     }
@@ -225,6 +243,7 @@
                     }
                 },
                 onError: function(error) {
+                    AIChatWaiting.stopCycling(tabId);
                     AIChatMessages.finishStreamingMessage(tab, tabId, true);
                     core.saveState();
                     core.render();

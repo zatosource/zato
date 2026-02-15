@@ -129,17 +129,25 @@
             } else {
                 for (var i = 0; i < tab.messages.length; i++) {
                     var msg = tab.messages[i];
-                    var streamingClass = msg.streaming ? ' streaming' : '';
+                    var streamingContent = msg.streaming ? AIChatMessages.getStreamingContent(tab.id) : '';
+                    var hasContent = streamingContent && streamingContent.trim().length > 0;
+                    var streamingClass = '';
+                    if (msg.streaming) {
+                        streamingClass = hasContent ? ' streaming has-content' : ' streaming';
+                    }
                     var timestamp = msg.timestamp || '';
                     html += '<div class="ai-chat-message ' + msg.role + streamingClass + '" data-timestamp="' + timestamp + '">';
                     html += '<div class="ai-chat-message-content">';
                     if (msg.streaming) {
-                        var streamingContent = AIChatMessages.getStreamingContent(tab.id);
-                        var parsedHtml = marked.parse(streamingContent);
-                        if (typeof markedEmoji !== 'undefined' && markedEmoji.wrapUnicodeEmojis) {
-                            parsedHtml = markedEmoji.wrapUnicodeEmojis(parsedHtml);
+                        if (hasContent) {
+                            var parsedHtml = marked.parse(streamingContent);
+                            if (typeof markedEmoji !== 'undefined' && markedEmoji.wrapUnicodeEmojis) {
+                                parsedHtml = markedEmoji.wrapUnicodeEmojis(parsedHtml);
+                            }
+                            html += parsedHtml;
+                        } else {
+                            html += AIChatWaiting.buildWaitingHtml();
                         }
-                        html += parsedHtml;
                     } else if (msg.role === 'assistant') {
                         var parsedHtml = marked.parse(msg.content);
                         if (typeof markedEmoji !== 'undefined') {
