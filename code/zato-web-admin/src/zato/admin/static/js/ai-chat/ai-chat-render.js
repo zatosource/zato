@@ -158,14 +158,15 @@
                                 parsedHtml = markedEmoji.wrapUnicodeEmojis(parsedHtml);
                             }
                         }
-                        var toolDoneRegex = /\[TOOL_DONE:([^:\]]+):(\[[^\]]*\])\]/g;
+                        var toolDoneRegex = /\[TOOL_DONE:([^|]+)\|(\[.*?\])\]/g;
                         var toolDoneMatch;
                         while ((toolDoneMatch = toolDoneRegex.exec(parsedHtml)) !== null) {
                             var doneMessage = toolDoneMatch[1];
-                            var itemsJson = toolDoneMatch[2];
+                            var itemsJsonRaw = toolDoneMatch[2];
+                            var itemsJson = itemsJsonRaw.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
                             var items = [];
                             try { items = JSON.parse(itemsJson); } catch (e) {}
-                            var showBtn = items.length > 0 ? '<button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>' : '';
+                            var showBtn = items.length > 0 ? ' <button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>' : '';
                             var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span class="ai-tool-checkmark">✓</span> ' + doneMessage + showBtn + '</div>';
                             parsedHtml = parsedHtml.replace(toolDoneMatch[0], toolDoneHtml);
                             parsedHtml = parsedHtml.replace('<p>' + toolDoneHtml + '</p>', toolDoneHtml);
