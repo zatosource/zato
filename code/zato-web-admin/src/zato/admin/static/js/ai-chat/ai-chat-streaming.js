@@ -158,36 +158,46 @@
         },
 
         handleToolProgress: function(widget, tabId, data) {
+            console.log('[SSE-TRACE] handleToolProgress called with data:', JSON.stringify(data));
+            console.log('[SSE-TRACE] widget:', !!widget, 'tabId:', tabId);
+            
             var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            console.log('[SSE-TRACE] messagesContainer found:', !!messagesContainer);
             if (!messagesContainer) {
                 return;
             }
 
             var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+            console.log('[SSE-TRACE] streamingEl found:', !!streamingEl);
             if (!streamingEl) {
                 return;
             }
 
             var contentEl = streamingEl.querySelector('.ai-chat-message-content');
+            console.log('[SSE-TRACE] contentEl found:', !!contentEl);
             if (!contentEl) {
                 return;
             }
 
             var progressEl = contentEl.querySelector('.ai-tool-progress');
+            console.log('[SSE-TRACE] existing progressEl found:', !!progressEl);
             if (!progressEl) {
                 progressEl = document.createElement('div');
                 progressEl.className = 'ai-tool-progress';
                 contentEl.appendChild(progressEl);
+                console.log('[SSE-TRACE] created new progressEl');
             }
 
             if (data.status === 'start') {
                 progressEl.innerHTML = '<span class="ai-tool-spinner"></span> ' + data.message;
                 progressEl.classList.remove('ai-tool-done');
                 progressEl.classList.add('ai-tool-running');
+                console.log('[SSE-TRACE] set progressEl to running state');
             } else if (data.status === 'done') {
                 progressEl.innerHTML = '<span class="ai-tool-checkmark">✓</span> ' + data.message;
                 progressEl.classList.remove('ai-tool-running');
                 progressEl.classList.add('ai-tool-done');
+                console.log('[SSE-TRACE] set progressEl to done state');
             }
 
             AIChatMessages.scrollToBottom(messagesContainer);

@@ -116,6 +116,16 @@ def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None, c
                 changed_event = _format_sse_event('object_changed', changed_data)
                 yield changed_event
 
+            elif response_type == 'tool_progress':
+                progress_data = {
+                    'status': llm_response.get('status', ''),
+                    'total': llm_response.get('total', 0),
+                    'completed': llm_response.get('completed', 0),
+                    'message': llm_response.get('message', '')
+                }
+                progress_event = _format_sse_event('tool_progress', progress_data)
+                yield progress_event
+
     except Exception as e:
         logger.warning('Stream error: %s', format_exc())
         error_msg = str(e)

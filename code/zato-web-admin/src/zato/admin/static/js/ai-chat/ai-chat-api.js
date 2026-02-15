@@ -10,6 +10,11 @@
                         callbacks.onChunk(text);
                     }
                 },
+                onToolProgress: function(data) {
+                    if (callbacks.onToolProgress) {
+                        callbacks.onToolProgress(data);
+                    }
+                },
                 onComplete: function(inputTokens, outputTokens) {
                     if (callbacks.onComplete) {
                         callbacks.onComplete(inputTokens, outputTokens);
