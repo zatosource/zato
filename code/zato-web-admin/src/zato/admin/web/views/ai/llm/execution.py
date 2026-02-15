@@ -354,16 +354,16 @@ def get_event_log(session_id:'str', count:'int'=50) -> 'list':
 
 def build_state_context(session_id:'str') -> 'str':
     """ Builds state snapshot context for LLM injection.
-    Used for 'what exists now' questions.
+    Used for 'what did you do in this conversation' questions.
     """
     snapshot = get_state_snapshot(session_id)
     if not snapshot:
         return ''
 
-    lines = ['## Current state of managed objects\n']
+    lines = ['## Objects you created or modified in this conversation\n']
 
     for model_name, objects in snapshot.items():
-        lines.append(f'**{model_name}** ({len(objects)} objects):')
+        lines.append(f'**{model_name}** ({len(objects)} operations):')
         for obj_name, fields in objects.items():
             action = fields.pop('_action', 'unknown')
             modified = fields.pop('_modified', '')
@@ -374,7 +374,8 @@ def build_state_context(session_id:'str') -> 'str':
             lines.append(f'  - {obj_name} [{action} at {modified}]: {field_str}')
 
     lines.append('')
-    lines.append('When answering questions about what exists, refer ONLY to this list.')
+    lines.append('This is a log of what you did in this conversation, not a list of what currently exists in the system.')
+    lines.append('When answering questions about what you created/modified/deleted, refer ONLY to this list.')
 
     out = '\n'.join(lines)
     return out
@@ -423,6 +424,27 @@ def build_execution_context(session_id:'str', question:'str'='') -> 'str':
     else:
         out = state or history
     return out
+
+# ################################################################################################################################
+
+def clear_session_state(session_id:'str') -> 'None':
+    """ Clears all execution state for a session from Redis.
+    Use when starting a new conversation or when state becomes stale.
+    """
+    try:
+        client = get_redis_client()
+
+        stream_key = Redis_Key_Prefix_Stream + session_id
+        client.delete(stream_key)
+
+        pattern = Redis_Key_Prefix_State + session_id + ':*'
+        for key in client.scan_iter(match=pattern):
+            client.delete(key)
+
+        logger.info('Cleared execution state for session %s', session_id)
+
+    except Exception as e:
+        logger.warning('Failed to clear session state: %s', e)
 
 # ################################################################################################################################
 # ################################################################################################################################

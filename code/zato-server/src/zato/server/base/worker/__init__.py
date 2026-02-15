@@ -1375,7 +1375,7 @@ class WorkerStore(_WorkerStoreBase):
         # First, check if there was a cache for this channel. If so, make sure of all entries pointing
         # to the channel are deleted too.
         item = self.get_channel_rest(msg.name) or {}
-        if item['cache_type']:
+        if item.get('cache_type'):
             cache = self.server.get_cache(item['cache_type'], item['cache_name'])
             cache.delete_by_prefix('http-channel-{}'.format(item['id']))
 
