@@ -38,6 +38,7 @@ Core modules:
 - `ai-chat-events.js` - event binding and delegation to other modules
 - `ai-chat-click-handlers.js` - click event handler logic for all UI elements
 - `ai-chat-streaming.js` - message sending, streaming, stop/continue, and live syntax highlighting
+- `ai-chat-waiting.js` - waiting indicator with cycling text and shine effect
 - `ai-chat-tab-actions.js` - tab operations (add, close, switch, focus)
 - `ai-chat-window.js` - window state management (minimize, maximize)
 - `ai-chat-state.js` - localStorage persistence for widget state
@@ -136,7 +137,18 @@ Location: `/zato-web-admin/src/zato/admin/web/views/ai/llm/`
 - `anthropic.py` - Anthropic Claude API client
 - `openai.py` - OpenAI GPT API client
 - `google.py` - Google Gemini API client
-- `factory.py` - factory function to get client by provider name
+- `core.py` - factory function to get client by provider name
+
+### System prompts
+
+Location: `/zato-common/src/zato/common/ai/prompts/`
+
+- `common.md` - general rules for LLM behavior and communication style
+- `enmasse_tools.md` - rules for announcing tool calls and handling retries
+- `tool_selection.md` - prompt for selecting which enmasse tools are needed
+- `zato.md` - Zato-specific knowledge (e.g., demo.ping service name)
+
+The loader (`loader.py`) automatically loads all `.md` files from this directory (except those starting with "internal") and concatenates them into the system prompt.
 
 ### Model definitions
 
@@ -286,6 +298,8 @@ All JS and CSS files are included here in the correct dependency order.
 - Full timestamp display (YYYY-MM-DD HH:MM:SS format)
 - Copy button on each message to copy content to clipboard
 - Timestamp and copy button hidden during streaming, only cursor shown
+- Waiting indicator with cycling text ("Working ..", "Generating ..", "In progress ..", "Be right with you ..") and shine effect shown before tokens arrive
+- Waiting indicator cycles every 4 seconds and stops when content starts streaming
 
 ### Token counters
 
@@ -537,8 +551,24 @@ Location: `/zato-web-admin/src/zato/admin/web/views/ai/tools/`
 
 1. When the LLM receives a request to create a Zato object, it calls the appropriate tool
 2. The tool executor converts the tool arguments to enmasse YAML format
-3. The enmasse importer creates or updates the object in the database
-4. The result is returned to the LLM which reports success or failure to the user
+3. The executor runs the enmasse CLI directly via subprocess (not via service invocation)
+4. The enmasse importer creates or updates the object in the database
+5. The result is returned to the LLM which reports success or failure to the user
+
+### Tool selection
+
+To avoid sending all tool schemas (which would consume many tokens), the system uses a two-step approach:
+
+1. First, the LLM is asked which enmasse tools are needed for the user's request
+2. Only the selected tool schemas are sent with the main request
+
+This is handled by `_select_enmasse_tools()` in each LLM client, using the prompt from `/zato-common/src/zato/common/ai/prompts/tool_selection.md`.
+
+### Service validation
+
+When creating scheduler jobs, REST channels, or AMQP channels, the enmasse importer validates that the referenced service exists. If the service doesn't exist within 2 seconds, an exception is raised with the missing service name(s).
+
+This timeout is passed via `--missing-wait-time 2` CLI argument.
 
 ### Example usage
 
