@@ -9,7 +9,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import re
-import time
+from datetime import datetime
+from enum import Enum
 from logging import getLogger
 from typing import Any, Dict, List, Optional
 
@@ -24,8 +25,46 @@ if 0:
 
 logger = getLogger(__name__)
 
-Redis_Key_Prefix = 'zato.ai-chat.tool-execution.'
+Redis_Key_Prefix_Stream = 'zato.ai-chat.events.'
+Redis_Key_Prefix_State = 'zato.ai-chat.state.'
 Redis_TTL_Seconds = 60 * 60 * 24 * 14 # 2 weeks
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class QueryIntent(Enum):
+    """ Intent classification for execution history queries.
+    """
+    Current_State = 'current_state'
+    Event_History = 'event_history'
+    Ambiguous = 'ambiguous'
+
+State_Signals = [
+    r'\b(what|which|show|list|how many)\b.*(exist|current|now|active|have|are there)',
+    r'\bcurrent (state|status|count)',
+    r'\bsummar(y|ize)\b',
+]
+
+History_Signals = [
+    r'\b(what|which).*did (you|it|the)\b.*(create|update|delete|do|change|modify)',
+    r'\b(show|list).*\b(log|history|events?|operations?|steps?)',
+    r'\b(what|when|how).*(happened|occurred|went wrong)',
+    r'\bsequence|timeline|order of\b',
+]
+
+def detect_intent(question:'str') -> 'QueryIntent':
+    """ Detects whether a question asks about current state or event history.
+    """
+    q = question.lower()
+    state_hits = sum(1 for p in State_Signals if re.search(p, q))
+    history_hits = sum(1 for p in History_Signals if re.search(p, q))
+
+    if state_hits > history_hits:
+        return QueryIntent.Current_State
+    if history_hits > state_hits:
+        return QueryIntent.Event_History
+
+    return QueryIntent.Ambiguous
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,6 +73,10 @@ class ToolRecord(BaseModel):
     """ Record of a single tool execution.
     """
     tool_name: str
+    model_name: str = ''
+    object_id: str = ''
+    object_name: str = ''
+    action: str = ''
     arguments: Dict[str, Any] = Field(default_factory=dict)
     result: Optional[Any] = None
     success: bool = False
@@ -42,7 +85,7 @@ class ToolRecord(BaseModel):
 # ################################################################################################################################
 
 class ExecutionLog(BaseModel):
-    """ Collection of tool execution records with ground-truth log generation.
+    """ Dual-view execution logger using Redis Streams (events) and Hashes (state).
     """
     records: List[ToolRecord] = Field(default_factory=list)
 
@@ -56,8 +99,26 @@ class ExecutionLog(BaseModel):
     ) -> 'None':
         """ Adds a tool execution record.
         """
+        action = ''
+        if tool_name.startswith('create_'):
+            action = 'created'
+        elif tool_name.startswith('update_'):
+            action = 'updated'
+        elif tool_name.startswith('delete_'):
+            action = 'deleted'
+
+        model_name = tool_name.replace('create_', '').replace('update_', '').replace('delete_', '')
+        object_name = arguments.get('name', '')
+        object_id = ''
+        if isinstance(result, dict):
+            object_id = str(result.get('id', ''))
+
         record = ToolRecord(
             tool_name=tool_name,
+            model_name=model_name,
+            object_id=object_id,
+            object_name=object_name,
+            action=action,
             arguments=arguments,
             result=result,
             success=success,
@@ -107,27 +168,11 @@ class ExecutionLog(BaseModel):
             if not record.success:
                 continue
 
-            action = None
-            if record.tool_name.startswith('create_'):
-                action = 'create'
-            elif record.tool_name.startswith('update_'):
-                action = 'update'
-            elif record.tool_name.startswith('delete_'):
-                action = 'delete'
-
-            if action:
-                object_id = ''
-                object_name = ''
-
-                if isinstance(record.result, dict):
-                    object_id = record.result.get('id', '')
-                if isinstance(record.arguments, dict):
-                    object_name = record.arguments.get('name', '')
-
+            if record.action:
                 out.append({
-                    'action': action,
-                    'object_id': object_id,
-                    'object_name': object_name
+                    'action': record.action.rstrip('d'),
+                    'object_id': record.object_id,
+                    'object_name': record.object_name
                 })
 
         return out
@@ -138,9 +183,9 @@ class ExecutionLog(BaseModel):
         """
         out = []
 
-        create_count = sum(1 for r in self.records if r.success and r.tool_name.startswith('create_'))
-        update_count = sum(1 for r in self.records if r.success and r.tool_name.startswith('update_'))
-        delete_count = sum(1 for r in self.records if r.success and r.tool_name.startswith('delete_'))
+        create_count = sum(1 for r in self.records if r.success and r.action == 'created')
+        update_count = sum(1 for r in self.records if r.success and r.action == 'updated')
+        delete_count = sum(1 for r in self.records if r.success and r.action == 'deleted')
 
         for match in re.finditer(r'created?\s+(\d+)\s+\w+', response_text, re.IGNORECASE):
             claimed = int(match.group(1))
@@ -163,9 +208,9 @@ class ExecutionLog(BaseModel):
         """ Builds a guaranteed-accurate response from the execution log.
         Used as fallback when verification detects fabrication.
         """
-        created = [r for r in self.records if r.success and r.tool_name.startswith('create_')]
-        updated = [r for r in self.records if r.success and r.tool_name.startswith('update_')]
-        deleted = [r for r in self.records if r.success and r.tool_name.startswith('delete_')]
+        created = [r for r in self.records if r.success and r.action == 'created']
+        updated = [r for r in self.records if r.success and r.action == 'updated']
+        deleted = [r for r in self.records if r.success and r.action == 'deleted']
         failed = [r for r in self.records if not r.success]
 
         parts = []
@@ -173,20 +218,17 @@ class ExecutionLog(BaseModel):
         if created:
             parts.append(f'Created {len(created)} object(s):')
             for r in created:
-                name = r.arguments.get('name', 'unknown')
-                parts.append(f'- {name}')
+                parts.append(f'- {r.object_name}')
 
         if updated:
             parts.append(f'Updated {len(updated)} object(s):')
             for r in updated:
-                name = r.arguments.get('name', 'unknown')
-                parts.append(f'- {name}')
+                parts.append(f'- {r.object_name}')
 
         if deleted:
             parts.append(f'Deleted {len(deleted)} object(s):')
             for r in deleted:
-                name = r.arguments.get('name', 'unknown')
-                parts.append(f'- {name}')
+                parts.append(f'- {r.object_name}')
 
         if failed:
             parts.append(f'{len(failed)} operation(s) failed.')
@@ -194,29 +236,54 @@ class ExecutionLog(BaseModel):
         out = '\n'.join(parts) if parts else 'No operations were performed.'
         return out
 
-    def persist(self, session_id:'str') -> 'None':
-        """ Persists all records to Redis for cross-turn recall.
+    def persist(self, session_id:'str', conversation_turn:'int'=0) -> 'None':
+        """ Persists records to Redis using dual-view architecture.
+        Writes to both event stream and state snapshot atomically.
         """
         if not self.records:
             return
 
         try:
             client = get_redis_client()
-            key = Redis_Key_Prefix + session_id
-            timestamp = time.time()
+            stream_key = Redis_Key_Prefix_Stream + session_id
+            timestamp = datetime.utcnow().isoformat()
+
+            pipe = client.pipeline(transaction=True)
 
             for record in self.records:
-                entry = {
-                    'tool_name': record.tool_name,
-                    'arguments': record.arguments,
-                    'result': record.result,
-                    'success': record.success,
-                    'error': record.error,
-                    'timestamp': timestamp
-                }
-                client.zadd(key, {json.dumps(entry, default=str): timestamp})
+                if not record.success:
+                    continue
 
-            client.expire(key, Redis_TTL_Seconds)
+                state_key = Redis_Key_Prefix_State + session_id + ':' + record.model_name
+                entity_key = record.object_name or record.object_id
+
+                pipe.xadd(stream_key, {
+                    'tool': record.tool_name,
+                    'model': record.model_name,
+                    'object_id': record.object_id,
+                    'object_name': record.object_name,
+                    'action': record.action,
+                    'details': json.dumps(record.arguments, default=str),
+                    'ts': timestamp,
+                    'turn': str(conversation_turn),
+                })
+
+                if record.action == 'deleted':
+                    pipe.hdel(state_key, entity_key)
+                else:
+                    snapshot_data = {
+                        **record.arguments,
+                        '_action': record.action,
+                        '_modified': timestamp,
+                        '_tool': record.tool_name,
+                        '_turn': conversation_turn,
+                        '_object_id': record.object_id,
+                    }
+                    pipe.hset(state_key, entity_key, json.dumps(snapshot_data, default=str))
+
+            pipe.expire(stream_key, Redis_TTL_Seconds)
+            pipe.execute()
+
             logger.info('Persisted %d tool execution records for session %s', len(self.records), session_id)
 
         except Exception as e:
@@ -224,24 +291,138 @@ class ExecutionLog(BaseModel):
 
 # ################################################################################################################################
 
-def get_recent_executions(session_id:'str', limit:'int'=20) -> 'list':
-    """ Retrieves recent tool executions for a session from Redis.
+def get_state_snapshot(session_id:'str', model_name:'str'='') -> 'dict':
+    """ Retrieves current state snapshot from Redis Hashes.
+    Returns deduplicated view of what currently exists.
     """
     try:
         client = get_redis_client()
-        key = Redis_Key_Prefix + session_id
-        entries = client.zrevrange(key, 0, limit - 1)
 
-        out = []
-        for entry in entries:
-            data = json.loads(entry)
-            out.append(data)
+        if model_name:
+            state_key = Redis_Key_Prefix_State + session_id + ':' + model_name
+            raw = client.hgetall(state_key)
+            out = {k: json.loads(v) for k, v in raw.items()}
+            return out
+
+        pattern = Redis_Key_Prefix_State + session_id + ':*'
+        out = {}
+        for key in client.scan_iter(match=pattern):
+            model = key.split(':')[-1]
+            raw = client.hgetall(key)
+            out[model] = {k: json.loads(v) for k, v in raw.items()}
 
         return out
 
     except Exception as e:
-        logger.warning('Failed to retrieve tool executions: %s', e)
+        logger.warning('Failed to retrieve state snapshot: %s', e)
+        return {}
+
+# ################################################################################################################################
+
+def get_event_log(session_id:'str', count:'int'=50) -> 'list':
+    """ Retrieves event log from Redis Stream.
+    Returns chronological list of all operations.
+    """
+    try:
+        client = get_redis_client()
+        stream_key = Redis_Key_Prefix_Stream + session_id
+        entries = client.xrange(stream_key, count=count)
+
+        out = []
+        for event_id, data in entries:
+            entry = {
+                'event_id': event_id,
+                'tool': data.get('tool', ''),
+                'model': data.get('model', ''),
+                'object_id': data.get('object_id', ''),
+                'object_name': data.get('object_name', ''),
+                'action': data.get('action', ''),
+                'ts': data.get('ts', ''),
+                'turn': data.get('turn', ''),
+            }
+            details = data.get('details', '{}')
+            entry['details'] = json.loads(details) if details else {}
+            out.append(entry)
+
+        return out
+
+    except Exception as e:
+        logger.warning('Failed to retrieve event log: %s', e)
         return []
+
+# ################################################################################################################################
+
+def build_state_context(session_id:'str') -> 'str':
+    """ Builds state snapshot context for LLM injection.
+    Used for 'what exists now' questions.
+    """
+    snapshot = get_state_snapshot(session_id)
+    if not snapshot:
+        return ''
+
+    lines = ['## Current state of managed objects\n']
+
+    for model_name, objects in snapshot.items():
+        lines.append(f'**{model_name}** ({len(objects)} objects):')
+        for obj_name, fields in objects.items():
+            action = fields.pop('_action', 'unknown')
+            modified = fields.pop('_modified', '')
+            _ = fields.pop('_tool', '')
+            _ = fields.pop('_turn', '')
+            _ = fields.pop('_object_id', '')
+            field_str = ', '.join(f'{k}={v}' for k, v in fields.items() if not k.startswith('_'))
+            lines.append(f'  - {obj_name} [{action} at {modified}]: {field_str}')
+
+    lines.append('')
+    lines.append('When answering questions about what exists, refer ONLY to this list.')
+
+    out = '\n'.join(lines)
+    return out
+
+# ################################################################################################################################
+
+def build_history_context(session_id:'str', count:'int'=30) -> 'str':
+    """ Builds event history context for LLM injection.
+    Used for 'what happened' questions.
+    """
+    events = get_event_log(session_id, count=count)
+    if not events:
+        return ''
+
+    lines = [f'## Recent operations ({len(events)} events)\n']
+
+    for event in events:
+        action = event.get('action', '')
+        model = event.get('model', '')
+        obj_name = event.get('object_name', '')
+        tool = event.get('tool', '')
+        ts = event.get('ts', '')
+        lines.append(f'  - {action} {model} "{obj_name}" via {tool} at {ts}')
+
+    out = '\n'.join(lines)
+    return out
+
+# ################################################################################################################################
+
+def build_execution_context(session_id:'str', question:'str'='') -> 'str':
+    """ Builds appropriate execution context based on question intent.
+    Routes to state snapshot or event history based on detected intent.
+    """
+    intent = detect_intent(question) if question else QueryIntent.Current_State
+
+    if intent == QueryIntent.Current_State:
+        return build_state_context(session_id)
+
+    if intent == QueryIntent.Event_History:
+        return build_history_context(session_id)
+
+    state = build_state_context(session_id)
+    history = build_history_context(session_id, count=10)
+    if state and history:
+        out = f'{state}\n\n--- Recent operations ---\n{history}'
+    else:
+        out = state or history
+    return out
 
 # ################################################################################################################################
 # ################################################################################################################################

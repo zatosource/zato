@@ -226,7 +226,8 @@ class GoogleClient(BaseLLMClient):
 
         if self.system_prompt:
             system_prompt = self.system_prompt
-            execution_history = self._build_execution_history_context()
+            user_question = self._extract_last_user_message(messages)
+            execution_history = self._build_execution_history_context(user_question)
             if execution_history:
                 system_prompt = system_prompt + '\n\n' + execution_history
             body['systemInstruction'] = {
