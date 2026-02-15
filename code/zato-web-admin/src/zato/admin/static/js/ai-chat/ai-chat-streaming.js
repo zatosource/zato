@@ -150,11 +150,16 @@
             }
 
             var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span class="ai-tool-checkmark">✓</span> Done</div>';
+            var hasToolDone = html.indexOf('[TOOL_DONE]') !== -1;
+            console.log('[SSE-TRACE] html has [TOOL_DONE]:', hasToolDone, 'progressOuterHTML:', !!progressOuterHTML);
             if (progressOuterHTML) {
                 html = html.replace('<p>[TOOL_DONE]</p>', progressOuterHTML);
+                html = html.replace('[TOOL_DONE]', progressOuterHTML);
             } else {
                 html = html.replace('<p>[TOOL_DONE]</p>', toolDoneHtml);
+                html = html.replace('[TOOL_DONE]', toolDoneHtml);
             }
+            console.log('[SSE-TRACE] html after replace still has [TOOL_DONE]:', html.indexOf('[TOOL_DONE]') !== -1);
 
             contentEl.innerHTML = html;
 
