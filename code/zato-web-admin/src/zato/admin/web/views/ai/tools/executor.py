@@ -72,12 +72,18 @@ def execute_enmasse_tool(tool_name:'str', arguments:'anydict', zato_client:'any_
             'file_name': 'ai-tool.yaml'
         })
 
-        if isinstance(response.data, dict):
-            return response.data
-        else:
+        response_str = str(response.data) if response.data else ''
+        is_ok = 'Enmasse OK' in response_str
+
+        if is_ok:
             return {
                 'success': True,
-                'result': str(response.data)
+                'message': f'Created {enmasse_key} object successfully'
+            }
+        else:
+            return {
+                'success': False,
+                'error': 'Enmasse import failed'
             }
 
     except Exception:
