@@ -20,9 +20,12 @@
                 return;
             }
 
+            var isNewConversation = messages.length === 1;
             var body = JSON.stringify({
                 model: model,
-                messages: messages
+                messages: messages,
+                session_id: tabId,
+                is_new_conversation: isNewConversation
             });
 
             var abortController = new AbortController();
@@ -235,6 +238,10 @@
                         if (oldRow) {
                             console.log('[SSE-TRACE] replacing oldRow with newRow');
                             oldRow.replaceWith(newRow);
+                            if (typeof $ !== 'undefined' && $.fn && $.fn.zato && $.fn.zato.data_table && $.fn.zato.data_table.parse) {
+                                console.log('[SSE-TRACE] re-parsing data_table after replace');
+                                $.fn.zato.data_table.parse();
+                            }
                         } else {
                             console.log('[SSE-TRACE] no oldRow, inserting newRow into tbody');
                             var tbody = document.querySelector('#data-table tbody');
@@ -249,6 +256,10 @@
                                 console.log('[SSE-TRACE] inserting newRow at beginning of tbody');
                                 tbody.insertBefore(newRow, tbody.firstChild);
                                 console.log('[SSE-TRACE] insertion done');
+                                if (typeof $ !== 'undefined' && $.fn && $.fn.zato && $.fn.zato.data_table && $.fn.zato.data_table.parse) {
+                                    console.log('[SSE-TRACE] re-parsing data_table');
+                                    $.fn.zato.data_table.parse();
+                                }
                             } else {
                                 console.log('[SSE-TRACE] no #data-table tbody found in current document');
                             }

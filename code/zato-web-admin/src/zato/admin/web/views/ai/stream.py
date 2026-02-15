@@ -187,6 +187,12 @@ def invoke(req) -> 'StreamingHttpResponse':
         zato_client = zato_obj.client
 
     session_id = body.get('session_id', '') or req.session.session_key or ''
+    is_new_conversation = body.get('is_new_conversation', False)
+
+    if is_new_conversation and session_id:
+        from zato.admin.web.views.ai.llm.execution import clear_session_state
+        clear_session_state(session_id)
+        logger.info('Cleared session state for new conversation: %s', session_id)
 
     response = StreamingHttpResponse(_stream_response(model_id, messages, zato_client, cluster_id, cluster, session_id), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'

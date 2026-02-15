@@ -382,6 +382,10 @@ span.like-a {
     text-align: center
 }
 
+#data-table td.center {
+    text-align: center
+}
+
 #data-table td.numbering:before {
     content: counter(data_table_counter);
     counter-increment: data_table_counter;
