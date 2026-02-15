@@ -622,6 +622,44 @@ The LLM will call:
 }
 ```
 
+## Execution grounding (anti-hallucination)
+
+The LLM can hallucinate about tool executions - e.g., announcing "Creating 3 objects" but only executing 2 tool calls, then fabricating the third in its response. This is mitigated through an execution-receipt architecture.
+
+### How it works
+
+1. **ExecutionLog** (Pydantic model) tracks all tool executions with: tool_name, arguments, result, success, error
+2. After tools execute, a ground-truth message is injected into the conversation before the LLM generates its final response
+3. System prompt constraints forbid pre-announcing counts and require responses to be based only on the execution log
+
+### Ground-truth message format
+
+```
+EXECUTION LOG - 2 operation(s) executed:
+  1. create_security({"name": "MyKey", "type": "apikey"}) -> SUCCESS
+     Result: {"success": true, "message": "Created 1 objects successfully"}
+  2. create_channel_rest({"name": "MyChannel", ...}) -> SUCCESS
+     Result: {"success": true, "message": "Created 1 objects successfully"}
+
+Total: 2 succeeded, 0 failed.
+
+Base your response ONLY on the operations listed above.
+Do NOT claim any operation occurred that is not in this log.
+```
+
+### Files involved
+
+- `execution.py` - `ToolRecord` and `ExecutionLog` Pydantic models
+- `anthropic.py`, `openai.py`, `google.py` - create `ExecutionLog`, pass to `_execute_tools_batched()`, inject ground-truth message
+- `enmasse_tools.md` - system prompt rules forbidding count announcements
+
+### System prompt constraints
+
+From `enmasse_tools.md`:
+- Never announce how many objects you will create before executing tools
+- After tool calls complete, base response only on the execution log
+- Never claim an operation occurred that is not in the execution log
+
 ## Live UI updates
 
 When the LLM creates, updates, or deletes objects via tools, the UI automatically refreshes the affected table rows without a full page reload.

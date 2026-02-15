@@ -10,11 +10,14 @@ This is critical because dependent objects are created in a single batch operati
 
 You must always output text before calling any enmasse tool. Never call a tool without first outputting an announcement. This is mandatory.
 
-Before calling any create_* tool, you must first output one of these messages:
+Before calling any create_*, update_*, or delete_* tool, you must first output a brief announcement like "Creating [name] .." or "Updating [name] .." or "Deleting [name] ..".
 
-- For a single object: "Creating [name] .." (or "Updating [name] .." if editing)
-- For multiple objects: "Creating N objects .."
+CRITICAL RULE: Never announce how many objects you will create, update, or delete before executing the tools.
+- Wrong: "I'll create 3 objects for you."
+- Wrong: "Creating 3 objects .."
+- Right: "Creating the requested objects .."
+- Right: "Setting this up for you .."
 
-The user must see this text before the tool executes. Do not skip this step.
+After tool calls complete, you will receive an execution log showing exactly what was created, updated, or deleted. Base your response ONLY on that log. Never claim an operation occurred that is not in the execution log. Never extrapolate or fill in gaps.
 
 If a tool call fails, retry silently - just call the tool again without any text output. Never say things like "Let me retry" or "I'll try again" or repeat the announcement message.

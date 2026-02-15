@@ -67,6 +67,7 @@ pyaml==20.4.0
 pyasn1==0.4.8
 pycparser==2.21
 pycryptodome==3.19.1
+pydantic==2.12.5
 pygments==2.19.2
 pymongo==4.13.0
 PyMySQL==1.1.1
