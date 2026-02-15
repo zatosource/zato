@@ -15,8 +15,8 @@ from urllib.request import Request, urlopen
 # Zato
 from zato.admin.web.views.ai.llm.base import BaseLLMClient
 from zato.admin.web.views.ai.mcp.registry import MCPRegistry
-from zato.admin.web.views.ai.tools.definitions import get_tools_by_name
-from zato.admin.web.views.ai.tools import executor as enmasse_executor
+from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools
+from zato.admin.web.views.ai.tools.executor import execute_enmasse_batch, is_enmasse_tool
 
 if 0:
     from zato.common.typing_ import anylist, generator_
@@ -39,8 +39,7 @@ class GoogleClient(BaseLLMClient):
     def stream_chat(self, model:'str', messages:'list') -> 'generator_':
         """ Streams chat completion responses from Google Gemini with tool support.
         """
-        enmasse_tool_names = self._select_enmasse_tools(model, messages)
-        all_tools = self._get_all_tools(enmasse_tool_names)
+        all_tools = self._get_all_tools()
         gemini_tools = self._convert_tools_to_gemini_format(all_tools)
 
         working_messages = list(messages)
@@ -66,16 +65,7 @@ class GoogleClient(BaseLLMClient):
             assistant_content = result.get('assistant_content', [])
             working_messages.append({'role': 'assistant', 'parts': assistant_content})
 
-            tool_response_parts = []
-            for tool_call in tool_calls:
-                tool_result = self._execute_tool(tool_call, all_tools)
-                tool_response_parts.append({
-                    'functionResponse': {
-                        'name': tool_call['name'],
-                        'response': tool_result
-                    }
-                })
-
+            tool_response_parts = self._execute_tools_batched(tool_calls, all_tools)
             working_messages.append({'role': 'user', 'parts': tool_response_parts})
 
         yield self._format_done(total_input_tokens, total_output_tokens)
@@ -93,10 +83,10 @@ class GoogleClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _get_enmasse_tools(self, tool_names:'anylist') -> 'anylist':
-        """ Gets enmasse tools by name.
+    def _get_enmasse_tools(self) -> 'anylist':
+        """ Gets all enmasse tools.
         """
-        tools = get_tools_by_name(tool_names)
+        tools = get_enmasse_tools()
         out = []
         for tool in tools:
             tool_copy = dict(tool)
@@ -106,66 +96,12 @@ class GoogleClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _get_all_tools(self, enmasse_tool_names:'anylist'=None) -> 'anylist':
-        """ Gets all available tools (MCP + selected enmasse).
+    def _get_all_tools(self) -> 'anylist':
+        """ Gets all available tools (MCP + enmasse).
         """
         mcp_tools = self._get_mcp_tools()
-        if enmasse_tool_names:
-            enmasse_tools = self._get_enmasse_tools(enmasse_tool_names)
-        else:
-            enmasse_tools = []
+        enmasse_tools = self._get_enmasse_tools()
         return mcp_tools + enmasse_tools
-
-# ################################################################################################################################
-
-    def _select_enmasse_tools(self, model:'str', messages:'list') -> 'anylist':
-        """ Asks the LLM which enmasse tools are needed for this request.
-        """
-        if not self.tool_selection_prompt:
-            return []
-
-        last_user_message = ''
-        for msg in reversed(messages):
-            if msg.get('role') == 'user':
-                last_user_message = msg.get('content', '')
-                break
-
-        if not last_user_message:
-            return []
-
-        url = API_URL_Template.format(model=model, api_key=self.api_key).replace(':streamGenerateContent', ':generateContent').replace('alt=sse&', '')
-
-        headers = {
-            'Content-Type': 'application/json',
-        }
-
-        body = {
-            'contents': [{'role': 'user', 'parts': [{'text': last_user_message}]}],
-            'systemInstruction': {'parts': [{'text': self.tool_selection_prompt}]},
-            'generationConfig': {'maxOutputTokens': 256}
-        }
-
-        body_json = json.dumps(body)
-        body_bytes = body_json.encode('utf-8')
-
-        try:
-            request = Request(url, data=body_bytes, headers=headers, method='POST')
-            with urlopen(request) as response:
-                response_data = json.loads(response.read().decode('utf-8'))
-
-            candidates = response_data.get('candidates', [])
-            if candidates:
-                parts = candidates[0].get('content', {}).get('parts', [])
-                if parts:
-                    text = parts[0].get('text', '').strip()
-                    tool_names = json.loads(text)
-                    if isinstance(tool_names, list):
-                        logger.info('Selected enmasse tools: %s', tool_names)
-                        return tool_names
-        except Exception as e:
-            logger.warning('Tool selection failed: %s', e)
-
-        return []
 
 # ################################################################################################################################
 
@@ -190,8 +126,53 @@ class GoogleClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _execute_tool(self, tool_call:'dict', all_tools:'anylist') -> 'dict':
-        """ Executes a tool call via MCP or enmasse.
+    def _execute_tools_batched(self, tool_calls:'list', all_tools:'anylist') -> 'list':
+        """ Executes tool calls, batching enmasse tools together.
+        """
+        enmasse_calls = []
+        mcp_calls = []
+
+        for tool_call in tool_calls:
+            tool_name = tool_call.get('name', '')
+            if is_enmasse_tool(tool_name):
+                enmasse_calls.append(tool_call)
+            else:
+                mcp_calls.append(tool_call)
+
+        tool_response_parts = []
+
+        if enmasse_calls:
+            batch = [(tc.get('name'), tc.get('args', {})) for tc in enmasse_calls]
+            try:
+                batch_result = execute_enmasse_batch(batch)
+                logger.info('Enmasse batch result: %s', batch_result)
+            except Exception as e:
+                logger.warning('Enmasse batch error: %s', format_exc())
+                batch_result = {'error': str(e)}
+
+            for tool_call in enmasse_calls:
+                tool_response_parts.append({
+                    'functionResponse': {
+                        'name': tool_call['name'],
+                        'response': batch_result
+                    }
+                })
+
+        for tool_call in mcp_calls:
+            tool_result = self._execute_mcp_tool(tool_call, all_tools)
+            tool_response_parts.append({
+                'functionResponse': {
+                    'name': tool_call['name'],
+                    'response': tool_result
+                }
+            })
+
+        return tool_response_parts
+
+# ################################################################################################################################
+
+    def _execute_mcp_tool(self, tool_call:'dict', all_tools:'anylist') -> 'dict':
+        """ Executes a single MCP tool call.
         """
         tool_name = tool_call.get('name', '')
         arguments = tool_call.get('args', {})
@@ -204,17 +185,6 @@ class GoogleClient(BaseLLMClient):
 
         if not tool_def:
             return {'error': f'Tool {tool_name} not found'}
-
-        is_enmasse = tool_def.get('_enmasse_tool', False)
-
-        if is_enmasse:
-            try:
-                result = enmasse_executor.execute_enmasse_tool(tool_name, arguments)
-                logger.info('Enmasse tool %s result: %s', tool_name, result)
-                return result
-            except Exception as e:
-                logger.warning('Enmasse tool %s error: %s', tool_name, format_exc())
-                return {'error': str(e)}
 
         server_id = tool_def.get('_mcp_server_id')
         if not server_id:

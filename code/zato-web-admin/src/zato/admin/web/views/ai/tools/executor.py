@@ -53,20 +53,26 @@ _tool_to_enmasse_key = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def execute_enmasse_tool(tool_name:'str', arguments:'anydict') -> 'anydict':
-    """ Executes a single enmasse tool via the CLI.
+def execute_enmasse_batch(tool_calls:'list') -> 'anydict':
+    """ Executes multiple enmasse tools in a single CLI call.
     """
-    logger.info('Executing tool: %s with arguments: %s', tool_name, arguments)
+    logger.info('Executing batch of %d enmasse tools', len(tool_calls))
 
-    enmasse_key = _tool_to_enmasse_key.get(tool_name)
-    if not enmasse_key:
-        return {
-            'success': False,
-            'error': f'Unknown tool: {tool_name}'
-        }
+    yaml_config = {}
+
+    for tool_name, arguments in tool_calls:
+        enmasse_key = _tool_to_enmasse_key.get(tool_name)
+        if not enmasse_key:
+            return {
+                'success': False,
+                'error': f'Unknown tool: {tool_name}'
+            }
+
+        if enmasse_key not in yaml_config:
+            yaml_config[enmasse_key] = []
+        yaml_config[enmasse_key].append(arguments)
 
     try:
-        yaml_config = {enmasse_key: [arguments]}
         file_content = yaml.dump(yaml_config)
 
         logger.info('Running enmasse CLI with file_content: %s', file_content)
@@ -97,7 +103,7 @@ def execute_enmasse_tool(tool_name:'str', arguments:'anydict') -> 'anydict':
         if is_ok:
             return {
                 'success': True,
-                'message': f'Created {enmasse_key} object successfully'
+                'message': f'Created {len(tool_calls)} objects successfully'
             }
         else:
             error_msg = result.stderr or result.stdout or 'Enmasse import failed'
@@ -119,6 +125,13 @@ def execute_enmasse_tool(tool_name:'str', arguments:'anydict') -> 'anydict':
             'success': False,
             'error': error_msg
         }
+
+# ################################################################################################################################
+
+def is_enmasse_tool(tool_name:'str') -> 'bool':
+    """ Returns True if the tool is an enmasse tool.
+    """
+    return tool_name in _tool_to_enmasse_key
 
 # ################################################################################################################################
 # ################################################################################################################################

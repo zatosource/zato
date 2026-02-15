@@ -939,18 +939,6 @@ def get_all_tools() -> 'anylist':
 
 # ################################################################################################################################
 
-def get_tools_by_name(tool_names:'anylist') -> 'anylist':
-    """ Returns only the tools matching the given names.
-    """
-    out = []
-    for name in tool_names:
-        tool = _all_tools.get(name)
-        if tool:
-            out.append(tool)
-    return out
-
-# ################################################################################################################################
-
 def get_all_tool_names() -> 'anylist':
     """ Returns all available tool names.
     """
