@@ -10,12 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from logging import getLogger
 from traceback import format_exc
 
-# Bunch
-from bunch import Bunch
-
-# Django
-from django.http import QueryDict
-
 # Zato
 from zato.common.api import CONNECTION, GENERIC, URL_TYPE
 
@@ -33,27 +27,15 @@ logger = getLogger(__name__)
 _security_type_to_config = {
     'apikey': {
         'list_service': 'zato.security.apikey.get-list',
-        'edit_view_module': 'zato.admin.web.views.security.apikey',
-        'edit_view_class': 'Edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.security.apikey.edit',
     },
     'basic_auth': {
         'list_service': 'zato.security.basic-auth.get-list',
-        'edit_view_module': 'zato.admin.web.views.security.basic_auth',
-        'edit_view_class': 'Edit',
-        'form_prefix': 'edit-',
-    },
-    'bearer_token': {
-        'list_service': 'zato.security.oauth.get-list',
-        'edit_view_module': 'zato.admin.web.views.security.oauth.outconn_client_credentials',
-        'edit_view_class': 'Edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.security.basic-auth.edit',
     },
     'ntlm': {
         'list_service': 'zato.security.ntlm.get-list',
-        'edit_view_module': 'zato.admin.web.views.security.ntlm',
-        'edit_view_class': 'Edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.security.ntlm.edit',
     },
 }
 
@@ -64,9 +46,7 @@ _update_tool_config = {
             'connection': CONNECTION.CHANNEL,
             'transport': URL_TYPE.PLAIN_HTTP,
         },
-        'edit_view_module': 'zato.admin.web.views.http_soap',
-        'edit_view_func': 'edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.http-soap.edit',
         'extra_params': {
             'connection': CONNECTION.CHANNEL,
             'transport': URL_TYPE.PLAIN_HTTP,
@@ -78,80 +58,48 @@ _update_tool_config = {
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
         },
-        'edit_view_module': 'zato.admin.web.views.http_soap',
-        'edit_view_func': 'edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.http-soap.edit',
         'extra_params': {
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
         },
     },
-    'update_scheduler': {
-        'list_service': 'zato.scheduler.job.get-list',
-        'list_params': {},
-        'edit_view_module': 'zato.admin.web.views.scheduler',
-        'edit_view_func': 'edit',
-        'form_prefix': 'edit-',
-    },
     'update_sql': {
         'list_service': 'zato.outgoing.sql.get-list',
         'list_params': {},
-        'edit_view_module': 'zato.admin.web.views.outgoing.sql',
-        'edit_view_func': 'edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.outgoing.sql.edit',
     },
     'update_cache': {
         'list_service': 'zato.cache.builtin.get-list',
         'list_params': {},
-        'edit_view_module': 'zato.admin.web.views.cache.builtin',
-        'edit_view_class': 'Edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.cache.builtin.edit',
     },
     'update_pubsub_topic': {
         'list_service': 'zato.pubsub.topic.get-list',
         'list_params': {},
-        'edit_view_module': 'zato.admin.web.views.pubsub.topic',
-        'edit_view_class': 'Edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.pubsub.topic.edit',
     },
     'update_confluence': {
         'list_service': 'zato.generic.connection.get-list',
         'list_params': {
             'type_': GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE,
         },
-        'edit_view_module': 'zato.admin.web.views.cloud.confluence',
-        'edit_view_class': 'Edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.generic.connection.edit',
+        'extra_params': {
+            'type_': GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE,
+        },
     },
     'update_jira': {
         'list_service': 'zato.generic.connection.get-list',
         'list_params': {
             'type_': GENERIC.CONNECTION.TYPE.CLOUD_JIRA,
         },
-        'edit_view_module': 'zato.admin.web.views.cloud.jira',
-        'edit_view_class': 'Edit',
-        'form_prefix': 'edit-',
+        'edit_service': 'zato.generic.connection.edit',
+        'extra_params': {
+            'type_': GENERIC.CONNECTION.TYPE.CLOUD_JIRA,
+        },
     },
 }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class MockRequest:
-    """ A mock request object that can be passed to Django views.
-    """
-    def __init__(self, zato_client:'any_', cluster_id:'int', cluster:'any_', post_data:'anydict'):
-        self.method = 'POST'
-        self.POST = QueryDict(mutable=True)
-        self.POST.update(post_data)
-        self.GET = QueryDict()
-        self.META = {}
-        self.zato = Bunch()
-        self.zato.client = zato_client
-        self.zato.cluster_id = cluster_id
-        self.zato.cluster = cluster
-        self.zato.args = Bunch()
-        self.zato.id = post_data.get('id')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -183,75 +131,38 @@ def _find_object_by_name(client, cluster_id, list_service, list_params, target_n
 
 # ################################################################################################################################
 
-def _build_post_data(existing_object, updates, form_prefix, extra_params=None):
-    """ Builds POST data for the edit view by merging existing object data with updates.
+def _build_edit_request(existing_object, updates, cluster_id, extra_params=None):
+    """ Builds edit service request by merging existing object data with updates.
     """
-    post_data = {}
+    request = {'cluster_id': cluster_id}
 
     if isinstance(existing_object, dict):
         for key, value in existing_object.items():
             if value is not None:
-                post_data[form_prefix + key] = value
+                request[key] = value
     else:
         for key in dir(existing_object):
             if not key.startswith('_'):
                 value = getattr(existing_object, key, None)
                 if value is not None and not callable(value):
-                    post_data[form_prefix + key] = value
-
-    obj_id = existing_object.get('id') if isinstance(existing_object, dict) else getattr(existing_object, 'id', None)
-    if obj_id:
-        post_data['id'] = obj_id
-
-    security_id = existing_object.get('security_id') if isinstance(existing_object, dict) else getattr(existing_object, 'security_id', None)
-    sec_type = existing_object.get('sec_type') if isinstance(existing_object, dict) else getattr(existing_object, 'sec_type', None)
-    if security_id and sec_type:
-        post_data[form_prefix + 'security'] = f'{sec_type}/{security_id}'
-    elif security_id:
-        post_data[form_prefix + 'security'] = f'/{security_id}'
-    else:
-        post_data[form_prefix + 'security'] = 'ZATO_NONE'
+                    request[key] = value
 
     if 'new_name' in updates:
-        post_data[form_prefix + 'name'] = updates['new_name']
-        del updates['new_name']
+        request['name'] = updates['new_name']
 
     for key, value in updates.items():
-        if key not in ('name', 'type'):
-            post_data[form_prefix + key] = value
+        if key not in ('name', 'type', 'new_name'):
+            request[key] = value
 
     if extra_params:
-        post_data.update(extra_params)
+        request.update(extra_params)
 
-    return post_data
-
-# ################################################################################################################################
-
-def _invoke_class_view(view_module, view_class, mock_request):
-    """ Invokes a class-based view.
-    """
-    import importlib
-    module = importlib.import_module(view_module)
-    view_cls = getattr(module, view_class)
-    view_instance = view_cls()
-    response = view_instance(mock_request)
-    return response
-
-# ################################################################################################################################
-
-def _invoke_func_view(view_module, view_func, mock_request):
-    """ Invokes a function-based view.
-    """
-    import importlib
-    module = importlib.import_module(view_module)
-    view_fn = getattr(module, view_func)
-    response = view_fn(mock_request)
-    return response
+    return request
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def execute_update_security(client, cluster_id, cluster, arguments:'anydict') -> 'anydict':
+def execute_update_security(client, cluster_id, arguments:'anydict') -> 'anydict':
     """ Updates a security definition by name.
     """
     name = arguments.get('name')
@@ -276,22 +187,15 @@ def execute_update_security(client, cluster_id, cluster, arguments:'anydict') ->
         if error:
             return {'success': False, 'error': error}
 
-        post_data = _build_post_data(existing_object, arguments, config['form_prefix'])
-        post_data['cluster_id'] = cluster_id
+        request = _build_edit_request(existing_object, arguments, cluster_id)
 
-        mock_request = MockRequest(client, cluster_id, cluster, post_data)
+        response = client.invoke(config['edit_service'], request)
 
-        response = _invoke_class_view(
-            config['edit_view_module'],
-            config['edit_view_class'],
-            mock_request
-        )
-
-        if response.status_code == 200:
+        if response.ok:
             new_name = arguments.get('new_name', name)
             return {'success': True, 'message': f'Updated {sec_type} security definition: {new_name}'}
         else:
-            return {'success': False, 'error': f'Update failed with status {response.status_code}: {response.content}'}
+            return {'success': False, 'error': f'Update failed: {response.details}'}
 
     except Exception:
         error_msg = format_exc()
@@ -303,8 +207,10 @@ def execute_update_security(client, cluster_id, cluster, arguments:'anydict') ->
 def execute_update_tool(client, cluster_id, cluster, tool_name:'str', arguments:'anydict') -> 'anydict':
     """ Executes an update tool by name.
     """
+    _ = cluster
+
     if tool_name == 'update_security':
-        return execute_update_security(client, cluster_id, cluster, arguments)
+        return execute_update_security(client, cluster_id, arguments)
 
     if tool_name not in _update_tool_config:
         return {'success': False, 'error': f'Unknown update tool: {tool_name}'}
@@ -328,31 +234,16 @@ def execute_update_tool(client, cluster_id, cluster, tool_name:'str', arguments:
             return {'success': False, 'error': error}
 
         extra_params = config.get('extra_params', {})
-        post_data = _build_post_data(existing_object, arguments, config['form_prefix'], extra_params)
-        post_data['cluster_id'] = cluster_id
+        request = _build_edit_request(existing_object, arguments, cluster_id, extra_params)
 
-        mock_request = MockRequest(client, cluster_id, cluster, post_data)
+        response = client.invoke(config['edit_service'], request)
 
-        if 'edit_view_class' in config:
-            response = _invoke_class_view(
-                config['edit_view_module'],
-                config['edit_view_class'],
-                mock_request
-            )
-        else:
-            response = _invoke_func_view(
-                config['edit_view_module'],
-                config['edit_view_func'],
-                mock_request
-            )
-
-        if response.status_code == 200:
+        if response.ok:
             new_name = arguments.get('new_name', target_name)
             object_type = tool_name.replace('update_', '').replace('_', ' ')
             return {'success': True, 'message': f'Updated {object_type}: {new_name}'}
         else:
-            content = getattr(response, 'content', str(response))
-            return {'success': False, 'error': f'Update failed with status {response.status_code}: {content}'}
+            return {'success': False, 'error': f'Update failed: {response.details}'}
 
     except Exception:
         error_msg = format_exc()

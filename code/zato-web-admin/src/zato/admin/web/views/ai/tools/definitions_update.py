@@ -57,21 +57,6 @@ tool_update_outgoing_rest = {
     }
 }
 
-tool_update_scheduler = {
-    'name': 'update_scheduler',
-    'description': 'Updates a scheduler job by name. Can rename or modify properties.',
-    'input_schema': {
-        'type': 'object',
-        'properties': {
-            'name': {'type': 'string', 'description': 'Current name of the scheduler job to update'},
-            'new_name': {'type': 'string', 'description': 'New name for the job (for rename)'},
-            'service': {'type': 'string', 'description': 'New service name to invoke'},
-            'is_active': {'type': 'boolean', 'description': 'Whether the job is active'}
-        },
-        'required': ['name']
-    }
-}
-
 tool_update_sql = {
     'name': 'update_sql',
     'description': 'Updates an outgoing SQL connection by name. Can rename or modify properties.',
@@ -149,7 +134,6 @@ all_update_tools = {
     'update_security': tool_update_security,
     'update_channel_rest': tool_update_channel_rest,
     'update_outgoing_rest': tool_update_outgoing_rest,
-    'update_scheduler': tool_update_scheduler,
     'update_sql': tool_update_sql,
     'update_cache': tool_update_cache,
     'update_pubsub_topic': tool_update_pubsub_topic,
