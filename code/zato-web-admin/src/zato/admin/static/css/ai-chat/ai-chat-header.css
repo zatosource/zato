@@ -126,7 +126,7 @@
     padding: 0 8px;
     flex-shrink: 0;
     overflow-x: auto;
-    height: 42px;
+    height: 32px;
 }
 
 .ai-chat-tabs::-webkit-scrollbar {
@@ -146,7 +146,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 6px 12px;
     background: transparent;
     border: none;
     color: #888;
