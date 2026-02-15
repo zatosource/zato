@@ -540,20 +540,59 @@ The AI chat widget includes built-in tools that allow the LLM to create Zato obj
 - `create_pubsub_permission` - creates topic permissions
 - `create_channel_openapi` - creates REST channels from OpenAPI specs
 
+### Delete tools
+
+- `delete_security` - deletes security definitions by name and type
+- `delete_channel_rest` - deletes REST channels by name
+- `delete_outgoing_rest` - deletes outgoing REST connections by name
+- `delete_outgoing_soap` - deletes outgoing SOAP connections by name
+- `delete_scheduler` - deletes scheduler jobs by name
+- `delete_sql` - deletes SQL connection pools by name
+- `delete_cache` - deletes cache definitions by name
+- `delete_groups` - deletes security groups by name
+- `delete_pubsub_topic` - deletes publish/subscribe topics by name
+- `delete_pubsub_subscription` - deletes topic subscriptions by sub_key
+- `delete_confluence` - deletes Confluence connections by name
+- `delete_jira` - deletes Jira connections by name
+
+### Update tools
+
+- `update_security` - updates security definitions (rename, change settings)
+- `update_channel_rest` - updates REST channels
+- `update_outgoing_rest` - updates outgoing REST connections
+- `update_sql` - updates SQL connection pools
+- `update_cache` - updates cache definitions
+- `update_pubsub_topic` - updates publish/subscribe topics
+- `update_confluence` - updates Confluence connections
+- `update_jira` - updates Jira connections
+
 ### Tool files
 
 Location: `/zato-web-admin/src/zato/admin/web/views/ai/tools/`
 
-- `definitions.py` - tool definitions with JSON schemas for each object type
-- `executor.py` - executes tool calls by running enmasse import
+- `definitions.py` - imports and aggregates all tool definitions
+- `definitions_create.py` - create tool definitions with JSON schemas
+- `definitions_delete.py` - delete tool definitions with JSON schemas
+- `definitions_update.py` - update tool definitions with JSON schemas
+- `executor.py` - executes create tool calls by running enmasse import
+- `delete_executor.py` - executes delete tool calls by invoking Zato services directly
+- `update_executor.py` - executes update tool calls by invoking Zato services directly
 
 ### How it works
 
-1. When the LLM receives a request to create a Zato object, it calls the appropriate tool
+**Create tools:**
+1. When the LLM receives a request to create a Zato object, it calls the appropriate create tool
 2. The tool executor converts the tool arguments to enmasse YAML format
-3. The executor runs the enmasse CLI directly via subprocess (not via service invocation)
-4. The enmasse importer creates or updates the object in the database
+3. The executor runs the enmasse CLI directly via subprocess
+4. The enmasse importer creates the object in the database
 5. The result is returned to the LLM which reports success or failure to the user
+
+**Delete/Update tools:**
+1. The LLM calls the appropriate delete or update tool with the object name
+2. The executor first queries the list service to find the object by name and get its ID
+3. For deletes: invokes the delete service with the object ID
+4. For updates: merges existing object data with updates and invokes the edit service
+5. Field mappings handle differences between list and edit service schemas (e.g., `service_name` → `service`)
 
 ### Tool batching
 
@@ -582,6 +621,39 @@ The LLM will call:
   }
 }
 ```
+
+## Live UI updates
+
+When the LLM creates, updates, or deletes objects via tools, the UI automatically refreshes the affected table rows without a full page reload.
+
+### How it works
+
+1. After a tool executes successfully, the LLM client yields an `object_changed` SSE event with:
+   - `action` - "create", "update", or "delete"
+   - `object_id` - the database ID of the object (empty for creates via enmasse)
+   - `object_name` - the name of the object
+
+2. The SSE handler in `ai-chat-sse.js` receives the event and:
+   - For **delete**: fades out and removes the row (`tr_<id>`)
+   - For **create/update**: fetches the current page in background, extracts the updated row, and swaps it into the DOM
+
+3. Visual feedback:
+   - Row pulses with bright yellow background and 10% text scale animation (2 cycles)
+   - After animation, row gets the `updated` CSS class (same as manual edit/create)
+
+### Files involved
+
+- `base.py` - `_format_object_changed()` method formats the SSE event
+- `stream.py` - passes `object_changed` events through the SSE stream
+- `anthropic.py`, `openai.py`, `google.py` - `_execute_tools_batched()` returns object changes, `stream_chat()` yields them
+- `update_executor.py`, `delete_executor.py` - return `id` field in success responses
+- `ai-chat-sse.js` - `handleObjectChanged()` and `refreshRow()` methods
+- `ai-chat-base.css` - `.zato-row-highlight`, `.zato-row-deleting` animations
+
+### Row lookup
+
+- For updates/deletes: row found by `id` attribute (`tr_<object_id>`)
+- For creates (enmasse): row found by matching `.name-value` span text content
 
 ## Reusable confirm button component
 
