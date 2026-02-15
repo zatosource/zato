@@ -149,18 +149,17 @@
                 }
             }
 
-            var toolDoneRegex = /\[TOOL_DONE:([^\]]+)\]/g;
-            var toolDoneMatch = toolDoneRegex.exec(html);
-            if (toolDoneMatch) {
+            var toolDoneRegex = /\[TOOL_DONE:([^:\]]+):(\[[^\]]*\])\]/g;
+            var toolDoneMatch;
+            while ((toolDoneMatch = toolDoneRegex.exec(html)) !== null) {
                 var doneMessage = toolDoneMatch[1];
-                var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span class="ai-tool-checkmark">✓</span> ' + doneMessage + '</div>';
-                if (progressOuterHTML) {
-                    html = html.replace(/<p>\[TOOL_DONE:[^\]]+\]<\/p>/g, progressOuterHTML);
-                    html = html.replace(/\[TOOL_DONE:[^\]]+\]/g, progressOuterHTML);
-                } else {
-                    html = html.replace(/<p>\[TOOL_DONE:[^\]]+\]<\/p>/g, toolDoneHtml);
-                    html = html.replace(/\[TOOL_DONE:[^\]]+\]/g, toolDoneHtml);
-                }
+                var itemsJson = toolDoneMatch[2];
+                var items = [];
+                try { items = JSON.parse(itemsJson); } catch (e) {}
+                var showBtn = items.length > 0 ? '<button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>' : '';
+                var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span class="ai-tool-checkmark">✓</span> ' + doneMessage + showBtn + '</div>';
+                html = html.replace(toolDoneMatch[0], toolDoneHtml);
+                html = html.replace('<p>' + toolDoneHtml + '</p>', toolDoneHtml);
             }
 
             contentEl.innerHTML = html;
@@ -215,10 +214,14 @@
                 streamingEl.classList.add('hide-cursor');
                 console.log('[SSE-TRACE] set progressEl to running state, hid cursor');
             } else if (data.status === 'done') {
-                progressEl.innerHTML = '<span class="ai-tool-checkmark">✓</span> ' + data.message;
+                var itemsJson = data.items ? JSON.stringify(data.items) : '[]';
+                var showBtn = data.items && data.items.length > 0 ? ' <button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>' : '';
+                console.log('[SSE-TRACE] showBtn:', showBtn, 'items:', data.items);
+                progressEl.innerHTML = '<span class="ai-tool-checkmark">✓</span> ' + data.message + showBtn;
                 progressEl.classList.remove('ai-tool-running');
                 progressEl.classList.add('ai-tool-done');
-                AIChatMessages.appendToStreamingMessage(tabId, '\n\n[TOOL_DONE:' + data.message + ']');
+                var marker = '[TOOL_DONE:' + data.message + ':' + itemsJson + ']';
+                AIChatMessages.appendToStreamingMessage(tabId, '\n\n' + marker);
                 console.log('[SSE-TRACE] set progressEl to done state, cursor stays hidden');
             }
 

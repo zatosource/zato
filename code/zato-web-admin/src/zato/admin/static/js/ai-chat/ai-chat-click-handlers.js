@@ -6,6 +6,12 @@
         handleClick: function(e, widget, core) {
             var target = e.target;
 
+            var showBtn = target.closest('.ai-tool-show-btn');
+            if (showBtn) {
+                this.handleShowItems(showBtn);
+                return;
+            }
+
             if (target.id === 'ai-chat-minimize') {
                 AIChatWindow.toggleMinimize(widget, core);
                 return;
@@ -383,6 +389,32 @@
                 core.render();
                 return;
             }
+        },
+
+        handleShowItems: function(btn) {
+            var progressEl = btn.closest('.ai-tool-progress');
+            if (!progressEl) return;
+
+            var existingList = progressEl.parentNode.querySelector('.ai-tool-items-list');
+            if (existingList) {
+                existingList.remove();
+                btn.textContent = 'Show';
+                return;
+            }
+
+            var itemsJson = btn.getAttribute('data-items');
+            var items = [];
+            try { items = JSON.parse(itemsJson); } catch (e) {}
+            if (!items.length) return;
+
+            var listHtml = '<div class="ai-tool-items-list"><table>';
+            for (var i = 0; i < items.length; i++) {
+                listHtml += '<tr><td>' + items[i].type + '</td><td>' + items[i].name + '</td></tr>';
+            }
+            listHtml += '</table></div>';
+
+            progressEl.insertAdjacentHTML('afterend', listHtml);
+            btn.textContent = 'Hide';
         }
     };
 

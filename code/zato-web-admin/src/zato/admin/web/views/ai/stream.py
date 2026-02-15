@@ -121,7 +121,8 @@ def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None, c
                     'status': llm_response.get('status', ''),
                     'total': llm_response.get('total', 0),
                     'completed': llm_response.get('completed', 0),
-                    'message': llm_response.get('message', '')
+                    'message': llm_response.get('message', ''),
+                    'items': llm_response.get('items', [])
                 }
                 progress_event = _format_sse_event('tool_progress', progress_data)
                 yield progress_event

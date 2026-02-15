@@ -173,10 +173,26 @@ class ExecutionLog(BaseModel):
                 out.append({
                     'action': record.action.rstrip('d'),
                     'object_id': record.object_id,
-                    'object_name': record.object_name
+                    'object_name': record.object_name,
+                    'object_type': self._format_object_type(record.model_name)
                 })
 
         return out
+
+    def _format_object_type(self, model_name:'str') -> 'str':
+        """ Formats a model name into a display-friendly object type.
+        """
+        type_map = {
+            'microsoft_365_outconn': 'MS 365',
+            'confluence_outconn': 'Confluence',
+            'dropbox_outconn': 'Dropbox',
+            'google_drive_outconn': 'Google Drive',
+            'salesforce_outconn': 'Salesforce',
+            'sap_outconn': 'SAP',
+            'jira_outconn': 'Jira',
+            'slack_outconn': 'Slack',
+        }
+        return type_map.get(model_name, model_name.replace('_', ' ').title())
 
     def verify_response(self, response_text:'str') -> 'List[str]':
         """ Verifies that the LLM response matches the execution log.

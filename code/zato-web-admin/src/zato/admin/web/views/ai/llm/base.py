@@ -135,9 +135,10 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
-    def _format_tool_progress(self, status:'str', total:'int'=0, completed:'int'=0, message:'str'='') -> 'dict':
+    def _format_tool_progress(self, status:'str', total:'int'=0, completed:'int'=0, message:'str'='', items:'list'=None) -> 'dict':
         """ Formats a tool progress event for UI spinner/progress display.
         status: 'start', 'progress', 'done'
+        items: list of dicts with 'type' and 'name' keys for created objects
         """
         out = {
             'type': 'tool_progress',
@@ -146,6 +147,8 @@ class BaseLLMClient(ABC):
             'completed': completed,
             'message': message
         }
+        if items:
+            out['items'] = items
         return out
 
 # ################################################################################################################################
@@ -159,12 +162,13 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
-    def _yield_tool_progress_done(self, count:'int') -> 'generator_':
+    def _yield_tool_progress_done(self, count:'int', items:'list'=None) -> 'generator_':
         """ Yields a tool progress done event followed by a newline chunk.
+        items: list of dicts with 'type' and 'name' keys for created objects
         """
         obj_word = 'object' if count == 1 else 'objects'
         msg = f'Created {count} {obj_word}'
-        yield self._format_tool_progress('done', total=count, completed=count, message=msg)
+        yield self._format_tool_progress('done', total=count, completed=count, message=msg, items=items)
         yield self._format_chunk('\n\n')
 
 # ################################################################################################################################

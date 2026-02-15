@@ -70,7 +70,8 @@ class OpenAIClient(BaseLLMClient):
             tool_messages = self._execute_tools_batched(tool_calls, all_tools, execution_log)
             working_messages.extend(tool_messages)
 
-            yield from self._yield_tool_progress_done(len(tool_calls))
+            items = [{'type': c['object_type'], 'name': c['object_name']} for c in execution_log.get_object_changes()]
+            yield from self._yield_tool_progress_done(len(tool_calls), items=items)
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()
