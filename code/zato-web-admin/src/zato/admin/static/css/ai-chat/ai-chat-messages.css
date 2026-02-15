@@ -508,3 +508,8 @@
     color: #8fbc8f;
     font-weight: bold;
 }
+
+.ai-tool-progress {
+    margin-top: 12px;
+    margin-bottom: 16px;
+}

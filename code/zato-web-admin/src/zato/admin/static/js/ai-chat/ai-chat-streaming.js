@@ -134,6 +134,9 @@
                 streamingEl.classList.add('has-content');
             }
 
+            var progressEl = contentEl.querySelector('.ai-tool-progress');
+            var progressOuterHTML = progressEl ? progressEl.outerHTML : null;
+
             var html = marked.parse(content);
             if (typeof markedEmoji !== 'undefined') {
                 if (markedEmoji.convertAsciiEmoticons) {
@@ -143,6 +146,16 @@
                     html = markedEmoji.wrapUnicodeEmojis(html);
                 }
             }
+
+            if (progressOuterHTML) {
+                var firstPEnd = html.indexOf('</p>');
+                if (firstPEnd !== -1) {
+                    html = html.substring(0, firstPEnd + 4) + progressOuterHTML + html.substring(firstPEnd + 4);
+                } else {
+                    html = html + progressOuterHTML;
+                }
+            }
+
             contentEl.innerHTML = html;
 
             this.highlightCodeBlocks(contentEl);
