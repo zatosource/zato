@@ -9,4 +9,4 @@ Before calling any create_* tool, you must first output one of these messages:
 
 The user must see this text before the tool executes. Do not skip this step.
 
-If a tool call fails, retry silently without explaining what you're doing. Never say things like "Let me retry" or "I'll try again". Just output the "Creating [name] .." message again and call the tool.
+If a tool call fails, retry silently - just call the tool again without any text output. Never say things like "Let me retry" or "I'll try again" or repeat the "Creating" message.
