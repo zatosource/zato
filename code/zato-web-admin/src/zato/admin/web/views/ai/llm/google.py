@@ -194,6 +194,11 @@ class GoogleClient(BaseLLMClient):
             'contents': contents,
         }
 
+        if self.system_prompt:
+            body['systemInstruction'] = {
+                'parts': [{'text': self.system_prompt}]
+            }
+
         if tools:
             body['tools'] = tools
 

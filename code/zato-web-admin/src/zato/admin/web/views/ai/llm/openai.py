@@ -192,10 +192,14 @@ class OpenAIClient(BaseLLMClient):
             'Authorization': f'Bearer {self.api_key}',
         }
 
+        api_messages = list(messages)
+        if self.system_prompt:
+            api_messages.insert(0, {'role': 'system', 'content': self.system_prompt})
+
         body = {
             'model': model,
             'stream': True,
-            'messages': messages,
+            'messages': api_messages,
         }
 
         if tools:

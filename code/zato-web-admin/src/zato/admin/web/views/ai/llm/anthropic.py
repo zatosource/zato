@@ -191,6 +191,9 @@ class AnthropicClient(BaseLLMClient):
             'messages': messages,
         }
 
+        if self.system_prompt:
+            body['system'] = self.system_prompt
+
         if tools:
             body['tools'] = tools
 

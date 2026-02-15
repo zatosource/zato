@@ -9,6 +9,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from abc import ABC, abstractmethod
 
+# Zato
+from zato.common.ai.prompts.loader import get_system_prompt
+
 if 0:
     from zato.common.typing_ import any_, generator_
 
@@ -22,6 +25,7 @@ class BaseLLMClient(ABC):
     def __init__(self, api_key:'str', zato_client:'any_'=None) -> 'None':
         self.api_key = api_key
         self.zato_client = zato_client
+        self.system_prompt = get_system_prompt()
 
 # ################################################################################################################################
 
