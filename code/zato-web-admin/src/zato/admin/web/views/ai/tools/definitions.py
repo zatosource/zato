@@ -14,7 +14,7 @@ if 0:
 
 tool_create_security = {
     'name': 'create_security',
-    'description': 'Creates a security definition (API key, basic auth, bearer token, or NTLM) in Zato via enmasse.',
+    'description': 'Creates or edits a security definition (API key, basic auth, bearer token, or NTLM) in Zato via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -73,7 +73,7 @@ tool_create_security = {
 
 tool_create_channel_rest = {
     'name': 'create_channel_rest',
-    'description': 'Creates a REST channel (HTTP endpoint) in Zato via enmasse.',
+    'description': 'Creates or edits a REST channel (HTTP endpoint) in Zato via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -123,7 +123,7 @@ tool_create_channel_rest = {
 
 tool_create_outgoing_rest = {
     'name': 'create_outgoing_rest',
-    'description': 'Creates an outgoing REST connection via enmasse.',
+    'description': 'Creates or edits an outgoing REST connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -183,7 +183,7 @@ tool_create_outgoing_rest = {
 
 tool_create_scheduler = {
     'name': 'create_scheduler',
-    'description': 'Creates a scheduler job via enmasse.',
+    'description': 'Creates or edits a scheduler job via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -253,7 +253,7 @@ tool_create_scheduler = {
 
 tool_create_sql = {
     'name': 'create_sql',
-    'description': 'Creates an SQL connection pool via enmasse.',
+    'description': 'Creates or edits an SQL connection pool via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -309,7 +309,7 @@ tool_create_sql = {
 
 tool_create_cache = {
     'name': 'create_cache',
-    'description': 'Creates a cache definition via enmasse.',
+    'description': 'Creates or edits a cache definition via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -368,7 +368,7 @@ tool_create_cache = {
 
 tool_create_groups = {
     'name': 'create_groups',
-    'description': 'Creates a security group via enmasse.',
+    'description': 'Creates or edits a security group via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -390,7 +390,7 @@ tool_create_groups = {
 
 tool_create_email_smtp = {
     'name': 'create_email_smtp',
-    'description': 'Creates an SMTP email connection via enmasse.',
+    'description': 'Creates or edits an SMTP email connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -444,7 +444,7 @@ tool_create_email_smtp = {
 
 tool_create_email_imap = {
     'name': 'create_email_imap',
-    'description': 'Creates an IMAP email connection via enmasse.',
+    'description': 'Creates or edits an IMAP email connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -494,7 +494,7 @@ tool_create_email_imap = {
 
 tool_create_odoo = {
     'name': 'create_odoo',
-    'description': 'Creates an Odoo ERP connection via enmasse.',
+    'description': 'Creates or edits an Odoo ERP connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -543,7 +543,7 @@ tool_create_odoo = {
 
 tool_create_elastic_search = {
     'name': 'create_elastic_search',
-    'description': 'Creates an ElasticSearch connection via enmasse.',
+    'description': 'Creates or edits an ElasticSearch connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -574,7 +574,7 @@ tool_create_elastic_search = {
 
 tool_create_confluence = {
     'name': 'create_confluence',
-    'description': 'Creates a Confluence connection via enmasse.',
+    'description': 'Creates or edits a Confluence connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -613,7 +613,7 @@ tool_create_confluence = {
 
 tool_create_jira = {
     'name': 'create_jira',
-    'description': 'Creates a Jira connection via enmasse.',
+    'description': 'Creates or edits a Jira connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -652,7 +652,7 @@ tool_create_jira = {
 
 tool_create_ldap = {
     'name': 'create_ldap',
-    'description': 'Creates an LDAP connection via enmasse.',
+    'description': 'Creates or edits an LDAP connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -696,7 +696,7 @@ tool_create_ldap = {
 
 tool_create_microsoft_365 = {
     'name': 'create_microsoft_365',
-    'description': 'Creates a Microsoft 365 connection via enmasse.',
+    'description': 'Creates or edits a Microsoft 365 connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -735,7 +735,7 @@ tool_create_microsoft_365 = {
 
 tool_create_outgoing_soap = {
     'name': 'create_outgoing_soap',
-    'description': 'Creates an outgoing SOAP connection via enmasse.',
+    'description': 'Creates or edits an outgoing SOAP connection via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -789,7 +789,7 @@ tool_create_outgoing_soap = {
 
 tool_create_pubsub_topic = {
     'name': 'create_pubsub_topic',
-    'description': 'Creates a publish/subscribe topic via enmasse.',
+    'description': 'Creates or edits a publish/subscribe topic via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -815,7 +815,7 @@ tool_create_pubsub_topic = {
 
 tool_create_pubsub_subscription = {
     'name': 'create_pubsub_subscription',
-    'description': 'Creates a topic subscription via enmasse.',
+    'description': 'Creates or edits a topic subscription via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -847,7 +847,7 @@ tool_create_pubsub_subscription = {
 
 tool_create_pubsub_permission = {
     'name': 'create_pubsub_permission',
-    'description': 'Creates a topic permission via enmasse.',
+    'description': 'Creates or edits a topic permission via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -873,7 +873,7 @@ tool_create_pubsub_permission = {
 
 tool_create_channel_openapi = {
     'name': 'create_channel_openapi',
-    'description': 'Creates REST channels from OpenAPI spec via enmasse.',
+    'description': 'Creates or edits REST channels from OpenAPI spec via enmasse.',
     'input_schema': {
         'type': 'object',
         'properties': {
