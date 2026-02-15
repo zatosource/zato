@@ -265,7 +265,7 @@ def execute_delete_security(client, cluster_id, arguments:'anydict') -> 'anydict
         if error:
             return {'success': False, 'error': error}
 
-        return {'success': True, 'message': f'Deleted {sec_type} security definition: {name}'}
+        return {'success': True, 'message': f'Deleted {sec_type} security definition: {name}', 'id': object_id}
 
     except Exception:
         error_msg = format_exc()
@@ -332,7 +332,7 @@ def execute_delete_tool(client, cluster_id, tool_name:'str', arguments:'anydict'
             return {'success': False, 'error': error}
 
         object_type = tool_name.replace('delete_', '').replace('_', ' ')
-        return {'success': True, 'message': f'Deleted {object_type}: {target_name}'}
+        return {'success': True, 'message': f'Deleted {object_type}: {target_name}', 'id': object_id}
 
     except Exception:
         error_msg = format_exc()

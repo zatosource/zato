@@ -64,8 +64,11 @@ class OpenAIClient(BaseLLMClient):
                 'tool_calls': tool_calls
             })
 
-            tool_messages = self._execute_tools_batched(tool_calls, all_tools)
+            tool_messages, object_changes = self._execute_tools_batched(tool_calls, all_tools)
             working_messages.extend(tool_messages)
+
+            for change in object_changes:
+                yield self._format_object_changed(change['action'], change['object_id'], change['object_name'])
 
         yield self._format_done(total_input_tokens, total_output_tokens)
 
@@ -91,8 +94,9 @@ class OpenAIClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _execute_tools_batched(self, tool_calls:'list', all_tools:'anylist') -> 'list':
+    def _execute_tools_batched(self, tool_calls:'list', all_tools:'anylist') -> 'tuple':
         """ Executes tool calls, batching enmasse tools together.
+        Returns (tool_messages, object_changes).
         """
         def get_tool_name(tc):
             return tc.get('function', {}).get('name', '')
@@ -106,6 +110,7 @@ class OpenAIClient(BaseLLMClient):
 
         enmasse_calls, delete_calls, update_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_messages = []
+        object_changes = []
 
         if enmasse_calls:
             batch = [(get_tool_name(tc), parse_arguments(tc)) for tc in enmasse_calls]
@@ -116,6 +121,12 @@ class OpenAIClient(BaseLLMClient):
                     'tool_call_id': tool_call['id'],
                     'content': json.dumps(batch_result)
                 })
+                if batch_result.get('success'):
+                    object_changes.append({
+                        'action': 'create',
+                        'object_id': '',
+                        'object_name': parse_arguments(tool_call).get('name', '')
+                    })
 
         for tool_call in delete_calls:
             tool_name = get_tool_name(tool_call)
@@ -126,6 +137,12 @@ class OpenAIClient(BaseLLMClient):
                 'tool_call_id': tool_call['id'],
                 'content': json.dumps(delete_result)
             })
+            if delete_result.get('success'):
+                object_changes.append({
+                    'action': 'delete',
+                    'object_id': delete_result.get('id', ''),
+                    'object_name': arguments.get('name', '')
+                })
 
         for tool_call in update_calls:
             tool_name = get_tool_name(tool_call)
@@ -136,6 +153,12 @@ class OpenAIClient(BaseLLMClient):
                 'tool_call_id': tool_call['id'],
                 'content': json.dumps(update_result)
             })
+            if update_result.get('success'):
+                object_changes.append({
+                    'action': 'update',
+                    'object_id': update_result.get('id', ''),
+                    'object_name': arguments.get('new_name', arguments.get('name', ''))
+                })
 
         for tool_call in mcp_calls:
             tool_name = get_tool_name(tool_call)
@@ -147,7 +170,7 @@ class OpenAIClient(BaseLLMClient):
                 'content': json.dumps(tool_result)
             })
 
-        return tool_messages
+        return tool_messages, object_changes
 
 # ################################################################################################################################
 

@@ -82,3 +82,21 @@
     margin-bottom: 16px;
     opacity: 0.5;
 }
+
+.zato-row-highlight {
+    animation: zato-pulse 0.5s ease-in-out 3;
+}
+
+.zato-row-deleting {
+    animation: zato-fade-out 0.5s ease-out forwards;
+}
+
+@keyframes zato-pulse {
+    0%, 100% { background-color: inherit; }
+    50% { background-color: #ffffcc; }
+}
+
+@keyframes zato-fade-out {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}

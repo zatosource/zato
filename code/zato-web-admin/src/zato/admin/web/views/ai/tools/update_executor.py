@@ -199,7 +199,8 @@ def execute_update_security(client, cluster_id, arguments:'anydict') -> 'anydict
 
         if response.ok:
             new_name = arguments.get('new_name', name)
-            return {'success': True, 'message': f'Updated {sec_type} security definition: {new_name}'}
+            obj_id = existing_object.get('id') if isinstance(existing_object, dict) else getattr(existing_object, 'id', None)
+            return {'success': True, 'message': f'Updated {sec_type} security definition: {new_name}', 'id': obj_id}
         else:
             return {'success': False, 'error': f'Update failed: {response.details}'}
 
@@ -247,7 +248,8 @@ def execute_update_tool(client, cluster_id, cluster, tool_name:'str', arguments:
         if response.ok:
             new_name = arguments.get('new_name', target_name)
             object_type = tool_name.replace('update_', '').replace('_', ' ')
-            return {'success': True, 'message': f'Updated {object_type}: {new_name}'}
+            obj_id = existing_object.get('id') if isinstance(existing_object, dict) else getattr(existing_object, 'id', None)
+            return {'success': True, 'message': f'Updated {object_type}: {new_name}', 'id': obj_id}
         else:
             return {'success': False, 'error': f'Update failed: {response.details}'}
 

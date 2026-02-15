@@ -119,6 +119,7 @@
         },
 
         handleEvent: function(eventType, data, tabId, callbacks) {
+            console.log('[SSE] handleEvent:', eventType, data);
             if (eventType === 'chunk') {
                 if (callbacks.onChunk) {
                     callbacks.onChunk(data.text);
@@ -135,7 +136,76 @@
                     callbacks.onError(data.message);
                 }
                 this.disconnect(tabId);
+            } else if (eventType === 'object_changed') {
+                console.log('[SSE] object_changed event received:', data);
+                this.handleObjectChanged(data);
             }
+        },
+
+        handleObjectChanged: function(data) {
+            console.log('[SSE] handleObjectChanged:', data);
+            var action = data.action;
+            var objectId = data.object_id;
+            var objectName = data.object_name;
+
+            if (action === 'delete') {
+                var row = document.getElementById('tr_' + objectId);
+                if (row) {
+                    row.classList.add('zato-row-deleting');
+                    setTimeout(function() {
+                        row.remove();
+                    }, 500);
+                }
+            } else if (action === 'create' || action === 'update') {
+                this.refreshRow(objectId, objectName, action);
+            }
+        },
+
+        refreshRow: function(objectId, objectName, action) {
+            console.log('[SSE] refreshRow:', objectId, objectName, action);
+            fetch(window.location.href)
+                .then(function(response) {
+                    return response.text();
+                })
+                .then(function(html) {
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(html, 'text/html');
+                    var newRow = null;
+                    var oldRow = null;
+
+                    if (objectId) {
+                        newRow = doc.getElementById('tr_' + objectId);
+                        oldRow = document.getElementById('tr_' + objectId);
+                    } else if (objectName) {
+                        var nameSpans = doc.querySelectorAll('.name-value');
+                        for (var i = 0; i < nameSpans.length; i++) {
+                            if (nameSpans[i].textContent.trim() === objectName) {
+                                newRow = nameSpans[i].closest('tr');
+                                break;
+                            }
+                        }
+                    }
+
+                    console.log('[SSE] newRow found:', !!newRow, 'oldRow found:', !!oldRow);
+
+                    if (newRow) {
+                        if (oldRow) {
+                            oldRow.replaceWith(newRow);
+                        } else {
+                            var tbody = document.querySelector('#data-table tbody');
+                            if (tbody) {
+                                tbody.insertBefore(newRow, tbody.firstChild);
+                            }
+                        }
+                        newRow.classList.add('zato-row-highlight');
+                        setTimeout(function() {
+                            newRow.classList.remove('zato-row-highlight');
+                        }, 2000);
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Failed to refresh row:', error);
+                });
         },
 
         handleDisconnect: function(tabId, callbacks) {
@@ -156,18 +226,6 @@
             var connection = this.connections[tabId];
             if (connection) {
                 connection.active = false;
-                if (connection.abortController) {
-                    try {
-                        connection.abortController.abort();
-                    } catch (e) {
-                    }
-                }
-                if (connection.reader) {
-                    try {
-                        connection.reader.cancel();
-                    } catch (e) {
-                    }
-                }
                 delete this.connections[tabId];
             }
         },

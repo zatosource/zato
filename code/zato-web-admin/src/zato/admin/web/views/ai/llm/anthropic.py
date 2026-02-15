@@ -61,8 +61,14 @@ class AnthropicClient(BaseLLMClient):
             assistant_content = result.get('assistant_content', [])
             working_messages.append({'role': 'assistant', 'content': assistant_content})
 
-            tool_results = self._execute_tools_batched(tool_calls, all_tools)
+            tool_results, object_changes = self._execute_tools_batched(tool_calls, all_tools)
             working_messages.append({'role': 'user', 'content': tool_results})
+
+            logger.info('Object changes to yield: %s', object_changes)
+            for change in object_changes:
+                event = self._format_object_changed(change['action'], change['object_id'], change['object_name'])
+                logger.info('Yielding object_changed event: %s', event)
+                yield event
 
         yield self._format_done(total_input_tokens, total_output_tokens)
 
@@ -85,14 +91,16 @@ class AnthropicClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _execute_tools_batched(self, tool_calls:'list', all_tools:'anylist') -> 'list':
+    def _execute_tools_batched(self, tool_calls:'list', all_tools:'anylist') -> 'tuple':
         """ Executes tool calls, batching enmasse tools together.
+        Returns (tool_results, object_changes).
         """
         def get_tool_name(tc):
             return tc.get('name', '')
 
         enmasse_calls, delete_calls, update_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_results = []
+        object_changes = []
 
         if enmasse_calls:
             batch = [(tc.get('name'), tc.get('input', {})) for tc in enmasse_calls]
@@ -103,6 +111,12 @@ class AnthropicClient(BaseLLMClient):
                     'tool_use_id': tool_call['id'],
                     'content': json.dumps(batch_result)
                 })
+                if batch_result.get('success'):
+                    object_changes.append({
+                        'action': 'create',
+                        'object_id': '',
+                        'object_name': tool_call.get('input', {}).get('name', '')
+                    })
 
         for tool_call in delete_calls:
             tool_name = tool_call.get('name', '')
@@ -113,6 +127,12 @@ class AnthropicClient(BaseLLMClient):
                 'tool_use_id': tool_call['id'],
                 'content': json.dumps(delete_result)
             })
+            if delete_result.get('success'):
+                object_changes.append({
+                    'action': 'delete',
+                    'object_id': delete_result.get('id', ''),
+                    'object_name': arguments.get('name', '')
+                })
 
         for tool_call in update_calls:
             tool_name = tool_call.get('name', '')
@@ -123,6 +143,12 @@ class AnthropicClient(BaseLLMClient):
                 'tool_use_id': tool_call['id'],
                 'content': json.dumps(update_result)
             })
+            if update_result.get('success'):
+                object_changes.append({
+                    'action': 'update',
+                    'object_id': update_result.get('id', ''),
+                    'object_name': arguments.get('new_name', arguments.get('name', ''))
+                })
 
         for tool_call in mcp_calls:
             tool_name = tool_call.get('name', '')
@@ -134,7 +160,7 @@ class AnthropicClient(BaseLLMClient):
                 'content': json.dumps(tool_result)
             })
 
-        return tool_results
+        return tool_results, object_changes
 
 # ################################################################################################################################
 

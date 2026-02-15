@@ -107,6 +107,15 @@ def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None, c
                 yield error_event
                 return
 
+            elif response_type == 'object_changed':
+                changed_data = {
+                    'action': llm_response.get('action', ''),
+                    'object_id': llm_response.get('object_id', ''),
+                    'object_name': llm_response.get('object_name', '')
+                }
+                changed_event = _format_sse_event('object_changed', changed_data)
+                yield changed_event
+
     except Exception as e:
         logger.warning('Stream error: %s', format_exc())
         error_msg = str(e)
