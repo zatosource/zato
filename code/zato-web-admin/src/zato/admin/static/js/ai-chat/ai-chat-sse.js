@@ -248,6 +248,16 @@
                             console.log('[SSE-TRACE] tbody found:', !!tbody);
                             if (tbody) {
                                 var noResultsRow = tbody.querySelector('tr.ignore');
+                                if (!noResultsRow) {
+                                    var rows = tbody.querySelectorAll('tr');
+                                    for (var k = 0; k < rows.length; k++) {
+                                        var rowText = rows[k].textContent.trim();
+                                        if (rowText === 'No results' || rowText === 'No results.') {
+                                            noResultsRow = rows[k];
+                                            break;
+                                        }
+                                    }
+                                }
                                 console.log('[SSE-TRACE] noResultsRow found:', !!noResultsRow);
                                 if (noResultsRow) {
                                     console.log('[SSE-TRACE] removing noResultsRow');
