@@ -15,8 +15,9 @@ from urllib.request import Request, urlopen
 # Zato
 from zato.admin.web.views.ai.llm.base import BaseLLMClient
 from zato.admin.web.views.ai.mcp.registry import MCPRegistry
-from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools
+from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools, is_delete_tool
 from zato.admin.web.views.ai.tools.executor import execute_enmasse_batch, is_enmasse_tool
+from zato.admin.web.views.ai.tools.delete_executor import execute_delete_tool
 
 if 0:
     from zato.common.typing_ import anylist, generator_
@@ -130,12 +131,15 @@ class GoogleClient(BaseLLMClient):
         """ Executes tool calls, batching enmasse tools together.
         """
         enmasse_calls = []
+        delete_calls = []
         mcp_calls = []
 
         for tool_call in tool_calls:
             tool_name = tool_call.get('name', '')
             if is_enmasse_tool(tool_name):
                 enmasse_calls.append(tool_call)
+            elif is_delete_tool(tool_name):
+                delete_calls.append(tool_call)
             else:
                 mcp_calls.append(tool_call)
 
@@ -157,6 +161,25 @@ class GoogleClient(BaseLLMClient):
                         'response': batch_result
                     }
                 })
+
+        for tool_call in delete_calls:
+            tool_name = tool_call.get('name', '')
+            arguments = tool_call.get('args', {})
+            try:
+                delete_result = execute_delete_tool(
+                    self.zato_client, self.cluster_id, tool_name, arguments
+                )
+                logger.info('Delete tool %s result: %s', tool_name, delete_result)
+            except Exception as e:
+                logger.warning('Delete tool %s error: %s', tool_name, format_exc())
+                delete_result = {'success': False, 'error': str(e)}
+
+            tool_response_parts.append({
+                'functionResponse': {
+                    'name': tool_call['name'],
+                    'response': delete_result
+                }
+            })
 
         for tool_call in mcp_calls:
             tool_result = self._execute_mcp_tool(tool_call, all_tools)

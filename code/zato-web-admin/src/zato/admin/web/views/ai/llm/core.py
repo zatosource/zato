@@ -24,7 +24,7 @@ Provider_To_Client = {
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_llm_client(provider:'str', api_key:'str', zato_client:'any_'=None) -> 'BaseLLMClient':
+def get_llm_client(provider:'str', api_key:'str', zato_client:'any_'=None, cluster_id:'int'=None) -> 'BaseLLMClient':
     """ Returns an LLM client for the given provider.
     """
     client_class = Provider_To_Client.get(provider)
@@ -32,7 +32,7 @@ def get_llm_client(provider:'str', api_key:'str', zato_client:'any_'=None) -> 'B
     if not client_class:
         raise ValueError(f'Unknown provider: {provider}')
 
-    out = client_class(api_key, zato_client)
+    out = client_class(api_key, zato_client, cluster_id)
     return out
 
 # ################################################################################################################################
