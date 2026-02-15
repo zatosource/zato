@@ -105,17 +105,17 @@
 
 .ai-chat-waiting-text {
     display: inline-block;
-    background: linear-gradient(90deg, #6a9a6a 0%, #a0d0a0 50%, #6a9a6a 100%);
-    background-size: 200% 100%;
+    background: linear-gradient(90deg, #6a9a6a 0%, #6a9a6a 35%, #b0e0b0 50%, #6a9a6a 65%, #6a9a6a 100%);
+    background-size: 300% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: shine 2s linear infinite;
+    animation: shine 1.5s ease-in-out infinite;
 }
 
 @keyframes shine {
     0% { background-position: 100% 0; }
-    100% { background-position: -100% 0; }
+    100% { background-position: 0% 0; }
 }
 
 .ai-chat-message-content {

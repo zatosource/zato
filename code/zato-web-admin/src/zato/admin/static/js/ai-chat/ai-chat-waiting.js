@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    var waitingTexts = ['Working', 'Generating', 'In progress', 'Be right with you'];
+    var waitingTexts = ['Working ..', 'Generating ..', 'In progress ..', 'Be right with you ..'];
     var cycleDuration = 4000;
 
     var AIChatWaiting = {
