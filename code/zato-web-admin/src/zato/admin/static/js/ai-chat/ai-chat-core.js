@@ -121,6 +121,7 @@
             this.scrollActiveTabToBottom();
             this.highlightCode();
             AIChatZoom.applyAllZoneZooms(this.widget);
+            this.restoreInputContent();
 
             var input = this.widget.querySelector('#ai-chat-mcp-endpoint') ||
                         this.widget.querySelector('#ai-chat-mcp-edit-endpoint') ||
@@ -152,6 +153,13 @@
                     existingDropdown.parentNode.removeChild(existingDropdown);
                 }
                 ZatoDropdown.init(select);
+            }
+        },
+
+        restoreInputContent: function() {
+            var inputEl = this.widget.querySelector('.ai-chat-input[data-tab-id="' + this.activeTabId + '"]');
+            if (inputEl && window.AIChatInput) {
+                AIChatInput.restoreInputFromStorage(inputEl);
             }
         }
     };

@@ -71,6 +71,43 @@
                 return;
             }
             this.convertEmojisInInput(inputElement);
+            this.saveInputToStorage(inputElement);
+        },
+
+        saveInputToStorage: function(inputElement) {
+            var tabId = inputElement.getAttribute('data-tab-id');
+            if (!tabId) {
+                return;
+            }
+            var key = 'ai-chat-input-' + tabId;
+            var content = inputElement.innerHTML;
+            try {
+                localStorage.setItem(key, content);
+            } catch (e) {
+            }
+        },
+
+        restoreInputFromStorage: function(inputElement) {
+            var tabId = inputElement.getAttribute('data-tab-id');
+            if (!tabId) {
+                return;
+            }
+            var key = 'ai-chat-input-' + tabId;
+            try {
+                var content = localStorage.getItem(key);
+                if (content) {
+                    inputElement.innerHTML = content;
+                }
+            } catch (e) {
+            }
+        },
+
+        clearInputStorage: function(tabId) {
+            var key = 'ai-chat-input-' + tabId;
+            try {
+                localStorage.removeItem(key);
+            } catch (e) {
+            }
         },
 
         convertEmojisInInput: function(inputElement) {

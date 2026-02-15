@@ -10,6 +10,8 @@
             var message = AIChatInput.getMessageText(input);
             if (!message) return;
 
+            AIChatInput.clearInputStorage(tabId);
+
             var tab = AIChatTabs.getTabById(core.tabs, tabId);
             if (!tab) return;
 
@@ -147,13 +149,11 @@
                 }
             }
 
+            var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span class="ai-tool-checkmark">✓</span> Done</div>';
             if (progressOuterHTML) {
-                var firstPEnd = html.indexOf('</p>');
-                if (firstPEnd !== -1) {
-                    html = html.substring(0, firstPEnd + 4) + progressOuterHTML + html.substring(firstPEnd + 4);
-                } else {
-                    html = html + progressOuterHTML;
-                }
+                html = html.replace('<p>[TOOL_DONE]</p>', progressOuterHTML);
+            } else {
+                html = html.replace('<p>[TOOL_DONE]</p>', toolDoneHtml);
             }
 
             contentEl.innerHTML = html;
@@ -211,6 +211,7 @@
                 progressEl.innerHTML = '<span class="ai-tool-checkmark">✓</span> ' + data.message;
                 progressEl.classList.remove('ai-tool-running');
                 progressEl.classList.add('ai-tool-done');
+                AIChatMessages.appendToStreamingMessage(tabId, '\n\n[TOOL_DONE]');
                 console.log('[SSE-TRACE] set progressEl to done state, cursor stays hidden');
             }
 
