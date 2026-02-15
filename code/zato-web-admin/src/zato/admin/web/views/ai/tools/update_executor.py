@@ -131,6 +131,10 @@ def _find_object_by_name(client, cluster_id, list_service, list_params, target_n
 
 # ################################################################################################################################
 
+_field_mappings = {
+    'service_name': 'service',
+}
+
 def _build_edit_request(existing_object, updates, cluster_id, extra_params=None):
     """ Builds edit service request by merging existing object data with updates.
     """
@@ -139,13 +143,15 @@ def _build_edit_request(existing_object, updates, cluster_id, extra_params=None)
     if isinstance(existing_object, dict):
         for key, value in existing_object.items():
             if value is not None:
-                request[key] = value
+                mapped_key = _field_mappings.get(key, key)
+                request[mapped_key] = value
     else:
         for key in dir(existing_object):
             if not key.startswith('_'):
                 value = getattr(existing_object, key, None)
                 if value is not None and not callable(value):
-                    request[key] = value
+                    mapped_key = _field_mappings.get(key, key)
+                    request[mapped_key] = value
 
     if 'new_name' in updates:
         request['name'] = updates['new_name']
