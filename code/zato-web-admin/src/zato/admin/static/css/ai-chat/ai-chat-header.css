@@ -180,21 +180,21 @@
 }
 
 .ai-chat-tab-add {
-    padding: 10px 12px;
-    background: #2d2d2d;
+    padding: 4px 8px;
+    background: transparent;
     border: none;
     color: #888;
     font-size: 16px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease;
     border-radius: 4px;
     margin: 4px;
     text-shadow: none;
 }
 
 .ai-chat-tab-add:hover {
-    color: #4a9eff;
-    background: #333;
+    color: #888;
+    background: rgba(255, 255, 255, 0.1);
     text-shadow: none;
 }
 

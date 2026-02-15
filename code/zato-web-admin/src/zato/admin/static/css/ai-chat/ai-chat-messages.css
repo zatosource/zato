@@ -85,6 +85,7 @@
     content: '▋';
     animation: blink 1s infinite;
     margin-left: 2px;
+    opacity: 0.5;
 }
 
 @keyframes blink {
