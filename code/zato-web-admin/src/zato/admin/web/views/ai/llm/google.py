@@ -94,7 +94,7 @@ class GoogleClient(BaseLLMClient):
         def get_tool_name(tc):
             return tc.get('name', '')
 
-        enmasse_calls, delete_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
+        enmasse_calls, delete_calls, update_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_response_parts = []
 
         if enmasse_calls:
@@ -116,6 +116,17 @@ class GoogleClient(BaseLLMClient):
                 'functionResponse': {
                     'name': tool_call['name'],
                     'response': delete_result
+                }
+            })
+
+        for tool_call in update_calls:
+            tool_name = tool_call.get('name', '')
+            arguments = tool_call.get('args', {})
+            update_result = self._execute_update_tool(tool_name, arguments)
+            tool_response_parts.append({
+                'functionResponse': {
+                    'name': tool_call['name'],
+                    'response': update_result
                 }
             })
 

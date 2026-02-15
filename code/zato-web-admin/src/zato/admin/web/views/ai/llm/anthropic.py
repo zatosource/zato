@@ -91,7 +91,7 @@ class AnthropicClient(BaseLLMClient):
         def get_tool_name(tc):
             return tc.get('name', '')
 
-        enmasse_calls, delete_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
+        enmasse_calls, delete_calls, update_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_results = []
 
         if enmasse_calls:
@@ -112,6 +112,16 @@ class AnthropicClient(BaseLLMClient):
                 'type': 'tool_result',
                 'tool_use_id': tool_call['id'],
                 'content': json.dumps(delete_result)
+            })
+
+        for tool_call in update_calls:
+            tool_name = tool_call.get('name', '')
+            arguments = tool_call.get('input', {})
+            update_result = self._execute_update_tool(tool_name, arguments)
+            tool_results.append({
+                'type': 'tool_result',
+                'tool_use_id': tool_call['id'],
+                'content': json.dumps(update_result)
             })
 
         for tool_call in mcp_calls:

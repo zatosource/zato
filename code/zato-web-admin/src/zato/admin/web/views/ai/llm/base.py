@@ -13,9 +13,10 @@ from traceback import format_exc
 
 # Zato
 from zato.admin.web.views.ai.mcp.registry import MCPRegistry
-from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools, is_delete_tool
+from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools, is_delete_tool, is_update_tool
 from zato.admin.web.views.ai.tools.executor import execute_enmasse_batch, is_enmasse_tool
 from zato.admin.web.views.ai.tools.delete_executor import execute_delete_tool
+from zato.admin.web.views.ai.tools.update_executor import execute_update_tool
 from zato.common.ai.prompts.loader import get_system_prompt
 
 if 0:
@@ -35,10 +36,11 @@ class BaseLLMClient(ABC):
     """ Base class for LLM clients.
     """
 
-    def __init__(self, api_key:'str', zato_client:'any_'=None, cluster_id:'int'=None) -> 'None':
+    def __init__(self, api_key:'str', zato_client:'any_'=None, cluster_id:'int'=None, cluster:'any_'=None) -> 'None':
         self.api_key = api_key
         self.zato_client = zato_client
         self.cluster_id = cluster_id
+        self.cluster = cluster
         self.system_prompt = get_system_prompt()
 
 # ################################################################################################################################
@@ -122,10 +124,11 @@ class BaseLLMClient(ABC):
 # ################################################################################################################################
 
     def _categorize_tool_calls(self, tool_calls:'list', get_tool_name:'callable') -> 'tuple':
-        """ Categorizes tool calls into enmasse, delete, and mcp calls.
+        """ Categorizes tool calls into enmasse, delete, update, and mcp calls.
         """
         enmasse_calls = []
         delete_calls = []
+        update_calls = []
         mcp_calls = []
 
         for tool_call in tool_calls:
@@ -134,10 +137,12 @@ class BaseLLMClient(ABC):
                 enmasse_calls.append(tool_call)
             elif is_delete_tool(tool_name):
                 delete_calls.append(tool_call)
+            elif is_update_tool(tool_name):
+                update_calls.append(tool_call)
             else:
                 mcp_calls.append(tool_call)
 
-        return enmasse_calls, delete_calls, mcp_calls
+        return enmasse_calls, delete_calls, update_calls, mcp_calls
 
 # ################################################################################################################################
 
@@ -165,6 +170,21 @@ class BaseLLMClient(ABC):
             return delete_result
         except Exception as e:
             logger.warning('Delete tool %s error: %s', tool_name, format_exc())
+            return {'success': False, 'error': str(e)}
+
+# ################################################################################################################################
+
+    def _execute_update_tool(self, tool_name:'str', arguments:'dict') -> 'dict':
+        """ Executes an update tool call.
+        """
+        try:
+            update_result = execute_update_tool(
+                self.zato_client, self.cluster_id, self.cluster, tool_name, arguments
+            )
+            logger.info('Update tool %s result: %s', tool_name, update_result)
+            return update_result
+        except Exception as e:
+            logger.warning('Update tool %s error: %s', tool_name, format_exc())
             return {'success': False, 'error': str(e)}
 
 # ################################################################################################################################
