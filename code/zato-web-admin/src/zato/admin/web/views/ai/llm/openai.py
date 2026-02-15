@@ -9,15 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from logging import getLogger
-from traceback import format_exc
 from urllib.request import Request, urlopen
 
 # Zato
-from zato.admin.web.views.ai.llm.base import BaseLLMClient
-from zato.admin.web.views.ai.mcp.registry import MCPRegistry
-from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools, is_delete_tool
-from zato.admin.web.views.ai.tools.executor import execute_enmasse_batch, is_enmasse_tool
-from zato.admin.web.views.ai.tools.delete_executor import execute_delete_tool
+from zato.admin.web.views.ai.llm.base import BaseLLMClient, Max_Tool_Iterations
 
 if 0:
     from zato.common.typing_ import anylist, generator_
@@ -28,7 +23,6 @@ if 0:
 logger = getLogger(__name__)
 
 API_URL = 'https://api.openai.com/v1/chat/completions'
-Max_Tool_Iterations = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,39 +71,6 @@ class OpenAIClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _get_mcp_tools(self) -> 'anylist':
-        """ Gets all tools from enabled MCP servers.
-        """
-        try:
-            return MCPRegistry.get_all_tools()
-        except Exception as e:
-            logger.warning('Failed to get MCP tools: %s', e)
-            return []
-
-# ################################################################################################################################
-
-    def _get_enmasse_tools(self) -> 'anylist':
-        """ Gets all enmasse tools.
-        """
-        tools = get_enmasse_tools()
-        out = []
-        for tool in tools:
-            tool_copy = dict(tool)
-            tool_copy['_enmasse_tool'] = True
-            out.append(tool_copy)
-        return out
-
-# ################################################################################################################################
-
-    def _get_all_tools(self) -> 'anylist':
-        """ Gets all available tools (MCP + enmasse).
-        """
-        mcp_tools = self._get_mcp_tools()
-        enmasse_tools = self._get_enmasse_tools()
-        return mcp_tools + enmasse_tools
-
-# ################################################################################################################################
-
     def _convert_tools_to_openai_format(self, tools:'anylist') -> 'anylist':
         """ Converts tools to OpenAI function calling format.
         """
@@ -133,41 +94,22 @@ class OpenAIClient(BaseLLMClient):
     def _execute_tools_batched(self, tool_calls:'list', all_tools:'anylist') -> 'list':
         """ Executes tool calls, batching enmasse tools together.
         """
-        enmasse_calls = []
-        delete_calls = []
-        mcp_calls = []
+        def get_tool_name(tc):
+            return tc.get('function', {}).get('name', '')
 
-        for tool_call in tool_calls:
-            function = tool_call.get('function', {})
-            tool_name = function.get('name', '')
-            if is_enmasse_tool(tool_name):
-                enmasse_calls.append(tool_call)
-            elif is_delete_tool(tool_name):
-                delete_calls.append(tool_call)
-            else:
-                mcp_calls.append(tool_call)
+        def parse_arguments(tc):
+            arguments_str = tc.get('function', {}).get('arguments', '{}')
+            try:
+                return json.loads(arguments_str)
+            except json.JSONDecodeError:
+                return {}
 
+        enmasse_calls, delete_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_messages = []
 
         if enmasse_calls:
-            batch = []
-            for tc in enmasse_calls:
-                function = tc.get('function', {})
-                tool_name = function.get('name', '')
-                arguments_str = function.get('arguments', '{}')
-                try:
-                    arguments = json.loads(arguments_str)
-                except json.JSONDecodeError:
-                    arguments = {}
-                batch.append((tool_name, arguments))
-
-            try:
-                batch_result = execute_enmasse_batch(batch)
-                logger.info('Enmasse batch result: %s', batch_result)
-            except Exception as e:
-                logger.warning('Enmasse batch error: %s', format_exc())
-                batch_result = {'error': str(e)}
-
+            batch = [(get_tool_name(tc), parse_arguments(tc)) for tc in enmasse_calls]
+            batch_result = self._execute_enmasse_batch(batch)
             for tool_call in enmasse_calls:
                 tool_messages.append({
                     'role': 'tool',
@@ -176,23 +118,9 @@ class OpenAIClient(BaseLLMClient):
                 })
 
         for tool_call in delete_calls:
-            function = tool_call.get('function', {})
-            tool_name = function.get('name', '')
-            arguments_str = function.get('arguments', '{}')
-            try:
-                arguments = json.loads(arguments_str)
-            except json.JSONDecodeError:
-                arguments = {}
-
-            try:
-                delete_result = execute_delete_tool(
-                    self.zato_client, self.cluster_id, tool_name, arguments
-                )
-                logger.info('Delete tool %s result: %s', tool_name, delete_result)
-            except Exception as e:
-                logger.warning('Delete tool %s error: %s', tool_name, format_exc())
-                delete_result = {'success': False, 'error': str(e)}
-
+            tool_name = get_tool_name(tool_call)
+            arguments = parse_arguments(tool_call)
+            delete_result = self._execute_delete_tool(tool_name, arguments)
             tool_messages.append({
                 'role': 'tool',
                 'tool_call_id': tool_call['id'],
@@ -200,7 +128,9 @@ class OpenAIClient(BaseLLMClient):
             })
 
         for tool_call in mcp_calls:
-            tool_result = self._execute_mcp_tool(tool_call, all_tools)
+            tool_name = get_tool_name(tool_call)
+            arguments = parse_arguments(tool_call)
+            tool_result = self._execute_mcp_tool_core(tool_name, arguments, all_tools)
             tool_messages.append({
                 'role': 'tool',
                 'tool_call_id': tool_call['id'],
@@ -208,45 +138,6 @@ class OpenAIClient(BaseLLMClient):
             })
 
         return tool_messages
-
-# ################################################################################################################################
-
-    def _execute_mcp_tool(self, tool_call:'dict', all_tools:'anylist') -> 'dict':
-        """ Executes a single MCP tool call.
-        """
-        function = tool_call.get('function', {})
-        tool_name = function.get('name', '')
-        arguments_str = function.get('arguments', '{}')
-
-        try:
-            arguments = json.loads(arguments_str)
-        except json.JSONDecodeError:
-            arguments = {}
-
-        tool_def = None
-        for tool in all_tools:
-            if tool.get('name') == tool_name:
-                tool_def = tool
-                break
-
-        if not tool_def:
-            return {'error': f'Tool {tool_name} not found'}
-
-        server_id = tool_def.get('_mcp_server_id')
-        if not server_id:
-            return {'error': f'MCP server not found for tool {tool_name}'}
-
-        client = MCPRegistry.get_client(server_id)
-        if not client:
-            return {'error': f'MCP server {server_id} not available'}
-
-        try:
-            result = client.invoke_tool(tool_name, arguments)
-            logger.info('MCP tool %s result: %s', tool_name, result)
-            return result
-        except Exception as e:
-            logger.warning('MCP tool %s error: %s', tool_name, format_exc())
-            return {'error': str(e)}
 
 # ################################################################################################################################
 

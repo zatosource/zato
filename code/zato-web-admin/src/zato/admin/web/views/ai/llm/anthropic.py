@@ -9,15 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from logging import getLogger
-from traceback import format_exc
 from urllib.request import Request, urlopen
 
 # Zato
-from zato.admin.web.views.ai.llm.base import BaseLLMClient
-from zato.admin.web.views.ai.mcp.registry import MCPRegistry
-from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools, is_delete_tool
-from zato.admin.web.views.ai.tools.executor import execute_enmasse_batch, is_enmasse_tool
-from zato.admin.web.views.ai.tools.delete_executor import execute_delete_tool
+from zato.admin.web.views.ai.llm.base import BaseLLMClient, Max_Tool_Iterations
 
 if 0:
     from zato.common.typing_ import anylist, generator_
@@ -29,7 +24,6 @@ logger = getLogger(__name__)
 
 API_URL = 'https://api.anthropic.com/v1/messages'
 API_Version = '2023-06-01'
-Max_Tool_Iterations = 10
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -74,39 +68,6 @@ class AnthropicClient(BaseLLMClient):
 
 # ################################################################################################################################
 
-    def _get_mcp_tools(self) -> 'anylist':
-        """ Gets all tools from enabled MCP servers.
-        """
-        try:
-            return MCPRegistry.get_all_tools()
-        except Exception as e:
-            logger.warning('Failed to get MCP tools: %s', e)
-            return []
-
-# ################################################################################################################################
-
-    def _get_enmasse_tools(self) -> 'anylist':
-        """ Gets all enmasse tools.
-        """
-        tools = get_enmasse_tools()
-        out = []
-        for tool in tools:
-            tool_copy = dict(tool)
-            tool_copy['_enmasse_tool'] = True
-            out.append(tool_copy)
-        return out
-
-# ################################################################################################################################
-
-    def _get_all_tools(self) -> 'anylist':
-        """ Gets all available tools (MCP + enmasse).
-        """
-        mcp_tools = self._get_mcp_tools()
-        enmasse_tools = self._get_enmasse_tools()
-        return mcp_tools + enmasse_tools
-
-# ################################################################################################################################
-
     def _convert_tools_to_anthropic_format(self, mcp_tools:'anylist') -> 'anylist':
         """ Converts MCP tools to Anthropic tool format.
         """
@@ -127,30 +88,15 @@ class AnthropicClient(BaseLLMClient):
     def _execute_tools_batched(self, tool_calls:'list', all_tools:'anylist') -> 'list':
         """ Executes tool calls, batching enmasse tools together.
         """
-        enmasse_calls = []
-        delete_calls = []
-        mcp_calls = []
+        def get_tool_name(tc):
+            return tc.get('name', '')
 
-        for tool_call in tool_calls:
-            tool_name = tool_call.get('name', '')
-            if is_enmasse_tool(tool_name):
-                enmasse_calls.append(tool_call)
-            elif is_delete_tool(tool_name):
-                delete_calls.append(tool_call)
-            else:
-                mcp_calls.append(tool_call)
-
+        enmasse_calls, delete_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_results = []
 
         if enmasse_calls:
             batch = [(tc.get('name'), tc.get('input', {})) for tc in enmasse_calls]
-            try:
-                batch_result = execute_enmasse_batch(batch)
-                logger.info('Enmasse batch result: %s', batch_result)
-            except Exception as e:
-                logger.warning('Enmasse batch error: %s', format_exc())
-                batch_result = {'error': str(e)}
-
+            batch_result = self._execute_enmasse_batch(batch)
             for tool_call in enmasse_calls:
                 tool_results.append({
                     'type': 'tool_result',
@@ -161,15 +107,7 @@ class AnthropicClient(BaseLLMClient):
         for tool_call in delete_calls:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('input', {})
-            try:
-                delete_result = execute_delete_tool(
-                    self.zato_client, self.cluster_id, tool_name, arguments
-                )
-                logger.info('Delete tool %s result: %s', tool_name, delete_result)
-            except Exception as e:
-                logger.warning('Delete tool %s error: %s', tool_name, format_exc())
-                delete_result = {'success': False, 'error': str(e)}
-
+            delete_result = self._execute_delete_tool(tool_name, arguments)
             tool_results.append({
                 'type': 'tool_result',
                 'tool_use_id': tool_call['id'],
@@ -177,7 +115,9 @@ class AnthropicClient(BaseLLMClient):
             })
 
         for tool_call in mcp_calls:
-            tool_result = self._execute_mcp_tool(tool_call, all_tools)
+            tool_name = tool_call.get('name', '')
+            arguments = tool_call.get('input', {})
+            tool_result = self._execute_mcp_tool_core(tool_name, arguments, all_tools)
             tool_results.append({
                 'type': 'tool_result',
                 'tool_use_id': tool_call['id'],
@@ -185,39 +125,6 @@ class AnthropicClient(BaseLLMClient):
             })
 
         return tool_results
-
-# ################################################################################################################################
-
-    def _execute_mcp_tool(self, tool_call:'dict', all_tools:'anylist') -> 'dict':
-        """ Executes a single MCP tool call.
-        """
-        tool_name = tool_call.get('name', '')
-        arguments = tool_call.get('input', {})
-
-        tool_def = None
-        for tool in all_tools:
-            if tool.get('name') == tool_name:
-                tool_def = tool
-                break
-
-        if not tool_def:
-            return {'error': f'Tool {tool_name} not found'}
-
-        server_id = tool_def.get('_mcp_server_id')
-        if not server_id:
-            return {'error': f'MCP server not found for tool {tool_name}'}
-
-        client = MCPRegistry.get_client(server_id)
-        if not client:
-            return {'error': f'MCP server {server_id} not available'}
-
-        try:
-            result = client.invoke_tool(tool_name, arguments)
-            logger.info('MCP tool %s result: %s', tool_name, result)
-            return result
-        except Exception as e:
-            logger.warning('MCP tool %s error: %s', tool_name, format_exc())
-            return {'error': str(e)}
 
 # ################################################################################################################################
 
