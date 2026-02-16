@@ -3,7 +3,7 @@
 
     var waitingTexts = ['Working ..', 'Generating ..', 'In progress ..', 'Be right with you ..'];
     var cycleDuration = 4000;
-    var idleThreshold = 2000;
+    var idleThreshold = 100;
     var minDisplayTime = 100;
 
     var AIChatWaiting = {
@@ -71,12 +71,15 @@
         },
 
         startIdleWatch: function(tabId, contentEl) {
+            console.log('[IDLE-TRACE] startIdleWatch called, tabId:', tabId, 'contentEl:', !!contentEl);
             if (this.idleTimers[tabId]) {
+                console.log('[IDLE-TRACE] timer already exists for tabId:', tabId);
                 return;
             }
 
             this.lastActivityTime[tabId] = Date.now();
-            this.cyclingElements[tabId] = contentEl;
+            this.cyclingElements[tabId] = tabId;
+            console.log('[IDLE-TRACE] set lastActivityTime and cyclingElements for tabId:', tabId);
 
             var self = this;
             this.idleTimers[tabId] = setInterval(function() {
@@ -85,9 +88,11 @@
                 var idleTime = now - lastActivity;
 
                 if (idleTime >= idleThreshold) {
+                    console.log('[IDLE-TRACE] idle threshold reached, idleTime:', idleTime, 'calling showCyclingText');
                     self.showCyclingText(tabId);
                 }
-            }, 500);
+            }, 100);
+            console.log('[IDLE-TRACE] interval started for tabId:', tabId);
         },
 
         stopIdleWatch: function(tabId) {
@@ -101,14 +106,27 @@
         },
 
         showCyclingText: function(tabId) {
-            var contentEl = this.cyclingElements[tabId];
+            var messagesContainer = document.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            if (!messagesContainer) {
+                return;
+            }
+
+            var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+            if (!streamingEl) {
+                return;
+            }
+
+            var contentEl = streamingEl.querySelector('.ai-chat-message-content');
             if (!contentEl) {
                 return;
             }
 
             var waitingEl = contentEl.querySelector('.ai-chat-waiting-indicator');
             if (!waitingEl) {
-                return;
+                waitingEl = document.createElement('span');
+                waitingEl.className = 'ai-chat-waiting-indicator';
+                waitingEl.innerHTML = '<span class="ai-chat-waiting-cursor">▋</span><span class="ai-chat-waiting-text"></span>';
+                contentEl.appendChild(waitingEl);
             }
 
             var textEl = waitingEl.querySelector('.ai-chat-waiting-text');
@@ -119,7 +137,17 @@
         },
 
         hideCyclingText: function(tabId) {
-            var contentEl = this.cyclingElements[tabId];
+            var messagesContainer = document.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            if (!messagesContainer) {
+                return;
+            }
+
+            var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+            if (!streamingEl) {
+                return;
+            }
+
+            var contentEl = streamingEl.querySelector('.ai-chat-message-content');
             if (!contentEl) {
                 return;
             }

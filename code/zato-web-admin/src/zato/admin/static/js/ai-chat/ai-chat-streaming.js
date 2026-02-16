@@ -58,14 +58,22 @@
 
             var self = this;
             var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            console.log('[IDLE-TRACE] messagesContainer:', !!messagesContainer);
             if (messagesContainer) {
                 var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+                console.log('[IDLE-TRACE] streamingEl:', !!streamingEl);
                 if (streamingEl) {
                     var contentEl = streamingEl.querySelector('.ai-chat-message-content');
+                    console.log('[IDLE-TRACE] contentEl:', !!contentEl);
                     if (contentEl) {
+                        var waitingEl = contentEl.querySelector('.ai-chat-waiting-indicator');
+                        console.log('[IDLE-TRACE] waitingEl:', !!waitingEl);
+                        console.log('[IDLE-TRACE] calling startIdleWatch for tabId:', tabId);
                         AIChatWaiting.startIdleWatch(tabId, contentEl);
                     }
                 }
+            } else {
+                console.log('[IDLE-TRACE] no messagesContainer found');
             }
 
             AIChatAPI.streamMessage(tabId, model, apiMessages, {
