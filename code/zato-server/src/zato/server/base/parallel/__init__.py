@@ -376,29 +376,29 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def add_pickup_conf_from_code_dir(self) -> 'None':
 
-        # The built-in code directory for services
-        code_dir = os.path.join(self.base_dir, 'code', 'impl', 'src', 'api')
+        # The services pickup directory
+        pickup_services_dir = os.path.join(self.base_dir, 'code', 'impl', 'src', 'api')
 
-        # The legacy pickup directory that should become a symlink
-        pickup_services_dir = os.path.join(self.base_dir, 'pickup', 'incoming', 'services')
+        # The old pickup directory that should become a symlink
+        pickup_services_dir_symlink = os.path.join(self.base_dir, 'pickup', 'incoming', 'services')
 
-        # Create the code directory if it does not exist
-        if not os.path.exists(code_dir):
-            os.makedirs(code_dir)
-            logger.info('Created code directory `%s`', code_dir)
+        # Create the pickup services directory if it does not exist
+        if not os.path.exists(pickup_services_dir):
+            os.makedirs(pickup_services_dir)
+            logger.info('Created pickup services directory `%s`', pickup_services_dir)
 
-        # Make pickup/incoming/services a symlink to code/impl/src/api
-        if os.path.islink(pickup_services_dir):
-            os.unlink(pickup_services_dir)
+        # Make the old directory a symlink to the new one
+        if os.path.islink(pickup_services_dir_symlink):
+            os.unlink(pickup_services_dir_symlink)
 
-        elif os.path.isdir(pickup_services_dir):
-            shutil.rmtree(pickup_services_dir)
+        elif os.path.isdir(pickup_services_dir_symlink):
+            shutil.rmtree(pickup_services_dir_symlink)
 
-        os.symlink(code_dir, pickup_services_dir)
-        logger.info('Created symlink `%s` -> `%s`', pickup_services_dir, code_dir)
+        os.symlink(pickup_services_dir, pickup_services_dir_symlink)
+        logger.info('Created symlink `%s` -> `%s`', pickup_services_dir_symlink, pickup_services_dir)
 
         # Add it to hot-deploy pickup
-        self.add_pickup_conf_from_local_path(code_dir, 'CodeDir')
+        self.add_pickup_conf_from_local_path(pickup_services_dir, 'CodeDir')
 
 # ################################################################################################################################
 

@@ -276,7 +276,6 @@ directories = (
     'pickup',
     'pickup/incoming',
     'pickup/processed',
-    'pickup/incoming/services',
     'pickup/incoming/user',
     'pickup/incoming/user-conf',
     'work',
