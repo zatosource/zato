@@ -8,10 +8,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from logging import getLogger
 from traceback import format_exc
 
 # Zato
+from zato.admin.web.views.ai.browser_tools import get_browser_tool_schemas, is_browser_tool
 from zato.admin.web.views.ai.mcp.registry import MCPRegistry
 from zato.admin.web.views.ai.llm.execution import build_execution_context
 from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools, is_delete_tool, is_update_tool
@@ -29,6 +31,18 @@ if 0:
 logger = getLogger(__name__)
 
 Max_Tool_Iterations = 10
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass
+class CategorizedToolCalls:
+    enmasse: 'list' = field(default_factory=list)
+    delete: 'list' = field(default_factory=list)
+    update: 'list' = field(default_factory=list)
+    service: 'list' = field(default_factory=list)
+    browser: 'list' = field(default_factory=list)
+    mcp: 'list' = field(default_factory=list)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -154,11 +168,14 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
-    def _get_tool_progress_message(self, tool_names:'list', is_done:'bool'=False) -> 'str':
+    def _get_tool_progress_message(self, tool_names:'list', is_done:'bool'=False, tool_params:'list'=None) -> 'str':
         """ Generates an appropriate progress message based on tool names.
+        tool_params: optional list of dicts with tool parameters (same order as tool_names)
         """
         if not tool_names:
             return 'Processing...' if not is_done else 'Done'
+
+        tool_params = tool_params or []
 
         create_count = 0
         update_count = 0
@@ -166,8 +183,11 @@ class BaseLLMClient(ABC):
         deploy_count = 0
         search_doc = False
         get_doc = False
+        search_internet_query = None
+        visit_page_url = None
 
-        for name in tool_names:
+        for i, name in enumerate(tool_names):
+            params = tool_params[i] if i < len(tool_params) else {}
             if name.startswith('create_'):
                 create_count += 1
             elif name.startswith('update_'):
@@ -180,9 +200,20 @@ class BaseLLMClient(ABC):
                 search_doc = True
             elif name == 'get_document_content':
                 get_doc = True
+            elif name == 'search_internet':
+                search_internet_query = params.get('query', '')
+            elif name == 'visit_page':
+                visit_page_url = params.get('url', '')
 
         parts = []
 
+        if search_internet_query:
+            query_display = search_internet_query[:50] + '...' if len(search_internet_query) > 50 else search_internet_query
+            parts.append(f'Searching the internet: "{query_display}"' if not is_done else f'Searched the internet: "{query_display}"')
+        if visit_page_url:
+            url_display = visit_page_url[:60] + '...' if len(visit_page_url) > 60 else visit_page_url
+            url_link = f'<a href="{visit_page_url}" target="_blank" class="ai-tool-link">{url_display}</a>'
+            parts.append(f'Visiting page: {url_link}' if not is_done else f'Visited page: {url_link}')
         if search_doc:
             parts.append('Searching documentation' if not is_done else 'Searched documentation')
         if get_doc:
@@ -210,19 +241,19 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
-    def _yield_tool_progress_start(self, count:'int', tool_names:'list'=None) -> 'generator_':
+    def _yield_tool_progress_start(self, count:'int', tool_names:'list'=None, tool_params:'list'=None) -> 'generator_':
         """ Yields a tool progress start event.
         """
-        msg = self._get_tool_progress_message(tool_names or [], is_done=False)
+        msg = self._get_tool_progress_message(tool_names or [], is_done=False, tool_params=tool_params)
         yield self._format_tool_progress('start', total=count, completed=0, message=msg)
 
 # ################################################################################################################################
 
-    def _yield_tool_progress_done(self, count:'int', items:'list'=None, tool_names:'list'=None) -> 'generator_':
+    def _yield_tool_progress_done(self, count:'int', items:'list'=None, tool_names:'list'=None, tool_params:'list'=None) -> 'generator_':
         """ Yields a tool progress done event followed by a newline chunk.
         items: list of dicts with 'type' and 'name' keys for created objects
         """
-        msg = self._get_tool_progress_message(tool_names or [], is_done=True)
+        msg = self._get_tool_progress_message(tool_names or [], is_done=True, tool_params=tool_params)
         yield self._format_tool_progress('done', total=count, completed=count, message=msg, items=items)
         yield self._format_chunk('\n\n')
 
@@ -253,37 +284,36 @@ class BaseLLMClient(ABC):
 # ################################################################################################################################
 
     def _get_all_tools(self) -> 'anylist':
-        """ Gets all available tools (MCP + enmasse).
+        """ Gets all available tools (MCP + enmasse + browser).
         """
         mcp_tools = self._get_mcp_tools()
         enmasse_tools = self._get_enmasse_tools()
-        return mcp_tools + enmasse_tools
+        browser_tools = get_browser_tool_schemas()
+        return mcp_tools + enmasse_tools + browser_tools
 
 # ################################################################################################################################
 
-    def _categorize_tool_calls(self, tool_calls:'list', get_tool_name:'callable') -> 'tuple':
-        """ Categorizes tool calls into enmasse, delete, update, service, and mcp calls.
+    def _categorize_tool_calls(self, tool_calls:'list', get_tool_name:'callable') -> 'CategorizedToolCalls':
+        """ Categorizes tool calls into enmasse, delete, update, service, browser, and mcp calls.
         """
-        enmasse_calls = []
-        delete_calls = []
-        update_calls = []
-        service_calls = []
-        mcp_calls = []
+        result = CategorizedToolCalls()
 
         for tool_call in tool_calls:
             tool_name = get_tool_name(tool_call)
             if is_enmasse_tool(tool_name):
-                enmasse_calls.append(tool_call)
+                result.enmasse.append(tool_call)
             elif is_delete_tool(tool_name):
-                delete_calls.append(tool_call)
+                result.delete.append(tool_call)
             elif is_update_tool(tool_name):
-                update_calls.append(tool_call)
+                result.update.append(tool_call)
             elif is_service_tool(tool_name):
-                service_calls.append(tool_call)
+                result.service.append(tool_call)
+            elif is_browser_tool(tool_name):
+                result.browser.append(tool_call)
             else:
-                mcp_calls.append(tool_call)
+                result.mcp.append(tool_call)
 
-        return enmasse_calls, delete_calls, update_calls, service_calls, mcp_calls
+        return result
 
 # ################################################################################################################################
 
@@ -340,6 +370,47 @@ class BaseLLMClient(ABC):
         except Exception as e:
             logger.warning('Service tool %s error: %s', tool_name, format_exc())
             return {'success': False, 'error': str(e)}
+
+# ################################################################################################################################
+
+    def _execute_browser_tool(self, tool_name:'str', arguments:'dict') -> 'generator_':
+        """ Executes a browser tool by yielding an SSE event and waiting for Redis response.
+        This is a generator that yields SSE events and returns the result.
+        """
+        from uuid import uuid4
+        from zato.admin.web.views.ai.common import get_redis_client
+        from zato.common.json_internal import loads
+
+        request_id = uuid4().hex
+        redis_key = 'zato.ai.browser-tool.' + request_id
+
+        logger.info('Executing browser tool %s with request_id %s, params: %s', tool_name, request_id, arguments)
+
+        event = {
+            'type': 'browser_tool',
+            'request_id': request_id,
+            'tool_name': tool_name,
+            'params': arguments
+        }
+        yield event
+
+        redis_client = get_redis_client()
+        logger.info('Waiting for browser tool result on key %s', redis_key)
+
+        result = redis_client.blpop(redis_key, timeout=60)
+
+        if result is None:
+            logger.warning('Browser tool %s timed out after 60 seconds', tool_name)
+            return {'success': False, 'error': 'Browser tool timed out after 60 seconds'}
+
+        _, result_json = result
+        result_data = loads(result_json)
+
+        redis_client.delete(redis_key)
+
+        logger.info('Browser tool %s completed with result: %s', tool_name, result_data)
+
+        return result_data
 
 # ################################################################################################################################
 

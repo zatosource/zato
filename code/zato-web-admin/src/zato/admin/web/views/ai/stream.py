@@ -124,6 +124,15 @@ def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None, c
                 progress_event = _format_sse_event('tool_progress', progress_data)
                 yield progress_event
 
+            elif response_type == 'browser_tool':
+                browser_data = {
+                    'request_id': llm_response.get('request_id', ''),
+                    'tool_name': llm_response.get('tool_name', ''),
+                    'params': llm_response.get('params', {})
+                }
+                browser_event = _format_sse_event('browser_tool', browser_data)
+                yield browser_event
+
     except Exception as e:
         logger.warning('Stream error: %s', format_exc())
         error_msg = str(e)
@@ -197,6 +206,108 @@ def invoke(req) -> 'StreamingHttpResponse':
     response['X-Accel-Buffering'] = 'no'
 
     return response
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def browser_tool_result(req):
+    """ Callback endpoint for browser tool results.
+    """
+    from django.http import JsonResponse
+    from zato.admin.web.views.ai.browser_tools import submit_browser_tool_result
+
+    try:
+        body = loads(req.body)
+        request_id = body.get('request_id', '')
+        result = body.get('result', {})
+
+        if not request_id:
+            return JsonResponse({'success': False, 'error': 'Missing request_id'})
+
+        submit_browser_tool_result(request_id, result)
+
+        return JsonResponse({'success': True})
+
+    except Exception as e:
+        logger.warning('Browser tool result error: %s', format_exc())
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def fetch_page(req):
+    """ Proxy endpoint for fetching web pages server-side using curl_cffi.
+    """
+    from django.http import JsonResponse
+    from curl_cffi import requests as curl_requests
+    from html.parser import HTMLParser
+
+    class TextExtractor(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.text_parts = []
+            self.skip_tags = {'script', 'style', 'noscript', 'head', 'meta', 'link'}
+            self.current_tag = None
+
+        def handle_starttag(self, tag, attrs):
+            self.current_tag = tag
+
+        def handle_endtag(self, tag):
+            self.current_tag = None
+
+        def handle_data(self, data):
+            if self.current_tag not in self.skip_tags:
+                text = data.strip()
+                if text:
+                    self.text_parts.append(text)
+
+        def get_text(self):
+            return ' '.join(self.text_parts)
+
+    try:
+        body = loads(req.body)
+        url = body.get('url', '')
+
+        if not url:
+            return JsonResponse({'success': False, 'error': 'Missing url'})
+
+        if not url.startswith(('http://', 'https://')):
+            return JsonResponse({'success': False, 'error': 'Invalid url'})
+
+        response = curl_requests.get(
+            url,
+            impersonate='chrome',
+            timeout=30,
+            allow_redirects=True
+        )
+
+        html = response.text
+        title = ''
+
+        title_start = html.lower().find('<title>')
+        if title_start != -1:
+            title_end = html.lower().find('</title>', title_start)
+            if title_end != -1:
+                title = html[title_start + 7:title_end].strip()
+
+        extractor = TextExtractor()
+        extractor.feed(html)
+        content = extractor.get_text()
+
+        if len(content) > 15000:
+            content = content[:15000] + '...'
+
+        return JsonResponse({
+            'success': True,
+            'url': url,
+            'title': title,
+            'content': content,
+            'status_code': response.status_code
+        })
+
+    except Exception as e:
+        logger.warning('Fetch page error: %s', format_exc())
+        return JsonResponse({'success': False, 'url': url, 'error': str(e)})
 
 # ################################################################################################################################
 # ################################################################################################################################

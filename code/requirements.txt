@@ -11,6 +11,7 @@ chardet==5.2.0
 colorama==0.4.6
 configparser==7.1.0
 cryptography==46.0.5
+curl-cffi==0.15.0b3
 dacite==1.6.0
 dateparser==0.7.6
 ddtrace==4.2.2

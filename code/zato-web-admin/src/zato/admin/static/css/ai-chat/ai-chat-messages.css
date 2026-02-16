@@ -568,6 +568,15 @@
     padding: 6px 12px;
 }
 
+.ai-tool-link {
+    color: var(--ai-chat-link-color);
+    text-decoration: none;
+}
+
+.ai-tool-link:hover {
+    text-decoration: none;
+}
+
 .ai-tool-items-list td a {
     color: var(--ai-chat-link-color);
     text-decoration: none;

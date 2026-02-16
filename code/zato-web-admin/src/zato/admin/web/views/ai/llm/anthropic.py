@@ -64,10 +64,29 @@ class AnthropicClient(BaseLLMClient):
             working_messages.append({'role': 'assistant', 'content': assistant_content})
 
             tool_names = [tc.get('name', '') for tc in tool_calls]
-            yield from self._yield_tool_progress_start(len(tool_calls), tool_names=tool_names)
+            tool_params = [tc.get('input', {}) for tc in tool_calls]
+            yield from self._yield_tool_progress_start(len(tool_calls), tool_names=tool_names, tool_params=tool_params)
 
             records_before = len(execution_log.records)
-            tool_results = self._execute_tools_batched(tool_calls, all_tools, execution_log)
+            tool_results, browser_calls = self._execute_tools_batched(tool_calls, all_tools, execution_log)
+
+            for browser_call in browser_calls:
+                browser_tool_name = browser_call.get('name', '')
+                browser_arguments = browser_call.get('input', {})
+                browser_result = yield from self._execute_browser_tool(browser_tool_name, browser_arguments)
+                tool_results.append({
+                    'type': 'tool_result',
+                    'tool_use_id': browser_call['id'],
+                    'content': json.dumps(browser_result)
+                })
+                execution_log.add(
+                    tool_name=browser_tool_name,
+                    arguments=browser_arguments,
+                    result=browser_result,
+                    success=browser_result.get('success', False),
+                    error=browser_result.get('error')
+                )
+
             working_messages.append({'role': 'user', 'content': tool_results})
 
             new_records = execution_log.records[records_before:]
@@ -79,7 +98,7 @@ class AnthropicClient(BaseLLMClient):
                         'name': record.object_name
                     })
             logger.info('Tool progress done items: %s', new_items)
-            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items, tool_names=tool_names)
+            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items, tool_names=tool_names, tool_params=tool_params)
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()
@@ -131,10 +150,10 @@ class AnthropicClient(BaseLLMClient):
         def get_tool_name(tc):
             return tc.get('name', '')
 
-        enmasse_calls, delete_calls, update_calls, service_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
+        categorized = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_results = []
 
-        for tool_call in service_calls:
+        for tool_call in categorized.service:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('input', {})
             service_result = self._execute_service_tool(tool_name, arguments)
@@ -151,10 +170,10 @@ class AnthropicClient(BaseLLMClient):
                 error=service_result.get('error')
             )
 
-        if enmasse_calls:
-            batch = [(tc.get('name'), tc.get('input', {})) for tc in enmasse_calls]
+        if categorized.enmasse:
+            batch = [(tc.get('name'), tc.get('input', {})) for tc in categorized.enmasse]
             batch_result = self._execute_enmasse_batch(batch)
-            for tool_call in enmasse_calls:
+            for tool_call in categorized.enmasse:
                 tool_results.append({
                     'type': 'tool_result',
                     'tool_use_id': tool_call['id'],
@@ -168,7 +187,7 @@ class AnthropicClient(BaseLLMClient):
                     error=batch_result.get('error')
                 )
 
-        for tool_call in delete_calls:
+        for tool_call in categorized.delete:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('input', {})
             delete_result = self._execute_delete_tool(tool_name, arguments)
@@ -185,7 +204,7 @@ class AnthropicClient(BaseLLMClient):
                 error=delete_result.get('error')
             )
 
-        for tool_call in update_calls:
+        for tool_call in categorized.update:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('input', {})
             update_result = self._execute_update_tool(tool_name, arguments)
@@ -202,7 +221,7 @@ class AnthropicClient(BaseLLMClient):
                 error=update_result.get('error')
             )
 
-        for tool_call in mcp_calls:
+        for tool_call in categorized.mcp:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('input', {})
             tool_result = self._execute_mcp_tool_core(tool_name, arguments, all_tools)
@@ -219,7 +238,7 @@ class AnthropicClient(BaseLLMClient):
                 error=tool_result.get('error')
             )
 
-        return tool_results
+        return tool_results, categorized.browser
 
 # ################################################################################################################################
 

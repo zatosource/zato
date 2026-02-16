@@ -62,10 +62,30 @@ class GoogleClient(BaseLLMClient):
             working_messages.append({'role': 'assistant', 'parts': assistant_content})
 
             tool_names = [tc.get('name', '') for tc in tool_calls]
-            yield from self._yield_tool_progress_start(len(tool_calls), tool_names=tool_names)
+            tool_params = [tc.get('args', {}) for tc in tool_calls]
+            yield from self._yield_tool_progress_start(len(tool_calls), tool_names=tool_names, tool_params=tool_params)
 
             records_before = len(execution_log.records)
-            tool_response_parts = self._execute_tools_batched(tool_calls, all_tools, execution_log)
+            tool_response_parts, browser_calls = self._execute_tools_batched(tool_calls, all_tools, execution_log)
+
+            for browser_call in browser_calls:
+                browser_tool_name = browser_call.get('name', '')
+                browser_arguments = browser_call.get('args', {})
+                browser_result = yield from self._execute_browser_tool(browser_tool_name, browser_arguments)
+                tool_response_parts.append({
+                    'functionResponse': {
+                        'name': browser_tool_name,
+                        'response': browser_result
+                    }
+                })
+                execution_log.add(
+                    tool_name=browser_tool_name,
+                    arguments=browser_arguments,
+                    result=browser_result,
+                    success=browser_result.get('success', False),
+                    error=browser_result.get('error')
+                )
+
             working_messages.append({'role': 'user', 'parts': tool_response_parts})
 
             new_records = execution_log.records[records_before:]
@@ -76,7 +96,7 @@ class GoogleClient(BaseLLMClient):
                         'type': execution_log._format_object_type(record.model_name),
                         'name': record.object_name
                     })
-            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items, tool_names=tool_names)
+            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items, tool_names=tool_names, tool_params=tool_params)
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()
@@ -129,10 +149,10 @@ class GoogleClient(BaseLLMClient):
         def get_tool_name(tc):
             return tc.get('name', '')
 
-        enmasse_calls, delete_calls, update_calls, service_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
+        categorized = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_response_parts = []
 
-        for tool_call in service_calls:
+        for tool_call in categorized.service:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('args', {})
             service_result = self._execute_service_tool(tool_name, arguments)
@@ -150,10 +170,10 @@ class GoogleClient(BaseLLMClient):
                 error=service_result.get('error')
             )
 
-        if enmasse_calls:
-            batch = [(tc.get('name'), tc.get('args', {})) for tc in enmasse_calls]
+        if categorized.enmasse:
+            batch = [(tc.get('name'), tc.get('args', {})) for tc in categorized.enmasse]
             batch_result = self._execute_enmasse_batch(batch)
-            for tool_call in enmasse_calls:
+            for tool_call in categorized.enmasse:
                 tool_response_parts.append({
                     'functionResponse': {
                         'name': tool_call['name'],
@@ -168,7 +188,7 @@ class GoogleClient(BaseLLMClient):
                     error=batch_result.get('error')
                 )
 
-        for tool_call in delete_calls:
+        for tool_call in categorized.delete:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('args', {})
             delete_result = self._execute_delete_tool(tool_name, arguments)
@@ -186,7 +206,7 @@ class GoogleClient(BaseLLMClient):
                 error=delete_result.get('error')
             )
 
-        for tool_call in update_calls:
+        for tool_call in categorized.update:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('args', {})
             update_result = self._execute_update_tool(tool_name, arguments)
@@ -204,7 +224,7 @@ class GoogleClient(BaseLLMClient):
                 error=update_result.get('error')
             )
 
-        for tool_call in mcp_calls:
+        for tool_call in categorized.mcp:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('args', {})
             tool_result = self._execute_mcp_tool_core(tool_name, arguments, all_tools)
@@ -222,7 +242,7 @@ class GoogleClient(BaseLLMClient):
                 error=tool_result.get('error')
             )
 
-        return tool_response_parts
+        return tool_response_parts, categorized.browser
 
 # ################################################################################################################################
 

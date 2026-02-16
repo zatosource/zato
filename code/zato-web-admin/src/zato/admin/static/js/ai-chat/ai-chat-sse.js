@@ -151,7 +151,158 @@
                 if (callbacks.onToolProgress) {
                     callbacks.onToolProgress(data);
                 }
+            } else if (eventType === 'browser_tool') {
+                console.log('[SSE] browser_tool event received:', data);
+                this.handleBrowserTool(data);
             }
+        },
+
+        handleBrowserTool: function(data) {
+            var requestId = data.request_id;
+            var toolName = data.tool_name;
+            var params = data.params || {};
+
+            console.log('[SSE] Executing browser tool:', toolName, 'requestId:', requestId, 'params:', params);
+
+            var self = this;
+
+            if (toolName === 'search_internet') {
+                this.executeSearchInternet(params.query, function(result) {
+                    self.submitBrowserToolResult(requestId, result);
+                });
+            } else if (toolName === 'visit_page') {
+                this.executeVisitPage(params.url, function(result) {
+                    self.submitBrowserToolResult(requestId, result);
+                });
+            } else {
+                console.error('[SSE] Unknown browser tool:', toolName);
+                this.submitBrowserToolResult(requestId, {success: false, error: 'Unknown browser tool: ' + toolName});
+            }
+        },
+
+        executeSearchInternet: function(query, callback) {
+            console.log('[SSE] Searching the internet for:', query);
+
+            var searchUrl = 'https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1';
+
+            fetch(searchUrl)
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    var results = [];
+
+                    if (data.AbstractText) {
+                        results.push({
+                            title: data.Heading || 'Summary',
+                            url: data.AbstractURL || '',
+                            snippet: data.AbstractText
+                        });
+                    }
+
+                    if (data.RelatedTopics) {
+                        for (var i = 0; i < Math.min(data.RelatedTopics.length, 10); i++) {
+                            var topic = data.RelatedTopics[i];
+                            if (topic.Text) {
+                                results.push({
+                                    title: topic.FirstURL ? topic.FirstURL.split('/').pop().replace(/_/g, ' ') : 'Related',
+                                    url: topic.FirstURL || '',
+                                    snippet: topic.Text
+                                });
+                            }
+                        }
+                    }
+
+                    if (data.Results) {
+                        for (var j = 0; j < Math.min(data.Results.length, 5); j++) {
+                            var result = data.Results[j];
+                            results.push({
+                                title: result.Text || '',
+                                url: result.FirstURL || '',
+                                snippet: result.Text || ''
+                            });
+                        }
+                    }
+
+                    console.log('[SSE] Search results:', results);
+
+                    if (results.length === 0) {
+                        callback({
+                            success: true,
+                            query: query,
+                            results: [],
+                            message: 'No instant answers found. The query may require a more specific search or visiting web pages directly.'
+                        });
+                    } else {
+                        callback({success: true, query: query, results: results});
+                    }
+                })
+                .catch(function(error) {
+                    console.error('[SSE] Search error:', error);
+                    callback({success: false, error: error.message});
+                });
+        },
+
+        executeVisitPage: function(url, callback) {
+            console.log('[SSE] Visiting page via server proxy:', url);
+            var csrfToken = this.getCsrfToken();
+
+            fetch('/zato/ai-chat/fetch-page/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                },
+                body: JSON.stringify({url: url})
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                console.log('[SSE] Page fetched via proxy:', data);
+                callback(data);
+            })
+            .catch(function(error) {
+                console.error('[SSE] Visit page error:', error);
+                callback({success: false, url: url, error: error.message});
+            });
+        },
+
+        submitBrowserToolResult: function(requestId, result) {
+            console.log('[SSE] Submitting browser tool result for requestId:', requestId, 'result:', result);
+            var csrfToken = this.getCsrfToken();
+
+            fetch('/zato/ai-chat/browser-tool-result/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                },
+                body: JSON.stringify({
+                    request_id: requestId,
+                    result: result
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                console.log('[SSE] Browser tool result submitted:', data);
+            })
+            .catch(function(error) {
+                console.error('[SSE] Failed to submit browser tool result:', error);
+            });
+        },
+
+        getCsrfToken: function() {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.indexOf('csrftoken=') === 0) {
+                    return cookie.substring('csrftoken='.length);
+                }
+            }
+            return null;
         },
 
         handleObjectChanged: function(data) {

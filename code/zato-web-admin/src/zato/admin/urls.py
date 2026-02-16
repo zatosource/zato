@@ -995,6 +995,13 @@ urlpatterns += [
         login_required(ai_mcp.get_tools), name='ai-chat-mcp-tools'),
     url(r'^zato/ai-chat/mcp/invoke/$',
         login_required(ai_mcp.invoke_tool), name='ai-chat-mcp-invoke'),
+
+    # AI chat browser tools
+
+    url(r'^zato/ai-chat/browser-tool-result/$',
+        login_required(ai_stream.browser_tool_result), name='ai-chat-browser-tool-result'),
+    url(r'^zato/ai-chat/fetch-page/$',
+        login_required(ai_stream.fetch_page), name='ai-chat-fetch-page'),
 ]
 
 # ################################################################################################################################
