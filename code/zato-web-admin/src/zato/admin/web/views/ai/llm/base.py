@@ -280,7 +280,7 @@ class BaseLLMClient(ABC):
         """ Executes a service deployment or deletion tool.
         """
         try:
-            service_result = execute_service_tool(tool_name, arguments)
+            service_result = execute_service_tool(tool_name, arguments, self.zato_client)
             logger.info('Service tool %s result: %s', tool_name, service_result)
             return service_result
         except Exception as e:

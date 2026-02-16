@@ -199,13 +199,19 @@
                 return;
             }
 
-            var progressEl = contentEl.querySelector('.ai-tool-progress');
-            console.log('[SSE-TRACE] existing progressEl found:', !!progressEl);
-            if (!progressEl) {
+            var progressEl;
+            if (data.status === 'start') {
                 progressEl = document.createElement('div');
                 progressEl.className = 'ai-tool-progress';
                 contentEl.appendChild(progressEl);
-                console.log('[SSE-TRACE] created new progressEl');
+                console.log('[SSE-TRACE] created new progressEl for start');
+            } else {
+                var allProgress = contentEl.querySelectorAll('.ai-tool-progress');
+                progressEl = allProgress.length > 0 ? allProgress[allProgress.length - 1] : null;
+                console.log('[SSE-TRACE] found last progressEl:', !!progressEl);
+                if (!progressEl) {
+                    return;
+                }
             }
 
             if (data.status === 'start') {

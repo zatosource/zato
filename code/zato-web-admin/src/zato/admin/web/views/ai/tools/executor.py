@@ -8,8 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import re
 import subprocess
 import tempfile
+import time
 from logging import getLogger
 from traceback import format_exc
 
@@ -142,7 +144,73 @@ def is_service_tool(tool_name:'str') -> 'bool':
 
 # ################################################################################################################################
 
-def execute_deploy_service(arguments:'anydict') -> 'anydict':
+def _extract_service_names(code:'str') -> 'list':
+    """ Extracts service names from Python code by finding 'name = ...' in Service classes.
+    """
+    out = []
+    pattern = re.compile(r"^\s*name\s*=\s*['\"]([^'\"]+)['\"]", re.MULTILINE)
+    for match in pattern.finditer(code):
+        out.append(match.group(1))
+    return out
+
+# ################################################################################################################################
+
+def _wait_for_services_deployed(client:'any_', service_names:'list', timeout:'int'=20) -> 'tuple':
+    """ Waits for all services to be deployed by polling zato.service.is-deployed.
+    Returns (success, error_message).
+    """
+    if not client or not service_names:
+        return True, None
+
+    time.sleep(0.25)
+
+    start_time = time.time()
+    poll_interval = 0.25
+
+    while time.time() - start_time < timeout:
+        all_deployed = True
+        for service_name in service_names:
+            try:
+                response = client.invoke('zato.service.is-deployed', {'name': service_name})
+                if response.ok:
+                    is_deployed = response.data.get('is_deployed', False)
+                    if not is_deployed:
+                        all_deployed = False
+                        break
+                else:
+                    all_deployed = False
+                    break
+            except Exception as e:
+                logger.warning('Error checking if service %s is deployed: %s', service_name, e)
+                all_deployed = False
+                break
+
+        if all_deployed:
+            logger.info('All services deployed: %s', service_names)
+            return True, None
+
+        time.sleep(poll_interval)
+
+    server_log_path = os.path.expanduser('~/env/qs-1/server1/logs/server.log')
+    error_lines = []
+    try:
+        with open(server_log_path, 'r') as f:
+            lines = f.readlines()
+            for line in lines[-50:]:
+                if 'error' in line.lower() or 'exception' in line.lower():
+                    error_lines.append(line.strip())
+    except Exception as e:
+        logger.warning('Could not read server log: %s', e)
+
+    error_msg = f'Timeout waiting for services to deploy: {service_names}'
+    if error_lines:
+        error_msg += '\n\nRecent errors from server.log:\n' + '\n'.join(error_lines[-10:])
+
+    return False, error_msg
+
+# ################################################################################################################################
+
+def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict':
     """ Deploys service files by writing them to the services directory.
     """
     files = arguments.get('files', [])
@@ -151,6 +219,7 @@ def execute_deploy_service(arguments:'anydict') -> 'anydict':
 
     services_root = os.path.expanduser('~/env/qs-1/server1/pickup/code/impl/src/api')
     deployed_files = []
+    all_service_names = []
 
     try:
         for file_info in files:
@@ -175,6 +244,15 @@ def execute_deploy_service(arguments:'anydict') -> 'anydict':
 
             deployed_files.append(file_path)
             logger.info('Deployed service file: %s', full_path)
+
+            service_names = _extract_service_names(code)
+            all_service_names.extend(service_names)
+            logger.info('Extracted service names from %s: %s', file_path, service_names)
+
+        if all_service_names:
+            success, error = _wait_for_services_deployed(client, all_service_names)
+            if not success:
+                return {'success': False, 'error': error}
 
         len_deployed = len(deployed_files)
         file_word = 'file' if len_deployed == 1 else 'files'
@@ -232,11 +310,11 @@ def execute_delete_service(arguments:'anydict') -> 'anydict':
 
 # ################################################################################################################################
 
-def execute_service_tool(tool_name:'str', arguments:'anydict') -> 'anydict':
+def execute_service_tool(tool_name:'str', arguments:'anydict', client:'any_'=None) -> 'anydict':
     """ Executes a service deployment or deletion tool.
     """
     if tool_name == 'deploy_service':
-        return execute_deploy_service(arguments)
+        return execute_deploy_service(arguments, client)
     elif tool_name == 'delete_service':
         return execute_delete_service(arguments)
     else:
