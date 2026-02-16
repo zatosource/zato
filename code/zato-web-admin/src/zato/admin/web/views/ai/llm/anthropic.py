@@ -102,15 +102,24 @@ class AnthropicClient(BaseLLMClient):
             if non_browser_calls:
                 new_records = execution_log.records[records_before:]
                 new_items = []
+                successful_names = []
+                successful_params = []
                 for record in new_records:
-                    if record.success and record.action:
-                        new_items.append({
-                            'type': execution_log._format_object_type(record.model_name),
-                            'name': record.object_name
-                        })
-                non_browser_names = [tc.get('name', '') for tc in non_browser_calls]
-                non_browser_params = [tc.get('input', {}) for tc in non_browser_calls]
-                yield from self._yield_tool_progress_done(len(non_browser_calls), items=new_items, tool_names=non_browser_names, tool_params=non_browser_params)
+                    if record.success:
+                        if record.action:
+                            new_items.append({
+                                'type': execution_log._format_object_type(record.model_name),
+                                'name': record.object_name
+                            })
+                        for tc in non_browser_calls:
+                            if tc.get('name', '') == record.tool_name:
+                                if tc.get('name', '') not in successful_names:
+                                    successful_names.append(tc.get('name', ''))
+                                    successful_params.append(tc.get('input', {}))
+                                break
+                if successful_names:
+                    logger.info('[DEPLOY-TRACE] _yield_tool_progress_done called with successful_names=%s new_items=%s', successful_names, new_items)
+                    yield from self._yield_tool_progress_done(len(successful_names), items=new_items, tool_names=successful_names, tool_params=successful_params)
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()

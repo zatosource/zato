@@ -281,6 +281,7 @@ class BaseLLMClient(ABC):
         items: list of dicts with 'type' and 'name' keys for created objects
         """
         msg = self._get_done_summary_message(tool_names or [], tool_params or [], items or [])
+        logger.info('[DEPLOY-TRACE] _yield_tool_progress_done emitting msg=%s items=%s', msg, items)
         yield self._format_tool_progress('done', total=count, completed=count, message=msg, items=items)
         yield self._format_chunk('\n\n')
 

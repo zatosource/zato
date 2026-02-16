@@ -126,15 +126,12 @@
         },
 
         startIdleWatch: function(tabId, contentEl) {
-            console.log('[IDLE-TRACE] startIdleWatch called, tabId:', tabId, 'contentEl:', !!contentEl);
             if (this.idleTimers[tabId]) {
-                console.log('[IDLE-TRACE] timer already exists for tabId:', tabId);
                 return;
             }
 
             this.lastActivityTime[tabId] = Date.now();
             this.cyclingElements[tabId] = tabId;
-            console.log('[IDLE-TRACE] set lastActivityTime and cyclingElements for tabId:', tabId);
 
             var self = this;
             this.idleTimers[tabId] = setInterval(function() {
@@ -143,11 +140,9 @@
                 var idleTime = now - lastActivity;
 
                 if (idleTime >= idleThreshold) {
-                    console.log('[IDLE-TRACE] idle threshold reached, idleTime:', idleTime, 'calling showCyclingText');
                     self.showCyclingText(tabId);
                 }
             }, 100);
-            console.log('[IDLE-TRACE] interval started for tabId:', tabId);
         },
 
         stopIdleWatch: function(tabId) {
@@ -161,83 +156,65 @@
         },
 
         showCyclingText: function(tabId) {
-            console.log('[SHOW-TRACE] showCyclingText called, tabId:', tabId);
-            console.log('[SHOW-TRACE] intervals[tabId]:', !!this.intervals[tabId]);
             if (this.intervals[tabId]) {
-                console.log('[SHOW-TRACE] early return - already has interval');
                 return;
             }
 
             var messagesContainer = document.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
             if (!messagesContainer) {
-                console.log('[SHOW-TRACE] no messagesContainer');
                 return;
             }
 
             var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
             if (!streamingEl) {
-                console.log('[SHOW-TRACE] no streamingEl');
                 return;
             }
 
             var contentEl = streamingEl.querySelector('.ai-chat-message-content');
             if (!contentEl) {
-                console.log('[SHOW-TRACE] no contentEl');
                 return;
             }
 
             var allWaiting = contentEl.querySelectorAll('.ai-chat-waiting-indicator');
-            console.log('[SHOW-TRACE] allWaiting.length:', allWaiting.length);
             for (var i = 1; i < allWaiting.length; i++) {
-                console.log('[SHOW-TRACE] removing duplicate waiting indicator at index:', i);
                 allWaiting[i].remove();
             }
 
             var waitingEl = contentEl.querySelector('.ai-chat-waiting-indicator');
-            console.log('[SHOW-TRACE] waitingEl exists:', !!waitingEl);
             if (!waitingEl) {
                 waitingEl = document.createElement('span');
                 waitingEl.className = 'ai-chat-waiting-indicator';
                 waitingEl.innerHTML = this.cyclingIndicatorHtml;
                 contentEl.appendChild(waitingEl);
-                console.log('[SHOW-TRACE] created new waitingEl');
             }
 
             streamingEl.classList.add('hide-cursor');
 
             var textEl = waitingEl.querySelector('.ai-chat-waiting-text');
-            console.log('[SHOW-TRACE] textEl exists:', !!textEl, 'textContent:', textEl ? textEl.textContent : 'N/A');
             if (textEl && !textEl.textContent) {
                 textEl.textContent = waitingTexts[0];
-                console.log('[SHOW-TRACE] set textContent to:', waitingTexts[0], 'calling startCycling');
                 this.startCycling(tabId, waitingEl.parentElement);
             }
         },
 
         hideCyclingText: function(tabId) {
-            console.log('[HIDE-TRACE] hideCyclingText called, tabId:', tabId);
             var messagesContainer = document.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
             if (!messagesContainer) {
-                console.log('[HIDE-TRACE] no messagesContainer');
                 return;
             }
 
             var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
             if (!streamingEl) {
-                console.log('[HIDE-TRACE] no streamingEl');
                 return;
             }
 
             var contentEl = streamingEl.querySelector('.ai-chat-message-content');
             if (!contentEl) {
-                console.log('[HIDE-TRACE] no contentEl');
                 return;
             }
 
             var allWaiting = contentEl.querySelectorAll('.ai-chat-waiting-indicator');
-            console.log('[HIDE-TRACE] allWaiting.length:', allWaiting.length);
             for (var i = 0; i < allWaiting.length; i++) {
-                console.log('[HIDE-TRACE] removing waiting indicator at index:', i);
                 allWaiting[i].remove();
             }
 
