@@ -323,6 +323,11 @@
         refreshRowForService: function(action) {
             console.log('[SSE-TRACE] refreshRowForService called, action:', action);
 
+            if (window.location.href.indexOf('/zato/service/') === -1) {
+                console.log('[SSE-TRACE] not on services page, skipping refreshRowForService');
+                return;
+            }
+
             fetch(window.location.href)
                 .then(function(response) {
                     return response.text();
