@@ -65,7 +65,8 @@ class OpenAIClient(BaseLLMClient):
                 'tool_calls': tool_calls
             })
 
-            yield from self._yield_tool_progress_start(len(tool_calls))
+            tool_names = [tc.get('function', {}).get('name', '') for tc in tool_calls]
+            yield from self._yield_tool_progress_start(len(tool_calls), tool_names=tool_names)
 
             records_before = len(execution_log.records)
             tool_messages = self._execute_tools_batched(tool_calls, all_tools, execution_log)
@@ -79,7 +80,7 @@ class OpenAIClient(BaseLLMClient):
                         'type': execution_log._format_object_type(record.model_name),
                         'name': record.object_name
                     })
-            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items)
+            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items, tool_names=tool_names)
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()

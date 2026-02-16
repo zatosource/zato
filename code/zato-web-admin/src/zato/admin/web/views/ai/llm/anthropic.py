@@ -63,7 +63,8 @@ class AnthropicClient(BaseLLMClient):
             assistant_content = result.get('assistant_content', [])
             working_messages.append({'role': 'assistant', 'content': assistant_content})
 
-            yield from self._yield_tool_progress_start(len(tool_calls))
+            tool_names = [tc.get('name', '') for tc in tool_calls]
+            yield from self._yield_tool_progress_start(len(tool_calls), tool_names=tool_names)
 
             records_before = len(execution_log.records)
             tool_results = self._execute_tools_batched(tool_calls, all_tools, execution_log)
@@ -78,7 +79,7 @@ class AnthropicClient(BaseLLMClient):
                         'name': record.object_name
                     })
             logger.info('Tool progress done items: %s', new_items)
-            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items)
+            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items, tool_names=tool_names)
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()

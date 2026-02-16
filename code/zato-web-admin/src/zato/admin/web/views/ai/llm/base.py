@@ -154,21 +154,75 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
-    def _yield_tool_progress_start(self, count:'int') -> 'generator_':
+    def _get_tool_progress_message(self, tool_names:'list', is_done:'bool'=False) -> 'str':
+        """ Generates an appropriate progress message based on tool names.
+        """
+        if not tool_names:
+            return 'Processing...' if not is_done else 'Done'
+
+        create_count = 0
+        update_count = 0
+        delete_count = 0
+        deploy_count = 0
+        search_doc = False
+        get_doc = False
+
+        for name in tool_names:
+            if name.startswith('create_'):
+                create_count += 1
+            elif name.startswith('update_'):
+                update_count += 1
+            elif name.startswith('delete_'):
+                delete_count += 1
+            elif name == 'deploy_service':
+                deploy_count += 1
+            elif name == 'search_documentation':
+                search_doc = True
+            elif name == 'get_document_content':
+                get_doc = True
+
+        parts = []
+
+        if search_doc:
+            parts.append('Searching documentation' if not is_done else 'Searched documentation')
+        if get_doc:
+            parts.append('Reading documentation' if not is_done else 'Read documentation')
+        if deploy_count > 0:
+            word = 'service' if deploy_count == 1 else 'services'
+            parts.append(f'Deploying {deploy_count} {word}' if not is_done else f'Deployed {deploy_count} {word}')
+        if create_count > 0:
+            word = 'object' if create_count == 1 else 'objects'
+            parts.append(f'Creating {create_count} {word}' if not is_done else f'Created {create_count} {word}')
+        if update_count > 0:
+            word = 'object' if update_count == 1 else 'objects'
+            parts.append(f'Updating {update_count} {word}' if not is_done else f'Updated {update_count} {word}')
+        if delete_count > 0:
+            word = 'object' if delete_count == 1 else 'objects'
+            parts.append(f'Deleting {delete_count} {word}' if not is_done else f'Deleted {delete_count} {word}')
+
+        if not parts:
+            return 'Processing...' if not is_done else 'Done'
+
+        msg = ', '.join(parts)
+        if not is_done:
+            msg += '...'
+        return msg
+
+# ################################################################################################################################
+
+    def _yield_tool_progress_start(self, count:'int', tool_names:'list'=None) -> 'generator_':
         """ Yields a tool progress start event.
         """
-        obj_word = 'object' if count == 1 else 'objects'
-        msg = f'Creating {count} {obj_word}...'
+        msg = self._get_tool_progress_message(tool_names or [], is_done=False)
         yield self._format_tool_progress('start', total=count, completed=0, message=msg)
 
 # ################################################################################################################################
 
-    def _yield_tool_progress_done(self, count:'int', items:'list'=None) -> 'generator_':
+    def _yield_tool_progress_done(self, count:'int', items:'list'=None, tool_names:'list'=None) -> 'generator_':
         """ Yields a tool progress done event followed by a newline chunk.
         items: list of dicts with 'type' and 'name' keys for created objects
         """
-        obj_word = 'object' if count == 1 else 'objects'
-        msg = f'Created {count} {obj_word}'
+        msg = self._get_tool_progress_message(tool_names or [], is_done=True)
         yield self._format_tool_progress('done', total=count, completed=count, message=msg, items=items)
         yield self._format_chunk('\n\n')
 
