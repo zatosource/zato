@@ -131,6 +131,24 @@ class GoogleClient(BaseLLMClient):
         enmasse_calls, delete_calls, update_calls, service_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_response_parts = []
 
+        for tool_call in service_calls:
+            tool_name = tool_call.get('name', '')
+            arguments = tool_call.get('args', {})
+            service_result = self._execute_service_tool(tool_name, arguments)
+            tool_response_parts.append({
+                'functionResponse': {
+                    'name': tool_call['name'],
+                    'response': service_result
+                }
+            })
+            execution_log.add(
+                tool_name=tool_name,
+                arguments=arguments,
+                result=service_result,
+                success=service_result.get('success', False),
+                error=service_result.get('error')
+            )
+
         if enmasse_calls:
             batch = [(tc.get('name'), tc.get('args', {})) for tc in enmasse_calls]
             batch_result = self._execute_enmasse_batch(batch)
@@ -183,24 +201,6 @@ class GoogleClient(BaseLLMClient):
                 result=update_result,
                 success=update_result.get('success', False),
                 error=update_result.get('error')
-            )
-
-        for tool_call in service_calls:
-            tool_name = tool_call.get('name', '')
-            arguments = tool_call.get('args', {})
-            service_result = self._execute_service_tool(tool_name, arguments)
-            tool_response_parts.append({
-                'functionResponse': {
-                    'name': tool_call['name'],
-                    'response': service_result
-                }
-            })
-            execution_log.add(
-                tool_name=tool_name,
-                arguments=arguments,
-                result=service_result,
-                success=service_result.get('success', False),
-                error=service_result.get('error')
             )
 
         for tool_call in mcp_calls:
