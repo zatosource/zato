@@ -205,10 +205,10 @@ class _IDEBase(Service):
 
         for item in all_root_dirs:
 
-            windows_matches = r'incoming\services' in item
-            non_windows_matches = 'incoming/services' in item
+            windows_pickup_dir = r'code\impl\src\api' in item
+            non_windows_pickup_dir = 'code/impl/src/api' in item
 
-            if windows_matches or non_windows_matches:
+            if windows_pickup_dir or non_windows_pickup_dir:
                 return item
 
         else:

@@ -176,62 +176,77 @@ class BaseLLMClient(ABC):
             return 'Processing...' if not is_done else 'Done'
 
         tool_params = tool_params or []
-
-        create_count = 0
-        update_count = 0
-        delete_count = 0
-        deploy_count = 0
-        search_doc = False
-        get_doc = False
-        search_internet_query = None
-        visit_page_url = None
+        parts = []
 
         for i, name in enumerate(tool_names):
             params = tool_params[i] if i < len(tool_params) else {}
+
             if name.startswith('create_'):
-                create_count += 1
+                obj_type = name[7:].replace('_', ' ')
+                obj_name = params.get('name', '')
+                if obj_name:
+                    parts.append(f'Creating {obj_type} "{obj_name}"' if not is_done else f'Created {obj_type} "{obj_name}"')
+                else:
+                    parts.append(f'Creating {obj_type}' if not is_done else f'Created {obj_type}')
+
             elif name.startswith('update_'):
-                update_count += 1
+                obj_type = name[7:].replace('_', ' ')
+                obj_name = params.get('name', '')
+                if obj_name:
+                    parts.append(f'Updating {obj_type} "{obj_name}"' if not is_done else f'Updated {obj_type} "{obj_name}"')
+                else:
+                    parts.append(f'Updating {obj_type}' if not is_done else f'Updated {obj_type}')
+
             elif name.startswith('delete_'):
-                delete_count += 1
+                obj_type = name[7:].replace('_', ' ')
+                obj_name = params.get('name', '')
+                if obj_name:
+                    parts.append(f'Deleting {obj_type} "{obj_name}"' if not is_done else f'Deleted {obj_type} "{obj_name}"')
+                else:
+                    parts.append(f'Deleting {obj_type}' if not is_done else f'Deleted {obj_type}')
+
             elif name == 'deploy_service':
-                deploy_count += 1
+                files = params.get('files', [])
+                if files:
+                    file_names = [f.get('file_path', '') for f in files if f.get('file_path')]
+                    if file_names:
+                        names_display = ', '.join(file_names)
+                        parts.append(f'Deploying {names_display}' if not is_done else f'Deployed {names_display}')
+                    else:
+                        parts.append('Deploying service' if not is_done else 'Deployed service')
+                else:
+                    parts.append('Deploying service' if not is_done else 'Deployed service')
+
             elif name == 'search_documentation':
-                search_doc = True
+                parts.append('Searching documentation' if not is_done else 'Searched documentation')
+
             elif name == 'get_document_content':
-                get_doc = True
+                parts.append('Reading documentation' if not is_done else 'Read documentation')
+
             elif name == 'search_internet':
-                search_internet_query = params.get('query', '')
+                query = params.get('query', '')
+                if query:
+                    query_display = query[:50] + '...' if len(query) > 50 else query
+                    parts.append(f'Searching the internet: "{query_display}"' if not is_done else f'Searched the Internet: "{query_display}"')
+                else:
+                    parts.append('Searching the internet' if not is_done else 'Searched the internet')
+
             elif name == 'visit_page':
-                visit_page_url = params.get('url', '')
+                url = params.get('url', '')
+                if url:
+                    url_display = url[:60] + '...' if len(url) > 60 else url
+                    url_link = f'<a href="{url}" target="_blank" class="ai-tool-link">{url_display}</a>'
+                    parts.append(f'Visiting page: {url_link}' if not is_done else f'Visited page: {url_link}')
+                else:
+                    parts.append('Visiting page' if not is_done else 'Visited page')
 
-        parts = []
-
-        if search_internet_query:
-            query_display = search_internet_query[:50] + '...' if len(search_internet_query) > 50 else search_internet_query
-            parts.append(f'Searching the internet: "{query_display}"' if not is_done else f'Searched the Internet: "{query_display}"')
-        if visit_page_url:
-            url_display = visit_page_url[:60] + '...' if len(visit_page_url) > 60 else visit_page_url
-            url_link = f'<a href="{visit_page_url}" target="_blank" class="ai-tool-link">{url_display}</a>'
-            parts.append(f'Visiting page: {url_link}' if not is_done else f'Visited page: {url_link}')
-        if search_doc:
-            parts.append('Searching documentation' if not is_done else 'Searched documentation')
-        if get_doc:
-            parts.append('Reading documentation' if not is_done else 'Read documentation')
-        if deploy_count > 0:
-            word = 'service' if deploy_count == 1 else 'services'
-            parts.append(f'Deploying {deploy_count} {word}' if not is_done else f'Deployed {deploy_count} {word}')
-        if create_count > 0:
-            word = 'object' if create_count == 1 else 'objects'
-            parts.append(f'Creating {create_count} {word}' if not is_done else f'Created {create_count} {word}')
-        if update_count > 0:
-            word = 'object' if update_count == 1 else 'objects'
-            parts.append(f'Updating {update_count} {word}' if not is_done else f'Updated {update_count} {word}')
-        if delete_count > 0:
-            word = 'object' if delete_count == 1 else 'objects'
-            parts.append(f'Deleting {delete_count} {word}' if not is_done else f'Deleted {delete_count} {word}')
+            else:
+                parts.append(f'Running {name}' if not is_done else f'Ran {name}')
 
         if not parts:
+            if tool_names:
+                tool_display = ', '.join(tool_names)
+                return f'Running {tool_display}...' if not is_done else f'Ran {tool_display}'
             return 'Processing...' if not is_done else 'Done'
 
         msg = ', '.join(parts)
