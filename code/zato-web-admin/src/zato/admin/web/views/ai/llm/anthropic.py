@@ -382,6 +382,8 @@ class AnthropicClient(BaseLLMClient):
                                     item['input'] = current_tool_call['input']
                                     break
 
+                            yield from self._yield_tool_progress_start(1, tool_names=[current_tool_call['name']], tool_params=[current_tool_call['input']])
+
                             tool_calls.append(current_tool_call)
                             current_tool_call = None
 

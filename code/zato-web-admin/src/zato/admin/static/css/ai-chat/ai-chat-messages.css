@@ -570,12 +570,14 @@
 }
 
 .ai-tool-link {
-    color: var(--ai-chat-link-color);
+    color: #dbcf72;
     text-decoration: none;
 }
 
 .ai-tool-link:hover {
     text-decoration: none;
+    background-color: #dbcf72;
+    color: #000;
 }
 
 .ai-tool-items-list td a {

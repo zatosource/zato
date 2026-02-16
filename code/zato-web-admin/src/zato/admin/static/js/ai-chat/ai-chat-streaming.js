@@ -57,16 +57,29 @@
             }
 
             var self = this;
+            var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            if (messagesContainer) {
+                var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+                if (streamingEl) {
+                    var contentEl = streamingEl.querySelector('.ai-chat-message-content');
+                    if (contentEl) {
+                        AIChatWaiting.startIdleWatch(tabId, contentEl);
+                    }
+                }
+            }
+
             AIChatAPI.streamMessage(tabId, model, apiMessages, {
                 onChunk: function(text) {
+                    AIChatWaiting.recordActivity(tabId);
                     AIChatMessages.appendToStreamingMessage(tabId, text);
                     self.updateStreamingMessage(widget, tabId);
                 },
                 onToolProgress: function(data) {
+                    AIChatWaiting.recordActivity(tabId);
                     self.handleToolProgress(widget, tabId, data);
                 },
                 onComplete: function(inputTokens, outputTokens) {
-                    AIChatWaiting.stopCycling(tabId);
+                    AIChatWaiting.stopIdleWatch(tabId);
 
                     if (inputTokens > 0) {
                         AIChatTabState.addTokensOut(tabId, inputTokens);
@@ -85,20 +98,13 @@
                     }
                 },
                 onError: function(error) {
-                    AIChatWaiting.stopCycling(tabId);
+                    AIChatWaiting.stopIdleWatch(tabId);
                     AIChatMessages.cancelStreamingMessage(tab, tabId);
                     AIChatMessages.addMessage(tab, 'system', 'Error: ' + error);
                     core.saveState();
                     core.render();
                 },
                 onWaiting: function() {
-                    var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
-                    if (messagesContainer) {
-                        var waitingEl = messagesContainer.querySelector('.ai-chat-waiting-indicator');
-                        if (waitingEl) {
-                            AIChatWaiting.startCycling(tabId, waitingEl.parentElement);
-                        }
-                    }
                 }
             });
         },
@@ -210,10 +216,17 @@
 
             var progressEl;
             if (data.status === 'start') {
-                progressEl = document.createElement('div');
-                progressEl.className = 'ai-tool-progress';
-                contentEl.appendChild(progressEl);
-                console.log('[SSE-TRACE] created new progressEl for start');
+                var allProgress = contentEl.querySelectorAll('.ai-tool-progress.ai-tool-running');
+                var lastRunning = allProgress.length > 0 ? allProgress[allProgress.length - 1] : null;
+                if (lastRunning) {
+                    progressEl = lastRunning;
+                    console.log('[SSE-TRACE] updating existing running progressEl');
+                } else {
+                    progressEl = document.createElement('div');
+                    progressEl.className = 'ai-tool-progress';
+                    contentEl.appendChild(progressEl);
+                    console.log('[SSE-TRACE] created new progressEl for start');
+                }
             } else {
                 var allProgress = contentEl.querySelectorAll('.ai-tool-progress');
                 progressEl = allProgress.length > 0 ? allProgress[allProgress.length - 1] : null;
@@ -309,16 +322,29 @@
             var self = this;
             var apiMessages = this.buildApiMessages(tab);
 
+            var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            if (messagesContainer) {
+                var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+                if (streamingEl) {
+                    var contentEl = streamingEl.querySelector('.ai-chat-message-content');
+                    if (contentEl) {
+                        AIChatWaiting.startIdleWatch(tabId, contentEl);
+                    }
+                }
+            }
+
             AIChatAPI.streamMessage(tabId, model, apiMessages, {
                 onChunk: function(text) {
+                    AIChatWaiting.recordActivity(tabId);
                     AIChatMessages.appendToStreamingMessage(tabId, text);
                     self.updateStreamingMessage(widget, tabId);
                 },
                 onToolProgress: function(data) {
+                    AIChatWaiting.recordActivity(tabId);
                     self.handleToolProgress(widget, tabId, data);
                 },
                 onComplete: function(inputTokens, outputTokens) {
-                    AIChatWaiting.stopCycling(tabId);
+                    AIChatWaiting.stopIdleWatch(tabId);
 
                     if (inputTokens > 0) {
                         AIChatTabState.addTokensOut(tabId, inputTokens);
@@ -337,19 +363,12 @@
                     }
                 },
                 onError: function(error) {
-                    AIChatWaiting.stopCycling(tabId);
+                    AIChatWaiting.stopIdleWatch(tabId);
                     AIChatMessages.finishStreamingMessage(tab, tabId, true);
                     core.saveState();
                     core.render();
                 },
                 onWaiting: function() {
-                    var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
-                    if (messagesContainer) {
-                        var waitingEl = messagesContainer.querySelector('.ai-chat-waiting-indicator');
-                        if (waitingEl) {
-                            AIChatWaiting.startCycling(tabId, waitingEl.parentElement);
-                        }
-                    }
                 }
             });
         }
