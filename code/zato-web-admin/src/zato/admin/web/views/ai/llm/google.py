@@ -330,12 +330,13 @@ class GoogleClient(BaseLLMClient):
                         function_call = part.get('functionCall')
                         if function_call:
                             tool_name = function_call.get('name', '')
+                            tool_args = function_call.get('args', {})
                             tool_calls.append({
                                 'name': tool_name,
-                                'args': function_call.get('args', {})
+                                'args': tool_args
                             })
                             assistant_content.append({'functionCall': function_call})
-                            yield from self._yield_tool_progress_start(1, tool_names=[tool_name], tool_params=[{}])
+                            yield from self._yield_tool_progress_start(1, tool_names=[tool_name], tool_params=[tool_args])
 
                     finish_reason = first_candidate.get('finishReason')
                     if finish_reason in ('STOP', 'TOOL_CODE'):

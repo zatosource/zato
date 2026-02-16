@@ -351,8 +351,6 @@ class OpenAIClient(BaseLLMClient):
                         func = tc.get('function', {})
                         if func.get('name'):
                             current_tool_calls[idx]['name'] = func['name']
-                            if is_new_tool:
-                                yield from self._yield_tool_progress_start(1, tool_names=[func['name']], tool_params=[{}])
                         if func.get('arguments'):
                             current_tool_calls[idx]['arguments'] += func['arguments']
 
@@ -360,6 +358,11 @@ class OpenAIClient(BaseLLMClient):
                     if finish_reason in ('stop', 'tool_calls'):
                         for idx in sorted(current_tool_calls.keys()):
                             tc = current_tool_calls[idx]
+                            try:
+                                parsed_args = json.loads(tc.get('arguments', '{}'))
+                            except json.JSONDecodeError:
+                                parsed_args = {}
+                            yield from self._yield_tool_progress_start(1, tool_names=[tc.get('name', '')], tool_params=[parsed_args])
                             tool_calls.append({
                                 'id': tc.get('id', ''),
                                 'type': 'function',

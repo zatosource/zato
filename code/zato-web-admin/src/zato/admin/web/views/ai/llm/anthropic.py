@@ -337,7 +337,6 @@ class AnthropicClient(BaseLLMClient):
                                 'name': current_tool_call['name'],
                                 'input': {}
                             })
-                            yield from self._yield_tool_progress_start(1, tool_names=[current_tool_call['name']], tool_params=[{}])
                         elif block_type == 'text':
                             assistant_content.append({'type': 'text', 'text': ''})
 
@@ -372,6 +371,9 @@ class AnthropicClient(BaseLLMClient):
                                 if item.get('type') == 'tool_use' and item.get('id') == current_tool_call['id']:
                                     item['input'] = current_tool_call['input']
                                     break
+
+                            logger.info('Tool progress params: name=%s input=%s', current_tool_call['name'], current_tool_call['input'])
+                            yield from self._yield_tool_progress_start(1, tool_names=[current_tool_call['name']], tool_params=[current_tool_call['input']])
 
                             tool_calls.append(current_tool_call)
                             current_tool_call = None
