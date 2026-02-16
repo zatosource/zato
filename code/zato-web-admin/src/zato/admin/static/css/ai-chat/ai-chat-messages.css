@@ -1,6 +1,3 @@
-:root {
-    --ai-chat-link-color: #bad0ca;
-}
 
 .ai-chat-messages {
     flex: 1 1 0;
@@ -232,12 +229,14 @@
 }
 
 .ai-chat-message-content a {
-    color: #7ec8ff;
+    color: var(--ai-chat-link-color);
     text-decoration: none;
 }
 
 .ai-chat-message-content a:hover {
-    text-decoration: underline;
+    text-decoration: none !important;
+    background-color: var(--ai-chat-link-color) !important;
+    color: #000 !important;
 }
 
 .ai-chat-message-content ul,
@@ -569,16 +568,6 @@
     padding: 6px 12px;
 }
 
-.ai-tool-link {
-    color: #dbcf72;
-    text-decoration: none;
-}
-
-.ai-tool-link:hover {
-    text-decoration: none;
-    background-color: #dbcf72;
-    color: #000;
-}
 
 .ai-tool-items-list td a {
     color: var(--ai-chat-link-color);

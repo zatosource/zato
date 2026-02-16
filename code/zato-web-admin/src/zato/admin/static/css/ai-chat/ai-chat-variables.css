@@ -11,8 +11,8 @@
     --ai-chat-border-subtle: rgba(255, 255, 255, 0.08);
     --ai-chat-border-light: rgba(255, 255, 255, 0.1);
 
-    --ai-chat-link-color: #63b3ed;
-    --ai-chat-link-hover: #90cdf4;
+    --ai-chat-link-color: #dbcf72;
+    --ai-chat-link-hover: #dbcf72;
 
     --ai-chat-user-bg: linear-gradient(135deg, #2a4a6a 0%, #1e3a5a 100%);
     --ai-chat-user-border: rgba(74, 158, 255, 0.2);
