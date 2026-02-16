@@ -181,66 +181,28 @@
         },
 
         executeSearchInternet: function(query, callback) {
-            console.log('[SSE] Searching the internet for:', query);
+            console.log('[SSE] Searching the internet via server proxy for:', query);
+            var csrfToken = this.getCsrfToken();
 
-            var searchUrl = 'https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1';
-
-            fetch(searchUrl)
-                .then(function(response) {
-                    return response.json();
-                })
-                .then(function(data) {
-                    var results = [];
-
-                    if (data.AbstractText) {
-                        results.push({
-                            title: data.Heading || 'Summary',
-                            url: data.AbstractURL || '',
-                            snippet: data.AbstractText
-                        });
-                    }
-
-                    if (data.RelatedTopics) {
-                        for (var i = 0; i < Math.min(data.RelatedTopics.length, 10); i++) {
-                            var topic = data.RelatedTopics[i];
-                            if (topic.Text) {
-                                results.push({
-                                    title: topic.FirstURL ? topic.FirstURL.split('/').pop().replace(/_/g, ' ') : 'Related',
-                                    url: topic.FirstURL || '',
-                                    snippet: topic.Text
-                                });
-                            }
-                        }
-                    }
-
-                    if (data.Results) {
-                        for (var j = 0; j < Math.min(data.Results.length, 5); j++) {
-                            var result = data.Results[j];
-                            results.push({
-                                title: result.Text || '',
-                                url: result.FirstURL || '',
-                                snippet: result.Text || ''
-                            });
-                        }
-                    }
-
-                    console.log('[SSE] Search results:', results);
-
-                    if (results.length === 0) {
-                        callback({
-                            success: true,
-                            query: query,
-                            results: [],
-                            message: 'No instant answers found. The query may require a more specific search or visiting web pages directly.'
-                        });
-                    } else {
-                        callback({success: true, query: query, results: results});
-                    }
-                })
-                .catch(function(error) {
-                    console.error('[SSE] Search error:', error);
-                    callback({success: false, error: error.message});
-                });
+            fetch('/zato/ai-chat/search-internet/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ''
+                },
+                body: JSON.stringify({query: query})
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                console.log('[SSE] Search results via proxy:', data);
+                callback(data);
+            })
+            .catch(function(error) {
+                console.error('[SSE] Search error:', error);
+                callback({success: false, error: error.message});
+            });
         },
 
         executeVisitPage: function(url, callback) {

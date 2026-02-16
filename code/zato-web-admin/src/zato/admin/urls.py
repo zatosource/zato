@@ -1002,6 +1002,8 @@ urlpatterns += [
         login_required(ai_stream.browser_tool_result), name='ai-chat-browser-tool-result'),
     url(r'^zato/ai-chat/fetch-page/$',
         login_required(ai_stream.fetch_page), name='ai-chat-fetch-page'),
+    url(r'^zato/ai-chat/search-internet/$',
+        login_required(ai_stream.search_internet), name='ai-chat-search-internet'),
 ]
 
 # ################################################################################################################################

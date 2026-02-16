@@ -310,4 +310,77 @@ def fetch_page(req):
         return JsonResponse({'success': False, 'url': url, 'error': str(e)})
 
 # ################################################################################################################################
+
+@method_allowed('POST')
+def search_internet(req):
+    """ Proxy endpoint for searching the internet server-side using curl_cffi.
+    """
+    from django.http import JsonResponse
+    from curl_cffi import requests as curl_requests
+
+    query = ''
+
+    try:
+        body = loads(req.body)
+        query = body.get('query', '')
+
+        if not query:
+            return JsonResponse({'success': False, 'error': 'Missing query'})
+
+        search_url = f'https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1'
+
+        response = curl_requests.get(
+            search_url,
+            impersonate='chrome',
+            timeout=30
+        )
+
+        data = response.json()
+        results = []
+
+        if data.get('AbstractText'):
+            results.append({
+                'title': data.get('Heading', 'Summary'),
+                'url': data.get('AbstractURL', ''),
+                'snippet': data.get('AbstractText')
+            })
+
+        related_topics = data.get('RelatedTopics', [])
+        for topic in related_topics[:10]:
+            if topic.get('Text'):
+                url = topic.get('FirstURL', '')
+                title = url.split('/')[-1].replace('_', ' ') if url else 'Related'
+                results.append({
+                    'title': title,
+                    'url': url,
+                    'snippet': topic.get('Text')
+                })
+
+        api_results = data.get('Results', [])
+        for result in api_results[:5]:
+            results.append({
+                'title': result.get('Text', ''),
+                'url': result.get('FirstURL', ''),
+                'snippet': result.get('Text', '')
+            })
+
+        if not results:
+            return JsonResponse({
+                'success': True,
+                'query': query,
+                'results': [],
+                'message': 'No instant answers found. The query may require visiting web pages directly.'
+            })
+
+        return JsonResponse({
+            'success': True,
+            'query': query,
+            'results': results
+        })
+
+    except Exception as e:
+        logger.warning('Search internet error: %s', format_exc())
+        return JsonResponse({'success': False, 'query': query, 'error': str(e)})
+
+# ################################################################################################################################
 # ################################################################################################################################
