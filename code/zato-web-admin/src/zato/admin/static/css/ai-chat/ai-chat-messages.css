@@ -111,6 +111,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    padding-top: 4px;
 }
 
 .ai-chat-waiting-cursor {
