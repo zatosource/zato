@@ -346,7 +346,6 @@ class AnthropicClient(BaseLLMClient):
                                 'name': current_tool_call['name'],
                                 'input': {}
                             })
-                            yield from self._yield_tool_progress_start(1, tool_names=[current_tool_call['name']], tool_params=[{}])
                         elif block_type == 'text':
                             assistant_content.append({'type': 'text', 'text': ''})
 
