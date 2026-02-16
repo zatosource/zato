@@ -13,12 +13,10 @@
         lastActivityTime: {},
         cyclingElements: {},
 
+        waitingIndicatorHtml: '<span class="ai-chat-waiting-text"></span> <span class="ai-chat-waiting-cursor">▋</span>',
+
         buildWaitingHtml: function() {
-            var html = '<span class="ai-chat-waiting-indicator">';
-            html += '<span class="ai-chat-waiting-cursor">▋</span>';
-            html += '<span class="ai-chat-waiting-text"></span>';
-            html += '</span>';
-            return html;
+            return '<span class="ai-chat-waiting-indicator">' + this.waitingIndicatorHtml + '</span>';
         },
 
         startCycling: function(tabId, element) {
@@ -125,7 +123,7 @@
             if (!waitingEl) {
                 waitingEl = document.createElement('span');
                 waitingEl.className = 'ai-chat-waiting-indicator';
-                waitingEl.innerHTML = '<span class="ai-chat-waiting-text"></span>';
+                waitingEl.innerHTML = this.waitingIndicatorHtml;
                 contentEl.appendChild(waitingEl);
             }
 
