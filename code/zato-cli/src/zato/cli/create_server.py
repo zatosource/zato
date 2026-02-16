@@ -101,7 +101,7 @@ scheduler_api_username={{scheduler_api_client_for_server_username}}
 scheduler_api_password={{scheduler_api_client_for_server_password}}
 
 [hot_deploy]
-pickup_dir=../../pickup/incoming/services
+pickup_dir=../../code/impl/src/api
 backup_history=100
 backup_format=bztar
 delete_after_pick_up=False
@@ -284,6 +284,10 @@ directories = (
     'work/hot-deploy/current',
     'work/hot-deploy/backup',
     'work/hot-deploy/backup/last',
+    'code',
+    'code/impl',
+    'code/impl/src',
+    'code/impl/src/api',
 )
 
 # ################################################################################################################################

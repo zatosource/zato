@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import shutil
 from copy import deepcopy
 from datetime import timedelta
 from json import loads
@@ -373,6 +374,34 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def add_pickup_conf_from_code_dir(self) -> 'None':
+
+        # The built-in code directory for services
+        code_dir = os.path.join(self.base_dir, 'code', 'impl', 'src', 'api')
+
+        # The legacy pickup directory that should become a symlink
+        pickup_services_dir = os.path.join(self.base_dir, 'pickup', 'incoming', 'services')
+
+        # Create the code directory if it does not exist
+        if not os.path.exists(code_dir):
+            os.makedirs(code_dir)
+            logger.info('Created code directory `%s`', code_dir)
+
+        # Make pickup/incoming/services a symlink to code/impl/src/api
+        if os.path.islink(pickup_services_dir):
+            os.unlink(pickup_services_dir)
+
+        elif os.path.isdir(pickup_services_dir):
+            shutil.rmtree(pickup_services_dir)
+
+        os.symlink(code_dir, pickup_services_dir)
+        logger.info('Created symlink `%s` -> `%s`', pickup_services_dir, code_dir)
+
+        # Add it to hot-deploy pickup
+        self.add_pickup_conf_from_local_path(code_dir, 'CodeDir')
+
+# ################################################################################################################################
+
     def add_pickup_conf_from_local_path(self, paths:'str', source:'str', path_patterns:'strorlistnone'=None) -> 'None':
 
         # Bunchz
@@ -572,6 +601,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Look up pickup configuration among environment variables
         # and add anything found to self.pickup_config.
         self.add_pickup_conf_from_env_variables()
+
+        # Add the built-in code directory for LLM-generated services
+        self.add_pickup_conf_from_code_dir()
 
         # Look up pickup configuration based on what should be auto-deployed on startup.
         if self.deploy_auto_from:

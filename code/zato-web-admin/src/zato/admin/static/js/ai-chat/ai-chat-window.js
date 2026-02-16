@@ -20,6 +20,7 @@
                 core.isMaximized = false;
             }
 
+            var wasMinimized = core.isMinimized;
             var result = AIChatWidget.toggleMinimize(
                 widget,
                 core.isMinimized,
@@ -33,6 +34,15 @@
             core.preMinimizeZoom = result.preMinimizeZoom;
             core.saveState();
             core.render();
+
+            if (wasMinimized && !core.isMinimized) {
+                setTimeout(function() {
+                    var input = widget.querySelector('.ai-chat-input');
+                    if (input) {
+                        input.focus();
+                    }
+                }, 50);
+            }
         },
 
         toggleMaximize: function(widget, core) {
