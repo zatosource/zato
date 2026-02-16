@@ -133,6 +133,11 @@ def _stream_response(model_id:'str', messages:'list', zato_client:'any_'=None, c
                 browser_event = _format_sse_event('browser_tool', browser_data)
                 yield browser_event
 
+            elif response_type == 'waiting':
+                logger.info('Emitting waiting event')
+                waiting_event = _format_sse_event('waiting', {})
+                yield waiting_event
+
     except Exception as e:
         logger.warning('Stream error: %s', format_exc())
         error_msg = str(e)

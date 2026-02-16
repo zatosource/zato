@@ -123,6 +123,16 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
+    def _format_waiting(self) -> 'dict':
+        """ Formats a waiting event to show cycling messages on the client.
+        """
+        out = {
+            'type': 'waiting'
+        }
+        return out
+
+# ################################################################################################################################
+
     def _format_done(self, input_tokens:'int'=0, output_tokens:'int'=0) -> 'dict':
         """ Formats a done response.
         """
@@ -268,9 +278,86 @@ class BaseLLMClient(ABC):
         """ Yields a tool progress done event followed by a newline chunk.
         items: list of dicts with 'type' and 'name' keys for created objects
         """
-        msg = self._get_tool_progress_message(tool_names or [], is_done=True, tool_params=tool_params)
+        msg = self._get_done_summary_message(tool_names or [], tool_params or [], items or [])
         yield self._format_tool_progress('done', total=count, completed=count, message=msg, items=items)
         yield self._format_chunk('\n\n')
+
+# ################################################################################################################################
+
+    def _get_done_summary_message(self, tool_names:'list', tool_params:'list', items:'list') -> 'str':
+        """ Generates a summary message for completed tools like 'Created 5 objects'.
+        """
+        if not tool_names:
+            return 'Done'
+
+        create_count = 0
+        update_count = 0
+        delete_count = 0
+        deploy_parts = []
+        search_parts = []
+        visit_parts = []
+        other_count = 0
+
+        for i, name in enumerate(tool_names):
+            params = tool_params[i] if i < len(tool_params) else {}
+
+            if name.startswith('create_'):
+                create_count += 1
+            elif name.startswith('update_'):
+                update_count += 1
+            elif name.startswith('delete_'):
+                delete_count += 1
+            elif name == 'deploy_service':
+                files = params.get('files', [])
+                for f in files:
+                    file_path = f.get('file_path', '')
+                    if file_path:
+                        deploy_parts.append(file_path)
+            elif name == 'search_internet':
+                query = params.get('query', '')
+                if query:
+                    query_display = query[:50] + '...' if len(query) > 50 else query
+                    search_parts.append(f'"{query_display}"')
+            elif name == 'search_documentation':
+                query = params.get('query', '')
+                if query:
+                    query_display = query[:50] + '...' if len(query) > 50 else query
+                    search_parts.append(f'docs: "{query_display}"')
+            elif name == 'visit_page':
+                url = params.get('url', '')
+                if url:
+                    url_display = url[:60] + '...' if len(url) > 60 else url
+                    url_link = f'<a href="{url}" target="_blank" class="ai-tool-link">{url_display}</a>'
+                    visit_parts.append(url_link)
+            elif name == 'get_document_content':
+                doc_id = params.get('document_id', '')
+                if doc_id:
+                    visit_parts.append(f'doc:{doc_id[:20]}')
+            else:
+                other_count += 1
+
+        parts = []
+
+        if create_count > 0:
+            word = 'object' if create_count == 1 else 'objects'
+            parts.append(f'Created {create_count} {word}')
+        if update_count > 0:
+            word = 'object' if update_count == 1 else 'objects'
+            parts.append(f'Updated {update_count} {word}')
+        if deploy_parts:
+            parts.append(f'Deployed {", ".join(deploy_parts)}')
+        if search_parts:
+            parts.append(f'Searched {", ".join(search_parts)}')
+        if visit_parts:
+            parts.append(f'Visited {", ".join(visit_parts)}')
+        if other_count > 0:
+            word = 'tool' if other_count == 1 else 'tools'
+            parts.append(f'Ran {other_count} {word}')
+
+        if not parts:
+            return 'Done'
+
+        return ', '.join(parts)
 
 # ################################################################################################################################
 

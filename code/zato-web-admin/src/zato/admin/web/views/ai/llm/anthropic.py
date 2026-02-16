@@ -51,6 +51,16 @@ class AnthropicClient(BaseLLMClient):
                 model, working_messages, anthropic_tools
             )
 
+            if result.get('retry'):
+                yield self._format_chunk('Continuing with LLM...\n\n')
+                yield self._format_waiting()
+                result = yield from self._stream_single_request(
+                    model, working_messages, anthropic_tools
+                )
+                if result.get('retry'):
+                    yield self._format_chunk('LLM is temporarily unavailable. Please try again.\n')
+                    return
+
             total_input_tokens += result.get('input_tokens', 0)
             total_output_tokens += result.get('output_tokens', 0)
 
@@ -98,7 +108,6 @@ class AnthropicClient(BaseLLMClient):
                             'type': execution_log._format_object_type(record.model_name),
                             'name': record.object_name
                         })
-                logger.info('Tool progress done items: %s', new_items)
                 non_browser_names = [tc.get('name', '') for tc in non_browser_calls]
                 non_browser_params = [tc.get('input', {}) for tc in non_browser_calls]
                 yield from self._yield_tool_progress_done(len(non_browser_calls), items=new_items, tool_names=non_browser_names, tool_params=non_browser_params)
@@ -337,6 +346,7 @@ class AnthropicClient(BaseLLMClient):
                                 'name': current_tool_call['name'],
                                 'input': {}
                             })
+                            yield from self._yield_tool_progress_start(1, tool_names=[current_tool_call['name']], tool_params=[{}])
                         elif block_type == 'text':
                             assistant_content.append({'type': 'text', 'text': ''})
 
@@ -372,9 +382,6 @@ class AnthropicClient(BaseLLMClient):
                                     item['input'] = current_tool_call['input']
                                     break
 
-                            logger.info('Tool progress params: name=%s input=%s', current_tool_call['name'], current_tool_call['input'])
-                            yield from self._yield_tool_progress_start(1, tool_names=[current_tool_call['name']], tool_params=[current_tool_call['input']])
-
                             tool_calls.append(current_tool_call)
                             current_tool_call = None
 
@@ -386,14 +393,12 @@ class AnthropicClient(BaseLLMClient):
                     elif event_type == 'error':
                         error_data = data.get('error', {})
                         error_msg = error_data.get('message', 'Unknown error')
-                        error_response = self._format_error(error_msg)
-                        yield error_response
-                        return {'error': True}
+                        logger.warning('Anthropic API error event: %s', error_msg)
+                        return {'retry': True}
 
         except Exception as e:
             logger.warning('Anthropic API error: %s', format_exc())
-            yield self._format_error(e)
-            return {'error': True}
+            return {'retry': True}
 
         return {'input_tokens': input_tokens, 'output_tokens': output_tokens, 'tool_calls': tool_calls, 'assistant_content': assistant_content}
 

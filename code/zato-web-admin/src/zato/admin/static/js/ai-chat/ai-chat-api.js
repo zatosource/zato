@@ -24,6 +24,11 @@
                     if (callbacks.onError) {
                         callbacks.onError(error);
                     }
+                },
+                onWaiting: function() {
+                    if (callbacks.onWaiting) {
+                        callbacks.onWaiting();
+                    }
                 }
             });
         },

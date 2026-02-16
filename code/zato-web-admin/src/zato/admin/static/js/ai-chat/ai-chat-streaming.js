@@ -90,6 +90,15 @@
                     AIChatMessages.addMessage(tab, 'system', 'Error: ' + error);
                     core.saveState();
                     core.render();
+                },
+                onWaiting: function() {
+                    var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+                    if (messagesContainer) {
+                        var waitingEl = messagesContainer.querySelector('.ai-chat-waiting-indicator');
+                        if (waitingEl) {
+                            AIChatWaiting.startCycling(tabId, waitingEl.parentElement);
+                        }
+                    }
                 }
             });
         },
@@ -332,6 +341,15 @@
                     AIChatMessages.finishStreamingMessage(tab, tabId, true);
                     core.saveState();
                     core.render();
+                },
+                onWaiting: function() {
+                    var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+                    if (messagesContainer) {
+                        var waitingEl = messagesContainer.querySelector('.ai-chat-waiting-indicator');
+                        if (waitingEl) {
+                            AIChatWaiting.startCycling(tabId, waitingEl.parentElement);
+                        }
+                    }
                 }
             });
         }
