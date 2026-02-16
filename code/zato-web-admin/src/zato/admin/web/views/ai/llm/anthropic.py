@@ -65,12 +65,20 @@ class AnthropicClient(BaseLLMClient):
 
             yield from self._yield_tool_progress_start(len(tool_calls))
 
+            records_before = len(execution_log.records)
             tool_results = self._execute_tools_batched(tool_calls, all_tools, execution_log)
             working_messages.append({'role': 'user', 'content': tool_results})
 
-            items = [{'type': c['object_type'], 'name': c['object_name']} for c in execution_log.get_object_changes()]
-            logger.info('Tool progress done items: %s', items)
-            yield from self._yield_tool_progress_done(len(tool_calls), items=items)
+            new_records = execution_log.records[records_before:]
+            new_items = []
+            for record in new_records:
+                if record.success and record.action:
+                    new_items.append({
+                        'type': execution_log._format_object_type(record.model_name),
+                        'name': record.object_name
+                    })
+            logger.info('Tool progress done items: %s', new_items)
+            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items)
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()
