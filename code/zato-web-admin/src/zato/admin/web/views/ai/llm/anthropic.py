@@ -346,6 +346,8 @@ class AnthropicClient(BaseLLMClient):
                                 'name': current_tool_call['name'],
                                 'input': {}
                             })
+                            if current_tool_call['name'] == 'deploy_service':
+                                yield self._format_waiting('code')
                         elif block_type == 'text':
                             assistant_content.append({'type': 'text', 'text': ''})
 

@@ -112,7 +112,10 @@
                     core.saveState();
                     core.render();
                 },
-                onWaiting: function() {
+                onWaiting: function(data) {
+                    if (data && data.waiting_type === 'code') {
+                        AIChatWaiting.startCodeCycling(tabId);
+                    }
                 }
             });
         },
@@ -376,7 +379,10 @@
                     core.saveState();
                     core.render();
                 },
-                onWaiting: function() {
+                onWaiting: function(data) {
+                    if (data && data.waiting_type === 'code') {
+                        AIChatWaiting.startCodeCycling(tabId);
+                    }
                 }
             });
         }

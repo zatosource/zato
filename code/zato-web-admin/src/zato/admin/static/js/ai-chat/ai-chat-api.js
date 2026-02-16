@@ -25,9 +25,9 @@
                         callbacks.onError(error);
                     }
                 },
-                onWaiting: function() {
+                onWaiting: function(data) {
                     if (callbacks.onWaiting) {
-                        callbacks.onWaiting();
+                        callbacks.onWaiting(data);
                     }
                 }
             });

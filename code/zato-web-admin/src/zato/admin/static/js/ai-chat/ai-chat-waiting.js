@@ -2,8 +2,11 @@
     'use strict';
 
     var waitingTexts = ['Working ..', 'Generating ..', 'In progress ..', 'Be right with you ..'];
+    var codeTexts = ['Architecting ..', 'Designing ..', 'Composing ..', 'Generating code ..'];
+    var codeTextFinal = 'Still generating code ..';
     var cycleDuration = 4000;
-    var idleThreshold = 100;
+    var codeCycleDuration = 5000;
+    var idleThreshold = 2000;
     var minDisplayTime = 100;
 
     var AIChatWaiting = {
@@ -12,11 +15,13 @@
         idleTimers: {},
         lastActivityTime: {},
         cyclingElements: {},
+        codeMode: {},
+        codeIndex: {},
 
-        waitingIndicatorHtml: '<span class="ai-chat-waiting-text"></span> <span class="ai-chat-waiting-cursor">▋</span>',
+        cyclingIndicatorHtml: '<span class="ai-chat-waiting-text"></span> <span class="ai-chat-waiting-cursor">▋</span>',
 
         buildWaitingHtml: function() {
-            return '<span class="ai-chat-waiting-indicator">' + this.waitingIndicatorHtml + '</span>';
+            return '<span class="ai-chat-waiting-indicator"><span class="ai-chat-waiting-text">Waiting ..</span> <span class="ai-chat-waiting-cursor">▋</span></span>';
         },
 
         startCycling: function(tabId, element) {
@@ -52,6 +57,58 @@
                 delete this.intervals[tabId];
             }
             delete this.cyclingElements[tabId];
+            delete this.codeMode[tabId];
+            delete this.codeIndex[tabId];
+        },
+
+        startCodeCycling: function(tabId) {
+            var self = this;
+            var messagesContainer = document.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            if (!messagesContainer) {
+                return;
+            }
+
+            var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+            if (!streamingEl) {
+                return;
+            }
+
+            var contentEl = streamingEl.querySelector('.ai-chat-message-content');
+            if (!contentEl) {
+                return;
+            }
+
+            this.stopCycling(tabId);
+            this.codeMode[tabId] = true;
+            this.codeIndex[tabId] = 0;
+
+            var waitingEl = contentEl.querySelector('.ai-chat-waiting-indicator');
+            if (!waitingEl) {
+                waitingEl = document.createElement('span');
+                waitingEl.className = 'ai-chat-waiting-indicator';
+                waitingEl.innerHTML = this.cyclingIndicatorHtml;
+                contentEl.appendChild(waitingEl);
+            }
+
+            var textEl = waitingEl.querySelector('.ai-chat-waiting-text');
+            if (textEl) {
+                textEl.textContent = codeTexts[0];
+            }
+
+            this.intervals[tabId] = setInterval(function() {
+                var el = contentEl.querySelector('.ai-chat-waiting-indicator .ai-chat-waiting-text');
+                if (!el) {
+                    self.stopCycling(tabId);
+                    return;
+                }
+
+                self.codeIndex[tabId]++;
+                if (self.codeIndex[tabId] < codeTexts.length) {
+                    el.textContent = codeTexts[self.codeIndex[tabId]];
+                } else {
+                    el.textContent = codeTextFinal;
+                }
+            }, codeCycleDuration);
         },
 
         stopAll: function() {
@@ -104,56 +161,88 @@
         },
 
         showCyclingText: function(tabId) {
+            console.log('[SHOW-TRACE] showCyclingText called, tabId:', tabId);
+            console.log('[SHOW-TRACE] intervals[tabId]:', !!this.intervals[tabId]);
+            if (this.intervals[tabId]) {
+                console.log('[SHOW-TRACE] early return - already has interval');
+                return;
+            }
+
             var messagesContainer = document.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
             if (!messagesContainer) {
+                console.log('[SHOW-TRACE] no messagesContainer');
                 return;
             }
 
             var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
             if (!streamingEl) {
+                console.log('[SHOW-TRACE] no streamingEl');
                 return;
             }
 
             var contentEl = streamingEl.querySelector('.ai-chat-message-content');
             if (!contentEl) {
+                console.log('[SHOW-TRACE] no contentEl');
                 return;
             }
 
+            var allWaiting = contentEl.querySelectorAll('.ai-chat-waiting-indicator');
+            console.log('[SHOW-TRACE] allWaiting.length:', allWaiting.length);
+            for (var i = 1; i < allWaiting.length; i++) {
+                console.log('[SHOW-TRACE] removing duplicate waiting indicator at index:', i);
+                allWaiting[i].remove();
+            }
+
             var waitingEl = contentEl.querySelector('.ai-chat-waiting-indicator');
+            console.log('[SHOW-TRACE] waitingEl exists:', !!waitingEl);
             if (!waitingEl) {
                 waitingEl = document.createElement('span');
                 waitingEl.className = 'ai-chat-waiting-indicator';
-                waitingEl.innerHTML = this.waitingIndicatorHtml;
+                waitingEl.innerHTML = this.cyclingIndicatorHtml;
                 contentEl.appendChild(waitingEl);
+                console.log('[SHOW-TRACE] created new waitingEl');
             }
 
+            streamingEl.classList.add('hide-cursor');
+
             var textEl = waitingEl.querySelector('.ai-chat-waiting-text');
+            console.log('[SHOW-TRACE] textEl exists:', !!textEl, 'textContent:', textEl ? textEl.textContent : 'N/A');
             if (textEl && !textEl.textContent) {
                 textEl.textContent = waitingTexts[0];
+                console.log('[SHOW-TRACE] set textContent to:', waitingTexts[0], 'calling startCycling');
                 this.startCycling(tabId, waitingEl.parentElement);
             }
         },
 
         hideCyclingText: function(tabId) {
+            console.log('[HIDE-TRACE] hideCyclingText called, tabId:', tabId);
             var messagesContainer = document.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
             if (!messagesContainer) {
+                console.log('[HIDE-TRACE] no messagesContainer');
                 return;
             }
 
             var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
             if (!streamingEl) {
+                console.log('[HIDE-TRACE] no streamingEl');
                 return;
             }
 
             var contentEl = streamingEl.querySelector('.ai-chat-message-content');
             if (!contentEl) {
+                console.log('[HIDE-TRACE] no contentEl');
                 return;
             }
 
-            var waitingEl = contentEl.querySelector('.ai-chat-waiting-indicator');
-            if (waitingEl) {
-                waitingEl.remove();
+            var allWaiting = contentEl.querySelectorAll('.ai-chat-waiting-indicator');
+            console.log('[HIDE-TRACE] allWaiting.length:', allWaiting.length);
+            for (var i = 0; i < allWaiting.length; i++) {
+                console.log('[HIDE-TRACE] removing waiting indicator at index:', i);
+                allWaiting[i].remove();
             }
+
+            streamingEl.classList.remove('hide-cursor');
+
             this.stopCycling(tabId);
         }
     };

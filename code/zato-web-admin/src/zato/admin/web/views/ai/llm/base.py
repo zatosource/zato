@@ -123,12 +123,14 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
-    def _format_waiting(self) -> 'dict':
+    def _format_waiting(self, waiting_type:'str'='') -> 'dict':
         """ Formats a waiting event to show cycling messages on the client.
         """
         out = {
             'type': 'waiting'
         }
+        if waiting_type:
+            out['waiting_type'] = waiting_type
         return out
 
 # ################################################################################################################################

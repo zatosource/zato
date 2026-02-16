@@ -155,9 +155,9 @@
                 console.log('[SSE] browser_tool event received:', data);
                 this.handleBrowserTool(data);
             } else if (eventType === 'waiting') {
-                console.log('[SSE] waiting event received');
+                console.log('[SSE] waiting event received:', data);
                 if (callbacks.onWaiting) {
-                    callbacks.onWaiting();
+                    callbacks.onWaiting(data);
                 }
             }
         },
