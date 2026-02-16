@@ -270,7 +270,7 @@
             var tab = AIChatTabs.getTabById(core.tabs, tabId);
             if (!tab) return;
 
-            AIChatWaiting.stopCycling(tabId);
+            AIChatWaiting.stopIdleWatch(tabId);
             AIChatAPI.cancelStream(tabId);
 
             var content = AIChatMessages.getStreamingContent(tabId);
