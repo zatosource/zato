@@ -120,7 +120,7 @@ class OpenAIClient(BaseLLMClient):
             except json.JSONDecodeError:
                 return {}
 
-        enmasse_calls, delete_calls, update_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
+        enmasse_calls, delete_calls, update_calls, service_calls, mcp_calls = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_messages = []
 
         if enmasse_calls:
@@ -172,6 +172,23 @@ class OpenAIClient(BaseLLMClient):
                 result=update_result,
                 success=update_result.get('success', False),
                 error=update_result.get('error')
+            )
+
+        for tool_call in service_calls:
+            tool_name = get_tool_name(tool_call)
+            arguments = parse_arguments(tool_call)
+            service_result = self._execute_service_tool(tool_name, arguments)
+            tool_messages.append({
+                'role': 'tool',
+                'tool_call_id': tool_call['id'],
+                'content': json.dumps(service_result)
+            })
+            execution_log.add(
+                tool_name=tool_name,
+                arguments=arguments,
+                result=service_result,
+                success=service_result.get('success', False),
+                error=service_result.get('error')
             )
 
         for tool_call in mcp_calls:

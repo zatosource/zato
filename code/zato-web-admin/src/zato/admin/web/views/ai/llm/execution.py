@@ -100,7 +100,7 @@ class ExecutionLog(BaseModel):
         """ Adds a tool execution record.
         """
         action = ''
-        if tool_name.startswith('create_'):
+        if tool_name.startswith('create_') or tool_name == 'deploy_service':
             action = 'created'
         elif tool_name.startswith('update_'):
             action = 'updated'
@@ -110,8 +110,26 @@ class ExecutionLog(BaseModel):
         model_name = tool_name.replace('create_', '').replace('update_', '').replace('delete_', '')
         object_name = arguments.get('name', '')
         object_id = ''
+
         if isinstance(result, dict):
             object_id = str(result.get('id', ''))
+
+            if tool_name in ('deploy_service', 'delete_service'):
+                files = result.get('files', [])
+                for file_path in files:
+                    record = ToolRecord(
+                        tool_name=tool_name,
+                        model_name='service',
+                        object_id='',
+                        object_name=file_path,
+                        action=action,
+                        arguments=arguments,
+                        result=result,
+                        success=success,
+                        error=error
+                    )
+                    self.records.append(record)
+                return
 
         record = ToolRecord(
             tool_name=tool_name,
@@ -191,6 +209,7 @@ class ExecutionLog(BaseModel):
             'sap_outconn': 'SAP',
             'jira_outconn': 'Jira',
             'slack_outconn': 'Slack',
+            'service': 'Service',
         }
         return type_map.get(model_name, model_name.replace('_', ' ').title())
 

@@ -375,6 +375,29 @@ tool_create_channel_openapi = {
     }
 }
 
+tool_deploy_service = {
+    'name': 'deploy_service',
+    'description': 'Deploys Zato services to the server by writing Python files. Use for both creating new services and updating existing ones - hot-deployment handles both cases automatically.',
+    'input_schema': {
+        'type': 'object',
+        'properties': {
+            'files': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'file_path': {'type': 'string', 'description': 'File path relative to services root (e.g., my_service.py or crm/customer.py)'},
+                        'code': {'type': 'string', 'description': 'Python source code for the service'}
+                    },
+                    'required': ['file_path', 'code']
+                },
+                'description': 'List of files to deploy'
+            }
+        },
+        'required': ['files']
+    }
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -399,6 +422,7 @@ all_create_tools = {
     'create_pubsub_subscription': tool_create_pubsub_subscription,
     'create_pubsub_permission': tool_create_pubsub_permission,
     'create_channel_openapi': tool_create_channel_openapi,
+    'deploy_service': tool_deploy_service,
 }
 
 # ################################################################################################################################

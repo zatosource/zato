@@ -15,7 +15,7 @@ from traceback import format_exc
 from zato.admin.web.views.ai.mcp.registry import MCPRegistry
 from zato.admin.web.views.ai.llm.execution import build_execution_context
 from zato.admin.web.views.ai.tools.definitions import get_all_tools as get_enmasse_tools, is_delete_tool, is_update_tool
-from zato.admin.web.views.ai.tools.executor import execute_enmasse_batch, is_enmasse_tool
+from zato.admin.web.views.ai.tools.executor import execute_enmasse_batch, is_enmasse_tool, is_service_tool, execute_service_tool
 from zato.admin.web.views.ai.tools.delete_executor import execute_delete_tool
 from zato.admin.web.views.ai.tools.update_executor import execute_update_tool
 from zato.common.ai.prompts.loader import get_system_prompt
@@ -207,11 +207,12 @@ class BaseLLMClient(ABC):
 # ################################################################################################################################
 
     def _categorize_tool_calls(self, tool_calls:'list', get_tool_name:'callable') -> 'tuple':
-        """ Categorizes tool calls into enmasse, delete, update, and mcp calls.
+        """ Categorizes tool calls into enmasse, delete, update, service, and mcp calls.
         """
         enmasse_calls = []
         delete_calls = []
         update_calls = []
+        service_calls = []
         mcp_calls = []
 
         for tool_call in tool_calls:
@@ -222,10 +223,12 @@ class BaseLLMClient(ABC):
                 delete_calls.append(tool_call)
             elif is_update_tool(tool_name):
                 update_calls.append(tool_call)
+            elif is_service_tool(tool_name):
+                service_calls.append(tool_call)
             else:
                 mcp_calls.append(tool_call)
 
-        return enmasse_calls, delete_calls, update_calls, mcp_calls
+        return enmasse_calls, delete_calls, update_calls, service_calls, mcp_calls
 
 # ################################################################################################################################
 
@@ -268,6 +271,19 @@ class BaseLLMClient(ABC):
             return update_result
         except Exception as e:
             logger.warning('Update tool %s error: %s', tool_name, format_exc())
+            return {'success': False, 'error': str(e)}
+
+# ################################################################################################################################
+
+    def _execute_service_tool(self, tool_name:'str', arguments:'dict') -> 'dict':
+        """ Executes a service deployment or deletion tool.
+        """
+        try:
+            service_result = execute_service_tool(tool_name, arguments)
+            logger.info('Service tool %s result: %s', tool_name, service_result)
+            return service_result
+        except Exception as e:
+            logger.warning('Service tool %s error: %s', tool_name, format_exc())
             return {'success': False, 'error': str(e)}
 
 # ################################################################################################################################

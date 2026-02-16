@@ -250,6 +250,22 @@ tool_delete_channel_openapi = {
     }
 }
 
+tool_delete_service = {
+    'name': 'delete_service',
+    'description': 'Deletes Zato service files by removing Python files from the services directory.',
+    'input_schema': {
+        'type': 'object',
+        'properties': {
+            'file_paths': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description': 'List of file paths relative to services root to delete (e.g., my_service.py or crm/customer.py)'
+            }
+        },
+        'required': ['file_paths']
+    }
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -274,6 +290,7 @@ all_delete_tools = {
     'delete_pubsub_subscription': tool_delete_pubsub_subscription,
     'delete_pubsub_permission': tool_delete_pubsub_permission,
     'delete_channel_openapi': tool_delete_channel_openapi,
+    'delete_service': tool_delete_service,
 }
 
 # ################################################################################################################################

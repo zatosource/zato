@@ -124,7 +124,7 @@
             if (tab.messages.length === 0) {
                 html += '<div class="ai-chat-empty">';
                 html += '<div class="ai-chat-empty-icon">💬</div>';
-                html += '<div>Start a conversation</div>';
+                html += '<div>Chat with AI</div>';
                 html += '</div>';
             } else {
                 for (var i = 0; i < tab.messages.length; i++) {

@@ -377,7 +377,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def add_pickup_conf_from_code_dir(self) -> 'None':
 
         # The services pickup directory
-        pickup_services_dir = os.path.join(self.base_dir, 'code', 'impl', 'src', 'api')
+        pickup_services_dir = os.path.join(self.base_dir, 'pickup', 'code', 'impl', 'src', 'api')
 
         # The old pickup directory that should become a symlink
         pickup_services_dir_symlink = os.path.join(self.base_dir, 'pickup', 'incoming', 'services')
