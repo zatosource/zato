@@ -63,10 +63,6 @@ class GoogleClient(BaseLLMClient):
             working_messages.append({'role': 'assistant', 'parts': assistant_content})
 
             non_browser_calls = [tc for tc in tool_calls if not is_browser_tool(tc.get('name', ''))]
-            if non_browser_calls:
-                tool_names = [tc.get('name', '') for tc in non_browser_calls]
-                tool_params = [tc.get('args', {}) for tc in non_browser_calls]
-                yield from self._yield_tool_progress_start(len(non_browser_calls), tool_names=tool_names, tool_params=tool_params)
 
             records_before = len(execution_log.records)
             tool_response_parts, browser_calls = self._execute_tools_batched(tool_calls, all_tools, execution_log)
@@ -74,7 +70,6 @@ class GoogleClient(BaseLLMClient):
             for browser_call in browser_calls:
                 browser_tool_name = browser_call.get('name', '')
                 browser_arguments = browser_call.get('args', {})
-                yield from self._yield_tool_progress_start(1, tool_names=[browser_tool_name], tool_params=[browser_arguments])
                 browser_result = yield from self._execute_browser_tool(browser_tool_name, browser_arguments)
                 yield from self._yield_tool_progress_done(1, items=[], tool_names=[browser_tool_name], tool_params=[browser_arguments])
                 tool_response_parts.append({
@@ -334,11 +329,13 @@ class GoogleClient(BaseLLMClient):
 
                         function_call = part.get('functionCall')
                         if function_call:
+                            tool_name = function_call.get('name', '')
                             tool_calls.append({
-                                'name': function_call.get('name', ''),
+                                'name': tool_name,
                                 'args': function_call.get('args', {})
                             })
                             assistant_content.append({'functionCall': function_call})
+                            yield from self._yield_tool_progress_start(1, tool_names=[tool_name], tool_params=[{}])
 
                     finish_reason = first_candidate.get('finishReason')
                     if finish_reason in ('STOP', 'TOOL_CODE'):

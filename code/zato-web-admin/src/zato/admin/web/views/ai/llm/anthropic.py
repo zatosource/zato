@@ -65,10 +65,6 @@ class AnthropicClient(BaseLLMClient):
             working_messages.append({'role': 'assistant', 'content': assistant_content})
 
             non_browser_calls = [tc for tc in tool_calls if not is_browser_tool(tc.get('name', ''))]
-            if non_browser_calls:
-                tool_names = [tc.get('name', '') for tc in non_browser_calls]
-                tool_params = [tc.get('input', {}) for tc in non_browser_calls]
-                yield from self._yield_tool_progress_start(len(non_browser_calls), tool_names=tool_names, tool_params=tool_params)
 
             records_before = len(execution_log.records)
             tool_results, browser_calls = self._execute_tools_batched(tool_calls, all_tools, execution_log)
@@ -76,7 +72,6 @@ class AnthropicClient(BaseLLMClient):
             for browser_call in browser_calls:
                 browser_tool_name = browser_call.get('name', '')
                 browser_arguments = browser_call.get('input', {})
-                yield from self._yield_tool_progress_start(1, tool_names=[browser_tool_name], tool_params=[browser_arguments])
                 browser_result = yield from self._execute_browser_tool(browser_tool_name, browser_arguments)
                 yield from self._yield_tool_progress_done(1, items=[], tool_names=[browser_tool_name], tool_params=[browser_arguments])
                 tool_results.append({
@@ -342,6 +337,7 @@ class AnthropicClient(BaseLLMClient):
                                 'name': current_tool_call['name'],
                                 'input': {}
                             })
+                            yield from self._yield_tool_progress_start(1, tool_names=[current_tool_call['name']], tool_params=[{}])
                         elif block_type == 'text':
                             assistant_content.append({'type': 'text', 'text': ''})
 

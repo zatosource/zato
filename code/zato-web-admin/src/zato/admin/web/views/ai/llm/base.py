@@ -209,7 +209,7 @@ class BaseLLMClient(ABC):
 
         if search_internet_query:
             query_display = search_internet_query[:50] + '...' if len(search_internet_query) > 50 else search_internet_query
-            parts.append(f'Searching the internet: "{query_display}"' if not is_done else f'Searched the internet: "{query_display}"')
+            parts.append(f'Searching the internet: "{query_display}"' if not is_done else f'Searched the Internet: "{query_display}"')
         if visit_page_url:
             url_display = visit_page_url[:60] + '...' if len(visit_page_url) > 60 else visit_page_url
             url_link = f'<a href="{visit_page_url}" target="_blank" class="ai-tool-link">{url_display}</a>'

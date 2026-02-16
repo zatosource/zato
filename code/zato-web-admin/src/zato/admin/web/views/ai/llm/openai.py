@@ -67,10 +67,6 @@ class OpenAIClient(BaseLLMClient):
             })
 
             non_browser_calls = [tc for tc in tool_calls if not is_browser_tool(tc.get('function', {}).get('name', ''))]
-            if non_browser_calls:
-                tool_names = [tc.get('function', {}).get('name', '') for tc in non_browser_calls]
-                tool_params = [json.loads(tc.get('function', {}).get('arguments', '{}')) for tc in non_browser_calls]
-                yield from self._yield_tool_progress_start(len(non_browser_calls), tool_names=tool_names, tool_params=tool_params)
 
             records_before = len(execution_log.records)
             tool_messages, browser_calls = self._execute_tools_batched(tool_calls, all_tools, execution_log)
@@ -78,7 +74,6 @@ class OpenAIClient(BaseLLMClient):
             for browser_call in browser_calls:
                 browser_tool_name = browser_call.get('function', {}).get('name', '')
                 browser_arguments = json.loads(browser_call.get('function', {}).get('arguments', '{}'))
-                yield from self._yield_tool_progress_start(1, tool_names=[browser_tool_name], tool_params=[browser_arguments])
                 browser_result = yield from self._execute_browser_tool(browser_tool_name, browser_arguments)
                 yield from self._yield_tool_progress_done(1, items=[], tool_names=[browser_tool_name], tool_params=[browser_arguments])
                 tool_messages.append({
@@ -344,7 +339,8 @@ class OpenAIClient(BaseLLMClient):
                     delta_tool_calls = delta.get('tool_calls', [])
                     for tc in delta_tool_calls:
                         idx = tc.get('index', 0)
-                        if idx not in current_tool_calls:
+                        is_new_tool = idx not in current_tool_calls
+                        if is_new_tool:
                             current_tool_calls[idx] = {
                                 'id': tc.get('id', ''),
                                 'name': '',
@@ -355,6 +351,8 @@ class OpenAIClient(BaseLLMClient):
                         func = tc.get('function', {})
                         if func.get('name'):
                             current_tool_calls[idx]['name'] = func['name']
+                            if is_new_tool:
+                                yield from self._yield_tool_progress_start(1, tool_names=[func['name']], tool_params=[{}])
                         if func.get('arguments'):
                             current_tool_calls[idx]['arguments'] += func['arguments']
 
