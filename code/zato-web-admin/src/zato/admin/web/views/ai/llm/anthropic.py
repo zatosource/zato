@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from logging import getLogger
+from traceback import format_exc
 from urllib.request import Request, urlopen
 
 # Zato

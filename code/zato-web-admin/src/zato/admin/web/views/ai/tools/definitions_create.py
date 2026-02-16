@@ -39,7 +39,7 @@ tool_create_channel_rest = {
             'name': {'type': 'string', 'description': 'Unique name for the REST channel'},
             'url_path': {'type': 'string', 'description': 'URL path for the channel (e.g., /api/v1/customers)'},
             'service': {'type': 'string', 'description': 'Name of the service to invoke'},
-            'method': {'type': 'string', 'description': 'HTTP method (GET, POST, PUT, DELETE, PATCH, or empty for any)', 'default': ''},
+            'method': {'type': 'string', 'enum': ['', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'], 'description': 'HTTP method (GET, POST, PUT, DELETE, PATCH, or empty for any)', 'default': ''},
             'security': {'type': 'string', 'description': 'Name of security definition to use (optional)'},
             'is_active': {'type': 'boolean', 'description': 'Whether the channel is active', 'default': True},
             'data_format': {'type': 'string', 'enum': ['json', 'xml', 'form-data'], 'description': 'Data format', 'default': 'json'},
@@ -101,7 +101,7 @@ tool_create_sql = {
         'type': 'object',
         'properties': {
             'name': {'type': 'string', 'description': 'Unique name for the SQL connection'},
-            'engine': {'type': 'string', 'enum': ['postgresql', 'mysql', 'oracle', 'mssql', 'sqlite'], 'description': 'Database engine'},
+            'engine': {'type': 'string', 'enum': ['postgresql+pg8000', 'mysql+pymysql', 'oracle', 'zato+mssql1'], 'description': 'Database engine (postgresql+pg8000, mysql+pymysql, oracle, or zato+mssql1)'},
             'host': {'type': 'string', 'description': 'Database host'},
             'port': {'type': 'integer', 'description': 'Database port'},
             'db_name': {'type': 'string', 'description': 'Database name'},
@@ -383,6 +383,7 @@ tool_deploy_service = {
         'properties': {
             'files': {
                 'type': 'array',
+                'minItems': 1,
                 'items': {
                     'type': 'object',
                     'properties': {
@@ -391,7 +392,7 @@ tool_deploy_service = {
                     },
                     'required': ['file_path', 'code']
                 },
-                'description': 'List of files to deploy'
+                'description': 'List of files to deploy, must contain at least one file'
             }
         },
         'required': ['files']
