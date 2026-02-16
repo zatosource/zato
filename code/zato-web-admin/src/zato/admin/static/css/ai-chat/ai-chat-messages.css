@@ -515,6 +515,7 @@
 .ai-tool-checkmark {
     color: #8fbc8f;
     font-weight: bold;
+    margin-right: 0.2em;
 }
 
 .ai-tool-progress {

@@ -12,6 +12,7 @@ from logging import getLogger
 from urllib.request import Request, urlopen
 
 # Zato
+from zato.admin.web.views.ai.browser_tools import is_browser_tool
 from zato.admin.web.views.ai.llm.base import BaseLLMClient, Max_Tool_Iterations
 from zato.admin.web.views.ai.llm.execution import ExecutionLog
 
@@ -65,9 +66,11 @@ class OpenAIClient(BaseLLMClient):
                 'tool_calls': tool_calls
             })
 
-            tool_names = [tc.get('function', {}).get('name', '') for tc in tool_calls]
-            tool_params = [json.loads(tc.get('function', {}).get('arguments', '{}')) for tc in tool_calls]
-            yield from self._yield_tool_progress_start(len(tool_calls), tool_names=tool_names, tool_params=tool_params)
+            non_browser_calls = [tc for tc in tool_calls if not is_browser_tool(tc.get('function', {}).get('name', ''))]
+            if non_browser_calls:
+                tool_names = [tc.get('function', {}).get('name', '') for tc in non_browser_calls]
+                tool_params = [json.loads(tc.get('function', {}).get('arguments', '{}')) for tc in non_browser_calls]
+                yield from self._yield_tool_progress_start(len(non_browser_calls), tool_names=tool_names, tool_params=tool_params)
 
             records_before = len(execution_log.records)
             tool_messages, browser_calls = self._execute_tools_batched(tool_calls, all_tools, execution_log)
@@ -75,7 +78,9 @@ class OpenAIClient(BaseLLMClient):
             for browser_call in browser_calls:
                 browser_tool_name = browser_call.get('function', {}).get('name', '')
                 browser_arguments = json.loads(browser_call.get('function', {}).get('arguments', '{}'))
+                yield from self._yield_tool_progress_start(1, tool_names=[browser_tool_name], tool_params=[browser_arguments])
                 browser_result = yield from self._execute_browser_tool(browser_tool_name, browser_arguments)
+                yield from self._yield_tool_progress_done(1, items=[], tool_names=[browser_tool_name], tool_params=[browser_arguments])
                 tool_messages.append({
                     'role': 'tool',
                     'tool_call_id': browser_call['id'],
@@ -91,15 +96,18 @@ class OpenAIClient(BaseLLMClient):
 
             working_messages.extend(tool_messages)
 
-            new_records = execution_log.records[records_before:]
-            new_items = []
-            for record in new_records:
-                if record.success and record.action:
-                    new_items.append({
-                        'type': execution_log._format_object_type(record.model_name),
-                        'name': record.object_name
-                    })
-            yield from self._yield_tool_progress_done(len(tool_calls), items=new_items, tool_names=tool_names, tool_params=tool_params)
+            if non_browser_calls:
+                new_records = execution_log.records[records_before:]
+                new_items = []
+                for record in new_records:
+                    if record.success and record.action:
+                        new_items.append({
+                            'type': execution_log._format_object_type(record.model_name),
+                            'name': record.object_name
+                        })
+                non_browser_names = [tc.get('function', {}).get('name', '') for tc in non_browser_calls]
+                non_browser_params = [json.loads(tc.get('function', {}).get('arguments', '{}')) for tc in non_browser_calls]
+                yield from self._yield_tool_progress_done(len(non_browser_calls), items=new_items, tool_names=non_browser_names, tool_params=non_browser_params)
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()
