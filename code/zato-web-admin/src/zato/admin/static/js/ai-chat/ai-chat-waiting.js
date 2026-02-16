@@ -125,7 +125,7 @@
             if (!waitingEl) {
                 waitingEl = document.createElement('span');
                 waitingEl.className = 'ai-chat-waiting-indicator';
-                waitingEl.innerHTML = '<span class="ai-chat-waiting-cursor">▋</span><span class="ai-chat-waiting-text"></span>';
+                waitingEl.innerHTML = '<span class="ai-chat-waiting-text"></span>';
                 contentEl.appendChild(waitingEl);
             }
 
@@ -153,17 +153,8 @@
             }
 
             var waitingEl = contentEl.querySelector('.ai-chat-waiting-indicator');
-            if (!waitingEl) {
-                return;
-            }
-
-            var textEl = waitingEl.querySelector('.ai-chat-waiting-text');
-            if (textEl) {
-                setTimeout(function() {
-                    if (textEl) {
-                        textEl.textContent = '';
-                    }
-                }, minDisplayTime);
+            if (waitingEl) {
+                waitingEl.remove();
             }
             this.stopCycling(tabId);
         }
