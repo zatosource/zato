@@ -75,7 +75,7 @@ class AnthropicClient(BaseLLMClient):
             object_changes = execution_log.get_object_changes()
             logger.info('Object changes to yield: %s', object_changes)
             for change in object_changes:
-                event = self._format_object_changed(change['action'], change['object_id'], change['object_name'])
+                event = self._format_object_changed(change['action'], change['object_id'], change['object_name'], change['object_type'])
                 logger.info('Yielding object_changed event: %s', event)
                 yield event
 

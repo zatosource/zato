@@ -76,7 +76,7 @@ class OpenAIClient(BaseLLMClient):
         if execution_log.records:
             object_changes = execution_log.get_object_changes()
             for change in object_changes:
-                yield self._format_object_changed(change['action'], change['object_id'], change['object_name'])
+                yield self._format_object_changed(change['action'], change['object_id'], change['object_name'], change['object_type'])
 
             if self.session_id:
                 execution_log.persist(self.session_id)

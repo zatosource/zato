@@ -159,7 +159,14 @@
             var action = data.action;
             var objectId = data.object_id;
             var objectName = data.object_name;
-            console.log('[SSE-TRACE] action:', action, 'objectId:', objectId, 'objectName:', objectName);
+            var objectType = data.object_type;
+            console.log('[SSE-TRACE] action:', action, 'objectId:', objectId, 'objectName:', objectName, 'objectType:', objectType);
+
+            if (objectType === 'Service') {
+                console.log('[SSE-TRACE] service change detected, using refreshRowForService');
+                this.refreshRowForService(action);
+                return;
+            }
 
             if (action === 'delete') {
                 console.log('[SSE-TRACE] delete action, looking for tr_' + objectId);
@@ -310,6 +317,55 @@
                 })
                 .catch(function(error) {
                     console.error('[SSE-TRACE] fetch error:', error);
+                });
+        },
+
+        refreshRowForService: function(action) {
+            console.log('[SSE-TRACE] refreshRowForService called, action:', action);
+
+            fetch(window.location.href)
+                .then(function(response) {
+                    return response.text();
+                })
+                .then(function(html) {
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(html, 'text/html');
+
+                    var currentTbody = document.querySelector('#data-table tbody');
+                    var fetchedTbody = doc.querySelector('#data-table tbody');
+
+                    if (!currentTbody || !fetchedTbody) {
+                        console.log('[SSE-TRACE] no tbody found, cannot refresh');
+                        return;
+                    }
+
+                    var currentIds = new Set();
+                    var currentRows = currentTbody.querySelectorAll('tr[id^="tr_"]');
+                    for (var i = 0; i < currentRows.length; i++) {
+                        currentIds.add(currentRows[i].id);
+                    }
+
+                    var fetchedRows = fetchedTbody.querySelectorAll('tr[id^="tr_"]');
+                    for (var j = 0; j < fetchedRows.length; j++) {
+                        var fetchedRow = fetchedRows[j];
+                        if (!currentIds.has(fetchedRow.id)) {
+                            console.log('[SSE-TRACE] found new row:', fetchedRow.id);
+                            currentTbody.insertBefore(fetchedRow, currentTbody.firstChild);
+                            fetchedRow.classList.add('zato-row-highlight');
+                            setTimeout(function() {
+                                fetchedRow.classList.remove('zato-row-highlight');
+                                fetchedRow.classList.add('updated');
+                            }, 1200);
+                            if (typeof $ !== 'undefined' && $.fn && $.fn.zato && $.fn.zato.data_table && $.fn.zato.data_table.parse) {
+                                $.fn.zato.data_table.parse();
+                            }
+                            return;
+                        }
+                    }
+                    console.log('[SSE-TRACE] no new rows found');
+                })
+                .catch(function(error) {
+                    console.error('[SSE-TRACE] refreshRowForService fetch error:', error);
                 });
         },
 

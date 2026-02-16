@@ -122,14 +122,15 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
-    def _format_object_changed(self, action:'str', object_id:'any_', object_name:'str'='') -> 'dict':
+    def _format_object_changed(self, action:'str', object_id:'any_', object_name:'str'='', object_type:'str'='') -> 'dict':
         """ Formats an object changed event for UI refresh.
         """
         out = {
             'type': 'object_changed',
             'action': action,
             'object_id': object_id,
-            'object_name': object_name
+            'object_name': object_name,
+            'object_type': object_type
         }
         return out
 
