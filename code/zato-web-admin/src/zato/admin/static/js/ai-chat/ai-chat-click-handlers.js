@@ -409,7 +409,7 @@
 
             var listHtml = '<div class="ai-tool-items-list"><table>';
             for (var i = 0; i < items.length; i++) {
-                listHtml += '<tr><td>' + items[i].type + '</td><td>' + items[i].name + '</td></tr>';
+                listHtml += '<tr><td>' + items[i].type + '</td><td><a href="#">' + items[i].name + '</a></td></tr>';
             }
             listHtml += '</table></div>';
 
