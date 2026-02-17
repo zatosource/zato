@@ -144,6 +144,7 @@ class BaseLLMClient(ABC):
             'input_tokens': input_tokens,
             'output_tokens': output_tokens
         }
+        logger.info('Yielding done event: input_tokens=%d output_tokens=%d', input_tokens, output_tokens)
         return out
 
 # ################################################################################################################################
@@ -336,7 +337,7 @@ class BaseLLMClient(ABC):
         if not tool_names:
             return 'Done'
 
-        create_count = 0
+        create_count = len(items) if items else 0
         update_count = 0
         delete_count = 0
         search_parts = []
@@ -346,14 +347,12 @@ class BaseLLMClient(ABC):
         for i, name in enumerate(tool_names):
             params = tool_params[i] if i < len(tool_params) else {}
 
-            if name.startswith('create_'):
-                create_count += 1
+            if name.startswith('create_') or name == 'deploy_service':
+                pass
             elif name.startswith('update_'):
                 update_count += 1
             elif name.startswith('delete_'):
                 delete_count += 1
-            elif name == 'deploy_service':
-                create_count += 1
             elif name == 'search_internet':
                 query = params.get('query', '')
                 if query:
