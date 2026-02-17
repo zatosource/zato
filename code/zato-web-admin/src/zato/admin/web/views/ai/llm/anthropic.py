@@ -38,13 +38,6 @@ class AnthropicClient(BaseLLMClient):
     def stream_chat(self, model:'str', messages:'list') -> 'generator_':
         """ Streams chat completion responses from Anthropic with MCP and enmasse tool support.
         """
-        # test flag - remove after testing
-        _test_unavailable = True
-        if _test_unavailable:
-            yield self._format_chunk('LLM is temporarily unavailable. Please try again.\n')
-            yield self._format_done(0, 0)
-            return
-
         all_tools = self._get_all_tools()
         anthropic_tools = self._convert_tools_to_anthropic_format(all_tools)
 

@@ -158,7 +158,9 @@
                                 parsedHtml = markedEmoji.wrapUnicodeEmojis(parsedHtml);
                             }
                         }
-                        parsedHtml += ' <button class="ai-chat-retry-btn" data-tab-id="' + tab.id + '">Retry</button>';
+                        if (parsedHtml.indexOf('LLM is temporarily unavailable') !== -1) {
+                            parsedHtml = parsedHtml.replace(/Please try again\./, 'Please try again. <button class="ai-chat-retry-btn" data-tab-id="' + tab.id + '">Retry</button>');
+                        }
                         var toolDoneRegex = /\[TOOL_DONE:([^|]+)\|(\[.*?\])\]/g;
                         var toolDoneMatch;
                         while ((toolDoneMatch = toolDoneRegex.exec(parsedHtml)) !== null) {
