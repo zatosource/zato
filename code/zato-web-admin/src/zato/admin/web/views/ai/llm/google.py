@@ -169,6 +169,8 @@ class GoogleClient(BaseLLMClient):
         categorized = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_response_parts = []
 
+        service_failed = False
+        service_error = ''
         for tool_call in categorized.service:
             tool_name = tool_call.get('name', '')
             arguments = tool_call.get('args', {})
@@ -186,8 +188,27 @@ class GoogleClient(BaseLLMClient):
                 success=service_result.get('success', False),
                 error=service_result.get('error')
             )
+            if not service_result.get('success', False):
+                service_failed = True
+                service_error = service_result.get('error', 'Unknown error')
 
-        if categorized.enmasse:
+        if categorized.enmasse and service_failed:
+            error_msg = f'Service deployment failed: {service_error}'
+            for tool_call in categorized.enmasse:
+                tool_response_parts.append({
+                    'functionResponse': {
+                        'name': tool_call['name'],
+                        'response': {'success': False, 'error': error_msg}
+                    }
+                })
+                execution_log.add(
+                    tool_name=tool_call.get('name', ''),
+                    arguments=tool_call.get('args', {}),
+                    result={'success': False, 'error': error_msg},
+                    success=False,
+                    error=error_msg
+                )
+        elif categorized.enmasse:
             batch = [(tc.get('name'), tc.get('args', {})) for tc in categorized.enmasse]
             batch_result = self._execute_enmasse_batch(batch)
             for tool_call in categorized.enmasse:

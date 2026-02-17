@@ -175,6 +175,11 @@
                 return;
             }
 
+            var toolProgressRunning = contentEl.querySelector('.ai-tool-progress.ai-tool-running');
+            if (toolProgressRunning) {
+                return;
+            }
+
             var allWaiting = contentEl.querySelectorAll('.ai-chat-waiting-indicator');
             for (var i = 1; i < allWaiting.length; i++) {
                 allWaiting[i].remove();

@@ -168,6 +168,8 @@ class OpenAIClient(BaseLLMClient):
         categorized = self._categorize_tool_calls(tool_calls, get_tool_name)
         tool_messages = []
 
+        service_failed = False
+        service_error = ''
         for tool_call in categorized.service:
             tool_name = get_tool_name(tool_call)
             arguments = parse_arguments(tool_call)
@@ -184,8 +186,26 @@ class OpenAIClient(BaseLLMClient):
                 success=service_result.get('success', False),
                 error=service_result.get('error')
             )
+            if not service_result.get('success', False):
+                service_failed = True
+                service_error = service_result.get('error', 'Unknown error')
 
-        if categorized.enmasse:
+        if categorized.enmasse and service_failed:
+            error_msg = f'Service deployment failed: {service_error}'
+            for tool_call in categorized.enmasse:
+                tool_messages.append({
+                    'role': 'tool',
+                    'tool_call_id': tool_call['id'],
+                    'content': json.dumps({'success': False, 'error': error_msg})
+                })
+                execution_log.add(
+                    tool_name=get_tool_name(tool_call),
+                    arguments=parse_arguments(tool_call),
+                    result={'success': False, 'error': error_msg},
+                    success=False,
+                    error=error_msg
+                )
+        elif categorized.enmasse:
             batch = [(get_tool_name(tc), parse_arguments(tc)) for tc in categorized.enmasse]
             batch_result = self._execute_enmasse_batch(batch)
             for tool_call in categorized.enmasse:
