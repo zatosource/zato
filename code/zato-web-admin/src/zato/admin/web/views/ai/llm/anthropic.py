@@ -16,6 +16,7 @@ from urllib.request import Request, urlopen
 from zato.admin.web.views.ai.browser_tools import is_browser_tool
 from zato.admin.web.views.ai.llm.base import BaseLLMClient, Max_Tool_Iterations
 from zato.admin.web.views.ai.llm.execution import ExecutionLog
+from zato.admin.web.views.ai.llm.guidance import select_guidance_for_message
 
 if 0:
     from zato.common.typing_ import anylist, generator_
@@ -278,16 +279,23 @@ class AnthropicClient(BaseLLMClient):
             'anthropic-beta': 'prompt-caching-2024-07-31',
         }
 
+        # Inject ephemeral guidance after last user message
+        user_question = self._extract_last_user_message(messages)
+        guidance = select_guidance_for_message(user_question)
+
+        messages_with_guidance = list(messages)
+        if guidance:
+            messages_with_guidance.append({'role': 'user', 'content': guidance})
+
         body = {
             'model': model,
             'max_tokens': 16384,
             'stream': True,
-            'messages': messages,
+            'messages': messages_with_guidance,
         }
 
         if self.system_prompt:
             system_prompt = self.system_prompt
-            user_question = self._extract_last_user_message(messages)
             execution_history = self._build_execution_history_context(user_question)
             if execution_history:
                 system_prompt = system_prompt + '\n\n' + execution_history
