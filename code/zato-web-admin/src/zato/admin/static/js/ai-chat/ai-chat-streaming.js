@@ -301,7 +301,7 @@
             }
 
             if (data.status === 'start') {
-                var startHtml = '<span class="ai-tool-spinner"></span> ';
+                var startHtml = '<span><span class="ai-tool-spinner"></span> ';
                 var deployMatch = data.message.match(/^Deploying (.+?)\.\.\.$/);
                 if (deployMatch) {
                     var fileList = deployMatch[1];
@@ -314,6 +314,7 @@
                 } else {
                     startHtml += data.message;
                 }
+                startHtml += '</span>';
                 progressEl.innerHTML = startHtml;
                 progressEl.classList.remove('ai-tool-done');
                 progressEl.classList.add('ai-tool-running');
