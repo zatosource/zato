@@ -556,20 +556,30 @@
 }
 
 .ai-chat-retry-btn {
-    background: rgba(30, 30, 30, 0.93);
+    background: linear-gradient(to bottom, rgba(35, 35, 35, 0.93), rgba(28, 28, 28, 0.93));
     border: 1px solid transparent;
     border-radius: 4px;
     color: #b29831;
-    font: normal 10px/1.3 inherit;
-    padding: 2px 8px;
+    font-size: 0.7rem !important;
+    padding: 2px 5px;
     cursor: pointer;
     text-shadow: none;
     box-shadow: none;
-    margin-left: 8px;
+    margin-left: 0;
+    margin-top: 6px;
+    display: inline-block;
+    vertical-align: baseline;
 }
 
 .ai-chat-retry-btn:hover {
-    background: rgba(30, 30, 30, 0.73);
+    background: linear-gradient(to bottom, rgba(40, 40, 40, 0.73), rgba(28, 28, 28, 0.73));
+    box-shadow: none;
+}
+
+.ai-chat-retry-btn:active,
+.ai-chat-retry-btn:focus {
+    border: 1px solid transparent;
+    outline: none;
     box-shadow: none;
 }
 
