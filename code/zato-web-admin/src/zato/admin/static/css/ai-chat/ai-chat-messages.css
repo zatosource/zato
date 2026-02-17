@@ -61,6 +61,11 @@
     border: 1px solid rgba(68, 170, 102, 0.3);
 }
 
+.ai-chat-message.assistant:has(.ai-tool-progress) {
+    width: 95%;
+    max-width: 95%;
+}
+
 .ai-chat-message.system {
     background: rgba(140, 40, 40, 0.4);
     color: #e0a0a0;
