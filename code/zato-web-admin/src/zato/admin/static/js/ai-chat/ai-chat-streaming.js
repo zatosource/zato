@@ -372,10 +372,15 @@
                 if (window.AIChatDiff && data.items && data.items.length > 0) {
                     for (var i = 0; i < data.items.length; i++) {
                         var item = data.items[i];
-                        if (item.is_new === false) {
-                            var container = progressEl.querySelector('.ai-diff-wrapper[data-file="' + item.name + '"] .ai-diff-container');
-                            console.log('[SSE-TRACE] scrolling to first hunk for:', item.name, 'container:', container);
-                            if (container) {
+                        var wrapper = progressEl.querySelector('.ai-diff-wrapper[data-file="' + item.name + '"]');
+                        if (wrapper) {
+                            var container = wrapper.querySelector('.ai-diff-container');
+                            var diffContent = container ? container.querySelector('.ai-diff-content') : null;
+                            console.log('[SSE-TRACE] scrolling for:', item.name, 'is_new:', item.is_new, 'container:', !!container, 'diffContent:', !!diffContent);
+                            if (diffContent) {
+                                diffContent.scrollTop = 0;
+                            }
+                            if (container && item.is_new === false) {
                                 AIChatDiff.navigateToHunk(container, 0);
                             }
                         }
@@ -383,6 +388,16 @@
                 }
             }
 
+            if (data.status === 'done' && data.items && data.items.length > 0) {
+                var firstWrapper = progressEl.querySelector('.ai-diff-wrapper');
+                if (firstWrapper) {
+                    var wrapperRect = firstWrapper.getBoundingClientRect();
+                    var containerRect = messagesContainer.getBoundingClientRect();
+                    var scrollOffset = wrapperRect.top - containerRect.top + messagesContainer.scrollTop - 10;
+                    messagesContainer.scrollTop = Math.max(0, scrollOffset);
+                    return;
+                }
+            }
             AIChatMessages.scrollToBottom(messagesContainer);
         },
 

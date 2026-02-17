@@ -286,9 +286,9 @@ def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict'
                 return {'success': False, 'error': f'Invalid file path: {file_path}'}
 
             old_content = ''
-            is_new = True
-            if os.path.exists(full_path):
-                is_new = False
+            file_exists = os.path.exists(full_path)
+            is_new = not file_exists
+            if file_exists:
                 with open(full_path, 'r') as f:
                     old_content = f.read()
 
@@ -299,6 +299,8 @@ def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict'
                 if error:
                     return {'success': False, 'error': f'Edit failed for {file_path}: {error}'}
             else:
+                if file_exists:
+                    return {'success': False, 'error': f'File {file_path} already exists, use a different filename'}
                 new_content = code
 
             dir_path = os.path.dirname(full_path)
@@ -313,9 +315,9 @@ def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict'
                 'file_path': file_path,
                 'old_content': old_content,
                 'new_content': new_content,
-                'is_new': is_new
+                'is_new': not file_exists
             })
-            logger.info('Deployed service file: %s (is_new=%s, edits=%d)', full_path, is_new, len(edits))
+            logger.info('Deployed service file: %s (is_new=%s, edits=%d)', full_path, not file_exists, len(edits))
 
             service_names = _extract_service_names(new_content)
             all_service_names.extend(service_names)

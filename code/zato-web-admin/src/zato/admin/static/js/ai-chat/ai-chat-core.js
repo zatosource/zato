@@ -168,23 +168,25 @@
             if (!window.AIChatDiff) return;
             var messagesContainer = this.widget.querySelector('.ai-chat-messages[data-tab-id="' + this.activeTabId + '"]');
             if (!messagesContainer) return;
-            var containers = messagesContainer.querySelectorAll('.ai-diff-container[data-hunk-count]');
+            var containers = messagesContainer.querySelectorAll('.ai-diff-container');
             console.log('[SCROLL-HUNK] found containers:', containers.length);
             for (var i = 0; i < containers.length; i++) {
                 var container = containers[i];
                 var hunkCount = parseInt(container.getAttribute('data-hunk-count') || '0', 10);
-                console.log('[SCROLL-HUNK] container', i, 'hunkCount:', hunkCount);
+                var diffContent = container.querySelector('.ai-diff-content');
+                if (diffContent) {
+                    diffContent.scrollTop = 0;
+                }
                 if (hunkCount > 0) {
-                    var wrapper = container.closest('.ai-diff-wrapper');
-                    if (wrapper) {
-                        var wrapperRect = wrapper.getBoundingClientRect();
-                        var containerRect = messagesContainer.getBoundingClientRect();
-                        var scrollOffset = wrapperRect.top - containerRect.top + messagesContainer.scrollTop - 10;
-                        console.log('[SCROLL-HUNK] scrollOffset:', scrollOffset, 'wrapperRect.top:', wrapperRect.top, 'containerRect.top:', containerRect.top);
-                        messagesContainer.scrollTop = Math.max(0, scrollOffset);
-                    }
                     AIChatDiff.navigateToHunk(container, 0);
                 }
+            }
+            var firstWrapper = messagesContainer.querySelector('.ai-diff-wrapper');
+            if (firstWrapper) {
+                var wrapperRect = firstWrapper.getBoundingClientRect();
+                var containerRect = messagesContainer.getBoundingClientRect();
+                var scrollOffset = wrapperRect.top - containerRect.top + messagesContainer.scrollTop - 10;
+                messagesContainer.scrollTop = Math.max(0, scrollOffset);
             }
         }
     };
