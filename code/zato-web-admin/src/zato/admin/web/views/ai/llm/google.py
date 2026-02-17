@@ -88,6 +88,12 @@ class GoogleClient(BaseLLMClient):
 
             working_messages.append({'role': 'user', 'parts': tool_response_parts})
 
+            all_succeeded = all(
+                part.get('functionResponse', {}).get('response', {}).get('success', False)
+                for part in tool_response_parts
+                if 'functionResponse' in part
+            )
+
             if non_browser_calls:
                 new_records = execution_log.records[records_before:]
                 new_items = []
@@ -114,6 +120,9 @@ class GoogleClient(BaseLLMClient):
                                 break
                 if successful_names:
                     yield from self._yield_tool_progress_done(len(successful_names), items=new_items, tool_names=successful_names, tool_params=successful_params)
+
+            if all_succeeded:
+                break
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()

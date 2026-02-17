@@ -121,6 +121,12 @@ class AnthropicClient(BaseLLMClient):
 
             working_messages.append({'role': 'user', 'content': tool_results})
 
+            all_succeeded = all(
+                json.loads(tr.get('content', '{}')).get('success', False)
+                for tr in tool_results
+                if tr.get('type') == 'tool_result'
+            )
+
             if non_browser_calls:
                 new_records = execution_log.records[records_before:]
                 new_items = []
@@ -147,6 +153,9 @@ class AnthropicClient(BaseLLMClient):
                 if successful_names:
                     logger.info('[DEPLOY-TRACE] _yield_tool_progress_done called with successful_names=%s new_items=%s', successful_names, new_items)
                     yield from self._yield_tool_progress_done(len(successful_names), items=new_items, tool_names=successful_names, tool_params=successful_params)
+
+            if all_succeeded:
+                break
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()

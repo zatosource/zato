@@ -91,6 +91,12 @@ class OpenAIClient(BaseLLMClient):
 
             working_messages.extend(tool_messages)
 
+            all_succeeded = all(
+                json.loads(tm.get('content', '{}')).get('success', False)
+                for tm in tool_messages
+                if tm.get('role') == 'tool'
+            )
+
             if non_browser_calls:
                 new_records = execution_log.records[records_before:]
                 new_items = []
@@ -117,6 +123,9 @@ class OpenAIClient(BaseLLMClient):
                                 break
                 if successful_names:
                     yield from self._yield_tool_progress_done(len(successful_names), items=new_items, tool_names=successful_names, tool_params=successful_params)
+
+            if all_succeeded:
+                break
 
         if execution_log.records:
             object_changes = execution_log.get_object_changes()
