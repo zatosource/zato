@@ -478,16 +478,15 @@
                 console.log('[DIFF-CLICK] showing diff');
 
                 var isNewFile = diffWrapper.querySelector('.ai-diff-new');
+                console.log('[DIFF-CLICK] isNewFile:', isNewFile);
                 if (!isNewFile) {
-                    var firstChange = diffWrapper.querySelector('.ai-diff-added, .ai-diff-removed');
-                    if (firstChange) {
-                        var allLines = diffWrapper.querySelectorAll('.ai-diff-line');
-                        var changeIndex = Array.prototype.indexOf.call(allLines, firstChange);
-                        var scrollToIndex = Math.max(0, changeIndex - 4);
-                        var scrollTarget = allLines[scrollToIndex];
-                        if (scrollTarget) {
-                            scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
+                    var container = diffWrapper.querySelector('.ai-diff-container');
+                    console.log('[DIFF-CLICK] container:', container);
+                    if (container) {
+                        console.log('[DIFF-CLICK] calling navigateToHunk(0)');
+                        AIChatDiff.navigateToHunk(container, 0);
+                    } else {
+                        console.log('[DIFF-CLICK] no container found in diffWrapper');
                     }
                 }
             }

@@ -92,7 +92,7 @@
 
             var hunks = this.countHunks(diff);
             var hunkCount = hunks.length;
-            var hunkLabel = hunkCount === 1 ? '1 place' : hunkCount + ' places';
+            var hunkLabel = hunkCount === 1 ? '1 edit' : hunkCount + ' edits';
             
             var html = '<div class="ai-diff-container" data-diff-content="' + escapedDiffText + '" data-hunk-count="' + hunkCount + '" data-current-hunk="0">';
             html += '<div class="ai-diff-header ai-diff-modified"><span>Modified · ' + hunkLabel + '</span>';
@@ -173,23 +173,41 @@
         },
 
         navigateToHunk: function(container, hunkIndex) {
+            console.log('[NAV-HUNK] navigateToHunk called, hunkIndex:', hunkIndex);
             var hunkCount = parseInt(container.getAttribute('data-hunk-count') || '0', 10);
-            if (hunkCount === 0) return;
+            console.log('[NAV-HUNK] hunkCount:', hunkCount);
+            if (hunkCount === 0) {
+                console.log('[NAV-HUNK] hunkCount is 0, returning');
+                return;
+            }
 
             if (hunkIndex < 0) hunkIndex = hunkCount - 1;
             if (hunkIndex >= hunkCount) hunkIndex = 0;
 
             container.setAttribute('data-current-hunk', hunkIndex);
+            console.log('[NAV-HUNK] set data-current-hunk to:', hunkIndex);
 
-            var firstLineOfHunk = container.querySelector('.ai-diff-line[data-hunk="' + hunkIndex + '"]');
+            var selector = '.ai-diff-line[data-hunk="' + hunkIndex + '"]';
+            console.log('[NAV-HUNK] selector:', selector);
+            var firstLineOfHunk = container.querySelector(selector);
+            console.log('[NAV-HUNK] firstLineOfHunk:', firstLineOfHunk);
             if (firstLineOfHunk) {
                 var allLines = container.querySelectorAll('.ai-diff-line');
+                console.log('[NAV-HUNK] allLines count:', allLines.length);
                 var lineIndex = Array.prototype.indexOf.call(allLines, firstLineOfHunk);
+                console.log('[NAV-HUNK] lineIndex:', lineIndex);
                 var scrollToIndex = Math.max(0, lineIndex - 4);
+                console.log('[NAV-HUNK] scrollToIndex:', scrollToIndex);
                 var scrollTarget = allLines[scrollToIndex];
+                console.log('[NAV-HUNK] scrollTarget:', scrollTarget);
                 if (scrollTarget) {
+                    console.log('[NAV-HUNK] calling scrollIntoView');
                     scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    console.log('[NAV-HUNK] no scrollTarget');
                 }
+            } else {
+                console.log('[NAV-HUNK] no firstLineOfHunk found');
             }
         }
     };

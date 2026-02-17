@@ -343,6 +343,19 @@
                 var marker = '[TOOL_DONE:' + data.message + '|' + itemsJson + ']';
                 AIChatMessages.appendToStreamingMessage(tabId, '\n\n' + marker);
                 console.log('[SSE-TRACE] set progressEl to done state, cursor restored');
+
+                if (window.AIChatDiff && data.items && data.items.length > 0) {
+                    for (var i = 0; i < data.items.length; i++) {
+                        var item = data.items[i];
+                        if (item.is_new === false) {
+                            var container = progressEl.querySelector('.ai-diff-wrapper[data-file="' + item.name + '"] .ai-diff-container');
+                            console.log('[SSE-TRACE] scrolling to first hunk for:', item.name, 'container:', container);
+                            if (container) {
+                                AIChatDiff.navigateToHunk(container, 0);
+                            }
+                        }
+                    }
+                }
             }
 
             AIChatMessages.scrollToBottom(messagesContainer);

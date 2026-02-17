@@ -120,6 +120,7 @@
             AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
             this.scrollActiveTabToBottom();
             this.highlightCode();
+            this.scrollEditDiffsToFirstHunk();
             AIChatZoom.applyAllZoneZooms(this.widget);
             this.restoreInputContent();
 
@@ -160,6 +161,22 @@
             var inputEl = this.widget.querySelector('.ai-chat-input[data-tab-id="' + this.activeTabId + '"]');
             if (inputEl && window.AIChatInput) {
                 AIChatInput.restoreInputFromStorage(inputEl);
+            }
+        },
+
+        scrollEditDiffsToFirstHunk: function() {
+            if (!window.AIChatDiff) return;
+            var messagesContainer = this.widget.querySelector('.ai-chat-messages[data-tab-id="' + this.activeTabId + '"]');
+            if (!messagesContainer) return;
+            var containers = messagesContainer.querySelectorAll('.ai-diff-container[data-hunk-count]');
+            console.log('[SCROLL-HUNK] found containers:', containers.length);
+            for (var i = 0; i < containers.length; i++) {
+                var container = containers[i];
+                var hunkCount = parseInt(container.getAttribute('data-hunk-count') || '0', 10);
+                console.log('[SCROLL-HUNK] container', i, 'hunkCount:', hunkCount);
+                if (hunkCount > 0) {
+                    AIChatDiff.navigateToHunk(container, 0);
+                }
             }
         }
     };
