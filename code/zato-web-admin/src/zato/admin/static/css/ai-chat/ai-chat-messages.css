@@ -496,6 +496,12 @@
     color: #7eb8da;
 }
 
+.ai-tool-progress.ai-tool-running > span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .ai-tool-progress.ai-tool-done {
     color: #8fbc8f;
 }
@@ -631,8 +637,7 @@
 
 .ai-diff-nav {
     display: inline-flex;
-    gap: 4px;
-    margin-left: 8px;
+    gap: 2px;
 }
 
 .ai-diff-nav-btn {

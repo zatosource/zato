@@ -95,11 +95,11 @@
             var hunkLabel = hunkCount === 1 ? '1 edit' : hunkCount + ' edits';
             
             var html = '<div class="ai-diff-container" data-diff-content="' + escapedDiffText + '" data-hunk-count="' + hunkCount + '" data-current-hunk="0">';
-            html += '<div class="ai-diff-header ai-diff-modified"><span>Modified · ' + hunkLabel + '</span>';
+            html += '<div class="ai-diff-header ai-diff-modified"><span>Modified · ' + hunkLabel;
             if (hunkCount > 1) {
-                html += '<span class="ai-diff-nav"><button class="ai-diff-nav-btn ai-diff-nav-up" title="Previous change">▲</button><button class="ai-diff-nav-btn ai-diff-nav-down" title="Next change">▼</button></span>';
+                html += ' · <span class="ai-diff-nav"><button class="ai-diff-nav-btn ai-diff-nav-up" title="Previous change">▲</button><button class="ai-diff-nav-btn ai-diff-nav-down" title="Next change">▼</button></span>';
             }
-            html += '<button class="ai-diff-copy ai-diff-copy-diff">Copy diff</button></div>';
+            html += '</span><button class="ai-diff-copy ai-diff-copy-diff">Copy diff</button></div>';
             html += '<div class="ai-diff-content">';
 
             var currentHunk = -1;

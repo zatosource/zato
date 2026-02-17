@@ -301,6 +301,11 @@
                 progressEl.classList.add('ai-tool-running');
                 streamingEl.classList.add('hide-cursor');
                 console.log('[SSE-TRACE] set progressEl to running state, hid cursor');
+
+                var existingWaiting = contentEl.querySelector('.ai-chat-waiting-indicator');
+                if (existingWaiting) {
+                    existingWaiting.remove();
+                }
             } else if (data.status === 'done') {
                 var itemsJson = data.items ? JSON.stringify(data.items) : '[]';
                 var inlineTags = '';
@@ -340,6 +345,7 @@
                 progressEl.classList.remove('ai-tool-running');
                 progressEl.classList.add('ai-tool-done');
                 streamingEl.classList.remove('hide-cursor');
+
                 var marker = '[TOOL_DONE:' + data.message + '|' + itemsJson + ']';
                 AIChatMessages.appendToStreamingMessage(tabId, '\n\n' + marker);
                 console.log('[SSE-TRACE] set progressEl to done state, cursor restored');
