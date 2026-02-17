@@ -167,20 +167,38 @@
                             var items = [];
                             try { items = JSON.parse(itemsJson); } catch (e) {}
                             var inlineTags = '';
+                            var diffHtml = '';
                             var showBtn = '';
                             if (items.length > 0) {
                                 var isServiceDeploy = items.every(function(item) { return item.type === 'Service'; });
                                 if (isServiceDeploy) {
                                     inlineTags = '<span class="ai-tool-tags">';
                                     for (var j = 0; j < items.length; j++) {
-                                        inlineTags += '<span class="ai-tool-tag">' + items[j].name + '</span>';
+                                        var item = items[j];
+                                        var tagData = JSON.stringify({
+                                            name: item.name,
+                                            old_content: item.old_content || '',
+                                            new_content: item.new_content || '',
+                                            is_new: item.is_new !== false
+                                        });
+                                        inlineTags += '<span class="ai-tool-tag active" data-diff=\'' + tagData.replace(/'/g, '&#39;') + '\'>' + item.name + '</span>';
                                     }
                                     inlineTags += '</span>';
+                                    if (window.AIChatDiff) {
+                                        for (var j = 0; j < items.length; j++) {
+                                            var item = items[j];
+                                            var isNew = item.is_new !== false;
+                                            diffHtml += '<div class="ai-diff-wrapper" data-file="' + item.name + '">';
+                                            diffHtml += '<div class="ai-diff-filename">' + item.name + '</div>';
+                                            diffHtml += AIChatDiff.renderDiff(item.old_content || '', item.new_content || '', isNew);
+                                            diffHtml += '</div>';
+                                        }
+                                    }
                                 } else {
                                     showBtn = '<button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>';
                                 }
                             }
-                            var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span><span class="ai-tool-checkmark">✓</span> ' + doneMessage + '</span>' + inlineTags + showBtn + '</div>';
+                            var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span><span class="ai-tool-checkmark">✓</span> ' + doneMessage + '</span>' + inlineTags + showBtn + diffHtml + '</div>';
                             parsedHtml = parsedHtml.replace(toolDoneMatch[0], toolDoneHtml);
                             parsedHtml = parsedHtml.replace('<p>' + toolDoneHtml + '</p>', toolDoneHtml);
                         }

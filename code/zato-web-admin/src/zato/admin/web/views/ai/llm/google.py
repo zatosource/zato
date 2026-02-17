@@ -96,10 +96,15 @@ class GoogleClient(BaseLLMClient):
                 for record in new_records:
                     if record.success:
                         if record.action:
-                            new_items.append({
+                            item = {
                                 'type': execution_log._format_object_type(record.model_name),
                                 'name': record.object_name
-                            })
+                            }
+                            if record.tool_name == 'deploy_service':
+                                item['old_content'] = record.old_content
+                                item['new_content'] = record.new_content
+                                item['is_new'] = record.is_new
+                            new_items.append(item)
                         for tc in non_browser_calls:
                             tc_name = tc.get('name', '')
                             if tc_name == record.tool_name:

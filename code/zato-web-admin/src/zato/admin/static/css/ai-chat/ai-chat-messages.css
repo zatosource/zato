@@ -478,13 +478,11 @@
 }
 
 .ai-tool-progress {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: block;
     padding: 8px 12px;
-    margin-top: 8px;
+    margin: 8px 0;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 13px;
     background: rgba(100, 100, 100, 0.2);
 }
 
@@ -522,13 +520,6 @@
     margin-right: 0.2em;
 }
 
-.ai-tool-progress {
-    margin-top: 12px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 
 .ai-tool-show-btn {
     background: rgba(143, 188, 143, 0.25);
@@ -560,10 +551,12 @@
 }
 
 .ai-tool-tags {
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    display: inline;
     margin-left: 10px;
+}
+
+.ai-tool-tags .ai-tool-tag {
+    margin-right: 6px;
 }
 
 .ai-tool-tag {
@@ -574,6 +567,94 @@
     padding: 2px 8px;
     font-size: 11px;
     color: rgba(180, 220, 180, 0.9);
+    cursor: pointer;
+}
+
+.ai-tool-tag:hover {
+    background: rgba(143, 188, 143, 0.35);
+}
+
+.ai-tool-tag.active {
+    background: rgba(200, 180, 100, 0.3);
+    border-color: rgba(200, 180, 100, 0.6);
+}
+
+.ai-diff-wrapper {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    clear: both;
+}
+
+.ai-diff-filename {
+    font-size: 10px;
+    color: rgba(180, 200, 180, 0.8);
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.ai-diff-container {
+    margin-bottom: 8px;
+    border: 1px solid rgba(100, 140, 100, 0.3);
+    border-radius: 6px;
+    overflow: hidden;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.ai-diff-header {
+    padding: 6px 10px;
+    font-weight: 500;
+    font-size: 10px;
+}
+
+.ai-diff-header.ai-diff-new {
+    background: rgba(80, 160, 80, 0.2);
+    color: rgba(150, 220, 150, 0.9);
+}
+
+.ai-diff-header.ai-diff-modified {
+    background: rgba(180, 150, 80, 0.2);
+    color: rgba(220, 200, 140, 0.9);
+}
+
+.ai-diff-content {
+    max-height: 300px;
+    overflow-y: auto;
+    background: rgba(20, 20, 20, 0.5);
+}
+
+.ai-diff-line {
+    display: flex;
+    padding: 1px 8px;
+    white-space: pre;
+}
+
+.ai-diff-sign {
+    width: 16px;
+    flex-shrink: 0;
+    color: rgba(150, 150, 150, 0.7);
+}
+
+.ai-diff-text {
+    flex: 1;
+    overflow-x: auto;
+}
+
+.ai-diff-added {
+    background: rgba(80, 160, 80, 0.15);
+}
+
+.ai-diff-added .ai-diff-sign {
+    color: rgba(120, 200, 120, 0.9);
+}
+
+.ai-diff-removed {
+    background: rgba(180, 80, 80, 0.15);
+}
+
+.ai-diff-removed .ai-diff-sign {
+    color: rgba(220, 120, 120, 0.9);
 }
 
 .ai-tool-items-list {

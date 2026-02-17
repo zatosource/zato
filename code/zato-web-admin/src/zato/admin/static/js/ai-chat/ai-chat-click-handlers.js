@@ -6,6 +6,18 @@
         handleClick: function(e, widget, core) {
             var target = e.target;
 
+            var diffTag = target.closest('.ai-tool-tag[data-diff]');
+            if (diffTag) {
+                console.log('[DIFF-CLICK] diffTag found:', diffTag);
+                this.handleDiffTagClick(diffTag);
+                return;
+            }
+
+            var anyTag = target.closest('.ai-tool-tag');
+            if (anyTag) {
+                console.log('[DIFF-CLICK] anyTag found but no data-diff:', anyTag, 'data-diff:', anyTag.getAttribute('data-diff'));
+            }
+
             var showBtn = target.closest('.ai-tool-show-btn');
             if (showBtn) {
                 this.handleShowItems(showBtn);
@@ -415,6 +427,38 @@
 
             progressEl.insertAdjacentHTML('afterend', listHtml);
             btn.textContent = 'Hide';
+        },
+
+        handleDiffTagClick: function(tag) {
+            var fileName = tag.textContent;
+            console.log('[DIFF-CLICK] handleDiffTagClick called, fileName:', fileName);
+            
+            var progressEl = tag.closest('.ai-tool-progress');
+            console.log('[DIFF-CLICK] progressEl:', progressEl);
+            if (!progressEl) {
+                console.log('[DIFF-CLICK] no progressEl found');
+                return;
+            }
+
+            var diffWrapper = progressEl.querySelector('.ai-diff-wrapper[data-file="' + fileName + '"]');
+            console.log('[DIFF-CLICK] diffWrapper:', diffWrapper, 'selector:', '.ai-diff-wrapper[data-file="' + fileName + '"]');
+            if (!diffWrapper) {
+                console.log('[DIFF-CLICK] no diffWrapper found, all wrappers:', progressEl.querySelectorAll('.ai-diff-wrapper'));
+                return;
+            }
+
+            var isActive = tag.classList.contains('active');
+            console.log('[DIFF-CLICK] isActive:', isActive);
+
+            if (isActive) {
+                tag.classList.remove('active');
+                diffWrapper.style.display = 'none';
+                console.log('[DIFF-CLICK] hiding diff');
+            } else {
+                tag.classList.add('active');
+                diffWrapper.style.display = 'block';
+                console.log('[DIFF-CLICK] showing diff');
+            }
         }
     };
 

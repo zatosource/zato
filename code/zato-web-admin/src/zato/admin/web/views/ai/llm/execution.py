@@ -81,6 +81,9 @@ class ToolRecord(BaseModel):
     result: Optional[Any] = None
     success: bool = False
     error: Optional[str] = None
+    old_content: str = ''
+    new_content: str = ''
+    is_new: bool = True
 
 # ################################################################################################################################
 
@@ -116,7 +119,10 @@ class ExecutionLog(BaseModel):
 
             if tool_name in ('deploy_service', 'delete_service'):
                 files = result.get('files', [])
+                details = result.get('details', [])
+                details_by_path = {d['file_path']: d for d in details}
                 for file_path in files:
+                    detail = details_by_path.get(file_path, {})
                     record = ToolRecord(
                         tool_name=tool_name,
                         model_name='service',
@@ -126,7 +132,10 @@ class ExecutionLog(BaseModel):
                         arguments=arguments,
                         result=result,
                         success=success,
-                        error=error
+                        error=error,
+                        old_content=detail.get('old_content', ''),
+                        new_content=detail.get('new_content', ''),
+                        is_new=detail.get('is_new', True)
                     )
                     self.records.append(record)
                 return

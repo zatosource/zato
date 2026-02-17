@@ -219,6 +219,7 @@ def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict'
 
     services_root = os.path.expanduser('~/env/qs-1/server1/pickup/code/impl/src/api')
     deployed_files = []
+    deployed_details = []
     all_service_names = []
 
     try:
@@ -235,6 +236,13 @@ def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict'
             if not full_path.startswith(services_root):
                 return {'success': False, 'error': f'Invalid file path: {file_path}'}
 
+            old_content = ''
+            is_new = True
+            if os.path.exists(full_path):
+                is_new = False
+                with open(full_path, 'r') as f:
+                    old_content = f.read()
+
             dir_path = os.path.dirname(full_path)
             if dir_path and not os.path.exists(dir_path):
                 os.makedirs(dir_path)
@@ -243,7 +251,13 @@ def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict'
                 f.write(code)
 
             deployed_files.append(file_path)
-            logger.info('Deployed service file: %s', full_path)
+            deployed_details.append({
+                'file_path': file_path,
+                'old_content': old_content,
+                'new_content': code,
+                'is_new': is_new
+            })
+            logger.info('Deployed service file: %s (is_new=%s)', full_path, is_new)
 
             service_names = _extract_service_names(code)
             all_service_names.extend(service_names)
@@ -259,7 +273,8 @@ def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict'
         return {
             'success': True,
             'message': f'Deployed {len_deployed} {file_word}',
-            'files': deployed_files
+            'files': deployed_files,
+            'details': deployed_details
         }
 
     except Exception:

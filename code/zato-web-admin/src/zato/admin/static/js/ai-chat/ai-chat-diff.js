@@ -1,0 +1,121 @@
+(function() {
+    'use strict';
+
+    var AIChatDiff = {
+
+        computeDiff: function(oldContent, newContent) {
+            var oldLines = oldContent ? oldContent.split('\n') : [];
+            var newLines = newContent ? newContent.split('\n') : [];
+
+            var result = [];
+            var oldIdx = 0;
+            var newIdx = 0;
+
+            var lcs = this.computeLCS(oldLines, newLines);
+            var lcsIdx = 0;
+
+            while (oldIdx < oldLines.length || newIdx < newLines.length) {
+                if (lcsIdx < lcs.length && oldIdx < oldLines.length && newIdx < newLines.length &&
+                    oldLines[oldIdx] === lcs[lcsIdx] && newLines[newIdx] === lcs[lcsIdx]) {
+                    result.push({type: 'unchanged', line: oldLines[oldIdx]});
+                    oldIdx++;
+                    newIdx++;
+                    lcsIdx++;
+                } else if (newIdx < newLines.length && (lcsIdx >= lcs.length || newLines[newIdx] !== lcs[lcsIdx])) {
+                    result.push({type: 'added', line: newLines[newIdx]});
+                    newIdx++;
+                } else if (oldIdx < oldLines.length && (lcsIdx >= lcs.length || oldLines[oldIdx] !== lcs[lcsIdx])) {
+                    result.push({type: 'removed', line: oldLines[oldIdx]});
+                    oldIdx++;
+                } else {
+                    break;
+                }
+            }
+
+            return result;
+        },
+
+        computeLCS: function(a, b) {
+            var m = a.length;
+            var n = b.length;
+            var dp = [];
+
+            for (var i = 0; i <= m; i++) {
+                dp[i] = [];
+                for (var j = 0; j <= n; j++) {
+                    if (i === 0 || j === 0) {
+                        dp[i][j] = 0;
+                    } else if (a[i - 1] === b[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1] + 1;
+                    } else {
+                        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                    }
+                }
+            }
+
+            var lcs = [];
+            var i = m;
+            var j = n;
+            while (i > 0 && j > 0) {
+                if (a[i - 1] === b[j - 1]) {
+                    lcs.unshift(a[i - 1]);
+                    i--;
+                    j--;
+                } else if (dp[i - 1][j] > dp[i][j - 1]) {
+                    i--;
+                } else {
+                    j--;
+                }
+            }
+
+            return lcs;
+        },
+
+        renderDiff: function(oldContent, newContent, isNew) {
+            if (isNew) {
+                var lines = newContent ? newContent.split('\n') : [];
+                var html = '<div class="ai-diff-container">';
+                html += '<div class="ai-diff-header ai-diff-new">New file</div>';
+                html += '<div class="ai-diff-content">';
+                for (var i = 0; i < lines.length; i++) {
+                    html += '<div class="ai-diff-line ai-diff-added"><span class="ai-diff-sign">+</span><span class="ai-diff-text">' + this.escapeHtml(lines[i]) + '</span></div>';
+                }
+                html += '</div></div>';
+                return html;
+            }
+
+            var diff = this.computeDiff(oldContent, newContent);
+            var html = '<div class="ai-diff-container">';
+            html += '<div class="ai-diff-header ai-diff-modified">Modified</div>';
+            html += '<div class="ai-diff-content">';
+
+            for (var i = 0; i < diff.length; i++) {
+                var item = diff[i];
+                var lineClass = 'ai-diff-line';
+                var sign = ' ';
+
+                if (item.type === 'added') {
+                    lineClass += ' ai-diff-added';
+                    sign = '+';
+                } else if (item.type === 'removed') {
+                    lineClass += ' ai-diff-removed';
+                    sign = '-';
+                }
+
+                html += '<div class="' + lineClass + '"><span class="ai-diff-sign">' + sign + '</span><span class="ai-diff-text">' + this.escapeHtml(item.line) + '</span></div>';
+            }
+
+            html += '</div></div>';
+            return html;
+        },
+
+        escapeHtml: function(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    };
+
+    window.AIChatDiff = AIChatDiff;
+
+})();
