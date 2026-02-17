@@ -29,6 +29,9 @@ logger = getLogger(__name__)
 API_URL = 'https://api.anthropic.com/v1/messages'
 API_Version = '2023-06-01'
 
+Max_Tokens_Per_Request = 8000
+Max_Continuations = 5
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -48,25 +51,43 @@ class AnthropicClient(BaseLLMClient):
         execution_log = ExecutionLog()
 
         for iteration in range(Max_Tool_Iterations):
-            result = yield from self._stream_single_request(
-                model, working_messages, anthropic_tools
-            )
 
-            if result.get('retry'):
-                yield self._format_chunk('Continuing with LLM...\n\n')
-                yield self._format_waiting()
+            continuation_count = 0
+            accumulated_content = []
+
+            while continuation_count < Max_Continuations:
                 result = yield from self._stream_single_request(
                     model, working_messages, anthropic_tools
                 )
+
                 if result.get('retry'):
-                    yield self._format_chunk('LLM is temporarily unavailable. Please try again.\n')
+                    yield self._format_chunk('Continuing with LLM...\n\n')
+                    yield self._format_waiting()
+                    result = yield from self._stream_single_request(
+                        model, working_messages, anthropic_tools
+                    )
+                    if result.get('retry'):
+                        yield self._format_chunk('LLM is temporarily unavailable. Please try again.\n')
+                        return
+
+                total_input_tokens += result.get('input_tokens', 0)
+                total_output_tokens += result.get('output_tokens', 0)
+
+                if result.get('error'):
                     return
 
-            total_input_tokens += result.get('input_tokens', 0)
-            total_output_tokens += result.get('output_tokens', 0)
+                assistant_content = result.get('assistant_content', [])
+                accumulated_content.extend(assistant_content)
 
-            if result.get('error'):
-                return
+                if result.get('stop_reason') == 'max_tokens':
+                    continuation_count += 1
+                    logger.info('Continuing response (continuation %d/%d)', continuation_count, Max_Continuations)
+                    working_messages.append({'role': 'assistant', 'content': assistant_content})
+                    working_messages.append({'role': 'user', 'content': 'Continue from where you left off.'})
+                else:
+                    break
+
+            result['assistant_content'] = accumulated_content
 
             tool_calls = result.get('tool_calls', [])
             if not tool_calls:
@@ -288,7 +309,7 @@ class AnthropicClient(BaseLLMClient):
 
         body = {
             'model': model,
-            'max_tokens': 16384,
+            'max_tokens': Max_Tokens_Per_Request,
             'stream': True,
             'messages': messages_with_guidance,
         }
@@ -328,6 +349,7 @@ class AnthropicClient(BaseLLMClient):
         tool_calls = []
         assistant_content = []
         current_tool_call = None
+        stop_reason = None
 
         try:
             with urlopen(request) as response:
@@ -361,9 +383,11 @@ class AnthropicClient(BaseLLMClient):
                         logger.info('Anthropic input_tokens: %d', input_tokens)
 
                     elif event_type == 'message_delta':
+                        delta = data.get('delta', {})
+                        stop_reason = delta.get('stop_reason')
                         usage = data.get('usage', {})
                         output_tokens = usage.get('output_tokens', 0)
-                        logger.info('Anthropic output_tokens: %d', output_tokens)
+                        logger.info('Anthropic output_tokens: %d stop_reason=%s', output_tokens, stop_reason)
 
                     elif event_type == 'content_block_start':
                         content_block = data.get('content_block', {})
@@ -433,9 +457,9 @@ class AnthropicClient(BaseLLMClient):
                             current_tool_call = None
 
                     elif event_type == 'message_stop':
-                        logger.info('Anthropic complete: input_tokens=%d output_tokens=%d tool_calls=%d',
-                                    input_tokens, output_tokens, len(tool_calls))
-                        return {'input_tokens': input_tokens, 'output_tokens': output_tokens, 'tool_calls': tool_calls, 'assistant_content': assistant_content}
+                        logger.info('Anthropic complete: input_tokens=%d output_tokens=%d tool_calls=%d stop_reason=%s',
+                                    input_tokens, output_tokens, len(tool_calls), stop_reason)
+                        return {'input_tokens': input_tokens, 'output_tokens': output_tokens, 'tool_calls': tool_calls, 'assistant_content': assistant_content, 'stop_reason': stop_reason}
 
                     elif event_type == 'error':
                         error_data = data.get('error', {})
@@ -447,7 +471,7 @@ class AnthropicClient(BaseLLMClient):
             logger.warning('Anthropic API error: %s', format_exc())
             return {'retry': True}
 
-        return {'input_tokens': input_tokens, 'output_tokens': output_tokens, 'tool_calls': tool_calls, 'assistant_content': assistant_content}
+        return {'input_tokens': input_tokens, 'output_tokens': output_tokens, 'tool_calls': tool_calls, 'assistant_content': assistant_content, 'stop_reason': stop_reason}
 
 # ################################################################################################################################
 # ################################################################################################################################
