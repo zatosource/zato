@@ -193,8 +193,7 @@
                                             var item = items[j];
                                             var isNew = item.is_new !== false;
                                             diffHtml += '<div class="ai-diff-wrapper" data-file="' + item.name + '">';
-                                            diffHtml += '<div class="ai-diff-filename">' + item.name + '</div>';
-                                            diffHtml += AIChatDiff.renderDiff(item.old_content || '', item.new_content || '', isNew);
+                                            diffHtml += AIChatDiff.renderDiff(item.old_content || '', item.new_content || '', isNew, item.name);
                                             diffHtml += '</div>';
                                         }
                                     }

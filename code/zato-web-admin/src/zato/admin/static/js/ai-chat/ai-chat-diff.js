@@ -71,13 +71,14 @@
             return lcs;
         },
 
-        renderDiff: function(oldContent, newContent, isNew) {
+        renderDiff: function(oldContent, newContent, isNew, fileName) {
             var escapedNewContent = this.escapeHtml(newContent || '');
+            var fileLabel = fileName ? this.escapeHtml(fileName) : '';
             
             if (isNew) {
                 var lines = newContent ? newContent.split('\n') : [];
                 var html = '<div class="ai-diff-container" data-new-content="' + escapedNewContent.replace(/"/g, '&quot;') + '">';
-                html += '<div class="ai-diff-header ai-diff-new"><span>New file</span><button class="ai-diff-copy ai-diff-copy-file">Copy file</button></div>';
+                html += '<div class="ai-diff-header ai-diff-new"><span>New · ' + fileLabel + '</span><button class="ai-diff-copy ai-diff-copy-file">Copy file</button></div>';
                 html += '<div class="ai-diff-content">';
                 for (var i = 0; i < lines.length; i++) {
                     html += '<div class="ai-diff-line ai-diff-added"><span class="ai-diff-sign">+</span><span class="ai-diff-text">' + this.escapeHtml(lines[i]) + '</span></div>';
@@ -92,10 +93,10 @@
 
             var hunks = this.countHunks(diff);
             var hunkCount = hunks.length;
-            var hunkLabel = hunkCount === 1 ? '1 edit' : hunkCount + ' edits';
+            var editLabel = hunkCount === 1 ? '1 edit' : hunkCount + ' edits';
             
             var html = '<div class="ai-diff-container" data-diff-content="' + escapedDiffText + '" data-hunk-count="' + hunkCount + '" data-current-hunk="0">';
-            html += '<div class="ai-diff-header ai-diff-modified"><span>Modified · ' + hunkLabel;
+            html += '<div class="ai-diff-header ai-diff-modified"><span>Modified · ' + fileLabel + ' · ' + editLabel;
             if (hunkCount > 1) {
                 html += ' · <span class="ai-diff-nav"><button class="ai-diff-nav-btn ai-diff-nav-up" title="Previous change">▲</button><button class="ai-diff-nav-btn ai-diff-nav-down" title="Next change">▼</button></span>';
             }

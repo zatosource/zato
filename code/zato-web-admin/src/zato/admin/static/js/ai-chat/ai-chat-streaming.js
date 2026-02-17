@@ -229,8 +229,7 @@
                                 var item = items[i];
                                 var isNew = item.is_new !== false;
                                 diffHtml += '<div class="ai-diff-wrapper" data-file="' + item.name + '">';
-                                diffHtml += '<div class="ai-diff-filename">' + item.name + '</div>';
-                                diffHtml += AIChatDiff.renderDiff(item.old_content || '', item.new_content || '', isNew);
+                                diffHtml += AIChatDiff.renderDiff(item.old_content || '', item.new_content || '', isNew, item.name);
                                 diffHtml += '</div>';
                             }
                         }
@@ -350,8 +349,7 @@
                                 var item = data.items[i];
                                 var isNew = item.is_new !== false;
                                 diffHtml += '<div class="ai-diff-wrapper" data-file="' + item.name + '">';
-                                diffHtml += '<div class="ai-diff-filename">' + item.name + '</div>';
-                                diffHtml += AIChatDiff.renderDiff(item.old_content || '', item.new_content || '', isNew);
+                                diffHtml += AIChatDiff.renderDiff(item.old_content || '', item.new_content || '', isNew, item.name);
                                 diffHtml += '</div>';
                             }
                         }
@@ -446,8 +444,7 @@
 
             if (window.AIChatDiff) {
                 var diffHtml = '<div class="ai-diff-wrapper" data-file="' + fileName + '">';
-                diffHtml += '<div class="ai-diff-filename">' + fileName + '</div>';
-                diffHtml += AIChatDiff.renderDiff('', code, isNew);
+                diffHtml += AIChatDiff.renderDiff('', code, isNew, fileName);
                 diffHtml += '</div>';
                 progressEl.insertAdjacentHTML('beforeend', diffHtml);
             }
