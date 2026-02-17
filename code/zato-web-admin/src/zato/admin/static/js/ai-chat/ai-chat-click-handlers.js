@@ -5,6 +5,7 @@
 
         handleClick: function(e, widget, core) {
             var target = e.target;
+            console.log('[CLICK] handleClick called, target:', target.tagName, target.className);
 
             var timestamp = target.closest('.ai-chat-message-time');
             if (timestamp) {
@@ -43,7 +44,9 @@
             }
 
             var retryBtn = target.closest('.ai-chat-retry-btn');
+            console.log('[CLICK] checking retryBtn:', retryBtn);
             if (retryBtn) {
+                console.log('[CLICK] retryBtn found, calling handleRetry');
                 this.handleRetry(retryBtn, widget, core);
                 return;
             }
@@ -552,8 +555,13 @@
         },
 
         handleRetry: function(btn, widget, core) {
+            console.log('[RETRY] handleRetry called');
             var tabId = btn.getAttribute('data-tab-id');
-            if (!tabId) return;
+            console.log('[RETRY] tabId:', tabId);
+            if (!tabId) {
+                console.log('[RETRY] no tabId, returning');
+                return;
+            }
 
             var tab = null;
             for (var i = 0; i < core.tabs.length; i++) {
@@ -562,28 +570,51 @@
                     break;
                 }
             }
-            if (!tab || tab.messages.length < 2) return;
+            console.log('[RETRY] tab found:', !!tab, 'messages:', tab ? tab.messages.length : 0);
+            if (!tab || tab.messages.length < 1) {
+                console.log('[RETRY] no tab or no messages, returning');
+                return;
+            }
 
             var lastUserMsg = null;
-            var lastUserMsgIndex = -1;
+            var lastAssistantMsgIndex = -1;
             for (var i = tab.messages.length - 1; i >= 0; i--) {
-                if (tab.messages[i].role === 'user') {
-                    lastUserMsg = tab.messages[i];
-                    lastUserMsgIndex = i;
+                if (tab.messages[i].role === 'assistant') {
+                    lastAssistantMsgIndex = i;
                     break;
                 }
             }
-            if (!lastUserMsg) return;
+            console.log('[RETRY] lastAssistantMsgIndex:', lastAssistantMsgIndex);
 
-            tab.messages = tab.messages.slice(0, lastUserMsgIndex);
+            for (var i = tab.messages.length - 1; i >= 0; i--) {
+                if (tab.messages[i].role === 'user') {
+                    lastUserMsg = tab.messages[i];
+                    break;
+                }
+            }
+            console.log('[RETRY] lastUserMsg:', lastUserMsg ? lastUserMsg.content.substring(0, 50) : null);
+            if (!lastUserMsg) {
+                console.log('[RETRY] no lastUserMsg, returning');
+                return;
+            }
 
+            if (lastAssistantMsgIndex > -1) {
+                console.log('[RETRY] slicing messages from', tab.messages.length, 'to', lastAssistantMsgIndex);
+                tab.messages = tab.messages.slice(0, lastAssistantMsgIndex);
+            }
+
+            console.log('[RETRY] saving state and rendering');
             core.saveState();
             core.render();
 
             var input = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
+            console.log('[RETRY] input found:', !!input);
             if (input) {
-                input.value = lastUserMsg.content;
+                input.textContent = lastUserMsg.content;
+                console.log('[RETRY] calling sendMessage');
                 AIChatStreaming.sendMessage(widget, core, tabId);
+            } else {
+                console.log('[RETRY] no input found, cannot send');
             }
         }
     };

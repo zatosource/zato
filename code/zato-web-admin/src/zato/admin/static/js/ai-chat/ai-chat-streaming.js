@@ -4,20 +4,35 @@
     var AIChatStreaming = {
 
         sendMessage: function(widget, core, tabId) {
+            console.log('[SEND] sendMessage called, tabId:', tabId);
             var input = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
-            if (!input) return;
+            console.log('[SEND] input found:', !!input, 'value:', input ? (input.value || input.textContent || '').substring(0, 30) : null);
+            if (!input) {
+                console.log('[SEND] no input, returning');
+                return;
+            }
 
             var message = AIChatInput.getMessageText(input);
-            if (!message) return;
+            console.log('[SEND] message from getMessageText:', message ? message.substring(0, 30) : null);
+            if (!message) {
+                console.log('[SEND] no message, returning');
+                return;
+            }
 
             AIChatInput.clearInputStorage(tabId);
 
             var tab = AIChatTabs.getTabById(core.tabs, tabId);
-            if (!tab) return;
-
-            if (AIChatMessages.isStreaming(tabId)) {
+            console.log('[SEND] tab found:', !!tab);
+            if (!tab) {
+                console.log('[SEND] no tab, returning');
                 return;
             }
+
+            if (AIChatMessages.isStreaming(tabId)) {
+                console.log('[SEND] already streaming, returning');
+                return;
+            }
+            console.log('[SEND] proceeding to send');
 
             AIChatMessages.addMessage(tab, 'user', message);
 
