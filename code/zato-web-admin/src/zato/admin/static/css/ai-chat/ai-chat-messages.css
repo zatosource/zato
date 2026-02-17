@@ -562,21 +562,21 @@
 .ai-tool-tag {
     display: inline-block;
     background: rgba(143, 188, 143, 0.2);
-    border: 1px solid rgba(143, 188, 143, 0.4);
+    border: 0px;
     border-radius: 4px;
     padding: 2px 8px;
     font-size: 11px;
-    color: rgba(180, 220, 180, 0.9);
+    color: rgba(200, 235, 200, 0.95);
     cursor: pointer;
 }
 
 .ai-tool-tag:hover {
-    background: rgba(143, 188, 143, 0.35);
+    background: rgba(143, 188, 143, 0.3);
 }
 
 .ai-tool-tag.active {
-    background: rgba(200, 180, 100, 0.3);
-    border-color: rgba(200, 180, 100, 0.6);
+    background: linear-gradient(to bottom, rgba(56, 38, 38, 0.35), rgba(46, 28, 28, 0.3));
+    border: 0px;
 }
 
 .ai-diff-wrapper {
