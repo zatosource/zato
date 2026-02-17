@@ -175,6 +175,14 @@
                 var hunkCount = parseInt(container.getAttribute('data-hunk-count') || '0', 10);
                 console.log('[SCROLL-HUNK] container', i, 'hunkCount:', hunkCount);
                 if (hunkCount > 0) {
+                    var wrapper = container.closest('.ai-diff-wrapper');
+                    if (wrapper) {
+                        var wrapperRect = wrapper.getBoundingClientRect();
+                        var containerRect = messagesContainer.getBoundingClientRect();
+                        var scrollOffset = wrapperRect.top - containerRect.top + messagesContainer.scrollTop - 10;
+                        console.log('[SCROLL-HUNK] scrollOffset:', scrollOffset, 'wrapperRect.top:', wrapperRect.top, 'containerRect.top:', containerRect.top);
+                        messagesContainer.scrollTop = Math.max(0, scrollOffset);
+                    }
                     AIChatDiff.navigateToHunk(container, 0);
                 }
             }

@@ -187,6 +187,12 @@
             container.setAttribute('data-current-hunk', hunkIndex);
             console.log('[NAV-HUNK] set data-current-hunk to:', hunkIndex);
 
+            var diffContent = container.querySelector('.ai-diff-content');
+            if (!diffContent) {
+                console.log('[NAV-HUNK] no diffContent found');
+                return;
+            }
+
             var selector = '.ai-diff-line[data-hunk="' + hunkIndex + '"]';
             console.log('[NAV-HUNK] selector:', selector);
             var firstLineOfHunk = container.querySelector(selector);
@@ -201,8 +207,10 @@
                 var scrollTarget = allLines[scrollToIndex];
                 console.log('[NAV-HUNK] scrollTarget:', scrollTarget);
                 if (scrollTarget) {
-                    console.log('[NAV-HUNK] calling scrollIntoView');
-                    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    console.log('[NAV-HUNK] scrolling diffContent');
+                    var targetTop = scrollTarget.offsetTop - diffContent.firstElementChild.offsetTop;
+                    console.log('[NAV-HUNK] targetTop:', targetTop, 'scrollTarget.offsetTop:', scrollTarget.offsetTop, 'firstChild.offsetTop:', diffContent.firstElementChild.offsetTop);
+                    diffContent.scrollTop = Math.max(0, targetTop);
                 } else {
                     console.log('[NAV-HUNK] no scrollTarget');
                 }
