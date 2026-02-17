@@ -275,6 +275,7 @@ class AnthropicClient(BaseLLMClient):
             'Content-Type': 'application/json',
             'x-api-key': self.api_key,
             'anthropic-version': API_Version,
+            'anthropic-beta': 'prompt-caching-2024-07-31',
         }
 
         body = {
@@ -290,10 +291,22 @@ class AnthropicClient(BaseLLMClient):
             execution_history = self._build_execution_history_context(user_question)
             if execution_history:
                 system_prompt = system_prompt + '\n\n' + execution_history
-            body['system'] = system_prompt
+            body['system'] = [
+                {
+                    'type': 'text',
+                    'text': system_prompt,
+                    'cache_control': {'type': 'ephemeral'}
+                }
+            ]
 
         if tools:
-            body['tools'] = tools
+            cached_tools = []
+            for i, tool in enumerate(tools):
+                cached_tool = dict(tool)
+                if i == len(tools) - 1:
+                    cached_tool['cache_control'] = {'type': 'ephemeral'}
+                cached_tools.append(cached_tool)
+            body['tools'] = cached_tools
 
         body_json = json.dumps(body)
         body_bytes = body_json.encode('utf-8')
@@ -382,7 +395,16 @@ class AnthropicClient(BaseLLMClient):
                             if current_tool_call is not None:
                                 if 'partial_input' not in current_tool_call:
                                     current_tool_call['partial_input'] = ''
+                                    current_tool_call['previewed_files'] = set()
                                 current_tool_call['partial_input'] += partial_json
+
+                                if current_tool_call.get('name') == 'deploy_service':
+                                    previews = yield from self._extract_file_previews(
+                                        current_tool_call['partial_input'],
+                                        current_tool_call['previewed_files']
+                                    )
+                                    for preview in previews:
+                                        current_tool_call['previewed_files'].add(preview['file_path'])
 
                     elif event_type == 'content_block_stop':
                         if current_tool_call is not None:

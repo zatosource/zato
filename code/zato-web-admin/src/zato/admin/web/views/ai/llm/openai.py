@@ -358,7 +358,8 @@ class OpenAIClient(BaseLLMClient):
                             current_tool_calls[idx] = {
                                 'id': tc.get('id', ''),
                                 'name': '',
-                                'arguments': ''
+                                'arguments': '',
+                                'previewed_files': set()
                             }
                         if tc.get('id'):
                             current_tool_calls[idx]['id'] = tc['id']
@@ -367,6 +368,14 @@ class OpenAIClient(BaseLLMClient):
                             current_tool_calls[idx]['name'] = func['name']
                         if func.get('arguments'):
                             current_tool_calls[idx]['arguments'] += func['arguments']
+
+                        if current_tool_calls[idx].get('name') == 'deploy_service':
+                            previews = yield from self._extract_file_previews(
+                                current_tool_calls[idx]['arguments'],
+                                current_tool_calls[idx]['previewed_files']
+                            )
+                            for preview in previews:
+                                current_tool_calls[idx]['previewed_files'].add(preview['file_path'])
 
                     finish_reason = first_choice.get('finish_reason')
                     if finish_reason in ('stop', 'tool_calls'):

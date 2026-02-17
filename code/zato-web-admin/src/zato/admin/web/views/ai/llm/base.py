@@ -180,6 +180,49 @@ class BaseLLMClient(ABC):
 
 # ################################################################################################################################
 
+    def _format_tool_preview(self, file_path:'str', code:'str', is_new:'bool'=True) -> 'dict':
+        """ Formats a tool preview event for showing file diffs during streaming.
+        """
+        return {
+            'type': 'tool_preview',
+            'file_path': file_path,
+            'code': code,
+            'is_new': is_new
+        }
+
+# ################################################################################################################################
+
+    def _extract_file_previews(self, partial_input:'str', already_previewed:'set'):
+        """ Extracts complete file entries from partial JSON and yields preview events.
+        """
+        import re
+        import os
+
+        previews = []
+        pattern = r'"file_path"\s*:\s*"([^"]+)"\s*,\s*"code"\s*:\s*"((?:[^"\\]|\\.)*)"\s*}'
+
+        for match in re.finditer(pattern, partial_input):
+            file_path = match.group(1)
+            if file_path in already_previewed:
+                continue
+
+            code_escaped = match.group(2)
+            try:
+                code = code_escaped.encode().decode('unicode_escape')
+            except Exception:
+                code = code_escaped
+
+            services_root = os.path.expanduser('~/env/qs-1/server1/pickup/code/impl/src/api')
+            full_path = os.path.join(services_root, file_path)
+            is_new = not os.path.exists(full_path)
+
+            yield self._format_tool_preview(file_path, code, is_new)
+            previews.append({'file_path': file_path, 'code': code, 'is_new': is_new})
+
+        return previews
+
+# ################################################################################################################################
+
     def _get_tool_progress_message(self, tool_names:'list', is_done:'bool'=False, tool_params:'list'=None) -> 'str':
         """ Generates an appropriate progress message based on tool names.
         tool_params: optional list of dicts with tool parameters (same order as tool_names)

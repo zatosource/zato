@@ -352,6 +352,18 @@ class GoogleClient(BaseLLMClient):
                             assistant_content.append({'functionCall': function_call})
                             yield from self._yield_tool_progress_start(1, tool_names=[tool_name], tool_params=[tool_args])
 
+                            if tool_name == 'deploy_service':
+                                files = tool_args.get('files', [])
+                                for f in files:
+                                    file_path = f.get('file_path', '')
+                                    code = f.get('code', '')
+                                    if file_path and code:
+                                        import os
+                                        services_root = os.path.expanduser('~/env/qs-1/server1/pickup/code/impl/src/api')
+                                        full_path = os.path.join(services_root, file_path)
+                                        is_new = not os.path.exists(full_path)
+                                        yield self._format_tool_preview(file_path, code, is_new)
+
                     finish_reason = first_candidate.get('finishReason')
                     if finish_reason in ('STOP', 'TOOL_CODE'):
                         return {

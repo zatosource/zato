@@ -151,6 +151,11 @@
                 if (callbacks.onToolProgress) {
                     callbacks.onToolProgress(data);
                 }
+            } else if (eventType === 'tool_preview') {
+                console.log('[SSE] tool_preview event received:', data);
+                if (callbacks.onToolPreview) {
+                    callbacks.onToolPreview(data);
+                }
             } else if (eventType === 'browser_tool') {
                 console.log('[SSE] browser_tool event received:', data);
                 this.handleBrowserTool(data);

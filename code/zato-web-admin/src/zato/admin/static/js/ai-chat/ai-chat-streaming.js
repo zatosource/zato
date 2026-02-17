@@ -86,6 +86,10 @@
                     AIChatWaiting.recordActivity(tabId);
                     self.handleToolProgress(widget, tabId, data);
                 },
+                onToolPreview: function(data) {
+                    AIChatWaiting.recordActivity(tabId);
+                    self.handleToolPreview(widget, tabId, data);
+                },
                 onComplete: function(inputTokens, outputTokens) {
                     AIChatWaiting.stopIdleWatch(tabId);
 
@@ -344,6 +348,60 @@
             AIChatMessages.scrollToBottom(messagesContainer);
         },
 
+        handleToolPreview: function(widget, tabId, data) {
+            console.log('[SSE-TRACE] handleToolPreview called with data:', JSON.stringify(data));
+
+            var messagesContainer = widget.querySelector('.ai-chat-messages[data-tab-id="' + tabId + '"]');
+            if (!messagesContainer) return;
+
+            var streamingEl = messagesContainer.querySelector('.ai-chat-message.streaming');
+            if (!streamingEl) return;
+
+            var contentEl = streamingEl.querySelector('.ai-chat-message-content');
+            if (!contentEl) return;
+
+            var progressEl = contentEl.querySelector('.ai-tool-progress.ai-tool-running');
+            if (!progressEl) return;
+
+            var fileName = data.file_path;
+            var code = data.code;
+            var isNew = data.is_new !== false;
+
+            var existingWrapper = progressEl.querySelector('.ai-diff-wrapper[data-file="' + fileName + '"]');
+            if (existingWrapper) return;
+
+            var tagsContainer = progressEl.querySelector('.ai-tool-tags');
+            if (!tagsContainer) {
+                var firstSpan = progressEl.querySelector('span');
+                if (firstSpan) {
+                    tagsContainer = document.createElement('span');
+                    tagsContainer.className = 'ai-tool-tags';
+                    firstSpan.insertAdjacentElement('afterend', tagsContainer);
+                }
+            }
+
+            if (tagsContainer) {
+                var tagData = JSON.stringify({
+                    name: fileName,
+                    old_content: '',
+                    new_content: code,
+                    is_new: isNew
+                });
+                var tagHtml = '<span class="ai-tool-tag active" data-diff=\'' + tagData.replace(/'/g, '&#39;') + '\'>' + fileName + '</span>';
+                tagsContainer.insertAdjacentHTML('beforeend', tagHtml);
+            }
+
+            if (window.AIChatDiff) {
+                var diffHtml = '<div class="ai-diff-wrapper" data-file="' + fileName + '">';
+                diffHtml += '<div class="ai-diff-filename">' + fileName + '</div>';
+                diffHtml += AIChatDiff.renderDiff('', code, isNew);
+                diffHtml += '</div>';
+                progressEl.insertAdjacentHTML('beforeend', diffHtml);
+            }
+
+            AIChatMessages.scrollToBottom(messagesContainer);
+        },
+
         stopMessage: function(widget, core, tabId) {
             var tab = AIChatTabs.getTabById(core.tabs, tabId);
             if (!tab) return;
@@ -428,6 +486,10 @@
                 onToolProgress: function(data) {
                     AIChatWaiting.recordActivity(tabId);
                     self.handleToolProgress(widget, tabId, data);
+                },
+                onToolPreview: function(data) {
+                    AIChatWaiting.recordActivity(tabId);
+                    self.handleToolPreview(widget, tabId, data);
                 },
                 onComplete: function(inputTokens, outputTokens) {
                     AIChatWaiting.stopIdleWatch(tabId);
