@@ -25,21 +25,16 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 guidance_snippets = [
-    'Check error messages carefully, use try/except blocks for error handling',
-    'Verify file paths exist before writing, check directory structure',
-    'Focus on authentication flow, validate credentials and tokens',
-    'Use edit blocks for existing files, full content only for new files',
-    'Run tests after making changes, verify the fix works',
-    'Check service configuration, verify endpoints and connections',
-    'Review database queries, check for SQL errors and connection issues',
-    'Validate input parameters, check for missing or malformed data',
-    'Check permissions and access rights for files and services',
-    'Review logs for recent errors, look for stack traces',
-    'Verify API responses, check status codes and response format',
-    'Check environment variables and configuration settings',
-    'Review recent changes that may have caused the issue',
-    'Validate JSON/XML structure, check for parsing errors',
-    'Check network connectivity and timeout settings',
+    'Task type: service creation - deploy_service tool available',
+    'Task type: debugging - check logs and error messages',
+    'Task type: configuration - use create/update tools for connections',
+    'Task type: documentation lookup - search_documentation tool available',
+    'Task type: code review - focus on error handling patterns',
+    'Task type: integration - verify endpoint connectivity',
+    'Task type: data transformation - validate input/output formats',
+    'Task type: security - check authentication and permissions',
+    'Task type: performance - review query patterns and caching',
+    'Task type: deployment - verify service dependencies',
 ]
 
 # ################################################################################################################################
@@ -70,8 +65,9 @@ class GuidanceSelector:
 
 # ################################################################################################################################
 
-    def select_guidance(self, user_message:'str', top_k:'int'=2) -> 'anylist':
+    def select_guidance(self, user_message:'str', top_k:'int'=2, threshold:'float'=0.75) -> 'anylist':
         """ Selects the top_k most relevant guidance snippets for the given user message.
+        Only includes snippets with similarity above the threshold.
         """
         self._ensure_initialized()
 
@@ -85,8 +81,9 @@ class GuidanceSelector:
         similarities.sort(key=itemgetter(1), reverse=True)
 
         out = []
-        for i, _ in similarities[:top_k]:
-            out.append(guidance_snippets[i])
+        for i, score in similarities[:top_k]:
+            if score >= threshold:
+                out.append(guidance_snippets[i])
 
         logger.info('Selected guidance for message: %s -> %s', user_message[:50], out)
 

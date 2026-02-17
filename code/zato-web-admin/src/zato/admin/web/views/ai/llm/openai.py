@@ -266,13 +266,14 @@ class OpenAIClient(BaseLLMClient):
         }
 
         api_messages = list(messages)
+        user_question = self._extract_last_user_message(messages)
+
         if self.system_prompt:
-            system_prompt = self.system_prompt
-            user_question = self._extract_last_user_message(messages)
-            execution_history = self._build_execution_history_context(user_question)
-            if execution_history:
-                system_prompt = system_prompt + '\n\n' + execution_history
-            api_messages.insert(0, {'role': 'system', 'content': system_prompt})
+            api_messages.insert(0, {'role': 'system', 'content': self.system_prompt})
+
+        execution_history = self._build_execution_history_context(user_question)
+        if execution_history:
+            api_messages.append({'role': 'user', 'content': execution_history})
 
         body = {
             'model': model,

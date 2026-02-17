@@ -279,7 +279,6 @@ class AnthropicClient(BaseLLMClient):
             'anthropic-beta': 'prompt-caching-2024-07-31',
         }
 
-        # Inject ephemeral guidance after last user message
         user_question = self._extract_last_user_message(messages)
         guidance = select_guidance_for_message(user_question)
 
@@ -295,23 +294,24 @@ class AnthropicClient(BaseLLMClient):
         }
 
         if self.system_prompt:
-            system_prompt = self.system_prompt
-            execution_history = self._build_execution_history_context(user_question)
-            if execution_history:
-                system_prompt = system_prompt + '\n\n' + execution_history
             body['system'] = [
                 {
                     'type': 'text',
-                    'text': system_prompt,
+                    'text': self.system_prompt,
                     'cache_control': {'type': 'ephemeral'}
                 }
             ]
 
+        execution_history = self._build_execution_history_context(user_question)
+        if execution_history:
+            messages_with_guidance.append({'role': 'user', 'content': execution_history})
+
         if tools:
             cached_tools = []
-            for i, tool in enumerate(tools):
+            last_idx = len(tools) - 1
+            for idx, tool in enumerate(tools):
                 cached_tool = dict(tool)
-                if i == len(tools) - 1:
+                if idx == last_idx:
                     cached_tool['cache_control'] = {'type': 'ephemeral'}
                 cached_tools.append(cached_tool)
             body['tools'] = cached_tools
