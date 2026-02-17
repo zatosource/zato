@@ -606,6 +606,9 @@
     padding: 6px 10px;
     font-weight: 500;
     font-size: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .ai-diff-header.ai-diff-new {
@@ -616,6 +619,42 @@
 .ai-diff-header.ai-diff-modified {
     background: rgba(180, 150, 80, 0.2);
     color: rgba(220, 200, 140, 0.9);
+}
+
+.ai-diff-copy {
+    background: transparent !important;
+    border: none !important;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.ai-diff-copy:hover,
+.ai-diff-copy:focus,
+.ai-diff-copy:active {
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    outline: none !important;
+}
+
+.ai-diff-copy-file {
+    color: rgba(150, 220, 150, 0.9);
+}
+
+.ai-diff-copy-file:hover {
+    color: rgba(180, 240, 180, 1);
+}
+
+.ai-diff-copy-diff {
+    color: rgba(220, 200, 140, 0.9);
+}
+
+.ai-diff-copy-diff:hover {
+    color: rgba(240, 220, 160, 1);
 }
 
 .ai-diff-content {

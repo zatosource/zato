@@ -72,10 +72,12 @@
         },
 
         renderDiff: function(oldContent, newContent, isNew) {
+            var escapedNewContent = this.escapeHtml(newContent || '');
+            
             if (isNew) {
                 var lines = newContent ? newContent.split('\n') : [];
-                var html = '<div class="ai-diff-container">';
-                html += '<div class="ai-diff-header ai-diff-new">New file</div>';
+                var html = '<div class="ai-diff-container" data-new-content="' + escapedNewContent.replace(/"/g, '&quot;') + '">';
+                html += '<div class="ai-diff-header ai-diff-new"><span>New file</span><button class="ai-diff-copy ai-diff-copy-file">Copy file</button></div>';
                 html += '<div class="ai-diff-content">';
                 for (var i = 0; i < lines.length; i++) {
                     html += '<div class="ai-diff-line ai-diff-added"><span class="ai-diff-sign">+</span><span class="ai-diff-text">' + this.escapeHtml(lines[i]) + '</span></div>';
@@ -85,8 +87,11 @@
             }
 
             var diff = this.computeDiff(oldContent, newContent);
-            var html = '<div class="ai-diff-container">';
-            html += '<div class="ai-diff-header ai-diff-modified">Modified</div>';
+            var diffText = this.getDiffText(diff);
+            var escapedDiffText = this.escapeHtml(diffText).replace(/"/g, '&quot;');
+            
+            var html = '<div class="ai-diff-container" data-diff-content="' + escapedDiffText + '">';
+            html += '<div class="ai-diff-header ai-diff-modified"><span>Modified</span><button class="ai-diff-copy ai-diff-copy-diff">Copy diff</button></div>';
             html += '<div class="ai-diff-content">';
 
             for (var i = 0; i < diff.length; i++) {
@@ -107,6 +112,21 @@
 
             html += '</div></div>';
             return html;
+        },
+
+        getDiffText: function(diff) {
+            var lines = [];
+            for (var i = 0; i < diff.length; i++) {
+                var item = diff[i];
+                var sign = ' ';
+                if (item.type === 'added') {
+                    sign = '+';
+                } else if (item.type === 'removed') {
+                    sign = '-';
+                }
+                lines.push(sign + item.line);
+            }
+            return lines.join('\n');
         },
 
         escapeHtml: function(text) {

@@ -6,6 +6,12 @@
         handleClick: function(e, widget, core) {
             var target = e.target;
 
+            var diffCopyBtn = target.closest('.ai-diff-copy');
+            if (diffCopyBtn) {
+                this.handleDiffCopy(diffCopyBtn);
+                return;
+            }
+
             var diffTag = target.closest('.ai-tool-tag[data-diff]');
             if (diffTag) {
                 console.log('[DIFF-CLICK] diffTag found:', diffTag);
@@ -458,6 +464,38 @@
                 tag.classList.add('active');
                 diffWrapper.style.display = 'block';
                 console.log('[DIFF-CLICK] showing diff');
+            }
+        },
+
+        handleDiffCopy: function(btn) {
+            var container = btn.closest('.ai-diff-container');
+            if (!container) return;
+
+            var content = '';
+            if (btn.classList.contains('ai-diff-copy-file')) {
+                content = container.getAttribute('data-new-content') || '';
+            } else if (btn.classList.contains('ai-diff-copy-diff')) {
+                content = container.getAttribute('data-diff-content') || '';
+            }
+
+            if (content) {
+                var decoded = content.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                navigator.clipboard.writeText(decoded);
+                var originalText = btn.textContent;
+                btn.textContent = 'Copied';
+                var capturedBtn = btn;
+                var capturedOriginal = originalText;
+                (function(b, o) {
+                    var start = Date.now();
+                    var check = function() {
+                        if (Date.now() - start >= 1500) {
+                            b.textContent = o;
+                        } else {
+                            requestAnimationFrame(check);
+                        }
+                    };
+                    requestAnimationFrame(check);
+                })(capturedBtn, capturedOriginal);
             }
         }
     };
