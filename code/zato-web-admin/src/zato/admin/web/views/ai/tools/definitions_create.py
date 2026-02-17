@@ -80,7 +80,7 @@ tool_create_scheduler = {
             'service': {'type': 'string', 'description': 'Name of the service to invoke'},
             'job_type': {'type': 'string', 'enum': ['one_time', 'interval_based'], 'description': 'Type of scheduler job'},
             'is_active': {'type': 'boolean', 'description': 'Whether the job is active', 'default': True},
-            'start_date': {'type': 'string', 'description': 'Start date/time in ISO format'},
+            'start_date': {'type': 'string', 'description': 'Start date/time in ISO format (required, e.g. 2025-01-01T00:00:00)'},
             'weeks': {'type': 'integer', 'description': 'Interval in weeks (for interval_based)'},
             'days': {'type': 'integer', 'description': 'Interval in days (for interval_based)'},
             'hours': {'type': 'integer', 'description': 'Interval in hours (for interval_based)'},
@@ -89,7 +89,7 @@ tool_create_scheduler = {
             'repeats': {'type': 'integer', 'description': 'Number of times to repeat (null for infinite)'},
             'extra': {'type': 'string', 'description': 'Extra data to pass to the service (JSON string)'}
         },
-        'required': ['name', 'service', 'job_type']
+        'required': ['name', 'service', 'job_type', 'start_date']
     }
 }
 

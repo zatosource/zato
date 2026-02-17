@@ -160,21 +160,28 @@ class SchedulerImporter:
         start_date = compute_next_start_date(original_start_date, job_def)
 
         # Prepare job parameters
-        job_id = None
         job_name = job_def['name']
         job_is_active = job_def.get('is_active', False)
         job_type = job_def['job_type']
         job_extra = job_def.get('extra', '')
 
-        # Create a new job instance
-        job = Job(job_id, job_name, job_is_active, job_type, start_date, job_extra, cluster=cluster, service=service)
+        # Create a new job instance using keyword arguments to let SQLAlchemy handle id
+        job = Job(
+            name=job_name,
+            is_active=job_is_active,
+            job_type=job_type,
+            start_date=start_date,
+            extra=job_extra,
+            cluster=cluster,
+            service=service
+        )
 
         # Add to session and flush to get ID
         session.add(job)
         session.flush()
 
         # Create the associated IntervalBasedJob
-        interval_job = IntervalBasedJob(None, job)
+        interval_job = IntervalBasedJob(job=job)
 
         # Set interval attributes
         for attr in _interval_based_job_attrs:

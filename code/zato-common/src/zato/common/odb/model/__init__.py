@@ -644,7 +644,8 @@ class Job(Base):
     def __init__(self, id=None, name=None, is_active=None, job_type=None, start_date=None, extra=None, cluster=None,
             cluster_id=None, service=None, service_id=None, service_name=None, interval_based=None,
             definition_text=None, job_type_friendly=None):
-        self.id = id
+        if id is not None:
+            self.id = id
         self.name = name
         self.is_active = is_active
         self.job_type = job_type
@@ -686,7 +687,8 @@ class IntervalBasedJob(Base):
 
     def __init__(self, id=None, job=None, weeks=None, days=None, hours=None, minutes=None, seconds=None, repeats=None,
             definition_text=None):
-        self.id = id
+        if id is not None:
+            self.id = id
         self.job = job
         self.weeks = weeks
         self.days = days

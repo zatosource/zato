@@ -73,6 +73,23 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         if not self.yaml_config:
             self.yaml_config = self.importer.from_path(self.temp_file.name)
 
+        # Clean up any existing test scheduler jobs and their interval jobs
+        existing_jobs = self.session.query(Job).filter(Job.name.like('enmasse.scheduler.%')).all()
+        for job in existing_jobs:
+            interval_job = self.session.query(IntervalBasedJob).filter_by(job_id=job.id).first()
+            if interval_job:
+                self.session.delete(interval_job)
+            self.session.delete(job)
+
+        # Also clean up any orphaned interval jobs that reference non-existent jobs
+        all_interval_jobs = self.session.query(IntervalBasedJob).all()
+        for interval_job in all_interval_jobs:
+            job = self.session.query(Job).filter_by(id=interval_job.job_id).first()
+            if not job:
+                self.session.delete(interval_job)
+
+        self.session.commit()
+
 # ################################################################################################################################
 
     def test_job_definition_creation(self):
@@ -171,6 +188,39 @@ class TestEnmasseSchedulerFromYAML(TestCase):
         job_created2, job_updated2 = self.scheduler_importer.sync_job_definitions(job_list, self.session)
         self.assertEqual(len(job_created2), 0)
         self.assertEqual(len(job_updated2), 4)
+
+# ################################################################################################################################
+
+    def test_multiple_job_creation_unique_ids(self):
+        """ Test that creating multiple jobs generates unique ids for each job.
+        This is a regression test for the bug where job_id=1 was being reused.
+        """
+        self._setup_test_environment()
+
+        # Get definitions from YAML
+        job_defs = self.yaml_config['scheduler']
+
+        # Create all jobs
+        created, _ = self.scheduler_importer.sync_job_definitions(job_defs, self.session)
+
+        # Verify we created 4 jobs
+        self.assertEqual(len(created), 4)
+
+        # Collect all job ids
+        job_ids = [job.id for job in created]
+
+        # Verify all ids are unique
+        self.assertEqual(len(job_ids), len(set(job_ids)), 'Job ids are not unique')
+
+        # Verify all ids are not None
+        for job_id in job_ids:
+            self.assertIsNotNone(job_id, 'Job id should not be None')
+
+        # Verify each job has a corresponding IntervalBasedJob with matching job_id
+        for job in created:
+            interval_job = self.session.query(IntervalBasedJob).filter_by(job_id=job.id).one()
+            self.assertIsNotNone(interval_job)
+            self.assertEqual(interval_job.job_id, job.id)
 
 # ################################################################################################################################
 

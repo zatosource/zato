@@ -498,6 +498,9 @@ class AnthropicClient(BaseLLMClient):
 
         except Exception as e:
             logger.warning('Anthropic API error: %s', format_exc())
+            if hasattr(e, 'read'):
+                error_body = e.read().decode('utf-8')
+                logger.warning('Anthropic API error body: %s', error_body)
             return {'retry': True}
 
         return {'input_tokens': input_tokens, 'output_tokens': output_tokens, 'tool_calls': tool_calls, 'assistant_content': assistant_content, 'stop_reason': stop_reason}

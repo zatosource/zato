@@ -108,7 +108,20 @@ def execute_enmasse_batch(tool_calls:'list') -> 'anydict':
                 'message': f'Created {len(tool_calls)} objects successfully'
             }
         else:
-            error_msg = result.stderr or result.stdout or 'Enmasse import failed'
+            error_output = result.stderr or result.stdout or ''
+            if 'KeyError' in error_output:
+                import re
+                match = re.search(r"KeyError: ['\"]([^'\"]+)['\"]", error_output)
+                if match:
+                    error_msg = f"Missing required field: {match.group(1)}"
+                else:
+                    error_msg = 'Enmasse import failed: missing required field'
+            elif 'Error' in error_output:
+                import re
+                match = re.search(r'Error[^:]*:\s*(.+?)(?:\\n|$)', error_output)
+                error_msg = match.group(1).strip() if match else 'Enmasse import failed'
+            else:
+                error_msg = 'Enmasse import failed'
             return {
                 'success': False,
                 'error': error_msg
