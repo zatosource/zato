@@ -537,6 +537,7 @@
     background: rgba(143, 188, 143, 0.25);
     border: 1px solid rgba(143, 188, 143, 0.5);
     border-radius: 4px;
+    margin-left: 8px;
     color: #8fbc8f;
     font: normal 10px/1.3 inherit;
     padding: 2px 8px;

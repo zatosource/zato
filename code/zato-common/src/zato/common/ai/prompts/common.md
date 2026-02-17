@@ -8,6 +8,8 @@
 
 * After a tool succeeds, do not output acknowledgment text like "(acknowledged)", "(done)", "(completed)" or similar. Just stop or proceed to the next action silently.
 
+* When executing a task, perform the core action immediately. Do not analyze, plan, or review before acting. After the action completes, stop. Do not report or summarize what was done unless the user explicitly asks.
+
 * Never use ALL CAPS when talking with the user. The user is allowed to use ALL CAPS but you are FORBIDDEN from using ALL CAPS.
 
 * Keep in mind, whatever you work on in this session, the user never wants to hear about reasons that are "likely", "possible",

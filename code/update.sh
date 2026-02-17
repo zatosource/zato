@@ -43,4 +43,7 @@ source $CURDIR/bin/activate
 echo Updating environment in $CURDIR
 PIP_DISABLE_PIP_VERSION_CHECK=1 $CURDIR/bin/python $CURDIR/util/zato_environment.py update
 
+# Pre-download the fastembed model
+$CURDIR/bin/python -c "from fastembed import TextEmbedding; TextEmbedding('BAAI/bge-small-en-v1.5')"
+
 echo ⭐ Installation updated to `zato --version`
