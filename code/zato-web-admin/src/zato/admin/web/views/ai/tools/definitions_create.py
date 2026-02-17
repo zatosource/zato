@@ -394,11 +394,12 @@ tool_deploy_service = {
                                 'type': 'object',
                                 'properties': {
                                     'old': {'type': 'string', 'description': 'Exact text to find in existing file'},
-                                    'new': {'type': 'string', 'description': 'Text to replace it with'}
+                                    'new': {'type': 'string', 'description': 'Text to replace it with'},
+                                    'line': {'type': 'integer', 'description': 'Line number where the old text starts (1-indexed). Required to avoid ambiguity.'}
                                 },
-                                'required': ['old', 'new']
+                                'required': ['old', 'new', 'line']
                             },
-                            'description': 'List of search/replace edits. Use for modifying existing files.'
+                            'description': 'List of search/replace edits with line numbers. Use for modifying existing files.'
                         }
                     },
                     'required': ['file_path']

@@ -213,15 +213,43 @@ def _wait_for_services_deployed(client:'any_', service_names:'list', timeout:'in
 def _apply_edits(content:'str', edits:'list') -> 'tuple':
     """ Applies a list of search/replace edits to content.
     Returns (new_content, error_message). Error is None on success.
+    Edits must include line numbers for precise matching.
     """
+    lines = content.split('\n')
+
     for edit in edits:
         old_text = edit.get('old', '')
         new_text = edit.get('new', '')
+        line_num = edit.get('line')
+
         if not old_text:
             return None, 'Edit has empty old text'
-        if old_text not in content:
-            return None, f'Text not found in file: {old_text[:100]}...'
-        content = content.replace(old_text, new_text, 1)
+
+        if line_num is None:
+            return None, 'Edit missing required line number'
+
+        if line_num < 1 or line_num > len(lines):
+            return None, f'Line number {line_num} out of range (file has {len(lines)} lines)'
+
+        line_idx = line_num - 1
+        old_lines = old_text.split('\n')
+        old_line_count = len(old_lines)
+
+        end_idx = line_idx + old_line_count
+        if end_idx > len(lines):
+            return None, f'Edit spans lines {line_num}-{line_num + old_line_count - 1} but file only has {len(lines)} lines'
+
+        actual_text = '\n'.join(lines[line_idx:end_idx])
+
+        if actual_text != old_text:
+            actual_preview = actual_text[:200]
+            expected_preview = old_text[:200]
+            return None, f'Text mismatch at line {line_num}.\nExpected:\n{expected_preview}\n\nActual:\n{actual_preview}'
+
+        new_lines = new_text.split('\n')
+        lines = lines[:line_idx] + new_lines + lines[end_idx:]
+
+    content = '\n'.join(lines)
     return content, None
 
 # ################################################################################################################################
