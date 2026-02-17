@@ -6,6 +6,12 @@
         handleClick: function(e, widget, core) {
             var target = e.target;
 
+            var timestamp = target.closest('.ai-chat-message-time');
+            if (timestamp) {
+                this.handleTimestampCopy(timestamp);
+                return;
+            }
+
             var diffCopyBtn = target.closest('.ai-diff-copy');
             if (diffCopyBtn) {
                 this.handleDiffCopy(diffCopyBtn);
@@ -481,22 +487,32 @@
             if (content) {
                 var decoded = content.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
                 navigator.clipboard.writeText(decoded);
-                var originalText = btn.textContent;
-                btn.textContent = 'Copied';
-                var capturedBtn = btn;
-                var capturedOriginal = originalText;
-                (function(b, o) {
-                    var start = Date.now();
-                    var check = function() {
-                        if (Date.now() - start >= 1500) {
-                            b.textContent = o;
-                        } else {
-                            requestAnimationFrame(check);
-                        }
-                    };
-                    requestAnimationFrame(check);
-                })(capturedBtn, capturedOriginal);
+                this.showCopiedFeedback(btn);
             }
+        },
+
+        handleTimestampCopy: function(el) {
+            var text = el.textContent;
+            if (text) {
+                navigator.clipboard.writeText(text);
+                this.showCopiedFeedback(el);
+            }
+        },
+
+        showCopiedFeedback: function(el) {
+            var originalText = el.textContent;
+            el.textContent = 'Copied';
+            (function(e, o) {
+                var start = Date.now();
+                var check = function() {
+                    if (Date.now() - start >= 1500) {
+                        e.textContent = o;
+                    } else {
+                        requestAnimationFrame(check);
+                    }
+                };
+                requestAnimationFrame(check);
+            })(el, originalText);
         }
     };
 
