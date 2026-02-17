@@ -210,8 +210,25 @@ def _wait_for_services_deployed(client:'any_', service_names:'list', timeout:'in
 
 # ################################################################################################################################
 
+def _apply_edits(content:'str', edits:'list') -> 'tuple':
+    """ Applies a list of search/replace edits to content.
+    Returns (new_content, error_message). Error is None on success.
+    """
+    for edit in edits:
+        old_text = edit.get('old', '')
+        new_text = edit.get('new', '')
+        if not old_text:
+            return None, 'Edit has empty old text'
+        if old_text not in content:
+            return None, f'Text not found in file: {old_text[:100]}...'
+        content = content.replace(old_text, new_text, 1)
+    return content, None
+
+# ################################################################################################################################
+
 def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict':
     """ Deploys service files by writing them to the services directory.
+    Supports both full code (for new files) and edits (for existing files).
     """
     files = arguments.get('files', [])
     if not files:
@@ -226,9 +243,13 @@ def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict'
         for file_info in files:
             file_path = file_info.get('file_path', '')
             code = file_info.get('code', '')
+            edits = file_info.get('edits', [])
 
-            if not file_path or not code:
+            if not file_path:
                 continue
+
+            if not code and not edits:
+                return {'success': False, 'error': f'File {file_path} has neither code nor edits'}
 
             full_path = os.path.join(services_root, file_path)
             full_path = os.path.normpath(full_path)
@@ -243,23 +264,32 @@ def execute_deploy_service(arguments:'anydict', client:'any_'=None) -> 'anydict'
                 with open(full_path, 'r') as f:
                     old_content = f.read()
 
+            if edits:
+                if is_new:
+                    return {'success': False, 'error': f'Cannot apply edits to non-existent file: {file_path}'}
+                new_content, error = _apply_edits(old_content, edits)
+                if error:
+                    return {'success': False, 'error': f'Edit failed for {file_path}: {error}'}
+            else:
+                new_content = code
+
             dir_path = os.path.dirname(full_path)
             if dir_path and not os.path.exists(dir_path):
                 os.makedirs(dir_path)
 
             with open(full_path, 'w') as f:
-                f.write(code)
+                f.write(new_content)
 
             deployed_files.append(file_path)
             deployed_details.append({
                 'file_path': file_path,
                 'old_content': old_content,
-                'new_content': code,
+                'new_content': new_content,
                 'is_new': is_new
             })
-            logger.info('Deployed service file: %s (is_new=%s)', full_path, is_new)
+            logger.info('Deployed service file: %s (is_new=%s, edits=%d)', full_path, is_new, len(edits))
 
-            service_names = _extract_service_names(code)
+            service_names = _extract_service_names(new_content)
             all_service_names.extend(service_names)
             logger.info('Extracted service names from %s: %s', file_path, service_names)
 

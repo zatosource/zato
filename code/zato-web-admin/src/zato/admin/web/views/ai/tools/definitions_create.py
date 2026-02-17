@@ -376,7 +376,7 @@ tool_create_channel_openapi = {
 
 tool_deploy_service = {
     'name': 'deploy_service',
-    'description': 'Deploys Zato services to the server by writing Python files. Use for both creating new services and updating existing ones - hot-deployment handles both cases automatically.',
+    'description': 'Deploys Zato services to the server. For NEW files, provide full code. For EXISTING files, provide edits array with old/new blocks to minimize output tokens.',
     'input_schema': {
         'type': 'object',
         'properties': {
@@ -387,11 +387,23 @@ tool_deploy_service = {
                     'type': 'object',
                     'properties': {
                         'file_path': {'type': 'string', 'description': 'File path relative to services root (e.g., my_service.py or crm/customer.py)'},
-                        'code': {'type': 'string', 'description': 'Python source code for the service'}
+                        'code': {'type': 'string', 'description': 'Full Python source code. Use ONLY for new files.'},
+                        'edits': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'old': {'type': 'string', 'description': 'Exact text to find in existing file'},
+                                    'new': {'type': 'string', 'description': 'Text to replace it with'}
+                                },
+                                'required': ['old', 'new']
+                            },
+                            'description': 'List of search/replace edits. Use for modifying existing files.'
+                        }
                     },
-                    'required': ['file_path', 'code']
+                    'required': ['file_path']
                 },
-                'description': 'List of files to deploy, must contain at least one file'
+                'description': 'List of files to deploy. Each file must have either code (new file) or edits (existing file).'
             }
         },
         'required': ['files']

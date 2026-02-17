@@ -470,6 +470,20 @@
                 tag.classList.add('active');
                 diffWrapper.style.display = 'block';
                 console.log('[DIFF-CLICK] showing diff');
+
+                var isNewFile = diffWrapper.querySelector('.ai-diff-new');
+                if (!isNewFile) {
+                    var firstChange = diffWrapper.querySelector('.ai-diff-added, .ai-diff-removed');
+                    if (firstChange) {
+                        var allLines = diffWrapper.querySelectorAll('.ai-diff-line');
+                        var changeIndex = Array.prototype.indexOf.call(allLines, firstChange);
+                        var scrollToIndex = Math.max(0, changeIndex - 4);
+                        var scrollTarget = allLines[scrollToIndex];
+                        if (scrollTarget) {
+                            scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }
+                }
             }
         },
 
