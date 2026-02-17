@@ -13,6 +13,7 @@ from copy import deepcopy
 from http.client import OK
 from io import StringIO
 from logging import DEBUG, getLogger
+from time import sleep
 from traceback import format_exc
 from urllib.parse import urlencode
 
@@ -364,25 +365,52 @@ class BaseHTTPSOAPWrapper:
             # .. log the information about our request ..
             logger.info(msg)
 
-            # .. drop extra kwargs ..
-            _ = kwargs.pop('max_retries', None)
-            _ = kwargs.pop('retry_sleep_time', None)
-            _ = kwargs.pop('retry_backoff_threshold', None)
+            # .. extract retry parameters ..
+            max_retries = kwargs.pop('max_retries', None) or 0
+            retry_sleep_time = kwargs.pop('retry_sleep_time', None) or 2
+            retry_backoff_threshold = kwargs.pop('retry_backoff_threshold', None) or 60
 
-            # .. do send it ..
-            response = self.session.request(
-                method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
-                verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
+            # .. retry loop ..
+            attempt = 0
+            total_sleep_time = 0
+            current_sleep_time = retry_sleep_time
 
-            # Update metrics
-            self._push_metrics(start_time, str(response.status_code))
+            while True:
+                try:
+                    # .. do send it ..
+                    response = self.session.request(
+                        method, address, data=data, json=json, auth=auth, headers=headers, hooks=hooks,
+                        verify=tls_verify, timeout=self.config['timeout'], *args, **kwargs)
 
-            # .. log what we received ..
-            msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
-            logger.info(msg)
+                    # Update metrics
+                    self._push_metrics(start_time, str(response.status_code))
 
-            # .. and return it.
-            return response
+                    # .. log what we received ..
+                    msg = f'REST out ← cid={cid}; {response.status_code} time={response.elapsed}; len={len(response.text)}'
+                    logger.info(msg)
+
+                    # .. and return it.
+                    return response
+
+                except (RequestsTimeout, RequestsConnectionError) as e:
+
+                    # .. check if we should retry ..
+                    can_retry_by_attempt = attempt < max_retries
+                    can_retry_by_time = total_sleep_time < retry_backoff_threshold
+                    can_retry = can_retry_by_attempt and can_retry_by_time
+
+                    if can_retry:
+                        attempt += 1
+                        logger.warning('REST out retry cid=%s; attempt=%s; sleep=%s; error=%s',
+                            cid, attempt, current_sleep_time, e)
+                        sleep(current_sleep_time)
+                        total_sleep_time += current_sleep_time
+                        current_sleep_time = min(current_sleep_time * 2, 8, retry_backoff_threshold - total_sleep_time)
+                        if current_sleep_time <= 0:
+                            current_sleep_time = 1
+                    else:
+                        # .. no more retries, re-raise ..
+                        raise
 
         except RequestsTimeout as e:
             self._push_metrics(start_time, 'timeout')
@@ -821,9 +849,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         auth_scopes=None,     # type: any_
         log_response=True,    # type: bool
         needs_exception=True, # type: bool
-        max_retries=0,        # type: int
-        retry_sleep_time=2,   # type: int
-        retry_backoff_threshold=3, # type: int
+        max_retries=None,     # type: int | None
+        retry_sleep_time=None,   # type: int | None
+        retry_backoff_threshold=None, # type: int | None
     ) -> 'any_':
 
         # Invoke the system ..
