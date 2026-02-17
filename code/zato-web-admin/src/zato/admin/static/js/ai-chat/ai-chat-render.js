@@ -161,12 +161,13 @@
                         if (parsedHtml.indexOf('LLM is temporarily unavailable') !== -1) {
                             parsedHtml = parsedHtml.replace(/Please try again\./, 'Please try again. <button class="ai-chat-retry-btn" data-tab-id="' + tab.id + '">Retry</button>');
                         }
-                        var toolDoneRegex = /\[TOOL_DONE:([^|]+)\|(\[.*?\])\]/g;
+                        var toolDoneRegex = /\[TOOL_DONE:([^|]+)\|([A-Za-z0-9+/=]+)\]/g;
                         var toolDoneMatch;
                         while ((toolDoneMatch = toolDoneRegex.exec(parsedHtml)) !== null) {
                             var doneMessage = toolDoneMatch[1];
-                            var itemsJsonRaw = toolDoneMatch[2];
-                            var itemsJson = itemsJsonRaw.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+                            var itemsJsonBase64 = toolDoneMatch[2];
+                            var itemsJson = '';
+                            try { itemsJson = decodeURIComponent(escape(atob(itemsJsonBase64))); } catch (e) {}
                             var items = [];
                             try { items = JSON.parse(itemsJson); } catch (e) {}
                             var inlineTags = '';

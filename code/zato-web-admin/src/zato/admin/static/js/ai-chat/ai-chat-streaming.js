@@ -197,12 +197,13 @@
                 html = html.replace(/Please try again\./, 'Please try again. <button class="ai-chat-retry-btn" data-tab-id="' + tabId + '">Retry</button>');
             }
 
-            var toolDoneRegex = /\[TOOL_DONE:([^|]+)\|(\[.*?\])\]/g;
+            var toolDoneRegex = /\[TOOL_DONE:([^|]+)\|([A-Za-z0-9+/=]+)\]/g;
             var toolDoneMatch;
             while ((toolDoneMatch = toolDoneRegex.exec(html)) !== null) {
                 var doneMessage = toolDoneMatch[1];
-                var itemsJsonRaw = toolDoneMatch[2];
-                var itemsJson = itemsJsonRaw.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+                var itemsJsonBase64 = toolDoneMatch[2];
+                var itemsJson = '';
+                try { itemsJson = decodeURIComponent(escape(atob(itemsJsonBase64))); } catch (e) { console.log('[TOOL_DONE] base64 decode error:', e); }
                 var items = [];
                 try { items = JSON.parse(itemsJson); } catch (e) { console.log('[TOOL_DONE] JSON parse error:', e); }
                 var inlineTags = '';
@@ -364,7 +365,7 @@
                 progressEl.classList.add('ai-tool-done');
                 streamingEl.classList.remove('hide-cursor');
 
-                var marker = '[TOOL_DONE:' + data.message + '|' + itemsJson + ']';
+                var marker = '[TOOL_DONE:' + data.message + '|' + btoa(unescape(encodeURIComponent(itemsJson))) + ']';
                 AIChatMessages.appendToStreamingMessage(tabId, '\n\n' + marker);
                 console.log('[SSE-TRACE] set progressEl to done state, cursor restored');
 
