@@ -38,6 +38,35 @@
                 return;
             }
 
+            var statusPatterns = [
+                /\n\nUpdating the service \.\.\n\n$/,
+                /\n\nDeploying the service \.\.\n\n$/,
+                /\n\nUpdating the service \.\.$/,
+                /\n\nDeploying the service \.\.$/
+            ];
+
+            var incomingPatterns = [
+                /^\n\nUpdating the service \.\./,
+                /^\n\nDeploying the service \.\./
+            ];
+
+            var isIncomingStatus = false;
+            for (var i = 0; i < incomingPatterns.length; i++) {
+                if (incomingPatterns[i].test(text)) {
+                    isIncomingStatus = true;
+                    break;
+                }
+            }
+
+            if (isIncomingStatus) {
+                for (var j = 0; j < statusPatterns.length; j++) {
+                    if (statusPatterns[j].test(streaming.content)) {
+                        streaming.content = streaming.content.replace(statusPatterns[j], '');
+                        break;
+                    }
+                }
+            }
+
             streaming.content += text;
         },
 
