@@ -89,25 +89,45 @@
             var diff = this.computeDiff(oldContent, newContent);
             var diffText = this.getDiffText(diff);
             var escapedDiffText = this.escapeHtml(diffText).replace(/"/g, '&quot;');
+
+            var hunks = this.countHunks(diff);
+            var hunkCount = hunks.length;
+            var hunkLabel = hunkCount === 1 ? '1 place' : hunkCount + ' places';
             
-            var html = '<div class="ai-diff-container" data-diff-content="' + escapedDiffText + '">';
-            html += '<div class="ai-diff-header ai-diff-modified"><span>Modified</span><button class="ai-diff-copy ai-diff-copy-diff">Copy diff</button></div>';
+            var html = '<div class="ai-diff-container" data-diff-content="' + escapedDiffText + '" data-hunk-count="' + hunkCount + '" data-current-hunk="0">';
+            html += '<div class="ai-diff-header ai-diff-modified"><span>Modified · ' + hunkLabel + '</span>';
+            if (hunkCount > 1) {
+                html += '<span class="ai-diff-nav"><button class="ai-diff-nav-btn ai-diff-nav-up" title="Previous change">▲</button><button class="ai-diff-nav-btn ai-diff-nav-down" title="Next change">▼</button></span>';
+            }
+            html += '<button class="ai-diff-copy ai-diff-copy-diff">Copy diff</button></div>';
             html += '<div class="ai-diff-content">';
 
+            var currentHunk = -1;
+            var inHunk = false;
             for (var i = 0; i < diff.length; i++) {
                 var item = diff[i];
                 var lineClass = 'ai-diff-line';
                 var sign = ' ';
+                var hunkAttr = '';
 
-                if (item.type === 'added') {
-                    lineClass += ' ai-diff-added';
-                    sign = '+';
-                } else if (item.type === 'removed') {
-                    lineClass += ' ai-diff-removed';
-                    sign = '-';
+                if (item.type === 'added' || item.type === 'removed') {
+                    if (!inHunk) {
+                        currentHunk++;
+                        inHunk = true;
+                    }
+                    hunkAttr = ' data-hunk="' + currentHunk + '"';
+                    if (item.type === 'added') {
+                        lineClass += ' ai-diff-added';
+                        sign = '+';
+                    } else {
+                        lineClass += ' ai-diff-removed';
+                        sign = '-';
+                    }
+                } else {
+                    inHunk = false;
                 }
 
-                html += '<div class="' + lineClass + '"><span class="ai-diff-sign">' + sign + '</span><span class="ai-diff-text">' + this.escapeHtml(item.line) + '</span></div>';
+                html += '<div class="' + lineClass + '"' + hunkAttr + '><span class="ai-diff-sign">' + sign + '</span><span class="ai-diff-text">' + this.escapeHtml(item.line) + '</span></div>';
             }
 
             html += '</div></div>';
@@ -133,6 +153,44 @@
             var div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        },
+
+        countHunks: function(diff) {
+            var hunks = [];
+            var inHunk = false;
+            for (var i = 0; i < diff.length; i++) {
+                var item = diff[i];
+                if (item.type === 'added' || item.type === 'removed') {
+                    if (!inHunk) {
+                        hunks.push(i);
+                        inHunk = true;
+                    }
+                } else {
+                    inHunk = false;
+                }
+            }
+            return hunks;
+        },
+
+        navigateToHunk: function(container, hunkIndex) {
+            var hunkCount = parseInt(container.getAttribute('data-hunk-count') || '0', 10);
+            if (hunkCount === 0) return;
+
+            if (hunkIndex < 0) hunkIndex = hunkCount - 1;
+            if (hunkIndex >= hunkCount) hunkIndex = 0;
+
+            container.setAttribute('data-current-hunk', hunkIndex);
+
+            var firstLineOfHunk = container.querySelector('.ai-diff-line[data-hunk="' + hunkIndex + '"]');
+            if (firstLineOfHunk) {
+                var allLines = container.querySelectorAll('.ai-diff-line');
+                var lineIndex = Array.prototype.indexOf.call(allLines, firstLineOfHunk);
+                var scrollToIndex = Math.max(0, lineIndex - 4);
+                var scrollTarget = allLines[scrollToIndex];
+                if (scrollTarget) {
+                    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
         }
     };
 

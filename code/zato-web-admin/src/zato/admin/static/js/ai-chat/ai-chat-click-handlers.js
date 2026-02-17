@@ -12,6 +12,12 @@
                 return;
             }
 
+            var diffNavBtn = target.closest('.ai-diff-nav-btn');
+            if (diffNavBtn) {
+                this.handleDiffNavClick(diffNavBtn);
+                return;
+            }
+
             var diffCopyBtn = target.closest('.ai-diff-copy');
             if (diffCopyBtn) {
                 this.handleDiffCopy(diffCopyBtn);
@@ -485,6 +491,17 @@
                     }
                 }
             }
+        },
+
+        handleDiffNavClick: function(btn) {
+            var container = btn.closest('.ai-diff-container');
+            if (!container) return;
+
+            var currentHunk = parseInt(container.getAttribute('data-current-hunk') || '0', 10);
+            var isUp = btn.classList.contains('ai-diff-nav-up');
+
+            var newHunk = isUp ? currentHunk - 1 : currentHunk + 1;
+            AIChatDiff.navigateToHunk(container, newHunk);
         },
 
         handleDiffCopy: function(btn) {
