@@ -25,16 +25,16 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 guidance_snippets = [
-    'Task type: service creation - deploy_service tool available',
-    'Task type: debugging - check logs and error messages',
-    'Task type: configuration - use create/update tools for connections',
-    'Task type: documentation lookup - search_documentation tool available',
-    'Task type: code review - focus on error handling patterns',
-    'Task type: integration - verify endpoint connectivity',
-    'Task type: data transformation - validate input/output formats',
-    'Task type: security - check authentication and permissions',
-    'Task type: performance - review query patterns and caching',
-    'Task type: deployment - verify service dependencies',
+    'Creating a service: use deploy_service with full code, perform once then stop',
+    'Modifying a service: use edits array with correct line numbers, perform once then stop',
+    'Editing existing file: line numbers are 1-indexed, verify the line number matches def handle position',
+    'After modifying a file successfully: do not modify the same file again unless user asks for more changes',
+    'Multiple edits needed: batch all edits in one deploy_service call, not multiple calls',
+    'Service file not found: check file_path matches exactly, include .py extension',
+    'Text mismatch error: re-read the file content, verify old text matches exactly',
+    'Connection or endpoint task: use the appropriate create/update tool for that connection type',
+    'Looking up documentation: use search_documentation tool with specific query',
+    'Debugging errors: check server logs, add logging statements to isolate the issue',
 ]
 
 # ################################################################################################################################
