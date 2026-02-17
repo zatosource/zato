@@ -261,7 +261,20 @@
             }
 
             if (data.status === 'start') {
-                progressEl.innerHTML = '<span class="ai-tool-spinner"></span> ' + data.message;
+                var startHtml = '<span class="ai-tool-spinner"></span> ';
+                var deployMatch = data.message.match(/^Deploying (.+?)\.\.\.$/);
+                if (deployMatch) {
+                    var fileList = deployMatch[1];
+                    var fileNames = fileList.split(', ');
+                    startHtml += 'Deploying <span class="ai-tool-tags">';
+                    for (var i = 0; i < fileNames.length; i++) {
+                        startHtml += '<span class="ai-tool-tag">' + fileNames[i] + '</span>';
+                    }
+                    startHtml += '</span>';
+                } else {
+                    startHtml += data.message;
+                }
+                progressEl.innerHTML = startHtml;
                 progressEl.classList.remove('ai-tool-done');
                 progressEl.classList.add('ai-tool-running');
                 streamingEl.classList.add('hide-cursor');
