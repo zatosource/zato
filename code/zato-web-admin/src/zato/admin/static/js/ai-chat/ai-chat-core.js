@@ -168,7 +168,9 @@
             if (!window.AIChatDiff) return;
             var messagesContainer = this.widget.querySelector('.ai-chat-messages[data-tab-id="' + this.activeTabId + '"]');
             if (!messagesContainer) return;
-            var containers = messagesContainer.querySelectorAll('.ai-diff-container');
+            var lastMessage = messagesContainer.querySelector('.ai-chat-message:last-child');
+            if (!lastMessage) return;
+            var containers = lastMessage.querySelectorAll('.ai-diff-container');
             console.log('[SCROLL-HUNK] found containers:', containers.length);
             for (var i = 0; i < containers.length; i++) {
                 var container = containers[i];
@@ -181,7 +183,7 @@
                     AIChatDiff.navigateToHunk(container, 0);
                 }
             }
-            var firstWrapper = messagesContainer.querySelector('.ai-diff-wrapper');
+            var firstWrapper = lastMessage.querySelector('.ai-diff-wrapper');
             if (firstWrapper) {
                 var wrapperRect = firstWrapper.getBoundingClientRect();
                 var containerRect = messagesContainer.getBoundingClientRect();
