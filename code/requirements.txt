@@ -11,6 +11,7 @@ chardet==5.2.0
 colorama==0.4.6
 configparser==7.1.0
 cryptography==46.0.5
+curl-cffi==0.15.0b3
 dacite==1.6.0
 dateparser==0.7.6
 ddtrace==4.2.2
@@ -67,6 +68,8 @@ pyaml==20.4.0
 pyasn1==0.4.8
 pycparser==2.21
 pycryptodome==3.19.1
+pydantic==2.12.5
+pygments==2.19.2
 pymongo==4.13.0
 PyMySQL==1.1.1
 pyOpenSSL==25.3.0
@@ -89,6 +92,7 @@ sortedcontainers==2.4.0
 SQLAlchemy==1.4.54
 stroll==1.1.0
 stevedore==3.5.0
+sumy==0.12.0
 texttable==1.6.1
 typing-utils==0.1.0
 tzlocal==5.3.1
