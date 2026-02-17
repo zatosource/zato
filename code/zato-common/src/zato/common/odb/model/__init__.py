@@ -628,7 +628,7 @@ class Job(Base):
     id = Column(Integer, Sequence('job_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    job_type = Column(Enum(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED, name='job_type'), nullable=False)
+    job_type = Column(nullable=False)
     start_date = Column(DateTime(), nullable=False)
     extra = Column(String(500), nullable=True)
 

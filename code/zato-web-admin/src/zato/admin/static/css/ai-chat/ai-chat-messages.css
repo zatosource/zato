@@ -500,10 +500,14 @@
     display: inline-block;
     width: 14px;
     height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+    box-sizing: border-box;
     border: 2px solid rgba(126, 184, 218, 0.3);
     border-top-color: #7eb8da;
     border-radius: 50%;
     animation: ai-tool-spin 0.8s linear infinite;
+    flex-shrink: 0;
 }
 
 @keyframes ai-tool-spin {

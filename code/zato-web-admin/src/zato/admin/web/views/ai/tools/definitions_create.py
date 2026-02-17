@@ -78,7 +78,7 @@ tool_create_scheduler = {
         'properties': {
             'name': {'type': 'string', 'description': 'Unique name for the scheduler job'},
             'service': {'type': 'string', 'description': 'Name of the service to invoke'},
-            'job_type': {'type': 'string', 'enum': ['interval_based', 'one_time', 'cron_style'], 'description': 'Type of scheduler job'},
+            'job_type': {'type': 'string', 'enum': ['one_time', 'interval_based'], 'description': 'Type of scheduler job'},
             'is_active': {'type': 'boolean', 'description': 'Whether the job is active', 'default': True},
             'start_date': {'type': 'string', 'description': 'Start date/time in ISO format'},
             'weeks': {'type': 'integer', 'description': 'Interval in weeks (for interval_based)'},
@@ -87,7 +87,6 @@ tool_create_scheduler = {
             'minutes': {'type': 'integer', 'description': 'Interval in minutes (for interval_based)'},
             'seconds': {'type': 'integer', 'description': 'Interval in seconds (for interval_based)'},
             'repeats': {'type': 'integer', 'description': 'Number of times to repeat (null for infinite)'},
-            'cron_definition': {'type': 'string', 'description': 'Cron expression (for cron_style)'},
             'extra': {'type': 'string', 'description': 'Extra data to pass to the service (JSON string)'}
         },
         'required': ['name', 'service', 'job_type']
