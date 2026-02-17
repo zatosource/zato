@@ -178,6 +178,9 @@
                     html = markedEmoji.wrapUnicodeEmojis(html);
                 }
             }
+            if (html.indexOf('LLM is temporarily unavailable') !== -1) {
+                html = html.replace(/Please try again\./, 'Please try again. <button class="ai-chat-retry-btn" data-tab-id="' + tabId + '">Retry</button>');
+            }
 
             var toolDoneRegex = /\[TOOL_DONE:([^|]+)\|(\[.*?\])\]/g;
             var toolDoneMatch;

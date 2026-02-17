@@ -42,6 +42,12 @@
                 return;
             }
 
+            var retryBtn = target.closest('.ai-chat-retry-btn');
+            if (retryBtn) {
+                this.handleRetry(retryBtn, widget, core);
+                return;
+            }
+
             if (target.id === 'ai-chat-minimize') {
                 AIChatWindow.toggleMinimize(widget, core);
                 return;
@@ -543,6 +549,42 @@
                 };
                 requestAnimationFrame(check);
             })(el, originalText);
+        },
+
+        handleRetry: function(btn, widget, core) {
+            var tabId = btn.getAttribute('data-tab-id');
+            if (!tabId) return;
+
+            var tab = null;
+            for (var i = 0; i < core.tabs.length; i++) {
+                if (core.tabs[i].id === tabId) {
+                    tab = core.tabs[i];
+                    break;
+                }
+            }
+            if (!tab || tab.messages.length < 2) return;
+
+            var lastUserMsg = null;
+            var lastUserMsgIndex = -1;
+            for (var i = tab.messages.length - 1; i >= 0; i--) {
+                if (tab.messages[i].role === 'user') {
+                    lastUserMsg = tab.messages[i];
+                    lastUserMsgIndex = i;
+                    break;
+                }
+            }
+            if (!lastUserMsg) return;
+
+            tab.messages = tab.messages.slice(0, lastUserMsgIndex);
+
+            core.saveState();
+            core.render();
+
+            var input = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
+            if (input) {
+                input.value = lastUserMsg.content;
+                AIChatStreaming.sendMessage(widget, core, tabId);
+            }
         }
     };
 

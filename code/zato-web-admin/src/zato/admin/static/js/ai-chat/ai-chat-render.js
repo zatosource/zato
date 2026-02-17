@@ -158,6 +158,7 @@
                                 parsedHtml = markedEmoji.wrapUnicodeEmojis(parsedHtml);
                             }
                         }
+                        parsedHtml += ' <button class="ai-chat-retry-btn" data-tab-id="' + tab.id + '">Retry</button>';
                         var toolDoneRegex = /\[TOOL_DONE:([^|]+)\|(\[.*?\])\]/g;
                         var toolDoneMatch;
                         while ((toolDoneMatch = toolDoneRegex.exec(parsedHtml)) !== null) {

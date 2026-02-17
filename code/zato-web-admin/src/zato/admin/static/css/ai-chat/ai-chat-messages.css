@@ -555,6 +555,24 @@
     box-shadow: none;
 }
 
+.ai-chat-retry-btn {
+    background: rgba(30, 30, 30, 0.93);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #b29831;
+    font: normal 10px/1.3 inherit;
+    padding: 2px 8px;
+    cursor: pointer;
+    text-shadow: none;
+    box-shadow: none;
+    margin-left: 8px;
+}
+
+.ai-chat-retry-btn:hover {
+    background: rgba(30, 30, 30, 0.73);
+    box-shadow: none;
+}
+
 .ai-tool-show-btn:active,
 .ai-tool-show-btn:focus {
     box-shadow: none;
