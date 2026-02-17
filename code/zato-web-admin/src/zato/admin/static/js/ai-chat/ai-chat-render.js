@@ -166,8 +166,21 @@
                             var itemsJson = itemsJsonRaw.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
                             var items = [];
                             try { items = JSON.parse(itemsJson); } catch (e) {}
-                            var showBtn = items.length > 0 ? '<button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>' : '';
-                            var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span><span class="ai-tool-checkmark">✓</span> ' + doneMessage + '</span>' + showBtn + '</div>';
+                            var inlineTags = '';
+                            var showBtn = '';
+                            if (items.length > 0) {
+                                var isServiceDeploy = items.every(function(item) { return item.type === 'Service'; });
+                                if (isServiceDeploy) {
+                                    inlineTags = '<span class="ai-tool-tags">';
+                                    for (var j = 0; j < items.length; j++) {
+                                        inlineTags += '<span class="ai-tool-tag">' + items[j].name + '</span>';
+                                    }
+                                    inlineTags += '</span>';
+                                } else {
+                                    showBtn = '<button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>';
+                                }
+                            }
+                            var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span><span class="ai-tool-checkmark">✓</span> ' + doneMessage + '</span>' + inlineTags + showBtn + '</div>';
                             parsedHtml = parsedHtml.replace(toolDoneMatch[0], toolDoneHtml);
                             parsedHtml = parsedHtml.replace('<p>' + toolDoneHtml + '</p>', toolDoneHtml);
                         }

@@ -183,8 +183,21 @@
                 var itemsJson = itemsJsonRaw.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
                 var items = [];
                 try { items = JSON.parse(itemsJson); } catch (e) {}
-                var showBtn = items.length > 0 ? '<button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>' : '';
-                var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span><span class="ai-tool-checkmark">✓</span> ' + doneMessage + '</span>' + showBtn + '</div>';
+                var inlineTags = '';
+                var showBtn = '';
+                if (items.length > 0) {
+                    var isServiceDeploy = items.every(function(item) { return item.type === 'Service'; });
+                    if (isServiceDeploy) {
+                        inlineTags = '<span class="ai-tool-tags">';
+                        for (var i = 0; i < items.length; i++) {
+                            inlineTags += '<span class="ai-tool-tag">' + items[i].name + '</span>';
+                        }
+                        inlineTags += '</span>';
+                    } else {
+                        showBtn = '<button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>';
+                    }
+                }
+                var toolDoneHtml = '<div class="ai-tool-progress ai-tool-done"><span><span class="ai-tool-checkmark">✓</span> ' + doneMessage + '</span>' + inlineTags + showBtn + '</div>';
                 html = html.replace(toolDoneMatch[0], toolDoneHtml);
                 html = html.replace('<p>' + toolDoneHtml + '</p>', toolDoneHtml);
             }
@@ -255,9 +268,22 @@
                 console.log('[SSE-TRACE] set progressEl to running state, hid cursor');
             } else if (data.status === 'done') {
                 var itemsJson = data.items ? JSON.stringify(data.items) : '[]';
-                var showBtn = data.items && data.items.length > 0 ? '<button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>' : '';
-                console.log('[SSE-TRACE] showBtn:', showBtn, 'items:', data.items);
-                progressEl.innerHTML = '<span><span class="ai-tool-checkmark">✓</span> ' + data.message + '</span>' + showBtn;
+                var inlineTags = '';
+                var showBtn = '';
+                if (data.items && data.items.length > 0) {
+                    var isServiceDeploy = data.items.every(function(item) { return item.type === 'Service'; });
+                    if (isServiceDeploy) {
+                        inlineTags = '<span class="ai-tool-tags">';
+                        for (var i = 0; i < data.items.length; i++) {
+                            inlineTags += '<span class="ai-tool-tag">' + data.items[i].name + '</span>';
+                        }
+                        inlineTags += '</span>';
+                    } else {
+                        showBtn = '<button class="ai-tool-show-btn" data-items=\'' + itemsJson.replace(/'/g, '&#39;') + '\'>Show</button>';
+                    }
+                }
+                console.log('[SSE-TRACE] showBtn:', showBtn, 'inlineTags:', inlineTags, 'items:', data.items);
+                progressEl.innerHTML = '<span><span class="ai-tool-checkmark">✓</span> ' + data.message + '</span>' + inlineTags + showBtn;
                 progressEl.classList.remove('ai-tool-running');
                 progressEl.classList.add('ai-tool-done');
                 streamingEl.classList.remove('hide-cursor');

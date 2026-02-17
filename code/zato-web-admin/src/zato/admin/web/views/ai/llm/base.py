@@ -311,11 +311,7 @@ class BaseLLMClient(ABC):
             elif name.startswith('delete_'):
                 delete_count += 1
             elif name == 'deploy_service':
-                files = params.get('files', [])
-                for f in files:
-                    file_path = f.get('file_path', '')
-                    if file_path:
-                        deploy_parts.append(file_path)
+                deploy_parts.append('deployed')
             elif name == 'search_internet':
                 query = params.get('query', '')
                 if query:
@@ -348,7 +344,7 @@ class BaseLLMClient(ABC):
             word = 'object' if update_count == 1 else 'objects'
             parts.append(f'Updated {update_count} {word}')
         if deploy_parts:
-            parts.append(f'Deployed {", ".join(deploy_parts)}')
+            parts.append('Deployed')
         if search_parts:
             parts.append(f'Searched {", ".join(search_parts)}')
         if visit_parts:

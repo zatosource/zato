@@ -559,6 +559,23 @@
     border: 1px solid rgba(143, 188, 143, 0.5);
 }
 
+.ai-tool-tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-left: 10px;
+}
+
+.ai-tool-tag {
+    display: inline-block;
+    background: rgba(143, 188, 143, 0.2);
+    border: 1px solid rgba(143, 188, 143, 0.4);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: rgba(180, 220, 180, 0.9);
+}
+
 .ai-tool-items-list {
     margin-top: 8px;
     margin-bottom: 12px;
