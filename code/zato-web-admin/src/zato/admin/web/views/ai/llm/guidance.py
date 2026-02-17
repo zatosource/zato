@@ -65,7 +65,7 @@ class GuidanceSelector:
 
 # ################################################################################################################################
 
-    def select_guidance(self, user_message:'str', top_k:'int'=2, threshold:'float'=0.75) -> 'anylist':
+    def select_guidance(self, user_message:'str', top_k:'int'=2, threshold:'float'=0.60) -> 'anylist':
         """ Selects the top_k most relevant guidance snippets for the given user message.
         Only includes snippets with similarity above the threshold.
         """
