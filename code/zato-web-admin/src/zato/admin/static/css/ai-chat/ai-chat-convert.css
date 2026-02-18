@@ -1,23 +1,23 @@
-.ai-chat-export-trigger {
+.ai-chat-convert-trigger {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     position: relative;
     color: #666;
-    cursor: default;
+    cursor: pointer;
     vertical-align: middle;
     margin-left: -3px;
 }
 
-.ai-chat-export-trigger:hover {
+.ai-chat-convert-trigger:hover {
     color: #888;
 }
 
-.ai-chat-export-trigger svg {
+.ai-chat-convert-trigger svg {
     display: block;
 }
 
-.ai-chat-export-tooltip {
+.ai-chat-convert-tooltip {
     position: absolute;
     bottom: 100%;
     left: 50%;
@@ -37,7 +37,7 @@
     overflow-y: auto;
 }
 
-.ai-chat-export-tooltip::after {
+.ai-chat-convert-tooltip::after {
     content: '';
     position: absolute;
     top: 100%;
@@ -46,18 +46,17 @@
     height: 10px;
 }
 
-.ai-chat-export-trigger:hover .ai-chat-export-tooltip,
-.ai-chat-export-tooltip:hover {
+.ai-chat-convert-tooltip.open {
     opacity: 1;
     pointer-events: auto;
 }
 
-.ai-chat-export-tooltip table {
+.ai-chat-convert-tooltip table {
     border-collapse: collapse;
     width: 100%;
 }
 
-.ai-chat-export-group-row td {
+.ai-chat-convert-group-row td {
     padding: 6px 12px 4px;
     color: #888;
     font-weight: 600;
@@ -67,33 +66,33 @@
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.ai-chat-export-group-row:first-child td {
+.ai-chat-convert-group-row:first-child td {
     border-top: none;
 }
 
-.ai-chat-export-item-row {
+.ai-chat-convert-item-row {
     cursor: pointer;
 }
 
-.ai-chat-export-item-row td {
+.ai-chat-convert-item-row td {
     padding: 5px 12px;
     color: #ccc;
 }
 
-.ai-chat-export-item-row:hover td {
+.ai-chat-convert-item-row:hover td {
     background: rgba(74, 158, 255, 0.15);
     color: #fff;
 }
 
-.ai-chat-export-tooltip::-webkit-scrollbar {
+.ai-chat-convert-tooltip::-webkit-scrollbar {
     width: 4px;
 }
 
-.ai-chat-export-tooltip::-webkit-scrollbar-track {
+.ai-chat-convert-tooltip::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.ai-chat-export-tooltip::-webkit-scrollbar-thumb {
+.ai-chat-convert-tooltip::-webkit-scrollbar-thumb {
     background: #444;
     border-radius: 2px;
 }

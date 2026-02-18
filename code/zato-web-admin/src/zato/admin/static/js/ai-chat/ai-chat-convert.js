@@ -1,4 +1,4 @@
-var AIChatExport = {
+var AIChatConvert = {
 
     groups: [
         {
@@ -68,11 +68,12 @@ var AIChatExport = {
 
     render: function() {
         var wrapper = document.createElement('span');
-        wrapper.className = 'ai-chat-export-trigger';
+        wrapper.className = 'ai-chat-convert-trigger';
+        wrapper.title = 'Convert chat to ..';
         wrapper.innerHTML = AIChatIcons.get('checklist', 25);
 
         var tooltip = document.createElement('div');
-        tooltip.className = 'ai-chat-export-tooltip';
+        tooltip.className = 'ai-chat-convert-tooltip';
         tooltip.innerHTML = this.buildTooltipHtml();
 
         wrapper.appendChild(tooltip);
@@ -84,10 +85,10 @@ var AIChatExport = {
         var html = '<table>';
         for (var i = 0; i < this.groups.length; i++) {
             var group = this.groups[i];
-            html += '<tr class="ai-chat-export-group-row"><td colspan="2">' + group.label + '</td></tr>';
+            html += '<tr class="ai-chat-convert-group-row"><td colspan="2">' + group.label + '</td></tr>';
             for (var j = 0; j < group.items.length; j++) {
                 var item = group.items[j];
-                html += '<tr class="ai-chat-export-item-row" data-export-id="' + item.id + '">';
+                html += '<tr class="ai-chat-convert-item-row" data-convert-id="' + item.id + '">';
                 html += '<td>' + item.label + '</td>';
                 html += '</tr>';
             }
@@ -98,30 +99,63 @@ var AIChatExport = {
 
     attachEvents: function() {
         var self = this;
+        var wrapper = this.container.querySelector('.ai-chat-convert-trigger');
+
+        wrapper.addEventListener('click', function(e) {
+            if (e.target.closest('.ai-chat-convert-tooltip')) {
+                return;
+            }
+            e.stopPropagation();
+            self.toggle();
+        });
+
         this.tooltip.addEventListener('click', function(e) {
-            var row = e.target.closest('.ai-chat-export-item-row');
+            var row = e.target.closest('.ai-chat-convert-item-row');
             if (row) {
-                var exportId = row.getAttribute('data-export-id');
-                self.handleExport(exportId);
+                var convertId = row.getAttribute('data-convert-id');
+                self.handleConvert(convertId);
+                self.close();
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.ai-chat-convert-trigger')) {
+                self.close();
             }
         });
     },
 
-    handleExport: function(exportId) {
-        var label = this.getExportLabel(exportId);
-        alert('Export: ' + label);
+    toggle: function() {
+        if (this.tooltip.classList.contains('open')) {
+            this.close();
+        } else {
+            this.open();
+        }
     },
 
-    getExportLabel: function(exportId) {
+    open: function() {
+        this.tooltip.classList.add('open');
+    },
+
+    close: function() {
+        this.tooltip.classList.remove('open');
+    },
+
+    handleConvert: function(convertId) {
+        var label = this.getConvertLabel(convertId);
+        alert('Convert to: ' + label);
+    },
+
+    getConvertLabel: function(convertId) {
         for (var i = 0; i < this.groups.length; i++) {
             var group = this.groups[i];
             for (var j = 0; j < group.items.length; j++) {
-                if (group.items[j].id === exportId) {
+                if (group.items[j].id === convertId) {
                     return group.items[j].label;
                 }
             }
         }
-        return exportId;
+        return convertId;
     }
 
 };

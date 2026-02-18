@@ -324,7 +324,7 @@
             }
             html += '</select>';
             html += this.buildContextBarHtml(tab);
-            html += '<div class="ai-chat-export-container" data-tab-id="' + tab.id + '"></div>';
+            html += '<div class="ai-chat-convert-container" data-tab-id="' + tab.id + '"></div>';
             html += '</div>';
             return html;
         },
@@ -353,7 +353,7 @@
             var totalTokens = tokensIn + tokensOut;
             var usagePercent = Math.min(100, (totalTokens / maxContext) * 100);
             var filledSegments = Math.ceil((usagePercent / 100) * 10);
-            var html = '<span class="ai-chat-context-bar" data-tab-id="' + tab.id + '">';
+            var html = '<span class="ai-chat-context-bar" data-tab-id="' + tab.id + '" title="Show context info">';
             for (var i = 0; i < 10; i++) {
                 var segmentClass = 'ai-chat-context-bar-segment';
                 if (i < filledSegments) {

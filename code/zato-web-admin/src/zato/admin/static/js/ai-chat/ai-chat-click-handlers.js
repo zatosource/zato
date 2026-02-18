@@ -440,6 +440,17 @@
                 return;
             }
 
+            var contextBar = target.closest('.ai-chat-context-bar');
+            if (contextBar && !target.closest('.ai-chat-context-help-link')) {
+                e.preventDefault();
+                e.stopPropagation();
+                var tooltip = contextBar.querySelector('.ai-chat-context-tooltip');
+                if (tooltip) {
+                    tooltip.classList.toggle('open');
+                }
+                return;
+            }
+
             var contextHelpLink = target.closest('.ai-chat-context-help-link');
             if (contextHelpLink) {
                 e.preventDefault();

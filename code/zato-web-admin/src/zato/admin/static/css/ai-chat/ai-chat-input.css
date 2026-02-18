@@ -174,7 +174,15 @@
     overflow: visible;
     position: relative;
     vertical-align: middle;
-    cursor: default;
+    cursor: pointer;
+}
+
+.ai-chat-context-bar:hover .ai-chat-context-bar-segment {
+    background: #555;
+}
+
+.ai-chat-context-bar:hover .ai-chat-context-bar-segment.filled {
+    background: #888;
 }
 
 .ai-chat-context-bar-segment {
@@ -207,8 +215,7 @@
     white-space: nowrap;
 }
 
-.ai-chat-context-bar:hover .ai-chat-context-tooltip,
-.ai-chat-context-tooltip:hover {
+.ai-chat-context-tooltip.open {
     opacity: 1;
     pointer-events: auto;
 }

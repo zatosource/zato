@@ -156,6 +156,13 @@
                 AIChatContextMenu.hide();
                 AIChatSettings.hideMenu();
                 AIChatOptionsMenu.hide(widget);
+
+                if (!e.target.closest('.ai-chat-context-bar')) {
+                    var openTooltips = document.querySelectorAll('.ai-chat-context-tooltip.open');
+                    for (var i = 0; i < openTooltips.length; i++) {
+                        openTooltips[i].classList.remove('open');
+                    }
+                }
             });
 
             widget.addEventListener('change', function(e) {
