@@ -69,7 +69,7 @@ var AIChatExport = {
     render: function() {
         var wrapper = document.createElement('span');
         wrapper.className = 'ai-chat-export-trigger';
-        wrapper.innerHTML = AIChatIcons.get('export', 14);
+        wrapper.innerHTML = AIChatIcons.get('checklist', 25);
 
         var tooltip = document.createElement('div');
         tooltip.className = 'ai-chat-export-tooltip';
