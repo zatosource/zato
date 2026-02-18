@@ -132,6 +132,7 @@
     border-radius: 6px;
     transition: color 0.15s ease, background 0.15s ease;
     margin-bottom: 16px;
+    margin-left: -10px;
     text-shadow: none !important;
     align-self: flex-start;
 }
