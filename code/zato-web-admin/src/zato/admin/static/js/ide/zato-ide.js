@@ -123,7 +123,7 @@
             html += '</select>';
             html += '</div>';
             html += '<div class="zato-ide-toolbar-right">';
-            html += '<span class="zato-ide-toolbar-placeholder">[Switch placeholder]</span>';
+            html += '<span class="zato-ide-search-button" title="Search"></span>';
             html += '</div>';
             html += '</div>';
 
@@ -179,7 +179,28 @@
 
             this.initTabs(instance);
 
+            this.loadSearchIcon(instance);
+
             this.bindEvents(instance);
+        },
+
+        loadSearchIcon: function(instance) {
+            var searchButton = instance.container.querySelector('.zato-ide-search-button');
+            if (!searchButton) {
+                return;
+            }
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/static/img/search.svg', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var svgContent = xhr.responseText;
+                    svgContent = svgContent.replace(/width="24"/, 'width="25"');
+                    svgContent = svgContent.replace(/height="24"/, 'height="25"');
+                    searchButton.innerHTML = svgContent;
+                }
+            };
+            xhr.send();
         },
 
         /**
@@ -353,6 +374,23 @@
         bindEvents: function(instance) {
             var self = this;
 
+            var searchButton = instance.container.querySelector('.zato-ide-search-button');
+            if (searchButton) {
+                searchButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    self.toggleSearchPopup(instance, searchButton);
+                });
+            }
+
+            document.addEventListener('click', function(e) {
+                var popup = instance.container.querySelector('.zato-ide-search-popup');
+                if (popup && popup.classList.contains('open')) {
+                    if (!popup.contains(e.target) && !searchButton.contains(e.target)) {
+                        popup.classList.remove('open');
+                    }
+                }
+            });
+
             if (instance.editor) {
                 instance.editor.addEventListener('input', function() {
                     instance.content = instance.editor.value;
@@ -407,6 +445,22 @@
             if (statusLeft) {
                 statusLeft.innerHTML = '<span class="zato-ide-statusbar-item">Ln ' + lineNumber + ', Col ' + columnNumber + '</span>';
             }
+        },
+
+        toggleSearchPopup: function(instance, button) {
+            var existingPopup = instance.container.querySelector('.zato-ide-search-popup');
+            if (existingPopup) {
+                existingPopup.classList.toggle('open');
+                return;
+            }
+
+            var popup = document.createElement('div');
+            popup.className = 'zato-ide-search-popup open';
+            popup.innerHTML = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.';
+
+            var toolbarRight = button.parentElement;
+            toolbarRight.style.position = 'relative';
+            toolbarRight.appendChild(popup);
         },
 
         /**

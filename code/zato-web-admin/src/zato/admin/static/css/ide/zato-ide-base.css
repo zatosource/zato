@@ -110,3 +110,42 @@
     align-items: center;
     gap: 4px;
 }
+
+.zato-ide-search-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    color: #666;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.zato-ide-search-button:hover {
+    color: #888;
+}
+
+.zato-ide-search-button svg {
+    display: block;
+}
+
+.zato-ide-search-popup {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    z-index: 10002;
+    min-width: 200px;
+    max-width: 300px;
+    display: none;
+}
+
+.zato-ide-search-popup.open {
+    display: block;
+}
