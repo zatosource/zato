@@ -85,7 +85,10 @@
                 container: container,
                 options: opts,
                 editor: null,
-                content: ''
+                codeEditor: null,
+                content: '',
+                files: {},
+                activeFile: null
             };
 
             this.render(instance);
@@ -132,25 +135,20 @@
             html += '</div>';
             html += '</div>';
 
-            html += '<div class="zato-ide-editor-area">';
-            html += '<textarea class="zato-ide-editor" spellcheck="false"></textarea>';
-            html += '</div>';
-
-            html += '<div class="zato-ide-statusbar">';
-            html += '<div class="zato-ide-statusbar-left">';
-            html += '<span class="zato-ide-statusbar-item">Ln 1, Col 1</span>';
-            html += '</div>';
-            html += '<div class="zato-ide-statusbar-right">';
-            html += '<span class="zato-ide-statusbar-item">Python</span>';
-            html += '<span class="zato-ide-statusbar-item">UTF-8</span>';
-            html += '</div>';
+            html += '<div class="zato-ide-editor-area" id="' + instance.id + '-editor-area">';
             html += '</div>';
 
             html += '</div>';
 
             instance.container.innerHTML = html;
-            instance.editor = instance.container.querySelector('.zato-ide-editor');
 
+            console.log('[ZatoIDE] render: container set, initializing files');
+            this.initFiles(instance);
+            console.log('[ZatoIDE] render: files initialized, initializing code editor');
+            this.initCodeEditor(instance);
+            console.log('[ZatoIDE] render: code editor initialized');
+
+            var self = this;
             var fileSelect = document.getElementById(instance.id + '-file-select');
             if (fileSelect && typeof ZatoDropdown !== 'undefined') {
                 instance.fileDropdown = ZatoDropdown.init(fileSelect, {
@@ -169,6 +167,7 @@
                         }
                     },
                     onChange: function(value, text) {
+                        self.switchToFile(instance, value);
                         if (instance.onFileChange) {
                             instance.onFileChange(value, text);
                         }
@@ -177,11 +176,137 @@
 
             }
 
+            console.log('[ZatoIDE] render: initializing tabs');
             this.initTabs(instance);
 
             this.loadSearchIcon(instance);
 
             this.bindEvents(instance);
+
+            console.log('[ZatoIDE] render: switching to initial file my_service.py');
+            this.switchToFile(instance, 'my_service.py');
+            console.log('[ZatoIDE] render: complete');
+        },
+
+        /**
+         * Initializes sample files with content.
+         */
+        initFiles: function(instance) {
+            instance.files = {
+                'my_service.py': {
+                    content: '# -*- coding: utf-8 -*-\n\nfrom zato.server.service import Service\n\nclass MyService(Service):\n    """A sample Zato service."""\n\n    def handle(self):\n        self.logger.info("Processing request")\n        self.response.payload = {"status": "ok"}\n',
+                    language: 'python'
+                },
+                'queries.sql': {
+                    content: '-- Database queries\n\nSELECT id, name, created_at\nFROM users\nWHERE status = \'active\'\nORDER BY created_at DESC\nLIMIT 100;\n\n-- Insert new record\nINSERT INTO logs (message, level)\nVALUES (\'Application started\', \'INFO\');\n',
+                    language: 'sql'
+                },
+                'config.yaml': {
+                    content: '# Configuration file\n\nserver:\n  host: localhost\n  port: 8080\n  debug: true\n\ndatabase:\n  engine: postgresql\n  name: myapp\n  pool_size: 10\n',
+                    language: 'yaml'
+                },
+                'data.json': {
+                    content: '{\n  "name": "My Application",\n  "version": "1.0.0",\n  "settings": {\n    "enabled": true,\n    "maxItems": 100,\n    "tags": ["production", "api"]\n  }\n}\n',
+                    language: 'json'
+                },
+                'settings.ini': {
+                    content: '; Application settings\n\n[general]\nname = MyApp\nversion = 1.0\n\n[logging]\nlevel = INFO\nformat = %(asctime)s - %(message)s\n\n[features]\nenable_cache = true\nmax_connections = 50\n',
+                    language: 'ini'
+                }
+            };
+            instance.activeFile = 'my_service.py';
+        },
+
+        /**
+         * Initializes the code editor component.
+         */
+        initCodeEditor: function(instance) {
+            console.log('[ZatoIDE] initCodeEditor: starting, instance.id=' + instance.id);
+            var self = this;
+            var editorArea = document.getElementById(instance.id + '-editor-area');
+            if (!editorArea) {
+                console.log('[ZatoIDE] initCodeEditor: editor area not found, id=' + instance.id + '-editor-area');
+                return;
+            }
+            console.log('[ZatoIDE] initCodeEditor: editor area found');
+
+            if (typeof ZatoIDEEditor === 'undefined') {
+                console.log('[ZatoIDE] initCodeEditor: ZatoIDEEditor is undefined, editor JS not loaded');
+                return;
+            }
+            console.log('[ZatoIDE] initCodeEditor: ZatoIDEEditor is available');
+
+            var file = instance.files[instance.activeFile];
+            console.log('[ZatoIDE] initCodeEditor: creating editor, activeFile=' + instance.activeFile + ', language=' + (file ? file.language : 'none'));
+            instance.codeEditor = ZatoIDEEditor.create(editorArea, {
+                theme: instance.options.theme,
+                language: file ? file.language : 'python',
+                fontSize: instance.options.fontSize,
+                tabSize: instance.options.tabSize,
+                content: file ? file.content : '',
+                onContentChange: function(content) {
+                    if (instance.activeFile && instance.files[instance.activeFile]) {
+                        instance.files[instance.activeFile].content = content;
+                    }
+                    instance.content = content;
+                },
+                onCursorChange: function(line, col) {
+                }
+            });
+            console.log('[ZatoIDE] initCodeEditor: editor created, codeEditor=' + (instance.codeEditor ? 'ok' : 'null'));
+        },
+
+        /**
+         * Switches to a different file.
+         */
+        switchToFile: function(instance, filename) {
+            console.log('[ZatoIDE] switchToFile: filename=' + filename);
+            if (!instance.files[filename]) {
+                console.log('[ZatoIDE] switchToFile: file not found in instance.files');
+                return;
+            }
+
+            if (instance.activeFile && instance.codeEditor) {
+                instance.files[instance.activeFile].content = ZatoIDEEditor.getValue(instance.codeEditor);
+            }
+
+            instance.activeFile = filename;
+            var file = instance.files[filename];
+
+            if (instance.codeEditor) {
+                ZatoIDEEditor.setContent(instance.codeEditor, file.content);
+                ZatoIDEEditor.setLanguage(instance.codeEditor, file.language);
+            }
+
+            this.syncTabToFile(instance, filename);
+            this.syncDropdownToFile(instance, filename);
+        },
+
+        /**
+         * Syncs the active tab to match the current file.
+         */
+        syncTabToFile: function(instance, filename) {
+            if (!instance.tabsManager) {
+                return;
+            }
+
+            var tabs = instance.tabsManager.tabs;
+            for (var i = 0; i < tabs.length; i++) {
+                if (tabs[i].title === filename) {
+                    instance.tabsManager.activeTabId = tabs[i].id;
+                    this.renderTabs(instance);
+                    break;
+                }
+            }
+        },
+
+        /**
+         * Syncs the dropdown to match the current file.
+         */
+        syncDropdownToFile: function(instance, filename) {
+            if (instance.fileDropdown) {
+                ZatoDropdown.setValue(instance.fileDropdown, filename);
+            }
         },
 
         loadSearchIcon: function(instance) {
@@ -298,6 +423,9 @@
 
             var callbacks = {
                 onTabChange: function(tab) {
+                    if (tab && tab.title) {
+                        self.switchToFile(instance, tab.title);
+                    }
                     if (instance.onTabChange) {
                         instance.onTabChange(tab);
                     }
@@ -390,61 +518,6 @@
                     }
                 }
             });
-
-            if (instance.editor) {
-                instance.editor.addEventListener('input', function() {
-                    instance.content = instance.editor.value;
-                    self.updateStatusBar(instance);
-                });
-
-                instance.editor.addEventListener('keyup', function() {
-                    self.updateStatusBar(instance);
-                });
-
-                instance.editor.addEventListener('click', function() {
-                    self.updateStatusBar(instance);
-                });
-
-                instance.editor.addEventListener('keydown', function(e) {
-                    if (e.key === 'Tab') {
-                        e.preventDefault();
-                        var start = instance.editor.selectionStart;
-                        var end = instance.editor.selectionEnd;
-                        var spaces = '';
-                        for (var i = 0; i < instance.options.tabSize; i++) {
-                            spaces += ' ';
-                        }
-                        instance.editor.value = instance.editor.value.substring(0, start) + spaces + instance.editor.value.substring(end);
-                        instance.editor.selectionStart = instance.editor.selectionEnd = start + instance.options.tabSize;
-                        instance.content = instance.editor.value;
-                    }
-                });
-            }
-        },
-
-        /**
-         * Updates the status bar with current cursor position (line and column).
-         * Called automatically on input, keyup, and click events.
-         *
-         * @param {Object} instance - the IDE instance object
-         */
-        updateStatusBar: function(instance) {
-            var editor = instance.editor;
-            if (!editor) {
-                return;
-            }
-
-            var value = editor.value;
-            var selectionStart = editor.selectionStart;
-
-            var lines = value.substring(0, selectionStart).split('\n');
-            var lineNumber = lines.length;
-            var columnNumber = lines[lines.length - 1].length + 1;
-
-            var statusLeft = instance.container.querySelector('.zato-ide-statusbar-left');
-            if (statusLeft) {
-                statusLeft.innerHTML = '<span class="zato-ide-statusbar-item">Ln ' + lineNumber + ', Col ' + columnNumber + '</span>';
-            }
         },
 
         toggleSearchPopup: function(instance, button) {
@@ -470,8 +543,8 @@
          * @returns {string} the editor content, or empty string if instance is invalid
          */
         getValue: function(instance) {
-            if (instance && instance.editor) {
-                return instance.editor.value;
+            if (instance && instance.codeEditor) {
+                return ZatoIDEEditor.getValue(instance.codeEditor);
             }
             return '';
         },
@@ -483,10 +556,9 @@
          * @param {string} value - the content to set
          */
         setValue: function(instance, value) {
-            if (instance && instance.editor) {
-                instance.editor.value = value;
+            if (instance && instance.codeEditor) {
+                ZatoIDEEditor.setContent(instance.codeEditor, value);
                 instance.content = value;
-                this.updateStatusBar(instance);
             }
         },
 
@@ -505,6 +577,9 @@
             var container = instance.container.querySelector('.zato-ide-container');
             if (container) {
                 container.className = 'zato-ide-container zato-ide-theme-' + theme;
+            }
+            if (instance.codeEditor) {
+                ZatoIDEEditor.setTheme(instance.codeEditor, theme);
             }
         },
 
@@ -527,8 +602,29 @@
         destroy: function(containerId) {
             var instance = this.instances[containerId];
             if (instance) {
+                if (instance.codeEditor) {
+                    ZatoIDEEditor.destroy(instance.codeEditor);
+                }
                 instance.container.innerHTML = '';
                 delete this.instances[containerId];
+            }
+        },
+
+        /**
+         * Sets the language for syntax highlighting.
+         */
+        setLanguage: function(instance, language) {
+            if (instance && instance.codeEditor) {
+                ZatoIDEEditor.setLanguage(instance.codeEditor, language);
+            }
+        },
+
+        /**
+         * Focuses the editor.
+         */
+        focus: function(instance) {
+            if (instance && instance.codeEditor) {
+                ZatoIDEEditor.focus(instance.codeEditor);
             }
         }
     };

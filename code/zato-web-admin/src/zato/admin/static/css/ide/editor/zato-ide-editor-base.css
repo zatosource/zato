@@ -1,0 +1,167 @@
+.zato-ide-editor-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.zato-ide-editor-main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.zato-ide-editor-main.focused {
+    outline: none;
+}
+
+.zato-ide-editor-gutter {
+    flex-shrink: 0;
+    min-width: 40px;
+    padding: 8px 8px 8px 4px;
+    text-align: right;
+    user-select: none;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.zato-ide-editor-gutter-line {
+    height: calc(1em * 1.5);
+    line-height: 1.5;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.zato-ide-editor-content-wrapper {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.zato-ide-editor-code {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 8px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    white-space: pre;
+    overflow: hidden;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.zato-ide-editor-line {
+    height: calc(1em * 1.5);
+    line-height: 1.5;
+    min-height: calc(1em * 1.5);
+}
+
+.zato-ide-editor-textarea {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    padding: 8px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: inherit;
+    line-height: inherit;
+    border: none;
+    outline: none;
+    resize: none;
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
+    white-space: pre;
+    overflow: auto;
+    box-sizing: border-box;
+    z-index: 2;
+}
+
+.zato-ide-editor-textarea::selection {
+    background: rgba(74, 158, 255, 0.3);
+}
+
+.zato-ide-editor-cursor {
+    position: absolute;
+    width: 2px;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0;
+    margin-left: 8px;
+    margin-top: 8px;
+}
+
+.zato-ide-editor-cursor.visible {
+    opacity: 1;
+}
+
+.zato-ide-editor-line-highlight {
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 0;
+    margin-top: 8px;
+}
+
+.zato-ide-editor-highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 8px;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.zato-ide-editor-statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 22px;
+    min-height: 22px;
+    padding: 0 8px;
+    font-size: 11px;
+    user-select: none;
+}
+
+.zato-ide-editor-statusbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.zato-ide-editor-statusbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.zato-ide-editor-statusbar-item {
+    display: flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.zato-ide-editor-statusbar-tooltip {
+    position: fixed;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    max-width: 300px;
+    z-index: 10010;
+    pointer-events: none;
+    white-space: normal;
+}
