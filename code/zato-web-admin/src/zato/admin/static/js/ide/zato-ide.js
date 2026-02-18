@@ -1,8 +1,41 @@
 (function() {
     'use strict';
 
+    /**
+     * ZatoIDE - reusable text editor component with theme support.
+     *
+     * Usage:
+     *   var instance = ZatoIDE.create('my-container-id', {
+     *       theme: 'dark',
+     *       language: 'python',
+     *       fontSize: 13,
+     *       tabSize: 4
+     *   });
+     *
+     *   ZatoIDE.setValue(instance, 'print("Hello")');
+     *   var code = ZatoIDE.getValue(instance);
+     *   ZatoIDE.setTheme(instance, 'light');
+     *   ZatoIDE.destroy('my-container-id');
+     *
+     * The container element must exist in the DOM before calling create().
+     * The editor renders a toolbar, tabs area, editor textarea, and status bar.
+     * Toolbar and tabs are placeholders for future implementation.
+     *
+     * Themes are applied via CSS classes: .zato-ide-theme-dark, .zato-ide-theme-light
+     * Theme CSS files define CSS variables for colors.
+     *
+     * localStorage key: none (editor content is not persisted automatically)
+     */
     var ZatoIDE = {
 
+        /**
+         * Default options for new IDE instances.
+         * @property {string} theme - theme name, maps to .zato-ide-theme-{name} CSS class
+         * @property {string} language - language for syntax highlighting (future)
+         * @property {number} fontSize - editor font size in pixels
+         * @property {number} tabSize - number of spaces inserted when Tab is pressed
+         * @property {boolean} lineNumbers - whether to show line numbers (future)
+         */
         defaultOptions: {
             theme: 'dark',
             language: 'python',
@@ -11,8 +44,26 @@
             lineNumbers: true
         },
 
+        /**
+         * Map of container ID to instance object.
+         * Used to retrieve instances later via getInstance().
+         */
         instances: {},
 
+        /**
+         * Creates a new IDE instance in the specified container.
+         *
+         * @param {string} containerId - ID of the DOM element to render into
+         * @param {Object} options - configuration options (see defaultOptions)
+         * @returns {Object|null} instance object, or null if container not found
+         *
+         * The returned instance object contains:
+         *   - id: the container ID
+         *   - container: the DOM element
+         *   - options: merged options
+         *   - editor: the textarea element
+         *   - content: current editor content
+         */
         create: function(containerId, options) {
             var opts = {};
             var key;
@@ -43,6 +94,18 @@
             return instance;
         },
 
+        /**
+         * Renders the IDE HTML structure into the instance container.
+         * Called automatically by create(). Structure:
+         *   - .zato-ide-container (with theme class)
+         *     - .zato-ide-toolbar (left: dropdown placeholder, right: switch placeholder)
+         *     - .zato-ide-tabs-area (placeholder for ZatoTabsManager)
+         *     - .zato-ide-editor-area
+         *       - textarea.zato-ide-editor
+         *     - .zato-ide-statusbar (left: line/col, right: language, encoding)
+         *
+         * @param {Object} instance - the IDE instance object
+         */
         render: function(instance) {
             var themeClass = 'zato-ide-theme-' + instance.options.theme;
             var html = '';
@@ -84,6 +147,12 @@
             this.bindEvents(instance);
         },
 
+        /**
+         * Binds event listeners to the editor textarea.
+         * Handles: input, keyup, click (for status bar updates), Tab key (inserts spaces).
+         *
+         * @param {Object} instance - the IDE instance object
+         */
         bindEvents: function(instance) {
             var self = this;
 
@@ -118,6 +187,12 @@
             }
         },
 
+        /**
+         * Updates the status bar with current cursor position (line and column).
+         * Called automatically on input, keyup, and click events.
+         *
+         * @param {Object} instance - the IDE instance object
+         */
         updateStatusBar: function(instance) {
             var editor = instance.editor;
             if (!editor) {
@@ -137,6 +212,12 @@
             }
         },
 
+        /**
+         * Gets the current editor content.
+         *
+         * @param {Object} instance - the IDE instance object
+         * @returns {string} the editor content, or empty string if instance is invalid
+         */
         getValue: function(instance) {
             if (instance && instance.editor) {
                 return instance.editor.value;
@@ -144,6 +225,12 @@
             return '';
         },
 
+        /**
+         * Sets the editor content.
+         *
+         * @param {Object} instance - the IDE instance object
+         * @param {string} value - the content to set
+         */
         setValue: function(instance, value) {
             if (instance && instance.editor) {
                 instance.editor.value = value;
@@ -152,6 +239,13 @@
             }
         },
 
+        /**
+         * Changes the editor theme.
+         * Updates the CSS class on .zato-ide-container to .zato-ide-theme-{theme}.
+         *
+         * @param {Object} instance - the IDE instance object
+         * @param {string} theme - theme name (e.g., 'dark', 'light')
+         */
         setTheme: function(instance, theme) {
             if (!instance) {
                 return;
@@ -163,10 +257,22 @@
             }
         },
 
+        /**
+         * Retrieves an existing IDE instance by container ID.
+         *
+         * @param {string} containerId - ID of the container element
+         * @returns {Object|null} the instance object, or null if not found
+         */
         getInstance: function(containerId) {
             return this.instances[containerId] || null;
         },
 
+        /**
+         * Destroys an IDE instance and clears its container.
+         * Removes the instance from the internal registry.
+         *
+         * @param {string} containerId - ID of the container element
+         */
         destroy: function(containerId) {
             var instance = this.instances[containerId];
             if (instance) {

@@ -13,11 +13,11 @@
     overflow: hidden;
 }
 
-.zato-ide-split-panel-ide {
+.zato-ide-split-panel-left {
     flex-shrink: 0;
 }
 
-.zato-ide-split-panel-chat {
+.zato-ide-split-panel-right {
     flex: 1;
     min-width: 250px;
 }

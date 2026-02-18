@@ -195,20 +195,20 @@
                 return;
             }
 
-            var idePanel = ZatoIDESplit.getIDEPanel(splitInstance);
-            if (idePanel) {
-                idePanel.id = 'ai-chat-ide-container';
+            var leftPanel = ZatoIDESplit.getLeftPanel(splitInstance);
+            if (leftPanel) {
+                leftPanel.id = 'ai-chat-ide-container';
                 ZatoIDE.create('ai-chat-ide-container', {
                     theme: 'dark',
                     language: 'python'
                 });
             }
 
-            var chatPanel = ZatoIDESplit.getChatPanel(splitInstance);
-            if (chatPanel) {
+            var rightPanel = ZatoIDESplit.getRightPanel(splitInstance);
+            if (rightPanel) {
                 var chatTabsHtml = AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
                 var chatBodyHtml = this.buildChatPanelBodyHtml();
-                chatPanel.innerHTML = chatTabsHtml + chatBodyHtml;
+                rightPanel.innerHTML = chatTabsHtml + chatBodyHtml;
             }
         },
 
