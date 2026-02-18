@@ -238,6 +238,7 @@
         buildManageServersHtml: function() {
             var html = '';
             html += '<div class="ai-chat-config-container">';
+            html += '<div class="ai-chat-config-content-wrapper">';
             html += AIChatConfig.buildBackButtonHtml('ai-chat-mcp-back');
 
             if (this.servers.length === 0) {
@@ -270,6 +271,7 @@
             }
 
             html += '</div>';
+            html += '</div>';
 
             return html;
         },
@@ -277,6 +279,7 @@
         buildServerDetailHtml: function(server, tools, loading) {
             var html = '';
             html += '<div class="ai-chat-config-container">';
+            html += '<div class="ai-chat-config-content-wrapper">';
             html += AIChatConfig.buildBackButtonHtml('ai-chat-mcp-detail-back');
             html += '<div class="ai-chat-config-title">' + server.name + '</div>';
             html += '<div class="ai-chat-mcp-server-url">' + server.endpoint + '</div>';
@@ -301,12 +304,14 @@
             }
 
             html += '</div>';
+            html += '</div>';
             return html;
         },
 
         buildEditServerHtml: function(server) {
             var html = '';
             html += '<div class="ai-chat-config-container">';
+            html += '<div class="ai-chat-config-content-wrapper">';
             html += AIChatConfig.buildBackButtonHtml('ai-chat-mcp-edit-back');
             html += '<div class="ai-chat-config-title">Edit ' + server.name + '</div>';
 
@@ -317,12 +322,14 @@
             html += '<button class="ai-chat-config-save-button" id="ai-chat-mcp-edit-save" data-server-id="' + server.id + '">Save changes</button>';
 
             html += '</div>';
+            html += '</div>';
             return html;
         },
 
         buildAddServerHtml: function() {
             var html = '';
             html += '<div class="ai-chat-config-container">';
+            html += '<div class="ai-chat-config-content-wrapper">';
             html += AIChatConfig.buildBackButtonHtml('ai-chat-mcp-add-back');
             html += '<div class="ai-chat-config-title">Add an MCP server</div>';
 
@@ -332,6 +339,7 @@
 
             html += '<button class="ai-chat-config-save-button" id="ai-chat-mcp-save">Save server</button>';
 
+            html += '</div>';
             html += '</div>';
 
             return html;

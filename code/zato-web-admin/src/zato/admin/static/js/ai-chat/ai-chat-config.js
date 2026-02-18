@@ -224,6 +224,7 @@
         buildProviderSelectionHtml: function(showBackButton) {
             var html = '';
             html += '<div class="ai-chat-config-container">';
+            html += '<div class="ai-chat-config-content-wrapper ai-chat-config-content-wrapper-providers">';
             if (showBackButton) {
                 html += this.buildBackButtonHtml();
             }
@@ -240,6 +241,7 @@
 
             html += '</div>';
             html += '</div>';
+            html += '</div>';
             return html;
         },
 
@@ -249,6 +251,7 @@
 
             var html = '';
             html += '<div class="ai-chat-config-container">';
+            html += '<div class="ai-chat-config-content-wrapper ai-chat-config-content-wrapper-key-input">';
             html += this.buildBackButtonHtml();
             html += '<div class="ai-chat-config-provider-header">';
             html += '<div class="ai-chat-config-provider-logo-large">' + provider.logo + '</div>';
@@ -258,6 +261,7 @@
             html += '<input type="text" class="ai-chat-config-api-key-input" placeholder="Paste your API key here" data-provider-id="' + providerId + '" tabindex="0" autofocus>';
             html += '</div>';
             html += '<button class="ai-chat-config-save-button" data-provider-id="' + providerId + '">Save API key</button>';
+            html += '</div>';
             html += '</div>';
             return html;
         },
@@ -280,6 +284,7 @@
         buildManageKeysHtml: function(cameFromChat) {
             var html = '';
             html += '<div class="ai-chat-config-container">';
+            html += '<div class="ai-chat-config-content-wrapper">';
             if (cameFromChat) {
                 html += this.buildBackButtonHtml();
             }
@@ -305,6 +310,7 @@
                 html += '</div>';
             }
 
+            html += '</div>';
             html += '</div>';
             html += '</div>';
             return html;
