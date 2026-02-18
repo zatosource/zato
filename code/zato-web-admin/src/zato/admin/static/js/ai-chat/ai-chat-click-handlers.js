@@ -458,6 +458,10 @@
             if (contextHelpLink) {
                 e.preventDefault();
                 e.stopPropagation();
+                var openTooltip = document.querySelector('.ai-chat-context-tooltip.open');
+                if (openTooltip) {
+                    openTooltip.classList.remove('open');
+                }
                 AIChatContextHelp.show();
                 return;
             }
