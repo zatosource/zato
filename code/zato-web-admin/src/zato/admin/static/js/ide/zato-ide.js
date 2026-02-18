@@ -128,7 +128,8 @@
             html += '</div>';
 
             html += '<div class="zato-ide-tabs-area">';
-            html += '<span class="zato-ide-tabs-placeholder">[Tabs via ZatoTabsManager]</span>';
+            html += '<div id="' + instance.id + '-tabs">';
+            html += '</div>';
             html += '</div>';
 
             html += '<div class="zato-ide-editor-area">';
@@ -155,6 +156,18 @@
                 instance.fileDropdown = ZatoDropdown.init(fileSelect, {
                     theme: instance.options.theme,
                     id: instance.id + '-file-dropdown',
+                    onBeforeOpen: function(container) {
+                        var menu = container.querySelector('.zato-dropdown-menu');
+                        var trigger = container.querySelector('.zato-dropdown-trigger');
+                        if (menu && trigger) {
+                            var rect = trigger.getBoundingClientRect();
+                            menu.style.position = 'fixed';
+                            menu.style.bottom = 'auto';
+                            menu.style.left = rect.left + 'px';
+                            menu.style.top = (rect.bottom + 2) + 'px';
+                            menu.style.minWidth = rect.width + 'px';
+                        }
+                    },
                     onChange: function(value, text) {
                         if (instance.onFileChange) {
                             instance.onFileChange(value, text);
@@ -162,18 +175,173 @@
                     }
                 });
 
-                var items = instance.fileDropdown.querySelectorAll('.zato-dropdown-item');
-                for (var i = 0; i < items.length; i++) {
-                    var item = items[i];
-                    var option = fileSelect.options[i];
-                    var tooltip = option.getAttribute('data-tooltip');
-                    if (tooltip) {
-                        item.setAttribute('data-tooltip', tooltip);
-                    }
-                }
             }
 
+            this.initTabs(instance);
+
             this.bindEvents(instance);
+        },
+
+        /**
+         * Initializes the tabs manager and renders tabs for all files.
+         *
+         * @param {Object} instance - the IDE instance object
+         */
+        initTabs: function(instance) {
+            if (typeof ZatoTabsManager === 'undefined') {
+                return;
+            }
+
+            var tabsContainerId = instance.id + '-tabs';
+            instance.tabsManager = ZatoTabsManager.create(tabsContainerId, {
+                theme: instance.options.theme,
+                onTabChange: function(tab) {
+                    if (instance.onTabChange) {
+                        instance.onTabChange(tab);
+                    }
+                }
+            });
+
+            var files = [
+                { id: 'file-1', title: 'my_service.py' },
+                { id: 'file-2', title: 'queries.sql' },
+                { id: 'file-3', title: 'config.yaml' },
+                { id: 'file-4', title: 'data.json' },
+                { id: 'file-5', title: 'settings.ini' }
+            ];
+
+            instance.tabsManager.tabs = files;
+            instance.tabsManager.activeTabId = files[0].id;
+            instance.tabsManager.container = document.getElementById(tabsContainerId);
+
+            this.renderTabs(instance);
+            this.bindTabEvents(instance);
+        },
+
+        /**
+         * Renders the tabs HTML into the tabs container.
+         *
+         * @param {Object} instance - the IDE instance object
+         */
+        renderTabs: function(instance) {
+            if (!instance.tabsManager || !instance.tabsManager.container) {
+                return;
+            }
+
+            var tabsInstance = {
+                containerId: instance.id + '-tabs',
+                tabs: instance.tabsManager.tabs,
+                activeTabId: instance.tabsManager.activeTabId,
+                theme: instance.options.theme,
+                closedTabsHistory: instance.closedTabsHistory || [],
+                clearedMessagesBuffer: instance.clearedMessagesBuffer || {}
+            };
+
+            var options = {
+                theme: instance.options.theme,
+                showAddButton: true,
+                showCloseButton: true,
+                showPinIcon: true,
+                showLockIcon: true,
+                addButtonTitle: 'New file',
+                containerClass: 'zato-ide-tabs'
+            };
+
+            var html = ZatoTabsRenderer.buildTabsHtml(tabsInstance, options);
+            instance.tabsManager.container.innerHTML = html;
+        },
+
+        /**
+         * Binds all tab events using ZatoTabsEvents.
+         *
+         * @param {Object} instance - the IDE instance object
+         */
+        bindTabEvents: function(instance) {
+            var self = this;
+            var container = instance.tabsManager.container;
+            if (!container) {
+                return;
+            }
+
+            instance.closedTabsHistory = [];
+            instance.clearedMessagesBuffer = {};
+
+            var tabsInstance = {
+                containerId: instance.id + '-tabs',
+                tabs: instance.tabsManager.tabs,
+                activeTabId: instance.tabsManager.activeTabId,
+                theme: instance.options.theme,
+                closedTabsHistory: instance.closedTabsHistory,
+                clearedMessagesBuffer: instance.clearedMessagesBuffer
+            };
+
+            var callbacks = {
+                onTabChange: function(tab) {
+                    if (instance.onTabChange) {
+                        instance.onTabChange(tab);
+                    }
+                },
+                onSave: function() {
+                },
+                onRender: function() {
+                    instance.tabsManager.activeTabId = tabsInstance.activeTabId;
+                    instance.tabsManager.tabs = tabsInstance.tabs;
+                    self.renderTabs(instance);
+                },
+                createTabData: function(tabNumber) {
+                    return {
+                        title: 'file-' + tabNumber + '.py'
+                    };
+                },
+                onAddToClosedHistory: function(tab) {
+                    instance.closedTabsHistory.unshift({
+                        tabs: [JSON.parse(JSON.stringify(tab))],
+                        closedAt: Date.now()
+                    });
+                    tabsInstance.closedTabsHistory = instance.closedTabsHistory;
+                },
+                onFlushClosedHistory: function() {
+                },
+                onReopenClosedTabs: function() {
+                    if (instance.closedTabsHistory.length === 0) {
+                        return [];
+                    }
+                    var entry = instance.closedTabsHistory.shift();
+                    var closedTabs = entry.tabs || [];
+                    var reopened = [];
+                    for (var i = 0; i < closedTabs.length; i++) {
+                        var tab = closedTabs[i];
+                        tab.id = ZatoTabsEvents.generateTabId();
+                        tabsInstance.tabs.push(tab);
+                        reopened.push(tab);
+                    }
+                    tabsInstance.closedTabsHistory = instance.closedTabsHistory;
+                    return reopened;
+                },
+                onClearMessages: function(tabId, messages) {
+                    instance.clearedMessagesBuffer[tabId] = {
+                        messages: JSON.parse(JSON.stringify(messages)),
+                        clearedAt: Date.now()
+                    };
+                    tabsInstance.clearedMessagesBuffer = instance.clearedMessagesBuffer;
+                },
+                onUndoClearMessages: function(tabId) {
+                    var buffer = instance.clearedMessagesBuffer[tabId];
+                    if (!buffer) {
+                        return false;
+                    }
+                    var tab = ZatoTabsEvents.getTabById(tabsInstance.tabs, tabId);
+                    if (tab) {
+                        tab.messages = buffer.messages;
+                        delete instance.clearedMessagesBuffer[tabId];
+                        tabsInstance.clearedMessagesBuffer = instance.clearedMessagesBuffer;
+                        return true;
+                    }
+                    return false;
+                }
+            };
+
+            ZatoTabsEvents.bind(container, tabsInstance, callbacks);
         },
 
         /**

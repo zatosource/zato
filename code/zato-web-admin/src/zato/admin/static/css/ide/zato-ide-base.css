@@ -16,6 +16,9 @@
     padding: 0 8px;
     background: var(--zato-ide-toolbar-bg);
     border-bottom: 1px solid var(--zato-ide-border-subtle);
+    position: relative;
+    z-index: 100;
+    overflow: visible;
 }
 
 .zato-ide-toolbar-left {
@@ -31,10 +34,7 @@
 }
 
 .zato-ide-tabs-area {
-    height: 28px;
-    min-height: 28px;
     background: var(--zato-ide-bg-dark);
-    border-bottom: 1px solid var(--zato-ide-border-subtle);
 }
 
 .zato-ide-editor-area {

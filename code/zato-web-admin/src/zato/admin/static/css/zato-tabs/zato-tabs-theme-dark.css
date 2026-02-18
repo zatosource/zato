@@ -62,3 +62,43 @@
 .zato-tabs-theme-dark .zato-tab-add:hover {
     text-shadow: none;
 }
+
+.zato-tabs-context-menu {
+    position: fixed;
+    background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    min-width: 120px;
+    padding: 4px 0;
+}
+
+.zato-tabs-context-menu-item {
+    padding: 8px 16px;
+    color: #e0e0e0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.zato-tabs-context-menu-item:hover {
+    background: rgba(74, 158, 255, 0.2);
+    color: #fff;
+}
+
+.zato-tabs-context-menu-item.disabled {
+    color: #666;
+    cursor: default;
+}
+
+.zato-tabs-context-menu-item.disabled:hover {
+    background: transparent;
+    color: #666;
+}
+
+.zato-tabs-context-menu-separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 4px 8px;
+}
