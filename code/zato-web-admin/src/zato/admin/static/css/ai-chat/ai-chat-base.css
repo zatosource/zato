@@ -15,6 +15,8 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 9999;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    container-type: inline-size;
+    container-name: ai-chat;
 }
 
 .ai-chat-widget.maximized {

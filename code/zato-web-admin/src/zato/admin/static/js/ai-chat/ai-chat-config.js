@@ -39,6 +39,14 @@
             return html;
         },
 
+        wrapWithBackButton: function(id, contentHtml) {
+            var html = '<div class="ai-chat-config-content-wrapper">';
+            html += this.buildBackButtonHtml(id);
+            html += contentHtml;
+            html += '</div>';
+            return html;
+        },
+
         init: function() {
             this.configuredKeys = {};
             this.models = {};

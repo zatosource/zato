@@ -104,6 +104,7 @@
 .ai-chat-config-back {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 6px;
     color: #888;
     font-size: 13px;
@@ -111,10 +112,11 @@
     padding: 6px 10px;
     border-radius: 6px;
     transition: color 0.15s ease, background 0.15s ease;
-    position: absolute;
-    top: 60px;
-    left: 12px;
+    margin-bottom: 16px;
     text-shadow: none !important;
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
 }
 
 .ai-chat-config-back:hover {
@@ -127,17 +129,6 @@
     height: 16px;
 }
 
-.ai-chat-widget.maximized .ai-chat-config-container {
-    max-width: 600px;
-}
-
-.ai-chat-widget.maximized .ai-chat-config-back {
-    position: relative;
-    top: auto;
-    left: auto;
-    align-self: flex-start;
-    margin-bottom: 24px;
-}
 
 .ai-chat-config-provider-header {
     display: flex;
