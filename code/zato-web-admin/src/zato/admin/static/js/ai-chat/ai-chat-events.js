@@ -74,8 +74,19 @@
 
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
+                    if (AIChatContextHelp && AIChatContextHelp.isOpen && AIChatContextHelp.isOpen()) {
+                        AIChatContextHelp.close();
+                        e.preventDefault();
+                        return;
+                    }
                     if (AIChatPreview.closeTop()) {
                         e.preventDefault();
+                        return;
+                    }
+                    var backBtn = widget.querySelector('.ai-chat-config-back');
+                    if (backBtn) {
+                        e.preventDefault();
+                        backBtn.click();
                         return;
                     }
                 }

@@ -100,6 +100,15 @@
                 self.close();
             });
 
+            this._clickOutsideHandler = function(e) {
+                if (self.popup && !self.popup.contains(e.target) && !e.target.closest('.ai-chat-context-help-link')) {
+                    self.close();
+                }
+            };
+            setTimeout(function() {
+                document.addEventListener('mousedown', self._clickOutsideHandler);
+            }, 0);
+
             popup.style.zIndex = '10100';
         },
 
@@ -108,6 +117,14 @@
                 this.popup.parentNode.removeChild(this.popup);
             }
             this.popup = null;
+            if (this._clickOutsideHandler) {
+                document.removeEventListener('mousedown', this._clickOutsideHandler);
+                this._clickOutsideHandler = null;
+            }
+        },
+
+        isOpen: function() {
+            return this.popup !== null;
         },
 
         bringToFront: function() {
@@ -117,6 +134,7 @@
         },
 
         makeDraggable: function(popup, handle) {
+            var self = this;
             var isDragging = false;
             var startX, startY, startLeft, startTop;
 
@@ -125,11 +143,16 @@
                     return;
                 }
                 isDragging = true;
+                
+                var rect = popup.getBoundingClientRect();
+                startLeft = rect.left;
+                startTop = rect.top;
                 popup.style.transform = 'none';
+                popup.style.left = startLeft + 'px';
+                popup.style.top = startTop + 'px';
+                
                 startX = e.clientX;
                 startY = e.clientY;
-                startLeft = popup.offsetLeft;
-                startTop = popup.offsetTop;
                 e.preventDefault();
             });
 
