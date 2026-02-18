@@ -314,8 +314,46 @@
                 html += '<option value="' + model.id + '"' + selected + separator + disabled + '>' + model.name + '</option>';
             }
             html += '</select>';
-            html += this.buildTokenCountersHtml(tab);
+            html += this.buildContextBarHtml(tab);
             html += '</div>';
+            return html;
+        },
+
+        getModelContextSize: function(modelId) {
+            var contextSizes = {
+                'claude-opus-4-6': 200000,
+                'claude-sonnet-4-5': 200000,
+                'claude-sonnet-4': 200000,
+                'claude-haiku-3-5': 200000,
+                'gpt-5.2-pro': 128000,
+                'gpt-5.2': 128000,
+                'gpt-4.1': 128000,
+                'gpt-4.1-mini': 128000,
+                'gemini-2.5-pro': 1000000,
+                'gemini-2.5-flash': 1000000
+            };
+            return contextSizes[modelId] || 200000;
+        },
+
+        buildContextBarHtml: function(tab) {
+            var tokensIn = AIChatTabState.getTokensIn(tab.id);
+            var tokensOut = AIChatTabState.getTokensOut(tab.id);
+            var modelId = tab.model || 'claude-opus-4-6';
+            var maxContext = this.getModelContextSize(modelId);
+            var totalTokens = tokensIn + tokensOut;
+            var usagePercent = Math.min(100, (totalTokens / maxContext) * 100);
+            var html = '<span class="ai-chat-context-bar" data-tab-id="' + tab.id + '">';
+            html += '<span class="ai-chat-context-bar-fill" style="width: ' + usagePercent + '%;"></span>';
+            html += '<span class="ai-chat-context-tooltip">';
+            html += '<table>';
+            html += '<tr><td>Ctx size</td><td>' + AIChatTabState.humanizeNumber(maxContext) + '</td></tr>';
+            html += '<tr><td>Used</td><td>' + usagePercent.toFixed(1) + '%</td></tr>';
+            html += '<tr><td>Tok out</td><td>' + AIChatTabState.humanizeNumber(tokensOut) + '</td></tr>';
+            html += '<tr><td>Tok in</td><td>' + AIChatTabState.humanizeNumber(tokensIn) + '</td></tr>';
+            html += '</table>';
+            html += '<a href="#" class="ai-chat-context-help-link">How does it work?</a>';
+            html += '</span>';
+            html += '</span>';
             return html;
         },
 

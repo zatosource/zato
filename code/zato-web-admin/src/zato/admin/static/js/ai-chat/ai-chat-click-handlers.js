@@ -428,6 +428,14 @@
                 core.render();
                 return;
             }
+
+            var contextHelpLink = target.closest('.ai-chat-context-help-link');
+            if (contextHelpLink) {
+                e.preventDefault();
+                e.stopPropagation();
+                AIChatContextHelp.show();
+                return;
+            }
         },
 
         handleShowItems: function(btn) {

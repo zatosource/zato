@@ -117,6 +117,7 @@
 
             this.widget.innerHTML = html;
             this.initModelDropdown();
+            this.initContextBarTooltip();
             AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
             this.scrollActiveTabToBottom();
             this.highlightCode();
@@ -156,6 +157,9 @@
                 select.style.display = '';
                 ZatoDropdown.init(select);
             }
+        },
+
+        initContextBarTooltip: function() {
         },
 
         restoreInputContent: function() {
