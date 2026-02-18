@@ -158,9 +158,11 @@
                 return null;
             }
 
+            var newTitle = this.generateDuplicateTitle(tabs, tab.title);
+
             var newTab = {
                 id: this.generateTabId(),
-                title: tab.title + ' (copy)',
+                title: newTitle,
                 messages: JSON.parse(JSON.stringify(tab.messages)),
                 model: tab.model,
                 tokensIn: tab.tokensIn || 0,
@@ -171,6 +173,31 @@
             tabs.splice(tabIndex + 1, 0, newTab);
 
             return newTab;
+        },
+
+        generateDuplicateTitle: function(tabs, originalTitle) {
+            var baseTitle = originalTitle.replace(/\s*\(\d+\)$/, '');
+            
+            var existingNumbers = [];
+            for (var i = 0; i < tabs.length; i++) {
+                var title = tabs[i].title;
+                if (title === baseTitle) {
+                    existingNumbers.push(1);
+                } else if (title.indexOf(baseTitle + ' (') === 0) {
+                    var match = title.match(/\((\d+)\)$/);
+                    if (match) {
+                        existingNumbers.push(parseInt(match[1], 10));
+                    }
+                }
+            }
+
+            var nextNumber = 2;
+            if (existingNumbers.length > 0) {
+                existingNumbers.sort(function(a, b) { return a - b; });
+                nextNumber = existingNumbers[existingNumbers.length - 1] + 1;
+            }
+
+            return baseTitle + ' (' + nextNumber + ')';
         },
 
         countClosableToRight: function(tabs, tabId) {
@@ -200,50 +227,103 @@
         maxClosedTabsHistory: 20,
 
         addToClosedHistory: function(tab) {
+            console.log('[CLOSED-TABS] addToClosedHistory called');
+            console.log('[CLOSED-TABS] tab to add:', JSON.stringify({
+                id: tab.id,
+                title: tab.title,
+                messagesCount: tab.messages ? tab.messages.length : 0
+            }));
+            console.log('[CLOSED-TABS] history length before:', this.closedTabsHistory.length);
+
             var entry = {
                 tab: JSON.parse(JSON.stringify(tab)),
                 closedAt: Date.now()
             };
             this.closedTabsHistory.unshift(entry);
             if (this.closedTabsHistory.length > this.maxClosedTabsHistory) {
+                console.log('[CLOSED-TABS] trimming history, exceeded max:', this.maxClosedTabsHistory);
                 this.closedTabsHistory.pop();
             }
+            console.log('[CLOSED-TABS] history length after:', this.closedTabsHistory.length);
             this.saveClosedHistory();
         },
 
         saveClosedHistory: function() {
+            console.log('[CLOSED-TABS] saveClosedHistory called, entries:', this.closedTabsHistory.length);
             try {
-                localStorage.setItem('zato.ai-chat.closed-tabs', JSON.stringify(this.closedTabsHistory));
+                var data = JSON.stringify(this.closedTabsHistory);
+                console.log('[CLOSED-TABS] saving to localStorage, size:', data.length, 'bytes');
+                localStorage.setItem('zato.ai-chat.closed-tabs', data);
+                console.log('[CLOSED-TABS] saved successfully');
             } catch (e) {
-                console.debug('AIChatTabs: failed to save closed history', e);
+                console.log('[CLOSED-TABS] failed to save closed history:', e);
             }
         },
 
         loadClosedHistory: function() {
+            console.log('[CLOSED-TABS] loadClosedHistory called');
             try {
                 var data = localStorage.getItem('zato.ai-chat.closed-tabs');
+                console.log('[CLOSED-TABS] loaded from localStorage:', data ? data.length + ' bytes' : 'null');
                 if (data) {
                     this.closedTabsHistory = JSON.parse(data);
+                    console.log('[CLOSED-TABS] parsed entries:', this.closedTabsHistory.length);
+                    for (var i = 0; i < this.closedTabsHistory.length; i++) {
+                        var entry = this.closedTabsHistory[i];
+                        console.log('[CLOSED-TABS] entry ' + i + ':', JSON.stringify({
+                            title: entry.tab.title,
+                            closedAt: new Date(entry.closedAt).toISOString(),
+                            messagesCount: entry.tab.messages ? entry.tab.messages.length : 0
+                        }));
+                    }
+                } else {
+                    console.log('[CLOSED-TABS] no saved history found');
                 }
             } catch (e) {
-                console.debug('AIChatTabs: failed to load closed history', e);
+                console.log('[CLOSED-TABS] failed to load closed history:', e);
             }
         },
 
         reopenClosedTab: function(tabs) {
+            console.log('[CLOSED-TABS] reopenClosedTab called');
+            console.log('[CLOSED-TABS] current history length:', this.closedTabsHistory.length);
+            console.log('[CLOSED-TABS] current tabs count:', tabs.length);
+
             if (this.closedTabsHistory.length === 0) {
+                console.log('[CLOSED-TABS] no closed tabs to reopen');
                 return null;
             }
+
             var entry = this.closedTabsHistory.shift();
+            console.log('[CLOSED-TABS] reopening entry:', JSON.stringify({
+                title: entry.tab.title,
+                closedAt: new Date(entry.closedAt).toISOString(),
+                messagesCount: entry.tab.messages ? entry.tab.messages.length : 0
+            }));
+
             this.saveClosedHistory();
+            console.log('[CLOSED-TABS] history length after shift:', this.closedTabsHistory.length);
+
             var tab = entry.tab;
+            var oldId = tab.id;
             tab.id = this.generateTabId();
+            console.log('[CLOSED-TABS] generated new tab id:', tab.id, '(was:', oldId + ')');
+
             tabs.push(tab);
+            console.log('[CLOSED-TABS] tabs count after push:', tabs.length);
+            console.log('[CLOSED-TABS] reopened tab:', JSON.stringify({
+                id: tab.id,
+                title: tab.title,
+                messagesCount: tab.messages ? tab.messages.length : 0
+            }));
+
             return tab;
         },
 
         hasClosedTabs: function() {
-            return this.closedTabsHistory.length > 0;
+            var has = this.closedTabsHistory.length > 0;
+            console.log('[CLOSED-TABS] hasClosedTabs:', has, '(count:', this.closedTabsHistory.length + ')');
+            return has;
         },
 
         togglePin: function(tabs, tabId) {
@@ -304,24 +384,46 @@
             return { tabs: newTabs, activeTabId: newActiveTabId, closed: closedTabs.length };
         },
 
+        clearedMessagesBuffer: {},
+
         clearMessages: function(tabs, tabId) {
             var tab = this.getTabById(tabs, tabId);
             if (!tab) return false;
 
             if (tab.messages && tab.messages.length > 0) {
-                this.addToClosedHistory({
-                    id: tab.id,
-                    title: tab.title + ' (cleared)',
-                    messages: tab.messages,
-                    model: tab.model,
-                    tokensIn: tab.tokensIn,
-                    tokensOut: tab.tokensOut
-                });
+                this.clearedMessagesBuffer[tabId] = {
+                    messages: JSON.parse(JSON.stringify(tab.messages)),
+                    tokensIn: tab.tokensIn || 0,
+                    tokensOut: tab.tokensOut || 0,
+                    clearedAt: Date.now()
+                };
+                console.log('[CLOSED-TABS] stored cleared messages for tab:', tabId, 'count:', tab.messages.length);
             }
 
             tab.messages = [];
             tab.tokensIn = 0;
             tab.tokensOut = 0;
+            return true;
+        },
+
+        canUndoClear: function(tabId) {
+            return !!this.clearedMessagesBuffer[tabId];
+        },
+
+        undoClearMessages: function(tabs, tabId) {
+            var tab = this.getTabById(tabs, tabId);
+            var buffer = this.clearedMessagesBuffer[tabId];
+            if (!tab || !buffer) {
+                console.log('[CLOSED-TABS] undoClearMessages: no buffer for tab:', tabId);
+                return false;
+            }
+
+            console.log('[CLOSED-TABS] undoClearMessages: restoring', buffer.messages.length, 'messages to tab:', tabId);
+            tab.messages = buffer.messages;
+            tab.tokensIn = buffer.tokensIn;
+            tab.tokensOut = buffer.tokensOut;
+
+            delete this.clearedMessagesBuffer[tabId];
             return true;
         },
 

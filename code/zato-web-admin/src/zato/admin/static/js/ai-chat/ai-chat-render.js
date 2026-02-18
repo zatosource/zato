@@ -60,7 +60,8 @@
                 var activeClass = tab.id === activeTabId ? ' active' : '';
                 var pinnedClass = tab.pinned ? ' pinned' : '';
                 var lockedClass = tab.locked ? ' locked' : '';
-                html += '<div class="ai-chat-tab' + activeClass + pinnedClass + lockedClass + '" data-tab-id="' + tab.id + '" draggable="true">';
+                var isDraggable = !tab.pinned && !tab.locked;
+                html += '<div class="ai-chat-tab' + activeClass + pinnedClass + lockedClass + '" data-tab-id="' + tab.id + '" draggable="' + isDraggable + '">';
                 if (tab.pinned) {
                     html += '<span class="ai-chat-tab-pin-icon">📌</span>';
                 }
@@ -431,8 +432,12 @@
                 html += '<div class="ai-chat-context-menu-item disabled">Reopen closed tab</div>';
             }
 
+            var canUndoClear = AIChatTabs.canUndoClear(tabId);
+
             if (hasMessages) {
                 html += '<div class="ai-chat-context-menu-item" data-action="clear" data-tab-id="' + tabId + '">Clear all messages</div>';
+            } else if (canUndoClear) {
+                html += '<div class="ai-chat-context-menu-item" data-action="undo-clear" data-tab-id="' + tabId + '">Undo clear messages</div>';
             } else {
                 html += '<div class="ai-chat-context-menu-item disabled">Clear all messages</div>';
             }

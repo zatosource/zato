@@ -146,6 +146,18 @@
                     core.render();
                     break;
 
+                case 'undo-clear':
+                    if (AIChatTabs.undoClearMessages(core.tabs, tabId)) {
+                        tab = AIChatTabs.getTabById(core.tabs, tabId);
+                        if (tab) {
+                            AIChatTabState.setTokensIn(tabId, tab.tokensIn || 0);
+                            AIChatTabState.setTokensOut(tabId, tab.tokensOut || 0);
+                        }
+                        core.saveState();
+                        core.render();
+                    }
+                    break;
+
                 case 'copy':
                     AIChatTabs.copyToClipboard(core.tabs, tabId);
                     break;

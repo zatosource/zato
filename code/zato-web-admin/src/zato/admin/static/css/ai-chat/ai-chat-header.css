@@ -155,6 +155,8 @@
     border-bottom: 2px solid transparent;
     transition: all 0.2s ease;
     white-space: nowrap;
+    min-height: 32px;
+    box-sizing: border-box;
 }
 
 .ai-chat-tab:hover {
@@ -234,4 +236,7 @@
 .ai-chat-tab-lock-icon {
     font-size: 10px;
     opacity: 0.7;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
 }
