@@ -1,0 +1,63 @@
+.zato-tabs-theme-dark .zato-tabs-container {
+    background: #1f1f1f;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.zato-tabs-theme-dark .zato-tabs-container::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.zato-tabs-theme-dark .zato-tabs-container::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 2px;
+}
+
+.zato-tabs-theme-dark .zato-tab {
+    color: #888;
+}
+
+.zato-tabs-theme-dark .zato-tab:hover {
+    color: #ccc;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.zato-tabs-theme-dark .zato-tab.active {
+    color: #fff;
+    border-bottom-color: #4a9eff;
+}
+
+.zato-tabs-theme-dark .zato-tab-close {
+    color: #666;
+}
+
+.zato-tabs-theme-dark .zato-tab-close:hover {
+    color: #ff6666;
+    background: rgba(255, 100, 100, 0.2);
+}
+
+.zato-tabs-theme-dark .zato-tab-add {
+    color: #888;
+}
+
+.zato-tabs-theme-dark .zato-tab-add:hover {
+    color: #888;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.zato-tabs-theme-dark .zato-tab.dragging {
+    background: rgba(74, 158, 255, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    color: #fff;
+}
+
+.zato-tabs-theme-dark .zato-tab-pin-icon {
+    color: #fff;
+}
+
+.zato-tabs-theme-dark .zato-tab-add {
+    text-shadow: none;
+}
+
+.zato-tabs-theme-dark .zato-tab-add:hover {
+    text-shadow: none;
+}

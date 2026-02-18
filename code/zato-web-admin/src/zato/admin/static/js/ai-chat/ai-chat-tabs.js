@@ -3,26 +3,29 @@
 
     var AIChatTabs = {
 
+        instance: null,
+
+        init: function() {
+            this.instance = ZatoTabsManager.create('ai-chat', {
+                theme: 'dark',
+                createTabData: function(tabNumber) {
+                    return {
+                        title: 'Chat ' + tabNumber
+                    };
+                }
+            });
+        },
+
         generateTabId: function() {
-            return 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            return ZatoTabsManager.generateTabId();
         },
 
         getTabById: function(tabs, tabId) {
-            for (var i = 0; i < tabs.length; i++) {
-                if (tabs[i].id === tabId) {
-                    return tabs[i];
-                }
-            }
-            return null;
+            return ZatoTabsManager.getTabById({ tabs: tabs }, tabId);
         },
 
         getTabIndex: function(tabs, tabId) {
-            for (var i = 0; i < tabs.length; i++) {
-                if (tabs[i].id === tabId) {
-                    return i;
-                }
-            }
-            return -1;
+            return ZatoTabsManager.getTabIndex({ tabs: tabs }, tabId);
         },
 
         createDefaultTab: function() {
@@ -48,179 +51,54 @@
         },
 
         closeTab: function(tabs, tabId, activeTabId) {
-
-            if (tabs.length <= 1) {
-                return { tabs: tabs, activeTabId: activeTabId };
-            }
-
-            var tabIndex = this.getTabIndex(tabs, tabId);
-            if (tabIndex === -1) {
-                return { tabs: tabs, activeTabId: activeTabId };
-            }
-
-            tabs.splice(tabIndex, 1);
-
-            var newActiveTabId = activeTabId;
-            if (activeTabId === tabId) {
-                var newActiveIndex = Math.min(tabIndex, tabs.length - 1);
-                newActiveTabId = tabs[newActiveIndex].id;
-            }
-
-            return { tabs: tabs, activeTabId: newActiveTabId };
+            var tempInstance = { tabs: tabs, activeTabId: activeTabId };
+            return ZatoTabsManager.closeTab(tempInstance, tabId);
         },
 
         renameTab: function(tabs, tabId, newTitle) {
-
-            var tab = this.getTabById(tabs, tabId);
-            if (!tab) {
-                return false;
-            }
-
-            if (newTitle && newTitle.trim()) {
-                tab.title = newTitle.trim();
-                return true;
-            }
-            return false;
+            return ZatoTabsManager.renameTab({ tabs: tabs }, tabId, newTitle);
         },
 
         reorderTabs: function(tabs, tabElements) {
-            var newOrder = [];
-            for (var i = 0; i < tabElements.length; i++) {
-                var tabId = tabElements[i].getAttribute('data-tab-id');
-                var tab = this.getTabById(tabs, tabId);
-                if (tab) {
-                    newOrder.push(tab);
-                }
-            }
-            return newOrder;
+            var tempInstance = { tabs: tabs };
+            return ZatoTabsManager.reorderTabs(tempInstance, tabElements);
         },
 
         toggleLock: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            if (tab) {
-                tab.locked = !tab.locked;
-                return true;
-            }
-            return false;
+            return ZatoTabsManager.toggleLock({ tabs: tabs }, tabId);
         },
 
         isLocked: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            return tab && tab.locked;
+            return ZatoTabsManager.isLocked({ tabs: tabs }, tabId);
         },
 
         closeOthers: function(tabs, tabId, activeTabId) {
-            var tab = this.getTabById(tabs, tabId);
-            if (!tab) {
-                return { tabs: tabs, activeTabId: activeTabId, closed: 0 };
-            }
-
-            var newTabs = [tab];
-            var closed = 0;
-            for (var i = 0; i < tabs.length; i++) {
-                if (tabs[i].id !== tabId && tabs[i].locked) {
-                    newTabs.push(tabs[i]);
-                } else if (tabs[i].id !== tabId) {
-                    closed++;
-                }
-            }
-
-            return { tabs: newTabs, activeTabId: tabId, closed: closed };
+            var tempInstance = { tabs: tabs, activeTabId: activeTabId };
+            var result = ZatoTabsManager.closeOthers(tempInstance, tabId);
+            return result;
         },
 
         closeToRight: function(tabs, tabId, activeTabId) {
-            var tabIndex = this.getTabIndex(tabs, tabId);
-            if (tabIndex === -1) {
-                return { tabs: tabs, activeTabId: activeTabId, closed: 0 };
-            }
-
-            var newTabs = tabs.slice(0, tabIndex + 1);
-            var closed = 0;
-            for (var i = tabIndex + 1; i < tabs.length; i++) {
-                if (tabs[i].locked) {
-                    newTabs.push(tabs[i]);
-                } else {
-                    closed++;
-                }
-            }
-
-            var newActiveTabId = activeTabId;
-            if (!this.getTabById(newTabs, activeTabId)) {
-                newActiveTabId = tabId;
-            }
-
-            return { tabs: newTabs, activeTabId: newActiveTabId, closed: closed };
+            var tempInstance = { tabs: tabs, activeTabId: activeTabId };
+            var result = ZatoTabsManager.closeToRight(tempInstance, tabId);
+            return result;
         },
 
         duplicateTab: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            if (!tab) {
-                return null;
-            }
-
-            var newTitle = this.generateDuplicateTitle(tabs, tab.title);
-
-            var newTab = {
-                id: this.generateTabId(),
-                title: newTitle,
-                messages: JSON.parse(JSON.stringify(tab.messages)),
-                model: tab.model,
-                tokensIn: tab.tokensIn || 0,
-                tokensOut: tab.tokensOut || 0
-            };
-
-            var tabIndex = this.getTabIndex(tabs, tabId);
-            tabs.splice(tabIndex + 1, 0, newTab);
-
-            return newTab;
+            var tempInstance = { tabs: tabs };
+            return ZatoTabsManager.duplicateTab(tempInstance, tabId);
         },
 
         generateDuplicateTitle: function(tabs, originalTitle) {
-            var baseTitle = originalTitle.replace(/\s*\(\d+\)$/, '');
-            
-            var existingNumbers = [];
-            for (var i = 0; i < tabs.length; i++) {
-                var title = tabs[i].title;
-                if (title === baseTitle) {
-                    existingNumbers.push(1);
-                } else if (title.indexOf(baseTitle + ' (') === 0) {
-                    var match = title.match(/\((\d+)\)$/);
-                    if (match) {
-                        existingNumbers.push(parseInt(match[1], 10));
-                    }
-                }
-            }
-
-            var nextNumber = 2;
-            if (existingNumbers.length > 0) {
-                existingNumbers.sort(function(a, b) { return a - b; });
-                nextNumber = existingNumbers[existingNumbers.length - 1] + 1;
-            }
-
-            return baseTitle + ' (' + nextNumber + ')';
+            return ZatoTabsManager.generateDuplicateTitle({ tabs: tabs }, originalTitle);
         },
 
         countClosableToRight: function(tabs, tabId) {
-            var tabIndex = this.getTabIndex(tabs, tabId);
-            if (tabIndex === -1) return 0;
-
-            var count = 0;
-            for (var i = tabIndex + 1; i < tabs.length; i++) {
-                if (!tabs[i].locked) {
-                    count++;
-                }
-            }
-            return count;
+            return ZatoTabsManager.countClosableToRight({ tabs: tabs }, tabId);
         },
 
         countClosableOthers: function(tabs, tabId) {
-            var count = 0;
-            for (var i = 0; i < tabs.length; i++) {
-                if (tabs[i].id !== tabId && !tabs[i].locked) {
-                    count++;
-                }
-            }
-            return count;
+            return ZatoTabsManager.countClosableOthers({ tabs: tabs }, tabId);
         },
 
         closedTabsHistory: [],
@@ -228,22 +106,13 @@
         pendingBatch: [],
 
         addToClosedHistory: function(tab) {
-            console.log('[CLOSED-TABS] addToClosedHistory called');
-            console.log('[CLOSED-TABS] tab to add:', JSON.stringify({
-                id: tab.id,
-                title: tab.title,
-                messagesCount: tab.messages ? tab.messages.length : 0
-            }));
             this.pendingBatch.push(JSON.parse(JSON.stringify(tab)));
-            console.log('[CLOSED-TABS] added to pending batch, batch size:', this.pendingBatch.length);
         },
 
         flushClosedHistory: function() {
             if (this.pendingBatch.length === 0) {
-                console.log('[CLOSED-TABS] flushClosedHistory: no pending tabs');
                 return;
             }
-            console.log('[CLOSED-TABS] flushClosedHistory: flushing', this.pendingBatch.length, 'tabs as batch');
             var entry = {
                 tabs: this.pendingBatch,
                 closedAt: Date.now()
@@ -251,108 +120,62 @@
             this.closedTabsHistory.unshift(entry);
             this.pendingBatch = [];
             if (this.closedTabsHistory.length > this.maxClosedTabsHistory) {
-                console.log('[CLOSED-TABS] trimming history, exceeded max:', this.maxClosedTabsHistory);
                 this.closedTabsHistory.pop();
             }
-            console.log('[CLOSED-TABS] history now has', this.closedTabsHistory.length, 'batches');
             this.saveClosedHistory();
         },
 
         saveClosedHistory: function() {
-            console.log('[CLOSED-TABS] saveClosedHistory called, batches:', this.closedTabsHistory.length);
             try {
                 var data = JSON.stringify(this.closedTabsHistory);
-                console.log('[CLOSED-TABS] saving to localStorage, size:', data.length, 'bytes');
                 localStorage.setItem('zato.ai-chat.closed-tabs', data);
-                console.log('[CLOSED-TABS] saved successfully');
             } catch (e) {
-                console.log('[CLOSED-TABS] failed to save closed history:', e);
+                console.log('[AIChatTabs] failed to save closed history:', e);
             }
         },
 
         loadClosedHistory: function() {
-            console.log('[CLOSED-TABS] loadClosedHistory called');
             try {
                 var data = localStorage.getItem('zato.ai-chat.closed-tabs');
-                console.log('[CLOSED-TABS] loaded from localStorage:', data ? data.length + ' bytes' : 'null');
                 if (data) {
                     this.closedTabsHistory = JSON.parse(data);
-                    console.log('[CLOSED-TABS] parsed batches:', this.closedTabsHistory.length);
-                    for (var i = 0; i < this.closedTabsHistory.length; i++) {
-                        var entry = this.closedTabsHistory[i];
-                        var tabCount = entry.tabs ? entry.tabs.length : (entry.tab ? 1 : 0);
-                        console.log('[CLOSED-TABS] batch ' + i + ':', tabCount, 'tabs, closedAt:', new Date(entry.closedAt).toISOString());
-                    }
-                } else {
-                    console.log('[CLOSED-TABS] no saved history found');
                 }
             } catch (e) {
-                console.log('[CLOSED-TABS] failed to load closed history:', e);
+                console.log('[AIChatTabs] failed to load closed history:', e);
             }
         },
 
         reopenClosedTabs: function(tabs) {
-            console.log('[CLOSED-TABS] reopenClosedTabs called');
-            console.log('[CLOSED-TABS] current history batches:', this.closedTabsHistory.length);
-            console.log('[CLOSED-TABS] current tabs count:', tabs.length);
-
             if (this.closedTabsHistory.length === 0) {
-                console.log('[CLOSED-TABS] no closed tabs to reopen');
                 return [];
             }
 
             var entry = this.closedTabsHistory.shift();
             var closedTabs = entry.tabs || (entry.tab ? [entry.tab] : []);
-            console.log('[CLOSED-TABS] reopening batch of', closedTabs.length, 'tabs from', new Date(entry.closedAt).toISOString());
 
             var reopened = [];
             for (var i = 0; i < closedTabs.length; i++) {
                 var tab = closedTabs[i];
-                var oldId = tab.id;
                 tab.id = this.generateTabId();
-                console.log('[CLOSED-TABS] reopened tab:', tab.title, 'new id:', tab.id, '(was:', oldId + ')');
                 tabs.push(tab);
                 reopened.push(tab);
             }
 
             this.saveClosedHistory();
-            console.log('[CLOSED-TABS] history batches after shift:', this.closedTabsHistory.length);
-            console.log('[CLOSED-TABS] tabs count after reopen:', tabs.length);
-
             return reopened;
         },
 
         hasClosedTabs: function() {
-            var has = this.closedTabsHistory.length > 0;
-            console.log('[CLOSED-TABS] hasClosedTabs:', has, '(batches:', this.closedTabsHistory.length + ')');
-            return has;
+            return this.closedTabsHistory.length > 0;
         },
 
         togglePin: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            if (!tab) return false;
-
-            var tabIndex = this.getTabIndex(tabs, tabId);
-            tab.pinned = !tab.pinned;
-
-            if (tab.pinned) {
-                tabs.splice(tabIndex, 1);
-                var insertIndex = 0;
-                for (var i = 0; i < tabs.length; i++) {
-                    if (tabs[i].pinned) {
-                        insertIndex = i + 1;
-                    } else {
-                        break;
-                    }
-                }
-                tabs.splice(insertIndex, 0, tab);
-            }
-            return true;
+            var tempInstance = { tabs: tabs };
+            return ZatoTabsManager.togglePin(tempInstance, tabId);
         },
 
         isPinned: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            return tab && tab.pinned;
+            return ZatoTabsManager.isPinned({ tabs: tabs }, tabId);
         },
 
         closeAll: function(tabs, activeTabId) {
@@ -389,23 +212,10 @@
         clearedMessagesBuffer: {},
 
         clearMessages: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            if (!tab) return false;
-
-            if (tab.messages && tab.messages.length > 0) {
-                this.clearedMessagesBuffer[tabId] = {
-                    messages: JSON.parse(JSON.stringify(tab.messages)),
-                    tokensIn: tab.tokensIn || 0,
-                    tokensOut: tab.tokensOut || 0,
-                    clearedAt: Date.now()
-                };
-                console.log('[CLOSED-TABS] stored cleared messages for tab:', tabId, 'count:', tab.messages.length);
-            }
-
-            tab.messages = [];
-            tab.tokensIn = 0;
-            tab.tokensOut = 0;
-            return true;
+            var tempInstance = { tabs: tabs, clearedMessagesBuffer: this.clearedMessagesBuffer };
+            var result = ZatoTabsManager.clearMessages(tempInstance, tabId);
+            this.clearedMessagesBuffer = tempInstance.clearedMessagesBuffer;
+            return result;
         },
 
         canUndoClear: function(tabId) {
@@ -413,82 +223,26 @@
         },
 
         undoClearMessages: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            var buffer = this.clearedMessagesBuffer[tabId];
-            if (!tab || !buffer) {
-                console.log('[CLOSED-TABS] undoClearMessages: no buffer for tab:', tabId);
-                return false;
-            }
-
-            console.log('[CLOSED-TABS] undoClearMessages: restoring', buffer.messages.length, 'messages to tab:', tabId);
-            tab.messages = buffer.messages;
-            tab.tokensIn = buffer.tokensIn;
-            tab.tokensOut = buffer.tokensOut;
-
-            delete this.clearedMessagesBuffer[tabId];
-            return true;
+            var tempInstance = { tabs: tabs, clearedMessagesBuffer: this.clearedMessagesBuffer };
+            var result = ZatoTabsManager.undoClearMessages(tempInstance, tabId);
+            this.clearedMessagesBuffer = tempInstance.clearedMessagesBuffer;
+            return result;
         },
 
         copyToClipboard: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            if (!tab || !tab.messages || tab.messages.length === 0) return false;
-
-            var text = '';
-            for (var i = 0; i < tab.messages.length; i++) {
-                var msg = tab.messages[i];
-                var role = msg.role.charAt(0).toUpperCase() + msg.role.slice(1);
-                text += role + ':\n' + msg.content + '\n\n';
-            }
-
-            navigator.clipboard.writeText(text.trim());
-            return true;
+            return ZatoTabsManager.copyToClipboard({ tabs: tabs }, tabId);
         },
 
         exportAsMarkdown: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            if (!tab) return null;
-
-            var md = '# ' + tab.title + '\n\n';
-            if (tab.messages) {
-                for (var i = 0; i < tab.messages.length; i++) {
-                    var msg = tab.messages[i];
-                    if (msg.role === 'user') {
-                        md += '## User\n\n' + msg.content + '\n\n';
-                    } else if (msg.role === 'assistant') {
-                        md += '## Assistant\n\n' + msg.content + '\n\n';
-                    } else {
-                        md += '## ' + msg.role.charAt(0).toUpperCase() + msg.role.slice(1) + '\n\n' + msg.content + '\n\n';
-                    }
-                }
-            }
-            return md;
+            return ZatoTabsManager.exportAsMarkdown({ tabs: tabs }, tabId);
         },
 
         exportAsJson: function(tabs, tabId) {
-            var tab = this.getTabById(tabs, tabId);
-            if (!tab) return null;
-
-            var data = {
-                title: tab.title,
-                model: tab.model,
-                tokensIn: tab.tokensIn || 0,
-                tokensOut: tab.tokensOut || 0,
-                messages: tab.messages || [],
-                exportedAt: new Date().toISOString()
-            };
-            return JSON.stringify(data, null, 2);
+            return ZatoTabsManager.exportAsJson({ tabs: tabs }, tabId);
         },
 
         downloadFile: function(content, filename, mimeType) {
-            var blob = new Blob([content], { type: mimeType });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            ZatoTabsManager.downloadFile(content, filename, mimeType);
         }
     };
 

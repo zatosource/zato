@@ -1,0 +1,82 @@
+.zato-tabs-container {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    height: 32px;
+}
+
+.zato-tabs-container::-webkit-scrollbar {
+    height: 4px;
+}
+
+.zato-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    min-height: 32px;
+    box-sizing: border-box;
+}
+
+.zato-tab-close {
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 2px;
+    transition: all 0.15s ease;
+}
+
+.zato-tab-add {
+    padding: 4px;
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    border-radius: 4px;
+    margin: auto 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+}
+
+.zato-tab.dragging {
+    opacity: 0.8;
+    position: fixed;
+    z-index: 10000;
+    pointer-events: none;
+    transform: scale(1.05);
+    transition: none;
+}
+
+.zato-tab.pinned {
+}
+
+.zato-tab.pinned.active {
+}
+
+.zato-tab-pin-icon {
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+}
+
+.zato-tab-lock-icon {
+    font-size: 10px;
+    opacity: 0.7;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+}

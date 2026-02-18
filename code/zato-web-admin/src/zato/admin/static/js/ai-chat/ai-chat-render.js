@@ -53,7 +53,8 @@
         },
 
         buildTabsHtml: function(tabs, activeTabId) {
-            var html = '<div class="ai-chat-tabs" id="ai-chat-tabs">';
+            var html = '<div class="zato-tabs-theme-dark ai-chat-tabs" id="ai-chat-tabs">';
+            html += '<div class="zato-tabs-container">';
 
             for (var i = 0; i < tabs.length; i++) {
                 var tab = tabs[i];
@@ -61,21 +62,22 @@
                 var pinnedClass = tab.pinned ? ' pinned' : '';
                 var lockedClass = tab.locked ? ' locked' : '';
                 var isDraggable = !tab.pinned && !tab.locked;
-                html += '<div class="ai-chat-tab' + activeClass + pinnedClass + lockedClass + '" data-tab-id="' + tab.id + '" draggable="' + isDraggable + '">';
+                html += '<div class="zato-tab ai-chat-tab' + activeClass + pinnedClass + lockedClass + '" data-tab-id="' + tab.id + '" draggable="' + isDraggable + '">';
                 if (tab.pinned) {
-                    html += '<span class="ai-chat-tab-pin-icon">' + AIChatIcons.get('pin', 14) + '</span>';
+                    html += '<span class="zato-tab-pin-icon ai-chat-tab-pin-icon">' + AIChatIcons.get('pin', 14) + '</span>';
                 }
                 if (tab.locked) {
-                    html += '<span class="ai-chat-tab-lock-icon">' + AIChatIcons.get('lock', 12) + '</span>';
+                    html += '<span class="zato-tab-lock-icon ai-chat-tab-lock-icon">' + AIChatIcons.get('lock', 12) + '</span>';
                 }
                 html += '<span class="ai-chat-tab-title">' + this.escapeHtml(tab.title) + '</span>';
                 if (tabs.length > 1 && !tab.locked && !tab.pinned) {
-                    html += '<span class="ai-chat-tab-close" data-tab-id="' + tab.id + '">✕</span>';
+                    html += '<span class="zato-tab-close ai-chat-tab-close" data-tab-id="' + tab.id + '">✕</span>';
                 }
                 html += '</div>';
             }
 
-            html += '<button class="ai-chat-tab-add" id="ai-chat-tab-add" title="New chat">+</button>';
+            html += '<button class="zato-tab-add ai-chat-tab-add" id="ai-chat-tab-add" title="New chat">+</button>';
+            html += '</div>';
             html += '</div>';
             return html;
         },

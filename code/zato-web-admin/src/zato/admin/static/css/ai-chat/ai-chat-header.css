@@ -119,104 +119,30 @@
 }
 
 .ai-chat-tabs {
-    display: flex;
-    align-items: center;
-    background: #1f1f1f;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 0 8px;
-    flex-shrink: 0;
-    overflow-x: auto;
-    height: 32px;
-}
-
-.ai-chat-tabs::-webkit-scrollbar {
-    height: 4px;
-}
-
-.ai-chat-tabs::-webkit-scrollbar-track {
-    background: #1a1a1a;
-}
-
-.ai-chat-tabs::-webkit-scrollbar-thumb {
-    background: #444;
-    border-radius: 2px;
 }
 
 .ai-chat-tab {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    background: transparent;
-    border: none;
-    color: #888;
-    font-size: 13px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    min-height: 32px;
-    box-sizing: border-box;
 }
 
 .ai-chat-tab:hover {
-    color: #ccc;
-    background: rgba(255, 255, 255, 0.05);
 }
 
 .ai-chat-tab.active {
-    color: #fff;
-    border-bottom-color: #4a9eff;
 }
 
 .ai-chat-tab-close {
-    font-size: 12px;
-    color: #666;
-    cursor: pointer;
-    padding: 2px;
-    border-radius: 2px;
-    transition: all 0.15s ease;
 }
 
 .ai-chat-tab-close:hover {
-    color: #ff6666;
-    background: rgba(255, 100, 100, 0.2);
 }
 
 .ai-chat-tab-add {
-    padding: 4px;
-    background: transparent;
-    border: none;
-    color: #888;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-    border-radius: 4px;
-    margin: auto 4px;
-    text-shadow: none;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    align-self: center;
 }
 
 .ai-chat-tab-add:hover {
-    color: #888;
-    background: rgba(255, 255, 255, 0.1);
-    text-shadow: none;
 }
 
 .ai-chat-tab.dragging {
-    opacity: 0.8;
-    background: rgba(74, 158, 255, 0.4);
-    position: fixed;
-    z-index: 10000;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-    pointer-events: none;
-    transform: scale(1.05);
-    transition: none;
 }
 
 .ai-chat-tab.pinned {
@@ -226,16 +152,7 @@
 }
 
 .ai-chat-tab-pin-icon {
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    color: #fff;
 }
 
 .ai-chat-tab-lock-icon {
-    font-size: 10px;
-    opacity: 0.7;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
 }

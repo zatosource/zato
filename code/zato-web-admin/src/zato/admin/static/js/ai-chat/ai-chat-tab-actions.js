@@ -22,6 +22,11 @@
         },
 
         closeTab: function(widget, core, tabId) {
+            var tab = AIChatTabs.getTabById(core.tabs, tabId);
+            if (tab) {
+                AIChatTabs.addToClosedHistory(tab);
+                AIChatTabs.flushClosedHistory();
+            }
             AIChatTabState.removeTab(tabId);
             var result = AIChatTabs.closeTab(core.tabs, tabId, core.activeTabId);
             core.tabs = result.tabs;
