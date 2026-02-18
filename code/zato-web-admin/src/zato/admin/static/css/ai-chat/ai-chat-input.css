@@ -169,7 +169,7 @@
 
 .ai-chat-context-bar {
     display: inline-flex;
-    gap: 2px;
+    gap: 1px;
     height: 12px;
     overflow: visible;
     position: relative;

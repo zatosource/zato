@@ -66,7 +66,7 @@
             html += '</button>';
             html += '</div>';
             html += '<div class="ai-chat-context-help-content">';
-            html += '<p>The <strong>context window</strong> is the amount of text an AI model can process in a single conversation.</p>';
+            html += '<p>The <strong>context window</strong> is the amount of text an AI model can process in a single conversation (in a single tab).</p>';
             html += '<table>';
             html += '<tr><td><strong>Ctx size</strong></td><td>Maximum tokens</td><td>' + currentValues.ctxSize + ' <span class="ai-chat-help-grey">(' + currentValues.ctxSizeWords + ' words)</span></td></tr>';
             html += '<tr><td><strong>Used</strong></td><td>Percentage of context currently in use</td><td>' + currentValues.used + '</td></tr>';
