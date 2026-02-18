@@ -3,14 +3,30 @@
 
     var ZatoDropdown = {
 
+        instances: {},
+
         init: function(selectElement, options) {
             if (!selectElement) {
                 return null;
             }
 
             options = options || {};
+            var theme = options.theme || 'dark';
             var container = this.createDropdown(selectElement, options);
-            this.bindEvents(container, selectElement);
+
+            container.setAttribute('data-theme', theme);
+            container.classList.add('zato-dropdown-theme-' + theme);
+
+            this.bindEvents(container, selectElement, options);
+
+            var instanceId = options.id || selectElement.id || ('dropdown-' + Date.now());
+            container.setAttribute('data-instance-id', instanceId);
+            this.instances[instanceId] = {
+                container: container,
+                selectElement: selectElement,
+                options: options
+            };
+
             return container;
         },
 
@@ -30,8 +46,8 @@
             var trigger = document.createElement('div');
             trigger.className = 'zato-dropdown-trigger';
 
-            if (selectElement.closest('.ai-chat-model-selector')) {
-                trigger.setAttribute('data-tooltip', 'Choose model');
+            if (options.tooltip) {
+                trigger.setAttribute('data-tooltip', options.tooltip);
             }
 
             var text = document.createElement('span');
@@ -77,19 +93,24 @@
             return container;
         },
 
-        bindEvents: function(container, selectElement) {
+        bindEvents: function(container, selectElement, options) {
             var trigger = container.querySelector('.zato-dropdown-trigger');
             var menu = container.querySelector('.zato-dropdown-menu');
 
             trigger.addEventListener('click', function(e) {
                 e.stopPropagation();
-                if (window.AIChatTooltip) {
-                    AIChatTooltip.hide();
+
+                if (options.onBeforeOpen) {
+                    options.onBeforeOpen(container);
                 }
+
                 var isOpen = container.classList.contains('open');
                 ZatoDropdown.closeAll();
                 if (!isOpen) {
                     container.classList.add('open');
+                    if (options.onOpen) {
+                        options.onOpen(container);
+                    }
                 }
             });
 
@@ -117,6 +138,10 @@
                     var event = document.createEvent('Event');
                     event.initEvent('change', true, true);
                     selectElement.dispatchEvent(event);
+
+                    if (options.onChange) {
+                        options.onChange(value, text, container);
+                    }
 
                     ZatoDropdown.closeAll();
                     e.stopPropagation();
@@ -151,6 +176,33 @@
                     items[i].classList.remove('active');
                 }
                 item.classList.add('active');
+            }
+        },
+
+        setTheme: function(container, theme) {
+            var currentTheme = container.getAttribute('data-theme');
+            if (currentTheme) {
+                container.classList.remove('zato-dropdown-theme-' + currentTheme);
+            }
+            container.setAttribute('data-theme', theme);
+            container.classList.add('zato-dropdown-theme-' + theme);
+        },
+
+        getTheme: function(container) {
+            return container.getAttribute('data-theme') || 'dark';
+        },
+
+        getInstance: function(instanceId) {
+            return this.instances[instanceId] || null;
+        },
+
+        destroy: function(container) {
+            var instanceId = container.getAttribute('data-instance-id');
+            if (instanceId && this.instances[instanceId]) {
+                var instance = this.instances[instanceId];
+                instance.selectElement.style.display = '';
+                container.parentNode.removeChild(container);
+                delete this.instances[instanceId];
             }
         }
     };

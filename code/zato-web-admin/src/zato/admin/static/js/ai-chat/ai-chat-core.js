@@ -175,7 +175,7 @@
                     existingDropdown.parentNode.removeChild(existingDropdown);
                 }
                 select.style.display = '';
-                ZatoDropdown.init(select);
+                ZatoDropdown.init(select, {theme: 'dark', tooltip: 'Choose model'});
             }
         },
 

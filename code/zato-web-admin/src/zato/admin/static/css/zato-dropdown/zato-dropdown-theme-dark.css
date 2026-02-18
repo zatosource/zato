@@ -1,0 +1,48 @@
+.zato-dropdown-theme-dark .zato-dropdown-trigger {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #a0a0a0;
+}
+
+.zato-dropdown-theme-dark .zato-dropdown-trigger:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: #222;
+}
+
+.zato-dropdown-theme-dark.open .zato-dropdown-trigger {
+    border-color: #4a9eff;
+    background: #222;
+}
+
+.zato-dropdown-theme-dark .zato-dropdown-menu {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.zato-dropdown-theme-dark .zato-dropdown-item {
+    color: #c0c0c0;
+}
+
+.zato-dropdown-theme-dark .zato-dropdown-item:hover {
+    background: rgba(74, 158, 255, 0.15);
+    color: #fff;
+}
+
+.zato-dropdown-theme-dark .zato-dropdown-item.active {
+    background: rgba(74, 158, 255, 0.25);
+    color: #fff;
+}
+
+.zato-dropdown-theme-dark .zato-dropdown-item.disabled {
+    color: #777;
+}
+
+.zato-dropdown-theme-dark .zato-dropdown-item.disabled:hover {
+    background: transparent;
+    color: #777;
+}
+
+.zato-dropdown-theme-dark .zato-dropdown-separator {
+    background: rgba(255, 255, 255, 0.1);
+}
