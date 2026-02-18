@@ -27,6 +27,7 @@
             AIChatConfig.init();
             AIChatMCP.init();
             AIChatZoom.init();
+            AIChatTabs.loadClosedHistory();
             this.loadState();
             this.widget = AIChatWidget.create(this.isMinimized, this.zoomScale);
             if (this.isMaximized) {

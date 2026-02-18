@@ -140,13 +140,7 @@
                 if (tabElement) {
                     e.preventDefault();
                     var tabId = tabElement.getAttribute('data-tab-id');
-                    AIChatContextMenu.show(e.clientX, e.clientY, tabId, function(tid) {
-                        AIChatContextMenu.renameTab(core.tabs, tid, function() {
-                            core.saveState();
-                        }, function() {
-                            core.render();
-                        });
-                    });
+                    AIChatContextMenu.show(e.clientX, e.clientY, tabId, core);
                 }
             });
 

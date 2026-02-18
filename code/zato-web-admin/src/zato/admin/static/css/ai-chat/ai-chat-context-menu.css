@@ -21,3 +21,19 @@
     background: rgba(74, 158, 255, 0.2);
     color: #fff;
 }
+
+.ai-chat-context-menu-item.disabled {
+    color: #666;
+    cursor: default;
+}
+
+.ai-chat-context-menu-item.disabled:hover {
+    background: transparent;
+    color: #666;
+}
+
+.ai-chat-context-menu-separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 4px 8px;
+}

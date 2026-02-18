@@ -216,3 +216,22 @@
     transform: scale(1.05);
     transition: none;
 }
+
+.ai-chat-tab.pinned {
+    background: rgba(255, 200, 50, 0.1);
+    border-bottom-color: rgba(255, 200, 50, 0.5);
+}
+
+.ai-chat-tab.pinned.active {
+    border-bottom-color: #ffc832;
+}
+
+.ai-chat-tab.locked {
+    background: rgba(100, 150, 255, 0.1);
+}
+
+.ai-chat-tab-pin-icon,
+.ai-chat-tab-lock-icon {
+    font-size: 10px;
+    opacity: 0.7;
+}
