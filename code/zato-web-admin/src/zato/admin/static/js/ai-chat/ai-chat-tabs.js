@@ -225,6 +225,7 @@
 
         closedTabsHistory: [],
         maxClosedTabsHistory: 20,
+        pendingBatch: [],
 
         addToClosedHistory: function(tab) {
             console.log('[CLOSED-TABS] addToClosedHistory called');
@@ -233,23 +234,32 @@
                 title: tab.title,
                 messagesCount: tab.messages ? tab.messages.length : 0
             }));
-            console.log('[CLOSED-TABS] history length before:', this.closedTabsHistory.length);
+            this.pendingBatch.push(JSON.parse(JSON.stringify(tab)));
+            console.log('[CLOSED-TABS] added to pending batch, batch size:', this.pendingBatch.length);
+        },
 
+        flushClosedHistory: function() {
+            if (this.pendingBatch.length === 0) {
+                console.log('[CLOSED-TABS] flushClosedHistory: no pending tabs');
+                return;
+            }
+            console.log('[CLOSED-TABS] flushClosedHistory: flushing', this.pendingBatch.length, 'tabs as batch');
             var entry = {
-                tab: JSON.parse(JSON.stringify(tab)),
+                tabs: this.pendingBatch,
                 closedAt: Date.now()
             };
             this.closedTabsHistory.unshift(entry);
+            this.pendingBatch = [];
             if (this.closedTabsHistory.length > this.maxClosedTabsHistory) {
                 console.log('[CLOSED-TABS] trimming history, exceeded max:', this.maxClosedTabsHistory);
                 this.closedTabsHistory.pop();
             }
-            console.log('[CLOSED-TABS] history length after:', this.closedTabsHistory.length);
+            console.log('[CLOSED-TABS] history now has', this.closedTabsHistory.length, 'batches');
             this.saveClosedHistory();
         },
 
         saveClosedHistory: function() {
-            console.log('[CLOSED-TABS] saveClosedHistory called, entries:', this.closedTabsHistory.length);
+            console.log('[CLOSED-TABS] saveClosedHistory called, batches:', this.closedTabsHistory.length);
             try {
                 var data = JSON.stringify(this.closedTabsHistory);
                 console.log('[CLOSED-TABS] saving to localStorage, size:', data.length, 'bytes');
@@ -267,14 +277,11 @@
                 console.log('[CLOSED-TABS] loaded from localStorage:', data ? data.length + ' bytes' : 'null');
                 if (data) {
                     this.closedTabsHistory = JSON.parse(data);
-                    console.log('[CLOSED-TABS] parsed entries:', this.closedTabsHistory.length);
+                    console.log('[CLOSED-TABS] parsed batches:', this.closedTabsHistory.length);
                     for (var i = 0; i < this.closedTabsHistory.length; i++) {
                         var entry = this.closedTabsHistory[i];
-                        console.log('[CLOSED-TABS] entry ' + i + ':', JSON.stringify({
-                            title: entry.tab.title,
-                            closedAt: new Date(entry.closedAt).toISOString(),
-                            messagesCount: entry.tab.messages ? entry.tab.messages.length : 0
-                        }));
+                        var tabCount = entry.tabs ? entry.tabs.length : (entry.tab ? 1 : 0);
+                        console.log('[CLOSED-TABS] batch ' + i + ':', tabCount, 'tabs, closedAt:', new Date(entry.closedAt).toISOString());
                     }
                 } else {
                     console.log('[CLOSED-TABS] no saved history found');
@@ -284,45 +291,40 @@
             }
         },
 
-        reopenClosedTab: function(tabs) {
-            console.log('[CLOSED-TABS] reopenClosedTab called');
-            console.log('[CLOSED-TABS] current history length:', this.closedTabsHistory.length);
+        reopenClosedTabs: function(tabs) {
+            console.log('[CLOSED-TABS] reopenClosedTabs called');
+            console.log('[CLOSED-TABS] current history batches:', this.closedTabsHistory.length);
             console.log('[CLOSED-TABS] current tabs count:', tabs.length);
 
             if (this.closedTabsHistory.length === 0) {
                 console.log('[CLOSED-TABS] no closed tabs to reopen');
-                return null;
+                return [];
             }
 
             var entry = this.closedTabsHistory.shift();
-            console.log('[CLOSED-TABS] reopening entry:', JSON.stringify({
-                title: entry.tab.title,
-                closedAt: new Date(entry.closedAt).toISOString(),
-                messagesCount: entry.tab.messages ? entry.tab.messages.length : 0
-            }));
+            var closedTabs = entry.tabs || (entry.tab ? [entry.tab] : []);
+            console.log('[CLOSED-TABS] reopening batch of', closedTabs.length, 'tabs from', new Date(entry.closedAt).toISOString());
+
+            var reopened = [];
+            for (var i = 0; i < closedTabs.length; i++) {
+                var tab = closedTabs[i];
+                var oldId = tab.id;
+                tab.id = this.generateTabId();
+                console.log('[CLOSED-TABS] reopened tab:', tab.title, 'new id:', tab.id, '(was:', oldId + ')');
+                tabs.push(tab);
+                reopened.push(tab);
+            }
 
             this.saveClosedHistory();
-            console.log('[CLOSED-TABS] history length after shift:', this.closedTabsHistory.length);
+            console.log('[CLOSED-TABS] history batches after shift:', this.closedTabsHistory.length);
+            console.log('[CLOSED-TABS] tabs count after reopen:', tabs.length);
 
-            var tab = entry.tab;
-            var oldId = tab.id;
-            tab.id = this.generateTabId();
-            console.log('[CLOSED-TABS] generated new tab id:', tab.id, '(was:', oldId + ')');
-
-            tabs.push(tab);
-            console.log('[CLOSED-TABS] tabs count after push:', tabs.length);
-            console.log('[CLOSED-TABS] reopened tab:', JSON.stringify({
-                id: tab.id,
-                title: tab.title,
-                messagesCount: tab.messages ? tab.messages.length : 0
-            }));
-
-            return tab;
+            return reopened;
         },
 
         hasClosedTabs: function() {
             var has = this.closedTabsHistory.length > 0;
-            console.log('[CLOSED-TABS] hasClosedTabs:', has, '(count:', this.closedTabsHistory.length + ')');
+            console.log('[CLOSED-TABS] hasClosedTabs:', has, '(batches:', this.closedTabsHistory.length + ')');
             return has;
         },
 

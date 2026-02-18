@@ -78,6 +78,7 @@
                     tab = AIChatTabs.getTabById(core.tabs, tabId);
                     if (tab) {
                         AIChatTabs.addToClosedHistory(tab);
+                        AIChatTabs.flushClosedHistory();
                     }
                     result = AIChatTabs.closeTab(core.tabs, tabId, core.activeTabId);
                     core.tabs = result.tabs;
@@ -97,6 +98,7 @@
                     for (var j = 0; j < toRight.length; j++) {
                         AIChatTabs.addToClosedHistory(toRight[j]);
                     }
+                    AIChatTabs.flushClosedHistory();
                     result = AIChatTabs.closeToRight(core.tabs, tabId, core.activeTabId);
                     core.tabs = result.tabs;
                     core.activeTabId = result.activeTabId;
@@ -114,6 +116,7 @@
                     for (var l = 0; l < others.length; l++) {
                         AIChatTabs.addToClosedHistory(others[l]);
                     }
+                    AIChatTabs.flushClosedHistory();
                     result = AIChatTabs.closeOthers(core.tabs, tabId, core.activeTabId);
                     core.tabs = result.tabs;
                     core.activeTabId = result.activeTabId;
@@ -122,6 +125,12 @@
                     break;
 
                 case 'close-all':
+                    for (var m = 0; m < core.tabs.length; m++) {
+                        if (!core.tabs[m].locked) {
+                            AIChatTabs.addToClosedHistory(core.tabs[m]);
+                        }
+                    }
+                    AIChatTabs.flushClosedHistory();
                     result = AIChatTabs.closeAll(core.tabs, core.activeTabId);
                     core.tabs = result.tabs;
                     core.activeTabId = result.activeTabId;
@@ -130,9 +139,9 @@
                     break;
 
                 case 'reopen':
-                    var reopened = AIChatTabs.reopenClosedTab(core.tabs);
-                    if (reopened) {
-                        core.activeTabId = reopened.id;
+                    var reopenedTabs = AIChatTabs.reopenClosedTabs(core.tabs);
+                    if (reopenedTabs.length > 0) {
+                        core.activeTabId = reopenedTabs[reopenedTabs.length - 1].id;
                         core.saveState();
                         core.render();
                     }
