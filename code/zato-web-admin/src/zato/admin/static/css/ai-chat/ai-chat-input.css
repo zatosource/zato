@@ -190,6 +190,10 @@
     border-radius: 2px;
 }
 
+.ai-chat-context-bar:hover {
+    background: #444;
+}
+
 .ai-chat-context-tooltip {
     position: absolute;
     bottom: 100%;
@@ -235,22 +239,22 @@
 .ai-chat-context-help-link {
     display: inline-block;
     margin-top: 6px;
-    padding: 4px 8px;
-    background: rgba(74, 158, 255, 0.25);
+    padding: 5px 10px;
+    background: var(--zato-seablue-light2) !important;
     border-radius: 4px;
-    color: #4a9eff;
+    color: #fff !important;
     text-decoration: none !important;
     font-size: 10px;
 }
 
 .ai-chat-context-help-link:hover {
-    background: rgba(74, 158, 255, 0.35);
+    background: var(--zato-seablue-light3) !important;
     text-decoration: none !important;
 }
 
 .ai-chat-context-help-popup {
     position: fixed;
-    width: 360px;
+    width: 480px;
     min-height: 200px;
     background: #1a1a1a;
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -322,16 +326,58 @@
     width: 100%;
     border-collapse: collapse;
     margin: 12px 0;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.ai-chat-context-help-content tr:hover {
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .ai-chat-context-help-content td {
-    padding: 6px 8px;
+    padding: 8px 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+}
+
+.ai-chat-context-help-content tr:last-child td {
+    border-bottom: none;
 }
 
 .ai-chat-context-help-content td:first-child {
-    width: 80px;
-    color: #888;
+    width: 70px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.ai-chat-context-help-content td:nth-child(2) {
+    color: #999;
+}
+
+.ai-chat-context-help-content td:last-child {
+    text-align: right;
+    font-weight: 500;
+    color: #4a9eff;
+    white-space: nowrap;
+}
+
+.ai-chat-help-grey {
+    color: #999;
+    font-weight: 400;
+}
+
+.ai-chat-context-help-content ul {
+    margin: 8px 0 0 0;
+    padding-left: 18px;
+}
+
+.ai-chat-context-help-content li {
+    margin-bottom: 6px;
+}
+
+.ai-chat-context-help-content li:last-child {
+    margin-bottom: 0;
 }
 
 .ai-chat-context-help-resizer {

@@ -4,6 +4,16 @@
     var AIChatContextHelp = {
         popup: null,
 
+        tokensToWords: function(tokens) {
+            var words = Math.round(tokens * 0.75);
+            if (words >= 1000000) {
+                return '~' + (words / 1000000).toFixed(1) + 'M';
+            } else if (words >= 1000) {
+                return '~' + Math.round(words / 1000) + 'k';
+            }
+            return '~' + words;
+        },
+
         getCurrentValues: function() {
             var tokIn = 0;
             var tokOut = 0;
@@ -30,6 +40,7 @@
 
             return {
                 ctxSize: AIChatTabState ? AIChatTabState.humanizeNumber(ctxSize) : ctxSize,
+                ctxSizeWords: this.tokensToWords(ctxSize),
                 used: used,
                 tokOut: AIChatTabState ? AIChatTabState.humanizeNumber(tokOut) : tokOut,
                 tokIn: AIChatTabState ? AIChatTabState.humanizeNumber(tokIn) : tokIn
@@ -57,7 +68,7 @@
             html += '<div class="ai-chat-context-help-content">';
             html += '<p>The <strong>context window</strong> is the amount of text an AI model can process in a single conversation.</p>';
             html += '<table>';
-            html += '<tr><td><strong>Ctx size</strong></td><td>Maximum tokens the model can handle</td><td>' + currentValues.ctxSize + '</td></tr>';
+            html += '<tr><td><strong>Ctx size</strong></td><td>Maximum tokens</td><td>' + currentValues.ctxSize + ' <span class="ai-chat-help-grey">(' + currentValues.ctxSizeWords + ' words)</span></td></tr>';
             html += '<tr><td><strong>Used</strong></td><td>Percentage of context currently in use</td><td>' + currentValues.used + '</td></tr>';
             html += '<tr><td><strong>Tok out</strong></td><td>Tokens sent to the model</td><td>' + currentValues.tokOut + '</td></tr>';
             html += '<tr><td><strong>Tok in</strong></td><td>Tokens received from the model</td><td>' + currentValues.tokIn + '</td></tr>';
