@@ -90,7 +90,7 @@
 
 .zato-ide-editor-cursor {
     position: absolute;
-    width: 2px;
+    width: 1px;
     pointer-events: none;
     z-index: 3;
     opacity: 0;

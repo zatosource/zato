@@ -29,7 +29,7 @@
             fontSize: 13,
             tabSize: 4,
             lineHeight: 1.5,
-            cursorBlinkRate: 400
+            cursorBlinkRate: 530
         },
 
         /**

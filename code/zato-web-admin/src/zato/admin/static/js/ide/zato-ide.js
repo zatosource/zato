@@ -194,7 +194,7 @@
         initFiles: function(instance) {
             instance.files = {
                 'my_service.py': {
-                    content: '# -*- coding: utf-8 -*-\n\nfrom zato.server.service import Service\n\nclass MyService(Service):\n    """A sample Zato service."""\n\n    def handle(self):\n        self.logger.info("Processing request")\n        self.response.payload = {"status": "ok"}\n',
+                    content: '# -*- coding: utf-8 -*-\n\n# Zato\nfrom zato.server.service import Service\n\nclass MyService(Service):\n\n    def handle(self):\n\n        # Connect to a Microsoft 365 IMAP connection by its name ..\n        conn = self.email.imap.get(\'My Automation\').conn\n\n        # .. get all messages matching filter criteria ("unread" by default)..\n        for msg_id, msg in conn.get():\n\n            # .. and access each of them.\n            self.logger.info(msg.data)\n',
                     language: 'python'
                 },
                 'queries.sql': {
