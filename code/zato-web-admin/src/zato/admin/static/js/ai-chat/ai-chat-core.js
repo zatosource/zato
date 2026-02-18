@@ -17,6 +17,8 @@
         hadKeyOnEntry: false,
         cameFromManageKeys: false,
 
+        ideEnabled: true,
+
         init: function() {
             var self = this;
 
@@ -27,6 +29,10 @@
             AIChatConfig.init();
             AIChatMCP.init();
             AIChatZoom.init();
+            if (window.AIChatIDEIntegration) {
+                AIChatIDEIntegration.init(null);
+                this.ideEnabled = AIChatIDEIntegration.isEnabled();
+            }
             AIChatTabs.loadClosedHistory();
             this.loadState();
             this.widget = AIChatWidget.create(this.isMinimized, this.zoomScale);
@@ -128,13 +134,26 @@
             }
 
             var html = AIChatRender.buildHeaderHtml(this.isMinimized, this.isMaximized);
-            if (!this.needsConfig) {
-                html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
+
+            if (this.ideEnabled && !this.needsConfig && !this.isMinimized && window.AIChatIDEIntegration) {
+                this.widget.classList.add('with-ide');
+                html += this.buildSplitBodyHtml();
+            } else {
+                this.widget.classList.remove('with-ide');
+                if (!this.needsConfig) {
+                    html += AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
+                }
+                html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider, this.cameFromChat, this.hadKeyOnEntry);
             }
-            html += AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider, this.cameFromChat, this.hadKeyOnEntry);
+
             html += AIChatRender.buildResizeHandlesHtml();
 
             this.widget.innerHTML = html;
+
+            if (this.ideEnabled && !this.needsConfig && !this.isMinimized && window.AIChatIDEIntegration) {
+                this.initIDESplit();
+            }
+
             this.initModelDropdown();
             this.initContextBarTooltip();
             this.initConvertDropdown();
@@ -151,6 +170,59 @@
             if (input) {
                 input.focus();
             }
+        },
+
+        buildSplitBodyHtml: function() {
+            var html = '<div class="ai-chat-body">';
+            html += '<div id="ai-chat-split-wrapper" class="ai-chat-split-wrapper"></div>';
+            html += '</div>';
+            return html;
+        },
+
+        initIDESplit: function() {
+            var self = this;
+
+            if (!window.ZatoIDESplit || !window.ZatoIDE) {
+                return;
+            }
+
+            var splitInstance = ZatoIDESplit.create('ai-chat-split-wrapper', {
+                onResize: function() {
+                }
+            });
+
+            if (!splitInstance) {
+                return;
+            }
+
+            var idePanel = ZatoIDESplit.getIDEPanel(splitInstance);
+            if (idePanel) {
+                idePanel.id = 'ai-chat-ide-container';
+                ZatoIDE.create('ai-chat-ide-container', {
+                    theme: 'dark',
+                    language: 'python'
+                });
+            }
+
+            var chatPanel = ZatoIDESplit.getChatPanel(splitInstance);
+            if (chatPanel) {
+                var chatTabsHtml = AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
+                var chatBodyHtml = this.buildChatPanelBodyHtml();
+                chatPanel.innerHTML = chatTabsHtml + chatBodyHtml;
+            }
+        },
+
+        buildChatPanelBodyHtml: function() {
+            var html = '';
+            for (var i = 0; i < this.tabs.length; i++) {
+                var tab = this.tabs[i];
+                var activeClass = tab.id === this.activeTabId ? ' active' : '';
+                html += '<div class="ai-chat-tab-panel' + activeClass + '" data-tab-id="' + tab.id + '">';
+                html += AIChatRender.buildMessagesHtml(tab, false, null, null, false, false);
+                html += AIChatRender.buildInputAreaHtml(tab);
+                html += '</div>';
+            }
+            return html;
         },
 
         highlightCode: function() {
