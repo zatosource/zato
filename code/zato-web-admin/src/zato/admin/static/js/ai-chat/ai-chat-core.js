@@ -137,6 +137,7 @@
             this.widget.innerHTML = html;
             this.initModelDropdown();
             this.initContextBarTooltip();
+            this.initExportDropdown();
             AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
             this.scrollActiveTabToBottom();
             this.highlightCode();
@@ -175,6 +176,16 @@
                 }
                 select.style.display = '';
                 ZatoDropdown.init(select);
+            }
+        },
+
+        initExportDropdown: function() {
+            var activePanel = this.widget.querySelector('.ai-chat-tab-panel.active');
+            if (!activePanel) return;
+            var container = activePanel.querySelector('.ai-chat-export-container');
+            if (container && window.AIChatExport) {
+                container.innerHTML = '';
+                AIChatExport.init(container);
             }
         },
 

@@ -1,0 +1,98 @@
+.ai-chat-export-trigger {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    color: #666;
+    cursor: default;
+    vertical-align: middle;
+    margin-left: 8px;
+}
+
+.ai-chat-export-trigger:hover {
+    color: #888;
+}
+
+.ai-chat-export-trigger svg {
+    display: block;
+}
+
+.ai-chat-export-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    color: #e0e0e0;
+    padding: 8px 0;
+    border-radius: 4px;
+    font-size: 11px;
+    opacity: 0;
+    pointer-events: none;
+    margin-bottom: -2px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    z-index: 10002;
+    min-width: 200px;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.ai-chat-export-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 10px;
+}
+
+.ai-chat-export-trigger:hover .ai-chat-export-tooltip,
+.ai-chat-export-tooltip:hover {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.ai-chat-export-tooltip table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.ai-chat-export-group-row td {
+    padding: 6px 12px 4px;
+    color: #888;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-size: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ai-chat-export-group-row:first-child td {
+    border-top: none;
+}
+
+.ai-chat-export-item-row {
+    cursor: pointer;
+}
+
+.ai-chat-export-item-row td {
+    padding: 5px 12px;
+    color: #ccc;
+}
+
+.ai-chat-export-item-row:hover td {
+    background: rgba(74, 158, 255, 0.15);
+    color: #fff;
+}
+
+.ai-chat-export-tooltip::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ai-chat-export-tooltip::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ai-chat-export-tooltip::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 2px;
+}

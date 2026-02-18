@@ -324,6 +324,7 @@
             }
             html += '</select>';
             html += this.buildContextBarHtml(tab);
+            html += '<div class="ai-chat-export-container" data-tab-id="' + tab.id + '"></div>';
             html += '</div>';
             return html;
         },
