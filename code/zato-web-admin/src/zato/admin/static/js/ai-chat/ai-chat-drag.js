@@ -103,6 +103,7 @@
                     var tabRect = this.draggedTabElement.getBoundingClientRect();
                     var clone = this.draggedTabElement.cloneNode(true);
                     clone.classList.add('dragging');
+                    clone.classList.add('zato-tabs-theme-dark');
                     clone.style.width = tabRect.width + 'px';
                     clone.style.left = tabRect.left + 'px';
                     clone.style.top = tabRect.top + 'px';
