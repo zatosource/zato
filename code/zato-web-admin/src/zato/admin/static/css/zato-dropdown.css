@@ -15,6 +15,8 @@
     font-size: 12px;
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease;
+    min-width: 115px;
+    text-align: center;
 }
 
 .zato-dropdown-trigger:hover {

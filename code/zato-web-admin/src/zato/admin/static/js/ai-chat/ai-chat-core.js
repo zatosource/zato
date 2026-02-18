@@ -36,8 +36,14 @@
             AIChatEvents.bind(this.widget, this);
 
             var savedConfigMode = AIChatState.loadConfigMode();
+            var modelsLoaded = false;
+            var keysChecked = false;
+            var hasKeys = false;
 
-            AIChatConfig.checkConfiguredKeys(function(hasKeys) {
+            function tryRender() {
+                if (!modelsLoaded || !keysChecked) {
+                    return;
+                }
                 if (savedConfigMode) {
                     self.needsConfig = true;
                     self.configMode = savedConfigMode;
@@ -55,6 +61,17 @@
                     self.render();
                     self.focusInputIfNotMinimized();
                 }
+            }
+
+            AIChatConfig.loadModels(function() {
+                modelsLoaded = true;
+                tryRender();
+            });
+
+            AIChatConfig.checkConfiguredKeys(function(result) {
+                hasKeys = result;
+                keysChecked = true;
+                tryRender();
             });
 
             window.addEventListener('focus', function() {

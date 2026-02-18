@@ -50,10 +50,9 @@
         init: function() {
             this.configuredKeys = {};
             this.models = {};
-            this.loadModels();
         },
 
-        loadModels: function() {
+        loadModels: function(callback) {
             var self = this;
 
             var xhr = new XMLHttpRequest();
@@ -70,6 +69,9 @@
                         }
                     } else {
                         self.models = {};
+                    }
+                    if (callback) {
+                        callback();
                     }
                 }
             };
