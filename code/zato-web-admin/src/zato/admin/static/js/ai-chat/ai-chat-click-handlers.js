@@ -251,17 +251,26 @@
 
             var backEl = target.closest('.ai-chat-config-back');
             if (backEl) {
-                AIChatSettings.handleBackClick(core.configMode, core.cameFromChat, core.hadKeyOnEntry, {
+                AIChatSettings.handleBackClick(core.configMode, core.cameFromChat, core.hadKeyOnEntry, core.cameFromManageKeys, {
                     onReturnToChat: function() {
                         core.cameFromChat = false;
+                        core.cameFromManageKeys = false;
                         core.needsConfig = false;
                         core.configMode = 'providers';
                         AIChatConfig.selectedProvider = null;
                         core.render();
                     },
                     onShowProviders: function() {
+                        core.cameFromManageKeys = false;
                         core.needsConfig = true;
                         core.configMode = 'providers';
+                        AIChatConfig.selectedProvider = null;
+                        core.render();
+                    },
+                    onShowManageKeys: function() {
+                        core.cameFromManageKeys = false;
+                        core.needsConfig = true;
+                        core.configMode = 'manage-keys';
                         AIChatConfig.selectedProvider = null;
                         core.render();
                     }
@@ -414,6 +423,7 @@
                 var providerId = configKeyAdd.getAttribute('data-item-id');
                 core.needsConfig = true;
                 core.configMode = 'key-input';
+                core.cameFromManageKeys = true;
                 AIChatConfig.selectedProvider = providerId;
                 core.render();
                 return;
@@ -424,6 +434,7 @@
                 var providerId = configKeyEdit.getAttribute('data-item-id');
                 core.needsConfig = true;
                 core.configMode = 'key-input';
+                core.cameFromManageKeys = true;
                 AIChatConfig.selectedProvider = providerId;
                 core.render();
                 return;

@@ -15,6 +15,7 @@
         configMode: 'providers',
         cameFromChat: false,
         hadKeyOnEntry: false,
+        cameFromManageKeys: false,
 
         init: function() {
             var self = this;

@@ -120,9 +120,11 @@
             });
         },
 
-        handleBackClick: function(configMode, cameFromChat, hadKeyOnEntry, callbacks) {
+        handleBackClick: function(configMode, cameFromChat, hadKeyOnEntry, cameFromManageKeys, callbacks) {
             if (configMode === 'key-input') {
-                if (hadKeyOnEntry) {
+                if (cameFromManageKeys) {
+                    callbacks.onShowManageKeys();
+                } else if (hadKeyOnEntry) {
                     callbacks.onReturnToChat();
                 } else {
                     callbacks.onShowProviders();
