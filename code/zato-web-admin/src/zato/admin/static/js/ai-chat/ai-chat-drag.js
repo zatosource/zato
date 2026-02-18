@@ -57,6 +57,9 @@
 
             var tabElement = target.closest('.ai-chat-tab');
             if (tabElement && !target.classList.contains('ai-chat-tab-close')) {
+                if (tabElement.classList.contains('pinned') || tabElement.classList.contains('locked')) {
+                    return false;
+                }
                 this.isTabDragging = true;
                 this.tabDragActivated = false;
                 this.draggedTabId = tabElement.getAttribute('data-tab-id');

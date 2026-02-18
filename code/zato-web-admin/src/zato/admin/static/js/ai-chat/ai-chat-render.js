@@ -63,10 +63,10 @@
                 var isDraggable = !tab.pinned && !tab.locked;
                 html += '<div class="ai-chat-tab' + activeClass + pinnedClass + lockedClass + '" data-tab-id="' + tab.id + '" draggable="' + isDraggable + '">';
                 if (tab.pinned) {
-                    html += '<span class="ai-chat-tab-pin-icon">📌</span>';
+                    html += '<span class="ai-chat-tab-pin-icon">' + AIChatIcons.get('pin', 14) + '</span>';
                 }
                 if (tab.locked) {
-                    html += '<span class="ai-chat-tab-lock-icon">🔒</span>';
+                    html += '<span class="ai-chat-tab-lock-icon">' + AIChatIcons.get('lock', 12) + '</span>';
                 }
                 html += '<span class="ai-chat-tab-title">' + this.escapeHtml(tab.title) + '</span>';
                 if (tabs.length > 1 && !tab.locked && !tab.pinned) {
