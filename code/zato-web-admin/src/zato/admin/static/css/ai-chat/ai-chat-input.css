@@ -168,30 +168,33 @@
 }
 
 .ai-chat-context-bar {
-    display: inline-block;
-    width: 20px;
+    display: inline-flex;
+    gap: 2px;
     height: 12px;
-    background: #333;
-    border-radius: 2px;
     overflow: visible;
     position: relative;
     vertical-align: middle;
     cursor: default;
 }
 
-.ai-chat-context-bar-fill {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 0;
+.ai-chat-context-bar-segment {
+    width: 3px;
     height: 100%;
-    background: #666;
-    transition: width 0.3s ease;
+    background: #333;
     border-radius: 2px;
+    transition: background 0.2s ease;
 }
 
-.ai-chat-context-bar:hover {
+.ai-chat-context-bar-segment.filled {
+    background: #666;
+}
+
+.ai-chat-context-bar:hover .ai-chat-context-bar-segment {
     background: #444;
+}
+
+.ai-chat-context-bar:hover .ai-chat-context-bar-segment.filled {
+    background: #777;
 }
 
 .ai-chat-context-tooltip {
@@ -239,7 +242,7 @@
 .ai-chat-context-help-link {
     display: inline-block;
     margin-top: 6px;
-    padding: 5px 10px;
+    padding: 6px 12px;
     background: var(--zato-seablue-light2) !important;
     border-radius: 4px;
     color: #fff !important;

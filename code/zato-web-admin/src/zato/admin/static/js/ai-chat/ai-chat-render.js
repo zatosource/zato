@@ -342,8 +342,15 @@
             var maxContext = this.getModelContextSize(modelId);
             var totalTokens = tokensIn + tokensOut;
             var usagePercent = Math.min(100, (totalTokens / maxContext) * 100);
+            var filledSegments = Math.ceil((usagePercent / 100) * 10);
             var html = '<span class="ai-chat-context-bar" data-tab-id="' + tab.id + '">';
-            html += '<span class="ai-chat-context-bar-fill" style="width: ' + usagePercent + '%;"></span>';
+            for (var i = 0; i < 10; i++) {
+                var segmentClass = 'ai-chat-context-bar-segment';
+                if (i < filledSegments) {
+                    segmentClass += ' filled';
+                }
+                html += '<span class="' + segmentClass + '"></span>';
+            }
             html += '<span class="ai-chat-context-tooltip">';
             html += '<table>';
             html += '<tr><td>Ctx size</td><td>' + AIChatTabState.humanizeNumber(maxContext) + '</td></tr>';
