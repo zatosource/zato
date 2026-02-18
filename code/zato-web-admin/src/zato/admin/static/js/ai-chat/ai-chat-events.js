@@ -141,11 +141,11 @@
 
             widget.addEventListener('wheel', function(e) {
                 if (e.ctrlKey) {
-                    e.preventDefault();
+                    return;
                 }
                 core.zoomScale = AIChatZoom.handleWheel(widget, e, core.zoomScale);
                 AIChatState.saveZoom(core.zoomScale);
-            }, { passive: false, capture: true });
+            }, { passive: true });
 
             document.addEventListener('click', function(e) {
                 AIChatContextMenu.hide();
