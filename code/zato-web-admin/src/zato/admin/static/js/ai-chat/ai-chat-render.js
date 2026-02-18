@@ -277,11 +277,11 @@
             html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-options-icon"><path d="M12 4v16m-8-8h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
             html += '</button>';
             if (isStreaming) {
-                html += '<button class="ai-chat-send-button ai-chat-stop-button" data-tab-id="' + tab.id + '" aria-label="Stop">';
+                html += '<button class="ai-chat-send-button ai-chat-stop-button" data-tab-id="' + tab.id + '" data-tooltip="Stop" data-tooltip-timeout="2100" aria-label="Stop">';
                 html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-send-icon"><rect x="5" y="5" width="14" height="14" fill="currentColor"/></svg>';
                 html += '</button>';
             } else {
-                html += '<button class="ai-chat-send-button" data-tab-id="' + tab.id + '" aria-label="Send">';
+                html += '<button class="ai-chat-send-button" data-tab-id="' + tab.id + '" data-tooltip="Send message" data-tooltip-timeout="2100" aria-label="Send">';
                 html += '<svg viewBox="0 0 24 24" fill="currentColor" class="ai-chat-send-icon"><path d="M12 19V5m0 0l-7 7m7-7l7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
                 html += '</button>';
             }

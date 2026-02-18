@@ -2,6 +2,7 @@ var AIChatTooltip = {
 
     tooltip: null,
     currentTarget: null,
+    hideTimerId: null,
 
     init: function() {
         if (this.tooltip) return;
@@ -32,6 +33,13 @@ var AIChatTooltip = {
             }
 
             self.show(target);
+
+            var timeout = target.getAttribute('data-tooltip-timeout');
+            if (timeout) {
+                self.hideTimerId = setTimeout(function() {
+                    self.hide();
+                }, parseInt(timeout, 10));
+            }
         }, true);
 
         document.addEventListener('mouseleave', function(e) {
@@ -96,6 +104,10 @@ var AIChatTooltip = {
 
     hide: function() {
         if (!this.tooltip) return;
+        if (this.hideTimerId) {
+            clearTimeout(this.hideTimerId);
+            this.hideTimerId = null;
+        }
         this.tooltip.style.opacity = '0';
         this.tooltip.style.visibility = 'hidden';
         this.currentTarget = null;
