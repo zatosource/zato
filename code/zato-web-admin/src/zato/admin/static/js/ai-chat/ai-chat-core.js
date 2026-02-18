@@ -153,6 +153,7 @@
                 if (existingDropdown) {
                     existingDropdown.parentNode.removeChild(existingDropdown);
                 }
+                select.style.display = '';
                 ZatoDropdown.init(select);
             }
         },
