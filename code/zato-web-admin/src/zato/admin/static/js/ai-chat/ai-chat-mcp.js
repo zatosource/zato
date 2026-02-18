@@ -237,11 +237,8 @@
 
         buildManageServersHtml: function() {
             var html = '';
-            html += '<div class="ai-chat-config-back" id="ai-chat-mcp-back">';
-            html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
-            html += '<span>Back</span>';
-            html += '</div>';
             html += '<div class="ai-chat-config-container">';
+            html += AIChatConfig.buildBackButtonHtml('ai-chat-mcp-back');
 
             if (this.servers.length === 0) {
                 html += '<div class="ai-chat-config-title">No MCP servers configured</div>';
@@ -279,11 +276,8 @@
 
         buildServerDetailHtml: function(server, tools, loading) {
             var html = '';
-            html += '<div class="ai-chat-config-back" id="ai-chat-mcp-detail-back">';
-            html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
-            html += '<span>Back</span>';
-            html += '</div>';
             html += '<div class="ai-chat-config-container">';
+            html += AIChatConfig.buildBackButtonHtml('ai-chat-mcp-detail-back');
             html += '<div class="ai-chat-config-title">' + server.name + '</div>';
             html += '<div class="ai-chat-mcp-server-url">' + server.endpoint + '</div>';
 
@@ -312,11 +306,8 @@
 
         buildEditServerHtml: function(server) {
             var html = '';
-            html += '<div class="ai-chat-config-back" id="ai-chat-mcp-edit-back" data-server-id="' + server.id + '">';
-            html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
-            html += '<span>Back</span>';
-            html += '</div>';
             html += '<div class="ai-chat-config-container">';
+            html += AIChatConfig.buildBackButtonHtml('ai-chat-mcp-edit-back');
             html += '<div class="ai-chat-config-title">Edit ' + server.name + '</div>';
 
             html += '<div class="ai-chat-config-input-wrapper">';
@@ -331,11 +322,8 @@
 
         buildAddServerHtml: function() {
             var html = '';
-            html += '<div class="ai-chat-config-back" id="ai-chat-mcp-add-back">';
-            html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
-            html += '<span>Back</span>';
-            html += '</div>';
             html += '<div class="ai-chat-config-container">';
+            html += AIChatConfig.buildBackButtonHtml('ai-chat-mcp-add-back');
             html += '<div class="ai-chat-config-title">Add an MCP server</div>';
 
             html += '<div class="ai-chat-config-input-wrapper">';

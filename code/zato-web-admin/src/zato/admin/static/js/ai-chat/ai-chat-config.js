@@ -27,6 +27,18 @@
         models: {},
         selectedModel: null,
 
+        buildBackButtonHtml: function(id) {
+            var html = '<div class="ai-chat-config-back"';
+            if (id) {
+                html += ' id="' + id + '"';
+            }
+            html += '>';
+            html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
+            html += '<span>Back</span>';
+            html += '</div>';
+            return html;
+        },
+
         init: function() {
             this.configuredKeys = {};
             this.models = {};
@@ -203,13 +215,10 @@
 
         buildProviderSelectionHtml: function(showBackButton) {
             var html = '';
-            if (showBackButton) {
-                html += '<div class="ai-chat-config-back">';
-                html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
-                html += '<span>Back</span>';
-                html += '</div>';
-            }
             html += '<div class="ai-chat-config-container">';
+            if (showBackButton) {
+                html += this.buildBackButtonHtml();
+            }
             html += '<div class="ai-chat-config-title">Configure your AI providers</div>';
             html += '<div class="ai-chat-config-providers">';
 
@@ -231,18 +240,8 @@
             if (!provider) return '';
 
             var html = '';
-            if (hadKeyOnEntry) {
-                html += '<div class="ai-chat-config-back" data-action="back">';
-                html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
-                html += '<span>Back</span>';
-                html += '</div>';
-            } else {
-                html += '<div class="ai-chat-config-back" data-action="back">';
-                html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
-                html += '<span>Back</span>';
-                html += '</div>';
-            }
             html += '<div class="ai-chat-config-container">';
+            html += this.buildBackButtonHtml();
             html += '<div class="ai-chat-config-provider-header">';
             html += '<div class="ai-chat-config-provider-logo-large">' + provider.logo + '</div>';
             html += '<div class="ai-chat-config-provider-name-large">' + provider.name + '</div>';
@@ -274,10 +273,7 @@
             var html = '';
             html += '<div class="ai-chat-config-container">';
             if (cameFromChat) {
-                html += '<div class="ai-chat-config-back">';
-                html += '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>';
-                html += '<span>Back</span>';
-                html += '</div>';
+                html += this.buildBackButtonHtml();
             }
             html += '<div class="ai-chat-config-title">Manage API keys</div>';
             html += '<div class="ai-chat-config-keys-list">';

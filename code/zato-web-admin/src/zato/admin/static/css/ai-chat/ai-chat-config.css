@@ -127,6 +127,18 @@
     height: 16px;
 }
 
+.ai-chat-widget.maximized .ai-chat-config-container {
+    max-width: 600px;
+}
+
+.ai-chat-widget.maximized .ai-chat-config-back {
+    position: relative;
+    top: auto;
+    left: auto;
+    align-self: flex-start;
+    margin-bottom: 24px;
+}
+
 .ai-chat-config-provider-header {
     display: flex;
     flex-direction: column;
