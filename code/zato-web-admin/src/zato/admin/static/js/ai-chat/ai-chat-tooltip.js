@@ -3,6 +3,7 @@ var AIChatTooltip = {
     tooltip: null,
     currentTarget: null,
     hideTimerId: null,
+    isLocked: false,
 
     init: function() {
         if (this.tooltip) return;
@@ -43,6 +44,7 @@ var AIChatTooltip = {
         }, true);
 
         document.addEventListener('mouseleave', function(e) {
+            if (self.isLocked) return;
             var target = e.target;
             if (target.hasAttribute && target.hasAttribute('data-tooltip')) {
                 self.hide();
@@ -111,6 +113,47 @@ var AIChatTooltip = {
         this.tooltip.style.opacity = '0';
         this.tooltip.style.visibility = 'hidden';
         this.currentTarget = null;
+    },
+
+    showTemporary: function(target, text, duration, alignLeft) {
+        if (!this.tooltip) return;
+
+        this.isLocked = true;
+        this.currentTarget = target;
+        this.tooltip.textContent = text;
+        this.tooltip.style.opacity = '1';
+        this.tooltip.style.visibility = 'visible';
+
+        if (alignLeft) {
+            this.positionLeft(target);
+        } else {
+            this.position(target);
+        }
+
+        var self = this;
+        this.hideTimerId = setTimeout(function() {
+            self.isLocked = false;
+            self.hide();
+        }, duration);
+    },
+
+    positionLeft: function(target) {
+        var rect = target.getBoundingClientRect();
+        this.tooltip.style.visibility = 'hidden';
+        this.tooltip.style.display = 'block';
+        var tooltipRect = this.tooltip.getBoundingClientRect();
+        this.tooltip.style.visibility = 'visible';
+
+        var left = rect.left;
+        var top = rect.top - tooltipRect.height - 6;
+
+        if (left < 5) left = 5;
+        if (left + tooltipRect.width > window.innerWidth - 5) {
+            left = window.innerWidth - tooltipRect.width - 5;
+        }
+
+        this.tooltip.style.left = left + 'px';
+        this.tooltip.style.top = top + 'px';
     }
 
 };

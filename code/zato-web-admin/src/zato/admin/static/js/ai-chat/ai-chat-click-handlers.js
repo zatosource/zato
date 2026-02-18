@@ -109,6 +109,17 @@
                 if (button.classList.contains('ai-chat-stop-button')) {
                     AIChatStreaming.stopMessage(widget, core, tabId);
                 } else {
+                    var input = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
+                    var message = input ? AIChatInput.getMessageText(input) : '';
+                    if (!message) {
+                        if (input) {
+                            input.focus();
+                            if (window.AIChatTooltip) {
+                                AIChatTooltip.showTemporary(input, 'Type a message ..', 2100, true);
+                            }
+                        }
+                        return;
+                    }
                     AIChatStreaming.sendMessage(widget, core, tabId);
                 }
                 return;
