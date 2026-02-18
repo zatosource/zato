@@ -178,23 +178,15 @@
 }
 
 .ai-chat-context-bar-segment {
-    width: 3px;
+    width: 2px;
     height: 100%;
-    background: #333;
+    background: #444;
     border-radius: 2px;
     transition: background 0.2s ease;
 }
 
 .ai-chat-context-bar-segment.filled {
     background: #666;
-}
-
-.ai-chat-context-bar:hover .ai-chat-context-bar-segment {
-    background: #444;
-}
-
-.ai-chat-context-bar:hover .ai-chat-context-bar-segment.filled {
-    background: #777;
 }
 
 .ai-chat-context-tooltip {
