@@ -114,7 +114,13 @@
 
             html += '<div class="zato-ide-toolbar">';
             html += '<div class="zato-ide-toolbar-left">';
-            html += '<span class="zato-ide-toolbar-placeholder">[Dropdown placeholder]</span>';
+            html += '<select id="' + instance.id + '-file-select" class="zato-ide-file-select">';
+            html += '<option value="my_service.py" data-tooltip="A Zato service written in Python">my_service.py</option>';
+            html += '<option value="queries.sql" data-tooltip="SQL queries for database operations">queries.sql</option>';
+            html += '<option value="config.yaml" data-tooltip="YAML configuration file">config.yaml</option>';
+            html += '<option value="data.json" data-tooltip="JSON data file">data.json</option>';
+            html += '<option value="settings.ini" data-tooltip="INI settings file">settings.ini</option>';
+            html += '</select>';
             html += '</div>';
             html += '<div class="zato-ide-toolbar-right">';
             html += '<span class="zato-ide-toolbar-placeholder">[Switch placeholder]</span>';
@@ -143,6 +149,29 @@
 
             instance.container.innerHTML = html;
             instance.editor = instance.container.querySelector('.zato-ide-editor');
+
+            var fileSelect = document.getElementById(instance.id + '-file-select');
+            if (fileSelect && typeof ZatoDropdown !== 'undefined') {
+                instance.fileDropdown = ZatoDropdown.init(fileSelect, {
+                    theme: instance.options.theme,
+                    id: instance.id + '-file-dropdown',
+                    onChange: function(value, text) {
+                        if (instance.onFileChange) {
+                            instance.onFileChange(value, text);
+                        }
+                    }
+                });
+
+                var items = instance.fileDropdown.querySelectorAll('.zato-dropdown-item');
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    var option = fileSelect.options[i];
+                    var tooltip = option.getAttribute('data-tooltip');
+                    if (tooltip) {
+                        item.setAttribute('data-tooltip', tooltip);
+                    }
+                }
+            }
 
             this.bindEvents(instance);
         },
