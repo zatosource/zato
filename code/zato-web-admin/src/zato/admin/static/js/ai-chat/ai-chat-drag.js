@@ -174,14 +174,32 @@
                     if (this.pendingDropIndex !== null && this.pendingDropIndex !== undefined) {
                         var draggedTabIndex = AIChatTabs.getTabIndex(tabs, this.draggedTabId);
                         if (draggedTabIndex !== -1 && draggedTabIndex !== this.pendingDropIndex) {
-                            var tab = tabs.splice(draggedTabIndex, 1)[0];
+                            var draggedTab = tabs[draggedTabIndex];
+
+                            var pinnedCount = 0;
+                            for (var i = 0; i < tabs.length; i++) {
+                                if (tabs[i].pinned) {
+                                    pinnedCount++;
+                                } else {
+                                    break;
+                                }
+                            }
+
                             var insertAt = this.pendingDropIndex;
                             if (insertAt > draggedTabIndex) {
                                 insertAt = insertAt - 1;
                             }
-                            tabs.splice(insertAt, 0, tab);
-                            result.tabsChanged = true;
-                            result.tabs = tabs;
+
+                            if (!draggedTab.pinned && insertAt < pinnedCount) {
+                                insertAt = pinnedCount;
+                            }
+
+                            if (draggedTabIndex !== insertAt) {
+                                var tab = tabs.splice(draggedTabIndex, 1)[0];
+                                tabs.splice(insertAt, 0, tab);
+                                result.tabsChanged = true;
+                                result.tabs = tabs;
+                            }
                         }
                     }
                 }

@@ -220,11 +220,9 @@
 }
 
 .ai-chat-tab.pinned {
-    border-bottom-color: rgba(255, 200, 50, 0.5);
 }
 
 .ai-chat-tab.pinned.active {
-    border-bottom-color: #ffc832;
 }
 
 .ai-chat-tab-pin-icon {
