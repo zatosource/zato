@@ -122,6 +122,7 @@
 }
 
 .ai-chat-config-back {
+    --back-offset: 30px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -131,8 +132,8 @@
     padding: 6px 10px;
     border-radius: 6px;
     transition: color 0.15s ease, background 0.15s ease;
-    margin-bottom: 16px;
     margin-left: -10px;
+    transform: translateY(calc(var(--back-offset) * -1));
     text-shadow: none !important;
     align-self: flex-start;
 }
