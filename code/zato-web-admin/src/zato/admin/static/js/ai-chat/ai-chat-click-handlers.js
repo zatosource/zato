@@ -116,6 +116,9 @@
 
             if (target.classList.contains('ai-chat-options-button') || target.closest('.ai-chat-options-button')) {
                 var optionsBtn = target.classList.contains('ai-chat-options-button') ? target : target.closest('.ai-chat-options-button');
+                if (window.AIChatTooltip) {
+                    AIChatTooltip.hide();
+                }
                 AIChatOptionsMenu.toggle(widget, core.activeTabId, optionsBtn);
                 e.stopPropagation();
                 return;
