@@ -444,6 +444,9 @@
             if (contextBar && !target.closest('.ai-chat-context-help-link')) {
                 e.preventDefault();
                 e.stopPropagation();
+                if (window.AIChatTooltip) {
+                    AIChatTooltip.hide();
+                }
                 var tooltip = contextBar.querySelector('.ai-chat-context-tooltip');
                 if (tooltip) {
                     tooltip.classList.toggle('open');

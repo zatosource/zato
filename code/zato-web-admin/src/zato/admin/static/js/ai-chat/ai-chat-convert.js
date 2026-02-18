@@ -69,7 +69,7 @@ var AIChatConvert = {
     render: function() {
         var wrapper = document.createElement('span');
         wrapper.className = 'ai-chat-convert-trigger';
-        wrapper.title = 'Convert chat to ..';
+        wrapper.setAttribute('data-tooltip', 'Convert chat to ..');
         wrapper.innerHTML = AIChatIcons.get('checklist', 25);
 
         var tooltip = document.createElement('div');
@@ -106,6 +106,9 @@ var AIChatConvert = {
                 return;
             }
             e.stopPropagation();
+            if (window.AIChatTooltip) {
+                AIChatTooltip.hide();
+            }
             self.toggle();
         });
 

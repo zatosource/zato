@@ -4,8 +4,17 @@
     var AIChatTabActions = {
 
         addTab: function(widget, core) {
+            var currentTab = AIChatTabs.getTabById(core.tabs, core.activeTabId);
+            var currentModel = currentTab ? currentTab.model : null;
+
             var newTab = AIChatTabs.addTab(core.tabs);
             AIChatTabState.initTab(newTab.id);
+
+            if (currentModel) {
+                newTab.model = currentModel;
+                AIChatTabState.setModel(newTab.id, currentModel);
+            }
+
             core.activeTabId = newTab.id;
             core.saveState();
             core.render();

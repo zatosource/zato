@@ -79,6 +79,9 @@
 
             trigger.addEventListener('click', function(e) {
                 e.stopPropagation();
+                if (window.AIChatTooltip) {
+                    AIChatTooltip.hide();
+                }
                 var isOpen = container.classList.contains('open');
                 ZatoDropdown.closeAll();
                 if (!isOpen) {

@@ -313,7 +313,7 @@
                 selectedModel = firstEnabledModel;
             }
 
-            var html = '<div class="ai-chat-model-selector">';
+            var html = '<div class="ai-chat-model-selector" data-tooltip="Choose model">';
             html += '<select class="ai-chat-model-select" data-tab-id="' + tab.id + '">';
             for (var i = 0; i < models.length; i++) {
                 var model = models[i];
@@ -353,7 +353,7 @@
             var totalTokens = tokensIn + tokensOut;
             var usagePercent = Math.min(100, (totalTokens / maxContext) * 100);
             var filledSegments = Math.ceil((usagePercent / 100) * 10);
-            var html = '<span class="ai-chat-context-bar" data-tab-id="' + tab.id + '" title="Show context info">';
+            var html = '<span class="ai-chat-context-bar" data-tab-id="' + tab.id + '" data-tooltip="Show context info">';
             for (var i = 0; i < 10; i++) {
                 var segmentClass = 'ai-chat-context-bar-segment';
                 if (i < filledSegments) {
