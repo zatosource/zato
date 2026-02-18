@@ -30,6 +30,10 @@
             var trigger = document.createElement('div');
             trigger.className = 'zato-dropdown-trigger';
 
+            if (selectElement.closest('.ai-chat-model-selector')) {
+                trigger.setAttribute('data-tooltip', 'Choose model');
+            }
+
             var text = document.createElement('span');
             text.className = 'zato-dropdown-text';
             text.textContent = selectedText;

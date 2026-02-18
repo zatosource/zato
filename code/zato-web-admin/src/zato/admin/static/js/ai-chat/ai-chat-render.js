@@ -313,7 +313,7 @@
                 selectedModel = firstEnabledModel;
             }
 
-            var html = '<div class="ai-chat-model-selector" data-tooltip="Choose model">';
+            var html = '<div class="ai-chat-model-selector">';
             html += '<select class="ai-chat-model-select" data-tab-id="' + tab.id + '">';
             for (var i = 0; i < models.length; i++) {
                 var model = models[i];

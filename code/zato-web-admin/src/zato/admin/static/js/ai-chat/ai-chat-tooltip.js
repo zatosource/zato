@@ -1,7 +1,6 @@
 var AIChatTooltip = {
 
     tooltip: null,
-    hideTimeout: null,
     currentTarget: null,
 
     init: function() {
@@ -17,19 +16,49 @@ var AIChatTooltip = {
     attachEvents: function() {
         var self = this;
 
-        document.addEventListener('mouseover', function(e) {
-            var target = e.target.closest('[data-tooltip]');
-            if (target && target.closest('.ai-chat-widget')) {
-                self.show(target);
-            }
-        });
+        document.addEventListener('mouseenter', function(e) {
+            var target = e.target;
 
-        document.addEventListener('mouseout', function(e) {
-            var target = e.target.closest('[data-tooltip]');
-            if (target) {
+            if (!target.hasAttribute || !target.hasAttribute('data-tooltip')) {
+                return;
+            }
+
+            if (!target.closest('.ai-chat-widget')) {
+                return;
+            }
+
+            if (self.isPopupOpen(target)) {
+                return;
+            }
+
+            self.show(target);
+        }, true);
+
+        document.addEventListener('mouseleave', function(e) {
+            var target = e.target;
+            if (target.hasAttribute && target.hasAttribute('data-tooltip')) {
                 self.hide();
             }
-        });
+        }, true);
+    },
+
+    isPopupOpen: function(target) {
+        if (target.classList.contains('zato-dropdown-trigger')) {
+            var dropdown = target.closest('.zato-dropdown');
+            if (dropdown && dropdown.classList.contains('open')) return true;
+        }
+
+        if (target.classList.contains('ai-chat-context-bar')) {
+            var tooltip = target.querySelector('.ai-chat-context-tooltip.open');
+            if (tooltip) return true;
+        }
+
+        if (target.classList.contains('ai-chat-convert-trigger')) {
+            var convertTooltip = target.querySelector('.ai-chat-convert-tooltip.open');
+            if (convertTooltip) return true;
+        }
+
+        return false;
     },
 
     show: function(target) {
@@ -48,7 +77,10 @@ var AIChatTooltip = {
 
     position: function(target) {
         var rect = target.getBoundingClientRect();
+        this.tooltip.style.visibility = 'hidden';
+        this.tooltip.style.display = 'block';
         var tooltipRect = this.tooltip.getBoundingClientRect();
+        this.tooltip.style.visibility = 'visible';
 
         var left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
         var top = rect.top - tooltipRect.height - 6;
@@ -67,12 +99,6 @@ var AIChatTooltip = {
         this.tooltip.style.opacity = '0';
         this.tooltip.style.visibility = 'hidden';
         this.currentTarget = null;
-    },
-
-    hideIfTarget: function(target) {
-        if (this.currentTarget && (this.currentTarget === target || this.currentTarget.contains(target) || target.contains(this.currentTarget))) {
-            this.hide();
-        }
     }
 
 };
