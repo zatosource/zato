@@ -106,18 +106,23 @@
                     self.handleToolPreview(widget, tabId, data);
                 },
                 onComplete: function(inputTokens, outputTokens) {
+                    console.log('[TOKEN-TRACE] sendMessage.onComplete called: inputTokens=' + inputTokens + ', outputTokens=' + outputTokens + ', tabId=' + tabId);
                     AIChatWaiting.stopIdleWatch(tabId);
 
                     if (inputTokens > 0) {
+                        console.log('[TOKEN-TRACE] sendMessage.onComplete: calling addTokensOut with inputTokens=' + inputTokens);
                         AIChatTabState.addTokensOut(tabId, inputTokens);
                     }
                     if (outputTokens > 0) {
+                        console.log('[TOKEN-TRACE] sendMessage.onComplete: calling addTokensIn with outputTokens=' + outputTokens);
                         AIChatTabState.addTokensIn(tabId, outputTokens);
                     }
 
+                    console.log('[TOKEN-TRACE] sendMessage.onComplete: about to call core.render()');
                     AIChatMessages.finishStreamingMessage(tab, tabId);
                     core.saveState();
                     core.render();
+                    console.log('[TOKEN-TRACE] sendMessage.onComplete: core.render() finished');
 
                     var input = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
                     if (input) {
@@ -543,18 +548,23 @@
                     self.handleToolPreview(widget, tabId, data);
                 },
                 onComplete: function(inputTokens, outputTokens) {
+                    console.log('[TOKEN-TRACE] continueMessage.onComplete called: inputTokens=' + inputTokens + ', outputTokens=' + outputTokens + ', tabId=' + tabId);
                     AIChatWaiting.stopIdleWatch(tabId);
 
                     if (inputTokens > 0) {
+                        console.log('[TOKEN-TRACE] continueMessage.onComplete: calling addTokensOut with inputTokens=' + inputTokens);
                         AIChatTabState.addTokensOut(tabId, inputTokens);
                     }
                     if (outputTokens > 0) {
+                        console.log('[TOKEN-TRACE] continueMessage.onComplete: calling addTokensIn with outputTokens=' + outputTokens);
                         AIChatTabState.addTokensIn(tabId, outputTokens);
                     }
 
+                    console.log('[TOKEN-TRACE] continueMessage.onComplete: about to call core.render()');
                     AIChatMessages.finishStreamingMessage(tab, tabId);
                     core.saveState();
                     core.render();
+                    console.log('[TOKEN-TRACE] continueMessage.onComplete: core.render() finished');
 
                     var input = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
                     if (input) {

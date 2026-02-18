@@ -132,9 +132,11 @@
                     callbacks.onChunk(text);
                 }
             } else if (eventType === 'done') {
+                console.log('[TOKEN-TRACE] SSE done event received, data:', JSON.stringify(data));
                 if (callbacks.onComplete) {
                     var inputTokens = data.input_tokens || 0;
                     var outputTokens = data.output_tokens || 0;
+                    console.log('[TOKEN-TRACE] SSE done: inputTokens=' + inputTokens + ', outputTokens=' + outputTokens);
                     callbacks.onComplete(inputTokens, outputTokens);
                 }
                 this.disconnect(tabId);

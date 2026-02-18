@@ -161,7 +161,7 @@ class EnvironmentManager:
         # E.g. ~/src-zato/lib/python3.8/site-packages vs. C:\src-zato\lib\site-packages
         if is_linux:
             python_version_dir = 'python' + py_version
-            py_lib_dir = os.path.join('lib', python_version_dir)
+            py_lib_dir = os.path.join(self.base_dir, 'lib', python_version_dir)
         else:
             py_lib_dir = os.path.join(self.bundled_python_dir, 'lib')
 

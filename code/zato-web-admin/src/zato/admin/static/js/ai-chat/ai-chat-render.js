@@ -320,8 +320,10 @@
         },
 
         buildTokenCountersHtml: function(tab) {
+            console.log('[TOKEN-TRACE] buildTokenCountersHtml called for tabId=' + tab.id);
             var tokensIn = AIChatTabState.getTokensIn(tab.id);
             var tokensOut = AIChatTabState.getTokensOut(tab.id);
+            console.log('[TOKEN-TRACE] buildTokenCountersHtml: tokensIn=' + tokensIn + ', tokensOut=' + tokensOut);
             var html = '<span class="ai-chat-token-counters" data-tab-id="' + tab.id + '">';
             html += '<span class="ai-chat-token-out">Tok out: ' + AIChatTabState.humanizeNumber(tokensOut) + '</span>';
             html += '<span class="ai-chat-token-in">Tok in: ' + AIChatTabState.humanizeNumber(tokensIn) + '</span>';

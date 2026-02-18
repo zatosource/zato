@@ -140,22 +140,30 @@
 
         getTokensIn: function(tabId) {
             var state = this.getState(tabId);
-            return state.tokensIn || 0;
+            var value = state.tokensIn || 0;
+            console.log('[TOKEN-TRACE] getTokensIn: tabId=' + tabId + ', value=' + value);
+            return value;
         },
 
         getTokensOut: function(tabId) {
             var state = this.getState(tabId);
-            return state.tokensOut || 0;
+            var value = state.tokensOut || 0;
+            console.log('[TOKEN-TRACE] getTokensOut: tabId=' + tabId + ', value=' + value);
+            return value;
         },
 
         addTokensIn: function(tabId, count) {
             var state = this.getState(tabId);
-            state.tokensIn = (state.tokensIn || 0) + count;
+            var oldValue = state.tokensIn || 0;
+            state.tokensIn = oldValue + count;
+            console.log('[TOKEN-TRACE] addTokensIn: tabId=' + tabId + ', count=' + count + ', oldValue=' + oldValue + ', newValue=' + state.tokensIn);
         },
 
         addTokensOut: function(tabId, count) {
             var state = this.getState(tabId);
-            state.tokensOut = (state.tokensOut || 0) + count;
+            var oldValue = state.tokensOut || 0;
+            state.tokensOut = oldValue + count;
+            console.log('[TOKEN-TRACE] addTokensOut: tabId=' + tabId + ', count=' + count + ', oldValue=' + oldValue + ', newValue=' + state.tokensOut);
         },
 
         humanizeNumber: function(num) {
