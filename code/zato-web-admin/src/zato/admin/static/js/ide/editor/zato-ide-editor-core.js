@@ -466,16 +466,12 @@
             var start = textarea.selectionStart;
             var end = textarea.selectionEnd;
 
-            console.log('[SELECTION] textarea.selectionStart=' + start + ', textarea.selectionEnd=' + end);
-
             if (start === end) {
                 overlay.innerHTML = '';
                 return;
             }
 
             var value = textarea.value;
-            var actualSelectedText = value.substring(start, end);
-            console.log('[SELECTION] actualSelectedText="' + actualSelectedText.replace(/\n/g, '\\n') + '"');
 
             var textBefore = value.substring(0, start);
             var startLine = textBefore.split('\n').length;
@@ -486,13 +482,6 @@
             var endLine = textToEnd.split('\n').length;
             var lastNewlineBeforeEnd = textToEnd.lastIndexOf('\n');
             var endCol = end - lastNewlineBeforeEnd - 1;
-
-            console.log('[SELECTION] textBefore.length=' + textBefore.length + ', lastNewlineBeforeStart=' + lastNewlineBeforeStart);
-            console.log('[SELECTION] textToEnd.length=' + textToEnd.length + ', lastNewlineBeforeEnd=' + lastNewlineBeforeEnd);
-            
-            var currentLineText = value.split('\n')[startLine - 1];
-            console.log('[SELECTION] currentLineText (line ' + startLine + ')="' + currentLineText + '"');
-            console.log('[SELECTION] currentLineText.length=' + currentLineText.length);
 
             var lineElements = code.querySelectorAll('.zato-ide-editor-line');
             if (lineElements.length === 0) {
@@ -510,26 +499,16 @@
 
             this._currentCodeRect = codeRect;
 
-            console.log('[SELECTION] --- debug start ---');
-            console.log('[SELECTION] startLine=' + startLine + ', startCol=' + startCol + ', endLine=' + endLine + ', endCol=' + endCol);
-            console.log('[SELECTION] codeRect: left=' + codeRect.left + ', top=' + codeRect.top);
-            console.log('[SELECTION] overlayRect: left=' + overlayRect.left + ', top=' + overlayRect.top);
-            console.log('[SELECTION] codePaddingLeft=' + codePaddingLeft + ', codePaddingTop=' + codePaddingTop);
-            console.log('[SELECTION] overlayPaddingLeft=' + overlayPaddingLeft + ', overlayPaddingTop=' + overlayPaddingTop);
-
             var html = '';
             for (var i = startLine; i <= endLine; i++) {
                 var lineEl = lineElements[i - 1];
                 if (!lineEl) {
-                    console.log('[SELECTION] line ' + i + ': no element found');
                     continue;
                 }
 
                 var lineRect = lineEl.getBoundingClientRect();
                 var top = lineRect.top - codeRect.top + code.scrollTop;
                 var lineHeightPx = lineRect.height;
-
-                console.log('[SELECTION] line ' + i + ': lineRect.left=' + lineRect.left + ', lineRect.top=' + lineRect.top + ', top=' + top + ', height=' + lineHeightPx);
 
                 var leftCol = 0;
                 var rightCol = lineEl.textContent.length;
@@ -541,17 +520,9 @@
                     rightCol = endCol;
                 }
 
-                var lineText = lineEl.textContent;
-                var selectedText = lineText.substring(leftCol, rightCol);
-                console.log('[SELECTION] line ' + i + ': leftCol=' + leftCol + ', rightCol=' + rightCol + ', textContent.length=' + lineText.length + ', selectedText="' + selectedText + '"');
-                console.log('[SELECTION] overlay.offsetLeft=' + overlay.offsetLeft + ', overlay.offsetTop=' + overlay.offsetTop);
-                console.log('[SELECTION] code.offsetLeft=' + code.offsetLeft + ', code.offsetTop=' + code.offsetTop);
-
                 var leftPx = this.getTextOffsetInLine(lineEl, leftCol, codeRect, codePaddingLeft, false);
                 var rightPx = this.getTextOffsetInLine(lineEl, rightCol, codeRect, codePaddingLeft, true);
                 var width = rightPx - leftPx;
-
-                console.log('[SELECTION] line ' + i + ': leftPx=' + leftPx + ', rightPx=' + rightPx + ', width=' + width);
 
                 if (width <= 0 && i !== endLine) {
                     width = this.getTextOffsetInLine(lineEl, 1, codeRect, codePaddingLeft);
@@ -562,12 +533,9 @@
                         html += '<div class="zato-ide-editor-selection-line" style="top:' + top + 'px;height:' + lineHeightPx + 'px;left:0;right:0;"></div>';
                     } else {
                         html += '<div class="zato-ide-editor-selection-line" style="top:' + top + 'px;height:' + lineHeightPx + 'px;left:' + leftPx + 'px;width:' + width + 'px;"></div>';
-                        console.log('[SELECTION] line ' + i + ': rendered div with top=' + top + ', left=' + leftPx + ', width=' + width);
                     }
                 }
             }
-
-            console.log('[SELECTION] --- debug end ---');
 
             overlay.innerHTML = html;
         },
@@ -581,66 +549,46 @@
 
             var targetTextNode = this.getTextNodeAtOffset(lineEl, charIndex);
             if (!targetTextNode.node) {
-                console.log('[SELECTION] getTextOffsetInLine: no target text node found for charIndex=' + charIndex);
                 return 0;
             }
-            console.log('[SELECTION] getTextOffsetInLine: charIndex=' + charIndex + ', node.textContent="' + targetTextNode.node.textContent + '", offset=' + targetTextNode.offset);
 
             var range = document.createRange();
             range.setStart(targetTextNode.node, targetTextNode.offset);
             range.setEnd(targetTextNode.node, targetTextNode.offset);
-            console.log('[SELECTION] range created: collapsed at node offset ' + targetTextNode.offset);
 
             var rects = range.getClientRects();
-            console.log('[SELECTION] collapsed range rects.length=' + rects.length);
             if (rects.length === 0) {
                 range.setStart(targetTextNode.node, 0);
                 range.setEnd(targetTextNode.node, targetTextNode.offset);
                 rects = range.getClientRects();
-                console.log('[SELECTION] expanded range rects.length=' + rects.length);
             }
 
             if (rects.length === 0) {
-                console.log('[SELECTION] getTextOffsetInLine: no rects for charIndex=' + charIndex);
                 return 0;
-            }
-
-            for (var r = 0; r < rects.length; r++) {
-                console.log('[SELECTION] rect[' + r + ']: left=' + rects[r].left + ', right=' + rects[r].right + ', width=' + rects[r].width);
             }
 
             var rect = rects[rects.length - 1];
             var edge = useRightEdge ? rect.right : rect.left;
             var codeRect = this._currentCodeRect;
-            var result = edge - codeRect.left;
-            console.log('[SELECTION] getTextOffsetInLine: charIndex=' + charIndex + ', useRightEdge=' + useRightEdge + ', rect.left=' + rect.left + ', rect.right=' + rect.right + ', edge=' + edge + ', codeRect.left=' + codeRect.left + ', result=' + result);
-            return result;
+            return edge - codeRect.left;
         },
 
         getTextNodeAtOffset: function(element, charIndex) {
             var walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
             var currentOffset = 0;
             var node;
-            var nodeIndex = 0;
-
-            console.log('[SELECTION] getTextNodeAtOffset: looking for charIndex=' + charIndex);
 
             while ((node = walker.nextNode())) {
                 var nodeLength = node.textContent.length;
-                console.log('[SELECTION] textNode[' + nodeIndex + ']: length=' + nodeLength + ', currentOffset=' + currentOffset + ', text="' + node.textContent.substring(0, 20) + (nodeLength > 20 ? '...' : '') + '"');
                 if (currentOffset + nodeLength >= charIndex) {
-                    var offset = charIndex - currentOffset;
-                    console.log('[SELECTION] FOUND: nodeIndex=' + nodeIndex + ', offset=' + offset + ', char at offset="' + node.textContent.charAt(offset) + '"');
                     return {
                         node: node,
-                        offset: offset
+                        offset: charIndex - currentOffset
                     };
                 }
                 currentOffset += nodeLength;
-                nodeIndex++;
             }
 
-            console.log('[SELECTION] getTextNodeAtOffset: NOT FOUND, total chars=' + currentOffset);
             return { node: null, offset: 0 };
         },
 
