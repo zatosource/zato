@@ -863,15 +863,15 @@
             }
             console.log('[ZatoIDE] initCodeEditor: editor area found');
 
-            if (typeof ZatoIDEEditor === 'undefined') {
-                console.log('[ZatoIDE] initCodeEditor: ZatoIDEEditor is undefined, editor JS not loaded');
+            if (typeof ZatoIDEEditorAce === 'undefined') {
+                console.log('[ZatoIDE] initCodeEditor: ZatoIDEEditorAce is undefined, editor JS not loaded');
                 return;
             }
-            console.log('[ZatoIDE] initCodeEditor: ZatoIDEEditor is available');
+            console.log('[ZatoIDE] initCodeEditor: ZatoIDEEditorAce is available');
 
             var file = instance.files[instance.activeFile];
             console.log('[ZatoIDE] initCodeEditor: creating editor, activeFile=' + instance.activeFile + ', language=' + (file ? file.language : 'none'));
-            instance.codeEditor = ZatoIDEEditor.create(editorArea, {
+            instance.codeEditor = ZatoIDEEditorAce.create(editorArea, {
                 theme: instance.options.theme,
                 language: file ? file.language : 'python',
                 fontSize: instance.options.fontSize,
@@ -901,15 +901,15 @@
             }
 
             if (instance.activeFile && instance.codeEditor) {
-                instance.files[instance.activeFile].content = ZatoIDEEditor.getValue(instance.codeEditor);
+                instance.files[instance.activeFile].content = ZatoIDEEditorAce.getValue(instance.codeEditor);
             }
 
             instance.activeFile = filename;
             var file = instance.files[filename];
 
             if (instance.codeEditor) {
-                ZatoIDEEditor.setContent(instance.codeEditor, file.content);
-                ZatoIDEEditor.setLanguage(instance.codeEditor, file.language);
+                ZatoIDEEditorAce.setValue(instance.codeEditor, file.content);
+                ZatoIDEEditorAce.setLanguage(instance.codeEditor, file.language);
             }
 
             this.syncTabToFile(instance, filename);
@@ -1216,7 +1216,7 @@
             }
 
             var targetLine = Math.max(1, line - 2);
-            ZatoIDEEditor.scrollToLine(instance.codeEditor, targetLine);
+            ZatoIDEEditorAce.scrollToLine(instance.codeEditor, targetLine);
         },
 
         loadSearchIcon: function(instance) {
@@ -1454,7 +1454,7 @@
          */
         getValue: function(instance) {
             if (instance && instance.codeEditor) {
-                return ZatoIDEEditor.getValue(instance.codeEditor);
+                return ZatoIDEEditorAce.getValue(instance.codeEditor);
             }
             return '';
         },
@@ -1467,7 +1467,7 @@
          */
         setValue: function(instance, value) {
             if (instance && instance.codeEditor) {
-                ZatoIDEEditor.setContent(instance.codeEditor, value);
+                ZatoIDEEditorAce.setValue(instance.codeEditor, value);
                 instance.content = value;
             }
         },
@@ -1489,7 +1489,7 @@
                 container.className = 'zato-ide-container zato-ide-theme-' + theme;
             }
             if (instance.codeEditor) {
-                ZatoIDEEditor.setTheme(instance.codeEditor, theme);
+                instance.codeEditor.aceEditor.setTheme(theme === 'dark' ? 'ace/theme/zato-dark' : 'ace/theme/zato');
             }
         },
 
@@ -1513,7 +1513,7 @@
             var instance = this.instances[containerId];
             if (instance) {
                 if (instance.codeEditor) {
-                    ZatoIDEEditor.destroy(instance.codeEditor);
+                    ZatoIDEEditorAce.destroy(instance.codeEditor);
                 }
                 instance.container.innerHTML = '';
                 delete this.instances[containerId];
@@ -1525,7 +1525,7 @@
          */
         setLanguage: function(instance, language) {
             if (instance && instance.codeEditor) {
-                ZatoIDEEditor.setLanguage(instance.codeEditor, language);
+                ZatoIDEEditorAce.setLanguage(instance.codeEditor, language);
             }
         },
 
@@ -1534,7 +1534,7 @@
          */
         focus: function(instance) {
             if (instance && instance.codeEditor) {
-                ZatoIDEEditor.focus(instance.codeEditor);
+                ZatoIDEEditorAce.focus(instance.codeEditor);
             }
         }
     };

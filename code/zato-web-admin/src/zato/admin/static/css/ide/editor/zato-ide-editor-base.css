@@ -44,16 +44,21 @@
     overflow: hidden;
 }
 
-.zato-ide-editor-code {
+.zato-ide-editor-scroll-container {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.zato-ide-editor-code {
+    position: relative;
     padding: var(--zato-ide-editor-content-padding);
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     white-space: pre;
-    overflow: hidden;
     pointer-events: none;
     box-sizing: border-box;
 }
@@ -97,10 +102,13 @@
 
 .zato-ide-editor-cursor {
     position: absolute;
+    top: 0;
+    left: 0;
     width: 1px;
     pointer-events: none;
     z-index: 3;
     opacity: 0;
+    will-change: transform;
 }
 
 .zato-ide-editor-cursor.visible {

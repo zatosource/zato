@@ -76,11 +76,18 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/symbols/json.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/symbols/yaml.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/symbols/ini.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/editor/zato-ide-editor-highlight.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/editor/zato-ide-editor-gutter.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/editor/zato-ide-editor-cursor.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/editor/zato-ide-editor-statusbar.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/editor/zato-ide-editor-core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/theme-zato-dark.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/theme-zato.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-python.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-javascript.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-json.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-xml.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-html.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-css.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-sql.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-yaml.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/editor/zato-ide-editor-ace.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/zato-ide.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/zato-ide-split.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-ide-integration.js"></script>
@@ -110,8 +117,7 @@
     <link rel="stylesheet" media="screen" href="/static/css/ide/zato-ide-base.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ide/zato-ide-theme-dark.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ide/zato-ide-split.css" />
-    <link rel="stylesheet" media="screen" href="/static/css/ide/editor/zato-ide-editor-base.css" />
-    <link rel="stylesheet" media="screen" href="/static/css/ide/editor/zato-ide-editor-theme-dark.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/ide/editor/zato-ide-editor-ace.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-dropdown/zato-dropdown-base.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-dropdown/zato-dropdown-theme-dark.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-preview.css" />

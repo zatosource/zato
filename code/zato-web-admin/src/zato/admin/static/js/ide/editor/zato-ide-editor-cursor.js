@@ -26,11 +26,10 @@
             var lineHeight = instance.options.fontSize * instance.options.lineHeight;
             var charWidth = this.measureCharWidth(instance);
 
-            var top = codePaddingTop + (line - 1) * lineHeight - instance.scrollTop;
-            var left = codePaddingLeft + (col - 1) * charWidth - instance.scrollLeft;
+            var top = codePaddingTop + (line - 1) * lineHeight;
+            var left = codePaddingLeft + (col - 1) * charWidth;
 
-            cursor.style.top = top + 'px';
-            cursor.style.left = left + 'px';
+            cursor.style.transform = 'translate(' + left + 'px, ' + top + 'px)';
             cursor.style.height = lineHeight + 'px';
         },
 

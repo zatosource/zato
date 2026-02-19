@@ -103,6 +103,9 @@
             var contentWrapper = document.createElement('div');
             contentWrapper.className = 'zato-ide-editor-content-wrapper';
 
+            var scrollContainer = document.createElement('div');
+            scrollContainer.className = 'zato-ide-editor-scroll-container';
+
             var codeEl = document.createElement('div');
             codeEl.className = 'zato-ide-editor-code';
 
@@ -128,12 +131,14 @@
             var statusbar = document.createElement('div');
             statusbar.className = 'zato-ide-editor-statusbar';
 
-            contentWrapper.appendChild(lineHighlight);
-            contentWrapper.appendChild(selectionOverlay);
-            contentWrapper.appendChild(highlightLayer);
-            contentWrapper.appendChild(codeEl);
+            scrollContainer.appendChild(lineHighlight);
+            scrollContainer.appendChild(selectionOverlay);
+            scrollContainer.appendChild(highlightLayer);
+            scrollContainer.appendChild(codeEl);
+            scrollContainer.appendChild(cursorEl);
+
+            contentWrapper.appendChild(scrollContainer);
             contentWrapper.appendChild(textarea);
-            contentWrapper.appendChild(cursorEl);
 
             editorEl.appendChild(gutterEl);
             editorEl.appendChild(contentWrapper);
@@ -145,6 +150,7 @@
                 editor: editorEl,
                 gutter: gutterEl,
                 contentWrapper: contentWrapper,
+                scrollContainer: scrollContainer,
                 code: codeEl,
                 textarea: textarea,
                 cursor: cursorEl,
@@ -221,18 +227,15 @@
             });
 
             textarea.addEventListener('select', function() {
-                console.log('[SELECTION] select event fired');
                 self.updateSelectionOverlay(instance);
             });
 
             textarea.addEventListener('mouseup', function() {
-                console.log('[SELECTION] mouseup event fired');
                 self.updateSelectionOverlay(instance);
             });
 
             textarea.addEventListener('mousemove', function(e) {
                 if (e.buttons === 1) {
-                    console.log('[SELECTION] mousemove with button down');
                     self.updateSelectionOverlay(instance);
                 }
             });
@@ -350,23 +353,15 @@
          */
         syncScroll: function(instance) {
             var textarea = instance.elements.textarea;
-            var code = instance.elements.code;
+            var scrollContainer = instance.elements.scrollContainer;
             var gutter = instance.elements.gutter;
-            var highlightLayer = instance.elements.highlightLayer;
-            var lineHighlight = instance.elements.lineHighlight;
-            var selectionOverlay = instance.elements.selectionOverlay;
 
-            code.scrollTop = textarea.scrollTop;
-            code.scrollLeft = textarea.scrollLeft;
+            scrollContainer.scrollTop = textarea.scrollTop;
+            scrollContainer.scrollLeft = textarea.scrollLeft;
             gutter.scrollTop = textarea.scrollTop;
-            highlightLayer.scrollTop = textarea.scrollTop;
-            highlightLayer.scrollLeft = textarea.scrollLeft;
-            selectionOverlay.scrollTop = textarea.scrollTop;
 
             instance.scrollTop = textarea.scrollTop;
             instance.scrollLeft = textarea.scrollLeft;
-
-            ZatoIDEEditorCursor.updatePosition(instance, instance.cursorLine, instance.cursorCol);
         },
 
         /**
@@ -507,7 +502,8 @@
                 }
 
                 var lineRect = lineEl.getBoundingClientRect();
-                var top = lineRect.top - codeRect.top + code.scrollTop;
+                var scrollContainer = instance.elements.scrollContainer;
+                var top = lineRect.top - codeRect.top + scrollContainer.scrollTop;
                 var lineHeightPx = lineRect.height;
 
                 var leftCol = 0;
