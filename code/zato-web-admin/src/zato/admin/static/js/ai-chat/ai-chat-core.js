@@ -286,8 +286,8 @@
 
             var leftPanel = ZatoIDESplit.getLeftPanel(splitInstance);
             if (leftPanel) {
-                leftPanel.id = 'ai-chat-ide-container';
-                ZatoIDE.create('ai-chat-ide-container', {
+                leftPanel.id = 'zato-ide-panel';
+                ZatoIDE.create('zato-ide-panel', {
                     theme: 'dark',
                     language: 'python'
                 });

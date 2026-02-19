@@ -70,9 +70,9 @@
                 return null;
             }
 
-            idePanel.id = 'ai-chat-ide-container';
+            idePanel.id = 'zato-ide-panel';
 
-            this.ideInstance = ZatoIDE.create('ai-chat-ide-container', {
+            this.ideInstance = ZatoIDE.create('zato-ide-panel', {
                 theme: 'dark',
                 language: 'python'
             });

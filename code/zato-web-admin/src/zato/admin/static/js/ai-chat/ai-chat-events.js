@@ -3,6 +3,15 @@
 
     var AIChatEvents = {
 
+        toggleIDE: function(core) {
+            if (!window.AIChatIDEIntegration) {
+                return;
+            }
+            core.ideEnabled = !core.ideEnabled;
+            AIChatIDEIntegration.setEnabled(core.ideEnabled);
+            core.render();
+        },
+
         bind: function(widget, core) {
             var self = this;
 
@@ -73,6 +82,12 @@
             });
 
             document.addEventListener('keydown', function(e) {
+                if (e.key === 'F9') {
+                    e.preventDefault();
+                    self.toggleIDE(core);
+                    return;
+                }
+
                 if (e.key === 'Escape') {
                     if (AIChatContextHelp && AIChatContextHelp.isOpen && AIChatContextHelp.isOpen()) {
                         AIChatContextHelp.close();

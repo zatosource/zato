@@ -295,6 +295,22 @@
         },
 
         /**
+         * Scrolls the editor to a specific line.
+         */
+        scrollToLine: function(instance, line) {
+            var textarea = instance.elements.textarea;
+            if (!textarea) {
+                return;
+            }
+
+            var lineHeight = instance.options.lineHeight || 20;
+            var targetScrollTop = (line - 1) * lineHeight;
+
+            textarea.scrollTop = targetScrollTop;
+            this.syncScroll(instance);
+        },
+
+        /**
          * Syncs scroll position between textarea and display layers.
          */
         syncScroll: function(instance) {

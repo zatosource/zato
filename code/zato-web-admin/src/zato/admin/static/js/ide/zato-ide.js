@@ -117,12 +117,8 @@
 
             html += '<div class="zato-ide-toolbar">';
             html += '<div class="zato-ide-toolbar-left">';
-            html += '<select id="' + instance.id + '-file-select" class="zato-ide-file-select">';
-            html += '<option value="my_service.py" data-tooltip="A Zato service written in Python">my_service.py</option>';
-            html += '<option value="queries.sql" data-tooltip="SQL queries for database operations">queries.sql</option>';
-            html += '<option value="config.yaml" data-tooltip="YAML configuration file">config.yaml</option>';
-            html += '<option value="data.json" data-tooltip="JSON data file">data.json</option>';
-            html += '<option value="settings.ini" data-tooltip="INI settings file">settings.ini</option>';
+            html += '<select id="' + instance.id + '-symbol-select" class="zato-ide-symbol-select">';
+            html += '<option value="">-- symbols --</option>';
             html += '</select>';
             html += '</div>';
             html += '<div class="zato-ide-toolbar-right">';
@@ -149,11 +145,11 @@
             console.log('[ZatoIDE] render: code editor initialized');
 
             var self = this;
-            var fileSelect = document.getElementById(instance.id + '-file-select');
-            if (fileSelect && typeof ZatoDropdown !== 'undefined') {
-                instance.fileDropdown = ZatoDropdown.init(fileSelect, {
+            var symbolSelect = document.getElementById(instance.id + '-symbol-select');
+            if (symbolSelect && typeof ZatoDropdown !== 'undefined') {
+                instance.symbolDropdown = ZatoDropdown.init(symbolSelect, {
                     theme: instance.options.theme,
-                    id: instance.id + '-file-dropdown',
+                    id: instance.id + '-symbol-dropdown',
                     onBeforeOpen: function(container) {
                         var menu = container.querySelector('.zato-dropdown-menu');
                         var trigger = container.querySelector('.zato-dropdown-trigger');
@@ -167,9 +163,9 @@
                         }
                     },
                     onChange: function(value, text) {
-                        self.switchToFile(instance, value);
-                        if (instance.onFileChange) {
-                            instance.onFileChange(value, text);
+                        if (value) {
+                            var line = parseInt(value, 10);
+                            self.jumpToLine(instance, line);
                         }
                     }
                 });
@@ -194,7 +190,7 @@
         initFiles: function(instance) {
             instance.files = {
                 'my_service.py': {
-                    content: '# -*- coding: utf-8 -*-\n\n# Zato\nfrom zato.server.service import Service\n\nclass MyService(Service):\n\n    def handle(self):\n\n        # Connect to a Microsoft 365 IMAP connection by its name ..\n        conn = self.email.imap.get(\'My Automation\').conn\n\n        # .. get all messages matching filter criteria ("unread" by default)..\n        for msg_id, msg in conn.get():\n\n            # .. and access each of them.\n            self.logger.info(msg.data)\n',
+                    content: '# -*- coding: utf-8 -*-\n\n# Zato\nfrom zato.server.service import Service\n\nclass MyService(Service):\n\n    def handle(self):\n\n        # Connect to a Microsoft 365 IMAP connection by its name ..\n        conn = self.email.imap.get(\'My Automation\').conn\n\n        # .. get all messages matching filter criteria ("unread" by default)..\n        for msg_id, msg in conn.get():\n\n            # .. and access each of them.\n            self.logger.info(msg.data)\n\n\nclass MyService2(Service):\n\n    def handle(self):\n        pass\n\n\nclass MyService3(Service):\n\n    def handle(self):\n        pass\n',
                     language: 'python'
                 },
                 'queries.sql': {
@@ -279,7 +275,7 @@
             }
 
             this.syncTabToFile(instance, filename);
-            this.syncDropdownToFile(instance, filename);
+            this.updateSymbols(instance);
         },
 
         /**
@@ -301,12 +297,65 @@
         },
 
         /**
-         * Syncs the dropdown to match the current file.
+         * Updates the symbol dropdown with symbols from the current file.
          */
-        syncDropdownToFile: function(instance, filename) {
-            if (instance.fileDropdown) {
-                ZatoDropdown.setValue(instance.fileDropdown, filename);
+        updateSymbols: function(instance) {
+            if (!instance.symbolDropdown || !window.ZatoIDESymbols) {
+                return;
             }
+
+            var file = instance.files[instance.activeFile];
+            if (!file) {
+                return;
+            }
+
+            var symbols = ZatoIDESymbols.extract(file.content, file.language);
+            var container = instance.symbolDropdown;
+            var menu = container.querySelector('.zato-dropdown-menu');
+            var textSpan = container.querySelector('.zato-dropdown-text');
+
+            if (!menu) {
+                return;
+            }
+
+            menu.innerHTML = '';
+
+            if (symbols.length === 0) {
+                var emptyItem = document.createElement('div');
+                emptyItem.className = 'zato-dropdown-item disabled';
+                emptyItem.textContent = '(no symbols)';
+                menu.appendChild(emptyItem);
+                if (textSpan) {
+                    textSpan.textContent = '-- symbols --';
+                }
+                return;
+            }
+
+            for (var i = 0; i < symbols.length; i++) {
+                var symbol = symbols[i];
+                var item = document.createElement('div');
+                item.className = 'zato-dropdown-item';
+                item.setAttribute('data-value', symbol.line);
+                item.textContent = symbol.name;
+                menu.appendChild(item);
+            }
+
+            if (textSpan) {
+                textSpan.textContent = symbols[0].name;
+            }
+            container.setAttribute('data-value', symbols[0].line);
+        },
+
+        /**
+         * Jumps to a specific line in the editor.
+         */
+        jumpToLine: function(instance, line) {
+            if (!instance.codeEditor) {
+                return;
+            }
+
+            var targetLine = Math.max(1, line - 4);
+            ZatoIDEEditor.scrollToLine(instance.codeEditor, targetLine);
         },
 
         loadSearchIcon: function(instance) {
