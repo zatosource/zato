@@ -190,27 +190,374 @@
         initFiles: function(instance) {
             instance.files = {
                 'my_service.py': {
-                    content: '# -*- coding: utf-8 -*-\n\n# Zato\nfrom zato.server.service import Service\n\nclass MyService(Service):\n\n    def handle(self):\n\n        # Connect to a Microsoft 365 IMAP connection by its name ..\n        conn = self.email.imap.get(\'My Automation\').conn\n\n        # .. get all messages matching filter criteria ("unread" by default)..\n        for msg_id, msg in conn.get():\n\n            # .. and access each of them.\n            self.logger.info(msg.data)\n\n\nclass MyService2(Service):\n\n    def handle(self):\n        pass\n\n\nclass MyService3(Service):\n\n    def handle(self):\n        pass\n',
+                    content: this.getPythonContent(),
                     language: 'python'
                 },
                 'queries.sql': {
-                    content: '-- Database queries\n\nSELECT id, name, created_at\nFROM users\nWHERE status = \'active\'\nORDER BY created_at DESC\nLIMIT 100;\n\n-- Insert new record\nINSERT INTO logs (message, level)\nVALUES (\'Application started\', \'INFO\');\n',
+                    content: this.getSQLContent(),
                     language: 'sql'
                 },
                 'config.yaml': {
-                    content: '# Configuration file\n\nserver:\n  host: localhost\n  port: 8080\n  debug: true\n\ndatabase:\n  engine: postgresql\n  name: myapp\n  pool_size: 10\n',
+                    content: this.getYAMLContent(),
                     language: 'yaml'
                 },
                 'data.json': {
-                    content: '{\n  "name": "My Application",\n  "version": "1.0.0",\n  "settings": {\n    "enabled": true,\n    "maxItems": 100,\n    "tags": ["production", "api"]\n  }\n}\n',
+                    content: this.getJSONContent(),
                     language: 'json'
                 },
                 'settings.ini': {
-                    content: '; Application settings\n\n[general]\nname = MyApp\nversion = 1.0\n\n[logging]\nlevel = INFO\nformat = %(asctime)s - %(message)s\n\n[features]\nenable_cache = true\nmax_connections = 50\n',
+                    content: this.getINIContent(),
                     language: 'ini'
                 }
             };
             instance.activeFile = 'my_service.py';
+        },
+
+        getPythonContent: function() {
+            var lines = [];
+            lines.push('# -*- coding: utf-8 -*-');
+            lines.push('');
+            lines.push('# Zato');
+            lines.push('from zato.server.service import Service');
+            lines.push('');
+            lines.push('');
+            lines.push('class EmailHandler(Service):');
+            lines.push('');
+            lines.push('    def handle(self):');
+            lines.push('');
+            lines.push('        # Connect to a Microsoft 365 IMAP connection by its name ..');
+            lines.push('        conn = self.email.imap.get(\'My Automation\').conn');
+            lines.push('');
+            lines.push('        # .. get all messages matching filter criteria ("unread" by default)..');
+            lines.push('        for msg_id, msg in conn.get():');
+            lines.push('');
+            lines.push('            # .. and access each of them.');
+            lines.push('            self.logger.info(msg.data)');
+            lines.push('');
+            lines.push('');
+            lines.push('class DatabaseSync(Service):');
+            lines.push('');
+            lines.push('    def handle(self):');
+            lines.push('        connection = self.outgoing.sql.get(\'My Database\').session()');
+            lines.push('        try:');
+            lines.push('            result = connection.execute(\'SELECT * FROM users\')');
+            lines.push('            for row in result:');
+            lines.push('                self.logger.info(row)');
+            lines.push('        finally:');
+            lines.push('            connection.close()');
+            lines.push('');
+            lines.push('');
+            lines.push('class CacheManager(Service):');
+            lines.push('');
+            lines.push('    def handle(self):');
+            lines.push('        cache = self.cache.get_cache(\'default\')');
+            lines.push('        cache.set(\'my_key\', \'my_value\', expiry=3600)');
+            lines.push('        value = cache.get(\'my_key\')');
+            lines.push('        self.response.payload = value');
+            lines.push('');
+            lines.push('');
+            lines.push('class DUPLICATE_CLASS(Service):');
+            lines.push('');
+            lines.push('    def handle(self):');
+            lines.push('        self.logger.info(\'First duplicate\')');
+            lines.push('');
+            lines.push('');
+            lines.push('class DUPLICATE_CLASS(Service):');
+            lines.push('');
+            lines.push('    def handle(self):');
+            lines.push('        self.logger.info(\'Second duplicate\')');
+            lines.push('');
+            lines.push('');
+            lines.push('class NotificationSender(Service):');
+            lines.push('');
+            lines.push('    def handle(self):');
+            lines.push('        self.outgoing.plain_http.get(\'Slack Webhook\').conn.post(');
+            lines.push('            self.cid,');
+            lines.push('            data={\'text\': \'Hello from Zato\'}');
+            lines.push('        )');
+            lines.push('');
+            lines.push('');
+            lines.push('class FileProcessor(Service):');
+            lines.push('');
+            lines.push('    def handle(self):');
+            lines.push('        ftp = self.outgoing.ftp.get(\'My FTP\').conn');
+            lines.push('        files = ftp.listdir(\'/incoming\')');
+            lines.push('        for filename in files:');
+            lines.push('            content = ftp.getfo(filename)');
+            lines.push('            self.logger.info(\'Processing: %s\', filename)');
+            lines.push('');
+            lines.push('');
+            lines.push('class QueueConsumer(Service):');
+            lines.push('');
+            lines.push('    def handle(self):');
+            lines.push('        msg = self.request.raw_request');
+            lines.push('        self.logger.info(\'Received message: %s\', msg)');
+            lines.push('        self.response.payload = {\'status\': \'processed\'}');
+            lines.push('');
+            lines.push('');
+            lines.push('class ScheduledTask(Service):');
+            lines.push('');
+            lines.push('    def handle(self):');
+            lines.push('        self.logger.info(\'Running scheduled task at %s\', self.time.utcnow())');
+            lines.push('        self.invoke(\'myapp.services.cleanup\')');
+            lines.push('');
+            return lines.join('\n');
+        },
+
+        getSQLContent: function() {
+            var lines = [];
+            lines.push('-- ## User Management');
+            lines.push('');
+            lines.push('CREATE TABLE users (');
+            lines.push('    id SERIAL PRIMARY KEY,');
+            lines.push('    username VARCHAR(100) NOT NULL,');
+            lines.push('    email VARCHAR(255) UNIQUE,');
+            lines.push('    created_at TIMESTAMP DEFAULT NOW()');
+            lines.push(');');
+            lines.push('');
+            lines.push('CREATE INDEX idx_users_email ON users(email);');
+            lines.push('');
+            lines.push('');
+            lines.push('-- ## Session Tracking');
+            lines.push('');
+            lines.push('CREATE TABLE sessions (');
+            lines.push('    id UUID PRIMARY KEY,');
+            lines.push('    user_id INTEGER REFERENCES users(id),');
+            lines.push('    token VARCHAR(512) NOT NULL,');
+            lines.push('    expires_at TIMESTAMP NOT NULL');
+            lines.push(');');
+            lines.push('');
+            lines.push('');
+            lines.push('-- ## DUPLICATE_SECTION');
+            lines.push('');
+            lines.push('SELECT * FROM users WHERE id = 1;');
+            lines.push('');
+            lines.push('');
+            lines.push('-- ## DUPLICATE_SECTION');
+            lines.push('');
+            lines.push('SELECT * FROM sessions WHERE user_id = 1;');
+            lines.push('');
+            lines.push('');
+            lines.push('-- ## Audit Logging');
+            lines.push('');
+            lines.push('CREATE TABLE audit_log (');
+            lines.push('    id SERIAL PRIMARY KEY,');
+            lines.push('    action VARCHAR(50) NOT NULL,');
+            lines.push('    entity_type VARCHAR(100),');
+            lines.push('    entity_id INTEGER,');
+            lines.push('    user_id INTEGER REFERENCES users(id),');
+            lines.push('    details JSONB,');
+            lines.push('    created_at TIMESTAMP DEFAULT NOW()');
+            lines.push(');');
+            lines.push('');
+            lines.push('');
+            lines.push('-- ## Permissions');
+            lines.push('');
+            lines.push('CREATE TABLE roles (');
+            lines.push('    id SERIAL PRIMARY KEY,');
+            lines.push('    name VARCHAR(50) UNIQUE NOT NULL');
+            lines.push(');');
+            lines.push('');
+            lines.push('CREATE TABLE user_roles (');
+            lines.push('    user_id INTEGER REFERENCES users(id),');
+            lines.push('    role_id INTEGER REFERENCES roles(id),');
+            lines.push('    PRIMARY KEY (user_id, role_id)');
+            lines.push(');');
+            lines.push('');
+            lines.push('');
+            lines.push('-- ## Notifications');
+            lines.push('');
+            lines.push('CREATE TABLE notifications (');
+            lines.push('    id SERIAL PRIMARY KEY,');
+            lines.push('    user_id INTEGER REFERENCES users(id),');
+            lines.push('    message TEXT NOT NULL,');
+            lines.push('    read BOOLEAN DEFAULT FALSE,');
+            lines.push('    created_at TIMESTAMP DEFAULT NOW()');
+            lines.push(');');
+            lines.push('');
+            return lines.join('\n');
+        },
+
+        getYAMLContent: function() {
+            var lines = [];
+            lines.push('# Configuration file');
+            lines.push('');
+            lines.push('server:');
+            lines.push('  host: localhost');
+            lines.push('  port: 8080');
+            lines.push('  debug: true');
+            lines.push('  workers: 4');
+            lines.push('  timeout: 30');
+            lines.push('');
+            lines.push('database:');
+            lines.push('  engine: postgresql');
+            lines.push('  name: myapp');
+            lines.push('  host: db.example.com');
+            lines.push('  port: 5432');
+            lines.push('  pool_size: 10');
+            lines.push('  max_overflow: 20');
+            lines.push('');
+            lines.push('cache:');
+            lines.push('  backend: redis');
+            lines.push('  host: redis.example.com');
+            lines.push('  port: 6379');
+            lines.push('  db: 0');
+            lines.push('  ttl: 3600');
+            lines.push('');
+            lines.push('DUPLICATE_KEY:');
+            lines.push('  first: true');
+            lines.push('  value: 100');
+            lines.push('');
+            lines.push('DUPLICATE_KEY:');
+            lines.push('  second: true');
+            lines.push('  value: 200');
+            lines.push('');
+            lines.push('logging:');
+            lines.push('  level: INFO');
+            lines.push('  format: json');
+            lines.push('  handlers:');
+            lines.push('    - console');
+            lines.push('    - file');
+            lines.push('  file_path: /var/log/app.log');
+            lines.push('');
+            lines.push('security:');
+            lines.push('  jwt_secret: change-me-in-production');
+            lines.push('  token_expiry: 86400');
+            lines.push('  allowed_origins:');
+            lines.push('    - https://example.com');
+            lines.push('    - https://api.example.com');
+            lines.push('');
+            lines.push('features:');
+            lines.push('  enable_signup: true');
+            lines.push('  enable_oauth: false');
+            lines.push('  maintenance_mode: false');
+            lines.push('');
+            lines.push('notifications:');
+            lines.push('  email:');
+            lines.push('    enabled: true');
+            lines.push('    smtp_host: smtp.example.com');
+            lines.push('  slack:');
+            lines.push('    enabled: false');
+            lines.push('    webhook_url: null');
+            lines.push('');
+            return lines.join('\n');
+        },
+
+        getJSONContent: function() {
+            var lines = [];
+            lines.push('{');
+            lines.push('  "name": "My Application",');
+            lines.push('  "version": "1.0.0",');
+            lines.push('  "description": "A sample application configuration",');
+            lines.push('  "author": "Development Team",');
+            lines.push('  "settings": {');
+            lines.push('    "enabled": true,');
+            lines.push('    "maxItems": 100,');
+            lines.push('    "tags": ["production", "api"]');
+            lines.push('  },');
+            lines.push('  "endpoints": {');
+            lines.push('    "api": "https://api.example.com",');
+            lines.push('    "auth": "https://auth.example.com",');
+            lines.push('    "cdn": "https://cdn.example.com"');
+            lines.push('  },');
+            lines.push('  "DUPLICATE_KEY": {');
+            lines.push('    "first": true,');
+            lines.push('    "value": 100');
+            lines.push('  },');
+            lines.push('  "DUPLICATE_KEY": {');
+            lines.push('    "second": true,');
+            lines.push('    "value": 200');
+            lines.push('  },');
+            lines.push('  "database": {');
+            lines.push('    "host": "localhost",');
+            lines.push('    "port": 5432,');
+            lines.push('    "name": "myapp",');
+            lines.push('    "ssl": true');
+            lines.push('  },');
+            lines.push('  "cache": {');
+            lines.push('    "enabled": true,');
+            lines.push('    "ttl": 3600,');
+            lines.push('    "maxSize": 1000');
+            lines.push('  },');
+            lines.push('  "logging": {');
+            lines.push('    "level": "info",');
+            lines.push('    "format": "json",');
+            lines.push('    "outputs": ["console", "file"]');
+            lines.push('  },');
+            lines.push('  "features": {');
+            lines.push('    "darkMode": true,');
+            lines.push('    "notifications": true,');
+            lines.push('    "analytics": false');
+            lines.push('  },');
+            lines.push('  "limits": {');
+            lines.push('    "requestsPerMinute": 100,');
+            lines.push('    "maxUploadSize": 10485760,');
+            lines.push('    "sessionTimeout": 1800');
+            lines.push('  }');
+            lines.push('}');
+            return lines.join('\n');
+        },
+
+        getINIContent: function() {
+            var lines = [];
+            lines.push('; Application settings');
+            lines.push('');
+            lines.push('[general]');
+            lines.push('name = MyApp');
+            lines.push('version = 1.0');
+            lines.push('environment = production');
+            lines.push('debug = false');
+            lines.push('');
+            lines.push('[server]');
+            lines.push('host = 0.0.0.0');
+            lines.push('port = 8080');
+            lines.push('workers = 4');
+            lines.push('timeout = 30');
+            lines.push('');
+            lines.push('[database]');
+            lines.push('engine = postgresql');
+            lines.push('host = db.example.com');
+            lines.push('port = 5432');
+            lines.push('name = myapp');
+            lines.push('user = appuser');
+            lines.push('pool_size = 10');
+            lines.push('');
+            lines.push('[DUPLICATE_SECTION]');
+            lines.push('first = true');
+            lines.push('value = 100');
+            lines.push('');
+            lines.push('[DUPLICATE_SECTION]');
+            lines.push('second = true');
+            lines.push('value = 200');
+            lines.push('');
+            lines.push('[cache]');
+            lines.push('backend = redis');
+            lines.push('host = redis.example.com');
+            lines.push('port = 6379');
+            lines.push('ttl = 3600');
+            lines.push('');
+            lines.push('[logging]');
+            lines.push('level = INFO');
+            lines.push('format = %(asctime)s - %(message)s');
+            lines.push('file = /var/log/app.log');
+            lines.push('');
+            lines.push('[security]');
+            lines.push('secret_key = change-me');
+            lines.push('token_expiry = 86400');
+            lines.push('ssl_enabled = true');
+            lines.push('');
+            lines.push('[features]');
+            lines.push('enable_cache = true');
+            lines.push('enable_signup = true');
+            lines.push('maintenance_mode = false');
+            lines.push('max_connections = 50');
+            lines.push('');
+            lines.push('[notifications]');
+            lines.push('email_enabled = true');
+            lines.push('smtp_host = smtp.example.com');
+            lines.push('slack_enabled = false');
+            lines.push('');
+            return lines.join('\n');
         },
 
         /**
