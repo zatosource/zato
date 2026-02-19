@@ -1112,7 +1112,10 @@
             }
 
             if (isOutsideSymbol) {
-                console.log('[SYNC] cursor is between symbols, keeping last symbol visible');
+                console.log('[SYNC] cursor is between symbols, keeping last symbol visible, hiding methods');
+                if (instance.methodDropdown) {
+                    instance.methodDropdown.style.display = 'none';
+                }
                 return;
             }
 
