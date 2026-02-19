@@ -25,6 +25,14 @@
             return symbols;
         },
 
+        extractMethods: function(content, language, classLine) {
+            var extractor = this.extractors[language];
+            if (!extractor || typeof extractor.extractMethods !== 'function') {
+                return [];
+            }
+            return extractor.extractMethods(content, classLine);
+        },
+
         getExtractor: function(language) {
             return this.extractors[language] || null;
         }

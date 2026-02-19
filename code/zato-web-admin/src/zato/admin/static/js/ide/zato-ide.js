@@ -120,6 +120,9 @@
             html += '<select id="' + instance.id + '-symbol-select" class="zato-ide-symbol-select">';
             html += '<option value="">-- symbols --</option>';
             html += '</select>';
+            html += '<select id="' + instance.id + '-method-select" class="zato-ide-method-select" style="display: none;">';
+            html += '<option value="">-- methods --</option>';
+            html += '</select>';
             html += '</div>';
             html += '<div class="zato-ide-toolbar-right">';
             html += '<span class="zato-ide-search-button" title="Search"></span>';
@@ -169,12 +172,41 @@
                             console.log('[TRACE-SYMBOL] dropdown.onChange: parsed line=' + line + ' from value="' + value + '"');
                             console.log('[TRACE-SYMBOL] dropdown.onChange: calling jumpToLine with line=' + line);
                             self.jumpToLine(instance, line);
+                            instance.selectedClassLine = line;
+                            self.updateMethods(instance, line);
                         } else {
                             console.log('[TRACE-SYMBOL] dropdown.onChange: value is empty, not jumping');
                         }
                     }
                 });
 
+            }
+
+            var methodSelect = document.getElementById(instance.id + '-method-select');
+            if (methodSelect && typeof ZatoDropdown !== 'undefined') {
+                instance.methodDropdown = ZatoDropdown.init(methodSelect, {
+                    theme: instance.options.theme,
+                    id: instance.id + '-method-dropdown',
+                    onBeforeOpen: function(container) {
+                        var menu = container.querySelector('.zato-dropdown-menu');
+                        var trigger = container.querySelector('.zato-dropdown-trigger');
+                        if (menu && trigger) {
+                            var rect = trigger.getBoundingClientRect();
+                            menu.style.position = 'fixed';
+                            menu.style.bottom = 'auto';
+                            menu.style.left = rect.left + 'px';
+                            menu.style.top = (rect.bottom + 2) + 'px';
+                            menu.style.minWidth = rect.width + 'px';
+                        }
+                    },
+                    onChange: function(value, text) {
+                        console.log('[TRACE-METHOD] dropdown.onChange: value="' + value + '" text="' + text + '"');
+                        if (value) {
+                            var line = parseInt(value, 10);
+                            self.jumpToLine(instance, line);
+                        }
+                    }
+                });
             }
 
             console.log('[ZatoIDE] render: initializing tabs');
@@ -239,6 +271,27 @@
             lines.push('            # .. and access each of them.');
             lines.push('            self.logger.info(msg.data)');
             lines.push('');
+            lines.push('    def fetch_unread(self):');
+            lines.push('        conn = self.email.imap.get(\'My Automation\').conn');
+            lines.push('        return list(conn.get(criteria=\'UNSEEN\'))');
+            lines.push('');
+            lines.push('    def mark_as_read(self, msg_id):');
+            lines.push('        conn = self.email.imap.get(\'My Automation\').conn');
+            lines.push('        conn.mark_seen(msg_id)');
+            lines.push('');
+            lines.push('    def archive_message(self, msg_id):');
+            lines.push('        conn = self.email.imap.get(\'My Automation\').conn');
+            lines.push('        conn.move(msg_id, \'Archive\')');
+            lines.push('');
+            lines.push('    def delete_message(self, msg_id):');
+            lines.push('        conn = self.email.imap.get(\'My Automation\').conn');
+            lines.push('        conn.delete(msg_id)');
+            lines.push('');
+            lines.push('    def get_attachments(self, msg_id):');
+            lines.push('        conn = self.email.imap.get(\'My Automation\').conn');
+            lines.push('        msg = conn.get_by_id(msg_id)');
+            lines.push('        return msg.attachments');
+            lines.push('');
             lines.push('');
             lines.push('class DatabaseSync(Service):');
             lines.push('');
@@ -251,6 +304,27 @@
             lines.push('        finally:');
             lines.push('            connection.close()');
             lines.push('');
+            lines.push('    def sync_users(self):');
+            lines.push('        session = self.outgoing.sql.get(\'My Database\').session()');
+            lines.push('        return session.execute(\'SELECT * FROM users WHERE active = true\')');
+            lines.push('');
+            lines.push('    def sync_orders(self):');
+            lines.push('        session = self.outgoing.sql.get(\'My Database\').session()');
+            lines.push('        return session.execute(\'SELECT * FROM orders WHERE status = pending\')');
+            lines.push('');
+            lines.push('    def update_record(self, table, record_id, data):');
+            lines.push('        session = self.outgoing.sql.get(\'My Database\').session()');
+            lines.push('        session.execute(f\'UPDATE {table} SET data = ? WHERE id = ?\', [data, record_id])');
+            lines.push('');
+            lines.push('    def delete_record(self, table, record_id):');
+            lines.push('        session = self.outgoing.sql.get(\'My Database\').session()');
+            lines.push('        session.execute(f\'DELETE FROM {table} WHERE id = ?\', [record_id])');
+            lines.push('');
+            lines.push('    def bulk_insert(self, table, records):');
+            lines.push('        session = self.outgoing.sql.get(\'My Database\').session()');
+            lines.push('        for record in records:');
+            lines.push('            session.execute(f\'INSERT INTO {table} VALUES (?)\', [record])');
+            lines.push('');
             lines.push('');
             lines.push('class CacheManager(Service):');
             lines.push('');
@@ -259,6 +333,26 @@
             lines.push('        cache.set(\'my_key\', \'my_value\', expiry=3600)');
             lines.push('        value = cache.get(\'my_key\')');
             lines.push('        self.response.payload = value');
+            lines.push('');
+            lines.push('    def get_cached(self, key):');
+            lines.push('        cache = self.cache.get_cache(\'default\')');
+            lines.push('        return cache.get(key)');
+            lines.push('');
+            lines.push('    def set_cached(self, key, value, ttl):');
+            lines.push('        cache = self.cache.get_cache(\'default\')');
+            lines.push('        cache.set(key, value, expiry=ttl)');
+            lines.push('');
+            lines.push('    def invalidate(self, key):');
+            lines.push('        cache = self.cache.get_cache(\'default\')');
+            lines.push('        cache.delete(key)');
+            lines.push('');
+            lines.push('    def clear_all(self):');
+            lines.push('        cache = self.cache.get_cache(\'default\')');
+            lines.push('        cache.clear()');
+            lines.push('');
+            lines.push('    def get_stats(self):');
+            lines.push('        cache = self.cache.get_cache(\'default\')');
+            lines.push('        return cache.stats()');
             lines.push('');
             lines.push('');
             lines.push('class DUPLICATE_CLASS(Service):');
@@ -281,6 +375,32 @@
             lines.push('            data={\'text\': \'Hello from Zato\'}');
             lines.push('        )');
             lines.push('');
+            lines.push('    def send_slack(self, message):');
+            lines.push('        self.outgoing.plain_http.get(\'Slack Webhook\').conn.post(');
+            lines.push('            self.cid,');
+            lines.push('            data={\'text\': message}');
+            lines.push('        )');
+            lines.push('');
+            lines.push('    def send_email(self, recipient, subject, body):');
+            lines.push('        self.email.smtp.get(\'Default SMTP\').send(');
+            lines.push('            to=recipient,');
+            lines.push('            subject=subject,');
+            lines.push('            body=body');
+            lines.push('        )');
+            lines.push('');
+            lines.push('    def send_sms(self, phone, message):');
+            lines.push('        self.outgoing.plain_http.get(\'SMS Gateway\').conn.post(');
+            lines.push('            self.cid,');
+            lines.push('            data={\'phone\': phone, \'message\': message}');
+            lines.push('        )');
+            lines.push('');
+            lines.push('    def broadcast(self, channels, message):');
+            lines.push('        for channel in channels:');
+            lines.push('            self.invoke(\'notifications.send\', {\'channel\': channel, \'message\': message})');
+            lines.push('');
+            lines.push('    def schedule_notification(self, delay, message):');
+            lines.push('        self.invoke_async(\'notifications.send\', {\'message\': message}, delay=delay)');
+            lines.push('');
             lines.push('');
             lines.push('class FileProcessor(Service):');
             lines.push('');
@@ -291,6 +411,26 @@
             lines.push('            content = ftp.getfo(filename)');
             lines.push('            self.logger.info(\'Processing: %s\', filename)');
             lines.push('');
+            lines.push('    def download_file(self, remote_path):');
+            lines.push('        ftp = self.outgoing.ftp.get(\'My FTP\').conn');
+            lines.push('        return ftp.getfo(remote_path)');
+            lines.push('');
+            lines.push('    def upload_file(self, local_content, remote_path):');
+            lines.push('        ftp = self.outgoing.ftp.get(\'My FTP\').conn');
+            lines.push('        ftp.putfo(local_content, remote_path)');
+            lines.push('');
+            lines.push('    def list_directory(self, path):');
+            lines.push('        ftp = self.outgoing.ftp.get(\'My FTP\').conn');
+            lines.push('        return ftp.listdir(path)');
+            lines.push('');
+            lines.push('    def delete_file(self, remote_path):');
+            lines.push('        ftp = self.outgoing.ftp.get(\'My FTP\').conn');
+            lines.push('        ftp.remove(remote_path)');
+            lines.push('');
+            lines.push('    def move_file(self, source, destination):');
+            lines.push('        ftp = self.outgoing.ftp.get(\'My FTP\').conn');
+            lines.push('        ftp.rename(source, destination)');
+            lines.push('');
             lines.push('');
             lines.push('class QueueConsumer(Service):');
             lines.push('');
@@ -299,12 +439,45 @@
             lines.push('        self.logger.info(\'Received message: %s\', msg)');
             lines.push('        self.response.payload = {\'status\': \'processed\'}');
             lines.push('');
+            lines.push('    def process_message(self, msg):');
+            lines.push('        self.logger.info(\'Processing: %s\', msg)');
+            lines.push('        return {\'status\': \'ok\'}');
+            lines.push('');
+            lines.push('    def validate_message(self, msg):');
+            lines.push('        if not msg.get(\'id\'):');
+            lines.push('            raise ValueError(\'Missing message id\')');
+            lines.push('        return True');
+            lines.push('');
+            lines.push('    def acknowledge(self, msg_id):');
+            lines.push('        self.pubsub.acknowledge(msg_id)');
+            lines.push('');
+            lines.push('    def reject(self, msg_id, reason):');
+            lines.push('        self.pubsub.reject(msg_id, reason=reason)');
+            lines.push('');
+            lines.push('    def requeue(self, msg_id):');
+            lines.push('        self.pubsub.requeue(msg_id)');
+            lines.push('');
             lines.push('');
             lines.push('class ScheduledTask(Service):');
             lines.push('');
             lines.push('    def handle(self):');
             lines.push('        self.logger.info(\'Running scheduled task at %s\', self.time.utcnow())');
             lines.push('        self.invoke(\'myapp.services.cleanup\')');
+            lines.push('');
+            lines.push('    def run_cleanup(self):');
+            lines.push('        self.invoke(\'myapp.services.cleanup\')');
+            lines.push('');
+            lines.push('    def run_backup(self):');
+            lines.push('        self.invoke(\'myapp.services.backup\')');
+            lines.push('');
+            lines.push('    def run_report(self):');
+            lines.push('        self.invoke(\'myapp.services.generate_report\')');
+            lines.push('');
+            lines.push('    def run_sync(self):');
+            lines.push('        self.invoke(\'myapp.services.sync_external\')');
+            lines.push('');
+            lines.push('    def run_maintenance(self):');
+            lines.push('        self.invoke(\'myapp.services.maintenance\')');
             lines.push('');
             return lines.join('\n');
         },
@@ -706,6 +879,64 @@
             }
             container.setAttribute('data-value', symbols[0].line);
             console.log('[TRACE-SYMBOL] updateSymbols: done, default value=' + symbols[0].line);
+
+            instance.selectedClassLine = symbols[0].line;
+            this.updateMethods(instance, symbols[0].line);
+        },
+
+        updateMethods: function(instance, classLine) {
+            console.log('[TRACE-METHOD] updateMethods: starting, classLine=' + classLine);
+
+            if (!instance.methodDropdown || !window.ZatoIDESymbols) {
+                console.log('[TRACE-METHOD] updateMethods: missing methodDropdown or ZatoIDESymbols');
+                return;
+            }
+
+            var file = instance.files[instance.activeFile];
+            if (!file) {
+                console.log('[TRACE-METHOD] updateMethods: no active file');
+                return;
+            }
+
+            if (file.language !== 'python') {
+                instance.methodDropdown.style.display = 'none';
+                return;
+            }
+
+            var methods = ZatoIDESymbols.extractMethods(file.content, file.language, classLine);
+            console.log('[TRACE-METHOD] updateMethods: extracted ' + methods.length + ' methods');
+
+            var container = instance.methodDropdown;
+            var menu = container.querySelector('.zato-dropdown-menu');
+            var textSpan = container.querySelector('.zato-dropdown-text');
+
+            if (!menu) {
+                console.log('[TRACE-METHOD] updateMethods: no menu element found');
+                return;
+            }
+
+            menu.innerHTML = '';
+
+            if (methods.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = '';
+
+            for (var i = 0; i < methods.length; i++) {
+                var method = methods[i];
+                var item = document.createElement('div');
+                item.className = 'zato-dropdown-item';
+                item.setAttribute('data-value', method.line);
+                item.textContent = method.name;
+                menu.appendChild(item);
+            }
+
+            if (textSpan) {
+                textSpan.textContent = methods[0].name;
+            }
+            container.setAttribute('data-value', methods[0].line);
         },
 
         /**

@@ -149,3 +149,7 @@
 .zato-ide-search-popup.open {
     display: block;
 }
+
+.zato-ide-method-select {
+    margin-left: 4px;
+}
