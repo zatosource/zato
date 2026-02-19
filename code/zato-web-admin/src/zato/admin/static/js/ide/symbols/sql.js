@@ -38,6 +38,51 @@
 
             console.log('[TRACE-SYMBOL] sql.extract: returning ' + symbols.length + ' symbols');
             return symbols;
+        },
+
+        extractMethods: function(content, sectionLine) {
+            var methods = [];
+            var lines = content.split('\n');
+
+            var sectionStartIndex = sectionLine - 1;
+            if (sectionStartIndex < 0 || sectionStartIndex >= lines.length) {
+                return methods;
+            }
+
+            for (var i = sectionStartIndex + 1; i < lines.length; i++) {
+                var line = lines[i];
+                var trimmed = line.trim();
+
+                if (trimmed === '') {
+                    continue;
+                }
+
+                if (line.match(/^--\s*##\s*.+$/)) {
+                    break;
+                }
+
+                var createMatch = line.match(/^\s*CREATE\s+(TABLE|VIEW|PROCEDURE|FUNCTION|INDEX|TRIGGER)\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)/i);
+                if (createMatch) {
+                    methods.push({
+                        name: createMatch[2],
+                        line: i + 1,
+                        type: createMatch[1].toLowerCase()
+                    });
+                    continue;
+                }
+
+                var selectMatch = line.match(/^\s*(SELECT|INSERT|UPDATE|DELETE)\s+/i);
+                if (selectMatch) {
+                    var stmtType = selectMatch[1].toUpperCase();
+                    methods.push({
+                        name: stmtType + ' (line ' + (i + 1) + ')',
+                        line: i + 1,
+                        type: 'statement'
+                    });
+                }
+            }
+
+            return methods;
         }
 
     };

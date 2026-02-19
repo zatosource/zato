@@ -26,6 +26,40 @@
 
             console.log('[TRACE-SYMBOL] ini.extract: returning ' + symbols.length + ' symbols');
             return symbols;
+        },
+
+        extractMethods: function(content, sectionLine) {
+            var methods = [];
+            var lines = content.split('\n');
+
+            var sectionStartIndex = sectionLine - 1;
+            if (sectionStartIndex < 0 || sectionStartIndex >= lines.length) {
+                return methods;
+            }
+
+            for (var i = sectionStartIndex + 1; i < lines.length; i++) {
+                var line = lines[i];
+                var trimmed = line.trim();
+
+                if (trimmed === '' || trimmed.match(/^[;#]/)) {
+                    continue;
+                }
+
+                if (line.match(/^\[([^\]]+)\]/)) {
+                    break;
+                }
+
+                var keyMatch = line.match(/^(\w[\w\-]*)\s*=/);
+                if (keyMatch) {
+                    methods.push({
+                        name: keyMatch[1],
+                        line: i + 1,
+                        type: 'setting'
+                    });
+                }
+            }
+
+            return methods;
         }
 
     };

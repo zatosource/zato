@@ -30,6 +30,43 @@
 
             console.log('[TRACE-SYMBOL] yaml.extract: returning ' + symbols.length + ' symbols');
             return symbols;
+        },
+
+        extractMethods: function(content, keyLine) {
+            var methods = [];
+            var lines = content.split('\n');
+
+            var keyStartIndex = keyLine - 1;
+            if (keyStartIndex < 0 || keyStartIndex >= lines.length) {
+                return methods;
+            }
+
+            for (var i = keyStartIndex + 1; i < lines.length; i++) {
+                var line = lines[i];
+
+                if (line.match(/^#/)) {
+                    continue;
+                }
+
+                if (line.trim() === '') {
+                    continue;
+                }
+
+                if (line.match(/^(\w[\w\-]*)\s*:/)) {
+                    break;
+                }
+
+                var nestedMatch = line.match(/^(\s{2})(\w[\w\-]*)\s*:/);
+                if (nestedMatch) {
+                    methods.push({
+                        name: nestedMatch[2],
+                        line: i + 1,
+                        type: 'key'
+                    });
+                }
+            }
+
+            return methods;
         }
 
     };

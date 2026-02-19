@@ -26,6 +26,55 @@
 
             console.log('[TRACE-SYMBOL] json.extract: returning ' + symbols.length + ' symbols');
             return symbols;
+        },
+
+        extractMethods: function(content, keyLine) {
+            var methods = [];
+            var lines = content.split('\n');
+
+            var keyStartIndex = keyLine - 1;
+            if (keyStartIndex < 0 || keyStartIndex >= lines.length) {
+                return methods;
+            }
+
+            var braceDepth = 0;
+            var started = false;
+
+            for (var i = keyStartIndex; i < lines.length; i++) {
+                var line = lines[i];
+
+                for (var j = 0; j < line.length; j++) {
+                    var ch = line[j];
+                    if (ch === '{' || ch === '[') {
+                        if (started) {
+                            braceDepth++;
+                        }
+                        started = true;
+                    } else if (ch === '}' || ch === ']') {
+                        braceDepth--;
+                        if (braceDepth < 0) {
+                            return methods;
+                        }
+                    }
+                }
+
+                if (i === keyStartIndex) {
+                    continue;
+                }
+
+                if (braceDepth === 1) {
+                    var nestedMatch = line.match(/^\s{4}"(\w+)"\s*:/);
+                    if (nestedMatch) {
+                        methods.push({
+                            name: nestedMatch[1],
+                            line: i + 1,
+                            type: 'key'
+                        });
+                    }
+                }
+            }
+
+            return methods;
         }
 
     };
