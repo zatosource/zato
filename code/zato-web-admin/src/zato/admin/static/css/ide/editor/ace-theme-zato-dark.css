@@ -178,6 +178,7 @@
     background-color: rgba(244, 71, 71, 0.3);
     border-left: 3px solid #f44747;
     color: #b0b0b0;
+    cursor: pointer;
 }
 
 .ace-zato-dark .ace_gutter-cell.ace_error.ace_gutter-active-line {
@@ -189,6 +190,7 @@
     background-color: rgba(255, 204, 0, 0.2);
     border-left: 3px solid #ffcc00;
     color: #b0b0b0;
+    cursor: pointer;
 }
 
 .ace-zato-dark .ace_gutter-cell.ace_warning.ace_gutter-active-line {
@@ -200,8 +202,19 @@
     background-color: rgba(74, 158, 255, 0.2);
     border-left: 3px solid #4a9eff;
     color: #b0b0b0;
+    cursor: pointer;
 }
 
 .ace-zato-dark .ace_gutter-cell.ace_info.ace_gutter-active-line {
     color: #d4a656;
+}
+
+.ace-zato-dark .ace_tooltip {
+    background-color: #252526;
+    color: #d4d4d4;
+    border: 1px solid #454545;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }

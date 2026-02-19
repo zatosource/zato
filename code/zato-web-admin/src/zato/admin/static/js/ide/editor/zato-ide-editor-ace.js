@@ -153,11 +153,44 @@
             editor.renderer.$gutterLayer.gutterWidth = 50;
             editor.container.style.lineHeight = '1.32';
 
+            var gutterEl = editor.renderer.$gutter;
+            gutterEl.addEventListener('click', function(e) {
+                var cell = e.target.closest('.ace_gutter-cell');
+                if (!cell) {
+                    return;
+                }
+                if (!cell.classList.contains('ace_error') && !cell.classList.contains('ace_warning') && !cell.classList.contains('ace_info')) {
+                    return;
+                }
+                var row = parseInt(cell.textContent, 10) - 1;
+                var annotations = editor.session.getAnnotations();
+                var messages = [];
+                for (var i = 0; i < annotations.length; i++) {
+                    if (annotations[i].row === row) {
+                        messages.push(annotations[i].text);
+                    }
+                }
+                if (messages.length > 0) {
+                    var text = messages.join('\n');
+                    navigator.clipboard.writeText(text).then(function() {
+                        if (instance.tooltipInstance) {
+                            ZatoTooltip.showTemporary(instance.tooltipInstance, cell, 'Copied to clipboard', 1500);
+                        }
+                    });
+                }
+            });
+
             if (instance.content) {
                 editor.setValue(instance.content, -1);
             }
 
             instance.aceEditor = editor;
+
+            if (window.ZatoTooltip) {
+                instance.tooltipInstance = ZatoTooltip.create(editorContainer.id, {
+                    theme: 'dark'
+                });
+            }
 
             this.renderStatusbar(instance);
             this.updateStatusbar(instance);
