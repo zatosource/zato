@@ -18,6 +18,7 @@
         cameFromManageKeys: false,
 
         ideEnabled: true,
+        chatEnabled: true,
 
         init: function() {
             var self = this;

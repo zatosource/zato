@@ -166,16 +166,11 @@
                         }
                     },
                     onChange: function(value, text) {
-                        console.log('[TRACE-SYMBOL] dropdown.onChange: value="' + value + '" text="' + text + '"');
                         if (value) {
                             var line = parseInt(value, 10);
-                            console.log('[TRACE-SYMBOL] dropdown.onChange: parsed line=' + line + ' from value="' + value + '"');
-                            console.log('[TRACE-SYMBOL] dropdown.onChange: calling jumpToLine with line=' + line);
                             self.jumpToLine(instance, line);
                             instance.selectedClassLine = line;
                             self.updateMethods(instance, line);
-                        } else {
-                            console.log('[TRACE-SYMBOL] dropdown.onChange: value is empty, not jumping');
                         }
                     }
                 });
@@ -943,28 +938,22 @@
          * Updates the symbol dropdown with symbols from the current file.
          */
         updateSymbols: function(instance) {
-            console.log('[TRACE-SYMBOL] updateSymbols: starting');
             if (!instance.symbolDropdown || !window.ZatoIDESymbols) {
-                console.log('[TRACE-SYMBOL] updateSymbols: missing symbolDropdown or ZatoIDESymbols');
                 return;
             }
 
             var file = instance.files[instance.activeFile];
             if (!file) {
-                console.log('[TRACE-SYMBOL] updateSymbols: no active file');
                 return;
             }
 
-            console.log('[TRACE-SYMBOL] updateSymbols: activeFile=' + instance.activeFile + ' language=' + file.language + ' content.length=' + (file.content ? file.content.length : 0));
             var symbols = ZatoIDESymbols.extract(file.content, file.language);
             instance.cachedSymbols = symbols;
-            console.log('[TRACE-SYMBOL] updateSymbols: extracted ' + symbols.length + ' symbols');
             var container = instance.symbolDropdown;
             var menu = container.querySelector('.zato-dropdown-menu');
             var textSpan = container.querySelector('.zato-dropdown-text');
 
             if (!menu) {
-                console.log('[TRACE-SYMBOL] updateSymbols: no menu element found');
                 return;
             }
 
@@ -991,7 +980,6 @@
             }
 
             if (symbols.length === 0) {
-                console.log('[TRACE-SYMBOL] updateSymbols: no symbols, showing empty state');
                 var emptyItem = document.createElement('div');
                 emptyItem.className = 'zato-dropdown-item disabled';
                 emptyItem.textContent = '(no symbols)';
@@ -1002,10 +990,8 @@
                 return;
             }
 
-            console.log('[TRACE-SYMBOL] updateSymbols: populating menu with ' + symbols.length + ' items');
             for (var i = 0; i < symbols.length; i++) {
                 var symbol = symbols[i];
-                console.log('[TRACE-SYMBOL] updateSymbols: adding item[' + i + '] name="' + symbol.name + '" data-value=' + symbol.line);
                 var item = document.createElement('div');
                 item.className = 'zato-dropdown-item';
                 item.setAttribute('data-value', symbol.line);
@@ -1017,17 +1003,13 @@
                 textSpan.textContent = symbols[0].name;
             }
             container.setAttribute('data-value', symbols[0].line);
-            console.log('[TRACE-SYMBOL] updateSymbols: done, default value=' + symbols[0].line);
 
             instance.selectedClassLine = symbols[0].line;
             this.updateMethods(instance, symbols[0].line);
         },
 
         syncDropdownsToLine: function(instance, line) {
-            console.log('[SYNC] === syncDropdownsToLine called, cursorLine=' + line + ' ===');
-
             if (!instance.symbolDropdown) {
-                console.log('[SYNC] no symbolDropdown, returning');
                 return;
             }
 
@@ -1036,13 +1018,7 @@
             var symbolContainer = instance.symbolDropdown;
             var symbolTextSpan = symbolContainer.querySelector('.zato-dropdown-text');
 
-            console.log('[SYNC] cachedSymbols.length=' + cachedSymbols.length + ', cachedMethods.length=' + cachedMethods.length);
-            for (var s = 0; s < cachedSymbols.length; s++) {
-                console.log('[SYNC]   symbol[' + s + ']: name="' + cachedSymbols[s].name + '" line=' + cachedSymbols[s].line);
-            }
-
             if (cachedSymbols.length === 0) {
-                console.log('[SYNC] no cached symbols, returning');
                 return;
             }
 
@@ -1051,10 +1027,7 @@
             var firstSymbolLine = cachedSymbols[0].line;
             var lastSymbolLine = cachedSymbols[cachedSymbols.length - 1].line;
 
-            console.log('[SYNC] lineCount=' + lineCount + ', firstSymbolLine=' + firstSymbolLine + ', lastSymbolLine=' + lastSymbolLine);
-
             if (line < firstSymbolLine) {
-                console.log('[SYNC] cursor line ' + line + ' < firstSymbolLine ' + firstSymbolLine + ' -> showing (top)');
                 if (symbolTextSpan) {
                     symbolTextSpan.textContent = '(top)';
                 }
@@ -1079,26 +1052,18 @@
                 }
             }
 
-            console.log('[SYNC] found symbol: name="' + (symbol ? symbol.name : 'null') + '" line=' + (symbol ? symbol.line : 'null') + ' symbolIndex=' + symbolIndex);
-            console.log('[SYNC] nextSymbolLine=' + nextSymbolLine);
-
             var symbolEnd = symbol ? this.estimateSymbolEnd(file.content, symbol.line) : null;
-            console.log('[SYNC] symbolEnd (estimated)=' + symbolEnd);
 
             var isOutsideSymbol = false;
             if (symbol && symbolEnd !== null && line >= symbolEnd) {
                 isOutsideSymbol = true;
-                console.log('[SYNC] cursor line ' + line + ' >= symbolEnd ' + symbolEnd + ' -> isOutsideSymbol=true');
             }
 
             if (symbol && nextSymbolLine === null && line > lastSymbolLine) {
-                console.log('[SYNC] checking if cursor is past last symbol content...');
                 var lastSymbolMethods = ZatoIDESymbols.extractMethods(file.content, file.language, lastSymbolLine);
                 var lastMethodLine = lastSymbolMethods.length > 0 ? lastSymbolMethods[lastSymbolMethods.length - 1].line : lastSymbolLine;
                 var estimatedEnd = this.estimateSymbolEnd(file.content, lastMethodLine);
-                console.log('[SYNC] lastMethodLine=' + lastMethodLine + ', estimatedEnd=' + estimatedEnd);
                 if (line > estimatedEnd) {
-                    console.log('[SYNC] cursor line ' + line + ' > estimatedEnd ' + estimatedEnd + ' -> showing (bottom)');
                     if (symbolTextSpan) {
                         symbolTextSpan.textContent = '(bottom)';
                     }
@@ -1112,7 +1077,6 @@
             }
 
             if (isOutsideSymbol) {
-                console.log('[SYNC] cursor is between symbols, keeping last symbol visible, hiding methods');
                 if (instance.methodDropdown) {
                     instance.methodDropdown.style.display = 'none';
                 }
@@ -1120,22 +1084,15 @@
             }
 
             if (instance.selectedClassLine !== symbol.line) {
-                console.log('[SYNC] selectedClassLine changed from ' + instance.selectedClassLine + ' to ' + symbol.line + ', updating methods');
                 instance.selectedClassLine = symbol.line;
                 this.updateMethods(instance, symbol.line);
                 cachedMethods = instance.cachedMethods || [];
             }
 
-            console.log('[SYNC] setting symbol dropdown text to "' + symbol.name + '"');
             if (symbolTextSpan) {
                 symbolTextSpan.textContent = symbol.name;
             }
             symbolContainer.setAttribute('data-value', symbol.line);
-
-            console.log('[SYNC] now checking methods, cachedMethods.length=' + cachedMethods.length);
-            for (var m = 0; m < cachedMethods.length; m++) {
-                console.log('[SYNC]   method[' + m + ']: name="' + cachedMethods[m].name + '" line=' + cachedMethods[m].line);
-            }
 
             var method = null;
             var methodIndex = -1;
@@ -1150,21 +1107,14 @@
                 }
             }
 
-            console.log('[SYNC] found method: name="' + (method ? method.name : 'null') + '" line=' + (method ? method.line : 'null') + ' methodIndex=' + methodIndex);
-            console.log('[SYNC] nextMethodLine=' + nextMethodLine);
-
             var isOutsideMethod = false;
             if (method) {
                 var methodEnd = this.estimateSymbolEnd(file.content, method.line);
-                console.log('[SYNC] methodEnd (estimated)=' + methodEnd);
                 if (line >= methodEnd) {
                     isOutsideMethod = true;
-                    console.log('[SYNC] cursor line ' + line + ' >= methodEnd ' + methodEnd + ' -> isOutsideMethod=true');
                 }
             } else {
-                console.log('[SYNC] no method found at or before cursor line');
                 if (cachedMethods.length > 0 && line < cachedMethods[0].line) {
-                    console.log('[SYNC] cursor is before first method (line ' + cachedMethods[0].line + ')');
                     isOutsideMethod = true;
                 }
             }
@@ -1174,19 +1124,14 @@
                 var methodTextSpan = methodContainer.querySelector('.zato-dropdown-text');
 
                 if (!method) {
-                    console.log('[SYNC] no method found, keeping last method visible');
                 } else if (isOutsideMethod) {
-                    console.log('[SYNC] outside method, keeping last method visible');
                 } else {
-                    console.log('[SYNC] inside method, showing plain name');
                     if (methodTextSpan) {
                         methodTextSpan.textContent = method.name;
                     }
                     methodContainer.setAttribute('data-value', method.line);
                 }
             }
-
-            console.log('[SYNC] === syncDropdownsToLine complete ===');
         },
 
         estimateSymbolEnd: function(content, startLine) {
@@ -1218,29 +1163,23 @@
         },
 
         updateMethods: function(instance, classLine) {
-            console.log('[TRACE-METHOD] updateMethods: starting, classLine=' + classLine);
-
             if (!instance.methodDropdown || !window.ZatoIDESymbols) {
-                console.log('[TRACE-METHOD] updateMethods: missing methodDropdown or ZatoIDESymbols');
                 return;
             }
 
             var file = instance.files[instance.activeFile];
             if (!file) {
-                console.log('[TRACE-METHOD] updateMethods: no active file');
                 return;
             }
 
             var methods = ZatoIDESymbols.extractMethods(file.content, file.language, classLine);
             instance.cachedMethods = methods;
-            console.log('[TRACE-METHOD] updateMethods: extracted ' + methods.length + ' methods');
 
             var container = instance.methodDropdown;
             var menu = container.querySelector('.zato-dropdown-menu');
             var textSpan = container.querySelector('.zato-dropdown-text');
 
             if (!menu) {
-                console.log('[TRACE-METHOD] updateMethods: no menu element found');
                 return;
             }
 
@@ -1272,17 +1211,12 @@
          * Jumps to a specific line in the editor.
          */
         jumpToLine: function(instance, line) {
-            console.log('[TRACE-SYMBOL] jumpToLine: called with line=' + line);
             if (!instance.codeEditor) {
-                console.log('[TRACE-SYMBOL] jumpToLine: no codeEditor, aborting');
                 return;
             }
 
             var targetLine = Math.max(1, line - 2);
-            console.log('[TRACE-SYMBOL] jumpToLine: computed targetLine=' + targetLine + ' (line=' + line + ' - 4)');
-            console.log('[TRACE-SYMBOL] jumpToLine: calling ZatoIDEEditor.scrollToLine with targetLine=' + targetLine);
             ZatoIDEEditor.scrollToLine(instance.codeEditor, targetLine);
-            console.log('[TRACE-SYMBOL] jumpToLine: scrollToLine called');
         },
 
         loadSearchIcon: function(instance) {
