@@ -55,9 +55,12 @@
 }
 
 .zato-ide-editor-line {
+    display: block;
     height: calc(1em * 1.5);
     line-height: 1.5;
     min-height: calc(1em * 1.5);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .zato-ide-editor-textarea {
@@ -85,7 +88,7 @@
 }
 
 .zato-ide-editor-textarea::selection {
-    background: rgba(74, 158, 255, 0.3);
+    background: transparent;
 }
 
 .zato-ide-editor-cursor {
@@ -121,6 +124,24 @@
     pointer-events: none;
     overflow: hidden;
     z-index: 1;
+}
+
+.zato-ide-editor-selection-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding-top: 8px;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.zato-ide-editor-selection-line {
+    position: absolute;
+    left: 0;
+    right: 0;
 }
 
 .zato-ide-editor-statusbar {

@@ -122,10 +122,14 @@
             var lineHighlight = document.createElement('div');
             lineHighlight.className = 'zato-ide-editor-line-highlight';
 
+            var selectionOverlay = document.createElement('div');
+            selectionOverlay.className = 'zato-ide-editor-selection-overlay';
+
             var statusbar = document.createElement('div');
             statusbar.className = 'zato-ide-editor-statusbar';
 
             contentWrapper.appendChild(lineHighlight);
+            contentWrapper.appendChild(selectionOverlay);
             contentWrapper.appendChild(highlightLayer);
             contentWrapper.appendChild(codeEl);
             contentWrapper.appendChild(textarea);
@@ -146,6 +150,7 @@
                 cursor: cursorEl,
                 highlightLayer: highlightLayer,
                 lineHighlight: lineHighlight,
+                selectionOverlay: selectionOverlay,
                 statusbar: statusbar
             };
 
@@ -190,10 +195,12 @@
 
             textarea.addEventListener('click', function() {
                 self.updateCursorPosition(instance);
+                self.updateSelectionOverlay(instance);
             });
 
             textarea.addEventListener('keyup', function() {
                 self.updateCursorPosition(instance);
+                self.updateSelectionOverlay(instance);
             });
 
             textarea.addEventListener('focus', function() {
@@ -206,10 +213,28 @@
                 instance.focused = false;
                 self.stopCursorBlink(instance);
                 editor.classList.remove('focused');
+                self.clearSelectionOverlay(instance);
             });
 
             textarea.addEventListener('scroll', function() {
                 self.syncScroll(instance);
+            });
+
+            textarea.addEventListener('select', function() {
+                console.log('[SELECTION] select event fired');
+                self.updateSelectionOverlay(instance);
+            });
+
+            textarea.addEventListener('mouseup', function() {
+                console.log('[SELECTION] mouseup event fired');
+                self.updateSelectionOverlay(instance);
+            });
+
+            textarea.addEventListener('mousemove', function(e) {
+                if (e.buttons === 1) {
+                    console.log('[SELECTION] mousemove with button down');
+                    self.updateSelectionOverlay(instance);
+                }
             });
 
             editor.addEventListener('click', function() {
@@ -329,12 +354,14 @@
             var gutter = instance.elements.gutter;
             var highlightLayer = instance.elements.highlightLayer;
             var lineHighlight = instance.elements.lineHighlight;
+            var selectionOverlay = instance.elements.selectionOverlay;
 
             code.scrollTop = textarea.scrollTop;
             code.scrollLeft = textarea.scrollLeft;
             gutter.scrollTop = textarea.scrollTop;
             highlightLayer.scrollTop = textarea.scrollTop;
             highlightLayer.scrollLeft = textarea.scrollLeft;
+            selectionOverlay.scrollTop = textarea.scrollTop;
 
             instance.scrollTop = textarea.scrollTop;
             instance.scrollLeft = textarea.scrollLeft;
@@ -423,6 +450,60 @@
             this.stopCursorBlink(instance);
             instance.container.innerHTML = '';
             delete this.instances[instance.id];
+        },
+
+        /**
+         * Updates the selection overlay to show full-width line backgrounds.
+         */
+        updateSelectionOverlay: function(instance) {
+            var textarea = instance.elements.textarea;
+            var overlay = instance.elements.selectionOverlay;
+            var code = instance.elements.code;
+            if (!textarea || !overlay || !code) {
+                return;
+            }
+
+            var start = textarea.selectionStart;
+            var end = textarea.selectionEnd;
+
+            if (start === end) {
+                overlay.innerHTML = '';
+                return;
+            }
+
+            var value = textarea.value;
+
+            var textBefore = value.substring(0, start);
+            var startLine = textBefore.split('\n').length;
+
+            var textToEnd = value.substring(0, end);
+            var endLine = textToEnd.split('\n').length;
+
+            var lineElements = code.querySelectorAll('.zato-ide-editor-line');
+            if (lineElements.length === 0) {
+                return;
+            }
+
+            var firstLineEl = lineElements[0];
+            var lineHeightPx = firstLineEl.offsetHeight;
+
+            var html = '';
+            for (var i = startLine; i <= endLine; i++) {
+                var top = (i - 1) * lineHeightPx;
+                html += '<div class="zato-ide-editor-selection-line" style="top:' + top + 'px;height:' + lineHeightPx + 'px;"></div>';
+            }
+
+            overlay.innerHTML = html;
+        },
+
+        /**
+         * Clears the selection overlay.
+         */
+        clearSelectionOverlay: function(instance) {
+            var overlay = instance.elements.selectionOverlay;
+            if (overlay) {
+                overlay.innerHTML = '';
+            }
         }
     };
 

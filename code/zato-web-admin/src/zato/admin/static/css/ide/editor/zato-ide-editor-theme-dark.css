@@ -41,6 +41,10 @@
     background: var(--zato-ide-editor-line-highlight);
 }
 
+.zato-ide-editor-theme-dark .zato-ide-editor-selection-line {
+    background: var(--zato-ide-editor-selection);
+}
+
 .zato-ide-editor-theme-dark .zato-ide-editor-statusbar {
     background: var(--zato-ide-editor-statusbar-bg);
     color: var(--zato-ide-editor-statusbar-text);
