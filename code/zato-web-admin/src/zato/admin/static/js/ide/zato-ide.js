@@ -1024,57 +1024,194 @@
         },
 
         syncDropdownsToLine: function(instance, line) {
+            console.log('[SYNC] === syncDropdownsToLine called, cursorLine=' + line + ' ===');
+
             if (!instance.symbolDropdown) {
+                console.log('[SYNC] no symbolDropdown, returning');
                 return;
             }
 
             var cachedSymbols = instance.cachedSymbols || [];
             var cachedMethods = instance.cachedMethods || [];
+            var symbolContainer = instance.symbolDropdown;
+            var symbolTextSpan = symbolContainer.querySelector('.zato-dropdown-text');
+
+            console.log('[SYNC] cachedSymbols.length=' + cachedSymbols.length + ', cachedMethods.length=' + cachedMethods.length);
+            for (var s = 0; s < cachedSymbols.length; s++) {
+                console.log('[SYNC]   symbol[' + s + ']: name="' + cachedSymbols[s].name + '" line=' + cachedSymbols[s].line);
+            }
+
+            if (cachedSymbols.length === 0) {
+                console.log('[SYNC] no cached symbols, returning');
+                return;
+            }
+
+            var file = instance.files[instance.activeFile];
+            var lineCount = file && file.content ? file.content.split('\n').length : 1;
+            var firstSymbolLine = cachedSymbols[0].line;
+            var lastSymbolLine = cachedSymbols[cachedSymbols.length - 1].line;
+
+            console.log('[SYNC] lineCount=' + lineCount + ', firstSymbolLine=' + firstSymbolLine + ', lastSymbolLine=' + lastSymbolLine);
+
+            if (line < firstSymbolLine) {
+                console.log('[SYNC] cursor line ' + line + ' < firstSymbolLine ' + firstSymbolLine + ' -> showing (top)');
+                if (symbolTextSpan) {
+                    symbolTextSpan.textContent = '(top)';
+                }
+                symbolContainer.setAttribute('data-value', '1');
+                instance.selectedClassLine = null;
+                if (instance.methodDropdown) {
+                    instance.methodDropdown.style.display = 'none';
+                }
+                return;
+            }
 
             var symbol = null;
+            var symbolIndex = -1;
+            var nextSymbolLine = null;
             for (var i = 0; i < cachedSymbols.length; i++) {
                 if (cachedSymbols[i].line <= line) {
                     symbol = cachedSymbols[i];
+                    symbolIndex = i;
+                    nextSymbolLine = (i + 1 < cachedSymbols.length) ? cachedSymbols[i + 1].line : null;
                 } else {
                     break;
                 }
             }
 
-            if (!symbol) {
+            console.log('[SYNC] found symbol: name="' + (symbol ? symbol.name : 'null') + '" line=' + (symbol ? symbol.line : 'null') + ' symbolIndex=' + symbolIndex);
+            console.log('[SYNC] nextSymbolLine=' + nextSymbolLine);
+
+            var symbolEnd = symbol ? this.estimateSymbolEnd(file.content, symbol.line) : null;
+            console.log('[SYNC] symbolEnd (estimated)=' + symbolEnd);
+
+            var isOutsideSymbol = false;
+            if (symbol && symbolEnd !== null && line >= symbolEnd) {
+                isOutsideSymbol = true;
+                console.log('[SYNC] cursor line ' + line + ' >= symbolEnd ' + symbolEnd + ' -> isOutsideSymbol=true');
+            }
+
+            if (symbol && nextSymbolLine === null && line > lastSymbolLine) {
+                console.log('[SYNC] checking if cursor is past last symbol content...');
+                var lastSymbolMethods = ZatoIDESymbols.extractMethods(file.content, file.language, lastSymbolLine);
+                var lastMethodLine = lastSymbolMethods.length > 0 ? lastSymbolMethods[lastSymbolMethods.length - 1].line : lastSymbolLine;
+                var estimatedEnd = this.estimateSymbolEnd(file.content, lastMethodLine);
+                console.log('[SYNC] lastMethodLine=' + lastMethodLine + ', estimatedEnd=' + estimatedEnd);
+                if (line > estimatedEnd) {
+                    console.log('[SYNC] cursor line ' + line + ' > estimatedEnd ' + estimatedEnd + ' -> showing (bottom)');
+                    if (symbolTextSpan) {
+                        symbolTextSpan.textContent = '(bottom)';
+                    }
+                    symbolContainer.setAttribute('data-value', lineCount);
+                    instance.selectedClassLine = null;
+                    if (instance.methodDropdown) {
+                        instance.methodDropdown.style.display = 'none';
+                    }
+                    return;
+                }
+            }
+
+            if (isOutsideSymbol) {
+                console.log('[SYNC] cursor is between symbols, keeping last symbol visible');
                 return;
             }
 
             if (instance.selectedClassLine !== symbol.line) {
+                console.log('[SYNC] selectedClassLine changed from ' + instance.selectedClassLine + ' to ' + symbol.line + ', updating methods');
                 instance.selectedClassLine = symbol.line;
-
-                var symbolContainer = instance.symbolDropdown;
-                var symbolTextSpan = symbolContainer.querySelector('.zato-dropdown-text');
-                if (symbolTextSpan) {
-                    symbolTextSpan.textContent = symbol.name;
-                }
-                symbolContainer.setAttribute('data-value', symbol.line);
-
                 this.updateMethods(instance, symbol.line);
                 cachedMethods = instance.cachedMethods || [];
             }
 
+            console.log('[SYNC] setting symbol dropdown text to "' + symbol.name + '"');
+            if (symbolTextSpan) {
+                symbolTextSpan.textContent = symbol.name;
+            }
+            symbolContainer.setAttribute('data-value', symbol.line);
+
+            console.log('[SYNC] now checking methods, cachedMethods.length=' + cachedMethods.length);
+            for (var m = 0; m < cachedMethods.length; m++) {
+                console.log('[SYNC]   method[' + m + ']: name="' + cachedMethods[m].name + '" line=' + cachedMethods[m].line);
+            }
+
             var method = null;
+            var methodIndex = -1;
+            var nextMethodLine = null;
             for (var j = 0; j < cachedMethods.length; j++) {
                 if (cachedMethods[j].line <= line) {
                     method = cachedMethods[j];
+                    methodIndex = j;
+                    nextMethodLine = (j + 1 < cachedMethods.length) ? cachedMethods[j + 1].line : null;
                 } else {
                     break;
                 }
             }
 
-            if (method && instance.methodDropdown) {
+            console.log('[SYNC] found method: name="' + (method ? method.name : 'null') + '" line=' + (method ? method.line : 'null') + ' methodIndex=' + methodIndex);
+            console.log('[SYNC] nextMethodLine=' + nextMethodLine);
+
+            var isOutsideMethod = false;
+            if (method) {
+                var methodEnd = this.estimateSymbolEnd(file.content, method.line);
+                console.log('[SYNC] methodEnd (estimated)=' + methodEnd);
+                if (line >= methodEnd) {
+                    isOutsideMethod = true;
+                    console.log('[SYNC] cursor line ' + line + ' >= methodEnd ' + methodEnd + ' -> isOutsideMethod=true');
+                }
+            } else {
+                console.log('[SYNC] no method found at or before cursor line');
+                if (cachedMethods.length > 0 && line < cachedMethods[0].line) {
+                    console.log('[SYNC] cursor is before first method (line ' + cachedMethods[0].line + ')');
+                    isOutsideMethod = true;
+                }
+            }
+
+            if (instance.methodDropdown) {
                 var methodContainer = instance.methodDropdown;
                 var methodTextSpan = methodContainer.querySelector('.zato-dropdown-text');
-                if (methodTextSpan) {
-                    methodTextSpan.textContent = method.name;
+
+                if (!method) {
+                    console.log('[SYNC] no method found, keeping last method visible');
+                } else if (isOutsideMethod) {
+                    console.log('[SYNC] outside method, keeping last method visible');
+                } else {
+                    console.log('[SYNC] inside method, showing plain name');
+                    if (methodTextSpan) {
+                        methodTextSpan.textContent = method.name;
+                    }
+                    methodContainer.setAttribute('data-value', method.line);
                 }
-                methodContainer.setAttribute('data-value', method.line);
             }
+
+            console.log('[SYNC] === syncDropdownsToLine complete ===');
+        },
+
+        estimateSymbolEnd: function(content, startLine) {
+            var lines = content.split('\n');
+            var startIndex = startLine - 1;
+            if (startIndex < 0 || startIndex >= lines.length) {
+                return startLine;
+            }
+
+            var baseIndent = this.getIndent(lines[startIndex]);
+
+            for (var i = startIndex + 1; i < lines.length; i++) {
+                var line = lines[i];
+                var trimmed = line.trim();
+                if (trimmed === '') {
+                    continue;
+                }
+                var currentIndent = this.getIndent(line);
+                if (currentIndent <= baseIndent) {
+                    return i;
+                }
+            }
+            return lines.length;
+        },
+
+        getIndent: function(line) {
+            var match = line.match(/^(\s*)/);
+            return match ? match[1].length : 0;
         },
 
         updateMethods: function(instance, classLine) {
