@@ -53,33 +53,21 @@
         },
 
         buildTabsHtml: function(tabs, activeTabId) {
-            var html = '<div class="zato-tabs-theme-dark ai-chat-tabs" id="ai-chat-tabs">';
-            html += '<div class="zato-tabs-container">';
-
-            for (var i = 0; i < tabs.length; i++) {
-                var tab = tabs[i];
-                var activeClass = tab.id === activeTabId ? ' active' : '';
-                var pinnedClass = tab.pinned ? ' pinned' : '';
-                var lockedClass = tab.locked ? ' locked' : '';
-                var isDraggable = !tab.pinned && !tab.locked;
-                html += '<div class="zato-tab ai-chat-tab' + activeClass + pinnedClass + lockedClass + '" data-tab-id="' + tab.id + '" draggable="' + isDraggable + '">';
-                if (tab.pinned) {
-                    html += '<span class="zato-tab-pin-icon ai-chat-tab-pin-icon">' + AIChatIcons.get('pin', 14) + '</span>';
+            var instance = {
+                containerId: 'ai-chat',
+                tabs: tabs,
+                activeTabId: activeTabId
+            };
+            var options = {
+                theme: 'dark',
+                containerClass: 'ai-chat-tabs',
+                tabClass: 'ai-chat-tab',
+                addButtonTitle: 'New chat',
+                getIcons: function(name, size) {
+                    return AIChatIcons.get(name, size);
                 }
-                if (tab.locked) {
-                    html += '<span class="zato-tab-lock-icon ai-chat-tab-lock-icon">' + AIChatIcons.get('lock', 12) + '</span>';
-                }
-                html += '<span class="ai-chat-tab-title">' + this.escapeHtml(tab.title) + '</span>';
-                if (tabs.length > 1 && !tab.locked && !tab.pinned) {
-                    html += '<span class="zato-tab-close ai-chat-tab-close" data-tab-id="' + tab.id + '">✕</span>';
-                }
-                html += '</div>';
-            }
-
-            html += '<button class="zato-tab-add ai-chat-tab-add" id="ai-chat-tab-add" title="New chat">+</button>';
-            html += '</div>';
-            html += '</div>';
-            return html;
+            };
+            return ZatoTabsRenderer.buildTabsHtml(instance, options);
         },
 
         buildBodyHtml: function(tabs, activeTabId, needsConfig, configMode, selectedProvider, cameFromChat, hadKeyOnEntry) {
@@ -377,10 +365,8 @@
         },
 
         buildTokenCountersHtml: function(tab) {
-            console.log('[TOKEN-TRACE] buildTokenCountersHtml called for tabId=' + tab.id);
             var tokensIn = AIChatTabState.getTokensIn(tab.id);
             var tokensOut = AIChatTabState.getTokensOut(tab.id);
-            console.log('[TOKEN-TRACE] buildTokenCountersHtml: tokensIn=' + tokensIn + ', tokensOut=' + tokensOut);
             var html = '<span class="ai-chat-token-counters" data-tab-id="' + tab.id + '">';
             html += '<span class="ai-chat-token-out">Tok out: ' + AIChatTabState.humanizeNumber(tokensOut) + '</span>';
             html += '<span class="ai-chat-token-in">Tok in: ' + AIChatTabState.humanizeNumber(tokensIn) + '</span>';
@@ -389,74 +375,14 @@
         },
 
         buildContextMenuHtml: function(tabId, tabs) {
-            var html = '';
-            var tab = AIChatTabs.getTabById(tabs, tabId);
-            var isLocked = AIChatTabs.isLocked(tabs, tabId);
-            var isPinned = AIChatTabs.isPinned(tabs, tabId);
-            var closableToRight = AIChatTabs.countClosableToRight(tabs, tabId);
-            var closableOthers = AIChatTabs.countClosableOthers(tabs, tabId);
-            var hasMessages = tab && tab.messages && tab.messages.length > 0;
-            var hasClosedTabs = AIChatTabs.hasClosedTabs();
-            var canClose = tabs.length > 1 && !isLocked && !isPinned;
-
-            html += '<div class="ai-chat-context-menu-item" data-action="rename" data-tab-id="' + tabId + '">Rename tab</div>';
-            html += '<div class="ai-chat-context-menu-item" data-action="duplicate" data-tab-id="' + tabId + '">Duplicate tab</div>';
-            html += '<div class="ai-chat-context-menu-separator"></div>';
-
-            html += '<div class="ai-chat-context-menu-item" data-action="pin" data-tab-id="' + tabId + '">' + (isPinned ? 'Unpin tab' : 'Pin tab') + '</div>';
-            html += '<div class="ai-chat-context-menu-item" data-action="lock" data-tab-id="' + tabId + '">' + (isLocked ? 'Unlock tab' : 'Lock tab') + '</div>';
-            html += '<div class="ai-chat-context-menu-separator"></div>';
-
-            if (canClose) {
-                html += '<div class="ai-chat-context-menu-item" data-action="close" data-tab-id="' + tabId + '">Close tab</div>';
-            } else {
-                html += '<div class="ai-chat-context-menu-item disabled">Close tab</div>';
-            }
-
-            if (closableToRight > 0) {
-                html += '<div class="ai-chat-context-menu-item" data-action="close-to-right" data-tab-id="' + tabId + '">Close tabs to the right</div>';
-            } else {
-                html += '<div class="ai-chat-context-menu-item disabled">Close tabs to the right</div>';
-            }
-
-            if (closableOthers > 0) {
-                html += '<div class="ai-chat-context-menu-item" data-action="close-others" data-tab-id="' + tabId + '">Close other tabs</div>';
-            } else {
-                html += '<div class="ai-chat-context-menu-item disabled">Close other tabs</div>';
-            }
-
-            html += '<div class="ai-chat-context-menu-item" data-action="close-all" data-tab-id="' + tabId + '">Close all tabs</div>';
-
-            html += '<div class="ai-chat-context-menu-separator"></div>';
-
-            if (hasClosedTabs) {
-                html += '<div class="ai-chat-context-menu-item" data-action="reopen" data-tab-id="' + tabId + '">Reopen closed tab</div>';
-            } else {
-                html += '<div class="ai-chat-context-menu-item disabled">Reopen closed tab</div>';
-            }
-
-            var canUndoClear = AIChatTabs.canUndoClear(tabId);
-
-            if (hasMessages) {
-                html += '<div class="ai-chat-context-menu-item" data-action="clear" data-tab-id="' + tabId + '">Clear all messages</div>';
-            } else if (canUndoClear) {
-                html += '<div class="ai-chat-context-menu-item" data-action="undo-clear" data-tab-id="' + tabId + '">Undo clear messages</div>';
-            } else {
-                html += '<div class="ai-chat-context-menu-item disabled">Clear all messages</div>';
-            }
-
-            html += '<div class="ai-chat-context-menu-separator"></div>';
-
-            if (hasMessages) {
-                html += '<div class="ai-chat-context-menu-item" data-action="copy" data-tab-id="' + tabId + '">Copy to clipboard</div>';
-                html += '<div class="ai-chat-context-menu-item" data-action="export-md" data-tab-id="' + tabId + '">Export as markdown</div>';
-                html += '<div class="ai-chat-context-menu-item" data-action="export-json" data-tab-id="' + tabId + '">Export as JSON</div>';
-            } else {
-                html += '<div class="ai-chat-context-menu-item disabled">Copy to clipboard</div>';
-                html += '<div class="ai-chat-context-menu-item disabled">Export as markdown</div>';
-                html += '<div class="ai-chat-context-menu-item disabled">Export as JSON</div>';
-            }
-
+            var instance = {
+                tabs: tabs,
+                closedTabsHistory: AIChatTabs.closedTabsHistory,
+                clearedMessagesBuffer: AIChatTabs.clearedMessagesBuffer
+            };
+            var html = ZatoTabsRenderer.buildContextMenuHtml(instance, tabId, {});
+            html = html.replace(/zato-tabs-context-menu-item/g, 'ai-chat-context-menu-item');
+            html = html.replace(/zato-tabs-context-menu-separator/g, 'ai-chat-context-menu-separator');
             return html;
         }
     };

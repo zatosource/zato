@@ -26,6 +26,44 @@
     border-bottom-color: #4a9eff;
 }
 
+.zato-tabs-theme-dark .zato-tab-close-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.zato-tabs-theme-dark .zato-tab-close-wrapper .zato-tab-modified-dot {
+    display: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #666;
+}
+
+.zato-tabs-theme-dark .zato-tab-close-wrapper .zato-tab-close {
+    display: block;
+}
+
+.zato-tabs-theme-dark .zato-tab-close-wrapper.modified .zato-tab-modified-dot {
+    display: block;
+}
+
+.zato-tabs-theme-dark .zato-tab-close-wrapper.modified .zato-tab-close {
+    display: none;
+}
+
+.zato-tabs-theme-dark .zato-tab-close-wrapper.modified:hover .zato-tab-modified-dot {
+    display: none;
+}
+
+.zato-tabs-theme-dark .zato-tab-close-wrapper.modified:hover .zato-tab-close {
+    display: block;
+}
+
 .zato-tabs-theme-dark .zato-tab-close {
     color: #666;
 }
@@ -62,3 +100,167 @@
 .zato-tabs-theme-dark .zato-tab-add:hover {
     text-shadow: none;
 }
+
+.zato-tabs-context-menu {
+    position: fixed;
+    background: linear-gradient(145deg, #2a2a2a 0%, #1f1f1f 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    min-width: 120px;
+    padding: 4px 0;
+}
+
+.zato-tabs-context-menu-item {
+    padding: 8px 16px;
+    color: #e0e0e0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.zato-tabs-context-menu-item:hover {
+    background: rgba(74, 158, 255, 0.2);
+    color: #fff;
+}
+
+.zato-tabs-context-menu-item.disabled {
+    color: #666;
+    cursor: default;
+}
+
+.zato-tabs-context-menu-item.disabled:hover {
+    background: transparent;
+    color: #666;
+}
+
+.zato-tabs-context-menu-separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 4px 8px;
+}
+
+.zato-tabs-save-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zato-tabs-save-dialog {
+    position: fixed;
+    background: #252526;
+    border: 1px solid #454545;
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    min-width: 400px;
+    max-width: 500px;
+    min-height: 120px;
+    overflow: hidden;
+}
+
+.zato-tabs-save-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #2d2d2d;
+    cursor: move;
+    user-select: none;
+}
+
+.zato-tabs-save-dialog-title {
+    color: #e0e0e0;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.zato-tabs-save-dialog-close {
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+    outline: none;
+}
+
+.zato-tabs-save-dialog-close:hover {
+    color: #fff;
+    background: transparent;
+}
+
+.zato-tabs-save-dialog-close:focus {
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+.zato-tabs-save-dialog-close svg {
+    width: 16px;
+    height: 16px;
+}
+
+.zato-tabs-save-dialog-content {
+    padding: 16px 20px;
+}
+
+.zato-tabs-save-dialog-message {
+    color: #999;
+    font-size: 13px;
+    margin-bottom: 20px;
+}
+
+.zato-tabs-save-dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.zato-tabs-save-dialog-btn {
+    padding: 6px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    transition: background 0.15s ease;
+    text-shadow: none;
+    box-shadow: none;
+    outline: none;
+}
+
+.zato-tabs-save-dialog-btn:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.zato-tabs-save-dialog-btn-default {
+    background: #0e639c;
+    color: #fff;
+}
+
+.zato-tabs-save-dialog-btn-default:hover {
+    background: #1177bb;
+}
+
+.zato-tabs-save-dialog-btn-secondary {
+    background: #3c3c3c;
+    color: #e0e0e0;
+    border: 1px solid #555;
+}
+
+.zato-tabs-save-dialog-btn-secondary:hover {
+    background: #4a4a4a;
+}
+

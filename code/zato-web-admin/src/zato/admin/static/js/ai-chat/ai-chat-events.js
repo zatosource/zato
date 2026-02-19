@@ -3,6 +3,70 @@
 
     var AIChatEvents = {
 
+        toggleIDE: function(core) {
+            console.log('[F9] toggleIDE: ideEnabled=' + core.ideEnabled + ' -> ' + !core.ideEnabled);
+            if (!window.AIChatIDEIntegration) {
+                console.log('[F9] toggleIDE: no AIChatIDEIntegration, returning');
+                return;
+            }
+            core.ideEnabled = !core.ideEnabled;
+            core.chatEnabled = true;
+            AIChatIDEIntegration.setEnabled(core.ideEnabled);
+            AIChatIDEIntegration.setChatEnabled(core.chatEnabled);
+            console.log('[F9] toggleIDE: calling render, ideEnabled=' + core.ideEnabled + ' chatEnabled=' + core.chatEnabled);
+            core.render();
+        },
+
+        toggleChat: function(core) {
+            console.log('[F8] toggleChat: ideEnabled=' + core.ideEnabled + ' chatEnabled=' + core.chatEnabled);
+            if (!window.AIChatIDEIntegration) {
+                console.log('[F8] toggleChat: no AIChatIDEIntegration, returning');
+                return;
+            }
+            if (!core.ideEnabled) {
+                console.log('[F8] toggleChat: ide not enabled, enabling ide and hiding chat');
+                core.ideEnabled = true;
+                core.chatEnabled = false;
+                AIChatIDEIntegration.setEnabled(true);
+                AIChatIDEIntegration.setChatEnabled(false);
+                core.render();
+                this.applyChatVisibility(core);
+                return;
+            }
+            core.chatEnabled = !core.chatEnabled;
+            AIChatIDEIntegration.setChatEnabled(core.chatEnabled);
+            console.log('[F8] toggleChat: toggled chatEnabled to ' + core.chatEnabled);
+            this.applyChatVisibility(core);
+        },
+
+        applyChatVisibility: function(core) {
+            var splitWrapper = core.widget.querySelector('#ai-chat-split-wrapper');
+            if (!splitWrapper) {
+                return;
+            }
+            var rightPanel = splitWrapper.querySelector('.zato-ide-split-panel-right');
+            var resizer = splitWrapper.querySelector('.zato-ide-split-resizer');
+            var leftPanel = splitWrapper.querySelector('.zato-ide-split-panel-left');
+            if (!rightPanel || !resizer || !leftPanel) {
+                return;
+            }
+            if (core.chatEnabled) {
+                rightPanel.style.display = '';
+                resizer.style.display = '';
+                leftPanel.style.width = '';
+                if (window.ZatoIDESplit) {
+                    var instance = ZatoIDESplit.getInstance('ai-chat-split-wrapper');
+                    if (instance) {
+                        ZatoIDESplit.applySplitPosition(instance);
+                    }
+                }
+            } else {
+                rightPanel.style.display = 'none';
+                resizer.style.display = 'none';
+                leftPanel.style.width = '100%';
+            }
+        },
+
         bind: function(widget, core) {
             var self = this;
 
@@ -73,6 +137,18 @@
             });
 
             document.addEventListener('keydown', function(e) {
+                if (e.key === 'F9') {
+                    e.preventDefault();
+                    self.toggleIDE(core);
+                    return;
+                }
+
+                if (e.key === 'F8') {
+                    e.preventDefault();
+                    self.toggleChat(core);
+                    return;
+                }
+
                 if (e.key === 'Escape') {
                     if (AIChatContextHelp && AIChatContextHelp.isOpen && AIChatContextHelp.isOpen()) {
                         AIChatContextHelp.close();

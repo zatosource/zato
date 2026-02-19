@@ -1,0 +1,59 @@
+.zato-ide-theme-dark {
+    --zato-ide-bg-dark: #1a1a1a;
+    --zato-ide-bg-medium: #252525;
+    --zato-ide-bg-light: #2a2a2a;
+    --zato-ide-bg-editor: #1e1e1e;
+
+    --zato-ide-text-primary: #e0e0e0;
+    --zato-ide-text-secondary: #888;
+    --zato-ide-text-muted: #666;
+    --zato-ide-text-dim: #555;
+
+    --zato-ide-border-subtle: rgba(255, 255, 255, 0.08);
+    --zato-ide-border-light: rgba(255, 255, 255, 0.1);
+
+    --zato-ide-accent: #4a9eff;
+    --zato-ide-accent-hover: #6ab0ff;
+
+    --zato-ide-toolbar-bg: #1f1f1f;
+    --zato-ide-statusbar-bg: #1f1f1f;
+
+    --zato-ide-tab-active-border: #4a9eff;
+    --zato-ide-tab-hover-bg: rgba(255, 255, 255, 0.05);
+
+    --zato-ide-gutter-bg: #1a1a1a;
+    --zato-ide-gutter-text: #858585;
+    --zato-ide-line-highlight: rgba(255, 255, 255, 0.04);
+
+    --zato-ide-scrollbar-track: #1a1a1a;
+    --zato-ide-scrollbar-thumb: #444;
+}
+
+.zato-ide-theme-dark .zato-ide-container {
+    background: var(--zato-ide-bg-dark);
+}
+
+.zato-ide-theme-dark .zato-ide-toolbar {
+    background: var(--zato-ide-toolbar-bg);
+    border-bottom-color: var(--zato-ide-border-subtle);
+}
+
+.zato-ide-theme-dark .zato-ide-tabs-area {
+    background: var(--zato-ide-bg-dark);
+    border-bottom-color: var(--zato-ide-border-subtle);
+}
+
+.zato-ide-theme-dark .zato-ide-editor-area {
+    background: var(--zato-ide-bg-editor);
+}
+
+.zato-ide-theme-dark .zato-ide-editor {
+    background: var(--zato-ide-bg-editor);
+    color: var(--zato-ide-text-primary);
+}
+
+.zato-ide-theme-dark .zato-ide-statusbar {
+    background: var(--zato-ide-statusbar-bg);
+    border-top-color: var(--zato-ide-border-subtle);
+    color: var(--zato-ide-text-secondary);
+}

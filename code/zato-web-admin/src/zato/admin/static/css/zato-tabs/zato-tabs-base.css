@@ -1,10 +1,18 @@
+.zato-tabs-theme-dark,
+.zato-tabs-theme-light {
+    min-height: 32px;
+    overflow: visible;
+}
+
 .zato-tabs-container {
     display: flex;
     align-items: center;
     padding: 0 8px;
     flex-shrink: 0;
     overflow-x: auto;
+    overflow-y: visible;
     height: 32px;
+    min-height: 32px;
 }
 
 .zato-tabs-container::-webkit-scrollbar {

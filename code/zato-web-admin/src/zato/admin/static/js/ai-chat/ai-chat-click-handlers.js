@@ -5,7 +5,6 @@
 
         handleClick: function(e, widget, core) {
             var target = e.target;
-            console.log('[CLICK] handleClick called, target:', target.tagName, target.className);
 
             var timestamp = target.closest('.ai-chat-message-time');
             if (timestamp) {
@@ -27,14 +26,12 @@
 
             var diffTag = target.closest('.ai-tool-tag[data-diff]');
             if (diffTag) {
-                console.log('[DIFF-CLICK] diffTag found:', diffTag);
                 this.handleDiffTagClick(diffTag);
                 return;
             }
 
             var anyTag = target.closest('.ai-tool-tag');
             if (anyTag) {
-                console.log('[DIFF-CLICK] anyTag found but no data-diff:', anyTag, 'data-diff:', anyTag.getAttribute('data-diff'));
             }
 
             var showBtn = target.closest('.ai-tool-show-btn');
@@ -44,9 +41,7 @@
             }
 
             var retryBtn = target.closest('.ai-chat-retry-btn');
-            console.log('[CLICK] checking retryBtn:', retryBtn);
             if (retryBtn) {
-                console.log('[CLICK] retryBtn found, calling handleRetry');
                 this.handleRetry(retryBtn, widget, core);
                 return;
             }
@@ -84,24 +79,6 @@
                 return;
             }
 
-            if (target.id === 'ai-chat-tab-add') {
-                AIChatTabActions.addTab(widget, core);
-                return;
-            }
-
-            if (target.classList.contains('ai-chat-tab-close')) {
-                var tabId = target.getAttribute('data-tab-id');
-                AIChatTabActions.closeTab(widget, core, tabId);
-                e.stopPropagation();
-                return;
-            }
-
-            var tabElement = target.closest('.ai-chat-tab');
-            if (tabElement && !target.classList.contains('ai-chat-tab-close')) {
-                var tabId = tabElement.getAttribute('data-tab-id');
-                AIChatTabActions.switchTab(widget, core, tabId);
-                return;
-            }
 
             if (target.classList.contains('ai-chat-send-button') || target.closest('.ai-chat-send-button')) {
                 var button = target.classList.contains('ai-chat-send-button') ? target : target.closest('.ai-chat-send-button');
@@ -114,9 +91,7 @@
                     if (!message) {
                         if (input) {
                             input.focus();
-                            if (window.AIChatTooltip) {
-                                AIChatTooltip.showTemporary(input, 'Type a message ..', 2100, true);
-                            }
+                            core.showTemporaryTooltip(input, 'Type a message ..', 2100, true);
                         }
                         return;
                     }
@@ -127,9 +102,7 @@
 
             if (target.classList.contains('ai-chat-options-button') || target.closest('.ai-chat-options-button')) {
                 var optionsBtn = target.classList.contains('ai-chat-options-button') ? target : target.closest('.ai-chat-options-button');
-                if (window.AIChatTooltip) {
-                    AIChatTooltip.hide();
-                }
+                core.hideTooltip();
                 AIChatOptionsMenu.toggle(widget, core.activeTabId, optionsBtn);
                 e.stopPropagation();
                 return;
@@ -454,20 +427,6 @@
                 return;
             }
 
-            var contextBar = target.closest('.ai-chat-context-bar');
-            if (contextBar && !target.closest('.ai-chat-context-help-link')) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (window.AIChatTooltip) {
-                    AIChatTooltip.hide();
-                }
-                var tooltip = contextBar.querySelector('.ai-chat-context-tooltip');
-                if (tooltip) {
-                    tooltip.classList.toggle('open');
-                }
-                return;
-            }
-
             var contextHelpLink = target.closest('.ai-chat-context-help-link');
             if (contextHelpLink) {
                 e.preventDefault();
@@ -477,6 +436,18 @@
                     openTooltip.classList.remove('open');
                 }
                 AIChatContextHelp.show();
+                return;
+            }
+
+            var contextBar = target.closest('.ai-chat-context-bar');
+            if (contextBar) {
+                e.preventDefault();
+                e.stopPropagation();
+                core.hideTooltip();
+                var tooltip = contextBar.querySelector('.ai-chat-context-tooltip');
+                if (tooltip) {
+                    tooltip.classList.toggle('open');
+                }
                 return;
             }
         },
@@ -509,44 +480,30 @@
 
         handleDiffTagClick: function(tag) {
             var fileName = tag.textContent;
-            console.log('[DIFF-CLICK] handleDiffTagClick called, fileName:', fileName);
-            
             var progressEl = tag.closest('.ai-tool-progress');
-            console.log('[DIFF-CLICK] progressEl:', progressEl);
             if (!progressEl) {
-                console.log('[DIFF-CLICK] no progressEl found');
                 return;
             }
 
             var diffWrapper = progressEl.querySelector('.ai-diff-wrapper[data-file="' + fileName + '"]');
-            console.log('[DIFF-CLICK] diffWrapper:', diffWrapper, 'selector:', '.ai-diff-wrapper[data-file="' + fileName + '"]');
             if (!diffWrapper) {
-                console.log('[DIFF-CLICK] no diffWrapper found, all wrappers:', progressEl.querySelectorAll('.ai-diff-wrapper'));
                 return;
             }
 
             var isActive = tag.classList.contains('active');
-            console.log('[DIFF-CLICK] isActive:', isActive);
 
             if (isActive) {
                 tag.classList.remove('active');
                 diffWrapper.style.display = 'none';
-                console.log('[DIFF-CLICK] hiding diff');
             } else {
                 tag.classList.add('active');
                 diffWrapper.style.display = 'block';
-                console.log('[DIFF-CLICK] showing diff');
 
                 var isNewFile = diffWrapper.querySelector('.ai-diff-new');
-                console.log('[DIFF-CLICK] isNewFile:', isNewFile);
                 if (!isNewFile) {
                     var container = diffWrapper.querySelector('.ai-diff-container');
-                    console.log('[DIFF-CLICK] container:', container);
                     if (container) {
-                        console.log('[DIFF-CLICK] calling navigateToHunk(0)');
                         AIChatDiff.navigateToHunk(container, 0);
-                    } else {
-                        console.log('[DIFF-CLICK] no container found in diffWrapper');
                     }
                 }
             }
@@ -606,11 +563,8 @@
         },
 
         handleRetry: function(btn, widget, core) {
-            console.log('[RETRY] handleRetry called');
             var tabId = btn.getAttribute('data-tab-id');
-            console.log('[RETRY] tabId:', tabId);
             if (!tabId) {
-                console.log('[RETRY] no tabId, returning');
                 return;
             }
 
@@ -621,9 +575,7 @@
                     break;
                 }
             }
-            console.log('[RETRY] tab found:', !!tab, 'messages:', tab ? tab.messages.length : 0);
             if (!tab || tab.messages.length < 1) {
-                console.log('[RETRY] no tab or no messages, returning');
                 return;
             }
 
@@ -635,7 +587,6 @@
                     break;
                 }
             }
-            console.log('[RETRY] lastAssistantMsgIndex:', lastAssistantMsgIndex);
 
             for (var i = tab.messages.length - 1; i >= 0; i--) {
                 if (tab.messages[i].role === 'user') {
@@ -643,29 +594,21 @@
                     break;
                 }
             }
-            console.log('[RETRY] lastUserMsg:', lastUserMsg ? lastUserMsg.content.substring(0, 50) : null);
             if (!lastUserMsg) {
-                console.log('[RETRY] no lastUserMsg, returning');
                 return;
             }
 
             if (lastAssistantMsgIndex > -1) {
-                console.log('[RETRY] slicing messages from', tab.messages.length, 'to', lastAssistantMsgIndex);
                 tab.messages = tab.messages.slice(0, lastAssistantMsgIndex);
             }
 
-            console.log('[RETRY] saving state and rendering');
             core.saveState();
             core.render();
 
             var input = widget.querySelector('.ai-chat-input[data-tab-id="' + tabId + '"]');
-            console.log('[RETRY] input found:', !!input);
             if (input) {
                 input.textContent = lastUserMsg.content;
-                console.log('[RETRY] calling sendMessage');
                 AIChatStreaming.sendMessage(widget, core, tabId);
-            } else {
-                console.log('[RETRY] no input found, cannot send');
             }
         }
     };

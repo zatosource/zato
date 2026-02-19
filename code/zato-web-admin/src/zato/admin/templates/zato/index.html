@@ -32,12 +32,14 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/libs/pdf.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/libs/mammoth.min.js"></script>
 
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato-tooltip/zato-tooltip.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato-tabs/zato-tabs-manager.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato-tabs/zato-tabs-renderer.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato-tabs/zato-tabs-events.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-state.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-tab-state.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-config.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-icons.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-tooltip.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-render.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-input.js"></script>
@@ -68,11 +70,35 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-click-handlers.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-context-help.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-events.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/symbols/core.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/symbols/python.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/symbols/sql.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/symbols/json.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/symbols/yaml.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/symbols/ini.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/theme-zato-dark.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/theme-zato.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-python.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-javascript.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-json.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-xml.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-html.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-css.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-sql.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/mode-yaml.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ext-language_tools.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/editor/zato-ide-editor-ace.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/zato-ide.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/zato-ide-split.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-ide-integration.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript">
         var ZatoEnvName = "{{ zato_env_name|default:'' }}";
     </script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-core.js"></script>
 
+    <link rel="stylesheet" media="screen" href="/static/css/zato-tooltip/zato-tooltip-base.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/zato-tooltip/zato-tooltip-theme-dark.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-tabs/zato-tabs-base.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-tabs/zato-tabs-theme-dark.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-variables.css" />
@@ -83,11 +109,18 @@
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-resize.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-context-menu.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-convert.css" />
-    <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-tooltip.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-config.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-mcp.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-confirm.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-error.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-split.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/ide/zato-ide-variables.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/ide/zato-ide-base.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/ide/zato-ide-theme-dark.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/ide/zato-ide-split.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/ide/editor/zato-ide-editor-ace.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/ide/editor/ace-theme-zato.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/ide/editor/ace-theme-zato-dark.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-dropdown/zato-dropdown-base.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-dropdown/zato-dropdown-theme-dark.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-preview.css" />

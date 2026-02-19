@@ -1,0 +1,47 @@
+.zato-ide-split-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.zato-ide-split-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    overflow: hidden;
+}
+
+.zato-ide-split-panel-left {
+    flex-shrink: 0;
+}
+
+.zato-ide-split-panel-right {
+    flex: 1;
+    min-width: 250px;
+}
+
+.zato-ide-split-resizer {
+    width: 4px;
+    min-width: 4px;
+    background: var(--zato-ide-border-subtle, rgba(255, 255, 255, 0.08));
+    cursor: col-resize;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+}
+
+.zato-ide-split-resizer:hover,
+.zato-ide-split-resizer.dragging {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.zato-ide-split-resizer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -4px;
+    right: -4px;
+}

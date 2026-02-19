@@ -1,0 +1,49 @@
+.zato-ide-editor-wrapper {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.zato-ide-ace-editor {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+}
+
+.zato-ide-ace-editor .ace_editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.zato-ide-ace-statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    height: 22px;
+    min-height: 22px;
+    padding: 0 8px;
+    background: #1f1f1f;
+    color: #888;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.zato-ide-ace-statusbar .zato-ide-editor-statusbar-item {
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: default;
+}
+
+.zato-ide-ace-statusbar .zato-ide-editor-statusbar-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}

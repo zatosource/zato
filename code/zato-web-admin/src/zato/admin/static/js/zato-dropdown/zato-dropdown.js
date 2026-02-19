@@ -115,15 +115,22 @@
             });
 
             menu.addEventListener('click', function(e) {
+                console.log('[TRACE-SYMBOL] dropdown.menu.click: e.target=' + e.target.tagName + ', className=' + e.target.className);
                 var item = e.target.closest('.zato-dropdown-item');
+                console.log('[TRACE-SYMBOL] dropdown.menu.click: item=' + (item ? 'found' : 'null'));
                 if (item) {
+                    console.log('[TRACE-SYMBOL] dropdown.menu.click: item.className=' + item.className);
+                    console.log('[TRACE-SYMBOL] dropdown.menu.click: item.textContent="' + item.textContent + '"');
+                    console.log('[TRACE-SYMBOL] dropdown.menu.click: item.getAttribute(data-value)="' + item.getAttribute('data-value') + '"');
                     if (item.classList.contains('disabled')) {
+                        console.log('[TRACE-SYMBOL] dropdown.menu.click: item is disabled, returning');
                         e.stopPropagation();
                         return;
                     }
 
                     var value = item.getAttribute('data-value');
                     var text = item.textContent;
+                    console.log('[TRACE-SYMBOL] dropdown.menu.click: extracted value="' + value + '" text="' + text + '"');
 
                     container.setAttribute('data-value', value);
                     container.querySelector('.zato-dropdown-text').textContent = text;
@@ -139,6 +146,7 @@
                     event.initEvent('change', true, true);
                     selectElement.dispatchEvent(event);
 
+                    console.log('[TRACE-SYMBOL] dropdown.menu.click: calling options.onChange with value="' + value + '" text="' + text + '"');
                     if (options.onChange) {
                         options.onChange(value, text, container);
                     }
