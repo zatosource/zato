@@ -73,7 +73,9 @@
             editor.setShowPrintMargin(false);
             editor.setHighlightActiveLine(true);
             editor.setHighlightSelectedWord(true);
-            editor.renderer.setScrollMargin(0, 0, 0, 0);
+            editor.renderer.setScrollMargin(7, 7, 0, 0);
+            editor.renderer.$gutterLayer.$fixedWidth = true;
+            editor.renderer.$gutterLayer.gutterWidth = 50;
 
             if (instance.content) {
                 editor.setValue(instance.content, -1);

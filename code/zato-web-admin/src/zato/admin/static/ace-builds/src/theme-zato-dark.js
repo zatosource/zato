@@ -6,6 +6,7 @@ exports.cssText = ".ace-zato-dark .ace_gutter {\
 background: #1a1a1a;\
 color: #858585;\
 border-right: 1px solid rgba(255, 255, 255, 0.06);\
+min-width: 40px;\
 }\
 .ace-zato-dark .ace_gutter-active-line {\
 background-color: transparent;\
@@ -40,8 +41,9 @@ margin: -1px 0 0 -1px;\
 border: 1px solid #404040;\
 }\
 .ace-zato-dark .ace_fold {\
-background-color: #569cd6;\
-border-color: #d4d4d4;\
+background-color: #2d2d2d;\
+border: 1px solid #569cd6;\
+color: #569cd6;\
 }\
 .ace-zato-dark .ace_keyword {\
 color: #569cd6;\
