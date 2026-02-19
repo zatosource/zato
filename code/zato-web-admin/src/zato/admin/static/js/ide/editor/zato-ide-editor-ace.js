@@ -74,15 +74,29 @@
             editor.setHighlightActiveLine(true);
             editor.setHighlightSelectedWord(true);
             editor.setDisplayIndentGuides(false);
+            editor.setOptions({
+                enableBasicAutocompletion: true,
+                enableLiveAutocompletion: true,
+                enableSnippets: true
+            });
             editor.renderer.$textLayer.$renderLine = (function(originalRenderLine) {
                 return function(parent, row, onlyContents, foldLine) {
                     var result = originalRenderLine.call(this, parent, row, onlyContents, foldLine);
                     var firstChild = parent.firstChild;
+                    if (row < 3) {
+                        console.log('[ACE-CURSOR] row=' + row + ', firstChild=' + (firstChild ? 'exists' : 'null') + ', nodeType=' + (firstChild ? firstChild.nodeType : 'n/a'));
+                        if (firstChild && firstChild.nodeType === 3) {
+                            console.log('[ACE-CURSOR] row=' + row + ', textContent=' + JSON.stringify(firstChild.textContent.substring(0, 50)));
+                        }
+                    }
                     if (firstChild && firstChild.nodeType === 3) {
                         var text = firstChild.textContent;
                         var match = text.match(/^( +)/);
                         if (match) {
                             var spaces = match[1];
+                            if (row < 3) {
+                                console.log('[ACE-CURSOR] row=' + row + ', matched spaces=' + spaces.length);
+                            }
                             var dots = '';
                             for (var i = 0; i < spaces.length; i++) {
                                 dots += '·';
@@ -91,12 +105,19 @@
                             span.className = 'ace_indent_dot';
                             span.textContent = dots;
                             var rest = text.substring(spaces.length);
+                            if (row < 3) {
+                                console.log('[ACE-CURSOR] row=' + row + ', dots length=' + dots.length + ', rest=' + JSON.stringify(rest.substring(0, 20)));
+                                console.log('[ACE-CURSOR] row=' + row + ', span width will be checked after insert');
+                            }
                             if (rest) {
                                 var restNode = document.createTextNode(rest);
                                 parent.replaceChild(restNode, firstChild);
                                 parent.insertBefore(span, restNode);
                             } else {
                                 parent.replaceChild(span, firstChild);
+                            }
+                            if (row < 3) {
+                                console.log('[ACE-CURSOR] row=' + row + ', after replacement, parent.innerHTML first 100=' + JSON.stringify(parent.innerHTML.substring(0, 100)));
                             }
                         }
                     }
