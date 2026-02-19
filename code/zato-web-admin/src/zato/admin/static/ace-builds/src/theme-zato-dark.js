@@ -27,7 +27,8 @@ color: #aeafad;\
 color: #404040;\
 }\
 .ace-zato-dark .ace_indent_dot {\
-color: #404040;\
+color: #444;\
+font-size: 0.7em;\
 }\
 .ace-zato-dark .ace_marker-layer .ace_selection {\
 background: rgba(74, 158, 255, 0.3);\
