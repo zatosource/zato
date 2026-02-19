@@ -475,9 +475,13 @@
 
             var textBefore = value.substring(0, start);
             var startLine = textBefore.split('\n').length;
+            var startCol = start - textBefore.lastIndexOf('\n') - 1;
 
             var textToEnd = value.substring(0, end);
             var endLine = textToEnd.split('\n').length;
+            var endCol = end - textToEnd.lastIndexOf('\n') - 1;
+
+            var lines = value.split('\n');
 
             var lineElements = code.querySelectorAll('.zato-ide-editor-line');
             if (lineElements.length === 0) {
@@ -487,13 +491,58 @@
             var firstLineEl = lineElements[0];
             var lineHeightPx = firstLineEl.offsetHeight;
 
+            var charWidthPx = this.getCharWidth(instance);
+
             var html = '';
             for (var i = startLine; i <= endLine; i++) {
                 var top = (i - 1) * lineHeightPx;
-                html += '<div class="zato-ide-editor-selection-line" style="top:' + top + 'px;height:' + lineHeightPx + 'px;"></div>';
+                var lineText = lines[i - 1] || '';
+                var lineLen = lineText.length;
+
+                var leftCol = 0;
+                var rightCol = lineLen;
+
+                if (i === startLine) {
+                    leftCol = startCol;
+                }
+                if (i === endLine) {
+                    rightCol = endCol;
+                }
+
+                var left = leftCol * charWidthPx;
+                var width = (rightCol - leftCol) * charWidthPx;
+
+                if (width <= 0 && i !== endLine) {
+                    width = charWidthPx;
+                }
+
+                if (width > 0 || (i > startLine && i < endLine)) {
+                    if (i > startLine && i < endLine) {
+                        html += '<div class="zato-ide-editor-selection-line" style="top:' + top + 'px;height:' + lineHeightPx + 'px;left:0;right:0;"></div>';
+                    } else {
+                        html += '<div class="zato-ide-editor-selection-line" style="top:' + top + 'px;height:' + lineHeightPx + 'px;left:' + left + 'px;width:' + width + 'px;"></div>';
+                    }
+                }
             }
 
             overlay.innerHTML = html;
+        },
+
+        getCharWidth: function(instance) {
+            var code = instance.elements.code;
+            if (!code) {
+                return 8;
+            }
+
+            var span = document.createElement('span');
+            span.style.visibility = 'hidden';
+            span.style.position = 'absolute';
+            span.style.whiteSpace = 'pre';
+            span.textContent = 'M';
+            code.appendChild(span);
+            var width = span.offsetWidth;
+            code.removeChild(span);
+            return width || 8;
         },
 
         /**
