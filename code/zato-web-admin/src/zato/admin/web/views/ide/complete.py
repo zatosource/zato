@@ -8,7 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import json
+import os
 import subprocess
+import sys
 import tempfile
 from http.client import BAD_REQUEST, INTERNAL_SERVER_ERROR
 from logging import getLogger
@@ -71,22 +73,41 @@ def complete_python(req:'HttpRequest') -> 'JsonResponse':
     if not code:
         return JsonResponse({'success': True, 'completions': []})
 
-    temp_path = None
     try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-            f.write(code)
-            temp_path = f.name
+        zato_server_path = None
+        for path in sys.path:
+            if 'zato-server' in path and path.endswith('src'):
+                zato_server_path = path
+                break
 
-        file_uri = 'file://' + temp_path
+        if zato_server_path:
+            fake_file_path = os.path.join(zato_server_path, 'zato', 'server', '_ide_temp_service.py')
+            root_uri = 'file://' + zato_server_path
+        else:
+            fake_file_path = '/tmp/_ide_temp_service.py'
+            root_uri = None
+
+        file_uri = 'file://' + fake_file_path
 
         initialize_request = {
             'jsonrpc': '2.0',
             'id': 1,
             'method': 'initialize',
             'params': {
-                'processId': None,
-                'rootUri': None,
-                'capabilities': {}
+                'processId': os.getpid(),
+                'rootUri': root_uri,
+                'capabilities': {
+                    'textDocument': {
+                        'completion': {
+                            'completionItem': {
+                                'snippetSupport': False
+                            }
+                        }
+                    }
+                },
+                'initializationOptions': {
+                    'mypy_path': [p for p in sys.path if 'zato' in p.lower()]
+                }
             }
         }
 
@@ -140,20 +161,27 @@ def complete_python(req:'HttpRequest') -> 'JsonResponse':
         lsp_input += build_lsp_message(shutdown_request)
         lsp_input += build_lsp_message(exit_notification)
 
-        result = subprocess.run(
+        zato_paths = [p for p in sys.path if 'zato' in p.lower()]
+        env = os.environ.copy()
+        env['PYTHONPATH'] = ':'.join(zato_paths)
+
+        proc = subprocess.Popen(
             ['zuban', 'server'],
-            input=lsp_input,
-            capture_output=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=10
+            env=env
         )
 
-        logger.info('Zuban stdout: %s', result.stdout[:500] if result.stdout else 'empty')
-        logger.info('Zuban stderr: %s', result.stderr[:500] if result.stderr else 'empty')
+        stdout, stderr = proc.communicate(input=lsp_input, timeout=10)
+
+        logger.info('Zuban stdout length: %s', len(stdout) if stdout else 0)
+        logger.info('Zuban stderr: %s', stderr if stderr else 'empty')
 
         completions = []
-        if result.stdout:
-            responses = parse_lsp_response(result.stdout)
+        if stdout:
+            responses = parse_lsp_response(stdout)
             for resp in responses:
                 if resp.get('id') == 2:
                     lsp_result = resp.get('result')
@@ -217,10 +245,3 @@ def complete_python(req:'HttpRequest') -> 'JsonResponse':
     except Exception:
         logger.warning('Zuban completion failed: %s', format_exc())
         return JsonResponse({'success': False, 'error': 'Completion failed'}, status=INTERNAL_SERVER_ERROR)
-    finally:
-        if temp_path:
-            try:
-                import os
-                os.unlink(temp_path)
-            except Exception:
-                pass
