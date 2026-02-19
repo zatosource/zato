@@ -76,6 +76,7 @@
             editor.renderer.setScrollMargin(7, 7, 0, 0);
             editor.renderer.$gutterLayer.$fixedWidth = true;
             editor.renderer.$gutterLayer.gutterWidth = 50;
+            editor.container.style.lineHeight = '1.22';
 
             if (instance.content) {
                 editor.setValue(instance.content, -1);
