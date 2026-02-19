@@ -889,6 +889,7 @@
                     instance.content = content;
                 },
                 onCursorChange: function(line, col) {
+                    self.syncDropdownsToLine(instance, line);
                 }
             });
             console.log('[ZatoIDE] initCodeEditor: editor created, codeEditor=' + (instance.codeEditor ? 'ok' : 'null'));
@@ -999,6 +1000,45 @@
 
             instance.selectedClassLine = symbols[0].line;
             this.updateMethods(instance, symbols[0].line);
+        },
+
+        syncDropdownsToLine: function(instance, line) {
+            if (!instance.symbolDropdown || !window.ZatoIDESymbols) {
+                return;
+            }
+
+            var file = instance.files[instance.activeFile];
+            if (!file) {
+                return;
+            }
+
+            var symbol = ZatoIDESymbols.findSymbolAtLine(file.content, file.language, line);
+            if (!symbol) {
+                return;
+            }
+
+            if (instance.selectedClassLine !== symbol.line) {
+                instance.selectedClassLine = symbol.line;
+
+                var symbolContainer = instance.symbolDropdown;
+                var symbolTextSpan = symbolContainer.querySelector('.zato-dropdown-text');
+                if (symbolTextSpan) {
+                    symbolTextSpan.textContent = symbol.name;
+                }
+                symbolContainer.setAttribute('data-value', symbol.line);
+
+                this.updateMethods(instance, symbol.line);
+            }
+
+            var method = ZatoIDESymbols.findMethodAtLine(file.content, file.language, symbol.line, line);
+            if (method && instance.methodDropdown) {
+                var methodContainer = instance.methodDropdown;
+                var methodTextSpan = methodContainer.querySelector('.zato-dropdown-text');
+                if (methodTextSpan) {
+                    methodTextSpan.textContent = method.name;
+                }
+                methodContainer.setAttribute('data-value', method.line);
+            }
         },
 
         updateMethods: function(instance, classLine) {
