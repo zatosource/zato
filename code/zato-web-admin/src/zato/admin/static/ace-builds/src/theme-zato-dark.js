@@ -26,6 +26,9 @@ color: #aeafad;\
 .ace-zato-dark .ace_invisible {\
 color: #404040;\
 }\
+.ace-zato-dark .ace_indent_dot {\
+color: #404040;\
+}\
 .ace-zato-dark .ace_marker-layer .ace_selection {\
 background: rgba(74, 158, 255, 0.3);\
 }\

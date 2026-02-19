@@ -73,6 +73,28 @@
             editor.setShowPrintMargin(false);
             editor.setHighlightActiveLine(true);
             editor.setHighlightSelectedWord(true);
+            editor.setDisplayIndentGuides(false);
+            editor.renderer.$textLayer.$renderLine = (function(originalRenderLine) {
+                return function(parent, row, onlyContents, foldLine) {
+                    var result = originalRenderLine.call(this, parent, row, onlyContents, foldLine);
+                    var lineEl = parent.lastChild;
+                    if (lineEl && lineEl.innerHTML) {
+                        lineEl.innerHTML = lineEl.innerHTML.replace(/^((?:&nbsp;| )+)/, function(match) {
+                            var dots = '';
+                            for (var i = 0; i < match.length; i++) {
+                                if (match.substr(i, 6) === '&nbsp;') {
+                                    dots += '<span class="ace_indent_dot">·</span>';
+                                    i += 5;
+                                } else {
+                                    dots += '<span class="ace_indent_dot">·</span>';
+                                }
+                            }
+                            return dots;
+                        });
+                    }
+                    return result;
+                };
+            })(editor.renderer.$textLayer.$renderLine);
             editor.renderer.setScrollMargin(7, 7, 0, 0);
             editor.renderer.$gutterLayer.$fixedWidth = true;
             editor.renderer.$gutterLayer.gutterWidth = 50;
