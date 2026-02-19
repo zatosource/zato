@@ -34,7 +34,7 @@
 
 .zato-ide-split-resizer:hover,
 .zato-ide-split-resizer.dragging {
-    background: var(--zato-ide-accent, #4a9eff);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .zato-ide-split-resizer::before {

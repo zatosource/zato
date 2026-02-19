@@ -170,6 +170,7 @@
                 console.log('[AI-CHAT-RENDER] inputs after initIDESplit: ' + inputsAfterIDE.length);
             }
 
+            this.bindTabsEvents();
             this.initModelDropdown();
             this.initContextBarTooltip();
             this.initConvertDropdown();
@@ -230,8 +231,73 @@
                 rightPanel.innerHTML = chatTabsHtml + chatBodyHtml;
                 var panelsInRightPanel = rightPanel.querySelectorAll('.ai-chat-tab-panel');
                 console.log('[AI-CHAT-RENDER] initIDESplit: panels in right panel: ' + panelsInRightPanel.length);
+                this.bindTabsEvents(rightPanel);
             }
         },
+
+        bindTabsEvents: function(container) {
+            var self = this;
+            container = container || this.widget;
+            var tabsContainer = container.querySelector('.zato-tabs-container');
+            if (!tabsContainer || !window.ZatoTabsEvents) {
+                return;
+            }
+            var parentEl = tabsContainer.parentElement;
+            if (!parentEl) {
+                return;
+            }
+            var instance = {
+                tabs: this.tabs,
+                activeTabId: this.activeTabId,
+                theme: 'dark'
+            };
+            var callbacks = {
+                onTabChange: function(tab) {
+                    self.activeTabId = tab.id;
+                },
+                onTabAdd: function(newTab) {
+                    AIChatTabState.initTab(newTab.id);
+                    var currentTab = AIChatTabs.getTabById(self.tabs, self.activeTabId);
+                    if (currentTab && currentTab.model) {
+                        newTab.model = currentTab.model;
+                        AIChatTabState.setModel(newTab.id, currentTab.model);
+                    }
+                },
+                createTabData: function(tabNumber) {
+                    return { title: 'Chat ' + tabNumber };
+                },
+                onSave: function() {
+                    self.saveState();
+                },
+                onRender: function() {
+                    self.render();
+                    AIChatTabActions.focusInput(self.widget, self.activeTabId);
+                },
+                onAddToClosedHistory: function(tab) {
+                    AIChatTabs.addToClosedHistory(tab);
+                },
+                onFlushClosedHistory: function() {
+                    AIChatTabs.flushClosedHistory();
+                },
+                onReopenClosedTabs: function() {
+                    return AIChatTabs.reopenClosedTabs(self.tabs);
+                },
+                onClearMessages: function(tabId, messages) {
+                    AIChatTabs.clearedMessagesBuffer[tabId] = messages;
+                },
+                onUndoClearMessages: function(tabId) {
+                    var tab = AIChatTabs.getTabById(self.tabs, tabId);
+                    if (tab && AIChatTabs.clearedMessagesBuffer[tabId]) {
+                        tab.messages = AIChatTabs.clearedMessagesBuffer[tabId];
+                        delete AIChatTabs.clearedMessagesBuffer[tabId];
+                        return true;
+                    }
+                    return false;
+                }
+            };
+            ZatoTabsEvents.bind(parentEl, instance, callbacks);
+        },
+
 
         buildChatPanelBodyHtml: function() {
             console.log('[AI-CHAT-RENDER] buildChatPanelBodyHtml called, tabs.length=' + this.tabs.length);

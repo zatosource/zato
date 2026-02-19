@@ -5,6 +5,7 @@
 
         contextMenu: null,
         currentInstance: null,
+        boundHandlers: new WeakMap(),
 
         isTabDragging: false,
         draggedTabId: null,
@@ -22,31 +23,58 @@
             var self = this;
             callbacks = callbacks || {};
 
-            containerElement.addEventListener('click', function(e) {
+            this.unbind(containerElement);
+
+            var clickHandler = function(e) {
                 self.handleClick(e, instance, callbacks);
-            });
-
-            containerElement.addEventListener('contextmenu', function(e) {
+            };
+            var contextMenuHandler = function(e) {
                 self.handleContextMenu(e, instance, callbacks);
-            });
-
-            containerElement.addEventListener('mousedown', function(e) {
+            };
+            var mouseDownHandler = function(e) {
                 self.handleMouseDown(e, instance, callbacks);
-            });
-
-            document.addEventListener('mousemove', function(e) {
+            };
+            var mouseMoveHandler = function(e) {
                 self.handleMouseMove(e, containerElement, instance, callbacks);
-            });
-
-            document.addEventListener('mouseup', function(e) {
+            };
+            var mouseUpHandler = function(e) {
                 self.handleMouseUp(e, containerElement, instance, callbacks);
-            });
-
-            document.addEventListener('click', function(e) {
+            };
+            var docClickHandler = function(e) {
                 if (self.contextMenu && !self.contextMenu.contains(e.target)) {
                     self.hideContextMenu();
                 }
+            };
+
+            containerElement.addEventListener('click', clickHandler);
+            containerElement.addEventListener('contextmenu', contextMenuHandler);
+            containerElement.addEventListener('mousedown', mouseDownHandler);
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            document.addEventListener('click', docClickHandler);
+
+            this.boundHandlers.set(containerElement, {
+                click: clickHandler,
+                contextmenu: contextMenuHandler,
+                mousedown: mouseDownHandler,
+                mousemove: mouseMoveHandler,
+                mouseup: mouseUpHandler,
+                docClick: docClickHandler
             });
+        },
+
+        unbind: function(containerElement) {
+            var handlers = this.boundHandlers.get(containerElement);
+            if (!handlers) {
+                return;
+            }
+            containerElement.removeEventListener('click', handlers.click);
+            containerElement.removeEventListener('contextmenu', handlers.contextmenu);
+            containerElement.removeEventListener('mousedown', handlers.mousedown);
+            document.removeEventListener('mousemove', handlers.mousemove);
+            document.removeEventListener('mouseup', handlers.mouseup);
+            document.removeEventListener('click', handlers.docClick);
+            this.boundHandlers.delete(containerElement);
         },
 
         handleClick: function(e, instance, callbacks) {
