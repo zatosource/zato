@@ -10,11 +10,19 @@
         },
 
         extract: function(content, language) {
+            console.log('[TRACE-SYMBOL] core.extract: language=' + language + ', content.length=' + (content ? content.length : 0));
             var extractor = this.extractors[language];
             if (!extractor) {
+                console.log('[TRACE-SYMBOL] core.extract: no extractor found for language=' + language);
                 return [];
             }
-            return extractor.extract(content);
+            console.log('[TRACE-SYMBOL] core.extract: calling extractor for language=' + language);
+            var symbols = extractor.extract(content);
+            console.log('[TRACE-SYMBOL] core.extract: extractor returned ' + symbols.length + ' symbols');
+            for (var i = 0; i < symbols.length; i++) {
+                console.log('[TRACE-SYMBOL] core.extract: symbol[' + i + '] name="' + symbols[i].name + '" line=' + symbols[i].line + ' type=' + symbols[i].type);
+            }
+            return symbols;
         },
 
         getExtractor: function(language) {

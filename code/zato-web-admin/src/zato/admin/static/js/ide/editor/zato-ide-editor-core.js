@@ -298,16 +298,26 @@
          * Scrolls the editor to a specific line.
          */
         scrollToLine: function(instance, line) {
+            console.log('[TRACE-SYMBOL] editor.scrollToLine: called with line=' + line);
             var textarea = instance.elements.textarea;
             if (!textarea) {
+                console.log('[TRACE-SYMBOL] editor.scrollToLine: no textarea, aborting');
                 return;
             }
 
-            var lineHeight = instance.options.lineHeight || 20;
-            var targetScrollTop = (line - 1) * lineHeight;
+            var lineCount = instance.content.split('\n').length;
+            var scrollHeight = textarea.scrollHeight;
+            var lineHeightPx = scrollHeight / lineCount;
+            var targetScrollTop = (line - 1) * lineHeightPx;
+            console.log('[TRACE-SYMBOL] editor.scrollToLine: lineCount=' + lineCount + ', scrollHeight=' + scrollHeight + ', lineHeightPx=' + lineHeightPx);
+            console.log('[TRACE-SYMBOL] editor.scrollToLine: targetScrollTop=' + targetScrollTop + ' ((line=' + line + ' - 1) * lineHeightPx=' + lineHeightPx + ')');
+            console.log('[TRACE-SYMBOL] editor.scrollToLine: textarea.scrollTop BEFORE=' + textarea.scrollTop);
 
             textarea.scrollTop = targetScrollTop;
+            console.log('[TRACE-SYMBOL] editor.scrollToLine: textarea.scrollTop AFTER=' + textarea.scrollTop);
+            console.log('[TRACE-SYMBOL] editor.scrollToLine: textarea.clientHeight=' + textarea.clientHeight);
             this.syncScroll(instance);
+            console.log('[TRACE-SYMBOL] editor.scrollToLine: syncScroll called');
         },
 
         /**

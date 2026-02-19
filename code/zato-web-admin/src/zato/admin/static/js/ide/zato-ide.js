@@ -163,9 +163,14 @@
                         }
                     },
                     onChange: function(value, text) {
+                        console.log('[TRACE-SYMBOL] dropdown.onChange: value="' + value + '" text="' + text + '"');
                         if (value) {
                             var line = parseInt(value, 10);
+                            console.log('[TRACE-SYMBOL] dropdown.onChange: parsed line=' + line + ' from value="' + value + '"');
+                            console.log('[TRACE-SYMBOL] dropdown.onChange: calling jumpToLine with line=' + line);
                             self.jumpToLine(instance, line);
+                        } else {
+                            console.log('[TRACE-SYMBOL] dropdown.onChange: value is empty, not jumping');
                         }
                     }
                 });
@@ -647,27 +652,34 @@
          * Updates the symbol dropdown with symbols from the current file.
          */
         updateSymbols: function(instance) {
+            console.log('[TRACE-SYMBOL] updateSymbols: starting');
             if (!instance.symbolDropdown || !window.ZatoIDESymbols) {
+                console.log('[TRACE-SYMBOL] updateSymbols: missing symbolDropdown or ZatoIDESymbols');
                 return;
             }
 
             var file = instance.files[instance.activeFile];
             if (!file) {
+                console.log('[TRACE-SYMBOL] updateSymbols: no active file');
                 return;
             }
 
+            console.log('[TRACE-SYMBOL] updateSymbols: activeFile=' + instance.activeFile + ' language=' + file.language + ' content.length=' + (file.content ? file.content.length : 0));
             var symbols = ZatoIDESymbols.extract(file.content, file.language);
+            console.log('[TRACE-SYMBOL] updateSymbols: extracted ' + symbols.length + ' symbols');
             var container = instance.symbolDropdown;
             var menu = container.querySelector('.zato-dropdown-menu');
             var textSpan = container.querySelector('.zato-dropdown-text');
 
             if (!menu) {
+                console.log('[TRACE-SYMBOL] updateSymbols: no menu element found');
                 return;
             }
 
             menu.innerHTML = '';
 
             if (symbols.length === 0) {
+                console.log('[TRACE-SYMBOL] updateSymbols: no symbols, showing empty state');
                 var emptyItem = document.createElement('div');
                 emptyItem.className = 'zato-dropdown-item disabled';
                 emptyItem.textContent = '(no symbols)';
@@ -678,8 +690,10 @@
                 return;
             }
 
+            console.log('[TRACE-SYMBOL] updateSymbols: populating menu with ' + symbols.length + ' items');
             for (var i = 0; i < symbols.length; i++) {
                 var symbol = symbols[i];
+                console.log('[TRACE-SYMBOL] updateSymbols: adding item[' + i + '] name="' + symbol.name + '" data-value=' + symbol.line);
                 var item = document.createElement('div');
                 item.className = 'zato-dropdown-item';
                 item.setAttribute('data-value', symbol.line);
@@ -691,18 +705,24 @@
                 textSpan.textContent = symbols[0].name;
             }
             container.setAttribute('data-value', symbols[0].line);
+            console.log('[TRACE-SYMBOL] updateSymbols: done, default value=' + symbols[0].line);
         },
 
         /**
          * Jumps to a specific line in the editor.
          */
         jumpToLine: function(instance, line) {
+            console.log('[TRACE-SYMBOL] jumpToLine: called with line=' + line);
             if (!instance.codeEditor) {
+                console.log('[TRACE-SYMBOL] jumpToLine: no codeEditor, aborting');
                 return;
             }
 
-            var targetLine = Math.max(1, line - 4);
+            var targetLine = Math.max(1, line - 2);
+            console.log('[TRACE-SYMBOL] jumpToLine: computed targetLine=' + targetLine + ' (line=' + line + ' - 4)');
+            console.log('[TRACE-SYMBOL] jumpToLine: calling ZatoIDEEditor.scrollToLine with targetLine=' + targetLine);
             ZatoIDEEditor.scrollToLine(instance.codeEditor, targetLine);
+            console.log('[TRACE-SYMBOL] jumpToLine: scrollToLine called');
         },
 
         loadSearchIcon: function(instance) {
