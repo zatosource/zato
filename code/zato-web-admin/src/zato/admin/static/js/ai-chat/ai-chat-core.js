@@ -126,6 +126,13 @@
         },
 
         render: function() {
+            console.log('[AI-CHAT-RENDER] render() called');
+            console.log('[AI-CHAT-RENDER] tabs.length=' + this.tabs.length + ', activeTabId=' + this.activeTabId);
+            console.log('[AI-CHAT-RENDER] needsConfig=' + this.needsConfig + ', ideEnabled=' + this.ideEnabled + ', isMinimized=' + this.isMinimized);
+            var existingPanels = this.widget ? this.widget.querySelectorAll('.ai-chat-tab-panel') : [];
+            console.log('[AI-CHAT-RENDER] existing panels before render: ' + existingPanels.length);
+            var existingInputs = this.widget ? this.widget.querySelectorAll('.ai-chat-input') : [];
+            console.log('[AI-CHAT-RENDER] existing inputs before render: ' + existingInputs.length);
 
             if (this.needsConfig && this.configMode && this.configMode !== 'providers') {
                 AIChatState.saveConfigMode(this.configMode);
@@ -150,8 +157,17 @@
 
             this.widget.innerHTML = html;
 
+            var panelsAfterHtml = this.widget.querySelectorAll('.ai-chat-tab-panel');
+            console.log('[AI-CHAT-RENDER] panels after innerHTML assignment: ' + panelsAfterHtml.length);
+            var inputsAfterHtml = this.widget.querySelectorAll('.ai-chat-input');
+            console.log('[AI-CHAT-RENDER] inputs after innerHTML assignment: ' + inputsAfterHtml.length);
+
             if (this.ideEnabled && !this.needsConfig && !this.isMinimized && window.AIChatIDEIntegration) {
                 this.initIDESplit();
+                var panelsAfterIDE = this.widget.querySelectorAll('.ai-chat-tab-panel');
+                console.log('[AI-CHAT-RENDER] panels after initIDESplit: ' + panelsAfterIDE.length);
+                var inputsAfterIDE = this.widget.querySelectorAll('.ai-chat-input');
+                console.log('[AI-CHAT-RENDER] inputs after initIDESplit: ' + inputsAfterIDE.length);
             }
 
             this.initModelDropdown();
@@ -180,9 +196,11 @@
         },
 
         initIDESplit: function() {
+            console.log('[AI-CHAT-RENDER] initIDESplit called');
             var self = this;
 
             if (!window.ZatoIDESplit || !window.ZatoIDE) {
+                console.log('[AI-CHAT-RENDER] initIDESplit: ZatoIDESplit or ZatoIDE not available');
                 return;
             }
 
@@ -206,17 +224,22 @@
 
             var rightPanel = ZatoIDESplit.getRightPanel(splitInstance);
             if (rightPanel) {
+                console.log('[AI-CHAT-RENDER] initIDESplit: building right panel content');
                 var chatTabsHtml = AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
                 var chatBodyHtml = this.buildChatPanelBodyHtml();
                 rightPanel.innerHTML = chatTabsHtml + chatBodyHtml;
+                var panelsInRightPanel = rightPanel.querySelectorAll('.ai-chat-tab-panel');
+                console.log('[AI-CHAT-RENDER] initIDESplit: panels in right panel: ' + panelsInRightPanel.length);
             }
         },
 
         buildChatPanelBodyHtml: function() {
+            console.log('[AI-CHAT-RENDER] buildChatPanelBodyHtml called, tabs.length=' + this.tabs.length);
             var html = '';
             for (var i = 0; i < this.tabs.length; i++) {
                 var tab = this.tabs[i];
                 var activeClass = tab.id === this.activeTabId ? ' active' : '';
+                console.log('[AI-CHAT-RENDER] buildChatPanelBodyHtml: creating panel for tab ' + tab.id);
                 html += '<div class="ai-chat-tab-panel' + activeClass + '" data-tab-id="' + tab.id + '">';
                 html += AIChatRender.buildMessagesHtml(tab, false, null, null, false, false);
                 html += AIChatRender.buildInputAreaHtml(tab);

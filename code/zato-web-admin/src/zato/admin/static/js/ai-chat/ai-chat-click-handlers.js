@@ -85,6 +85,9 @@
             }
 
             if (target.id === 'ai-chat-tab-add') {
+                console.log('[CLICK] ai-chat-tab-add clicked');
+                var panelsBefore = widget.querySelectorAll('.ai-chat-tab-panel');
+                console.log('[CLICK] panels before addTab: ' + panelsBefore.length);
                 AIChatTabActions.addTab(widget, core);
                 return;
             }
@@ -99,6 +102,9 @@
             var tabElement = target.closest('.ai-chat-tab');
             if (tabElement && !target.classList.contains('ai-chat-tab-close')) {
                 var tabId = tabElement.getAttribute('data-tab-id');
+                console.log('[CLICK] tab clicked, tabId=' + tabId + ', current activeTabId=' + core.activeTabId);
+                var panelsBefore = widget.querySelectorAll('.ai-chat-tab-panel');
+                console.log('[CLICK] panels before switchTab: ' + panelsBefore.length);
                 AIChatTabActions.switchTab(widget, core, tabId);
                 return;
             }
