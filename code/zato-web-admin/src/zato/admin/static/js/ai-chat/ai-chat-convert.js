@@ -106,8 +106,8 @@ var AIChatConvert = {
                 return;
             }
             e.stopPropagation();
-            if (window.AIChatTooltip) {
-                AIChatTooltip.hide();
+            if (window.AIChat) {
+                AIChat.hideTooltip();
             }
             self.toggle();
         });

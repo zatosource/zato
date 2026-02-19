@@ -32,6 +32,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/libs/pdf.min.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/libs/mammoth.min.js"></script>
 
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato-tooltip/zato-tooltip.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato-tabs/zato-tabs-manager.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato-tabs/zato-tabs-renderer.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/zato-tabs/zato-tabs-events.js"></script>
@@ -39,7 +40,6 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-tab-state.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-config.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-icons.js"></script>
-    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-tooltip.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-render.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-tabs.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-input.js"></script>
@@ -83,6 +83,8 @@
     </script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-core.js"></script>
 
+    <link rel="stylesheet" media="screen" href="/static/css/zato-tooltip/zato-tooltip-base.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/zato-tooltip/zato-tooltip-theme-dark.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-tabs/zato-tabs-base.css" />
     <link rel="stylesheet" media="screen" href="/static/css/zato-tabs/zato-tabs-theme-dark.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-variables.css" />
@@ -93,7 +95,6 @@
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-resize.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-context-menu.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-convert.css" />
-    <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-tooltip.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-config.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-mcp.css" />
     <link rel="stylesheet" media="screen" href="/static/css/ai-chat/ai-chat-confirm.css" />

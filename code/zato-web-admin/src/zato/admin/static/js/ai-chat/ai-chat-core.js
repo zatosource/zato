@@ -36,6 +36,7 @@
             AIChatTabs.loadClosedHistory();
             this.loadState();
             this.widget = AIChatWidget.create(this.isMinimized, this.zoomScale);
+            this.initTooltip();
             if (this.isMaximized) {
                 this.widget.classList.add('maximized');
                 document.documentElement.classList.add('ai-chat-maximized');
@@ -92,6 +93,51 @@
                 return;
             }
             AIChatTabActions.focusInput(this.widget, this.activeTabId);
+        },
+
+        tooltipInstance: null,
+
+        initTooltip: function() {
+            var self = this;
+            this.tooltipInstance = ZatoTooltip.create('ai-chat-widget', {
+                theme: 'dark',
+                attribute: 'data-tooltip',
+                timeoutAttribute: 'data-tooltip-timeout',
+                isPopupOpen: function(target) {
+                    if (target.classList.contains('zato-dropdown-trigger')) {
+                        var dropdown = target.closest('.zato-dropdown');
+                        if (dropdown && dropdown.classList.contains('open')) {
+                            return true;
+                        }
+                    }
+                    if (target.classList.contains('ai-chat-context-bar')) {
+                        var tooltip = target.querySelector('.ai-chat-context-tooltip.open');
+                        if (tooltip) {
+                            return true;
+                        }
+                    }
+                    if (target.classList.contains('ai-chat-convert-trigger')) {
+                        var convertTooltip = target.querySelector('.ai-chat-convert-tooltip.open');
+                        if (convertTooltip) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            });
+        },
+
+        hideTooltip: function() {
+            if (this.tooltipInstance) {
+                ZatoTooltip.hide(this.tooltipInstance);
+            }
+        },
+
+        showTemporaryTooltip: function(target, text, duration, alignLeft) {
+            if (this.tooltipInstance) {
+                var alignment = alignLeft ? 'left' : 'center';
+                ZatoTooltip.showTemporary(this.tooltipInstance, target, text, duration, alignment);
+            }
         },
 
         loadState: function() {

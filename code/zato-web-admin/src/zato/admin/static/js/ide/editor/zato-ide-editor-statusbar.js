@@ -182,7 +182,7 @@
         },
 
         /**
-         * Binds tooltip show/hide events to status bar items.
+         * Binds tooltip events to the statusbar using ZatoTooltip.
          */
         bindTooltips: function(instance) {
             var statusbar = instance.elements.statusbar;
@@ -190,68 +190,26 @@
                 return;
             }
 
-            var items = statusbar.querySelectorAll('.zato-ide-editor-statusbar-item');
-            for (var i = 0; i < items.length; i++) {
-                var item = items[i];
-                this.bindItemTooltip(instance, item);
+            if (!statusbar.id) {
+                statusbar.id = 'zato-ide-statusbar-' + instance.id;
             }
-        },
 
-        /**
-         * Binds tooltip events to a single item.
-         */
-        bindItemTooltip: function(instance, item) {
-            var self = this;
-
-            item.addEventListener('mouseenter', function(e) {
-                var tooltip = item.getAttribute('data-tooltip');
-                if (tooltip) {
-                    self.showTooltip(instance, item, tooltip);
-                }
-            });
-
-            item.addEventListener('mouseleave', function() {
-                self.hideTooltip(instance);
-            });
-
-            item.addEventListener('click', function() {
-                self.hideTooltip(instance);
-            });
-        },
-
-        /**
-         * Shows a tooltip near the given element.
-         */
-        showTooltip: function(instance, element, text) {
-            this.hideTooltip(instance);
-
-            var tooltip = document.createElement('div');
-            tooltip.className = 'zato-ide-editor-statusbar-tooltip';
-            tooltip.textContent = text;
-
-            var rect = element.getBoundingClientRect();
-            tooltip.style.position = 'fixed';
-            tooltip.style.left = rect.left + 'px';
-            tooltip.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
-
-            document.body.appendChild(tooltip);
-            instance.activeTooltip = tooltip;
-
-            var tooltipRect = tooltip.getBoundingClientRect();
-            if (tooltipRect.right > window.innerWidth) {
-                tooltip.style.left = (window.innerWidth - tooltipRect.width - 8) + 'px';
+            if (instance.tooltipInstance) {
+                ZatoTooltip.destroy(statusbar.id);
             }
+
+            instance.tooltipInstance = ZatoTooltip.create(statusbar.id, {
+                theme: 'dark',
+                attribute: 'data-tooltip'
+            });
         },
 
         /**
          * Hides the active tooltip for the instance.
          */
         hideTooltip: function(instance) {
-            if (instance.activeTooltip) {
-                if (instance.activeTooltip.parentNode) {
-                    instance.activeTooltip.parentNode.removeChild(instance.activeTooltip);
-                }
-                instance.activeTooltip = null;
+            if (instance.tooltipInstance) {
+                ZatoTooltip.hide(instance.tooltipInstance);
             }
         },
 

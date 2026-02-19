@@ -96,9 +96,7 @@
                     if (!message) {
                         if (input) {
                             input.focus();
-                            if (window.AIChatTooltip) {
-                                AIChatTooltip.showTemporary(input, 'Type a message ..', 2100, true);
-                            }
+                            core.showTemporaryTooltip(input, 'Type a message ..', 2100, true);
                         }
                         return;
                     }
@@ -109,9 +107,7 @@
 
             if (target.classList.contains('ai-chat-options-button') || target.closest('.ai-chat-options-button')) {
                 var optionsBtn = target.classList.contains('ai-chat-options-button') ? target : target.closest('.ai-chat-options-button');
-                if (window.AIChatTooltip) {
-                    AIChatTooltip.hide();
-                }
+                core.hideTooltip();
                 AIChatOptionsMenu.toggle(widget, core.activeTabId, optionsBtn);
                 e.stopPropagation();
                 return;
@@ -440,9 +436,7 @@
             if (contextBar && !target.closest('.ai-chat-context-help-link')) {
                 e.preventDefault();
                 e.stopPropagation();
-                if (window.AIChatTooltip) {
-                    AIChatTooltip.hide();
-                }
+                core.hideTooltip();
                 var tooltip = contextBar.querySelector('.ai-chat-context-tooltip');
                 if (tooltip) {
                     tooltip.classList.toggle('open');
