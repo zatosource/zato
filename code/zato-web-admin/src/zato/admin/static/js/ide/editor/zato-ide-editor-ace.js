@@ -7,7 +7,8 @@
             theme: 'dark',
             language: 'python',
             fontSize: 12,
-            tabSize: 4
+            tabSize: 4,
+            lintDelay: 125
         },
 
         create: function(container, options) {
@@ -86,7 +87,10 @@
             });
 
             var lintTimeout = null;
+            var lintInProgress = false;
+            var lintPending = false;
             var lintLanguage = opts.language;
+            var lintDelay = opts.lintDelay;
             editor.session.on('change', function() {
                 if (lintLanguage !== 'python') {
                     return;
@@ -94,9 +98,25 @@
                 if (lintTimeout) {
                     clearTimeout(lintTimeout);
                 }
+                if (lintInProgress) {
+                    lintPending = true;
+                    return;
+                }
                 lintTimeout = setTimeout(function() {
-                    ZatoIDEEditorAce.lintPython(editor);
-                }, 500);
+                    lintInProgress = true;
+                    ZatoIDEEditorAce.lintPython(editor, function() {
+                        lintInProgress = false;
+                        if (lintPending) {
+                            lintPending = false;
+                            lintTimeout = setTimeout(function() {
+                                lintInProgress = true;
+                                ZatoIDEEditorAce.lintPython(editor, function() {
+                                    lintInProgress = false;
+                                });
+                            }, lintDelay);
+                        }
+                    });
+                }, lintDelay);
             });
             instance.lintLanguage = lintLanguage;
             editor.renderer.$textLayer.$renderLine = (function(originalRenderLine) {
@@ -285,10 +305,13 @@
             }
         },
 
-        lintPython: function(editor) {
+        lintPython: function(editor, callback) {
             var code = editor.getValue();
             if (!code.trim()) {
                 editor.session.setAnnotations([]);
+                if (callback) {
+                    callback();
+                }
                 return;
             }
 
@@ -310,6 +333,9 @@
                         } catch (e) {
                             console.warn('[Lint] Failed to parse response:', e);
                         }
+                    }
+                    if (callback) {
+                        callback();
                     }
                 }
             };
