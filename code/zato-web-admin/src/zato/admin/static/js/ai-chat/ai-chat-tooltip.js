@@ -29,6 +29,7 @@ var AIChatTooltip = {
                 return;
             }
 
+
             if (self.isPopupOpen(target)) {
                 return;
             }

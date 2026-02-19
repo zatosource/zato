@@ -295,6 +295,10 @@
             if (instance.activeTabId === tabId) {
                 var newActiveIndex = Math.min(tabIndex, instance.tabs.length - 1);
                 instance.activeTabId = instance.tabs[newActiveIndex].id;
+                if (callbacks.onTabChange) {
+                    var newActiveTab = this.getTabById(instance.tabs, instance.activeTabId);
+                    callbacks.onTabChange(newActiveTab);
+                }
             }
 
             if (callbacks.onFlushClosedHistory) {
