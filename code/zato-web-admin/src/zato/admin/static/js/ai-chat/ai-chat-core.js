@@ -217,12 +217,8 @@
         bindTabsEvents: function(container) {
             var self = this;
             container = container || this.widget;
-            var tabsContainer = container.querySelector('.zato-tabs-container');
-            if (!tabsContainer || !window.ZatoTabsEvents) {
-                return;
-            }
-            var parentEl = tabsContainer.parentElement;
-            if (!parentEl) {
+            var tabsWrapper = container.querySelector('.ai-chat-tabs');
+            if (!tabsWrapper || !window.ZatoTabsEvents) {
                 return;
             }
             var instance = {
@@ -274,7 +270,7 @@
                     return false;
                 }
             };
-            ZatoTabsEvents.bind(parentEl, instance, callbacks);
+            ZatoTabsEvents.bind(tabsWrapper, instance, callbacks);
         },
 
 
