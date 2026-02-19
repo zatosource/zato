@@ -23,20 +23,9 @@
             var self = this;
             callbacks = callbacks || {};
 
-            console.log('[TABS-EVENTS] bind called');
-            console.log('[TABS-EVENTS] bind: containerElement.id=' + containerElement.id);
-            console.log('[TABS-EVENTS] bind: containerElement.className=' + containerElement.className);
-            console.log('[TABS-EVENTS] bind: containerElement.tagName=' + containerElement.tagName);
-            console.log('[TABS-EVENTS] bind: containerElement outerHTML (first 200 chars)=' + containerElement.outerHTML.substring(0, 200));
-            console.log('[TABS-EVENTS] bind: instance.containerId=' + instance.containerId);
-            console.log('[TABS-EVENTS] bind: instance.tabs.length=' + instance.tabs.length);
-            console.log('[TABS-EVENTS] bind: instance.activeTabId=' + instance.activeTabId);
-            console.log('[TABS-EVENTS] bind: callbacks keys=' + Object.keys(callbacks).join(','));
-
             this.unbind(containerElement);
 
             var clickHandler = function(e) {
-                console.log('[TABS-EVENTS] clickHandler fired on containerElement.id=' + containerElement.id);
                 self.handleClick(e, containerElement, instance, callbacks);
             };
             var contextMenuHandler = function(e) {
@@ -64,8 +53,6 @@
             document.addEventListener('mouseup', mouseUpHandler);
             document.addEventListener('click', docClickHandler);
 
-            console.log('[TABS-EVENTS] bind: event listeners attached to containerElement');
-
             this.boundHandlers.set(containerElement, {
                 click: clickHandler,
                 contextmenu: contextMenuHandler,
@@ -74,8 +61,6 @@
                 mouseup: mouseUpHandler,
                 docClick: docClickHandler
             });
-
-            console.log('[TABS-EVENTS] bind: complete');
         },
 
         unbind: function(containerElement) {
@@ -94,30 +79,23 @@
 
         handleClick: function(e, containerElement, instance, callbacks) {
             var target = e.target;
-            console.log('[TABS-EVENTS] handleClick: target=' + target.className + ', containerElement.id=' + containerElement.id);
 
             var closeButton = target.closest('.zato-tab-close');
-            console.log('[TABS-EVENTS] handleClick: closeButton=' + (closeButton ? closeButton.getAttribute('data-tab-id') : 'null') + ', contains=' + (closeButton ? containerElement.contains(closeButton) : 'n/a'));
             if (closeButton && containerElement.contains(closeButton)) {
                 var tabId = closeButton.getAttribute('data-tab-id');
-                console.log('[TABS-EVENTS] handleClick: closing tab ' + tabId);
                 this.closeTab(instance, tabId, callbacks);
                 return;
             }
 
             var addButton = target.closest('.zato-tab-add');
-            console.log('[TABS-EVENTS] handleClick: addButton=' + (addButton ? 'found' : 'null') + ', contains=' + (addButton ? containerElement.contains(addButton) : 'n/a'));
             if (addButton && containerElement.contains(addButton)) {
-                console.log('[TABS-EVENTS] handleClick: adding tab to instance with ' + instance.tabs.length + ' tabs');
                 this.addTab(instance, callbacks);
                 return;
             }
 
             var tabElement = target.closest('.zato-tab');
-            console.log('[TABS-EVENTS] handleClick: tabElement=' + (tabElement ? tabElement.getAttribute('data-tab-id') : 'null') + ', contains=' + (tabElement ? containerElement.contains(tabElement) : 'n/a'));
             if (tabElement && containerElement.contains(tabElement)) {
                 var tabId = tabElement.getAttribute('data-tab-id');
-                console.log('[TABS-EVENTS] handleClick: switching to tab ' + tabId);
                 this.switchTab(instance, tabId, callbacks);
                 return;
             }

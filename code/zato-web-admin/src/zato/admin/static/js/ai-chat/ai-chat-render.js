@@ -71,8 +71,6 @@
         },
 
         buildBodyHtml: function(tabs, activeTabId, needsConfig, configMode, selectedProvider, cameFromChat, hadKeyOnEntry) {
-            console.log('[AI-CHAT-RENDER] buildBodyHtml called');
-            console.log('[AI-CHAT-RENDER] buildBodyHtml: tabs.length=' + tabs.length + ', activeTabId=' + activeTabId + ', needsConfig=' + needsConfig);
             var html = '<div class="ai-chat-body">';
 
             if (needsConfig) {
@@ -105,11 +103,9 @@
                 html += '</div>';
                 html += '</div>';
             } else {
-                console.log('[AI-CHAT-RENDER] buildBodyHtml: creating ' + tabs.length + ' tab panels');
                 for (var i = 0; i < tabs.length; i++) {
                     var tab = tabs[i];
                     var activeClass = tab.id === activeTabId ? ' active' : '';
-                    console.log('[AI-CHAT-RENDER] buildBodyHtml: creating panel for tab ' + tab.id + ' (active=' + (tab.id === activeTabId) + ')');
                     html += '<div class="ai-chat-tab-panel' + activeClass + '" data-tab-id="' + tab.id + '">';
                     html += this.buildMessagesHtml(tab, needsConfig, configMode, selectedProvider, cameFromChat, hadKeyOnEntry);
                     html += this.buildInputAreaHtml(tab);
@@ -369,10 +365,8 @@
         },
 
         buildTokenCountersHtml: function(tab) {
-            console.log('[TOKEN-TRACE] buildTokenCountersHtml called for tabId=' + tab.id);
             var tokensIn = AIChatTabState.getTokensIn(tab.id);
             var tokensOut = AIChatTabState.getTokensOut(tab.id);
-            console.log('[TOKEN-TRACE] buildTokenCountersHtml: tokensIn=' + tokensIn + ', tokensOut=' + tokensOut);
             var html = '<span class="ai-chat-token-counters" data-tab-id="' + tab.id + '">';
             html += '<span class="ai-chat-token-out">Tok out: ' + AIChatTabState.humanizeNumber(tokensOut) + '</span>';
             html += '<span class="ai-chat-token-in">Tok in: ' + AIChatTabState.humanizeNumber(tokensIn) + '</span>';
