@@ -84,6 +84,21 @@
                     editor.execCommand('startAutocomplete');
                 }
             });
+
+            var lintTimeout = null;
+            var lintLanguage = opts.language;
+            editor.session.on('change', function() {
+                if (lintLanguage !== 'python') {
+                    return;
+                }
+                if (lintTimeout) {
+                    clearTimeout(lintTimeout);
+                }
+                lintTimeout = setTimeout(function() {
+                    ZatoIDEEditorAce.lintPython(editor);
+                }, 500);
+            });
+            instance.lintLanguage = lintLanguage;
             editor.renderer.$textLayer.$renderLine = (function(originalRenderLine) {
                 return function(parent, row, onlyContents, foldLine) {
                     var result = originalRenderLine.call(this, parent, row, onlyContents, foldLine);
@@ -268,6 +283,48 @@
             if (instance.elements.wrapper && instance.elements.wrapper.parentNode) {
                 instance.elements.wrapper.parentNode.removeChild(instance.elements.wrapper);
             }
+        },
+
+        lintPython: function(editor) {
+            var code = editor.getValue();
+            if (!code.trim()) {
+                editor.session.setAnnotations([]);
+                return;
+            }
+
+            var csrfToken = this.getCsrfToken();
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/zato/ide/lint/python/', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            if (csrfToken) {
+                xhr.setRequestHeader('X-CSRFToken', csrfToken);
+            }
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response.success && response.annotations) {
+                                editor.session.setAnnotations(response.annotations);
+                            }
+                        } catch (e) {
+                            console.warn('[Lint] Failed to parse response:', e);
+                        }
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({ code: code }));
+        },
+
+        getCsrfToken: function() {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.indexOf('csrftoken=') === 0) {
+                    return cookie.substring('csrftoken='.length);
+                }
+            }
+            return null;
         }
     };
 

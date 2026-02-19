@@ -18,6 +18,7 @@ from zato.admin.web.views.ai import chat as ai_chat
 from zato.admin.web.views.ai import highlight as ai_highlight
 from zato.admin.web.views.ai import stream as ai_stream
 from zato.admin.web.views.ai.mcp import views as ai_mcp
+from zato.admin.web.views.ide import lint as ide_lint
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -1004,6 +1005,11 @@ urlpatterns += [
         login_required(ai_stream.fetch_page), name='ai-chat-fetch-page'),
     url(r'^zato/ai-chat/search-internet/$',
         login_required(ai_stream.search_internet), name='ai-chat-search-internet'),
+
+    # IDE linting
+
+    url(r'^zato/ide/lint/python/$',
+        login_required(ide_lint.lint_python), name='ide-lint-python'),
 ]
 
 # ################################################################################################################################
