@@ -1,3 +1,7 @@
+:root {
+    --zato-ide-editor-content-padding: 8px;
+}
+
 .zato-ide-editor-wrapper {
     display: flex;
     flex-direction: column;
@@ -46,7 +50,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    padding: 8px;
+    padding: var(--zato-ide-editor-content-padding);
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     white-space: pre;
     overflow: hidden;
@@ -71,7 +75,7 @@
     bottom: 0;
     width: 100%;
     height: 100%;
-    padding: 8px;
+    padding: var(--zato-ide-editor-content-padding);
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: inherit;
     line-height: inherit;
@@ -97,8 +101,6 @@
     pointer-events: none;
     z-index: 3;
     opacity: 0;
-    margin-left: 8px;
-    margin-top: 8px;
 }
 
 .zato-ide-editor-cursor.visible {
@@ -111,7 +113,7 @@
     right: 0;
     pointer-events: none;
     z-index: 0;
-    margin-top: 8px;
+    margin-top: var(--zato-ide-editor-content-padding);
 }
 
 .zato-ide-editor-highlight-layer {
@@ -120,7 +122,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    padding: 8px;
+    padding: var(--zato-ide-editor-content-padding);
     pointer-events: none;
     overflow: hidden;
     z-index: 1;
@@ -132,7 +134,6 @@
     left: 0;
     right: 0;
     bottom: 0;
-    padding-top: 8px;
     pointer-events: none;
     overflow: hidden;
     z-index: 0;
