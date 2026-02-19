@@ -6,10 +6,13 @@
         splitInstance: null,
         ideInstance: null,
         enabled: true,
+        chatEnabled: true,
         storageKeyEnabled: 'zato.ai-chat.ide-enabled',
+        storageKeyChatEnabled: 'zato.ai-chat.chat-enabled',
 
         init: function(widget) {
             this.enabled = this.loadEnabledState();
+            this.chatEnabled = this.loadChatEnabledState();
         },
 
         loadEnabledState: function() {
@@ -32,6 +35,26 @@
             }
         },
 
+        loadChatEnabledState: function() {
+            try {
+                var saved = localStorage.getItem(this.storageKeyChatEnabled);
+                if (saved !== null) {
+                    return saved === 'true';
+                }
+            } catch (e) {
+                console.warn('AIChatIDEIntegration: failed to load chat enabled state:', e);
+            }
+            return true;
+        },
+
+        saveChatEnabledState: function(enabled) {
+            try {
+                localStorage.setItem(this.storageKeyChatEnabled, enabled.toString());
+            } catch (e) {
+                console.warn('AIChatIDEIntegration: failed to save chat enabled state:', e);
+            }
+        },
+
         isEnabled: function() {
             return this.enabled;
         },
@@ -39,6 +62,15 @@
         setEnabled: function(enabled) {
             this.enabled = enabled;
             this.saveEnabledState(enabled);
+        },
+
+        isChatEnabled: function() {
+            return this.chatEnabled;
+        },
+
+        setChatEnabled: function(enabled) {
+            this.chatEnabled = enabled;
+            this.saveChatEnabledState(enabled);
         },
 
         createSplitContainer: function(bodyElement) {

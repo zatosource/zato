@@ -33,6 +33,7 @@
             if (window.AIChatIDEIntegration) {
                 AIChatIDEIntegration.init(null);
                 this.ideEnabled = AIChatIDEIntegration.isEnabled();
+                this.chatEnabled = AIChatIDEIntegration.isChatEnabled();
             }
             AIChatTabs.loadClosedHistory();
             this.loadState();
@@ -207,6 +208,7 @@
 
             if (this.ideEnabled && !this.isMinimized && window.AIChatIDEIntegration) {
                 this.initIDESplit();
+                AIChatEvents.applyChatVisibility(this);
             }
 
             this.bindTabsEvents();

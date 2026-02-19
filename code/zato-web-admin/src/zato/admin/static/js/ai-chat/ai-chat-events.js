@@ -12,6 +12,7 @@
             core.ideEnabled = !core.ideEnabled;
             core.chatEnabled = true;
             AIChatIDEIntegration.setEnabled(core.ideEnabled);
+            AIChatIDEIntegration.setChatEnabled(core.chatEnabled);
             console.log('[F9] toggleIDE: calling render, ideEnabled=' + core.ideEnabled + ' chatEnabled=' + core.chatEnabled);
             core.render();
         },
@@ -27,11 +28,13 @@
                 core.ideEnabled = true;
                 core.chatEnabled = false;
                 AIChatIDEIntegration.setEnabled(true);
+                AIChatIDEIntegration.setChatEnabled(false);
                 core.render();
                 this.applyChatVisibility(core);
                 return;
             }
             core.chatEnabled = !core.chatEnabled;
+            AIChatIDEIntegration.setChatEnabled(core.chatEnabled);
             console.log('[F8] toggleChat: toggled chatEnabled to ' + core.chatEnabled);
             this.applyChatVisibility(core);
         },
