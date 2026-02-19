@@ -77,20 +77,28 @@
             editor.renderer.$textLayer.$renderLine = (function(originalRenderLine) {
                 return function(parent, row, onlyContents, foldLine) {
                     var result = originalRenderLine.call(this, parent, row, onlyContents, foldLine);
-                    var lineEl = parent.lastChild;
-                    if (lineEl && lineEl.innerHTML) {
-                        lineEl.innerHTML = lineEl.innerHTML.replace(/^((?:&nbsp;| )+)/, function(match) {
+                    var firstChild = parent.firstChild;
+                    if (firstChild && firstChild.nodeType === 3) {
+                        var text = firstChild.textContent;
+                        var match = text.match(/^( +)/);
+                        if (match) {
+                            var spaces = match[1];
                             var dots = '';
-                            for (var i = 0; i < match.length; i++) {
-                                if (match.substr(i, 6) === '&nbsp;') {
-                                    dots += '<span class="ace_indent_dot">·</span>';
-                                    i += 5;
-                                } else {
-                                    dots += '<span class="ace_indent_dot">·</span>';
-                                }
+                            for (var i = 0; i < spaces.length; i++) {
+                                dots += '·';
                             }
-                            return dots;
-                        });
+                            var span = document.createElement('span');
+                            span.className = 'ace_indent_dot';
+                            span.textContent = dots;
+                            var rest = text.substring(spaces.length);
+                            if (rest) {
+                                var restNode = document.createTextNode(rest);
+                                parent.replaceChild(restNode, firstChild);
+                                parent.insertBefore(span, restNode);
+                            } else {
+                                parent.replaceChild(span, firstChild);
+                            }
+                        }
                     }
                     return result;
                 };
