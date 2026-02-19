@@ -1,0 +1,29 @@
+from typing import Any
+
+import os
+import re
+import subprocess
+import tempfile
+import time
+from logging import getLogger
+from traceback import format_exc
+import yaml
+from zato.common.typing_ import anydict
+
+def execute_enmasse_batch(tool_calls: list) -> anydict: ...
+
+def is_enmasse_tool(tool_name: str) -> bool: ...
+
+def is_service_tool(tool_name: str) -> bool: ...
+
+def _extract_service_names(code: str) -> list: ...
+
+def _wait_for_services_deployed(client: any_, service_names: list, timeout: int = ...) -> tuple: ...
+
+def _apply_edits(content: str, edits: list) -> tuple: ...
+
+def execute_deploy_service(arguments: anydict, client: any_ = ...) -> anydict: ...
+
+def execute_delete_service(arguments: anydict) -> anydict: ...
+
+def execute_service_tool(tool_name: str, arguments: anydict, client: any_ = ...) -> anydict: ...

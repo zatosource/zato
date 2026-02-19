@@ -1,0 +1,9 @@
+from typing import Any
+
+from zato.common.typing_ import anydict, anydictnone
+from zato.server.base.parallel import ParallelServer
+
+class SecurityFacade:
+    def __init__(self: Any, server: ParallelServer) -> None: ...
+    def get_bearer_token_by_name(self: Any, key: str) -> anydict: ...
+    def get_bearer_token_by_id(self: Any, id: int) -> anydict: ...

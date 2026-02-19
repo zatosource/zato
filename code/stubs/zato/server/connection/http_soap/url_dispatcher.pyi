@@ -1,0 +1,23 @@
+from typing import Any
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+import re as stdlib_re
+from datetime import datetime
+from logging import getLogger
+from operator import itemgetter
+from uuid import uuid4
+from regex import compile as re_compile
+from zato.bunch import bunchify
+from zato.common.api import HTTP_SOAP, MISC, TRACE1
+
+class Matcher:
+    __repr__: Any
+    def __init__(self: Any, pattern: Any, match_slash: Any = ...) -> None: ...
+    def __str__(self: Any) -> None: ...
+    def _set_up_matcher(self: Any, pattern: Any) -> None: ...
+    def match(self: Any, value: Any) -> None: ...
+
+class PyURLData:
+    def __init__(self: Any, channel_data: Any = ...) -> None: ...
+    def _remove_from_cache(self: Any, match_target: Any) -> None: ...
+    def match(self: Any, url_path: Any, http_method: Any, http_accept: Any, sep: Any = ..., _bunchify: Any = ..., _log_trace1: Any = ..., _trace1: Any = ...) -> None: ...

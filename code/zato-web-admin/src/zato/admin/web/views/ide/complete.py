@@ -21,6 +21,7 @@ from django.http import JsonResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.common.api import IDE_Ignore_Modules
 from zato.common.json_internal import loads
 
 if 0:
@@ -74,15 +75,18 @@ def complete_python(req:'HttpRequest') -> 'JsonResponse':
         return JsonResponse({'success': True, 'completions': []})
 
     try:
-        zato_server_path = None
+        # .. find the stubs directory ..
+        stubs_path = None
         for path in sys.path:
             if 'zato-server' in path and path.endswith('src'):
-                zato_server_path = path
+                # .. path is like /code/zato-server/src, stubs are in /code/stubs ..
+                code_dir = os.path.dirname(os.path.dirname(path))
+                stubs_path = os.path.join(code_dir, 'stubs')
                 break
 
-        if zato_server_path:
-            fake_file_path = os.path.join(zato_server_path, 'zato', 'server', '_ide_temp_service.py')
-            root_uri = 'file://' + zato_server_path
+        if stubs_path and os.path.exists(stubs_path):
+            fake_file_path = os.path.join(stubs_path, 'zato', 'server', '_ide_temp_service.py')
+            root_uri = 'file://' + stubs_path
         else:
             fake_file_path = '/tmp/_ide_temp_service.py'
             root_uri = None
@@ -161,9 +165,23 @@ def complete_python(req:'HttpRequest') -> 'JsonResponse':
         lsp_input += build_lsp_message(shutdown_request)
         lsp_input += build_lsp_message(exit_notification)
 
-        zato_paths = [p for p in sys.path if 'zato' in p.lower()]
         env = os.environ.copy()
-        env['PYTHONPATH'] = ':'.join(zato_paths)
+        if stubs_path and os.path.exists(stubs_path):
+            env['PYTHONPATH'] = stubs_path
+        else:
+            zato_paths = []
+            for p in sys.path:
+                if 'zato' not in p.lower():
+                    continue
+                should_skip = False
+                for ignore_module in IDE_Ignore_Modules:
+                    if ignore_module in p.lower():
+                        should_skip = True
+                        break
+                if not should_skip:
+                    zato_paths.append(p)
+            env['PYTHONPATH'] = ':'.join(zato_paths)
+        env['ZUBAN_CRASH_ON_ERROR'] = '1'
 
         proc = subprocess.Popen(
             ['zuban', 'server'],
@@ -176,6 +194,9 @@ def complete_python(req:'HttpRequest') -> 'JsonResponse':
 
         stdout, stderr = proc.communicate(input=lsp_input, timeout=10)
 
+        logger.info('Zuban file_uri: %s', file_uri)
+        logger.info('Zuban rootUri: %s', root_uri)
+        logger.info('Zuban PYTHONPATH: %s', env.get('PYTHONPATH', ''))
         logger.info('Zuban stdout length: %s', len(stdout) if stdout else 0)
         logger.info('Zuban stderr: %s', stderr if stderr else 'empty')
 
@@ -185,6 +206,7 @@ def complete_python(req:'HttpRequest') -> 'JsonResponse':
             for resp in responses:
                 if resp.get('id') == 2:
                     lsp_result = resp.get('result')
+                    logger.info('Zuban completion result for line %s col %s: %s', line, column, lsp_result)
                     if lsp_result:
                         items = []
                         if isinstance(lsp_result, dict):

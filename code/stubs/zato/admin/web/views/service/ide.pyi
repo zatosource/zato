@@ -1,0 +1,29 @@
+from typing import Any
+
+import logging
+from django.template.response import TemplateResponse
+from zato.admin.web.views import BaseCallView, invoke_action_handler, method_allowed
+from django.http import HttpRequest, HttpResponse
+from zato.common.typing_ import any_
+
+class IDE(BaseCallView):
+    method_allowed: Any
+    url_name: Any
+    template: Any
+    service_name: Any
+    def get_input_dict(self: Any) -> None: ...
+    def build_http_response(self: Any, response: any_) -> TemplateResponse: ...
+
+def get_service(req: HttpRequest, service_name: str) -> HttpResponse: ...
+
+def get_file(req: HttpRequest, fs_location: str) -> HttpResponse: ...
+
+def create_file(req: HttpRequest) -> HttpResponse: ...
+
+def rename_file(req: HttpRequest) -> HttpResponse: ...
+
+def delete_file(req: HttpRequest) -> HttpResponse: ...
+
+def get_file_list(req: HttpRequest) -> HttpResponse: ...
+
+def get_service_list(req: HttpRequest) -> HttpResponse: ...

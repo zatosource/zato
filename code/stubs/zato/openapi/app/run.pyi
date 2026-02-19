@@ -1,0 +1,14 @@
+from typing import Any
+
+import logging
+import os
+import sys
+import gunicorn.app.base
+from zato.openapi.app.wsgi import application
+
+class OpenAPIServer(gunicorn.app.base.BaseApplication):
+    def __init__(self: Any, app: Any, options: Any = ...) -> None: ...
+    def load_config(self: Any) -> None: ...
+    def load(self: Any) -> None: ...
+
+def main() -> None: ...

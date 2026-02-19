@@ -1,0 +1,26 @@
+from typing import Any
+
+import json
+import uuid
+from logging import getLogger
+from zato.admin.web.views.ai.common import get_redis_client
+from zato.admin.web.views.ai.mcp.base import MCPClient
+from zato.common.typing_ import anydict, anylist
+
+class MCPRegistry:
+    @classmethod
+    def get_servers(cls: Any) -> anylist: ...
+    @classmethod
+    def save_servers(cls: Any, servers: anylist) -> None: ...
+    @classmethod
+    def add_server_from_endpoint(cls: Any, endpoint: str, auth_type: str = ..., auth_data: anydict | None = ...) -> anydict: ...
+    @classmethod
+    def remove_server(cls: Any, server_id: str) -> bool: ...
+    @classmethod
+    def update_server(cls: Any, server_id: str, updates: anydict) -> anydict: ...
+    @classmethod
+    def get_client(cls: Any, server_id: str) -> MCPClient | None: ...
+    @classmethod
+    def get_all_clients(cls: Any) -> list: ...
+    @classmethod
+    def get_all_tools(cls: Any) -> anylist: ...

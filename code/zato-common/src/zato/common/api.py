@@ -98,6 +98,9 @@ simple_types = (bytes, str, dict, list, tuple, bool, Number)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Modules to ignore in IDE autocompletion and stub generation
+IDE_Ignore_Modules = {'gevent'}
+
 generic_attrs = (
     'data_encoding',
     'max_msg_size', 'read_buffer_size', 'recv_timeout', 'logging_level', 'should_log_messages', 'start_seq', 'end_seq',

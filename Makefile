@@ -139,3 +139,6 @@ stop-dashboard:
 
 restart-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
+
+stubs:
+	py $(CURDIR)/code/util/generate_stubs.py

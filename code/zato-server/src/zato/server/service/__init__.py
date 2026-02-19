@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 
 """
 Copyright (C) 2025, Zato Source s.r.o. https://zato.io
@@ -14,6 +15,7 @@ from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
 from re import findall
 from traceback import format_exc
+from typing import TYPE_CHECKING
 
 # Bunch
 from bunch import bunchify
@@ -88,7 +90,7 @@ UUID = UUID # type: ignore
 
 # ################################################################################################################################
 
-if 0:
+if TYPE_CHECKING:
     from ddtrace._trace.context import Context as DatadogContext
     from logging import Logger
     from zato.broker.client import BrokerClient
