@@ -179,9 +179,17 @@
                 AIChatState.saveConfigMode(null);
             }
 
+            if (this.ideEnabled && !this.isMinimized && window.AIChatIDEIntegration) {
+                var existingSplit = this.widget.querySelector('#ai-chat-split-wrapper');
+                if (existingSplit) {
+                    this.updateChatPanelOnly();
+                    return;
+                }
+            }
+
             var html = AIChatRender.buildHeaderHtml(this.isMinimized, this.isMaximized);
 
-            if (this.ideEnabled && !this.needsConfig && !this.isMinimized && window.AIChatIDEIntegration) {
+            if (this.ideEnabled && !this.isMinimized && window.AIChatIDEIntegration) {
                 this.widget.classList.add('with-ide');
                 html += this.buildSplitBodyHtml();
             } else {
@@ -196,7 +204,7 @@
 
             this.widget.innerHTML = html;
 
-            if (this.ideEnabled && !this.needsConfig && !this.isMinimized && window.AIChatIDEIntegration) {
+            if (this.ideEnabled && !this.isMinimized && window.AIChatIDEIntegration) {
                 this.initIDESplit();
             }
 
@@ -226,6 +234,40 @@
             return html;
         },
 
+        updateChatPanelOnly: function() {
+            var rightPanel = this.widget.querySelector('.zato-ide-split-panel-right');
+            if (!rightPanel) {
+                return;
+            }
+
+            if (this.needsConfig) {
+                var configBodyHtml = AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider, this.cameFromChat, this.hadKeyOnEntry);
+                rightPanel.innerHTML = configBodyHtml;
+            } else {
+                var chatTabsHtml = AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
+                var chatBodyHtml = this.buildChatPanelBodyHtml();
+                rightPanel.innerHTML = chatTabsHtml + chatBodyHtml;
+                this.bindTabsEvents(rightPanel);
+            }
+
+            this.initModelDropdown();
+            this.initContextBarTooltip();
+            this.initConvertDropdown();
+            AIChatAttachments.render(this.widget, this.activeTabId, this.tabs);
+            this.scrollActiveTabToBottom();
+            this.highlightCode();
+            this.scrollEditDiffsToFirstHunk();
+            AIChatZoom.applyAllZoneZooms(this.widget);
+            this.restoreInputContent();
+
+            var input = this.widget.querySelector('#ai-chat-mcp-endpoint') ||
+                        this.widget.querySelector('#ai-chat-mcp-edit-endpoint') ||
+                        this.widget.querySelector('.ai-chat-config-api-key-input');
+            if (input) {
+                input.focus();
+            }
+        },
+
         initIDESplit: function() {
             var self = this;
 
@@ -253,10 +295,15 @@
 
             var rightPanel = ZatoIDESplit.getRightPanel(splitInstance);
             if (rightPanel) {
-                var chatTabsHtml = AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
-                var chatBodyHtml = this.buildChatPanelBodyHtml();
-                rightPanel.innerHTML = chatTabsHtml + chatBodyHtml;
-                this.bindTabsEvents(rightPanel);
+                if (this.needsConfig) {
+                    var configBodyHtml = AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider, this.cameFromChat, this.hadKeyOnEntry);
+                    rightPanel.innerHTML = configBodyHtml;
+                } else {
+                    var chatTabsHtml = AIChatRender.buildTabsHtml(this.tabs, this.activeTabId);
+                    var chatBodyHtml = this.buildChatPanelBodyHtml();
+                    rightPanel.innerHTML = chatTabsHtml + chatBodyHtml;
+                    this.bindTabsEvents(rightPanel);
+                }
             }
         },
 
