@@ -172,3 +172,21 @@
 .ace-zato-dark .ace_indent-guide {
     background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEklEQVQImWNgYGBgYHB3d/8PAAOIAdULw8qMAAAAAElFTkSuQmCC) right repeat-y;
 }
+
+.ace-zato-dark .ace_gutter-cell.ace_error {
+    background-image: none;
+    background-color: rgba(244, 71, 71, 0.3);
+    border-left: 3px solid #f44747;
+}
+
+.ace-zato-dark .ace_gutter-cell.ace_warning {
+    background-image: none;
+    background-color: rgba(255, 204, 0, 0.2);
+    border-left: 3px solid #ffcc00;
+}
+
+.ace-zato-dark .ace_gutter-cell.ace_info {
+    background-image: none;
+    background-color: rgba(74, 158, 255, 0.2);
+    border-left: 3px solid #4a9eff;
+}
