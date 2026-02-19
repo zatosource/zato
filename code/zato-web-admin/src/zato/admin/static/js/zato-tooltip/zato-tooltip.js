@@ -54,6 +54,12 @@
             var self = this;
 
             instance.handlers.mouseenter = function(e) {
+                console.log('[TOOLTIP] mouseenter, isLocked:', instance.isLocked, 'containerId:', instance.containerId, 'target:', e.target.className);
+                if (instance.isLocked) {
+                    console.log('[TOOLTIP] blocked by isLocked');
+                    return;
+                }
+
                 var target = e.target;
 
                 if (!target.hasAttribute || !target.hasAttribute(instance.attribute)) {
@@ -79,11 +85,14 @@
             };
 
             instance.handlers.mouseleave = function(e) {
+                console.log('[TOOLTIP] mouseleave, isLocked:', instance.isLocked, 'containerId:', instance.containerId, 'target:', e.target.className);
                 if (instance.isLocked) {
+                    console.log('[TOOLTIP] blocked by isLocked');
                     return;
                 }
                 var target = e.target;
-                if (target.hasAttribute && target.hasAttribute(instance.attribute)) {
+                if (target === instance.currentTarget) {
+                    console.log('[TOOLTIP] hiding because target === currentTarget');
                     self.hide(instance);
                 }
             };
@@ -187,11 +196,14 @@
         },
 
         showTemporary: function(instance, target, text, duration, alignment) {
+            console.log('[TOOLTIP] showTemporary called, text:', text, 'duration:', duration, 'containerId:', instance.containerId);
             if (!instance.tooltipEl) {
+                console.log('[TOOLTIP] showTemporary: no tooltipEl');
                 return;
             }
 
             instance.isLocked = true;
+            console.log('[TOOLTIP] showTemporary: isLocked set to true');
             instance.currentTarget = target;
             instance.tooltipEl.textContent = text;
             instance.tooltipEl.style.opacity = '1';
