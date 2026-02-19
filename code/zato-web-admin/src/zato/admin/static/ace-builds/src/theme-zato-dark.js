@@ -46,7 +46,7 @@ border: 1px solid #569cd6;\
 color: #569cd6;\
 }\
 .ace-zato-dark .ace_keyword {\
-color: #569cd6;\
+color: #7cb3e8;\
 }\
 .ace-zato-dark .ace_keyword.ace_operator {\
 color: #d4d4d4;\
@@ -108,7 +108,7 @@ color: #569cd6;\
 color: #9cdcfe;\
 }\
 .ace-zato-dark .ace_variable.ace_language {\
-color: #569cd6;\
+color: #7cb3e8;\
 }\
 .ace-zato-dark .ace_variable.ace_parameter {\
 color: #9cdcfe;\
