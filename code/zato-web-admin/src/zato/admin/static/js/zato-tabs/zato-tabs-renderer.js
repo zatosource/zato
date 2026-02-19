@@ -75,7 +75,11 @@
                 html += '<span class="zato-tab-title">' + this.escapeHtml(tab.title) + '</span>';
 
                 if (opts.showCloseButton && tabs.length > 1 && !tab.locked && !tab.pinned) {
-                    html += '<span class="zato-tab-close" data-tab-id="' + tab.id + '">✕</span>';
+                    var modifiedClass = tab.modified ? ' modified' : '';
+                    html += '<span class="zato-tab-close-wrapper' + modifiedClass + '" data-tab-id="' + tab.id + '">';
+                    html += '<span class="zato-tab-modified-dot"></span>';
+                    html += '<span class="zato-tab-close">✕</span>';
+                    html += '</span>';
                 }
 
                 html += '</div>';

@@ -80,11 +80,19 @@
         handleClick: function(e, containerElement, instance, callbacks) {
             var target = e.target;
 
+            var closeWrapper = target.closest('.zato-tab-close-wrapper');
+            if (closeWrapper && containerElement.contains(closeWrapper)) {
+                var tabId = closeWrapper.getAttribute('data-tab-id');
+                this.closeTab(instance, tabId, callbacks);
+                return;
+            }
             var closeButton = target.closest('.zato-tab-close');
             if (closeButton && containerElement.contains(closeButton)) {
                 var tabId = closeButton.getAttribute('data-tab-id');
-                this.closeTab(instance, tabId, callbacks);
-                return;
+                if (tabId) {
+                    this.closeTab(instance, tabId, callbacks);
+                    return;
+                }
             }
 
             var addButton = target.closest('.zato-tab-add');
@@ -281,34 +289,43 @@
                 return;
             }
 
-            if (tab && callbacks.onAddToClosedHistory) {
-                callbacks.onAddToClosedHistory(tab);
-            }
-
-            var tabIndex = this.getTabIndex(instance.tabs, tabId);
-            if (tabIndex === -1) {
-                return;
-            }
-
-            instance.tabs.splice(tabIndex, 1);
-
-            if (instance.activeTabId === tabId) {
-                var newActiveIndex = Math.min(tabIndex, instance.tabs.length - 1);
-                instance.activeTabId = instance.tabs[newActiveIndex].id;
-                if (callbacks.onTabChange) {
-                    var newActiveTab = this.getTabById(instance.tabs, instance.activeTabId);
-                    callbacks.onTabChange(newActiveTab);
+            var self = this;
+            var doClose = function() {
+                if (tab && callbacks.onAddToClosedHistory) {
+                    callbacks.onAddToClosedHistory(tab);
                 }
-            }
 
-            if (callbacks.onFlushClosedHistory) {
-                callbacks.onFlushClosedHistory();
-            }
-            if (callbacks.onSave) {
-                callbacks.onSave();
-            }
-            if (callbacks.onRender) {
-                callbacks.onRender();
+                var tabIndex = self.getTabIndex(instance.tabs, tabId);
+                if (tabIndex === -1) {
+                    return;
+                }
+
+                instance.tabs.splice(tabIndex, 1);
+
+                if (instance.activeTabId === tabId) {
+                    var newActiveIndex = Math.min(tabIndex, instance.tabs.length - 1);
+                    instance.activeTabId = instance.tabs[newActiveIndex].id;
+                    if (callbacks.onTabChange) {
+                        var newActiveTab = self.getTabById(instance.tabs, instance.activeTabId);
+                        callbacks.onTabChange(newActiveTab);
+                    }
+                }
+
+                if (callbacks.onFlushClosedHistory) {
+                    callbacks.onFlushClosedHistory();
+                }
+                if (callbacks.onSave) {
+                    callbacks.onSave();
+                }
+                if (callbacks.onRender) {
+                    callbacks.onRender();
+                }
+            };
+
+            if (callbacks.onBeforeClose) {
+                callbacks.onBeforeClose(tab, doClose);
+            } else {
+                doClose();
             }
         },
 
