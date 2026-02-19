@@ -352,6 +352,9 @@
             instance.tabs.push(newTab);
             instance.activeTabId = newTab.id;
 
+            if (callbacks.onTabChange) {
+                callbacks.onTabChange(newTab);
+            }
             if (callbacks.onTabAdd) {
                 callbacks.onTabAdd(newTab);
             }
