@@ -957,6 +957,7 @@
 
             console.log('[TRACE-SYMBOL] updateSymbols: activeFile=' + instance.activeFile + ' language=' + file.language + ' content.length=' + (file.content ? file.content.length : 0));
             var symbols = ZatoIDESymbols.extract(file.content, file.language);
+            instance.cachedSymbols = symbols;
             console.log('[TRACE-SYMBOL] updateSymbols: extracted ' + symbols.length + ' symbols');
             var container = instance.symbolDropdown;
             var menu = container.querySelector('.zato-dropdown-menu');
@@ -968,6 +969,26 @@
             }
 
             menu.innerHTML = '';
+
+            var lineCount = file.content ? file.content.split('\n').length : 1;
+
+            if (symbols.length > 0) {
+                var topItem = document.createElement('div');
+                topItem.className = 'zato-dropdown-item';
+                topItem.setAttribute('data-value', '1');
+                topItem.textContent = '(top)';
+                menu.appendChild(topItem);
+
+                var bottomItem = document.createElement('div');
+                bottomItem.className = 'zato-dropdown-item';
+                bottomItem.setAttribute('data-value', lineCount);
+                bottomItem.textContent = '(bottom)';
+                menu.appendChild(bottomItem);
+
+                var separator = document.createElement('div');
+                separator.className = 'zato-dropdown-separator';
+                menu.appendChild(separator);
+            }
 
             if (symbols.length === 0) {
                 console.log('[TRACE-SYMBOL] updateSymbols: no symbols, showing empty state');
@@ -1003,16 +1024,22 @@
         },
 
         syncDropdownsToLine: function(instance, line) {
-            if (!instance.symbolDropdown || !window.ZatoIDESymbols) {
+            if (!instance.symbolDropdown) {
                 return;
             }
 
-            var file = instance.files[instance.activeFile];
-            if (!file) {
-                return;
+            var cachedSymbols = instance.cachedSymbols || [];
+            var cachedMethods = instance.cachedMethods || [];
+
+            var symbol = null;
+            for (var i = 0; i < cachedSymbols.length; i++) {
+                if (cachedSymbols[i].line <= line) {
+                    symbol = cachedSymbols[i];
+                } else {
+                    break;
+                }
             }
 
-            var symbol = ZatoIDESymbols.findSymbolAtLine(file.content, file.language, line);
             if (!symbol) {
                 return;
             }
@@ -1028,9 +1055,18 @@
                 symbolContainer.setAttribute('data-value', symbol.line);
 
                 this.updateMethods(instance, symbol.line);
+                cachedMethods = instance.cachedMethods || [];
             }
 
-            var method = ZatoIDESymbols.findMethodAtLine(file.content, file.language, symbol.line, line);
+            var method = null;
+            for (var j = 0; j < cachedMethods.length; j++) {
+                if (cachedMethods[j].line <= line) {
+                    method = cachedMethods[j];
+                } else {
+                    break;
+                }
+            }
+
             if (method && instance.methodDropdown) {
                 var methodContainer = instance.methodDropdown;
                 var methodTextSpan = methodContainer.querySelector('.zato-dropdown-text');
@@ -1056,6 +1092,7 @@
             }
 
             var methods = ZatoIDESymbols.extractMethods(file.content, file.language, classLine);
+            instance.cachedMethods = methods;
             console.log('[TRACE-METHOD] updateMethods: extracted ' + methods.length + ' methods');
 
             var container = instance.methodDropdown;
