@@ -6,7 +6,7 @@
         defaults: {
             theme: 'dark',
             language: 'python',
-            fontSize: 13,
+            fontSize: 12,
             tabSize: 4
         },
 

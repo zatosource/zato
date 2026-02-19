@@ -39,7 +39,6 @@
         defaultOptions: {
             theme: 'dark',
             language: 'python',
-            fontSize: 13,
             tabSize: 4,
             lineNumbers: true
         },
@@ -871,10 +870,9 @@
 
             var file = instance.files[instance.activeFile];
             console.log('[ZatoIDE] initCodeEditor: creating editor, activeFile=' + instance.activeFile + ', language=' + (file ? file.language : 'none'));
-            instance.codeEditor = ZatoIDEEditorAce.create(editorArea, {
+            var editorOptions = {
                 theme: instance.options.theme,
                 language: file ? file.language : 'python',
-                fontSize: instance.options.fontSize,
                 tabSize: instance.options.tabSize,
                 content: file ? file.content : '',
                 onContentChange: function(content) {
@@ -886,7 +884,11 @@
                 onCursorChange: function(line, col) {
                     self.syncDropdownsToLine(instance, line);
                 }
-            });
+            };
+            if (instance.options.fontSize) {
+                editorOptions.fontSize = instance.options.fontSize;
+            }
+            instance.codeEditor = ZatoIDEEditorAce.create(editorArea, editorOptions);
             console.log('[ZatoIDE] initCodeEditor: editor created, codeEditor=' + (instance.codeEditor ? 'ok' : 'null'));
         },
 
