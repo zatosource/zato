@@ -64,7 +64,7 @@ class GeventWorker(GunicornGeventWorker):
 
 def _get_base_classes() -> anytuple: ...
 
-class WorkerStore(_WorkerStoreBase):
+class WorkerStore(object):
     pubsub_consumer_backend: ConsumerBackend
     broker_client: BrokerClient | None
     on_broker_msg_OUTGOING_ODOO_CHANGE_PASSWORD: Any

@@ -45,7 +45,8 @@ class StubGenerator:
         for source_dir in self.source_dirs:
             self._process_directory(source_dir)
 
-        logger.info(f'Stub generation complete: {self.generated_count} generated, {self.skipped_count} skipped, {self.error_count} errors')
+        error_word = 'error' if self.error_count == 1 else 'errors'
+        logger.info(f'Stub generation complete: {self.generated_count} generated, {self.skipped_count} skipped, {self.error_count} {error_word}')
 
 # ################################################################################################################################
 
@@ -58,6 +59,10 @@ class StubGenerator:
             return
 
         for py_file in source_path.rglob('*.py'):
+            # .. skip zato/admin/manage.py - Django entry point with special syntax ..
+            if py_file.name == 'manage.py':
+                if py_file.match('*/zato/admin/manage.py'):
+                    continue
             self._process_file(py_file, source_path)
 
 # ################################################################################################################################
@@ -172,7 +177,15 @@ class StubGenerator:
         lines = []
 
         # .. class declaration with bases ..
-        bases = ', '.join(self._get_name(base) for base in node.bases)
+        base_names = []
+        for base in node.bases:
+            base_name = self._get_name(base)
+            # .. special case: _WorkerStoreBase is dynamically created, replace with object ..
+            if base_name == '_WorkerStoreBase':
+                base_name = 'object'
+            base_names.append(base_name)
+
+        bases = ', '.join(base_names)
         if bases:
             lines.append(f'class {node.name}({bases}):')
         else:
