@@ -208,3 +208,37 @@ def list_directory(req:'HttpRequest'):
         'path': path,
         'items': items
     })
+
+@method_allowed('GET')
+def read_file(req:'HttpRequest'):
+
+    path = req.GET.get('path', '')
+
+    if not path:
+        return JsonResponse({'success': False, 'error': 'Path is required'}, status=400)
+
+    path = os.path.expanduser(path)
+    path = os.path.abspath(path)
+
+    if not os.path.exists(path):
+        return JsonResponse({'success': False, 'error': 'File does not exist'}, status=404)
+
+    if not os.path.isfile(path):
+        return JsonResponse({'success': False, 'error': 'Path is not a file'}, status=400)
+
+    try:
+        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+            content = f.read()
+    except PermissionError:
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+    filename = os.path.basename(path)
+
+    return JsonResponse({
+        'success': True,
+        'path': path,
+        'filename': filename,
+        'content': content
+    })

@@ -1275,6 +1275,7 @@
         },
 
         initExplorer: function(instance, container) {
+            var self = this;
             if (typeof ZatoIDEExplorer === 'undefined') {
                 return;
             }
@@ -1288,9 +1289,104 @@
                     console.log('[ZatoIDE] File selected:', item.path);
                 },
                 onFileDoubleClick: function(item) {
-                    console.log('[ZatoIDE] File double-clicked:', item.path);
+                    self.openFileFromPath(instance, item.path, item.name);
                 }
             });
+        },
+
+        openFileFromPath: function(instance, filePath, fileName) {
+            var self = this;
+
+            var existingTab = this.findTabByPath(instance, filePath);
+            if (existingTab) {
+                this.switchToTab(instance, existingTab.id);
+                return;
+            }
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/zato/ide/explorer/read/?path=' + encodeURIComponent(filePath), true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            self.openFileInNewTab(instance, filePath, fileName, response.content);
+                        }
+                    }
+                }
+            };
+            xhr.send();
+        },
+
+        findTabByPath: function(instance, filePath) {
+            if (!instance.tabsManager || !instance.tabsManager.tabs) {
+                return null;
+            }
+            for (var i = 0; i < instance.tabsManager.tabs.length; i++) {
+                var tab = instance.tabsManager.tabs[i];
+                if (tab.filePath === filePath) {
+                    return tab;
+                }
+            }
+            return null;
+        },
+
+        openFileInNewTab: function(instance, filePath, fileName, content) {
+            var tabId = 'file-' + Date.now();
+            var language = 'text';
+            if (typeof ZatoIDEEditorAce !== 'undefined') {
+                language = ZatoIDEEditorAce.getLanguageFromExtension(fileName);
+            }
+
+            var newTab = {
+                id: tabId,
+                title: fileName,
+                filePath: filePath,
+                content: content,
+                language: language
+            };
+
+            if (!instance.tabsManager.tabs) {
+                instance.tabsManager.tabs = [];
+            }
+            instance.tabsManager.tabs.push(newTab);
+
+            if (!instance.files) {
+                instance.files = {};
+            }
+            instance.files[fileName] = {
+                content: content,
+                originalContent: content,
+                language: language,
+                filePath: filePath,
+                modified: false
+            };
+
+            this.renderTabs(instance);
+            this.bindTabEvents(instance);
+            this.switchToTab(instance, tabId);
+        },
+
+        switchToTab: function(instance, tabId) {
+            if (!instance.tabsManager) {
+                return;
+            }
+
+            instance.tabsManager.activeTabId = tabId;
+            this.renderTabs(instance);
+            this.bindTabEvents(instance);
+
+            var tab = null;
+            for (var i = 0; i < instance.tabsManager.tabs.length; i++) {
+                if (instance.tabsManager.tabs[i].id === tabId) {
+                    tab = instance.tabsManager.tabs[i];
+                    break;
+                }
+            }
+
+            if (tab && tab.title) {
+                this.switchToFile(instance, tab.title);
+            }
         },
 
         /**

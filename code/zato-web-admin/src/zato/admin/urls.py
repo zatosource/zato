@@ -1030,6 +1030,8 @@ urlpatterns += [
 
     url(r'^zato/ide/explorer/list/$',
         login_required(ide_explorer.list_directory), name='ide-explorer-list'),
+    url(r'^zato/ide/explorer/read/$',
+        login_required(ide_explorer.read_file), name='ide-explorer-read'),
 ]
 
 # ################################################################################################################################
