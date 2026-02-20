@@ -141,7 +141,15 @@
             html += '</div>';
             html += '</div>';
 
+            html += '<div class="zato-ide-main-area">';
             html += '<div class="zato-ide-editor-area" id="' + instance.id + '-editor-area">';
+            html += '</div>';
+            html += '<div class="zato-ide-side-panel-1" id="' + instance.id + '-side-panel-1">';
+            html += '<div class="zato-ide-side-panel-1-content" id="' + instance.id + '-side-panel-1-content">';
+            html += '</div>';
+            html += '<div class="zato-ide-side-panel-1-icons" id="' + instance.id + '-side-panel-1-icons">';
+            html += '</div>';
+            html += '</div>';
             html += '</div>';
 
             html += '</div>';
@@ -243,6 +251,7 @@
             this.initTabs(instance);
 
             this.loadSearchIcon(instance);
+            this.loadSidePanel1Icons(instance);
 
             this.bindEvents(instance);
 
@@ -1142,6 +1151,65 @@
                 }
             };
             xhr.send();
+        },
+
+        loadSidePanel1Icons: function(instance) {
+            var self = this;
+            var iconsContainer = document.getElementById(instance.id + '-side-panel-1-icons');
+            if (!iconsContainer) {
+                return;
+            }
+
+            var icons = [
+                { id: 'explorer', file: 'explorer.svg', tooltip: 'Explorer' },
+                { id: 'debugger', file: 'debugger.svg', tooltip: 'Debugger' },
+                { id: 'notes', file: 'notes.svg', tooltip: 'Notes' }
+            ];
+
+            instance.sidePanel1ActiveView = 'explorer';
+
+            icons.forEach(function(iconDef) {
+                var iconDiv = document.createElement('div');
+                iconDiv.className = 'zato-ide-side-panel-1-icon';
+                iconDiv.setAttribute('data-view', iconDef.id);
+                iconDiv.setAttribute('data-tooltip', iconDef.tooltip);
+                if (iconDef.id === instance.sidePanel1ActiveView) {
+                    iconDiv.classList.add('active');
+                }
+
+                iconsContainer.appendChild(iconDiv);
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/static/img/side-panel/' + iconDef.file, true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        iconDiv.innerHTML = xhr.responseText;
+                    }
+                };
+                xhr.send();
+
+                iconDiv.addEventListener('click', function() {
+                    self.switchSidePanel1View(instance, iconDef.id);
+                });
+            });
+        },
+
+        switchSidePanel1View: function(instance, viewId) {
+            var iconsContainer = document.getElementById(instance.id + '-side-panel-1-icons');
+            if (!iconsContainer) {
+                return;
+            }
+
+            var icons = iconsContainer.querySelectorAll('.zato-ide-side-panel-1-icon');
+            icons.forEach(function(icon) {
+                if (icon.getAttribute('data-view') === viewId) {
+                    icon.classList.add('active');
+                } else {
+                    icon.classList.remove('active');
+                }
+            });
+
+            instance.sidePanel1ActiveView = viewId;
         },
 
         /**

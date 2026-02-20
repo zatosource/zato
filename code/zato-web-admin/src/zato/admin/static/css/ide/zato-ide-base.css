@@ -44,6 +44,14 @@
     background: var(--zato-ide-bg-dark);
 }
 
+.zato-ide-main-area {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .zato-ide-editor-area {
     flex: 1;
     min-height: 0;

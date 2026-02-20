@@ -1,0 +1,57 @@
+.zato-ide-side-panel-1 {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    background: var(--zato-ide-bg-dark);
+}
+
+.zato-ide-side-panel-1-content {
+    flex: 1;
+    min-width: 0;
+    background: var(--zato-ide-bg-dark);
+    border-left: 1px solid var(--zato-ide-border-subtle);
+}
+
+.zato-ide-side-panel-1-icons {
+    display: flex;
+    flex-direction: column;
+    width: 40px;
+    min-width: 40px;
+    background: var(--zato-ide-toolbar-bg);
+    border-left: 1px solid var(--zato-ide-border-subtle);
+}
+
+.zato-ide-side-panel-1-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    color: var(--zato-ide-text-secondary);
+    position: relative;
+}
+
+.zato-ide-side-panel-1-icon:hover {
+    color: var(--zato-ide-text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.zato-ide-side-panel-1-icon.active {
+    color: var(--zato-ide-text-primary);
+}
+
+.zato-ide-side-panel-1-icon.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--zato-ide-accent-blue, #007acc);
+}
+
+.zato-ide-side-panel-1-icon svg {
+    width: 20px;
+    height: 20px;
+}

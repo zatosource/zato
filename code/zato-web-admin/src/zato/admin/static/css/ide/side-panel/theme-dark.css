@@ -1,0 +1,30 @@
+.zato-ide-theme-dark .zato-ide-side-panel-1 {
+    background: #1e1e1e;
+}
+
+.zato-ide-theme-dark .zato-ide-side-panel-1-content {
+    background: #252526;
+    border-left-color: #3c3c3c;
+}
+
+.zato-ide-theme-dark .zato-ide-side-panel-1-icons {
+    background: #333333;
+    border-left-color: #3c3c3c;
+}
+
+.zato-ide-theme-dark .zato-ide-side-panel-1-icon {
+    color: #858585;
+}
+
+.zato-ide-theme-dark .zato-ide-side-panel-1-icon:hover {
+    color: #cccccc;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.zato-ide-theme-dark .zato-ide-side-panel-1-icon.active {
+    color: #ffffff;
+}
+
+.zato-ide-theme-dark .zato-ide-side-panel-1-icon.active::before {
+    background: #007acc;
+}
