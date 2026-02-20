@@ -10,5 +10,6 @@ from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.common.typing_ import anydict, list_
 
 class Microsoft365Exporter:
+    exporter: Any
     def __init__(self: Any, exporter: EnmasseYAMLExporter) -> None: ...
     def export(self: Any, session: SASession, cluster_id: int) -> microsoft_365_def_list: ...

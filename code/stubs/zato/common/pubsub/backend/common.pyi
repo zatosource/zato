@@ -20,6 +20,13 @@ class ModuleCtx:
 class Backend:
     topics: dict_[str, Topic]
     subs_by_topic: topic_subs
+    broker_client: Any
+    topics: Any
+    subs_by_topic: Any
+    _main_lock: RLock
+    _invoke_lock: RLock
+    _publish_counter_lock: RLock
+    message_counter: Any
     def __init__(self: Any, broker_client: BrokerClient) -> None: ...
     def _add_topic(self: Any, topic_name: str, topic: Topic) -> None: ...
     def _delete_topic(self: Any, topic_name: str) -> Topic: ...

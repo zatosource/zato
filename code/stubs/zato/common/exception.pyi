@@ -5,6 +5,8 @@ from zato.common.http_ import HTTP_RESPONSES
 
 class ZatoException(Exception):
     __str__: Any
+    cid: Any
+    msg: Any
     def __init__(self: Any, cid: Any = ..., msg: Any = ...) -> None: ...
     def __repr__(self: Any) -> None: ...
 
@@ -24,6 +26,9 @@ class TimeoutException(ConnectionException):
     ...
 
 class StatusAwareException(ZatoException):
+    status: Any
+    reason: Any
+    needs_msg: Any
     def __init__(self: Any, cid: Any, msg: Any, status: Any, needs_msg: Any = ...) -> None: ...
     def __repr__(self: Any) -> None: ...
 
@@ -61,6 +66,7 @@ class NotFound(Reportable):
     def __init__(self: Any, cid: Any, msg: Any) -> None: ...
 
 class Unauthorized(Reportable):
+    challenge: Any
     def __init__(self: Any, cid: Any, msg: Any, challenge: Any) -> None: ...
 
 class TooManyRequests(Reportable):
@@ -73,4 +79,5 @@ class ServiceUnavailable(Reportable):
     def __init__(self: Any, cid: Any, msg: Any) -> None: ...
 
 class ConnectorClosedException(Exception):
+    inner_exc: Any
     def __init__(self: Any, exc: Any, message: Any) -> None: ...

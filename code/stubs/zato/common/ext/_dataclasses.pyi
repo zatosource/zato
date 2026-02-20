@@ -17,6 +17,7 @@ class _MISSING_TYPE:
     ...
 
 class _FIELD_BASE:
+    name: Any
     def __init__(self: Any, name: Any) -> None: ...
     def __repr__(self: Any) -> None: ...
 
@@ -28,12 +29,28 @@ class InitVar:
 
 class Field:
     __slots__: Any
+    name: Any
+    type: Any
+    default: Any
+    default_factory: Any
+    init: Any
+    repr: Any
+    hash: Any
+    compare: Any
+    metadata: Any
+    _field_type: Any
     def __init__(self: Any, default: Any, default_factory: Any, init: Any, repr: Any, hash: Any, compare: Any, metadata: Any) -> None: ...
     def __repr__(self: Any) -> None: ...
     def __set_name__(self: Any, owner: Any, name: Any) -> None: ...
 
 class _DataclassParams:
     __slots__: Any
+    init: Any
+    repr: Any
+    eq: Any
+    order: Any
+    unsafe_hash: Any
+    frozen: Any
     def __init__(self: Any, init: Any, repr: Any, eq: Any, order: Any, unsafe_hash: Any, frozen: Any) -> None: ...
     def __repr__(self: Any) -> None: ...
 

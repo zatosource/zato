@@ -16,6 +16,7 @@ from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.service import Service
 
 class SchedulerFacade:
+    server: Any
     def __init__(self: Any, server: ParallelServer) -> None: ...
     def onetime(self: Any, invoking_service: Any, target_service: Any, name: Any = ...) -> int: ...
 
@@ -42,6 +43,8 @@ class RESTInvoker:
     conn: HTTPSOAPWrapper
     container: RESTFacade
     send: Any
+    conn: Any
+    container: Any
     def __init__(self: Any, conn: HTTPSOAPWrapper, container: RESTFacade) -> None: ...
     def call_rest_func(self: Any, func_name: str, conn_name: str, *args: any_, **kwargs: str) -> any_: ...
     def call_wrapper(self: Any, *args: any_, **kwargs: any_) -> any_: ...

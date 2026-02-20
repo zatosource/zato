@@ -23,9 +23,24 @@ import getpass
 def setup_update_file_logger(base_dir: strnone = ..., component_name: str = ...) -> None: ...
 
 class UpdaterConfig:
+    redis_host: Any
+    redis_port: Any
+    redis_db: Any
+    current_dir: Any
+    base_dir: Any
+    zato_path: Any
+    github_repo: Any
+    github_branch: Any
+    default_version: Any
+    audit_log_key: Any
+    schedule_key: Any
+    lock_key: Any
+    lock_timeout: Any
+    audit_log_max_entries: Any
     def __init__(self: Any) -> None: ...
 
 class Updater:
+    config: Any
     def __init__(self: Any, config: UpdaterConfig) -> None: ...
     def _setup_update_logger(self: Any) -> None: ...
     def get_component_path(self: Any, component_name: str) -> str: ...

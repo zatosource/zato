@@ -21,6 +21,12 @@ class GoogleClient:
     scopes: anylist
     service_file_dict: str
     dir_map: stranydict
+    api_name: Any
+    api_version: Any
+    user: Any
+    scopes: Any
+    service_file_dict: Any
+    _dir_map: Any
     def __init__(self: Any, api_name: str, api_version: str, user: str, scopes: anylist, service_file_dict: str) -> None: ...
     def connect(self: Any) -> any_: ...
     def reset(self: Any) -> None: ...

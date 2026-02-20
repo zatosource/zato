@@ -17,6 +17,11 @@ class Inactive(Exception):
     ...
 
 class EventLogger:
+    enter_verb: Any
+    exit_verb: Any
+    enter_func: Any
+    exit_func: Any
+    predicate_func: Any
     def __init__(self: Any, enter_verb: Any, exit_verb: Any, enter_func: Any, exit_func: Any, predicate_func: Any = ...) -> None: ...
     def __enter__(self: Any) -> None: ...
     def __exit__(self: Any, *args: Any, **kwargs: Any) -> None: ...
@@ -26,6 +31,23 @@ class Connector:
     should_log_started_stopped: Any
     _get_conn_string: Any
     get_prev_log_details: Any
+    name: Any
+    type: Any
+    config: Any
+    on_message_callback: Any
+    auth_func: Any
+    service: getattr
+    channels: Any
+    outconns: Any
+    id: Any
+    is_active: Any
+    is_inactive: Any
+    is_connected: Any
+    keep_connecting: Any
+    keep_running: Any
+    lock: RLock
+    id_self: hex
+    conn: Any
     def __init__(self: Any, name: str, type: str, config: Bunch, on_message_callback: callable_, auth_func: callnone = ..., channels: dictnone = ..., outconns: dictnone = ..., parallel_server: ParallelServer | None = ...) -> None: ...
     def get_log_details(self: Any) -> str: ...
     def _start_loop(self: Any) -> None: ...
@@ -50,6 +72,10 @@ class Connector:
     def get_conn_report(self: Any) -> None: ...
 
 class ConnectorStore:
+    type: Any
+    connector_class: Any
+    parallel_server: Any
+    lock: RLock
     def __init__(self: Any, type: str, connector_class: type_, parallel_server: ParallelServer | None = ...) -> None: ...
     def _create(self: Any, name: str, config: Bunch, on_message_callback: callnone = ..., auth_func: callnone = ..., channels: dictnone = ..., outconns: dictnone = ..., needs_start: bool = ...) -> None: ...
     def create(self: Any, name: str, config: Bunch, on_message_callback: callnone = ..., auth_func: callnone = ..., channels: dictnone = ..., outconns: dictnone = ..., needs_start: bool = ...) -> None: ...

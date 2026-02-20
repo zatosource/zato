@@ -11,15 +11,33 @@ from requests import Response as RequestsResponse
 
 class CommandConfig:
     __slots__: Any
+    command: Any
+    modifier: Any
+    key: Any
+    value: Any
+    is_string_key: Any
+    is_int_key: Any
+    is_string_value: Any
+    is_int_value: Any
+    is_bool_value: Any
+    format: Any
     def __init__(self: Any) -> None: ...
     def to_dict(self: Any) -> None: ...
 
 class CommandResponse:
     __slots__: Any
+    key: Any
+    text: Any
+    has_value: Any
     def __init__(self: Any) -> None: ...
 
 class Client:
     __slots__: Any
+    address: Any
+    username: Any
+    password: Any
+    cache_name: Any
+    session: Any
     def __init__(self: Any) -> None: ...
     @staticmethod
     def from_server_conf(server_dir: Any, cache_name: Any, is_https: Any) -> None: ...

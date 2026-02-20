@@ -11,6 +11,10 @@ from zato.server.ext.zunicorn import util
 from zato.server.ext.zunicorn.six import string_types
 
 class BaseSocket:
+    log: Any
+    conf: Any
+    cfg_addr: Any
+    sock: self.set_options
     def __init__(self: Any, address: Any, conf: Any, log: Any, fd: Any = ...) -> None: ...
     def __str__(self: Any) -> None: ...
     def __getattr__(self: Any, name: Any) -> None: ...

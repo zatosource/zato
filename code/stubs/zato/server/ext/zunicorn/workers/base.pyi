@@ -22,6 +22,21 @@ from traceback import format_exc
 
 class Worker:
     PIPE: Any
+    age: Any
+    pid: Any
+    ppid: Any
+    sockets: Any
+    app: Any
+    timeout: Any
+    cfg: Any
+    booted: Any
+    aborted: Any
+    reloader: Any
+    nr: Any
+    max_requests: Any
+    alive: Any
+    log: Any
+    tmp: worker_tmp_class
     def __init__(self: Any, age: Any, ppid: Any, sockets: Any, app: Any, timeout: Any, cfg: Any, log: Any) -> None: ...
     def __str__(self: Any) -> None: ...
     def notify(self: Any) -> None: ...

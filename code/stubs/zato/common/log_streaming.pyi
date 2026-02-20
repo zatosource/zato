@@ -8,12 +8,21 @@ import redis
 from traceback import format_exc
 
 class RedisHandler(logging.Handler):
+    channel: Any
+    redis_client: Any
+    redis_host: Any
+    redis_port: Any
+    redis_db: Any
+    emit_count: Any
     def __init__(self: Any, channel: Any = ..., redis_host: Any = ..., redis_port: Any = ..., redis_db: Any = ...) -> None: ...
     def _get_redis_client(self: Any) -> None: ...
     def emit(self: Any, record: Any) -> None: ...
 
 class LogStreamingManager:
     loggers_to_stream: Any
+    logger_name: Any
+    logger: logging.getLogger
+    redis_handler: Any
     def __init__(self: Any, logger_name: Any = ...) -> None: ...
     def configure_logging(self: Any) -> None: ...
     def get_redis_handler(self: Any) -> None: ...

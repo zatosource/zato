@@ -206,6 +206,14 @@ class StubGenerator:
                         lines.append(f'    {target.id}: Any')
                         has_content = True
 
+        # .. extract self.x assignments from __init__ ..
+        for item in node.body:
+            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == '__init__':
+                init_attrs = self._extract_init_attributes(item)
+                for attr_name, attr_type in init_attrs.items():
+                    lines.append(f'    {attr_name}: {attr_type}')
+                    has_content = True
+
         # .. methods ..
         for item in node.body:
             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -217,6 +225,30 @@ class StubGenerator:
             lines.append('    ...')
 
         return '\n'.join(lines)
+
+# ################################################################################################################################
+
+    def _extract_init_attributes(self, init_node:'ast.FunctionDef') -> 'dict[str, str]':
+        """ Extracts self.x = ... assignments from __init__ method.
+        """
+        attrs = {}
+        for stmt in ast.walk(init_node):
+            if isinstance(stmt, ast.Assign):
+                for target in stmt.targets:
+                    if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name):
+                        if target.value.id == 'self':
+                            attr_name = target.attr
+                            # .. try to infer type from the value ..
+                            if isinstance(stmt.value, ast.Call):
+                                if isinstance(stmt.value.func, ast.Name):
+                                    attrs[attr_name] = stmt.value.func.id
+                                elif isinstance(stmt.value.func, ast.Attribute):
+                                    attrs[attr_name] = self._get_name(stmt.value.func)
+                                else:
+                                    attrs[attr_name] = 'Any'
+                            else:
+                                attrs[attr_name] = 'Any'
+        return attrs
 
 # ################################################################################################################################
 

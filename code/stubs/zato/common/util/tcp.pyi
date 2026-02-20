@@ -14,6 +14,16 @@ from zato.common.util.api import wait_for_predicate
 
 class SocketReaderCtx:
     __slots__: Any
+    conn_id: Any
+    socket: Any
+    max_wait_time: Any
+    max_msg_size: Any
+    read_buffer_size: Any
+    recv_timeout: Any
+    should_log_messages: Any
+    buffer: Any
+    is_ok: Any
+    reason: Any
     def __init__(self: Any, conn_id: Any, socket: Any, max_wait_time: Any, max_msg_size: Any, read_buffer_size: Any, recv_timeout: Any, should_log_messages: Any) -> None: ...
 
 def get_free_port(start: Any = ...) -> None: ...

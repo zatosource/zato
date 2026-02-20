@@ -23,6 +23,8 @@ class SecretKeyError(Exception):
     ...
 
 class CryptoManager:
+    stdin_data: Any
+    hash_scheme: Any
     def __init__(self: Any, repo_dir: Any = ..., secret_key: Any = ..., stdin_data: Any = ..., well_known_data: Any = ...) -> None: ...
     def add_hash_scheme(self: Any, name: Any, rounds: Any, salt_size: Any) -> None: ...
     def get_config(self: Any, repo_dir: Any) -> None: ...
@@ -57,6 +59,22 @@ class ServerCryptoManager(CryptoManager):
     def get_config(self: Any, repo_dir: Any) -> None: ...
 
 class HashParamsComputer:
+    goal: Any
+    header_func: Any
+    progress_func: Any
+    footer_func: Any
+    scheme: Any
+    loops: Any
+    iters_per_loop: Any
+    iters: Any
+    salt_size: Any
+    rounds_per_iter: Any
+    report_per_cent: Any
+    report_once_in: Any
+    hash_scheme: getattr.using
+    cpu_info: self.get_cpu_info
+    _round_down_to_nearest: Any
+    _round_up_to_nearest: Any
     def __init__(self: Any, goal: Any, header_func: Any = ..., progress_func: Any = ..., footer_func: Any = ..., scheme: Any = ..., loops: Any = ..., iters_per_loop: Any = ..., salt_size: Any = ..., rounds_per_iter: Any = ...) -> None: ...
     def get_cpu_info(self: Any) -> None: ...
     def get_info(self: Any, _utcnow: Any = ...) -> None: ...

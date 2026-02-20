@@ -23,6 +23,12 @@ class SecurityGroupsCtx:
     group_to_sec_map: intanydict
     basic_auth_credentials: dict_[str, _BasicAuthSecDef]
     apikey_credentials: dict_[str, _APIKeySecDef]
+    server: Any
+    group_to_sec_map: Any
+    security_groups: set
+    basic_auth_credentials: Any
+    apikey_credentials: Any
+    _lock: RLock
     def __init__(self: Any, server: ParallelServer) -> None: ...
     def check_security_basic_auth(self: Any, cid: str, channel_name: str, username: str, password: str) -> intnone: ...
     def _get_basic_auth_by_security_id(self: Any, security_id: int) -> _BasicAuthSecDef | None: ...
@@ -61,6 +67,7 @@ class SecurityGroupsCtx:
 
 class SecurityGroupsCtxBuilder:
     members: list_[Member]
+    server: Any
     def __init__(self: Any, server: ParallelServer) -> None: ...
     def populate_members(self: Any) -> None: ...
     def _get_members_by_group_id(self: Any, group_id: int) -> list_[Member]: ...

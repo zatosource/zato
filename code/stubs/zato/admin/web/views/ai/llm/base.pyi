@@ -28,6 +28,12 @@ class CategorizedToolCalls:
     mcp: list
 
 class BaseLLMClient(ABC):
+    api_key: Any
+    zato_client: Any
+    cluster_id: Any
+    cluster: Any
+    session_id: Any
+    system_prompt: get_system_prompt
     def __init__(self: Any, api_key: str, zato_client: any_ = ..., cluster_id: int = ..., cluster: any_ = ..., session_id: str = ...) -> None: ...
     def _build_execution_history_context(self: Any, question: str = ...) -> str: ...
     def _extract_last_user_message(self: Any, messages: list) -> str: ...

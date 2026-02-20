@@ -37,6 +37,13 @@ def create_subscription_bindings(broker_client: Any, cid: str, sub_key: str, exc
 def cleanup_broker_impl(broker_config: BrokerConfig, management_port: int) -> dict: ...
 
 class ConsumerManager:
+    broker_config: Any
+    cid: Any
+    host: Any
+    management_port: Any
+    auth: Any
+    ignore_prefixes: Any
+    request_timeout: Any
     def __init__(self: Any, cid: str, broker_config: BrokerConfig) -> None: ...
     def _close_consumers(self: Any, queue_name: str) -> None: ...
     def close_consumers(self: Any, queue_name: str) -> None: ...

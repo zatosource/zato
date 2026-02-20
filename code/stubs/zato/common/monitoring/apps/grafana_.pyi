@@ -156,6 +156,9 @@ class PanelConfig(Model):
     h: int
 
 class GrafanaDashboardBuilder:
+    grafana_url: Any
+    auth: Any
+    headers: Any
     def __init__(self: Any, grafana_url: str = ..., username: str = ..., password: str = ...) -> None: ...
     def create_panel(self: Any, panel_id: int, title: str, query: str, x: int = ..., y: int = ..., w: int = ..., h: int = ...) -> anydict: ...
     def create_process_monitoring_dashboard(self: Any) -> anydict: ...

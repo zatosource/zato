@@ -13,6 +13,7 @@ from zato.common.util.api import new_cid_server
 class BasePoolAPI:
     get: Any
     create: Any
+    _conn_store: Any
     def __init__(self: Any, conn_store: Any) -> None: ...
     def __getitem__(self: Any, name: Any) -> None: ...
     def create_def(self: Any, name: Any, msg: Any, on_connection_established_callback: Any = ..., *args: Any, **kwargs: Any) -> None: ...
@@ -24,6 +25,12 @@ class BaseConnPoolStore:
     conn_name: Any
     dispatcher_events: Any
     dispatcher_listen_for: Any
+    _gevent: Any
+    _RLock: Any
+    sessions: Any
+    lock: self._RLock
+    keep_connecting: set
+    dispatcher_backlog: Any
     def __init__(self: Any) -> None: ...
     def __getitem__(self: Any, name: Any) -> None: ...
     def get(self: Any, name: Any) -> None: ...

@@ -27,6 +27,27 @@ from sqlalchemy.orm.session import Session as SASession
 from zato.common.typing_ import any_, stranydict
 
 class EnmasseYAMLExporter:
+    cluster_id: Any
+    cache_exporter: CacheExporter
+    email_imap_exporter: IMAPExporter
+    email_smtp_exporter: SMTPExporter
+    group_exporter: GroupExporter
+    odoo_exporter: OdooExporter
+    scheduler_exporter: SchedulerExporter
+    security_exporter: SecurityExporter
+    sql_exporter: SQLExporter
+    channel_exporter: ChannelExporter
+    jira_exporter: JiraExporter
+    ldap_exporter: LDAPExporter
+    microsoft_365_exporter: Microsoft365Exporter
+    confluence_exporter: ConfluenceExporter
+    elastic_search_exporter: ElasticSearchExporter
+    outgoing_rest_exporter: OutgoingRESTExporter
+    outgoing_soap_exporter: OutgoingSOAPExporter
+    pubsub_topic_exporter: PubSubTopicExporter
+    pubsub_permission_exporter: PubSubPermissionExporter
+    pubsub_subscription_exporter: PubSubSubscriptionExporter
+    channel_openapi_exporter: ChannelOpenAPIExporter
     def __init__(self: Any) -> None: ...
     def get_cluster(self: Any, session: SASession) -> any_: ...
     def export_cache(self: Any, session: SASession) -> list: ...

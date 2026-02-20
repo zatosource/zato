@@ -24,12 +24,18 @@ from zato.common.typing_ import any_, anydict, dict_, list_
 from zato.common.pubsub.util import validate_topic_name
 
 class UnauthorizedException(Exception):
+    cid: Any
     def __init__(self: Any, cid: str, *args: any_, **kwargs: any_) -> None: ...
 
 class BadRequestException(Exception):
+    cid: Any
+    message: Any
     def __init__(self: Any, cid: str, message: str, *args: any_, **kwargs: any_) -> None: ...
 
 class BaseRESTServer(BaseServer):
+    _broker_config: get_broker_config
+    _broker_auth: HTTPBasicAuth
+    _broker_api_base_url: Any
     def __init__(self: Any, host: str, port: int, should_init_broker_client: bool = ...) -> None: ...
     def authenticate(self: Any, cid: str, environ: anydict) -> str: ...
     def _parse_json(self: Any, cid: str, request: Request) -> dict_: ...

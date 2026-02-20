@@ -12,6 +12,11 @@ from zato.common.pubsub.test.config import AppConfig
 from zato.common.pubsub.test.report import generate_html_report
 
 class PubSubTestServer:
+    config: Any
+    lock: RLock
+    collector: TestCollector
+    last_message_time: datetime.utcnow
+    url_map: Map
     def __init__(self: Any, config: AppConfig) -> None: ...
     def on_messages(self: Any, request: Request) -> Response: ...
     def on_report(self: Any, request: Request) -> Response: ...

@@ -10,6 +10,9 @@ class ConnectionPoolWrapper:
     type_: str
     items: anylist
     server: ParallelServer
+    server: Any
+    type_: Any
+    items: Any
     def __init__(self: Any, server: ParallelServer, type_: str) -> None: ...
     def _lock(self: Any, config_id: any_) -> Lock: ...
     def get_update_lock(self: Any) -> callable_: ...

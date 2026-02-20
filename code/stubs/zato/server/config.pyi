@@ -17,6 +17,9 @@ from zato.server.connection.ftp import FTPStore
 class ConfigDict:
     __setitem__: Any
     __str__: Any
+    name: Any
+    _impl: Any
+    lock: RLock
     def __init__(self: Any, name: Any, _bunch: Any = ...) -> None: ...
     def get(self: Any, key: Any, default: Any = ...) -> None: ...
     def set(self: Any, key: Any, value: Any) -> None: ...
@@ -42,6 +45,30 @@ class ConfigDict:
     def from_generic(config_dict: Any) -> None: ...
 
 class ConfigStore:
+    out_ftp: Any
+    out_odoo: Any
+    out_soap: Any
+    out_sql: Any
+    out_sap: Any
+    out_plain_http: Any
+    out_amqp: Any
+    email_smtp: Any
+    email_imap: Any
+    generic_connection: Any
+    service: Any
+    search_es: Any
+    cache_builtin: Any
+    repo_location: Any
+    apikey: Any
+    basic_auth: Any
+    ntlm: Any
+    oauth: Any
+    url_sec: Any
+    http_soap: Any
+    broker_config: Any
+    odb_data: Bunch
+    simple_io: Any
+    channel_amqp: Any
     def __init__(self: Any) -> None: ...
     def get_config_by_item_id(self: Any, attr_name: Any, item_id: Any) -> None: ...
     def __getitem__(self: Any, key: Any) -> None: ...

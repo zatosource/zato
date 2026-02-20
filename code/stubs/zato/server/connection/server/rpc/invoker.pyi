@@ -25,6 +25,9 @@ class PerPIDResponse:
     error_info: any_
 
 class ServerInvoker:
+    parallel_server: Any
+    cluster_name: Any
+    server_name: Any
     def __init__(self: Any, parallel_server: ParallelServer, cluster_name: str, server_name: str) -> None: ...
     def invoke(self: Any, *args: any_, **kwargs: any_) -> any_: ...
     def invoke_async(self: Any, *args: any_, **kwargs: any_) -> any_: ...
@@ -37,6 +40,11 @@ class LocalServerInvoker(ServerInvoker):
 
 class RemoteServerInvoker(ServerInvoker):
     url_path: Any
+    invocation_ctx: Any
+    ping_address: Any.format
+    ping_timeout: Any
+    address: Any.format
+    invoker: AnyServiceInvoker
     def __init__(self: Any, ctx: RPCServerInvocationCtx) -> None: ...
     def ping(self: Any, ping_timeout: intnone = ...) -> None: ...
     def close(self: Any) -> None: ...

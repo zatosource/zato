@@ -8,6 +8,14 @@ from zato.common.ext.imbox.vendors import GmailMessages, hostname_vendorname_dic
 
 class Imbox:
     authentication_error_message: Any
+    server: ImapTransport
+    hostname: Any
+    username: Any
+    password: Any
+    parser_policy: Any
+    vendor: Any
+    authentication_error_message: name_authentication_string_dict.get
+    connection: self.server.connect
     def __init__(self: Any, hostname: Any, username: Any = ..., password: Any = ..., ssl: Any = ..., port: Any = ..., ssl_context: Any = ..., policy: Any = ..., starttls: Any = ..., vendor: Any = ...) -> None: ...
     def __enter__(self: Any) -> None: ...
     def __exit__(self: Any, type: Any, value: Any, traceback: Any) -> None: ...

@@ -49,6 +49,12 @@ class ZatoCommand:
     target_dir: Any
     show_output: Any
     opts: Any
+    args: Any
+    original_dir: os.getcwd
+    show_output: Any
+    verbose: Any
+    engine: Any
+    stdin_data: read_stdin_data
     def __init__(self: Any, args: Any) -> None: ...
     def exit(self: Any, exit_code: int = ...) -> None: ...
     def allow_empty_secrets(self: Any) -> None: ...
@@ -82,6 +88,7 @@ class FromConfig(ZatoCommand):
 
 class CACreateCommand(ZatoCommand):
     file_needed: Any
+    target_dir: os.path.abspath
     def __init__(self: Any, args: Any) -> None: ...
     def _on_file_missing(self: Any) -> None: ...
     def _execute(self: Any, args: Any, extension: Any, show_output: Any = ...) -> None: ...

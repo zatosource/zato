@@ -12,6 +12,12 @@ class DatadogLogger(Logger):
     process_name: str
     service: any_
     warn: Any
+    cid: Any
+    server: Any
+    service_name: Any
+    process_name: Any
+    datadog_tracer: Any
+    service: Any
     def __init__(self: Any, cid: str, server: ParallelServer, service_name: str, process_name: str, service: any_ = ...) -> None: ...
     def _zato_emit_log(self: Any, level: str, msg: str, event: strnone) -> None: ...
     def debug(self: Any, msg: any_, *args: any_, **kwargs: any_) -> None: ...

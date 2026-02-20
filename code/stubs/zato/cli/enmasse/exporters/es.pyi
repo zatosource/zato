@@ -11,5 +11,6 @@ from zato.common.typing_ import list_
 
 class ElasticSearchExporter:
     DIRECT_FIELDS: Any
+    exporter: Any
     def __init__(self: Any, exporter: EnmasseYAMLExporter) -> None: ...
     def export_es(self: Any, session: SASession) -> list_: ...

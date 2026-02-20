@@ -45,17 +45,33 @@ def get_client_error_wrapper(transport: str, data_format: str) -> callable_: ...
 
 class _CachedResponse:
     __slots__: Any
+    payload: Any
+    content_type: Any
+    headers: Any
+    status_code: Any
     def __init__(self: Any, payload: any_, content_type: str, headers: stranydict, status_code: int) -> None: ...
 
 class _HashCtx:
+    raw_request: Any
+    channel_item: Any
+    channel_params: Any
+    wsgi_environ: Any
     def __init__(self: Any, raw_request: str, channel_item: any_, channel_params: stranydict, wsgi_environ: stranydict) -> None: ...
 
 class RequestDispatcher:
+    server: Any
+    url_data: Any
+    request_handler: Any
+    simple_io_config: Any
+    return_tracebacks: Any
+    default_error_message: Any
+    http_methods_allowed: Any
     def __init__(self: Any) -> None: ...
     def dispatch(self: Any, cid: str, req_timestamp: str, wsgi_environ: stranydict, worker_store: WorkerStore, user_agent: str, remote_addr: str, _needs_details: Any = ...) -> any_: ...
     def check_security_via_groups(self: Any, cid: str, channel_name: str, security_groups_ctx: SecurityGroupsCtx, wsgi_environ: stranydict) -> None: ...
 
 class RequestHandler:
+    server: Any
     def __init__(self: Any, server: ParallelServer) -> None: ...
     def _set_response_data(self: Any, service: Service, **kwargs: any_) -> None: ...
     def _get_flattened(self: Any, params: str) -> anydict: ...

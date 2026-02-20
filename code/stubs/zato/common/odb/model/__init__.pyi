@@ -22,6 +22,7 @@ def _utcnow(_utc_zone: Any = ...) -> None: ...
 class AlembicRevision(Base):
     __tablename__: Any
     version_num: Any
+    version_num: Any
     def __init__(self: Any, version_num: Any = ...) -> None: ...
 
 class ZatoInstallState(Base):
@@ -32,6 +33,11 @@ class ZatoInstallState(Base):
     source_host: Any
     source_user: Any
     opaque1: Any
+    id: Any
+    version: Any
+    install_time: Any
+    source_host: Any
+    source_user: Any
     def __init__(self: Any, id: Any = ..., version: Any = ..., install_time: Any = ..., source_host: Any = ..., source_user: Any = ...) -> None: ...
 
 class Cluster(Base):
@@ -50,6 +56,19 @@ class Cluster(Base):
     cw_srv_id: Any
     cw_srv_keep_alive_dt: Any
     opaque1: Any
+    id: Any
+    name: Any
+    description: Any
+    odb_type: Any
+    odb_host: Any
+    odb_port: Any
+    odb_user: Any
+    odb_db_name: Any
+    odb_schema: Any
+    broker_host: Any
+    broker_port: Any
+    cw_srv_id: Any
+    cw_srv_keep_alive_dt: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., description: Any = ..., odb_type: Any = ..., odb_host: Any = ..., odb_port: Any = ..., odb_user: Any = ..., odb_db_name: Any = ..., odb_schema: Any = ..., broker_host: Any = ..., broker_port: Any = ..., cw_srv_id: Any = ..., cw_srv_keep_alive_dt: Any = ...) -> None: ...
     def to_json(self: Any) -> None: ...
 
@@ -72,6 +91,15 @@ class Server(Base):
     opaque1: Any
     cluster_id: Any
     cluster: Any
+    id: Any
+    name: Any
+    cluster: Any
+    token: Any
+    last_join_status: Any
+    last_join_mod_date: Any
+    last_join_mod_by: Any
+    may_be_deleted: Any
+    up_mod_date_user: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., cluster: Any = ..., token: Any = ..., last_join_status: Any = ..., last_join_mod_date: Any = ..., last_join_mod_by: Any = ...) -> None: ...
 
 class SecurityBase(Base):
@@ -111,6 +139,13 @@ class HTTPBasicAuth(SecurityBase):
     __mapper_args__: Any
     id: Any
     realm: Any
+    id: Any
+    name: Any
+    is_active: Any
+    username: Any
+    realm: Any
+    password: Any
+    cluster: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., username: Any = ..., realm: Any = ..., password: Any = ..., cluster: Any = ...) -> None: ...
 
 class OAuth(SecurityBase):
@@ -120,6 +155,15 @@ class OAuth(SecurityBase):
     proto_version: Any
     sig_method: Any
     max_nonce_log: Any
+    id: Any
+    name: Any
+    is_active: Any
+    username: Any
+    password: Any
+    proto_version: Any
+    sig_method: Any
+    max_nonce_log: Any
+    cluster: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., username: Any = ..., password: Any = ..., proto_version: Any = ..., sig_method: Any = ..., max_nonce_log: Any = ..., cluster: Any = ...) -> None: ...
     def to_json(self: Any) -> None: ...
 
@@ -127,6 +171,11 @@ class NTLM(SecurityBase):
     __tablename__: Any
     __mapper_args__: Any
     id: Any
+    id: Any
+    name: Any
+    is_active: Any
+    username: Any
+    cluster: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., username: Any = ..., password: Any = ..., cluster: Any = ...) -> None: ...
     def to_json(self: Any) -> None: ...
 
@@ -134,6 +183,13 @@ class APIKeySecurity(SecurityBase):
     __tablename__: Any
     __mapper_args__: Any
     id: Any
+    id: Any
+    name: Any
+    is_active: Any
+    username: Any
+    password: Any
+    cluster: Any
+    header: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., username: Any = ..., password: Any = ..., cluster: Any = ...) -> None: ...
     def to_json(self: Any) -> None: ...
 
@@ -171,6 +227,48 @@ class HTTPSOAP(Base):
     service: Any
     cluster_id: Any
     cluster: Any
+    id: Any
+    name: Any
+    is_active: Any
+    is_internal: Any
+    connection: Any
+    transport: Any
+    host: Any
+    url_path: Any
+    method: Any
+    soap_action: Any
+    soap_version: Any
+    data_format: Any
+    ping_method: Any
+    pool_size: Any
+    merge_url_params_req: Any
+    url_params_pri: Any
+    params_pri: Any
+    serialization_type: Any
+    timeout: Any
+    service_id: Any
+    service: Any
+    security: Any
+    cluster_id: Any
+    cluster: Any
+    service_name: Any
+    security_id: Any
+    security_name: Any
+    content_type: Any
+    cache_id: Any
+    cache_type: Any
+    cache_expiry: Any
+    cache_name: Any
+    content_encoding: Any
+    match_slash: Any
+    http_accept: Any
+    validate_tls: Any
+    opaque1: Any
+    is_wrapper: Any
+    wrapper_type: Any
+    password: Any
+    security_groups_count: Any
+    security_groups_member_count: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., is_internal: Any = ..., connection: Any = ..., transport: Any = ..., host: Any = ..., url_path: Any = ..., method: Any = ..., soap_action: Any = ..., soap_version: Any = ..., data_format: Any = ..., ping_method: Any = ..., pool_size: Any = ..., merge_url_params_req: Any = ..., url_params_pri: Any = ..., params_pri: Any = ..., serialization_type: Any = ..., timeout: Any = ..., service_id: Any = ..., service: Any = ..., security: Any = ..., cluster_id: Any = ..., cluster: Any = ..., service_name: Any = ..., security_id: Any = ..., security_name: Any = ..., content_type: Any = ..., cache_id: Any = ..., cache_type: Any = ..., cache_expiry: Any = ..., cache_name: Any = ..., content_encoding: Any = ..., match_slash: Any = ..., http_accept: Any = ..., validate_tls: Any = ..., opaque: Any = ..., **kwargs: Any) -> None: ...
 
 class SQLConnectionPool(Base):
@@ -191,6 +289,17 @@ class SQLConnectionPool(Base):
     cluster_id: Any
     cluster: Any
     engine_display_name: Any
+    id: Any
+    name: Any
+    is_active: Any
+    db_name: Any
+    username: Any
+    engine: Any
+    extra: Any
+    host: Any
+    port: Any
+    pool_size: Any
+    cluster: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., db_name: Any = ..., username: Any = ..., engine: Any = ..., extra: Any = ..., host: Any = ..., port: Any = ..., pool_size: Any = ..., cluster: Any = ...) -> None: ...
 
 class Service(Base):
@@ -205,6 +314,21 @@ class Service(Base):
     opaque1: Any
     cluster_id: Any
     cluster: Any
+    id: Any
+    name: Any
+    is_active: Any
+    impl_name: Any
+    is_internal: Any
+    cluster: Any
+    wsdl: Any
+    wsdl_name: Any
+    plain_http_channels: Any
+    soap_channels: Any
+    amqp_channels: Any
+    scheduler_jobs: Any
+    deployment_info: Any
+    source_info: Any
+    may_be_deleted: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., impl_name: Any = ..., is_internal: Any = ..., cluster: Any = ..., wsdl: Any = ..., wsdl_name: Any = ...) -> None: ...
 
 class DeployedService(Base):
@@ -221,6 +345,14 @@ class DeployedService(Base):
     server: Any
     service_id: Any
     service: Any
+    deployment_time: Any
+    details: Any
+    server_id: Any
+    service_id: Any
+    source: Any
+    source_path: Any
+    source_hash: Any
+    source_hash_method: Any
     def __init__(self: Any, deployment_time: Any, details: Any, server_id: Any, service_id: Any, source: Any, source_path: Any, source_hash: Any, source_hash_method: Any) -> None: ...
 
 class Job(Base):
@@ -237,6 +369,20 @@ class Job(Base):
     cluster: Any
     service_id: Any
     service: Any
+    name: Any
+    is_active: Any
+    job_type: Any
+    start_date: Any
+    extra: Any
+    cluster: Any
+    cluster_id: Any
+    service: Any
+    service_id: Any
+    service_name: Any
+    interval_based: Any
+    definition_text: Any
+    job_type_friendly: Any
+    id: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., job_type: Any = ..., start_date: Any = ..., extra: Any = ..., cluster: Any = ..., cluster_id: Any = ..., service: Any = ..., service_id: Any = ..., service_name: Any = ..., interval_based: Any = ..., definition_text: Any = ..., job_type_friendly: Any = ...) -> None: ...
 
 class IntervalBasedJob(Base):
@@ -253,6 +399,15 @@ class IntervalBasedJob(Base):
     opaque1: Any
     job_id: Any
     job: Any
+    job: Any
+    weeks: Any
+    days: Any
+    hours: Any
+    minutes: Any
+    seconds: Any
+    repeats: Any
+    definition_text: Any
+    id: Any
     def __init__(self: Any, id: Any = ..., job: Any = ..., weeks: Any = ..., days: Any = ..., hours: Any = ..., minutes: Any = ..., seconds: Any = ..., repeats: Any = ..., definition_text: Any = ...) -> None: ...
 
 class CacheBuiltin(Base):
@@ -271,6 +426,7 @@ class CacheBuiltin(Base):
     persistent_storage: Any
     opaque1: Any
     cluster_id: Any
+    cluster: Any
     cluster: Any
     def __init__(self: Any, cluster: Any = ...) -> None: ...
 
@@ -294,6 +450,18 @@ class OutgoingAMQP(Base):
     frame_max: Any
     heartbeat: Any
     opaque1: Any
+    id: Any
+    name: Any
+    is_active: Any
+    delivery_mode: Any
+    priority: Any
+    content_type: Any
+    content_encoding: Any
+    expiration: Any
+    user_id: Any
+    app_id: Any
+    delivery_mode_text: Any
+    def_name: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., delivery_mode: Any = ..., priority: Any = ..., content_type: Any = ..., content_encoding: Any = ..., expiration: Any = ..., user_id: Any = ..., app_id: Any = ..., delivery_mode_text: Any = ..., def_name: Any = ...) -> None: ...
 
 class OutgoingFTP(Base):
@@ -312,6 +480,17 @@ class OutgoingFTP(Base):
     opaque1: Any
     cluster_id: Any
     cluster: Any
+    id: Any
+    name: Any
+    is_active: Any
+    host: Any
+    user: Any
+    password: Any
+    acct: Any
+    timeout: Any
+    port: Any
+    dircache: Any
+    cluster_id: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., host: Any = ..., user: Any = ..., password: Any = ..., acct: Any = ..., timeout: Any = ..., port: Any = ..., dircache: Any = ..., cluster_id: Any = ...) -> None: ...
 
 class OutgoingOdoo(Base):
@@ -331,6 +510,8 @@ class OutgoingOdoo(Base):
     opaque1: Any
     cluster_id: Any
     cluster: Any
+    cluster: Any
+    protocol_name: Any
     def __init__(self: Any, cluster: Any = ...) -> None: ...
 
 class OutgoingSAP(Base):
@@ -349,6 +530,7 @@ class OutgoingSAP(Base):
     router: Any
     opaque1: Any
     cluster_id: Any
+    cluster: Any
     cluster: Any
     def __init__(self: Any, cluster: Any = ...) -> None: ...
 
@@ -372,6 +554,13 @@ class ChannelAMQP(Base):
     opaque1: Any
     service_id: Any
     service: Any
+    id: Any
+    name: Any
+    is_active: Any
+    queue: Any
+    consumer_tag_prefix: Any
+    service_name: Any
+    data_format: Any
     def __init__(self: Any, id: Any = ..., name: Any = ..., is_active: Any = ..., queue: Any = ..., consumer_tag_prefix: Any = ..., service_name: Any = ..., data_format: Any = ...) -> None: ...
 
 class DeploymentPackage(Base):
@@ -384,6 +573,11 @@ class DeploymentPackage(Base):
     opaque1: Any
     server_id: Any
     server: Any
+    id: Any
+    deployment_time: Any
+    details: Any
+    payload_name: Any
+    payload: Any
     def __init__(self: Any, id: Any = ..., deployment_time: Any = ..., details: Any = ..., payload_name: Any = ..., payload: Any = ...) -> None: ...
 
 class DeploymentStatus(Base):
@@ -395,6 +589,10 @@ class DeploymentStatus(Base):
     package: Any
     server_id: Any
     server: Any
+    status: Any
+    status_change_time: Any
+    package_id: Any
+    server_id: Any
     status: Any
     status_change_time: Any
     def __init__(self: Any, package_id: Any = ..., server_id: Any = ..., status: Any = ..., status_change_time: Any = ...) -> None: ...

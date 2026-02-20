@@ -19,6 +19,12 @@ class SalesforceClient:
     consumer_secret: str
     access_token: str
     http_bearer: str
+    api_version: Any
+    address: Any
+    username: Any
+    password: Any
+    consumer_key: Any
+    consumer_secret: Any
     def __init__(self: Any) -> None: ...
     @staticmethod
     def from_config(config: stranydict) -> SalesforceClient: ...

@@ -8,6 +8,7 @@ from zato.common.util.time_ import utcnow
 from zato.common.typing_ import anydict
 
 class SnowflakeGenerator:
+    machine_id: Any
     def __init__(self: Any, machine_id: str) -> None: ...
     def generate_id(self: Any, suffix: str) -> str: ...
 

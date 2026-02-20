@@ -48,6 +48,7 @@ class _TestingWorkerStore:
     email_imap_api: Any
     search_es_api: Any
     cache_api: Any
+    worker_config: cast_
     def __init__(self: Any) -> None: ...
 
 class _TestingWorkerConfig:
@@ -80,6 +81,9 @@ class ModelInfo:
 
 class DeploymentInfo:
     __slots__: Any
+    to_process: Any
+    total_size: Any
+    total_size_human: Any
     def __init__(self: Any) -> None: ...
 
 def get_service_name(class_obj: type[Service]) -> str: ...
@@ -91,6 +95,21 @@ class ServiceStore:
     odb: ODBManager
     server: ParallelServer
     is_testing: bool
+    services: Any
+    odb: Any
+    server: Any
+    is_testing: Any
+    max_batch_size: Any
+    models: Any
+    id_to_impl_name: Any
+    impl_name_to_id: Any
+    name_to_impl_name: Any
+    deployment_info: Any
+    update_lock: RLock
+    needs_post_deploy_attr: Any
+    action_internal_doing: Any
+    action_internal_done: Any
+    _testing_worker_store: cast_
     def __init__(self: Any) -> None: ...
     def edit_service_data(self: Any, config: stranydict) -> None: ...
     def _delete_service_from_odb(self: Any, service_id: int) -> None: ...

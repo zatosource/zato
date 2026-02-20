@@ -13,6 +13,12 @@ from zato.common.typing_ import anydict, intnone
 from zato.common.pubsub.perftest.python_.progress_tracker import ProgressTracker
 
 class Consumer(Client):
+    pull_interval: Any
+    max_messages: Any
+    registry: CollectorRegistry
+    consumer_range: Any
+    messages_consumed: Counter
+    request_duration: Histogram
     def __init__(self: Any, progress_tracker: ProgressTracker, consumer_id: int = ..., pull_interval: float = ..., max_messages: int = ..., cpu_num: intnone = ..., use_new_requests: bool = ...) -> None: ...
     def _get_config(self: Any) -> anydict: ...
     def _consume_messages(self: Any, base_url: str, headers: anydict, auth: tuple, max_messages: int) -> None: ...

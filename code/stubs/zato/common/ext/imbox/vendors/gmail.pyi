@@ -9,4 +9,5 @@ class GmailMessages(Messages):
     name: Any
     FOLDER_LOOKUP: Any
     GMAIL_IMAP_ATTRIBUTE_LOOKUP_DIFF: Any
+    IMAP_ATTRIBUTE_LOOKUP: merge_two_dicts
     def __init__(self: Any, connection: Any, parser_policy: Any, **kwargs: Any) -> None: ...

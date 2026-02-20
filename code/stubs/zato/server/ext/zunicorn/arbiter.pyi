@@ -28,6 +28,16 @@ class Arbiter:
     SIG_QUEUE: Any
     SIG_NAMES: Any
     num_workers: Any
+    _num_workers: Any
+    _last_logged_active_worker_count: Any
+    log: Any
+    pidfile: Any
+    systemd: Any
+    worker_age: Any
+    reexec_pid: Any
+    master_pid: Any
+    master_name: Any
+    START_CTX: Any
     def __init__(self: Any, app: Any) -> None: ...
     def _get_num_workers(self: Any) -> None: ...
     def _set_num_workers(self: Any, value: Any) -> None: ...

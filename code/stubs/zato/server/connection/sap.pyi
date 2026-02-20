@@ -9,5 +9,6 @@ from zato.server.connection.queue import Wrapper
 import pyrfc
 
 class SAPWrapper(Wrapper):
+    pyrfc: Any
     def __init__(self: Any, config: Any, server: Any) -> None: ...
     def add_client(self: Any) -> None: ...

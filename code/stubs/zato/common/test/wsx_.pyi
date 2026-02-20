@@ -11,6 +11,8 @@ from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
 from zato.server.generic.api.outconn.wsx.client_zato import _ZatoWSXClientImpl
 
 class _ParallelServer:
+    zato_lock_manager: LockManager
+    wsx_connection_pool_wrapper: ConnectionPoolWrapper
     def __init__(self: Any) -> None: ...
     def is_active_outconn_wsx(self: Any, _ignored_conn_id: str) -> bool: ...
     def on_wsx_outconn_stopped_running(self: Any, conn_id: str) -> None: ...
@@ -33,6 +35,18 @@ class WSXChannelManager:
     wsx_channel_address: str
     run_cli: bool
     topics: strlistnone
+    test_case: Any
+    username: Any
+    password: Any
+    needs_pubsub: Any
+    needs_credentials: Any
+    run_cli: Any
+    topics: Any
+    topic_name_to_id: Any
+    channel_id: Any
+    security_id: Any
+    security_name: Any
+    wsx_channel_address: Any
     def __init__(self: Any, test_case: CommandLineTestCase, username: str = ..., password: str = ..., needs_credentials: bool = ..., needs_pubsub: bool = ..., run_cli: bool = ..., topics: strlistnone = ...) -> None: ...
     def create_basic_auth(self: Any) -> None: ...
     def create_topics(self: Any, topics: strlist) -> None: ...

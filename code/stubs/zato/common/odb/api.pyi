@@ -46,6 +46,12 @@ class SQLRow:
 
 class SessionWrapper:
     _Session: SASession
+    session_initialized: Any
+    pool: Any
+    config: Any
+    is_sqlite: Any
+    is_oracle_db: Any
+    logger: logging.getLogger
     def __init__(self: Any) -> None: ...
     def init_session(self: Any, *args: Any, **kwargs: Any) -> None: ...
     def _init_session(self: Any, name: Any, config: Any, pool: Any, use_scoped_session: Any = ...) -> None: ...
@@ -63,6 +69,13 @@ class SQLConnectionPool:
     __repr__: Any
     conn: Any
     impl: Any
+    name: Any
+    config: Any
+    config_no_sensitive: Any
+    logger: getLogger
+    has_debug: self.logger.isEnabledFor
+    engine: Any
+    _is_oracle_db: self.engine_name.startswith
     def __init__(self: Any, name: str, config: strdict, config_no_sensitive: strdict, should_init: bool = ...) -> None: ...
     def init(self: Any) -> None: ...
     def __str__(self: Any) -> None: ...
@@ -84,6 +97,10 @@ class PoolStore:
     get: Any
     set_item: Any
     __repr__: Any
+    sql_conn_class: Any
+    _lock: RLock
+    wrappers: Any
+    logger: getLogger
     def __init__(self: Any, sql_conn_class: Any = ...) -> None: ...
     def __getitem__(self: Any, name: Any, enforce_is_active: Any = ...) -> None: ...
     def __setitem__(self: Any, name: Any, config: Any) -> None: ...
@@ -94,6 +111,12 @@ class PoolStore:
     def cleanup_on_stop(self: Any) -> None: ...
 
 class _Server:
+    id: Any
+    name: Any
+    last_join_status: Any
+    token: Any
+    cluster_id: Any
+    cluster: Any
     def __init__(self: Any, odb_server: Any, odb_cluster: Any) -> None: ...
 
 class ODBManager(SessionWrapper):

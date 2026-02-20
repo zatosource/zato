@@ -4,6 +4,17 @@ from typing import Callable
 from zato.common.util.api import make_repr
 
 class SearchResults:
+    q: Any
+    result: Any
+    total: Any
+    columns: Any
+    num_pages: Any
+    cur_page: Any
+    prev_page: Any
+    next_page: Any
+    has_prev_page: Any
+    has_next_page: Any
+    page_size: Any
     def __init__(self: Any, q: Any, result: Any, columns: Any, total: Any) -> None: ...
     def __iter__(self: Any) -> None: ...
     def __repr__(self: Any) -> None: ...

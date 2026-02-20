@@ -7,6 +7,10 @@ from zato.common.ext.imbox.parser import fetch_email_by_uid
 class Messages:
     IMAP_ATTRIBUTE_LOOKUP: Any
     FOLDER_LOOKUP: Any
+    connection: Any
+    parser_policy: Any
+    kwargs: Any
+    _uid_list: self._query_uids
     def __init__(self: Any, connection: Any, parser_policy: Any, **kwargs: Any) -> None: ...
     def _fetch_email(self: Any, uid: Any) -> None: ...
     def _query_uids(self: Any, **kwargs: Any) -> None: ...

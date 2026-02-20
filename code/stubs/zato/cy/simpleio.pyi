@@ -27,6 +27,7 @@ from zato.server.base.parallel import ParallelServer
 def _not_implemented(func: Any) -> None: ...
 
 class SIOJSONEncoder(JSONEncoder):
+    bytes_to_str_encoding: Any
     def __init__(self: Any, *args: Any, **kwargs: Any) -> None: ...
     def default(self: Any, value: Any) -> None: ...
 
@@ -48,6 +49,8 @@ class ServiceInput(Bunch):
 class SIODefault:
     input_value: Any
     output_value: Any
+    input_value: Any
+    output_value: Any
     def __init__(self: Any, input_value: Any, output_value: Any, default_value: Any) -> None: ...
 
 class SIOSkipEmpty:
@@ -59,6 +62,14 @@ class SIOSkipEmpty:
     skip_all_empty_input: Any
     skip_all_empty_output: Any
     has_skip_input_set: Any
+    empty_output_value: Any
+    force_empty_input_set: set
+    force_empty_output_set: set
+    skip_input_set: Any
+    skip_all_empty_input: Any
+    skip_output_set: Any
+    skip_all_empty_output: Any
+    has_skip_input_set: bool
     def __init__(self: Any, input_def: Any, output_def: Any, force_empty_input_set: Any, force_empty_output_set: Any, empty_output_value: Any) -> None: ...
 
 class ParsingError(Exception):
@@ -104,6 +115,10 @@ class Elem:
     to_csv: Any
     from_dict: Any
     to_dict: Any
+    name: self._get_unicode_name
+    is_required: Any
+    user_default_value: kwargs.get
+    default_value: kwargs.get
     def __cinit__(self: Any) -> None: ...
     def __init__(self: Any, name: Any, **kwargs: Any) -> None: ...
     def __lt__(self: Any, other: Any) -> None: ...
@@ -274,6 +289,8 @@ class Text(Elem):
     from_csv: Any
     to_xml: Any
     from_xml: Any
+    encoding: kwargs.get
+    is_secret: Any
     def __cinit__(self: Any) -> None: ...
     def __init__(self: Any, name: Any, **kwargs: Any) -> None: ...
     @staticmethod
@@ -283,6 +300,7 @@ class Text(Elem):
     def from_json(self: Any, value: Any) -> None: ...
 
 class Secret(Text):
+    is_secret: Any
     def __init__(self: Any, *args: Any, **kwargs: Any) -> None: ...
 
 class UTC(Elem):
@@ -411,6 +429,8 @@ class SIODefinition:
     _service_name: Any
     _response_elem: Any
     _has_response_elem: Any
+    sio_default: Any
+    skip_empty: Any
     def __cinit__(self: Any) -> None: ...
     def __init__(self: Any, sio_default: SIODefault, skip_empty: SIOSkipEmpty) -> None: ...
     def get_input_required(self: Any) -> SIOList: ...

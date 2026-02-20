@@ -10,6 +10,13 @@ from zato.common.rules.cache import CachedRule
 from zato.common.typing_ import any_, dict_, strdict, strlist
 
 class RulesManager:
+    _all_rules: Any
+    _containers: Any
+    cached_rules: Any
+    evaluator: RuleEvaluator
+    loader: RuleLoader
+    _rules_by_complexity: Any
+    _field_to_rules: Any
     def __init__(self: Any) -> None: ...
     def __getitem__(self: Any, name: str) -> Rule | Container: ...
     def __getattr__(self: Any, name: str) -> Rule | Container: ...

@@ -39,6 +39,8 @@ class MultiValueDict(dict):
 class QueryDict(MultiValueDict):
     _mutable: Any
     _encoding: Any
+    encoding: Any
+    _mutable: Any
     def __init__(self: Any, query_string: Any = ..., mutable: Any = ..., encoding: Any = ...) -> None: ...
     @classmethod
     def fromkeys(cls: Any, iterable: Any, value: Any = ..., mutable: Any = ..., encoding: Any = ...) -> None: ...

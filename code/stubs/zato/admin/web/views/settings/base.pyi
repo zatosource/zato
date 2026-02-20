@@ -5,6 +5,10 @@ from zato.admin.web.views import method_allowed
 from zato.admin.web.views.settings.handlers import RestartHandler
 
 class SettingsBaseView:
+    page_config: Any
+    updater: Any
+    template_name: Any
+    restart_handler: RestartHandler
     def __init__(self: Any, page_config: Any, updater: Any, template_name: Any) -> None: ...
     def get_index_context(self: Any) -> None: ...
     def index(self: Any, req: Any) -> None: ...

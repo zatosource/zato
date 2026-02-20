@@ -30,6 +30,13 @@ class Logger:
     access_fmt: Any
     syslog_fmt: Any
     atoms_wrapper_class: Any
+    error_log: logging.getLogger
+    access_log: logging.getLogger
+    error_handlers: Any
+    access_handlers: Any
+    logfile: Any
+    lock: threading.Lock
+    cfg: Any
     def __init__(self: Any, cfg: Any) -> None: ...
     def setup(self: Any, cfg: Any) -> None: ...
     def critical(self: Any, msg: Any, *args: Any, **kwargs: Any) -> None: ...

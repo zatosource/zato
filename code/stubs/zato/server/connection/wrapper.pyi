@@ -14,6 +14,12 @@ class Wrapper:
     required_secret_attr: Any
     required_secret_label: Any
     build_if_not_active: Any
+    config: Any
+    server: Any
+    _impl: Any
+    delete_requested: Any
+    is_connected: Any
+    update_lock: RLock
     def __init__(self: Any, config: Any, server: Any = ...) -> None: ...
     @property
     def client(self: Any) -> None: ...

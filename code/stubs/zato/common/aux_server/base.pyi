@@ -37,6 +37,8 @@ class AuxServerConfig:
     parent_server_name: str
     parent_server_pid: int
     raw_config: Bunch
+    main: Bunch
+    component_dir: Any
     def __init__(self: Any) -> None: ...
     @staticmethod
     def get_odb(config: AuxServerConfig) -> ODBManager: ...
@@ -56,6 +58,10 @@ class AuxServer:
     has_credentials: bool
     parent_server_name: str
     parent_server_pid: int
+    config: Any
+    parent_server_name: Any
+    parent_server_pid: Any
+    api_server: WSGIServer
     def __init__(self: Any, config: AuxServerConfig) -> None: ...
     @classmethod
     def before_config_hook(class_: type_[AuxServer]) -> None: ...

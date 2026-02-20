@@ -17,6 +17,9 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.trace import SpanKind
 
 class OTLPDemo:
+    traces_endpoint: Any
+    logs_endpoint: Any
+    metrics_endpoint: Any
     def __init__(self: Any, traces_endpoint: Any = ..., logs_endpoint: Any = ..., metrics_endpoint: Any = ...) -> None: ...
     def setup(self: Any) -> None: ...
     def run(self: Any) -> None: ...

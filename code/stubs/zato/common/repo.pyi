@@ -7,6 +7,7 @@ from zato.common.util.api import get_current_user
 import sh
 
 class _BaseRepoManager:
+    repo_location: os.path.abspath
     def __init__(self: Any, repo_location: Any = ...) -> None: ...
 
 class PassThroughRepoManager(_BaseRepoManager):

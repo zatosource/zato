@@ -79,12 +79,27 @@ class AsyncCtx:
 
 class ChannelInfo:
     __slots__: Any
+    id: Any
+    name: Any
+    type: Any
+    data_format: Any
+    is_internal: Any
+    match_target: Any
+    impl: Any
+    security: Any
+    sec: Any
+    gateway_service_list: Any
     def __init__(self: Any, id: intnone, name: strnone, type: strnone, data_format: strnone, is_internal: boolnone, match_target: any_, security: ChannelSecurityInfo, impl: any_, gateway_service_list: strnone = ...) -> None: ...
     def __repr__(self: Any) -> str: ...
     def to_dict(self: Any, needs_impl: bool = ...) -> strdict: ...
 
 class ChannelSecurityInfo:
     __slots__: Any
+    id: Any
+    name: Any
+    type: Any
+    username: Any
+    impl: Any
     def __init__(self: Any, id: intnone, name: strnone, type: strnone, username: strnone, impl: any_) -> None: ...
     def to_dict(self: Any, needs_impl: bool = ...) -> strdict: ...
 
@@ -93,6 +108,9 @@ class AMQPFacade:
 
 class PatternsFacade:
     __slots__: Any
+    invoke_retry: InvokeRetry
+    fanout: FanOut
+    parallel: ParallelExec
     def __init__(self: Any, invoking_service: Service, cache: anydict, lock: RLock) -> None: ...
 
 class Service:
@@ -142,6 +160,24 @@ class Service:
     component_enabled_search: bool
     cache: CacheAPI
     spawn: Any
+    name: Any
+    impl_name: Any
+    cid: Any
+    in_reply_to: Any
+    data_format: Any
+    transport: Any
+    wsgi_environ: Any
+    job_type: Any
+    environ: Bunch
+    request: Request
+    response: Response
+    config: Bunch
+    user_config: Bunch
+    usage: Any
+    slow_threshold: Any
+    out: Outgoing
+    outgoing: Outgoing
+    rest: RESTFacade
     def __init__(self: Any, *ignored_args: any_, **ignored_kwargs: any_) -> None: ...
     @staticmethod
     def get_name_static(class_: type[Service]) -> str: ...

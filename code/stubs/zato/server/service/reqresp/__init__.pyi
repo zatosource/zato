@@ -26,6 +26,14 @@ from zato.simpleio import CySimpleIO
 
 class HTTPRequestData:
     __slots__: Any
+    method: Any
+    GET: _Bunch
+    POST: _Bunch
+    path: Any
+    params: _Bunch
+    user_agent: Any
+    headers: _Bunch
+    _wsgi_environ: Any
     def __init__(self: Any, _Bunch: Any = ...) -> None: ...
     def init(self: Any, wsgi_environ: Any = ...) -> None: ...
     def _extract_headers(self: Any) -> None: ...
@@ -35,12 +43,31 @@ class HTTPRequestData:
 
 class AMQPRequestData:
     __slots__: Any
+    msg: Any
+    ack: Any
+    reject: Any
     def __init__(self: Any, msg: Any) -> None: ...
 
 class Request:
     text: any_
     __slots__: Any
     bunchified: Any
+    service: Any
+    logger: cast_
+    payload: Any
+    text: Any
+    input: Any
+    cid: cast_
+    data_format: cast_
+    transport: cast_
+    http: HTTPRequestData
+    _wsgi_environ: cast_
+    channel_params: cast_
+    merge_channel_params: Any
+    amqp: cast_
+    encrypt_func: Any
+    encrypt_secrets: Any
+    bytes_to_str_encoding: cast_
     def __init__(self: Any, service: Any, simple_io_config: Any = ..., data_format: Any = ..., transport: Any = ...) -> None: ...
     def init(self: Any, is_sio: Any, cid: Any, sio: Any, data_format: Any, transport: Any, wsgi_environ: Any, encrypt_func: Any) -> None: ...
     @property
@@ -50,6 +77,16 @@ class Request:
 
 class Outgoing:
     __slots__: Any
+    amqp: cast_
+    odoo: cast_
+    rest: cast_
+    plain_http: Any
+    soap: cast_
+    sql: cast_
+    sap: cast_
+    ldap: cast_
+    mongodb: cast_
+    redis: cast_
     def __init__(self: Any, amqp: Any = ..., odoo: Any = ..., plain_http: Any = ..., soap: Any = ..., sql: Any = ..., sap: Any = ..., ldap: Any = ..., mongodb: Any = ..., redis: Any = ...) -> None: ...
 
 class Cloud:

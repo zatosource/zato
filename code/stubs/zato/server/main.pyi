@@ -48,6 +48,13 @@ class ModuleCtx:
 
 class ZatoGunicornApplication(Application):
     cfg: ZunicornConfig
+    zato_wsgi_app: Any
+    repo_location: Any
+    config_main: Any
+    crypto_config: Any
+    zato_host: Any
+    zato_port: Any
+    zato_config: Any
     def __init__(self: Any, zato_wsgi_app: ParallelServer, repo_location: str, config_main: Bunch, crypto_config: Bunch, *args: any_, **kwargs: any_) -> None: ...
     def get_config_value(self: Any, config_key: str) -> strintnone: ...
     def init(self: Any, *ignored_args: any_, **ignored_kwargs: any_) -> None: ...

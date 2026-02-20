@@ -13,6 +13,9 @@ from os import sendfile
 from _sendfile import sendfile
 
 class FileWrapper:
+    filelike: Any
+    blksize: Any
+    close: Any
     def __init__(self: Any, filelike: Any, blksize: Any = ...) -> None: ...
     def __getitem__(self: Any, key: Any) -> None: ...
 
@@ -23,6 +26,18 @@ def default_environ(req: Any, sock: Any, cfg: Any, base_environ: Any = ...) -> N
 def proxy_environ(req: Any) -> None: ...
 
 class Response:
+    req: Any
+    sock: Any
+    version: Any
+    status: Any
+    chunked: Any
+    must_close: Any
+    headers: Any
+    headers_sent: Any
+    response_length: Any
+    sent: Any
+    upgrade: Any
+    cfg: Any
     def __init__(self: Any, req: Any, sock: Any, cfg: Any) -> None: ...
     def force_close(self: Any) -> None: ...
     def should_close(self: Any) -> None: ...

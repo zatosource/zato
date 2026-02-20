@@ -19,13 +19,24 @@ class ModuleCtx:
     Exchange_Name: Any
 
 class UnauthorizedException(Exception):
+    cid: Any
     def __init__(self: Any, cid: str, *args: any_, **kwargs: any_) -> None: ...
 
 class BadRequestException(Exception):
+    cid: Any
+    message: Any
     def __init__(self: Any, cid: str, message: str, *args: any_, **kwargs: any_) -> None: ...
 
 class BaseServer:
     server_type: str
+    host: Any
+    port: Any
+    users: Any
+    broker_client: BrokerClient
+    backend: RESTBackend
+    topics: Any
+    subs_by_topic: Any
+    url_map: Map
     def __init__(self: Any, host: str, port: int, should_init_broker_client: bool = ...) -> None: ...
     def _authenticate(self: Any, cid: str, environ: strdict, users: strdictnone = ...) -> strnone: ...
     def init_broker_client(self: Any) -> None: ...

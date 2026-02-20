@@ -48,6 +48,9 @@ class Validator:
     _list_members: Any
     _paramfinder: Any
     _matchfinder: Any
+    functions: Any
+    baseErrorClass: Any
+    _cache: Any
     def __init__(self: Any, functions: Any = ...) -> None: ...
     def check(self: Any, check: Any, value: Any, missing: Any = ...) -> None: ...
     def _handle_none(self: Any, value: Any) -> None: ...

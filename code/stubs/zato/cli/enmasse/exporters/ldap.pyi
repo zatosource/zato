@@ -10,5 +10,6 @@ from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.common.typing_ import anydict, list_
 
 class LDAPExporter:
+    exporter: Any
     def __init__(self: Any, exporter: EnmasseYAMLExporter) -> None: ...
     def export(self: Any, session: SASession, cluster_id: int) -> ldap_def_list: ...

@@ -4,6 +4,9 @@ import oracledb as oracledb_impl
 
 class OracleParam:
     is_out: Any
+    value: Any
+    size: Any
+    var: Any
     def __init__(self: Any, value: Any = ..., size: Any = ...) -> None: ...
     def bind(self: Any, cursor: Any) -> None: ...
     def get(self: Any) -> None: ...

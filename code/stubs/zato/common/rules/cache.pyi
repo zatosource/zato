@@ -8,6 +8,10 @@ from zato.common.typing_ import any_, anydict, bool_, dict_
 from zato.common.rules.models import Rule
 
 class CachedRule:
+    rule: Any
+    name: Any
+    cache_hits: Any
+    cache_misses: Any
     def __init__(self: Any, rule: Rule) -> None: ...
     def match(self: Any, data: anydict, condition_cache: dict_[str, any_] = ...) -> MatchResult: ...
     def _get_cache_key(self: Any, expression: ExpressionBase) -> str: ...

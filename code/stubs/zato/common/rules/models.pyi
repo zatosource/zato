@@ -13,6 +13,7 @@ class MatchResult(Model):
     _has_matched: bool
     then: any_
     full_name: str
+    _has_matched: Any
     def __init__(self: Any, has_matched: bool) -> None: ...
     def __bool__(self: Any) -> bool: ...
 
@@ -32,6 +33,8 @@ class Rule(Model):
 class Container(Model):
     name: str
     _rules: dict_[str, Rule]
+    name: Any
+    _rules: Any
     def __init__(self: Any, name: str) -> None: ...
     def __getitem__(self: Any, name: str) -> Rule: ...
     def __getattr__(self: Any, name: str) -> Rule: ...

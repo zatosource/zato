@@ -21,6 +21,7 @@ def add_select_from_service(form: Any, req: Any, service_name: Any, field_names:
 class SearchForm(forms.Form):
     cluster: Any
     query: Any
+    zato_auto_submit: Any
     def __init__(self: Any, clusters: Any, data: Any = ...) -> None: ...
 
 class ChangePasswordForm(forms.Form):

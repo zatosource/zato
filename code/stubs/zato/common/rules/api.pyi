@@ -11,6 +11,11 @@ from zato.common.rules.parser import parse_file
 from zato.common.typing_ import any_, dict_, float_, int_, strdict, strlist
 
 class RulesManager:
+    _all_rules: Any
+    _containers: Any
+    _lock: RLock
+    cached_rules: Any
+    performance_stats: Any
     def __init__(self: Any) -> None: ...
     def __getitem__(self: Any, name: str) -> Rule | Container: ...
     def __getattr__(self: Any, name: str) -> Rule | Container: ...

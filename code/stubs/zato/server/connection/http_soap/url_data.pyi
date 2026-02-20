@@ -20,6 +20,18 @@ from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData
 from zato.server.base.worker import WorkerStore
 
 class URLData(PyURLData):
+    worker: Any
+    url_sec: Any
+    basic_auth_config: Any
+    ntlm_config: Any
+    oauth_config: Any
+    apikey_config: Any
+    broker_client: Any
+    odb: Any
+    sec_config_getter: Bunch
+    url_sec_lock: RLock
+    update_lock: RLock
+    _target_separator: Any
     def __init__(self: Any, worker: Any, channel_data: Any = ..., url_sec: Any = ..., basic_auth_config: Any = ..., ntlm_config: Any = ..., oauth_config: Any = ..., apikey_config: Any = ..., broker_client: Any = ..., odb: Any = ...) -> None: ...
     def set_security_objects(self: Any) -> None: ...
     def dispatcher_callback(self: Any, event: Any, ctx: Any, **opaque: Any) -> None: ...

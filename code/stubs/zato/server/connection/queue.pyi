@@ -20,6 +20,10 @@ class _Connection:
     should_block: bool
     block_timeout: intnone
     client: any_
+    queue: Any
+    conn_name: Any
+    should_block: Any
+    block_timeout: Any
     def __init__(self: Any, client_queue: Queue, conn_name: str, should_block: bool = ..., block_timeout: intnone = ...) -> None: ...
     def __enter__(self: Any) -> None: ...
     def __exit__(self: Any, _type: any_, _value: any_, _traceback: any_) -> None: ...
@@ -42,6 +46,21 @@ class ConnectionQueue:
     lock: RLock
     logger: Logger
     in_progress_count: int
+    is_active: Any
+    server: Any
+    queue: Queue
+    queue_max_size: cast_
+    queue_build_cap: Any
+    conn_id: Any
+    conn_name: Any
+    conn_type: Any
+    address: Any
+    add_client_func: Any
+    needs_spawn: Any
+    max_attempts: Any
+    lock: RLock
+    logger: getLogger
+    address_masked: Any
     def __init__(self: Any, server: ParallelServer, is_active: bool, pool_size: int, queue_build_cap: int, conn_id: int, conn_name: str, conn_type: str, address: str, add_client_func: callable_, needs_spawn: bool = ..., max_attempts: int = ...) -> None: ...
     def __call__(self: Any, should_block: bool = ..., block_timeout: intnone = ...) -> _Connection: ...
     def put_client(self: Any, client: any_) -> bool: ...
@@ -58,6 +77,16 @@ class Wrapper:
     has_delete_reasons: Any
     supports_reconnections: Any
     build_wrapper: Any
+    conn_type: Any
+    config: Any
+    server: Any
+    python_id: get_python_id
+    should_reconnect: Any
+    conn_in_progress_list: Any
+    client: ConnectionQueue
+    delete_requested: Any
+    update_lock: RLock
+    logger: getLogger
     def __init__(self: Any, config: Bunch, conn_type: str, server: ParallelServer) -> None: ...
     def add_client(self: Any) -> None: ...
     def build_queue(self: Any) -> None: ...

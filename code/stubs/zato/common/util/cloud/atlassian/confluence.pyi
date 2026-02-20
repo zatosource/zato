@@ -31,6 +31,9 @@ class PageProperties:
     schema_version: str
     user_link_pattern: str
     rows: list_[Row]
+    param_name: Any
+    local_id: Any
+    rows: Any
     def __init__(self: Any, param_name: str = ..., local_id: str = ...) -> None: ...
     def get_user_link(self: Any, account_id: str) -> str: ...
     def append(self: Any, key: any_, value: any_) -> Row: ...

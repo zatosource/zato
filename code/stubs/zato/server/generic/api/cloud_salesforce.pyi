@@ -8,6 +8,10 @@ from zato.server.connection.queue import Wrapper
 from zato.common.typing_ import stranydict
 
 class _SalesforceClient:
+    impl: SalesforceClient.from_config
+    get: Any
+    post: Any
+    ping: Any
     def __init__(self: Any, config: stranydict) -> None: ...
 
 class CloudSalesforceWrapper(Wrapper):

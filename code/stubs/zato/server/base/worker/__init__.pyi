@@ -60,6 +60,7 @@ class _generic_msg:
     change_password: Any
 
 class GeventWorker(GunicornGeventWorker):
+    deployment_key: Any.format
     def __init__(self: Any, *args: any_, **kwargs: any_) -> None: ...
 
 def _get_base_classes() -> anytuple: ...
@@ -71,6 +72,21 @@ class WorkerStore(object):
     on_broker_msg_OUTGOING_ODOO_EDIT: Any
     on_broker_msg_OUTGOING_SAP_CHANGE_PASSWORD: Any
     on_broker_msg_OUTGOING_SAP_EDIT: Any
+    logger: logging.getLogger
+    is_ready: Any
+    worker_config: Any
+    server: Any
+    update_lock: RLock
+    worker_idx: int
+    _simple_types: Any
+    channel_openapi: Any
+    cloud_confluence: Any
+    cloud_dropbox: Any
+    cloud_jira: Any
+    cloud_microsoft_365: Any
+    cloud_salesforce: Any
+    outconn_ldap: Any
+    outconn_mongodb: Any
     def __init__(self: Any, worker_config: ConfigStore, server: ParallelServer) -> None: ...
     def init(self: Any) -> None: ...
     def _populate_channel_security_groups_info(self: Any, channel_data: anylist) -> None: ...

@@ -6,6 +6,10 @@ from zato.common.monitoring.api import create_context, get_metrics_data, incr_gl
 import argparse
 
 class PrometheusTestServer:
+    host: Any
+    port: Any
+    server: Any
+    running: Any
     def __init__(self: Any, host: str = ..., port: int = ...) -> None: ...
     def wsgi_app(self: Any, environ: Any, start_response: Any) -> None: ...
     def _generate_demo_data(self: Any) -> None: ...

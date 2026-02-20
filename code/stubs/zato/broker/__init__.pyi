@@ -13,6 +13,9 @@ from zato.server.base.worker import WorkerStore
 class BrokerMessageReceiver:
     broker_client: BrokerClient
     worker_store: WorkerStore
+    broker_client_id: Any.format
+    broker_callbacks: Any
+    broker_messages: Any
     def __init__(self: Any) -> None: ...
     def on_broker_msg(self: Any, msg: strdict) -> None: ...
     def preprocess_msg(self: Any, msg: Any) -> None: ...

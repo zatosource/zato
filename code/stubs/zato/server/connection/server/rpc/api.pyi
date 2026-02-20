@@ -14,11 +14,19 @@ class InvokeAllResult:
     data: anylist
 
 class ConfigCtx:
+    config_source: Any
+    parallel_server: Any
+    local_server_invoker_class: Any
+    remote_server_invoker_class: Any
     def __init__(self: Any, config_source: Any, parallel_server: Any, local_server_invoker_class: Any = ..., remote_server_invoker_class: Any = ...) -> None: ...
     def get_remote_server_invoker(self: Any, server_name: str) -> RemoteServerInvoker: ...
     def get_remote_server_invoker_list(self: Any) -> generator_[ServerInvoker, None, None]: ...
 
 class ServerRPC:
+    config_ctx: Any
+    current_cluster_name: Any
+    _invokers: Any
+    logger: getLogger
     def __init__(self: Any, config_ctx: ConfigCtx) -> None: ...
     def _get_invoker_by_server_name(self: Any, server_name: str) -> ServerInvoker: ...
     def get_invoker_by_server_name(self: Any, server_name: str) -> ServerInvoker: ...

@@ -13,6 +13,16 @@ from zato.server.ext.zunicorn.six import BytesIO, string_types
 from zato.server.ext.zunicorn.util import split_request_uri
 
 class Message:
+    cfg: Any
+    unreader: Any
+    version: Any
+    headers: Any
+    trailers: Any
+    body: Any
+    scheme: Any
+    limit_request_fields: Any
+    limit_request_field_size: Any
+    max_buffer_headers: Any
     def __init__(self: Any, cfg: Any, unreader: Any, MAX_HEADERS: Any = ..., DEFAULT_MAX_HEADERFIELD_SIZE: Any = ...) -> None: ...
     def parse(self: Any, unreader: Any) -> None: ...
     def parse_headers(self: Any, data: Any, bytes_to_str: Any = ...) -> None: ...
@@ -20,6 +30,14 @@ class Message:
     def should_close(self: Any) -> None: ...
 
 class Request(Message):
+    method: Any
+    uri: Any
+    path: Any
+    query: Any
+    fragment: Any
+    limit_request_line: Any
+    req_number: Any
+    proxy_protocol_info: Any
     def __init__(self: Any, cfg: Any, unreader: Any, req_number: Any = ...) -> None: ...
     def get_data(self: Any, unreader: Any, buf: Any, stop: Any = ..., NoMoreData: Any = ...) -> None: ...
     def parse(self: Any, unreader: Any, BytesIO: Any = ...) -> None: ...

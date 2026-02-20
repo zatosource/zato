@@ -49,6 +49,11 @@ class ModelCtx:
     DataClass: any_
 
 class ModelValidationError(Exception):
+    elem_path: Any
+    reason: self.get_reason
+    msg: self.get_reason
+    status: Any
+    needs_msg: Any
     def __init__(self: Any, elem_path: str) -> None: ...
     def get_reason(self: Any) -> None: ...
 
@@ -61,15 +66,40 @@ class ElementIsNotAList(ElementMissing):
     def get_reason(self: Any) -> None: ...
 
 class DictCtx:
+    service: Any
+    current_dict: Any
+    extra: Any
+    DataClass: Any
+    list_idx: Any
+    parent: Any
+    has_init: Any
+    fields: Any
+    init_attrs: Any
+    setattr_attrs: Any
+    attrs_container: cast_
     def __init__(self: Any, service: Service, current_dict: anydict | Model, DataClass: any_, extra: dictnone, list_idx: intnone, parent: optional[FieldCtx] = ...) -> None: ...
     def init(self: Any) -> None: ...
 
 class FieldCtx:
+    dict_ctx: Any
+    field: Any
+    parent: Any
+    name: Any
+    field_type: Any
+    model_class: Any
+    value: Any
+    is_class: Any
+    is_list: Any
+    is_required: Any
+    is_model: Any
+    contains_model: Any
+    has_extra: Any
     def __init__(self: Any, dict_ctx: Any, field: Any, parent: Any) -> None: ...
     def init(self: Any) -> None: ...
     def get_name(self: Any) -> None: ...
 
 class MarshalAPI:
+    _field_cache: Any
     def __init__(self: Any) -> None: ...
     def get_validation_error(self: Any, field_ctx: Any, error_class: Any = ...) -> ModelValidationError: ...
     def _self_require_dict_or_model(self: Any, field_ctx: FieldCtx) -> None: ...

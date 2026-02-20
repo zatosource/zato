@@ -26,9 +26,23 @@ from zato.common.util.cli import read_stdin_data
 def default_json_handler(value: Any) -> None: ...
 
 class _APIResponse:
+    inner: Any
+    is_ok: Any
+    cid: self.inner.headers.get
+    response_time: self.inner.headers.get
+    headers: Any
+    data: Any
+    details: Any
     def __init__(self: Any, inner: Any, _OK: Any = ...) -> None: ...
 
 class APIClient:
+    address: Any
+    username: Any
+    password: Any
+    path: Any
+    tls_verify: Any
+    tls_cert: Any
+    session: requests.Session
     def __init__(self: Any, address: Any, username: Any, password: Any, path: Any = ..., tls_verify: Any = ..., tls_cert: Any = ...) -> None: ...
     def _invoke(self: Any, verb: Any, service_name: Any, request: Any = ...) -> None: ...
     def invoke(self: Any, *args: Any, **kwargs: Any) -> None: ...
@@ -40,6 +54,20 @@ class APIClient:
     def by_verb(self: Any, verb: Any, *args: Any, **kwargs: Any) -> None: ...
 
 class _Response:
+    inner: Any
+    to_bunch: Any
+    max_response_repr: Any
+    max_cid_repr: Any
+    logger: Any
+    sio_result: Any
+    ok: Any
+    has_data: Any
+    output_repeated: Any
+    data: Any
+    meta: Any
+    cid: self.inner.headers.get
+    response_time: self.inner.headers.get
+    details: Any
     def __init__(self: Any, inner: Any, to_bunch: Any, max_response_repr: Any, max_cid_repr: Any, logger: Any, output_repeated: Any = ...) -> None: ...
     def __repr__(self: Any) -> None: ...
     def __iter__(self: Any) -> None: ...
@@ -62,6 +90,7 @@ class JSONSIOResponse(_Response):
     def set_data(self: Any, payload: Any, _ignored: Any) -> None: ...
 
 class ServiceInvokeResponse(JSONSIOResponse):
+    inner_service_response: Any
     def __init__(self: Any, *args: Any, **kwargs: Any) -> None: ...
     def _handle_response_with_meta(self: Any, data: Any) -> None: ...
     def set_data(self: Any, payload: Any, has_zato_env: Any) -> None: ...
@@ -73,6 +102,17 @@ class RawDataResponse(_Response):
 class _Client:
     service_address: str
     session: any_
+    address: Any
+    path: Any
+    auth: Any
+    username: Any
+    password: Any
+    to_bunch: Any
+    max_response_repr: Any
+    max_cid_repr: Any
+    logger: Any
+    tls_verify: Any
+    has_debug: self.logger.isEnabledFor
     def __init__(self: Any, address: Any, path: Any, auth: Any = ..., session: Any = ..., to_bunch: Any = ..., max_response_repr: Any = ..., max_cid_repr: Any = ..., logger: Any = ..., tls_verify: Any = ...) -> None: ...
     def inner_invoke(self: Any, request: Any, response_class: Any, is_async: Any, headers: Any, output_repeated: Any = ...) -> None: ...
     def invoke(self: Any, request: Any, response_class: Any, is_async: Any = ..., headers: Any = ..., output_repeated: Any = ...) -> None: ...
@@ -99,6 +139,8 @@ class RawDataClient(_Client):
     def invoke(self: Any, payload: Any = ..., headers: Any = ...) -> None: ...
 
 class ZatoClient(AnyServiceInvoker):
+    cluster_id: Any
+    odb_session: Any
     def __init__(self: Any, *args: Any, **kwargs: Any) -> None: ...
 
 def get_client_from_credentials(use_tls: bool, server_url: str, client_auth: tuple) -> ZatoClient: ...

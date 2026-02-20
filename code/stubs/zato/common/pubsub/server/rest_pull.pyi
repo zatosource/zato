@@ -19,6 +19,9 @@ from zato.common.typing_ import any_, anydict
 
 class PubSubRESTServerPull(BaseRESTServer):
     server_type: Any
+    _connection_pool: Queue
+    _pool_lock: RLock
+    _pool_initialized: Any
     def __init__(self: Any, *args: Any, **kwargs: Any) -> None: ...
     def _init_connection_pool(self: Any) -> None: ...
     def _create_amqp_connection(self: Any) -> Connection: ...

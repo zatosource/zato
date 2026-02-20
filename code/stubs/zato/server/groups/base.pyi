@@ -10,6 +10,9 @@ from zato.common.typing_ import any_, anydict, anylist, intnone, list_, strlist
 from zato.server.base.parallel import ParallelServer
 
 class GroupsManager:
+    server: Any
+    session: Any
+    cluster_id: Any
     def __init__(self: Any, server: ParallelServer, session: any_ = ...) -> None: ...
     def create_group(self: Any, group_type: str, group_name: str) -> str: ...
     def edit_group(self: Any, group_id: int, group_type: str, group_name: str) -> None: ...

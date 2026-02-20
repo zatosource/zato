@@ -37,6 +37,9 @@ class GeventResponse:
     status: Any
     headers: Any
     sent: Any
+    status: Any
+    headers: Any
+    sent: Any
     def __init__(self: Any, status: Any, headers: Any, clength: Any) -> None: ...
 
 class PyWSGIHandler(pywsgi.WSGIHandler):

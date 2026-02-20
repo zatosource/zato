@@ -11,6 +11,11 @@ from zato.common.typing_ import anydict, intnone
 from zato.common.pubsub.perftest.python_.progress_tracker import ProgressTracker
 
 class Producer(Client):
+    reqs_per_producer: Any
+    topic_spec: Any
+    burst_multiplier: Any
+    burst_duration: Any
+    burst_interval: Any
     def __init__(self: Any, progress_tracker: ProgressTracker, reqs_per_producer: int = ..., producer_id: int = ..., reqs_per_second: float = ..., topic_spec: str = ..., burst_multiplier: int = ..., burst_duration: int = ..., burst_interval: int = ..., cpu_num: intnone = ..., use_new_requests: bool = ...) -> None: ...
     def _get_config(self: Any) -> anydict: ...
     def _create_payload(self: Any, topic_name: str) -> anydict: ...

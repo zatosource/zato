@@ -43,6 +43,19 @@ class HTTPSAdapter(HTTPAdapter):
 
 class BaseHTTPSOAPWrapper:
     auth: Any
+    config: Any
+    config_no_sensitive: deepcopy
+    RequestsSession: Any
+    server: cast_
+    session: RequestsSession
+    https_adapter: HTTPSAdapter
+    _component_name: get_component_name
+    default_content_type: self.get_default_content_type
+    address: Any
+    path_params: Any
+    base_headers: Any
+    sec_type: Any
+    soap: Any
     def __init__(self: Any, config: Any, _requests_session: Any = ..., server: Any = ...) -> None: ...
     def _push_metrics(self: Any, start_time: Any, status_code: Any) -> None: ...
     def set_auth(self: Any) -> None: ...
@@ -58,6 +71,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
     __repr__: Any
     impl: Any
     send: Any
+    server: Any
     def __init__(self: Any, server: Any, config: Any, requests_module: Any = ...) -> None: ...
     def __str__(self: Any) -> str: ...
     def format_address(self: Any, cid: str, params: stranydict) -> tuple[str, stranydict]: ...

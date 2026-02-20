@@ -11,14 +11,27 @@ from email.utils import formatdate
 from zato.common.py23_.past.builtins import basestring
 
 class Email:
+    recipients: Any
+    subject: Any
+    body: Any
+    html_body: Any
+    charset: Any
+    fields: Any
+    rfc2231: Any
     def __init__(self: Any, recipients: Any, subject: Any, body: Any = ..., html_body: Any = ..., charset: Any = ..., fields: Any = ..., rfc2231: Any = ...) -> None: ...
     def as_mime(self: Any, attachments: Any = ...) -> None: ...
 
 class Attachment:
+    name: Any
+    raw: self.raw.encode
     def __init__(self: Any, name: Any, fileobj: Any) -> None: ...
     def read(self: Any) -> None: ...
 
 class Outbox:
+    username: Any
+    password: Any
+    connection_details: Any
+    _conn: Any
     def __init__(self: Any, username: Any, password: Any, server: Any, port: Any, mode: Any = ..., debug: Any = ..., timeout: Any = ...) -> None: ...
     def __enter__(self: Any) -> None: ...
     def __exit__(self: Any, type: Any, value: Any, traceback: Any) -> None: ...

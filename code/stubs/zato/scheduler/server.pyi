@@ -19,6 +19,11 @@ class SchedulerServerConfig(AuxServerConfig):
     env_key_username: Any
     env_key_password: Any
     env_key_auth_required: Any
+    startup_jobs: Any
+    on_job_executed_cb: cast_
+    job_log_level: Any
+    _add_startup_jobs: Any
+    _add_scheduler_jobs: Any
     def __init__(self: Any) -> None: ...
 
 class SchedulerServer(AuxServer):
@@ -28,6 +33,9 @@ class SchedulerServer(AuxServer):
     conf_file_name: Any
     config_class: Any
     crypto_manager_class: Any
+    zato_client: set_up_zato_client
+    should_run_scheduler: Any
+    scheduler_api: SchedulerAPI
     def __init__(self: Any, config: AuxServerConfig) -> None: ...
     def should_check_credentials(self: Any) -> bool: ...
     @classmethod

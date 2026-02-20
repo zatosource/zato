@@ -14,6 +14,9 @@ from zato.server.service import Service
 class DataClassSimpleIO:
     service_class: Service
     is_dataclass: Any
+    server: Any
+    server_config: Any
+    user_declaration: Any
     def __init__(self: Any, server: Any, server_config: Any, user_declaration: Any) -> None: ...
     @staticmethod
     def attach_sio(server: Any, server_config: Any, class_: Any) -> None: ...

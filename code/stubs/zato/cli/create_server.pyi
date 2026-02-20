@@ -32,6 +32,9 @@ class SchedulerConfigForServer:
 class Create(ZatoCommand):
     needs_empty_dir: Any
     opts: any_
+    target_dir: os.path.abspath
+    dirs_prepared: Any
+    token: uuid.uuid4.hex.encode
     def __init__(self: Any, args: any_) -> None: ...
     def allow_empty_secrets(self: Any) -> None: ...
     def prepare_directories(self: Any, show_output: bool) -> None: ...

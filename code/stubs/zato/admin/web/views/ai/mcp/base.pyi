@@ -13,6 +13,11 @@ class AuthType:
     APIKey: Any
 
 class MCPClient:
+    server_id: Any
+    endpoint: Any
+    auth_type: Any
+    auth_data: Any
+    _session_id: Any
     def __init__(self: Any, server_id: str, endpoint: str, auth_type: str = ..., auth_data: anydict | None = ...) -> None: ...
     def get_server_info(self: Any) -> anydict: ...
     def _initialize(self: Any) -> anydict: ...

@@ -41,24 +41,47 @@ def close_connection(cid: str, connection: KombuAMQPConnection, max_wait_time: i
 
 class _AMQPMessage:
     __slots__: Any
+    body: Any
+    impl: Any
     def __init__(self: Any, body: Any, impl: Any) -> None: ...
 
 class Producer:
+    config: Any
+    name: Any
+    get_conn_class_func: Any
+    conn: Any
+    pool: _Producers
     def __init__(self: Any, config: Bunch) -> None: ...
     def acquire(self: Any, *args: Any, **kwargs: Any) -> KombuProducer: ...
     def stop(self: Any) -> None: ...
 
 class AzureServiceBusProducer:
+    config: Any
+    name: Any
+    client: ServiceBusClient.from_connection_string
+    sender: self.client.get_queue_sender
     def __init__(self: Any, config: Bunch) -> None: ...
     def publish(self: Any, msg: str, **kwargs: any_) -> None: ...
     def stop(self: Any) -> None: ...
 
 class _AzureMessageWrapper:
+    _msg: Any
+    _receiver: Any
     def __init__(self: Any, msg: Any, receiver: Any) -> None: ...
     def ack(self: Any) -> None: ...
     def reject(self: Any) -> None: ...
 
 class AzureServiceBusConsumer:
+    cid: new_cid_queue_consumer
+    config: Any
+    name: Any
+    on_amqp_message: Any
+    _keep_running: Any
+    is_stopped: Any
+    is_connected: Any
+    start_called: Any
+    client: Any
+    receiver: Any
     def __init__(self: Any, config: Bunch, on_amqp_message: callable_) -> None: ...
     @property
     def keep_running(self: Any) -> bool: ...
@@ -69,6 +92,17 @@ class AzureServiceBusConsumer:
     def _is_connected(self: Any) -> bool: ...
 
 class Consumer:
+    cid: new_cid_queue_consumer
+    config: Any
+    name: Any
+    queue: Any
+    on_amqp_message: Any
+    _keep_running: Any
+    is_stopped: Any
+    is_connected: Any
+    timeout: Any
+    consumer_manager: ConsumerManager
+    start_called: Any
     def __init__(self: Any, config: Bunch, on_amqp_message: callable_) -> None: ...
     @property
     def keep_running(self: Any) -> bool: ...

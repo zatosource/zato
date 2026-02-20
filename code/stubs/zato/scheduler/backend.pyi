@@ -14,11 +14,36 @@ from zato.scheduler.server import SchedulerServerConfig, SchedulerAPI
 
 class Interval:
     __repr__: Any
+    days: Any
+    hours: Any
+    minutes: Any
+    seconds: Any
+    in_seconds: Any
     def __init__(self: Any, days: int = ..., hours: int = ..., minutes: int = ..., seconds: int = ..., in_seconds: int = ...) -> None: ...
     def __str__(self: Any) -> None: ...
     def get_in_seconds(self: Any) -> None: ...
 
 class Job:
+    id: Any
+    name: Any
+    type: Any
+    interval: Any
+    callback: Any
+    cb_kwargs: Any
+    max_repeats: Any
+    on_max_repeats_reached_cb: Any
+    is_active: Any
+    service: Any
+    extra: Any
+    old_name: Any
+    current_run: Any
+    max_repeats_reached: Any
+    max_repeats_reached_at: Any
+    keep_running: Any
+    wait_sleep_time: Any
+    wait_iter_cb: Any
+    wait_iter_cb_args: Any
+    start_time: self.get_start_time
     def __init__(self: Any, id: Any, name: Any, type: Any, interval: Any, start_time: Any = ..., callback: Any = ..., cb_kwargs: Any = ..., max_repeats: Any = ..., on_max_repeats_reached_cb: Any = ..., is_active: Any = ..., clone_start_time: Any = ..., service: Any = ..., extra: Any = ..., old_name: Any = ...) -> None: ...
     def __str__(self: Any) -> None: ...
     def __hash__(self: Any) -> None: ...
@@ -33,6 +58,25 @@ class Job:
     def run(self: Any) -> None: ...
 
 class Scheduler:
+    config: Any
+    api: Any
+    on_job_executed_cb: Any
+    current_status: Any
+    startup_jobs: Any
+    odb: Any
+    jobs: Any
+    job_greenlets: Any
+    keep_running: Any
+    lock: lock.RLock
+    sleep_time: Any
+    iter_cb: Any
+    iter_cb_args: Any
+    ready: Any
+    _add_startup_jobs: Any
+    _add_scheduler_jobs: Any
+    job_log: getattr
+    initial_sleep_time: Any
+    prefer_odb_config: self.config.raw_config.server.get
     def __init__(self: Any, config: SchedulerServerConfig, api: SchedulerAPI) -> None: ...
     def on_max_repeats_reached(self: Any, job: Any) -> None: ...
     def _create(self: Any, job: Any, spawn: Any = ...) -> None: ...

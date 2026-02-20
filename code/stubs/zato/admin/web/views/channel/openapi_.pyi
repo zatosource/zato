@@ -15,6 +15,13 @@ def get_openapi_path_prefix() -> None: ...
 def build_openapi_spec(req: Any, cluster_id: Any, channel_name: Any, rest_channel_list: Any) -> None: ...
 
 class OpenAPIChannelConfigObject:
+    _config_attrs: Any
+    id: Any
+    name: Any
+    is_active: Any
+    is_public: Any
+    url_path: Any
+    rest_channel_list: Any
     def __init__(self: Any) -> None: ...
     @property
     def rest_channel_list_json(self: Any) -> None: ...

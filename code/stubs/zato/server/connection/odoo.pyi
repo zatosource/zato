@@ -9,6 +9,12 @@ import openerplib as client_lib
 import odoolib as client_lib
 
 class OdooWrapper:
+    config: Any
+    server: Any
+    url: Any.format
+    client: ConnectionQueue
+    update_lock: RLock
+    logger: getLogger
     def __init__(self: Any, config: Any, server: Any) -> None: ...
     def build_queue(self: Any) -> None: ...
     def add_client(self: Any) -> None: ...

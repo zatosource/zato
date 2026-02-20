@@ -19,6 +19,17 @@ class _AttributeHolder:
 def _ensure_value(namespace: Any, name: Any, value: Any) -> None: ...
 
 class HelpFormatter:
+    _prog: Any
+    _indent_increment: Any
+    _max_help_position: Any
+    _width: Any
+    _current_indent: Any
+    _level: Any
+    _action_max_length: Any
+    _root_section: self._Section
+    _current_section: Any
+    _whitespace_matcher: _re.compile
+    _long_break_matcher: _re.compile
     def __init__(self: Any, prog: Any, indent_increment: Any = ..., max_help_position: Any = ..., width: Any = ...) -> None: ...
     def _indent(self: Any) -> None: ...
     def _dedent(self: Any) -> None: ...
@@ -56,6 +67,8 @@ class ArgumentDefaultsHelpFormatter(HelpFormatter):
 def _get_action_name(argument: Any) -> None: ...
 
 class ArgumentError(Exception):
+    argument_name: _get_action_name
+    message: Any
     def __init__(self: Any, argument: Any, message: Any) -> None: ...
     def __str__(self: Any) -> None: ...
 
@@ -63,6 +76,16 @@ class ArgumentTypeError(Exception):
     ...
 
 class Action(_AttributeHolder):
+    option_strings: Any
+    dest: Any
+    nargs: Any
+    const: Any
+    default: Any
+    type: Any
+    choices: Any
+    required: Any
+    help: Any
+    metavar: Any
     def __init__(self: Any, option_strings: Any, dest: Any, nargs: Any = ..., const: Any = ..., default: Any = ..., type: Any = ..., choices: Any = ..., required: Any = ..., help: Any = ..., metavar: Any = ...) -> None: ...
     def _get_kwargs(self: Any) -> None: ...
     def __call__(self: Any, parser: Any, namespace: Any, values: Any, option_string: Any = ...) -> None: ...
@@ -98,16 +121,23 @@ class _HelpAction(Action):
     def __call__(self: Any, parser: Any, namespace: Any, values: Any, option_string: Any = ...) -> None: ...
 
 class _VersionAction(Action):
+    version: Any
     def __init__(self: Any, option_strings: Any, version: Any = ..., dest: Any = ..., default: Any = ..., help: Any = ...) -> None: ...
     def __call__(self: Any, parser: Any, namespace: Any, values: Any, option_string: Any = ...) -> None: ...
 
 class _SubParsersAction(Action):
+    _prog_prefix: Any
+    _parser_class: Any
+    _name_parser_map: Any
+    _choices_actions: Any
     def __init__(self: Any, option_strings: Any, prog: Any, parser_class: Any, dest: Any = ..., help: Any = ..., metavar: Any = ...) -> None: ...
     def add_parser(self: Any, name: Any, **kwargs: Any) -> None: ...
     def _get_subactions(self: Any) -> None: ...
     def __call__(self: Any, parser: Any, namespace: Any, values: Any, option_string: Any = ...) -> None: ...
 
 class FileType:
+    _mode: Any
+    _bufsize: Any
     def __init__(self: Any, mode: Any = ..., bufsize: Any = ...) -> None: ...
     def __call__(self: Any, string: Any) -> None: ...
     def __repr__(self: Any) -> None: ...
@@ -120,6 +150,18 @@ class Namespace(_AttributeHolder):
     def __contains__(self: Any, key: Any) -> None: ...
 
 class _ActionsContainer:
+    description: Any
+    argument_default: Any
+    prefix_chars: Any
+    conflict_handler: Any
+    _registries: Any
+    _actions: Any
+    _option_string_actions: Any
+    _action_groups: Any
+    _mutually_exclusive_groups: Any
+    _defaults: Any
+    _negative_number_matcher: _re.compile
+    _has_negative_number_optionals: Any
     def __init__(self: Any, description: Any, prefix_chars: Any, argument_default: Any, conflict_handler: Any) -> None: ...
     def register(self: Any, registry_name: Any, value: Any, object: Any) -> None: ...
     def _registry_get(self: Any, registry_name: Any, value: Any, default: Any = ...) -> None: ...
@@ -140,16 +182,35 @@ class _ActionsContainer:
     def _handle_conflict_resolve(self: Any, action: Any, conflicting_actions: Any) -> None: ...
 
 class _ArgumentGroup(_ActionsContainer):
+    title: Any
+    _group_actions: Any
+    _registries: Any
+    _actions: Any
+    _option_string_actions: Any
+    _defaults: Any
+    _has_negative_number_optionals: Any
     def __init__(self: Any, container: Any, title: Any = ..., description: Any = ..., **kwargs: Any) -> None: ...
     def _add_action(self: Any, action: Any) -> None: ...
     def _remove_action(self: Any, action: Any) -> None: ...
 
 class _MutuallyExclusiveGroup(_ArgumentGroup):
+    required: Any
+    _container: Any
     def __init__(self: Any, container: Any, required: Any = ...) -> None: ...
     def _add_action(self: Any, action: Any) -> None: ...
     def _remove_action(self: Any, action: Any) -> None: ...
 
 class ArgumentParser(_AttributeHolder, _ActionsContainer):
+    prog: Any
+    usage: Any
+    epilog: Any
+    version: Any
+    formatter_class: Any
+    fromfile_prefix_chars: Any
+    add_help: Any
+    _positionals: add_group
+    _optionals: add_group
+    _subparsers: Any
     def __init__(self: Any, prog: Any = ..., usage: Any = ..., description: Any = ..., epilog: Any = ..., version: Any = ..., parents: Any = ..., formatter_class: Any = ..., prefix_chars: Any = ..., fromfile_prefix_chars: Any = ..., argument_default: Any = ..., conflict_handler: Any = ..., add_help: Any = ...) -> None: ...
     def _get_kwargs(self: Any) -> None: ...
     def add_subparsers(self: Any, **kwargs: Any) -> None: ...

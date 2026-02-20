@@ -20,6 +20,16 @@ class BarChart:
     def render(data: Any, title: Any = ..., xlabel: Any = ..., ylabel: Any = ..., width: Any = ..., height: Any = ...) -> None: ...
 
 class RulePerformanceTester:
+    rules_dir: Any
+    pattern: Any
+    results: Any
+    rule_groups: Any
+    group_times: Any
+    total_start_time: time.time
+    interrupted: Any
+    perf_dir: Any
+    rule_files: sorted
+    test_data: self._generate_test_data
     def __init__(self: Any, rules_dir: Any = ..., pattern: Any = ...) -> None: ...
     def _find_rule_files(self: Any) -> None: ...
     def _generate_test_data(self: Any) -> None: ...

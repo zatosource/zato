@@ -7,6 +7,10 @@ from zato.common.rules.api import RulesManager
 from zato.common.typing_ import any_, anydict, strlist
 
 class RuleTestHelper:
+    include_perf_files: Any
+    rules_manager: RulesManager
+    rule_conditions: Any
+    current_dir: Path
     def __init__(self: Any, rules_dir: Any = ..., include_perf_files: Any = ...) -> None: ...
     def _load_rules(self: Any, directory: Path) -> None: ...
     def find_rules_with_condition(self: Any, condition_text: str) -> strlist: ...

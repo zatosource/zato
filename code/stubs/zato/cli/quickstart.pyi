@@ -23,6 +23,12 @@ from zato.common.odb.model import Cluster
 from zato.common.util.api import get_engine, get_session
 
 class CryptoMaterialLocation:
+    ca_dir: Any
+    component_pattern: Any
+    ca_certs_path: os.path.join
+    cert_path: Any
+    pub_path: Any
+    priv_path: Any
     def __init__(self: Any, ca_dir: str, component_pattern: str) -> None: ...
     def locate(self: Any) -> None: ...
 

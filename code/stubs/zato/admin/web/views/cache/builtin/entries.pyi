@@ -8,6 +8,17 @@ from zato.admin.web.views import Delete as _Delete, Index as _Index
 from zato.common.typing_ import any_, strdict
 
 class CacheEntry:
+    id: Any
+    key: Any
+    _value: Any
+    last_read: Any
+    prev_read: Any
+    prev_write: Any
+    expiry_op: Any
+    expires_at: Any
+    hits: Any
+    position: Any
+    server: Any
     def __init__(self: Any, id: Any = ..., key: Any = ..., value: Any = ..., last_read: Any = ..., prev_read: Any = ..., prev_write: Any = ..., expiry_op: Any = ..., expires_at: Any = ..., hits: Any = ..., position: Any = ..., server: Any = ...) -> None: ...
     @property
     def value(self: Any) -> None: ...

@@ -33,6 +33,18 @@ class NoResponseReceivedException(Exception):
 
 class BrokerClient:
     invoke_async: Any
+    server: Any
+    lock: RLock
+    _callbacks: Any
+    correlation_to_queue_map: Any
+    reply_consumers: Any
+    reply_consumer_started: Any
+    consumer: Any
+    consumer_drain_events_timeout: kwargs.get
+    _amqp: _AMQP
+    context: Any
+    producer: Producer
+    consumer_config: Any
     def __init__(self: Any, **kwargs: any_) -> None: ...
     def publish_to_pubsub(self: Any, msg: any_, *ignored_args: any_, **kwargs: any_) -> any_: ...
     def publish(self: Any, msg: any_, *ignored_args: any_, **kwargs: any_) -> any_: ...

@@ -7,6 +7,13 @@ import requests
 from zato.common.typing_ import anydict, anydictnone, dictnone, strnone
 
 class DataverseClient:
+    tenant_id: Any
+    client_id: Any
+    client_secret: Any
+    org_url: Any
+    api_version: Any
+    token: Any
+    base_url: Any
     def __init__(self: Any, tenant_id: str, client_id: str, client_secret: str, org_url: str) -> None: ...
     def get_access_token(self: Any) -> strnone: ...
     def _get_headers(self: Any) -> anydict: ...

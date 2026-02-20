@@ -7,9 +7,14 @@ from traceback import format_exc
 from bunch import Bunch
 
 class PhaseCtx:
+    phase: Any
+    args: Any
+    kwargs: Any
     def __init__(self: Any, phase: Any, args: Any, kwargs: Any) -> None: ...
 
 class StartupCallableTool:
+    _callable_names: Any
+    callable_list: Any
     def __init__(self: Any, server_config: Any) -> None: ...
     def init(self: Any) -> None: ...
     def invoke(self: Any, phase: Any, args: Any = ..., kwargs: Any = ...) -> None: ...

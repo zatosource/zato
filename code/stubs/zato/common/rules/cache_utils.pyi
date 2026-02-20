@@ -6,6 +6,10 @@ from time import time
 from zato.common.typing_ import any_, callable_, float_, int_, strdict
 
 class CacheStats:
+    hits: Any
+    misses: Any
+    total_time: Any
+    start_time: Any
     def __init__(self: Any) -> None: ...
     def start(self: Any) -> None: ...
     def stop(self: Any) -> None: ...

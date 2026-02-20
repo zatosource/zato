@@ -12,6 +12,9 @@ from zato.server.base.worker import WorkerStore
 
 class ConsumerBackend(Backend):
     consumers: dict_[str, Consumer]
+    worker_store: Any
+    broker_client: Any
+    consumers: Any
     def __init__(self: Any, worker_store: WorkerStore, broker_client: BrokerClient) -> None: ...
     def _add_consumer(self: Any, sub_key: str, consumer: Consumer) -> None: ...
     def _remove_consumer(self: Any, sub_key: str) -> None: ...

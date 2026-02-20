@@ -36,6 +36,8 @@ class Builder:
 def unrepr(s: Any) -> None: ...
 
 class ConfigObjError(SyntaxError):
+    line: Any
+    line_number: Any
     def __init__(self: Any, message: Any = ..., line_number: Any = ..., line: Any = ...) -> None: ...
 
 class NestingError(ConfigObjError):
@@ -71,6 +73,7 @@ class UnreprError(ConfigObjError):
 class InterpolationEngine:
     _KEYCRE: Any
     _cookie: Any
+    section: Any
     def __init__(self: Any, section: Any) -> None: ...
     def interpolate(self: Any, key: Any, value: Any) -> None: ...
     def _fetch(self: Any, key: Any) -> None: ...
@@ -92,6 +95,10 @@ def __newobj__(cls: Any, *args: Any) -> None: ...
 class Section(OrderedDict):
     __iter__: Any
     __str__: Any
+    parent: Any
+    main: Any
+    depth: Any
+    name: Any
     def __setstate__(self: Any, state: Any) -> None: ...
     def __reduce__(self: Any) -> None: ...
     def __init__(self: Any, parent: Any, depth: Any, main: Any, indict: Any = ..., name: Any = ...) -> None: ...
@@ -136,6 +143,18 @@ class ConfigObj(Section):
     _multi_line_double: Any
     _triple_quote: Any
     _bools: Any
+    zato_env_config_ctx: get_env_config_ctx
+    zato_component: Any
+    zato_config_file_name: Any
+    zato_env_variable_missing_suffix: Any
+    zato_get_env_config_value: Any
+    _inspec: Any
+    use_zato: Any
+    zato_crypto_manager: Any
+    zato_secrets_conf: Any
+    zato_secrets_url_prefix: Any
+    zato_file_name: Any
+    _original_configspec: Any
     def __init__(self: Any, infile: Any = ..., options: Any = ..., configspec: Any = ..., encoding: Any = ..., interpolation: Any = ..., raise_errors: Any = ..., list_values: Any = ..., create_empty: Any = ..., file_error: Any = ..., stringify: Any = ..., indent_type: Any = ..., default_encoding: Any = ..., unrepr: Any = ..., write_empty_values: Any = ..., _inspec: Any = ..., use_zato: Any = ..., zato_crypto_manager: Any = ..., zato_secrets_conf: Any = ..., zato_secrets_url_prefix: Any = ...) -> None: ...
     def _load(self: Any, infile: Any, configspec: Any) -> None: ...
     def _initialise(self: Any, options: Any = ...) -> None: ...
@@ -165,6 +184,7 @@ class ConfigObj(Section):
     def reload(self: Any) -> None: ...
 
 class SimpleVal:
+    baseErrorClass: Any
     def __init__(self: Any) -> None: ...
     def check(self: Any, check: Any, member: Any, missing: Any = ...) -> None: ...
 

@@ -54,6 +54,8 @@ class MSG_SOURCE:
     DUPLEX: Any
 
 class NameId:
+    name: Any
+    id: Any
     def __init__(self: Any, name: str, id: str = ...) -> None: ...
     def __repr__(self: Any) -> None: ...
 
@@ -260,6 +262,14 @@ class HotDeploy:
 
 class SourceCodeInfo:
     __slots__: Any
+    source: Any
+    source_html: Any
+    len_source: Any
+    path: Any
+    hash: Any
+    hash_method: Any
+    server_name: Any
+    line_number: Any
     def __init__(self: Any) -> None: ...
 
 class IDEDeploy:
@@ -277,10 +287,24 @@ class SMTPMessage:
     headers: any_
     charset: any_
     is_rfc2231: any_
+    from_: Any
+    to: Any
+    subject: Any
+    body: Any
+    attachments: Any
+    cc: Any
+    bcc: Any
+    is_html: Any
+    headers: Any
+    charset: Any
+    is_rfc2231: Any
     def __init__(self: Any, from_: Any = ..., to: Any = ..., subject: Any = ..., body: Any = ..., attachments: Any = ..., cc: Any = ..., bcc: Any = ..., is_html: Any = ..., headers: Any = ..., charset: Any = ..., is_rfc2231: Any = ...) -> None: ...
     def attach(self: Any, name: Any, contents: Any) -> None: ...
 
 class IMAPMessage:
+    uid: Any
+    conn: Any
+    data: Any
     def __init__(self: Any, uid: Any, conn: Any, data: Any) -> None: ...
     def __repr__(self: Any) -> None: ...
     def delete(self: Any) -> None: ...
@@ -304,6 +328,8 @@ class URLInfo:
     use_tls: bool
 
 class RESTAdapterResponse:
+    data: Any
+    raw_response: Any
     def __init__(self: Any, data: any_, raw_response: any_) -> None: ...
 
 class PubSub:

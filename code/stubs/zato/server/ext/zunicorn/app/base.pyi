@@ -11,6 +11,11 @@ from zato.server.ext.zunicorn.config import Config, get_default_config_file
 from zato.server.ext.zunicorn import debug
 
 class BaseApplication:
+    usage: Any
+    cfg: Any
+    callable: Any
+    prog: Any
+    logger: Any
     def __init__(self: Any, usage: Any = ..., prog: Any = ...) -> None: ...
     def do_load_config(self: Any) -> None: ...
     def load_default_config(self: Any) -> None: ...

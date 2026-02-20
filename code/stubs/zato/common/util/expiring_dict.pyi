@@ -5,6 +5,11 @@ from time import time
 from sortedcontainers import SortedKeyList
 
 class ExpiringDict(MutableMapping):
+    _store: dict
+    _keys: SortedKeyList
+    _ttl: Any
+    impl_lock: Lock
+    _interval: Any
     def __init__(self: Any, ttl: Any = ..., interval: Any = ..., *args: Any, **kwargs: Any) -> None: ...
     def _sort_func(self: Any, elem: Any) -> None: ...
     def flush(self: Any) -> None: ...

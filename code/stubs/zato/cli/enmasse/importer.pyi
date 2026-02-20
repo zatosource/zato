@@ -31,6 +31,52 @@ from sqlalchemy.orm.session import Session as SASession
 from zato.common.typing_ import any_, stranydict
 
 class EnmasseYAMLImporter:
+    cluster_id: Any
+    object_type: Any
+    object_alias: Any
+    sec_defs: Any
+    group_defs: Any
+    cache_defs: Any
+    odoo_defs: Any
+    smtp_defs: Any
+    imap_defs: Any
+    es_defs: Any
+    sql_defs: Any
+    job_defs: Any
+    confluence_defs: Any
+    jira_defs: Any
+    ldap_defs: Any
+    microsoft_365_defs: Any
+    outgoing_rest_defs: Any
+    outgoing_soap_defs: Any
+    pubsub_topic_defs: Any
+    pubsub_permission_defs: Any
+    pubsub_subscription_defs: Any
+    channel_openapi_defs: Any
+    objects: Any
+    cluster: Any
+    created_objects: Any
+    updated_objects: Any
+    security_importer: SecurityImporter
+    channel_importer: ChannelImporter
+    group_importer: GroupImporter
+    cache_importer: CacheImporter
+    odoo_importer: OdooImporter
+    smtp_importer: SMTPImporter
+    imap_importer: IMAPImporter
+    es_importer: ElasticSearchImporter
+    sql_importer: SQLImporter
+    scheduler_importer: SchedulerImporter
+    confluence_importer: ConfluenceImporter
+    jira_importer: JiraImporter
+    ldap_importer: LDAPImporter
+    microsoft_365_importer: Microsoft365Importer
+    outgoing_rest_importer: OutgoingRESTImporter
+    outgoing_soap_importer: OutgoingSOAPImporter
+    pubsub_topic_importer: PubSubTopicImporter
+    pubsub_permission_importer: PubSubPermissionImporter
+    pubsub_subscription_importer: PubSubSubscriptionImporter
+    channel_openapi_importer: ChannelOpenAPIImporter
     def __init__(self: Any) -> None: ...
     def get_cluster(self: Any, session: SASession) -> any_: ...
     def from_path(self: Any, path: str) -> stranydict: ...
