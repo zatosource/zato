@@ -1173,6 +1173,7 @@
                 iconDiv.className = 'zato-ide-side-panel-1-icon';
                 iconDiv.setAttribute('data-view', iconDef.id);
                 iconDiv.setAttribute('data-tooltip', iconDef.tooltip);
+                iconDiv.setAttribute('data-tooltip-position', 'left');
                 if (iconDef.id === instance.sidePanel1ActiveView) {
                     iconDiv.classList.add('active');
                 }

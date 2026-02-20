@@ -2,56 +2,43 @@
     display: flex;
     flex-direction: row;
     height: 100%;
-    background: var(--zato-ide-bg-dark);
 }
 
 .zato-ide-side-panel-1-content {
     flex: 1;
     min-width: 0;
-    background: var(--zato-ide-bg-dark);
-    border-left: 1px solid var(--zato-ide-border-subtle);
+    border-left: 1px solid #3c3c3c;
 }
 
 .zato-ide-side-panel-1-icons {
     display: flex;
     flex-direction: column;
-    width: 40px;
-    min-width: 40px;
-    background: var(--zato-ide-toolbar-bg);
-    border-left: 1px solid var(--zato-ide-border-subtle);
+    width: 48px;
+    min-width: 48px;
+    padding: 4px 0;
+    border-left: 1px solid #3c3c3c;
 }
 
 .zato-ide-side-panel-1-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     cursor: pointer;
-    color: var(--zato-ide-text-secondary);
     position: relative;
+    border-radius: 4px;
+    margin: 0 4px;
+    width: 40px;
+    transition: background-color 0.15s ease;
 }
 
 .zato-ide-side-panel-1-icon:hover {
-    color: var(--zato-ide-text-primary);
-    background: rgba(255, 255, 255, 0.05);
+    background: #3c3c3c;
 }
 
-.zato-ide-side-panel-1-icon.active {
-    color: var(--zato-ide-text-primary);
-}
-
-.zato-ide-side-panel-1-icon.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: var(--zato-ide-accent-blue, #007acc);
-}
 
 .zato-ide-side-panel-1-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
 }

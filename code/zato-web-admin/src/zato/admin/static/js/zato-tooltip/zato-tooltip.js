@@ -20,6 +20,8 @@
                 theme: options.theme || 'dark',
                 attribute: options.attribute || 'data-tooltip',
                 timeoutAttribute: options.timeoutAttribute || 'data-tooltip-timeout',
+                positionAttribute: options.positionAttribute || 'data-tooltip-position',
+                position: options.position || 'top',
                 isPopupOpen: options.isPopupOpen || null,
                 handlers: {}
             };
@@ -138,65 +140,34 @@
             instance.tooltipEl.style.visibility = 'visible';
             console.log('[ZatoTooltip] show: set opacity=1, visibility=visible');
 
-            this.position(instance, target);
+            var targetPosition = target.getAttribute(instance.positionAttribute) || instance.position;
+            this.positionTooltip(instance, target, targetPosition);
             console.log('[ZatoTooltip] show: position called, tooltipEl.style.left=' + instance.tooltipEl.style.left + ', top=' + instance.tooltipEl.style.top);
         },
 
-        position: function(instance, target) {
+        positionTooltip: function(instance, target, positionOverride) {
+            var pos = positionOverride || instance.position || 'top';
             var rect = target.getBoundingClientRect();
             instance.tooltipEl.style.visibility = 'hidden';
             instance.tooltipEl.style.display = 'block';
             var tooltipRect = instance.tooltipEl.getBoundingClientRect();
             instance.tooltipEl.style.visibility = 'visible';
 
-            var left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-            var top = rect.top - tooltipRect.height - 6;
+            var left, top;
 
-            if (top < 5) {
-                top = rect.bottom + 6;
+            if (pos === 'left') {
+                left = rect.left - tooltipRect.width - 8;
+                top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+            } else if (pos === 'bottom') {
+                left = rect.left;
+                top = rect.bottom + 4;
+            } else {
+                left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+                top = rect.top - tooltipRect.height - 6;
+                if (top < 5) {
+                    top = rect.bottom + 6;
+                }
             }
-
-            if (left < 5) {
-                left = 5;
-            }
-            if (left + tooltipRect.width > window.innerWidth - 5) {
-                left = window.innerWidth - tooltipRect.width - 5;
-            }
-
-            instance.tooltipEl.style.left = left + 'px';
-            instance.tooltipEl.style.top = top + 'px';
-        },
-
-        positionLeft: function(instance, target) {
-            var rect = target.getBoundingClientRect();
-            instance.tooltipEl.style.visibility = 'hidden';
-            instance.tooltipEl.style.display = 'block';
-            var tooltipRect = instance.tooltipEl.getBoundingClientRect();
-            instance.tooltipEl.style.visibility = 'visible';
-
-            var left = rect.left;
-            var top = rect.top - tooltipRect.height - 6;
-
-            if (left < 5) {
-                left = 5;
-            }
-            if (left + tooltipRect.width > window.innerWidth - 5) {
-                left = window.innerWidth - tooltipRect.width - 5;
-            }
-
-            instance.tooltipEl.style.left = left + 'px';
-            instance.tooltipEl.style.top = top + 'px';
-        },
-
-        positionBottom: function(instance, target) {
-            var rect = target.getBoundingClientRect();
-            instance.tooltipEl.style.visibility = 'hidden';
-            instance.tooltipEl.style.display = 'block';
-            var tooltipRect = instance.tooltipEl.getBoundingClientRect();
-            instance.tooltipEl.style.visibility = 'visible';
-
-            var left = rect.left;
-            var top = rect.bottom + 4;
 
             if (left < 5) {
                 left = 5;
@@ -233,15 +204,7 @@
             instance.tooltipEl.style.opacity = '1';
             instance.tooltipEl.style.visibility = 'visible';
 
-            if (alignment === 'left') {
-                this.positionLeft(instance, target);
-            }
-            else if (alignment === 'bottom') {
-                this.positionBottom(instance, target);
-            }
-            else {
-                this.position(instance, target);
-            }
+            this.positionTooltip(instance, target, alignment);
 
             var self = this;
             instance.hideTimerId = setTimeout(function() {
