@@ -11,6 +11,9 @@
             lintDelay: 125
         },
 
+        completionMetaSelectedColor: '#ddd',
+        completionNameSelectedColor: '#fff',
+
         create: function(container, options) {
             var opts = {};
             for (var key in this.defaults) {
@@ -141,6 +144,32 @@
                 enableSnippets: false
             });
             editor.completers = [zubanCompleter];
+
+            setInterval(function() {
+                var allLines = document.querySelectorAll('.ace_autocomplete .ace_line');
+                allLines.forEach(function(line) {
+                    var isSelected = line.classList.contains('ace_selected');
+                    var meta = line.querySelector('.ace_completion-meta');
+                    var name = line.querySelector('.ace_');
+                    if (isSelected) {
+                        if (meta) {
+                            meta.style.color = ZatoIDEEditorAce.completionMetaSelectedColor;
+                            meta.style.opacity = '1';
+                        }
+                        if (name) {
+                            name.style.color = ZatoIDEEditorAce.completionNameSelectedColor;
+                        }
+                    } else {
+                        if (meta) {
+                            meta.style.color = '';
+                            meta.style.opacity = '';
+                        }
+                        if (name) {
+                            name.style.color = '';
+                        }
+                    }
+                });
+            }, 16);
             editor.commands.on('afterExec', function(e) {
                 if (e.command.name === 'insertstring' && e.args === '.') {
                     console.log('[Complete] Dot pressed, triggering autocomplete');
