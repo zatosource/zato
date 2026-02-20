@@ -99,9 +99,10 @@
 
                 var icon = document.createElement('img');
                 icon.className = 'zato-ide-explorer-icon';
-                icon.src = '/static/ide-icons/icons/' + item.icon;
-                icon.setAttribute('data-expanded-icon', '/static/ide-icons/icons/' + (item.icon_expanded || item.icon));
-                icon.setAttribute('data-collapsed-icon', '/static/ide-icons/icons/' + item.icon);
+                var iconBasePath = item.is_dir ? '/static/ide-icons/icons/' : '/static/ide-icons/icons/';
+                icon.src = iconBasePath + item.icon;
+                icon.setAttribute('data-expanded-icon', iconBasePath + (item.icon_expanded || item.icon));
+                icon.setAttribute('data-collapsed-icon', iconBasePath + item.icon);
                 contentDiv.appendChild(icon);
 
                 var name = document.createElement('span');
