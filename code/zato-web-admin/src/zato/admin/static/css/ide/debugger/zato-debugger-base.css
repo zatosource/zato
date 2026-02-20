@@ -397,6 +397,12 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
+.zato-debugger-bp-context-menu-separator {
+    height: 1px;
+    margin: 4px 0;
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .zato-debugger-condition-overlay {
     position: fixed;
     top: 0;

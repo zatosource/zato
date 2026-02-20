@@ -19,7 +19,7 @@ from zato.admin.web.views.ai import highlight as ai_highlight
 from zato.admin.web.views.ai import stream as ai_stream
 from zato.admin.web.views.ai.mcp import views as ai_mcp
 from zato.admin.web.views.ide import complete as ide_complete
-from zato.admin.web.views.ide import debug as ide_debug
+from zato.admin.web.views.ide import zato_debug as ide_debug
 from zato.admin.web.views.ide import lint as ide_lint
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries

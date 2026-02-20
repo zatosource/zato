@@ -154,9 +154,15 @@
                 instance.localBreakpoints[file] = {};
             }
 
-            if (instance.localBreakpoints[file][line]) {
-                console.log('[Gutter] toggleLocalBreakpoint: removing breakpoint at line ' + line);
-                delete instance.localBreakpoints[file][line];
+            var bp = instance.localBreakpoints[file][line];
+            if (bp) {
+                if (bp.enabled) {
+                    console.log('[Gutter] toggleLocalBreakpoint: disabling breakpoint at line ' + line);
+                    bp.enabled = false;
+                } else {
+                    console.log('[Gutter] toggleLocalBreakpoint: removing breakpoint at line ' + line);
+                    delete instance.localBreakpoints[file][line];
+                }
             } else {
                 console.log('[Gutter] toggleLocalBreakpoint: adding breakpoint at line ' + line);
                 instance.localBreakpoints[file][line] = { line: line, enabled: true };
@@ -227,23 +233,35 @@
             menu.style.top = y + 'px';
 
             var items = [];
+            var localBp = instance.localBreakpoints && instance.localBreakpoints[file] ? instance.localBreakpoints[file][line] : null;
 
-            if (bp) {
+            if (bp || localBp) {
                 items.push({ label: 'Remove breakpoint', action: 'remove' });
-                items.push({ label: bp.enabled ? 'Disable breakpoint' : 'Enable breakpoint', action: 'toggle-enable' });
+                var isEnabled = bp ? bp.enabled : (localBp ? localBp.enabled : true);
+                items.push({ label: isEnabled ? 'Disable breakpoint' : 'Enable breakpoint', action: 'toggle-enable' });
                 items.push({ label: 'Edit condition...', action: 'edit-condition' });
             } else {
                 items.push({ label: 'Add breakpoint', action: 'add' });
                 items.push({ label: 'Add conditional breakpoint...', action: 'add-conditional' });
             }
 
+            items.push({ separator: true });
+            items.push({ label: 'Disable all breakpoints', action: 'disable-all' });
+            items.push({ label: 'Clear all breakpoints', action: 'clear-all' });
+
             for (var i = 0; i < items.length; i++) {
                 var item = items[i];
-                var itemEl = document.createElement('div');
-                itemEl.className = 'zato-debugger-bp-context-menu-item';
-                itemEl.textContent = item.label;
-                itemEl.setAttribute('data-action', item.action);
-                menu.appendChild(itemEl);
+                if (item.separator) {
+                    var sep = document.createElement('div');
+                    sep.className = 'zato-debugger-bp-context-menu-separator';
+                    menu.appendChild(sep);
+                } else {
+                    var itemEl = document.createElement('div');
+                    itemEl.className = 'zato-debugger-bp-context-menu-item';
+                    itemEl.textContent = item.label;
+                    itemEl.setAttribute('data-action', item.action);
+                    menu.appendChild(itemEl);
+                }
             }
 
             document.body.appendChild(menu);
@@ -270,30 +288,80 @@
         },
 
         handleBreakpointAction: function(instance, action, file, line) {
-            if (!instance.debugger) {
-                return;
+            var self = this;
+
+            if (instance.debugger) {
+                switch (action) {
+                    case 'add':
+                        ZatoDebuggerCore.addBreakpoint(instance.debugger, file, line);
+                        break;
+                    case 'remove':
+                        ZatoDebuggerCore.removeBreakpoint(instance.debugger, file, line);
+                        break;
+                    case 'toggle-enable':
+                        var bp = ZatoDebuggerCore.getBreakpoint(instance.debugger, file, line);
+                        if (bp) {
+                            ZatoDebuggerCore.enableBreakpoint(instance.debugger, file, line, !bp.enabled);
+                        }
+                        break;
+                    case 'add-conditional':
+                    case 'edit-condition':
+                        this.showConditionDialog(instance, file, line);
+                        break;
+                }
+            } else {
+                switch (action) {
+                    case 'add':
+                        if (!instance.localBreakpoints) {
+                            instance.localBreakpoints = {};
+                        }
+                        if (!instance.localBreakpoints[file]) {
+                            instance.localBreakpoints[file] = {};
+                        }
+                        instance.localBreakpoints[file][line] = { line: line, enabled: true };
+                        this.saveBreakpointsToStorage(instance.localBreakpoints);
+                        break;
+                    case 'remove':
+                        if (instance.localBreakpoints && instance.localBreakpoints[file]) {
+                            delete instance.localBreakpoints[file][line];
+                            this.saveBreakpointsToStorage(instance.localBreakpoints);
+                        }
+                        break;
+                    case 'toggle-enable':
+                        if (instance.localBreakpoints && instance.localBreakpoints[file] && instance.localBreakpoints[file][line]) {
+                            instance.localBreakpoints[file][line].enabled = !instance.localBreakpoints[file][line].enabled;
+                            this.saveBreakpointsToStorage(instance.localBreakpoints);
+                        }
+                        break;
+                }
             }
 
             switch (action) {
-                case 'add':
-                    ZatoDebuggerCore.addBreakpoint(instance.debugger, file, line);
+                case 'disable-all':
+                    this.disableAllBreakpoints(instance);
                     break;
-                case 'remove':
-                    ZatoDebuggerCore.removeBreakpoint(instance.debugger, file, line);
-                    break;
-                case 'toggle-enable':
-                    var bp = ZatoDebuggerCore.getBreakpoint(instance.debugger, file, line);
-                    if (bp) {
-                        ZatoDebuggerCore.enableBreakpoint(instance.debugger, file, line, !bp.enabled);
-                    }
-                    break;
-                case 'add-conditional':
-                case 'edit-condition':
-                    this.showConditionDialog(instance, file, line);
+                case 'clear-all':
+                    this.clearAllBreakpoints(instance);
                     break;
             }
 
             this.updateBreakpointMarkers(instance);
+        },
+
+        disableAllBreakpoints: function(instance) {
+            if (instance.localBreakpoints) {
+                for (var file in instance.localBreakpoints) {
+                    for (var line in instance.localBreakpoints[file]) {
+                        instance.localBreakpoints[file][line].enabled = false;
+                    }
+                }
+                this.saveBreakpointsToStorage(instance.localBreakpoints);
+            }
+        },
+
+        clearAllBreakpoints: function(instance) {
+            instance.localBreakpoints = {};
+            this.saveBreakpointsToStorage(instance.localBreakpoints);
         },
 
         showConditionDialog: function(instance, file, line) {
@@ -466,7 +534,7 @@
             var css = '';
 
             var redCircle = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5" fill="#e51400"/></svg>');
-            var redCircleOutline = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="4" fill="none" stroke="#e51400" stroke-width="2"/></svg>');
+            var grayCircle = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5" fill="#555555"/></svg>');
             var orangeCircle = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5" fill="#f0a000"/></svg>');
 
             css += '.ace_gutter-cell.ace_breakpoint {';
@@ -476,7 +544,7 @@
             css += '}';
 
             css += '.ace_gutter-cell.ace_breakpoint-disabled {';
-            css += '  background-image: url("' + redCircleOutline + '");';
+            css += '  background-image: url("' + grayCircle + '");';
             css += '  background-repeat: no-repeat;';
             css += '  background-position: 2px center;';
             css += '}';
