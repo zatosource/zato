@@ -123,7 +123,15 @@
             html += '<option value="">-- methods --</option>';
             html += '</select>';
             html += '</div>';
-            html += '<div class="zato-ide-toolbar-right">';
+            html += '<div class="zato-ide-toolbar-center">';
+            html += '<div class="zato-ide-debug-container" id="' + instance.id + '-debug-container">';
+            html += '<select class="zato-ide-debug-select zato-ide-symbol-select" id="' + instance.id + '-debug-select">';
+            html += '<option value="">Debug</option>';
+            html += '<option value="debug-file">Debug current file</option>';
+            html += '<option value="connect-server">Connect to server</option>';
+            html += '</select>';
+            html += '</div>';
+            html += '<span class="zato-ide-toolbar-separator"></span>';
             html += '<span class="zato-ide-search-button" title="Search"></span>';
             html += '</div>';
             html += '</div>';
@@ -198,6 +206,34 @@
                         if (value) {
                             var line = parseInt(value, 10);
                             self.jumpToLine(instance, line);
+                        }
+                    }
+                });
+            }
+
+            var debugSelect = document.getElementById(instance.id + '-debug-select');
+            if (debugSelect && typeof ZatoDropdown !== 'undefined') {
+                instance.debugDropdown = ZatoDropdown.init(debugSelect, {
+                    theme: instance.options.theme,
+                    id: instance.id + '-debug-dropdown',
+                    onBeforeOpen: function(container) {
+                        var menu = container.querySelector('.zato-dropdown-menu');
+                        var trigger = container.querySelector('.zato-dropdown-trigger');
+                        if (menu && trigger) {
+                            var rect = trigger.getBoundingClientRect();
+                            menu.style.position = 'fixed';
+                            menu.style.bottom = 'auto';
+                            menu.style.left = rect.left + 'px';
+                            menu.style.top = (rect.bottom + 2) + 'px';
+                            menu.style.minWidth = rect.width + 'px';
+                        }
+                    },
+                    onChange: function(value, text) {
+                        if (value) {
+                            self.handleDebugAction(instance, value);
+                            if (instance.debugDropdown) {
+                                ZatoDropdown.setValue(instance.debugDropdown, '');
+                            }
                         }
                     }
                 });
@@ -1312,6 +1348,15 @@
             });
         },
 
+        handleDebugAction: function(instance, action) {
+            console.log('[ZatoIDE] Debug action:', action, 'file:', instance.activeFile);
+            if (action === 'debug-file') {
+                console.log('[ZatoIDE] Debug current file:', instance.activeFile);
+            } else if (action === 'connect-server') {
+                console.log('[ZatoIDE] Connect to server');
+            }
+        },
+
         toggleSearchPopup: function(instance, button) {
             var existingPopup = instance.container.querySelector('.zato-ide-search-popup');
             if (existingPopup) {
@@ -1323,9 +1368,12 @@
             popup.className = 'zato-ide-search-popup open';
             popup.innerHTML = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.';
 
-            var toolbarRight = button.parentElement;
-            toolbarRight.style.position = 'relative';
-            toolbarRight.appendChild(popup);
+            var rect = button.getBoundingClientRect();
+            popup.style.position = 'fixed';
+            popup.style.top = (rect.bottom + 4) + 'px';
+            popup.style.left = rect.left + 'px';
+
+            instance.container.appendChild(popup);
         },
 
         /**

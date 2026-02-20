@@ -27,6 +27,13 @@
     gap: 8px;
 }
 
+.zato-ide-toolbar-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 auto;
+}
+
 .zato-ide-toolbar-right {
     display: flex;
     align-items: center;
@@ -152,4 +159,15 @@
 
 .zato-ide-method-select {
     margin-left: 4px;
+}
+
+.zato-ide-toolbar-separator {
+    width: 1px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 0 4px;
+}
+
+.zato-ide-debug-container {
+    position: relative;
 }
