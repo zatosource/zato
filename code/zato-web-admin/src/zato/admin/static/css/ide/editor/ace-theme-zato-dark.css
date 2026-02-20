@@ -1,3 +1,8 @@
+:root {
+    --zato-gutter-active-line-color: #d4a656;
+    --zato-completion-name-selected-color: #f0d090;
+}
+
 .ace-zato-dark .ace_gutter {
     background: #1a1a1a;
     color: #b0b0b0;
@@ -7,7 +12,7 @@
 
 .ace-zato-dark .ace_gutter-active-line {
     background-color: transparent;
-    color: #d4a656;
+    color: var(--zato-gutter-active-line-color);
 }
 
 .ace-zato-dark .ace_print-margin {
@@ -182,7 +187,7 @@
 }
 
 .ace-zato-dark .ace_gutter-cell.ace_error.ace_gutter-active-line {
-    color: #d4a656;
+    color: var(--zato-gutter-active-line-color);
 }
 
 .ace-zato-dark .ace_gutter-cell.ace_warning {
@@ -194,7 +199,7 @@
 }
 
 .ace-zato-dark .ace_gutter-cell.ace_warning.ace_gutter-active-line {
-    color: #d4a656;
+    color: var(--zato-gutter-active-line-color);
 }
 
 .ace-zato-dark .ace_gutter-cell.ace_info {
@@ -206,7 +211,7 @@
 }
 
 .ace-zato-dark .ace_gutter-cell.ace_info.ace_gutter-active-line {
-    color: #d4a656;
+    color: var(--zato-gutter-active-line-color);
 }
 
 .ace-zato-dark .ace_tooltip {

@@ -12,7 +12,10 @@
         },
 
         completionMetaSelectedColor: '#ddd',
-        completionNameSelectedColor: '#fff',
+
+        getCompletionNameSelectedColor: function() {
+            return getComputedStyle(document.documentElement).getPropertyValue('--zato-completion-name-selected-color').trim();
+        },
 
         create: function(container, options) {
             var opts = {};
@@ -157,7 +160,7 @@
                             meta.style.opacity = '1';
                         }
                         if (name) {
-                            name.style.color = ZatoIDEEditorAce.completionNameSelectedColor;
+                            name.style.color = ZatoIDEEditorAce.getCompletionNameSelectedColor();
                         }
                     } else {
                         if (meta) {
