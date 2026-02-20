@@ -184,10 +184,9 @@
             var lintTimeout = null;
             var lintInProgress = false;
             var lintPending = false;
-            var lintLanguage = opts.language;
             var lintDelay = opts.lintDelay;
             editor.session.on('change', function() {
-                if (lintLanguage !== 'python') {
+                if (instance.options.language !== 'python') {
                     return;
                 }
                 if (lintTimeout) {
@@ -213,7 +212,6 @@
                     });
                 }, lintDelay);
             });
-            instance.lintLanguage = lintLanguage;
             editor.renderer.$textLayer.$renderLine = (function(originalRenderLine) {
                 return function(parent, row, onlyContents, foldLine) {
                     var result = originalRenderLine.call(this, parent, row, onlyContents, foldLine);

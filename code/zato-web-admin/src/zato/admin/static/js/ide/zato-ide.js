@@ -1219,11 +1219,20 @@
         },
 
         initMainSplit: function(instance) {
+            console.log('[ZatoIDE] initMainSplit: START');
             if (typeof ZatoIDESplit === 'undefined') {
+                console.log('[ZatoIDE] initMainSplit: ZatoIDESplit undefined, returning');
                 return;
             }
 
             var splitContainerId = instance.id + '-main-split';
+            console.log('[ZatoIDE] initMainSplit: splitContainerId=' + splitContainerId);
+            var container = document.getElementById(splitContainerId);
+            console.log('[ZatoIDE] initMainSplit: container found=' + !!container);
+            if (container) {
+                console.log('[ZatoIDE] initMainSplit: container.innerHTML length=' + container.innerHTML.length);
+                console.log('[ZatoIDE] initMainSplit: container.children.length=' + container.children.length);
+            }
             instance.mainSplit = ZatoIDESplit.create(splitContainerId, {
                 storageKey: 'zato.ide.main-split-position',
                 defaultSplitPercent: 75,
@@ -1235,19 +1244,25 @@
                 }
             });
 
+            console.log('[ZatoIDE] initMainSplit: mainSplit created=' + !!instance.mainSplit);
             if (!instance.mainSplit) {
+                console.log('[ZatoIDE] initMainSplit: mainSplit is null, returning');
                 return;
             }
 
             var leftPanel = ZatoIDESplit.getLeftPanel(instance.mainSplit);
             var rightPanel = ZatoIDESplit.getRightPanel(instance.mainSplit);
+            console.log('[ZatoIDE] initMainSplit: leftPanel=' + !!leftPanel + ', rightPanel=' + !!rightPanel);
 
             if (leftPanel) {
+                console.log('[ZatoIDE] initMainSplit: setting leftPanel id to ' + instance.id + '-editor-area');
                 leftPanel.id = instance.id + '-editor-area';
                 leftPanel.className += ' zato-ide-editor-area';
             }
 
             if (rightPanel) {
+                console.log('[ZatoIDE] initMainSplit: setting rightPanel id to ' + instance.id + '-side-panel-1');
+                console.log('[ZatoIDE] initMainSplit: rightPanel current innerHTML length=' + rightPanel.innerHTML.length);
                 rightPanel.id = instance.id + '-side-panel-1';
                 rightPanel.className += ' zato-ide-side-panel-1';
 
@@ -1260,7 +1275,9 @@
                 iconsDiv.id = instance.id + '-side-panel-1-icons';
                 iconsDiv.className = 'zato-ide-side-panel-1-icons';
                 rightPanel.appendChild(iconsDiv);
+                console.log('[ZatoIDE] initMainSplit: side panel elements created');
             }
+            console.log('[ZatoIDE] initMainSplit: END');
         },
 
         initSidePanel1Content: function(instance) {
@@ -1386,6 +1403,67 @@
 
             if (tab && tab.title) {
                 this.switchToFile(instance, tab.title);
+            }
+        },
+
+        closeTab: function(instance, tab) {
+            if (!instance.tabsManager || !instance.tabsManager.tabs) {
+                return;
+            }
+
+            if (instance.tabsManager.tabs.length <= 1) {
+                return;
+            }
+
+            var tabId = tab.id;
+            var filename = tab.title;
+            var file = instance.files ? instance.files[filename] : null;
+            var self = this;
+
+            var doClose = function() {
+                var tabs = instance.tabsManager.tabs;
+                var tabIndex = -1;
+                for (var i = 0; i < tabs.length; i++) {
+                    if (tabs[i].id === tabId) {
+                        tabIndex = i;
+                        break;
+                    }
+                }
+
+                if (tabIndex === -1) {
+                    return;
+                }
+
+                tabs.splice(tabIndex, 1);
+
+                if (instance.tabsManager.activeTabId === tabId) {
+                    var newIndex = tabIndex > 0 ? tabIndex - 1 : 0;
+                    if (tabs.length > 0) {
+                        instance.tabsManager.activeTabId = tabs[newIndex].id;
+                        self.switchToFile(instance, tabs[newIndex].title);
+                    }
+                }
+
+                self.renderTabs(instance);
+                self.bindTabEvents(instance);
+            };
+
+            if (file && file.modified) {
+                this.showSaveDialog(instance, filename, {
+                    onDontSave: function() {
+                        file.modified = false;
+                        doClose();
+                    },
+                    onCancel: function() {
+                    },
+                    onSave: function() {
+                        file.originalContent = file.content;
+                        file.modified = false;
+                        doClose();
+                    }
+                });
+            } else {
+                doClose();
             }
         },
 

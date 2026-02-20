@@ -5,6 +5,23 @@
 
 
 {% block head %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript">
+    (function() {
+        var handler = function(e) {
+            if (e.ctrlKey && (e.key === 'w' || e.key === 'W' || e.keyCode === 87)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                if (window.ZatoIDEKeyboard) {
+                    window.ZatoIDEKeyboard.handleCloseTab();
+                }
+                return false;
+            }
+        };
+        document.addEventListener('keydown', handler, true);
+        window.addEventListener('keydown', handler, true);
+    })();
+    </script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery-3.7.1.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/hide-show-password.js"></script>
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.custom.css">
@@ -132,6 +149,7 @@
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/explorer/zato-ide-explorer.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/zato-ide.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/zato-ide-split.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ide/zato-ide-keyboard.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/ai-chat/ai-chat-ide-integration.js"></script>
     <script nonce="{{ CSP_NONCE }}" type="text/javascript">
         var ZatoEnvName = "{{ zato_env_name|default:'' }}";

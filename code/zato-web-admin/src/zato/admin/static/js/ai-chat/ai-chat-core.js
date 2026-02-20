@@ -174,6 +174,7 @@
         },
 
         render: function() {
+            console.log('[AIChatCore] render: START, isMaximized=' + this.isMaximized + ', isMinimized=' + this.isMinimized + ', ideEnabled=' + this.ideEnabled);
 
             if (this.needsConfig && this.configMode && this.configMode !== 'providers') {
                 AIChatState.saveConfigMode(this.configMode);
@@ -183,15 +184,19 @@
 
             if (this.ideEnabled && !this.isMinimized && window.AIChatIDEIntegration) {
                 var existingSplit = this.widget.querySelector('#ai-chat-split-wrapper');
+                console.log('[AIChatCore] render: existingSplit=' + !!existingSplit);
                 if (existingSplit) {
+                    console.log('[AIChatCore] render: calling updateChatPanelOnly and returning');
                     this.updateChatPanelOnly();
                     return;
                 }
             }
 
             var html = AIChatRender.buildHeaderHtml(this.isMinimized, this.isMaximized);
+            console.log('[AIChatCore] render: building body HTML');
 
             if (this.ideEnabled && !this.isMinimized && window.AIChatIDEIntegration) {
+                console.log('[AIChatCore] render: IDE enabled, building split body');
                 this.widget.classList.add('with-ide');
                 html += this.buildSplitBodyHtml();
             } else {
@@ -238,7 +243,22 @@
         },
 
         updateChatPanelOnly: function() {
-            var rightPanel = this.widget.querySelector('.zato-ide-split-panel-right');
+            var splitWrapper = this.widget.querySelector('#ai-chat-split-wrapper');
+            if (!splitWrapper) {
+                return;
+            }
+            var splitContainer = splitWrapper.querySelector('.zato-ide-split-container');
+            if (!splitContainer) {
+                return;
+            }
+            var rightPanel = null;
+            var children = splitContainer.children;
+            for (var i = 0; i < children.length; i++) {
+                if (children[i].classList.contains('zato-ide-split-panel-right')) {
+                    rightPanel = children[i];
+                    break;
+                }
+            }
             if (!rightPanel) {
                 return;
             }
@@ -273,31 +293,41 @@
 
         initIDESplit: function() {
             var self = this;
+            console.log('[AIChatCore] initIDESplit: START');
 
             if (!window.ZatoIDESplit || !window.ZatoIDE) {
+                console.log('[AIChatCore] initIDESplit: ZatoIDESplit or ZatoIDE not defined, returning');
                 return;
             }
 
+            console.log('[AIChatCore] initIDESplit: creating split for ai-chat-split-wrapper');
             var splitInstance = ZatoIDESplit.create('ai-chat-split-wrapper', {
                 onResize: function() {
                 }
             });
 
             if (!splitInstance) {
+                console.log('[AIChatCore] initIDESplit: splitInstance is null, returning');
                 return;
             }
+            console.log('[AIChatCore] initIDESplit: splitInstance created, id=' + splitInstance.id);
 
             var leftPanel = ZatoIDESplit.getLeftPanel(splitInstance);
+            console.log('[AIChatCore] initIDESplit: leftPanel=' + !!leftPanel);
             if (leftPanel) {
                 leftPanel.id = 'zato-ide-panel';
+                console.log('[AIChatCore] initIDESplit: calling ZatoIDE.create for zato-ide-panel');
                 ZatoIDE.create('zato-ide-panel', {
                     theme: 'dark',
                     language: 'python'
                 });
+                console.log('[AIChatCore] initIDESplit: ZatoIDE.create completed');
             }
 
             var rightPanel = ZatoIDESplit.getRightPanel(splitInstance);
+            console.log('[AIChatCore] initIDESplit: rightPanel=' + !!rightPanel + ', id=' + (rightPanel ? rightPanel.id : 'N/A'));
             if (rightPanel) {
+                console.log('[AIChatCore] initIDESplit: rightPanel.innerHTML length before=' + rightPanel.innerHTML.length);
                 if (this.needsConfig) {
                     var configBodyHtml = AIChatRender.buildBodyHtml(this.tabs, this.activeTabId, this.needsConfig, this.configMode, AIChatConfig.selectedProvider, this.cameFromChat, this.hadKeyOnEntry);
                     rightPanel.innerHTML = configBodyHtml;
@@ -307,7 +337,9 @@
                     rightPanel.innerHTML = chatTabsHtml + chatBodyHtml;
                     this.bindTabsEvents(rightPanel);
                 }
+                console.log('[AIChatCore] initIDESplit: rightPanel.innerHTML length after=' + rightPanel.innerHTML.length);
             }
+            console.log('[AIChatCore] initIDESplit: END');
         },
 
         bindTabsEvents: function(container) {
