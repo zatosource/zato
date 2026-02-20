@@ -77,6 +77,11 @@
             }
             gutter._zatoGutterBound = true;
 
+            gutter.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
             gutter.addEventListener('click', function(e) {
                 console.log('[Gutter] click event fired, instance.id=' + instance.id);
                 e.preventDefault();
@@ -129,7 +134,11 @@
 
             var line = row + 1;
             var file = this.getCurrentFile(instance);
+            var lineText = editor.session.getLine(row);
+            var lineType = this.getLineType(lineText);
             console.log('[Gutter] handleGutterClick: line=' + line + ' file=' + file);
+            console.log('[Gutter] handleGutterClick: lineText="' + lineText + '"');
+            console.log('[Gutter] handleGutterClick: lineType=' + lineType);
             console.log('[Gutter] handleGutterClick: instance.debugger=' + (instance.debugger ? 'exists' : 'null'));
 
             if (instance.debugger) {
@@ -139,13 +148,13 @@
                 this.updateBreakpointMarkers(instance);
             } else {
                 console.log('[Gutter] handleGutterClick: calling toggleLocalBreakpoint');
-                this.toggleLocalBreakpoint(instance, file, line);
+                this.toggleLocalBreakpoint(instance, file, line, lineType);
             }
             console.log('[Gutter] handleGutterClick: END');
         },
 
-        toggleLocalBreakpoint: function(instance, file, line) {
-            console.log('[Gutter] toggleLocalBreakpoint: file=' + file + ' line=' + line);
+        toggleLocalBreakpoint: function(instance, file, line, lineType) {
+            console.log('[Gutter] toggleLocalBreakpoint: file=' + file + ' line=' + line + ' lineType=' + lineType);
             if (!instance.localBreakpoints) {
                 instance.localBreakpoints = this.loadBreakpointsFromStorage();
                 console.log('[Gutter] toggleLocalBreakpoint: loaded from storage=' + JSON.stringify(instance.localBreakpoints));
@@ -164,8 +173,18 @@
                     delete instance.localBreakpoints[file][line];
                 }
             } else {
-                console.log('[Gutter] toggleLocalBreakpoint: adding breakpoint at line ' + line);
-                instance.localBreakpoints[file][line] = { line: line, enabled: true };
+                var targetLine = line;
+                if (!this.isBreakableLine(lineType)) {
+                    console.log('[Gutter] toggleLocalBreakpoint: line ' + line + ' is not breakable (type=' + lineType + '), finding next breakable line');
+                    targetLine = this.findNextBreakableLine(instance, file, line);
+                    if (targetLine === null) {
+                        console.log('[Gutter] toggleLocalBreakpoint: no breakable line found after line ' + line);
+                        return;
+                    }
+                    console.log('[Gutter] toggleLocalBreakpoint: found next breakable line at ' + targetLine);
+                }
+                console.log('[Gutter] toggleLocalBreakpoint: adding breakpoint at line ' + targetLine);
+                instance.localBreakpoints[file][targetLine] = { line: targetLine, enabled: true };
             }
             console.log('[Gutter] toggleLocalBreakpoint: localBreakpoints[' + file + ']=' + JSON.stringify(instance.localBreakpoints[file]));
             this.saveBreakpointsToStorage(instance.localBreakpoints);
@@ -449,6 +468,53 @@
             return 'untitled.py';
         },
 
+        getLineType: function(lineText) {
+            var trimmed = lineText.trim();
+            if (trimmed === '') {
+                return 'empty';
+            }
+            if (trimmed.startsWith('#')) {
+                return 'comment';
+            }
+            if (trimmed.startsWith('"""') || trimmed.startsWith("'''")) {
+                return 'docstring';
+            }
+            if (trimmed.startsWith('def ') || trimmed.startsWith('class ') || trimmed.startsWith('async def ')) {
+                return 'definition';
+            }
+            if (trimmed.startsWith('import ') || trimmed.startsWith('from ')) {
+                return 'import';
+            }
+            if (trimmed.startsWith('@')) {
+                return 'decorator';
+            }
+            return 'code';
+        },
+
+        isBreakableLine: function(lineType) {
+            return lineType === 'code' || lineType === 'import';
+        },
+
+        findNextBreakableLine: function(instance, file, startLine) {
+            var editor = instance.editor;
+            var session = editor.session;
+            var totalLines = session.getLength();
+
+            for (var line = startLine; line <= totalLines; line++) {
+                var row = line - 1;
+                var lineText = session.getLine(row);
+                var lineType = this.getLineType(lineText);
+
+                if (this.isBreakableLine(lineType)) {
+                    var existingBp = instance.localBreakpoints && instance.localBreakpoints[file] && instance.localBreakpoints[file][line];
+                    if (!existingBp) {
+                        return line;
+                    }
+                }
+            }
+            return null;
+        },
+
         updateBreakpointMarkers: function(instance) {
             var editor = instance.editor;
             var session = editor.session;
@@ -559,6 +625,10 @@
             css += '  position: absolute;';
             css += '  background: rgba(255, 238, 0, 0.2);';
             css += '  border-left: 2px solid #ffee00;';
+            css += '}';
+
+            css += '.ace_gutter-cell {';
+            css += '  cursor: pointer;';
             css += '}';
 
             return css;
