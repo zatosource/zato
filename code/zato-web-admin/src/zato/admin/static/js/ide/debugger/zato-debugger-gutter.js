@@ -127,20 +127,11 @@
 
             var editor = instance.editor;
 
-            var gutterEl = editor.renderer.$gutter;
-            var gutterRect = gutterEl.getBoundingClientRect();
-            var relativeY = event.clientY - gutterRect.top;
-            var firstVisibleRow = editor.renderer.getFirstVisibleRow();
-            var lineHeight = editor.renderer.lineHeight;
-            var clickedRow = firstVisibleRow + Math.floor(relativeY / lineHeight);
+            var screenPos = editor.renderer.pixelToScreenCoordinates(event.clientX, event.clientY);
+            var row = editor.session.screenToDocumentRow(screenPos.row, screenPos.column);
 
-            console.log('[Gutter] handleGutterClick: gutterRect.top=' + gutterRect.top);
-            console.log('[Gutter] handleGutterClick: relativeY=' + relativeY);
-            console.log('[Gutter] handleGutterClick: firstVisibleRow=' + firstVisibleRow);
-            console.log('[Gutter] handleGutterClick: lineHeight=' + lineHeight);
-            console.log('[Gutter] handleGutterClick: clickedRow=' + clickedRow);
-
-            var row = clickedRow;
+            console.log('[Gutter] handleGutterClick: screenPos.row=' + screenPos.row);
+            console.log('[Gutter] handleGutterClick: row=' + row);
 
             if (isNaN(row)) {
                 console.log('[Gutter] handleGutterClick: row is NaN, returning');
@@ -191,12 +182,16 @@
                 var targetLine = line;
                 if (!this.isBreakableLine(lineType)) {
                     console.log('[Gutter] toggleLocalBreakpoint: line ' + line + ' is not breakable (type=' + lineType + '), finding next breakable line');
-                    targetLine = this.findNextBreakableLine(instance, file, line);
+                    targetLine = this.findFirstBreakableLine(instance, line);
                     if (targetLine === null) {
                         console.log('[Gutter] toggleLocalBreakpoint: no breakable line found after line ' + line);
                         return;
                     }
                     console.log('[Gutter] toggleLocalBreakpoint: found next breakable line at ' + targetLine);
+                    if (instance.localBreakpoints[file] && instance.localBreakpoints[file][targetLine]) {
+                        console.log('[Gutter] toggleLocalBreakpoint: target line ' + targetLine + ' already has breakpoint, doing nothing');
+                        return;
+                    }
                 }
                 console.log('[Gutter] toggleLocalBreakpoint: adding breakpoint at line ' + targetLine);
                 instance.localBreakpoints[file][targetLine] = { line: targetLine, enabled: true };
@@ -503,6 +498,18 @@
             if (trimmed.startsWith('@')) {
                 return 'decorator';
             }
+            if (trimmed.startsWith('if ') || trimmed.startsWith('elif ') || trimmed === 'else:' || trimmed.startsWith('else:')) {
+                return 'block_header';
+            }
+            if (trimmed.startsWith('for ') || trimmed.startsWith('while ') || trimmed.startsWith('async for ')) {
+                return 'block_header';
+            }
+            if (trimmed === 'try:' || trimmed.startsWith('except ') || trimmed.startsWith('except:') || trimmed === 'finally:' || trimmed.startsWith('finally:')) {
+                return 'block_header';
+            }
+            if (trimmed.startsWith('with ') || trimmed.startsWith('async with ')) {
+                return 'block_header';
+            }
             return 'code';
         },
 
@@ -510,7 +517,7 @@
             return lineType === 'code' || lineType === 'import';
         },
 
-        findNextBreakableLine: function(instance, file, startLine) {
+        findFirstBreakableLine: function(instance, startLine) {
             var editor = instance.editor;
             var session = editor.session;
             var totalLines = session.getLength();
@@ -521,10 +528,7 @@
                 var lineType = this.getLineType(lineText);
 
                 if (this.isBreakableLine(lineType)) {
-                    var existingBp = instance.localBreakpoints && instance.localBreakpoints[file] && instance.localBreakpoints[file][line];
-                    if (!existingBp) {
-                        return line;
-                    }
+                    return line;
                 }
             }
             return null;
@@ -647,7 +651,7 @@
             css += '}';
 
             css += '.ace_gutter-cell:hover {';
-            css += '  background-color: rgba(255, 255, 255, 0.1);';
+            css += '  background-color: rgba(255, 255, 255, 0.15) !important;';
             css += '}';
 
             return css;
