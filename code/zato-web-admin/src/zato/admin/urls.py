@@ -19,6 +19,7 @@ from zato.admin.web.views.ai import highlight as ai_highlight
 from zato.admin.web.views.ai import stream as ai_stream
 from zato.admin.web.views.ai.mcp import views as ai_mcp
 from zato.admin.web.views.ide import complete as ide_complete
+from zato.admin.web.views.ide import explorer as ide_explorer
 from zato.admin.web.views.ide import zato_debug as ide_debug
 from zato.admin.web.views.ide import lint as ide_lint
 from zato.admin.web.views.cache import builtin as cache_builtin
@@ -1024,6 +1025,11 @@ urlpatterns += [
         login_required(ide_debug.debug_sse), name='ide-debug-sse'),
     url(r'^zato/ide/debug/command/$',
         login_required(ide_debug.debug_command), name='ide-debug-command'),
+
+    # IDE explorer
+
+    url(r'^zato/ide/explorer/list/$',
+        login_required(ide_explorer.list_directory), name='ide-explorer-list'),
 ]
 
 # ################################################################################################################################

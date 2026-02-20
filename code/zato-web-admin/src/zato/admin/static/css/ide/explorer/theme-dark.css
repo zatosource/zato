@@ -1,0 +1,33 @@
+.zato-ide-theme-dark .zato-ide-explorer {
+    background: #252526;
+    color: #cccccc;
+}
+
+.zato-ide-theme-dark .zato-ide-explorer-header {
+    color: #bbbbbb;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.zato-ide-theme-dark .zato-ide-explorer-item-content:hover {
+    background: #2a2d2e;
+}
+
+.zato-ide-theme-dark .zato-ide-explorer-item-content.selected {
+    background: #094771;
+}
+
+.zato-ide-theme-dark .zato-ide-explorer-arrow {
+    color: #cccccc;
+}
+
+.zato-ide-theme-dark .zato-ide-explorer-name {
+    color: #cccccc;
+}
+
+.zato-ide-theme-dark .zato-ide-explorer-tree::-webkit-scrollbar-thumb {
+    background: #424242;
+}
+
+.zato-ide-theme-dark .zato-ide-explorer-tree::-webkit-scrollbar-thumb:hover {
+    background: #555555;
+}

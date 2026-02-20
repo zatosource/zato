@@ -252,6 +252,7 @@
 
             this.loadSearchIcon(instance);
             this.loadSidePanel1Icons(instance);
+            this.initSidePanel1Content(instance);
 
             this.bindEvents(instance);
 
@@ -1196,6 +1197,7 @@
         },
 
         switchSidePanel1View: function(instance, viewId) {
+            var self = this;
             var iconsContainer = document.getElementById(instance.id + '-side-panel-1-icons');
             if (!iconsContainer) {
                 return;
@@ -1211,6 +1213,45 @@
             });
 
             instance.sidePanel1ActiveView = viewId;
+
+            var contentContainer = document.getElementById(instance.id + '-side-panel-1-content');
+            if (contentContainer) {
+                contentContainer.innerHTML = '';
+
+                if (viewId === 'explorer') {
+                    self.initExplorer(instance, contentContainer);
+                }
+            }
+        },
+
+        initSidePanel1Content: function(instance) {
+            var contentContainer = document.getElementById(instance.id + '-side-panel-1-content');
+            if (!contentContainer) {
+                return;
+            }
+
+            if (instance.sidePanel1ActiveView === 'explorer') {
+                this.initExplorer(instance, contentContainer);
+            }
+        },
+
+        initExplorer: function(instance, container) {
+            if (typeof ZatoIDEExplorer === 'undefined') {
+                return;
+            }
+
+            var explorerId = instance.id + '-explorer';
+            container.id = explorerId;
+
+            instance.explorer = ZatoIDEExplorer.create(explorerId, {
+                rootPath: '~',
+                onFileSelect: function(item) {
+                    console.log('[ZatoIDE] File selected:', item.path);
+                },
+                onFileDoubleClick: function(item) {
+                    console.log('[ZatoIDE] File double-clicked:', item.path);
+                }
+            });
         },
 
         /**

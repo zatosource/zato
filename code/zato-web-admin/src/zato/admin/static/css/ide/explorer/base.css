@@ -1,0 +1,94 @@
+.zato-ide-explorer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    font-size: 13px;
+}
+
+.zato-ide-explorer-header {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.zato-ide-explorer-tree {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0;
+}
+
+.zato-ide-explorer-item {
+    user-select: none;
+}
+
+.zato-ide-explorer-item-content {
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding-right: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.zato-ide-explorer-item-content:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.zato-ide-explorer-item-content.selected {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.zato-ide-explorer-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 8px;
+    flex-shrink: 0;
+}
+
+.zato-ide-explorer-arrow-spacer {
+    width: 16px;
+    flex-shrink: 0;
+}
+
+.zato-ide-explorer-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.zato-ide-explorer-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.zato-ide-explorer-children {
+    display: none;
+}
+
+.zato-ide-explorer-tree::-webkit-scrollbar {
+    width: 10px;
+}
+
+.zato-ide-explorer-tree::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.zato-ide-explorer-tree::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.zato-ide-explorer-tree::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
