@@ -119,16 +119,18 @@ MEDIA_URL = '/static/'
 # Examples: 'https://foo.com/media/', '/media/'.
 ADMIN_MEDIA_PREFIX = '/media/'
 
-CSP_DEFAULT_SRC = ["'none'"]
+CSP_DEFAULT_SRC = ["'self'"]
 CSP_IMG_SRC     = ["'self'", "data:", "https://upcdn.io"]
 CSP_STYLE_SRC   = ["'self'"]
 CSP_FONT_SRC   = ["'self'", "data:"]
 CSP_SCRIPT_SRC  = ["'self'", "'unsafe-inline'", "'unsafe-eval'"]
+CSP_WORKER_SRC  = ["'self'", "blob:"]
 CSP_CONNECT_SRC = ["'self'"]
 CSP_FORM_ACTION = ["'self'"]
 CSP_STYLE_SRC_ATTR = ["'self'", "'unsafe-inline'"]
 CSP_STYLE_SRC_ELEM = ["'self'", "'unsafe-inline'"]
-CSP_INCLUDE_NONCE_IN = ["'script-src'"]
+CSP_SCRIPT_SRC_ATTR = ["'unsafe-hashes'", "'unsafe-inline'"]
+CSP_SCRIPT_SRC_ELEM = ["'self'", "'unsafe-inline'"]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
