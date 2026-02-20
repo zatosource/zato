@@ -141,22 +141,16 @@
             html += '</div>';
             html += '</div>';
 
-            html += '<div class="zato-ide-main-area">';
-            html += '<div class="zato-ide-editor-area" id="' + instance.id + '-editor-area">';
-            html += '</div>';
-            html += '<div class="zato-ide-side-panel-1" id="' + instance.id + '-side-panel-1">';
-            html += '<div class="zato-ide-side-panel-1-content" id="' + instance.id + '-side-panel-1-content">';
-            html += '</div>';
-            html += '<div class="zato-ide-side-panel-1-icons" id="' + instance.id + '-side-panel-1-icons">';
-            html += '</div>';
-            html += '</div>';
+            html += '<div class="zato-ide-main-area" id="' + instance.id + '-main-split">';
             html += '</div>';
 
             html += '</div>';
 
             instance.container.innerHTML = html;
 
-            console.log('[ZatoIDE] render: container set, initializing files');
+            console.log('[ZatoIDE] render: container set, initializing main split');
+            this.initMainSplit(instance);
+            console.log('[ZatoIDE] render: main split initialized, initializing files');
             this.initFiles(instance);
             console.log('[ZatoIDE] render: files initialized, initializing code editor');
             this.initCodeEditor(instance);
@@ -1221,6 +1215,51 @@
                 if (viewId === 'explorer') {
                     self.initExplorer(instance, contentContainer);
                 }
+            }
+        },
+
+        initMainSplit: function(instance) {
+            if (typeof ZatoIDESplit === 'undefined') {
+                return;
+            }
+
+            var splitContainerId = instance.id + '-main-split';
+            instance.mainSplit = ZatoIDESplit.create(splitContainerId, {
+                storageKey: 'zato.ide.main-split-position',
+                defaultSplitPercent: 75,
+                minPanelWidth: 200,
+                onResize: function() {
+                    if (instance.aceEditor) {
+                        instance.aceEditor.resize();
+                    }
+                }
+            });
+
+            if (!instance.mainSplit) {
+                return;
+            }
+
+            var leftPanel = ZatoIDESplit.getLeftPanel(instance.mainSplit);
+            var rightPanel = ZatoIDESplit.getRightPanel(instance.mainSplit);
+
+            if (leftPanel) {
+                leftPanel.id = instance.id + '-editor-area';
+                leftPanel.className += ' zato-ide-editor-area';
+            }
+
+            if (rightPanel) {
+                rightPanel.id = instance.id + '-side-panel-1';
+                rightPanel.className += ' zato-ide-side-panel-1';
+
+                var contentDiv = document.createElement('div');
+                contentDiv.id = instance.id + '-side-panel-1-content';
+                contentDiv.className = 'zato-ide-side-panel-1-content';
+                rightPanel.appendChild(contentDiv);
+
+                var iconsDiv = document.createElement('div');
+                iconsDiv.id = instance.id + '-side-panel-1-icons';
+                iconsDiv.className = 'zato-ide-side-panel-1-icons';
+                rightPanel.appendChild(iconsDiv);
             }
         },
 

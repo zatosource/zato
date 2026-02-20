@@ -79,8 +79,10 @@
                 return null;
             }
 
-            var savedPercent = this.loadSplitPosition();
-            var splitPercent = savedPercent !== null ? savedPercent : this.defaultSplitPercent;
+            var storageKey = opts.storageKey || this.storageKey;
+            var defaultPercent = opts.defaultSplitPercent || this.defaultSplitPercent;
+            var savedPercent = this.loadSplitPosition(storageKey);
+            var splitPercent = savedPercent !== null ? savedPercent : defaultPercent;
 
             var instance = {
                 id: containerId,
@@ -90,7 +92,10 @@
                 leftPanel: null,
                 rightPanel: null,
                 resizer: null,
-                onResize: opts.onResize || null
+                onResize: opts.onResize || null,
+                storageKey: opts.storageKey || this.storageKey,
+                defaultSplitPercent: opts.defaultSplitPercent || this.defaultSplitPercent,
+                minPanelWidth: opts.minPanelWidth || this.minPanelWidth
             };
 
             this.render(instance);
@@ -160,14 +165,15 @@
                 var containerRect = instance.container.getBoundingClientRect();
                 var containerWidth = containerRect.width;
                 var resizerWidth = instance.resizer.offsetWidth;
+                var minWidth = instance.minPanelWidth;
 
                 var newIdeWidth = e.clientX - containerRect.left;
 
-                if (newIdeWidth < self.minPanelWidth) {
-                    newIdeWidth = self.minPanelWidth;
+                if (newIdeWidth < minWidth) {
+                    newIdeWidth = minWidth;
                 }
 
-                var maxIdeWidth = containerWidth - self.minPanelWidth - resizerWidth;
+                var maxIdeWidth = containerWidth - minWidth - resizerWidth;
                 if (newIdeWidth > maxIdeWidth) {
                     newIdeWidth = maxIdeWidth;
                 }
@@ -182,7 +188,7 @@
                     instance.resizer.classList.remove('dragging');
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
-                    self.saveSplitPosition(instance.splitPercent);
+                    self.saveSplitPosition(instance.splitPercent, instance.storageKey);
 
                     if (instance.onResize) {
                         instance.onResize(instance);
@@ -200,13 +206,14 @@
         applySplitPosition: function(instance) {
             var containerWidth = instance.container.offsetWidth;
             var resizerWidth = instance.resizer ? instance.resizer.offsetWidth : 4;
+            var minWidth = instance.minPanelWidth;
             var leftWidth = (containerWidth * instance.splitPercent / 100);
 
-            if (leftWidth < this.minPanelWidth) {
-                leftWidth = this.minPanelWidth;
+            if (leftWidth < minWidth) {
+                leftWidth = minWidth;
             }
 
-            var maxLeftWidth = containerWidth - this.minPanelWidth - resizerWidth;
+            var maxLeftWidth = containerWidth - minWidth - resizerWidth;
             if (leftWidth > maxLeftWidth) {
                 leftWidth = maxLeftWidth;
             }
@@ -221,9 +228,10 @@
          *
          * @param {number} percent - split position as percentage (0-100)
          */
-        saveSplitPosition: function(percent) {
+        saveSplitPosition: function(percent, storageKey) {
+            var key = storageKey || this.storageKey;
             try {
-                localStorage.setItem(this.storageKey, percent.toString());
+                localStorage.setItem(key, percent.toString());
             } catch (e) {
                 console.warn('ZatoIDESplit: failed to save split position:', e);
             }
@@ -232,11 +240,13 @@
         /**
          * Loads the split position from localStorage.
          *
+         * @param {string} storageKey - optional custom storage key
          * @returns {number|null} split position as percentage, or null if not saved
          */
-        loadSplitPosition: function() {
+        loadSplitPosition: function(storageKey) {
+            var key = storageKey || this.storageKey;
             try {
-                var saved = localStorage.getItem(this.storageKey);
+                var saved = localStorage.getItem(key);
                 if (saved !== null) {
                     var percent = parseFloat(saved);
                     if (!isNaN(percent) && percent >= 10 && percent <= 90) {
