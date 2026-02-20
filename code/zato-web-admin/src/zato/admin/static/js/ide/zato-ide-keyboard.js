@@ -194,13 +194,13 @@
                 return;
             }
 
-            if (contentContainer.style.display === 'none') {
-                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: showing content');
-                contentContainer.style.display = '';
+            if (contentContainer.classList.contains('collapsed')) {
+                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: expanding content');
+                contentContainer.classList.remove('collapsed');
                 ideInstance.sidePanelContentHidden = false;
             } else {
-                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: hiding content');
-                contentContainer.style.display = 'none';
+                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: collapsing content');
+                contentContainer.classList.add('collapsed');
                 ideInstance.sidePanelContentHidden = true;
             }
 
