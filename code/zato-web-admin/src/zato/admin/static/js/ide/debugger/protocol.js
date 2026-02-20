@@ -19,11 +19,37 @@
 
         sessionIds: {},
 
+        unloadHandlerAttached: false,
+
+        attachUnloadHandler: function() {
+            if (this.unloadHandlerAttached) {
+                return;
+            }
+            var self = this;
+            window.addEventListener('beforeunload', function() {
+                self.closeAllConnections();
+            });
+            this.unloadHandlerAttached = true;
+        },
+
+        closeAllConnections: function() {
+            var self = this;
+            Object.keys(this.connections).forEach(function(id) {
+                var eventSource = self.connections[id];
+                if (eventSource) {
+                    eventSource.close();
+                }
+            });
+            this.connections = {};
+            this.sessionIds = {};
+        },
+
         getNextSeq: function() {
             return this.sequenceCounter++;
         },
 
         connect: function(instance, callback) {
+            this.attachUnloadHandler();
             console.log('[DebugProtocol] connect: START instance.id=' + instance.id);
             var self = this;
 
