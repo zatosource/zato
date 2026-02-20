@@ -81,6 +81,12 @@
                 theme: instance.ide.options.theme
             });
             console.log('[DebuggerIDE] initDebugger: debugger created=' + (instance.debugger ? 'ok' : 'null'));
+
+            if (instance.gutterHandler && instance.debugger) {
+                ZatoDebuggerGutter.attachDebugger(instance.gutterHandler, instance.debugger);
+                console.log('[DebuggerIDE] initDebugger: attached debugger to gutter');
+            }
+
             console.log('[DebuggerIDE] initDebugger: END');
         },
 

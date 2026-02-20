@@ -94,14 +94,29 @@
             });
 
             if (instance.debugger) {
-                ZatoDebuggerCore.on(instance.debugger, 'onStateChange', function(data) {
-                    self.updateCurrentLineMarker(instance);
-                });
-
-                ZatoDebuggerCore.on(instance.debugger, 'onCallStackUpdate', function(data) {
-                    self.updateCurrentLineMarker(instance);
-                });
+                this.bindDebuggerEvents(instance);
             }
+        },
+
+        attachDebugger: function(instance, debuggerInstance) {
+            instance.debugger = debuggerInstance;
+            this.bindDebuggerEvents(instance);
+        },
+
+        bindDebuggerEvents: function(instance) {
+            if (!instance.debugger || instance._debuggerEventsBound) {
+                return;
+            }
+            instance._debuggerEventsBound = true;
+
+            var self = this;
+            ZatoDebuggerCore.on(instance.debugger, 'onStateChange', function(data) {
+                self.updateCurrentLineMarker(instance);
+            });
+
+            ZatoDebuggerCore.on(instance.debugger, 'onCallStackUpdate', function(data) {
+                self.updateCurrentLineMarker(instance);
+            });
         },
 
         handleGutterClick: function(instance, event) {
@@ -629,6 +644,10 @@
 
             css += '.ace_gutter-cell {';
             css += '  cursor: pointer;';
+            css += '}';
+
+            css += '.ace_gutter-cell:hover {';
+            css += '  background-color: rgba(255, 255, 255, 0.1);';
             css += '}';
 
             return css;
