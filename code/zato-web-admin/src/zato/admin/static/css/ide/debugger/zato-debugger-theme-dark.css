@@ -1,0 +1,208 @@
+.zato-debugger-theme-dark {
+    background: #1e1e1e;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-toolbar {
+    background: #252526;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.zato-debugger-theme-dark .zato-debugger-toolbar-separator {
+    background: #3c3c3c;
+}
+
+.zato-debugger-theme-dark .zato-debugger-toolbar-button {
+    background: transparent;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-toolbar-button:hover:not(:disabled) {
+    background: #3c3c3c;
+}
+
+.zato-debugger-theme-dark .zato-debugger-toolbar-button:active:not(:disabled) {
+    background: #4c4c4c;
+}
+
+.zato-debugger-theme-dark .zato-debugger-toolbar-button[data-action="continue"] {
+    color: #89d185;
+}
+
+.zato-debugger-theme-dark .zato-debugger-toolbar-button[data-action="stop"] {
+    color: #f48771;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panel {
+    border-bottom-color: #3c3c3c;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panel-header {
+    background: #252526;
+    color: #bbbbbb;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panel-action {
+    background: transparent;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panel-action:hover {
+    background: #3c3c3c;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panel-content {
+    background: #1e1e1e;
+}
+
+.zato-debugger-theme-dark .zato-debugger-frame-item.active {
+    background: #094771;
+}
+
+.zato-debugger-theme-dark .zato-debugger-variable-name {
+    color: #9cdcfe;
+}
+
+.zato-debugger-theme-dark .zato-debugger-variable-value {
+    color: #ce9178;
+}
+
+.zato-debugger-theme-dark .zato-debugger-variable-type {
+    color: #4ec9b0;
+}
+
+.zato-debugger-theme-dark .zato-debugger-watch-expr {
+    color: #9cdcfe;
+}
+
+.zato-debugger-theme-dark .zato-debugger-watch-value {
+    color: #ce9178;
+}
+
+.zato-debugger-theme-dark .zato-debugger-watch-input {
+    background: #3c3c3c;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-watch-input::placeholder {
+    color: #808080;
+}
+
+.zato-debugger-theme-dark .zato-debugger-watch-remove {
+    background: transparent;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-console {
+    background: #1e1e1e;
+    border-top: 1px solid #3c3c3c;
+}
+
+.zato-debugger-theme-dark .zato-debugger-console-output {
+    background: #1e1e1e;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-console-input {
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-console-line.zato-debugger-console-input {
+    color: #dcdcaa;
+}
+
+.zato-debugger-theme-dark .zato-debugger-console-line.zato-debugger-console-output {
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-console-line.zato-debugger-console-error {
+    color: #f48771;
+}
+
+.zato-debugger-theme-dark .zato-debugger-console-line.zato-debugger-console-warning {
+    color: #cca700;
+}
+
+.zato-debugger-theme-dark .zato-debugger-console-input-wrapper {
+    background: #252526;
+    border-top-color: #3c3c3c;
+}
+
+.zato-debugger-theme-dark .zato-debugger-console-input {
+    background: transparent;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panel-container {
+    background: #1e1e1e;
+    border-left-color: #3c3c3c;
+}
+
+.zato-debugger-bp-context-menu {
+    background: #252526;
+    border: 1px solid #3c3c3c;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-condition-dialog {
+    background: #252526;
+    border: 1px solid #3c3c3c;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-condition-input {
+    background: #3c3c3c;
+    border-color: #5a5a5a;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-condition-input:focus {
+    border-color: #007acc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-condition-button-secondary {
+    background: #3c3c3c;
+    color: #cccccc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-condition-button-secondary:hover {
+    background: #4c4c4c;
+}
+
+.zato-debugger-theme-dark .zato-debugger-condition-button-primary {
+    background: #0e639c;
+    color: #ffffff;
+}
+
+.zato-debugger-theme-dark .zato-debugger-condition-button-primary:hover {
+    background: #1177bb;
+}
+
+.zato-debugger-theme-dark .zato-debugger-breakpoint-checkbox {
+    accent-color: #007acc;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panels::-webkit-scrollbar,
+.zato-debugger-theme-dark .zato-debugger-panel-content::-webkit-scrollbar,
+.zato-debugger-theme-dark .zato-debugger-console-output::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panels::-webkit-scrollbar-track,
+.zato-debugger-theme-dark .zato-debugger-panel-content::-webkit-scrollbar-track,
+.zato-debugger-theme-dark .zato-debugger-console-output::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panels::-webkit-scrollbar-thumb,
+.zato-debugger-theme-dark .zato-debugger-panel-content::-webkit-scrollbar-thumb,
+.zato-debugger-theme-dark .zato-debugger-console-output::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 2px;
+}
+
+.zato-debugger-theme-dark .zato-debugger-panels::-webkit-scrollbar-thumb:hover,
+.zato-debugger-theme-dark .zato-debugger-panel-content::-webkit-scrollbar-thumb:hover,
+.zato-debugger-theme-dark .zato-debugger-console-output::-webkit-scrollbar-thumb:hover {
+    background: #555555;
+}

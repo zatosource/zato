@@ -1,0 +1,523 @@
+.zato-debugger-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    font-size: 10px;
+    overflow: hidden;
+}
+
+.zato-debugger-toolbar {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    min-height: 36px;
+    padding: 0 8px;
+    gap: 4px;
+}
+
+.zato-debugger-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.zato-debugger-toolbar-separator {
+    width: 1px;
+    height: 20px;
+    margin: 0 6px;
+}
+
+.zato-debugger-toolbar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.zato-debugger-toolbar-button:disabled,
+.zato-debugger-toolbar-button.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.zato-debugger-toolbar-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.zato-debugger-panels {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.zato-debugger-panel {
+    display: flex;
+    flex-direction: column;
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+}
+
+.zato-debugger-panel.collapsed .zato-debugger-panel-content {
+    display: none;
+}
+
+.zato-debugger-panel.collapsed .zato-debugger-panel-toggle {
+    transform: rotate(0deg);
+}
+
+.zato-debugger-panel-header {
+    display: flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.zato-debugger-panel-header:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.zato-debugger-panel-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    transform: rotate(90deg);
+    transition: transform 0.15s ease;
+}
+
+.zato-debugger-panel-title {
+    flex: 1;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+
+.zato-debugger-panel-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+}
+
+.zato-debugger-panel-action:hover {
+    opacity: 1;
+}
+
+.zato-debugger-panel-content {
+    padding: 4px 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.zato-debugger-empty {
+    padding: 8px 12px;
+    font-style: italic;
+    opacity: 0.5;
+}
+
+.zato-debugger-callstack-list,
+.zato-debugger-variables-list,
+.zato-debugger-watches-list,
+.zato-debugger-breakpoints-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.zato-debugger-frame-item {
+    display: flex;
+    align-items: center;
+    padding: 4px 12px;
+    cursor: pointer;
+    gap: 8px;
+}
+
+.zato-debugger-frame-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.zato-debugger-frame-item.active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.zato-debugger-frame-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zato-debugger-frame-location {
+    font-size: 11px;
+    opacity: 0.6;
+}
+
+.zato-debugger-variable-item {
+    display: flex;
+    align-items: center;
+    padding: 2px 12px;
+    gap: 4px;
+}
+
+.zato-debugger-variable-item.expandable {
+    cursor: pointer;
+}
+
+.zato-debugger-variable-item.expandable:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.zato-debugger-variable-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    transform: rotate(0deg);
+    transition: transform 0.15s ease;
+}
+
+.zato-debugger-variable-item.expanded .zato-debugger-variable-toggle {
+    transform: rotate(90deg);
+}
+
+.zato-debugger-variable-name {
+    font-weight: 500;
+}
+
+.zato-debugger-variable-separator {
+    margin: 0 4px;
+    opacity: 0.5;
+}
+
+.zato-debugger-variable-value {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zato-debugger-variable-type {
+    font-size: 11px;
+    opacity: 0.5;
+    margin-left: 8px;
+}
+
+.zato-debugger-watch-item {
+    display: flex;
+    align-items: center;
+    padding: 2px 12px;
+    gap: 4px;
+}
+
+.zato-debugger-watch-expr {
+    font-weight: 500;
+}
+
+.zato-debugger-watch-separator {
+    margin: 0 4px;
+    opacity: 0.5;
+}
+
+.zato-debugger-watch-value {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zato-debugger-watch-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.zato-debugger-watch-item:hover .zato-debugger-watch-remove {
+    opacity: 0.6;
+}
+
+.zato-debugger-watch-remove:hover {
+    opacity: 1;
+}
+
+.zato-debugger-watch-input {
+    width: 100%;
+    padding: 4px 12px;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.zato-debugger-breakpoint-item {
+    display: flex;
+    align-items: center;
+    padding: 4px 12px;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.zato-debugger-breakpoint-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.zato-debugger-breakpoint-checkbox {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.zato-debugger-breakpoint-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+}
+
+.zato-debugger-breakpoint-file {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zato-debugger-breakpoint-line {
+    opacity: 0.6;
+}
+
+.zato-debugger-breakpoint-condition {
+    font-size: 11px;
+    opacity: 0.5;
+    font-style: italic;
+}
+
+.zato-debugger-console {
+    flex: 0 0 auto;
+    min-height: 120px;
+    max-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.zato-debugger-console-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 10px;
+}
+
+.zato-debugger-console-line {
+    padding: 1px 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.zato-debugger-console-input-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-top-width: 1px;
+    border-top-style: solid;
+}
+
+.zato-debugger-console-prompt {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    margin-right: 8px;
+    opacity: 0.6;
+}
+
+.zato-debugger-console-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 10px;
+}
+
+.zato-debugger-panel-container {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 300px;
+    z-index: 100;
+    border-left-width: 1px;
+    border-left-style: solid;
+    overflow: hidden;
+}
+
+.zato-debugger-bp-context-menu {
+    position: fixed;
+    min-width: 180px;
+    padding: 4px 0;
+    border-radius: 3px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    font-size: 10px;
+}
+
+.zato-debugger-bp-context-menu-item {
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.zato-debugger-bp-context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.zato-debugger-condition-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+}
+
+.zato-debugger-condition-dialog {
+    width: 400px;
+    padding: 16px;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.zato-debugger-condition-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.zato-debugger-condition-input {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 3px;
+    border-width: 1px;
+    border-style: solid;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 10px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+}
+
+.zato-debugger-condition-input:focus {
+    outline: none;
+}
+
+.zato-debugger-condition-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.zato-debugger-condition-button {
+    padding: 4px 12px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.zato-debugger-copy-btn {
+    margin-left: auto;
+    padding: 2px 8px;
+    font-size: 9px;
+    border: none;
+    border-radius: 3px;
+    background: #3c3c3c;
+    color: #999;
+    cursor: pointer;
+    text-shadow: none;
+    box-shadow: none;
+}
+
+.zato-debugger-copy-btn:hover {
+    background: #4c4c4c;
+    color: #ccc;
+}
+
+.ace_gutter-cell.zato-debugger-breakpoint::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #e51400;
+}
+
+.ace_gutter-cell.zato-debugger-breakpoint-disabled::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #808080;
+    border: 1px solid #606060;
+}
+
+.ace_gutter-cell.zato-debugger-breakpoint-conditional::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #e51400;
+    box-shadow: inset 0 0 0 2px #ffcc00;
+}
+
+.ace_gutter-cell.zato-debugger-current-line {
+    background-color: rgba(255, 255, 0, 0.2) !important;
+}
+
+.ace_gutter-cell.zato-debugger-current-line::after {
+    content: '▶';
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ffcc00;
+    font-size: 8px;
+}
