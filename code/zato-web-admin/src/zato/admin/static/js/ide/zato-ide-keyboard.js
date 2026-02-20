@@ -24,13 +24,20 @@
             }, true);
 
             var handleCtrlW = function(e) {
-                console.log('[ZatoIDEKeyboard] keydown/keypress event:', e.key, e.keyCode, e.ctrlKey);
+                console.log('[ZatoIDEKeyboard] keydown: key=' + e.key + ', keyCode=' + e.keyCode);
                 if (e.ctrlKey && (e.key === 'w' || e.key === 'W' || e.keyCode === 87 || e.which === 87 || e.which === 119)) {
-                    console.log('[ZatoIDEKeyboard] Ctrl+W detected, preventing default');
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
                     self.handleCloseTab();
+                    return false;
+                }
+                if (e.key === 'F2' || e.keyCode === 113) {
+                    console.log('[ZatoIDEKeyboard] F2 detected, toggling side panel');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    self.toggleSidePanelContent();
                     return false;
                 }
             };
@@ -153,6 +160,54 @@
             }
 
             AIChatTabActions.closeTab(widget, core, core.activeTabId);
+        },
+
+        toggleSidePanelContent: function() {
+            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: START');
+            var ideInstance = null;
+            if (typeof ZatoIDE !== 'undefined' && ZatoIDE.instances) {
+                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: ZatoIDE.instances keys=' + Object.keys(ZatoIDE.instances).join(','));
+                for (var key in ZatoIDE.instances) {
+                    ideInstance = ZatoIDE.instances[key];
+                    break;
+                }
+            }
+
+            if (!ideInstance) {
+                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: no ideInstance found');
+                return;
+            }
+            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: ideInstance.id=' + ideInstance.id);
+
+            var expectedId = ideInstance.id + '-side-panel-1-content';
+            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: looking for id=' + expectedId);
+            var contentContainer = document.getElementById(expectedId);
+            if (!contentContainer) {
+                var allContent = document.querySelectorAll('.zato-ide-side-panel-1-content');
+                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: found by class=' + allContent.length);
+                if (allContent.length > 0) {
+                    contentContainer = allContent[0];
+                }
+            }
+            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: contentContainer=' + !!contentContainer);
+            if (!contentContainer) {
+                return;
+            }
+
+            if (contentContainer.style.display === 'none') {
+                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: showing content');
+                contentContainer.style.display = '';
+                ideInstance.sidePanelContentHidden = false;
+            } else {
+                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: hiding content');
+                contentContainer.style.display = 'none';
+                ideInstance.sidePanelContentHidden = true;
+            }
+
+            if (ideInstance.aceEditor) {
+                ideInstance.aceEditor.resize();
+            }
+            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: END');
         }
     };
 

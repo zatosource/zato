@@ -82,6 +82,9 @@
             editor.setHighlightActiveLine(true);
             editor.setHighlightSelectedWord(true);
             editor.setDisplayIndentGuides(false);
+            editor.commands.removeCommand('foldall');
+            editor.commands.removeCommand('unfoldall');
+            editor.commands.removeCommand('toggleFoldWidget');
             var zubanCompleter = {
                 getCompletions: function(aceEditor, session, pos, prefix, callback) {
                     console.log('[Complete] getCompletions called, pos:', pos, 'prefix:', prefix);

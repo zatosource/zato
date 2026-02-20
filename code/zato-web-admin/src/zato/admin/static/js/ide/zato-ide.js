@@ -1300,8 +1300,10 @@
                 return;
             }
 
+            var explorerDiv = document.createElement('div');
             var explorerId = instance.id + '-explorer';
-            container.id = explorerId;
+            explorerDiv.id = explorerId;
+            container.appendChild(explorerDiv);
 
             instance.explorer = ZatoIDEExplorer.create(explorerId, {
                 rootPath: '~',
