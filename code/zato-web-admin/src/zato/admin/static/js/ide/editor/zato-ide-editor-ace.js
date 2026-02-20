@@ -520,6 +520,8 @@
                     wholeWord: editor.$search.$options.wholeWord,
                     regExp: editor.$search.$options.regExp
                 } : null,
+                autocompleteOpen: editor.completer && editor.completer.activated,
+                autocompletePos: editor.completer && editor.completer.activated ? editor.getCursorPosition() : null,
                 timestamp: Date.now()
             };
 
@@ -598,6 +600,13 @@
                     editor.$search.$options.caseSensitive = state.searchOptions.caseSensitive;
                     editor.$search.$options.wholeWord = state.searchOptions.wholeWord;
                     editor.$search.$options.regExp = state.searchOptions.regExp;
+                }
+
+                if (state.autocompleteOpen && state.autocompletePos) {
+                    setTimeout(function() {
+                        editor.moveCursorToPosition(state.autocompletePos);
+                        editor.execCommand('startAutocomplete');
+                    }, 100);
                 }
 
                 return true;
