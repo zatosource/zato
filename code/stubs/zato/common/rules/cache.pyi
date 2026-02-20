@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from copy import deepcopy
 from logging import getLogger
@@ -6,6 +6,7 @@ from rule_engine.ast import ExpressionBase, LogicExpression
 from zato.common.rules.models import MatchResult, resolve_then_values
 from zato.common.typing_ import any_, anydict, bool_, dict_
 from zato.common.rules.models import Rule
+
 
 class CachedRule:
     rule: Any

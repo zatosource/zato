@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from json import dumps
 import select
@@ -9,6 +9,7 @@ from zato.common.typing_ import any_, anydict, anylist, stranydict
 import sh
 from sh import CommandNotFound
 from zato.common.test.config import TestConfig
+
 
 class CommandName:
     Default: Any
@@ -32,15 +33,11 @@ class CommandLineServiceInvoker(CommandLineInvoker):
     def invoke_and_test(self: Any, service: str) -> any_: ...
 
 class _AuthManager:
-    command: ServerAwareCommand
-    is_active: bool
+    command: Any
+    is_active: Any
     create_service: str
     change_password_service: str
-    name: str
-    password: str
-    command: Any
     name: Any
-    is_active: Any
     password: Any
     def __init__(self: Any, command: ServerAwareCommand, name: str, is_active: bool, password: str) -> None: ...
     def _create(self: Any, create_request: stranydict, needs_stdout: bool = ...) -> stranydict: ...

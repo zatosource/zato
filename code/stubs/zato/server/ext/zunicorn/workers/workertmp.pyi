@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import platform
 import tempfile
 from zato.server.ext.zunicorn import util
+
 
 class PassThroughTmp:
     def __init__(self: Any, *ignored_args: Any, **ignored_kwargs: Any) -> None: ...

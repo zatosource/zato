@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import print_function
 import errno
@@ -16,6 +16,7 @@ from zato.server.ext.zunicorn import SERVER_SOFTWARE, sock, systemd, util
 from zato.server.ext.zunicorn.errors import HaltServer, AppImportError
 from zato.server.ext.zunicorn.pidfile import Pidfile
 from zato.server.ext.zunicorn.util import is_forking
+
 
 class Arbiter:
     zato_deployment_key: str

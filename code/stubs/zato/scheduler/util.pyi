@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.client import AnyServiceInvoker, ZatoClient
 from zato.common.typing_ import anydict
 from zato.common.util.api import get_client_from_server_conf
 from zato.client import get_client_from_credentials
+
 
 def _set_up_zato_client_by_server_path(server_path: str) -> AnyServiceInvoker: ...
 

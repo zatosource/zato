@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from datetime import datetime, timedelta
@@ -14,43 +14,23 @@ from bunch import Bunch
 from zato.common.typing_ import any_, callable_, intnone, strnone
 from zato.server.base.parallel import ParallelServer
 
+
 class _Connection:
     client_queue: Queue
-    conn_name: str
-    should_block: bool
-    block_timeout: intnone
-    client: any_
-    queue: Any
     conn_name: Any
     should_block: Any
     block_timeout: Any
+    client: any_
+    queue: Any
     def __init__(self: Any, client_queue: Queue, conn_name: str, should_block: bool = ..., block_timeout: intnone = ...) -> None: ...
     def __enter__(self: Any) -> None: ...
     def __exit__(self: Any, _type: any_, _value: any_, _traceback: any_) -> None: ...
 
 class ConnectionQueue:
-    is_active: bool
-    queue: Queue
-    queue_build_cap: int
-    queue_max_size: int
-    conn_id: int
-    conn_name: str
-    conn_type: str
-    address: str
-    add_client_func: callable_
-    needs_spawn: bool
-    max_attempts: int
-    keep_connecting: bool
-    is_building_conn_queue: bool
-    queue_building_stopped: bool
-    lock: RLock
-    logger: Logger
-    in_progress_count: int
     is_active: Any
-    server: Any
     queue: Queue
-    queue_max_size: cast_
     queue_build_cap: Any
+    queue_max_size: int
     conn_id: Any
     conn_name: Any
     conn_type: Any
@@ -58,8 +38,13 @@ class ConnectionQueue:
     add_client_func: Any
     needs_spawn: Any
     max_attempts: Any
+    keep_connecting: bool
+    is_building_conn_queue: bool
+    queue_building_stopped: bool
     lock: RLock
     logger: getLogger
+    in_progress_count: int
+    server: Any
     address_masked: Any
     def __init__(self: Any, server: ParallelServer, is_active: bool, pool_size: int, queue_build_cap: int, conn_id: int, conn_name: str, conn_type: str, address: str, add_client_func: callable_, needs_spawn: bool = ..., max_attempts: int = ...) -> None: ...
     def __call__(self: Any, should_block: bool = ..., block_timeout: intnone = ...) -> _Connection: ...

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.typing_ import cast_
 from argparse import ArgumentParser
@@ -13,6 +13,7 @@ from zato.cli import cache as cache_mod, check_config as check_config_mod, compo
 from zato.cli.rest import channel as rest_channel_mod
 from zato.cli.security import api_key as sec_api_key_mod, basic_auth as sec_basic_auth_mod
 from zato.cli import run_command
+
 
 class CommandStore:
     add_start_server_parser: Any

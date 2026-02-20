@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import getLogger
 from pathlib import Path
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import any_, anydict, strlist
+
 
 class RuleTestHelper:
     include_perf_files: Any

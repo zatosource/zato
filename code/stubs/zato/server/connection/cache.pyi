@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from base64 import b64encode
 from logging import getLogger
@@ -12,6 +12,8 @@ from zato.common.ext.future.utils import iteritems, itervalues
 from zato.common.py23_.past.builtins import basestring
 from zato.common.py23_ import pickle_dumps
 from zato.common.typing_ import any_
+
+default_get = ZATO_NOT_GIVEN
 
 class Cache:
     config: Any
@@ -99,7 +101,7 @@ class _NotConfiguredAPI:
 class CacheAPI:
     server: Any
     lock: RLock
-    default: cast_
+    default: Cache
     caches: Any
     builtin: Any
     def __init__(self: Any, server: Any) -> None: ...

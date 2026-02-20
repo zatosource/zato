@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import types
 from collections import OrderedDict as odict
@@ -8,6 +8,7 @@ from exceptions import CandvInvalidConstantClass
 from exceptions import CandvInvalidGroupMemberError
 from exceptions import CandvMissingConstantError
 from _utils import export
+
 
 class SimpleConstant:
     name: Any

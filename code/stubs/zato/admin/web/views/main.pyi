@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
@@ -13,6 +13,7 @@ from zato.admin.web.forms.main import AuthenticationForm
 from zato.admin.web.util import get_user_profile
 from zato.admin.web.views import method_allowed
 from zato.common.crypto.api import CryptoManager
+
 
 def index_redirect(req: Any) -> None: ...
 

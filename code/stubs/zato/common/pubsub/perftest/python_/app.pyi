@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import random
@@ -10,6 +10,8 @@ from zato.common.pubsub.perftest.python_.progress_tracker import ProgressTracker
 from zato.common.typing_ import any_, intnone
 import argparse
 import os
+
+log_level = logging.INFO
 
 class ConsumerManager:
     def _start_consumer(self: Any, consumer_id: int, pull_interval: float, max_messages: int, progress_tracker: ProgressTracker, cpu_num: intnone = ..., use_new_requests: bool = ...) -> any_: ...

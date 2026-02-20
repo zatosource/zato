@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from six import PY2
 import http.client as http_client
@@ -11,6 +11,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 from xmlrpclib import ServerProxy, Transport
 from xmlrpc.server import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 from xmlrpc.client import ServerProxy, Transport
+
 
 class CAValidatingHTTPSConnection(http_client.HTTPConnection):
     ca_certs: Any

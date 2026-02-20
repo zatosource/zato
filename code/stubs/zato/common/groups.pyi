@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dataclasses import dataclass
 from zato.server.service import Model
+
 
 class Member(Model):
     id: int

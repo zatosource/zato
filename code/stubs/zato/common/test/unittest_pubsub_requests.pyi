@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import http.client as http_client
 import json
@@ -13,6 +13,8 @@ from zato.common.pubsub.util import cleanup_broker_impl, get_broker_config
 from yaml import CLoader as Loader
 from zato.common.typing_ import any_
 from yaml import Loader
+
+_public_port = PubSub.REST_Server.Public_Port
 
 class PubSubRESTServerBaseTestCase(TestCase):
     @classmethod

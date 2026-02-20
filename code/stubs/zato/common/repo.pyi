@@ -1,10 +1,12 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
 import socket
 from zato.common.util.api import get_current_user
 import sh
+
+RepoManager = PassThroughRepoManager
 
 class _BaseRepoManager:
     repo_location: os.path.abspath

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from json import dumps
@@ -11,6 +11,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, get_group_list a
 from zato.common.api import Groups, SEC_DEF_TYPE_NAME
 from zato.common.model.groups import GroupObject
 from zato.common.typing_ import any_, anylist, strdict, strlist, strnone
+
 
 class Index(_Index):
     method_allowed: Any

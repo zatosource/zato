@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import warnings
 import logging
@@ -36,6 +36,7 @@ from zato.common.util.cli import read_stdin_data
 from zato_environment import EnvironmentManager
 import requests as _r
 import redis as redis_lib
+
 
 class ModuleCtx:
     num_threads: Any

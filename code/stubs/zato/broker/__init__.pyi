@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from zato.common.api import ZATO_NONE
@@ -9,6 +9,8 @@ from zato.broker.message_handler import handle_broker_msg
 from kombu.transport.pyamqp import Message as KombuMessage
 from zato.broker.client import BrokerClient
 from zato.server.base.worker import WorkerStore
+
+service_invoke = SERVICE.INVOKE.value
 
 class BrokerMessageReceiver:
     broker_client: BrokerClient

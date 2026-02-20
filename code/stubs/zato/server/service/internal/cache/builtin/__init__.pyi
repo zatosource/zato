@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from zato.common.ext.dictalchemy.utils import asdict
@@ -11,6 +11,10 @@ from zato.server.service import Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.cache import common_instance_hook
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+model = CacheBuiltin
+broker_message = CACHE
+list_func = cache_builtin_list
 
 def instance_hook(self: Any, input: Any, instance: Any, attrs: Any) -> None: ...
 

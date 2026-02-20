@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import base64
 import logging
@@ -16,6 +16,7 @@ from zato.common.json_internal import loads
 from zato.common.typing_ import any_, strbytes
 from passlib import hash as passlib_hash
 from cpuinfo import get_cpu_info
+
 
 def is_string_equal(data1: strbytes, data2: strbytes) -> bool: ...
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import random
@@ -26,6 +26,7 @@ from zato.common.api import DATA_FORMAT, Groups, SEC_DEF_TYPE
 from zato.server.groups.base import GroupsManager
 from json import dumps
 from zato.common.util.channel import create_openapi_channel, openapi_service_name
+
 
 def get_random_integer() -> None: ...
 

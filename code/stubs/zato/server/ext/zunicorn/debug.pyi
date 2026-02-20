@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import sys
 import linecache
 import re
 import inspect
+
 
 class Spew:
     trace_names: Any

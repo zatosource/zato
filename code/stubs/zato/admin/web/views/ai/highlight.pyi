@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from http.client import BAD_REQUEST
 from logging import getLogger
@@ -9,6 +9,7 @@ from pygments.lexers import get_lexer_by_name, guess_lexer
 from pygments.util import ClassNotFound
 from zato.admin.web.views import method_allowed
 from zato.common.json_internal import loads
+
 
 def highlight_code(req: Any) -> JsonResponse: ...
 

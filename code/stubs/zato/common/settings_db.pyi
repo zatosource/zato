@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 from logging import getLogger
 from sqlalchemy import Column, create_engine, Integer, Sequence, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
+
 
 class Setting(Base):
     __tablename__: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 import logging
@@ -8,6 +8,7 @@ from zato.common.odb.model import GenericObject
 from zato.common.odb.query.generic import GroupsWrapper
 from sqlalchemy.orm.session import Session as SASession
 from zato.common.typing_ import any_, anydict, anylist, strlist
+
 
 class GroupImporter:
     importer: Any

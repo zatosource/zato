@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function
 import sys
@@ -25,6 +25,7 @@ import dbm
 from zato.common.ext.future.moves.dbm import dumb
 from zato.common.ext.future.moves.dbm import gnu
 from zato.common.ext.future.moves.dbm import ndbm
+
 
 class RenameImport(object):
     RENAMER: Any

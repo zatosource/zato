@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import ssl
 from codecs import encode
@@ -11,6 +11,7 @@ from zato.server.connection.queue import Wrapper
 from bunch import Bunch
 from zato.common.typing_ import any_, stranydict, strdictnone
 from zato.server.base.parallel import ParallelServer
+
 
 class ConnectionWrapper:
     conn: LDAPConnection

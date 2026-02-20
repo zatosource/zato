@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dataclasses import dataclass
 from zato.common.api import CommonObject
@@ -6,6 +6,7 @@ from zato.common.exception import BadRequest
 from zato.common.typing_ import any_, anylist, anylistnone, intlistnone, intnone, strdict, strlistnone, strnone
 from zato.server.service import Model, Service
 from zato.server.service.internal.security.basic_auth import Create as SecBasicAuthCreate
+
 
 class DataItem(Model):
     name: str

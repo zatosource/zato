@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from io import BytesIO
 from zato.server.ext.zunicorn.http.errors import NoMoreData, ChunkMissingTerminator, InvalidChunkSize
 from zato.server.ext.zunicorn import six
+
 
 class ChunkedReader:
     req: Any

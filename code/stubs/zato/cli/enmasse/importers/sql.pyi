@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from uuid import uuid4
@@ -9,6 +9,7 @@ from zato.common.util.sql import set_instance_opaque_attrs
 from sqlalchemy.orm.session import Session as SASession
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.common.typing_ import any_, anydict, anylist, listtuple
+
 
 class SQLImporter:
     importer: Any

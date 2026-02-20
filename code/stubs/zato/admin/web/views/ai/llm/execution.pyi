@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 import re
@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from zato.admin.web.views.ai.common import get_redis_client
 from zato.common.typing_ import anydict
+
 
 class QueryIntent(Enum):
     Current_State: Any

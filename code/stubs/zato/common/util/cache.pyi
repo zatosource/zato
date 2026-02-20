@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from requests import Session as RequestsSession
@@ -9,8 +9,8 @@ from zato.common.util.api import as_bool, get_config, get_odb_session_from_serve
 from zato.common.odb.model import Cluster, HTTPBasicAuth, Server
 from requests import Response as RequestsResponse
 
+
 class CommandConfig:
-    __slots__: Any
     command: Any
     modifier: Any
     key: Any
@@ -25,14 +25,12 @@ class CommandConfig:
     def to_dict(self: Any) -> None: ...
 
 class CommandResponse:
-    __slots__: Any
     key: Any
     text: Any
     has_value: Any
     def __init__(self: Any) -> None: ...
 
 class Client:
-    __slots__: Any
     address: Any
     username: Any
     password: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from django.contrib import messages
@@ -15,6 +15,7 @@ from zato.admin.web.util import set_user_profile_totp_key
 from zato.admin.web.views import method_allowed
 from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import dumps, loads
+
 
 def set_initial_opaque_attrs(username: Any, initial: Any, opaque_attrs: Any) -> None: ...
 

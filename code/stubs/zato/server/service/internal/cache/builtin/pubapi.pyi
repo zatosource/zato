@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from datetime import datetime
@@ -6,6 +6,7 @@ from zato.common.ext.future.utils import iteritems
 from zato.common.api import ZATO_NOT_GIVEN
 from zato.common.exception import BadRequest, InternalServerError, NotFound
 from zato.server.service import AsIs, Bool, Float, Service
+
 
 class _BaseService(Service):
     def _get_cache(self: Any, input: Any) -> None: ...

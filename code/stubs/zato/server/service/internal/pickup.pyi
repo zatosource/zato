@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import csv
 import os
@@ -13,6 +13,7 @@ from zato.common.util.api import get_config, get_user_config_name
 from zato.common.util.open_ import open_r
 from zato.server.service import Service
 from zato.common.typing_ import any_, stranydict
+
 
 class UpdateCtx:
     data: str

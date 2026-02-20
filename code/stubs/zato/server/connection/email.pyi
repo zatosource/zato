@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from base64 import b64decode
 from contextlib import contextmanager
@@ -17,6 +17,7 @@ from zato.server.store import BaseAPI, BaseStore
 from O365.mailbox import MailBox
 from O365.message import Message as MS365Message
 from zato.common.typing_ import any_, anylist
+
 
 class GenericIMAPMessage(IMAPMessage):
     def delete(self: Any) -> None: ...

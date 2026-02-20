@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from django import template
 from django.utils.safestring import mark_safe
+
 
 def bunchget(obj: Any, args: Any) -> None: ...
 

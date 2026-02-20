@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from logging import getLogger
@@ -12,6 +12,7 @@ from zato.url_dispatcher import Matcher
 from zato.common.odb.model import Server as ServerModel
 from zato.common.typing_ import anydict, anydictnone, anyset
 from zato.server.base.parallel import ParallelServer
+
 
 class ModuleCtx:
     Config_Store: Any

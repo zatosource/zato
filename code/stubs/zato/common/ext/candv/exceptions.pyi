@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from _utils import export
+
 
 class CandvException(Exception):
     ...

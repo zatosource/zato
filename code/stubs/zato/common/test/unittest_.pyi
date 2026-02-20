@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from time import sleep
 from zato.common import PUBSUB
@@ -6,6 +6,10 @@ from zato.common.test import PubSubConfig
 from zato.common.test.rest_client import RESTClient, RESTClientTestCase
 from zato.common.typing_ import cast_
 from zato.common.typing_ import any_, anydict, anylist, stranydict
+
+_default = PUBSUB.DEFAULT
+sec_name = _default.DEFAULT_SECDEF_NAME
+username = _default.DEFAULT_USERNAME
 
 class PubSubAPIRestImpl:
     test: Any

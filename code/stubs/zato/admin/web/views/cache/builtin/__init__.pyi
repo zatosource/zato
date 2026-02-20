@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from zato.admin.web.forms.cache.builtin import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_service_with_json_response, method_allowed
 from zato.common.api import CACHE
 from zato.common.odb.model import CacheBuiltin
+
 
 class Index(_Index):
     method_allowed: Any

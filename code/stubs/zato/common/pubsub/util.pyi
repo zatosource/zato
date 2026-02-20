@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from datetime import datetime
@@ -14,6 +14,7 @@ from zato.common.util.api import as_bool, utcnow, wait_for_predicate
 from zato.common.odb.model import PubSubPermission
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.odb.model import SecurityBase
+
 
 class ModuleCtx:
     Max_Length: Any

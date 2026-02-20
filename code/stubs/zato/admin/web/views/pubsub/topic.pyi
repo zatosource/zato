@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 import logging
@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import PubSubTopic
+
 
 class Index(_Index):
     method_allowed: Any

@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dataclasses import asdict, _FIELDS, make_dataclass, MISSING, _PARAMS
 from http.client import BAD_REQUEST
 from inspect import isclass
 from sys import exc_info
 from traceback import extract_stack, extract_tb
+from typing import Any
 from bson import ObjectId
 from dateutil.parser import parse as dt_parse
 from orjson import dumps
@@ -20,6 +21,7 @@ from zato.common.typing_ import any_, anydict, anylist, boolnone, dictnone, intn
 from zato.server.base.parallel import ParallelServer
 from zato.server.service import Service
 from zato.simpleio import is_sio_bool, is_sio_int
+
 
 def is_list(field_type: Field, is_class: bool) -> bool: ...
 
@@ -76,7 +78,7 @@ class DictCtx:
     fields: Any
     init_attrs: Any
     setattr_attrs: Any
-    attrs_container: cast_
+    attrs_container: dict
     def __init__(self: Any, service: Service, current_dict: anydict | Model, DataClass: any_, extra: dictnone, list_idx: intnone, parent: optional[FieldCtx] = ...) -> None: ...
     def init(self: Any) -> None: ...
 

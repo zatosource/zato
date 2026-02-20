@@ -109,11 +109,42 @@ class StubGenerator:
             raise SyntaxError(f'Line {e.lineno}: {e.msg}') from e
 
         out = []
-        out.append('from typing import Any')
+        out.append('from typing import Any, TYPE_CHECKING')
         out.append('')
 
-        # .. collect imports including those inside if 0: blocks ..
-        self._collect_imports(tree, out)
+        # .. collect imports, separating circular ones into TYPE_CHECKING block ..
+        regular_imports = []
+        type_checking_imports = []
+        self._collect_imports(tree, regular_imports, type_checking_imports, py_file)
+
+        out.extend(regular_imports)
+        if type_checking_imports:
+            out.append('')
+            out.append('if TYPE_CHECKING:')
+            for imp in type_checking_imports:
+                out.append(f'    {imp}')
+
+        out.append('')
+
+        # .. collect type alias assignments ..
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        # .. type alias assignment like: stranydict = dict_[str, any_] ..
+                        type_value = self._get_type_alias_value(node.value)
+                        if type_value:
+                            out.append(f'{target.id} = {type_value}')
+
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                # .. annotated assignment like: x: TypeAlias = ... ..
+                annotation = self._get_annotation(node.annotation)
+                if node.value:
+                    type_value = self._get_type_alias_value(node.value)
+                    if type_value:
+                        out.append(f'{node.target.id}: {annotation} = {type_value}')
+                else:
+                    out.append(f'{node.target.id}: {annotation}')
 
         out.append('')
 
@@ -133,9 +164,14 @@ class StubGenerator:
 
 # ################################################################################################################################
 
-    def _collect_imports(self, tree:'ast.Module', out:'list[str]') -> 'None':
+    def _collect_imports(self, tree:'ast.Module', regular_imports:'list[str]', type_checking_imports:'list[str]', py_file:'Path') -> 'None':
         """ Collects imports from the AST tree, including those inside if 0: blocks.
         """
+        # .. detect circular import patterns ..
+        file_path_str = str(py_file)
+        is_reqresp = 'service/reqresp' in file_path_str
+        is_service_init = file_path_str.endswith('service/__init__.py')
+
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -148,8 +184,8 @@ class StubGenerator:
                     if should_skip:
                         continue
                     import_line = f'import {alias.name}' + (f' as {alias.asname}' if alias.asname else '')
-                    if import_line not in out:
-                        out.append(import_line)
+                    if import_line not in regular_imports:
+                        regular_imports.append(import_line)
 
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
@@ -161,13 +197,26 @@ class StubGenerator:
                             break
                     if should_skip:
                         continue
+
                     names = ', '.join(
                         (f'{alias.name} as {alias.asname}' if alias.asname else alias.name)
                         for alias in node.names
                     )
                     import_line = f'from {node.module} import {names}'
-                    if import_line not in out:
-                        out.append(import_line)
+
+                    # .. handle circular imports ..
+                    is_circular = False
+                    if is_reqresp and 'zato.server.service' == node.module:
+                        is_circular = True
+                    elif is_service_init and 'zato.server.service.reqresp' in node.module:
+                        is_circular = True
+
+                    if is_circular:
+                        if import_line not in type_checking_imports:
+                            type_checking_imports.append(import_line)
+                    else:
+                        if import_line not in regular_imports:
+                            regular_imports.append(import_line)
 
 # ################################################################################################################################
 
@@ -193,26 +242,48 @@ class StubGenerator:
 
         has_content = False
 
+        # .. first extract self.x assignments from __init__ to get proper types ..
+        init_attrs = {}
+        for item in node.body:
+            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == '__init__':
+                init_attrs = self._extract_init_attributes(item)
+                break
+
+        seen_attrs = set()
+
         # .. class attributes ..
         for item in node.body:
             if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
-                annotation = self._get_annotation(item.annotation)
-                lines.append(f'    {item.target.id}: {annotation}')
+                attr_name = item.target.id
+                if attr_name in init_attrs:
+                    lines.append(f'    {attr_name}: {init_attrs[attr_name]}')
+                else:
+                    annotation = self._get_annotation(item.annotation)
+                    lines.append(f'    {attr_name}: {annotation}')
+                seen_attrs.add(attr_name)
                 has_content = True
 
             elif isinstance(item, ast.Assign):
                 for target in item.targets:
                     if isinstance(target, ast.Name):
-                        lines.append(f'    {target.id}: Any')
-                        has_content = True
+                        if target.id == '__slots__':
+                            slots = self._extract_slots(item.value)
+                            for slot_name in slots:
+                                if slot_name in init_attrs:
+                                    lines.append(f'    {slot_name}: {init_attrs[slot_name]}')
+                                else:
+                                    lines.append(f'    {slot_name}: Any')
+                                seen_attrs.add(slot_name)
+                                has_content = True
+                        else:
+                            lines.append(f'    {target.id}: Any')
+                            has_content = True
 
-        # .. extract self.x assignments from __init__ ..
-        for item in node.body:
-            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == '__init__':
-                init_attrs = self._extract_init_attributes(item)
-                for attr_name, attr_type in init_attrs.items():
-                    lines.append(f'    {attr_name}: {attr_type}')
-                    has_content = True
+        # .. add remaining __init__ attributes ..
+        for attr_name, attr_type in init_attrs.items():
+            if attr_name not in seen_attrs:
+                lines.append(f'    {attr_name}: {attr_type}')
+                has_content = True
 
         # .. methods ..
         for item in node.body:
@@ -228,6 +299,20 @@ class StubGenerator:
 
 # ################################################################################################################################
 
+    def _extract_slots(self, node:'ast.expr') -> 'list[str]':
+        """ Extracts slot names from __slots__ assignment.
+        """
+        slots = []
+        if isinstance(node, ast.Tuple) or isinstance(node, ast.List):
+            for elt in node.elts:
+                if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                    slots.append(elt.value)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            slots.append(node.value)
+        return slots
+
+# ################################################################################################################################
+
     def _extract_init_attributes(self, init_node:'ast.FunctionDef') -> 'dict[str, str]':
         """ Extracts self.x = ... assignments from __init__ method.
         """
@@ -240,10 +325,25 @@ class StubGenerator:
                             attr_name = target.attr
                             # .. try to infer type from the value ..
                             if isinstance(stmt.value, ast.Call):
+                                func_name = None
                                 if isinstance(stmt.value.func, ast.Name):
-                                    attrs[attr_name] = stmt.value.func.id
+                                    func_name = stmt.value.func.id
                                 elif isinstance(stmt.value.func, ast.Attribute):
-                                    attrs[attr_name] = self._get_name(stmt.value.func)
+                                    func_name = self._get_name(stmt.value.func)
+
+                                # .. special case: cast_('TypeName', value) - extract TypeName ..
+                                if func_name in ('cast_', 'cast') and stmt.value.args:
+                                    first_arg = stmt.value.args[0]
+                                    if isinstance(first_arg, ast.Constant) and isinstance(first_arg.value, str):
+                                        type_name = first_arg.value
+                                        # .. replace non-existent types with Any ..
+                                        if type_name in ('KVDBAPI',):
+                                            type_name = 'Any'
+                                        attrs[attr_name] = type_name
+                                    else:
+                                        attrs[attr_name] = 'Any'
+                                elif func_name:
+                                    attrs[attr_name] = func_name
                                 else:
                                     attrs[attr_name] = 'Any'
                             else:
@@ -301,6 +401,37 @@ class StubGenerator:
         out += f'{prefix}{async_prefix}def {node.name}({params_str}) -> {returns}: ...'
 
         return out
+
+# ################################################################################################################################
+
+    def _get_type_alias_value(self, node:'ast.expr') -> 'str | None':
+        """ Extracts type alias value from an AST node.
+        """
+        # .. handle subscript like dict_[str, any_] ..
+        if isinstance(node, ast.Subscript):
+            base = self._get_name(node.value)
+            if isinstance(node.slice, ast.Tuple):
+                args = ', '.join(self._get_name(elt) for elt in node.slice.elts)
+            else:
+                args = self._get_name(node.slice)
+            return f'{base}[{args}]'
+
+        # .. handle simple name reference ..
+        if isinstance(node, ast.Name):
+            return node.id
+
+        # .. handle attribute like typing.Dict ..
+        if isinstance(node, ast.Attribute):
+            return self._get_name(node)
+
+        # .. handle BinOp for union types like X | Y ..
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+            left = self._get_type_alias_value(node.left)
+            right = self._get_type_alias_value(node.right)
+            if left and right:
+                return f'{left} | {right}'
+
+        return None
 
 # ################################################################################################################################
 

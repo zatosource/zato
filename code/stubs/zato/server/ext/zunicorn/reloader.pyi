@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import os.path
@@ -8,6 +8,7 @@ import time
 import threading
 from inotify.adapters import Inotify
 import inotify.constants
+
 
 class Reloader(threading.Thread):
     _extra_files: set

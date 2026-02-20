@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.typing_ import strdict
 from zato.common.util.time_ import utcnow_as_ms
 from zato.common.monitoring.metrics import get_global_metrics_store
+
 
 class ProcessContext:
     process_name: Any

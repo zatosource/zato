@@ -1,8 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from django import forms
 from zato.common.api import OAuth as OAuthCommon, SIMPLE_IO
 from zato.admin.web.forms import add_select
+
+_default = OAuthCommon.Default
 
 class CreateForm(forms.Form):
     id: Any

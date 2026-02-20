@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from uuid import uuid4
@@ -7,6 +7,7 @@ from zato.common.crypto.api import is_string_equal
 from zato.common.groups import Member
 from zato.common.typing_ import anydict, boolnone, dict_, intanydict, intlist, intnone, intset, list_, strlist
 from zato.server.base.parallel import ParallelServer
+
 
 class _BasicAuthSecDef:
     security_id: int
@@ -19,15 +20,11 @@ class _APIKeySecDef:
 
 class SecurityGroupsCtx:
     channel_id: int
-    security_groups: intset
-    group_to_sec_map: intanydict
-    basic_auth_credentials: dict_[str, _BasicAuthSecDef]
-    apikey_credentials: dict_[str, _APIKeySecDef]
-    server: Any
-    group_to_sec_map: Any
     security_groups: set
+    group_to_sec_map: Any
     basic_auth_credentials: Any
     apikey_credentials: Any
+    server: Any
     _lock: RLock
     def __init__(self: Any, server: ParallelServer) -> None: ...
     def check_security_basic_auth(self: Any, cid: str, channel_name: str, username: str, password: str) -> intnone: ...

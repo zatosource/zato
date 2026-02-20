@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import captureWarnings, getLogger
@@ -13,6 +13,7 @@ from zato.scheduler.util import set_up_zato_client
 from zato.common.typing_ import callable_, type_
 from logging import getLogger
 
+
 class SchedulerServerConfig(AuxServerConfig):
     current_status: str
     env_key_status: Any
@@ -20,7 +21,7 @@ class SchedulerServerConfig(AuxServerConfig):
     env_key_password: Any
     env_key_auth_required: Any
     startup_jobs: Any
-    on_job_executed_cb: cast_
+    on_job_executed_cb: callable_
     job_log_level: Any
     _add_startup_jobs: Any
     _add_scheduler_jobs: Any

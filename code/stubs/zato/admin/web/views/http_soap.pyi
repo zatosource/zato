@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -13,6 +13,7 @@ from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import openapi_ as openapi_module
+
 
 def _get_edit_create_message(params: Any, prefix: Any = ...) -> None: ...
 

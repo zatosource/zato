@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from yaml import safe_load as yaml_load
 from typing import Dict, List, Set, Tuple
+
 
 class UsersYAMLParser:
     users_yaml_path: Any

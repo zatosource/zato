@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -34,6 +34,13 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.odb.model import Cluster as ClusterModel, Server as ServerModel
 from zato.common.typing_ import any_, anylistnone, anyset, callable_, commondict, strdict, strdictnone
 from zato.server.base.parallel import ParallelServer
+
+ServiceTable = Service.__table__
+ServiceTableInsert = ServiceTable.insert
+DeployedServiceTable = DeployedService.__table__
+DeployedServiceInsert = DeployedServiceTable.insert
+DeployedServiceDelete = DeployedServiceTable.delete
+WritableKeyedTuple = SQLRow
 
 class SQLRow:
     def __init__(self: Any, elem: Any) -> None: ...

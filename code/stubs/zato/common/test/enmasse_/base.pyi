@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import basicConfig, getLogger, WARN
 from traceback import format_exc
@@ -7,6 +7,7 @@ from zato.common.test.config import TestConfig
 from sh import RunningCommand
 from zato.common.typing_ import any_
 from zato.common.util.cli import get_zato_sh_command
+
 
 class BaseEnmasseTestCase(TestCase):
     def _warn_on_error(self: Any, stdout: any_, stderr: any_) -> None: ...

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import ast
 import dataclasses
@@ -8,6 +8,7 @@ import os
 import sys
 import typing
 from zato.openapi.generator.openapi_ import OpenAPIGenerator
+
 
 class TypeConversionError(Exception):
     ...

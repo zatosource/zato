@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import re
@@ -11,6 +11,7 @@ from time import sleep
 from uuid import uuid4
 from zato.common.util.time_ import utcnow
 from zato.common.typing_ import callable_, dictlist, strlist
+
 
 def fs_safe_name(value: str) -> str: ...
 

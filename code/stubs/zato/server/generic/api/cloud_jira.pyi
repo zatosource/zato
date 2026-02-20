@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from traceback import format_exc
@@ -9,6 +9,7 @@ from bunch import Bunch
 from requests import Response
 from zato.common.typing_ import any_, stranydict, strnone
 from zato.server.base.parallel import ParallelServer
+
 
 class _JiraClient(JiraClient):
     def __init__(self: Any, config: stranydict) -> None: ...

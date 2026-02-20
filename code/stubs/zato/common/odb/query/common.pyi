@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.api import CONNECTION
 from zato.common.odb.model import HTTPSOAP
@@ -7,6 +7,8 @@ from sqlalchemy import Column
 from sqlalchemy.orm.session import Session as SASession
 from zato.common.odb.model.base import Base as BaseTable
 from zato.common.typing_ import any_, anylist, anylistnone, strlist
+
+RESTTable: any_ = HTTPSOAP.__table__
 
 def get_object_list_by_columns(session: SASession, columns: anylist, order_by: any_ = ...) -> anylist: ...
 

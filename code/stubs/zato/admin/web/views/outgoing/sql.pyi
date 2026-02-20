@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from traceback import format_exc
@@ -11,6 +11,7 @@ from zato.admin.web.views import Delete as _Delete, method_allowed
 from zato.common.api import engine_display_name
 from zato.common.json_internal import dumps
 from zato.common.odb.model import SQLConnectionPool
+
 
 def _get_edit_create_message(params: Any, prefix: Any = ...) -> None: ...
 

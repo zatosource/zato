@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import _thread
 import os
@@ -6,6 +6,7 @@ import platform
 import random
 from zato.common.util.time_ import utcnow
 from zato.common.typing_ import anydict
+
 
 class SnowflakeGenerator:
     machine_id: Any

@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from django import forms
 from zato.admin.web.forms import add_services
+
 
 class _Base(forms.Form):
     id: Any

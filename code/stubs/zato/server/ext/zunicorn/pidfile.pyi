@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import errno
 import os
 import tempfile
+
 
 class Pidfile(object):
     fname: Any

@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from time import time
 from zato.common.rules.cache import CachedRule, identify_common_expressions, precompute_common_expressions
 from zato.common.typing_ import any_, dict_, float_, strdict
 from zato.common.rules.models import MatchResult
+
 
 class RuleEvaluator:
     performance_stats: Any

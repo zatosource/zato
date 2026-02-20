@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from django.template.response import TemplateResponse
 from zato.admin.web.forms.cloud.salesforce import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_action_handler, method_allowed, ping_connection
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.model.salesforce import SalesforceConfigObject
+
 
 class Index(_Index):
     method_allowed: Any

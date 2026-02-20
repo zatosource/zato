@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.util.sql import get_instance_by_id, get_instance_by_name
 from zato.server.service.internal import AdminService
+
 
 class _BaseService(AdminService):
     def _get_instance_by_id(self: Any, session: Any, model_class: Any, id: Any) -> None: ...

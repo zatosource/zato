@@ -1,7 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from http.client import BAD_REQUEST, CONFLICT, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, SERVICE_UNAVAILABLE, UNAUTHORIZED
 from zato.common.http_ import HTTP_RESPONSES
+
+ClientHTTPError = Reportable
 
 class ZatoException(Exception):
     __str__: Any

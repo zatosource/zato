@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import ast
 import logging
@@ -7,6 +7,7 @@ from zato.common.typing_ import dictlist, strlist
 from diskcache import Cache
 import yaml
 from tqdm import tqdm
+
 
 class ServiceVisitor(ast.NodeVisitor):
     services: Any

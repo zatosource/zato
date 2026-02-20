@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -30,6 +30,14 @@ from zato.server.base.parallel import ParallelServer
 from zato.server.base.worker import WorkerStore
 from zato.server.connection.http_soap.url_data import URLData
 
+_logger_is_enabled_for = logger.isEnabledFor
+_logging_info = logging.INFO
+split_re = regex_compile.findall
+accept_any_http = HTTP_SOAP.ACCEPT.ANY
+accept_any_internal = HTTP_SOAP.ACCEPT.ANY_INTERNAL
+_utcnow = utcnow
+_basic_auth = SEC_DEF_TYPE.BASIC_AUTH
+
 class ModuleCtx:
     Channel: Any
     No_URL_Match: Any
@@ -44,7 +52,6 @@ def client_json_error(cid: str, details: any_) -> str: ...
 def get_client_error_wrapper(transport: str, data_format: str) -> callable_: ...
 
 class _CachedResponse:
-    __slots__: Any
     payload: Any
     content_type: Any
     headers: Any

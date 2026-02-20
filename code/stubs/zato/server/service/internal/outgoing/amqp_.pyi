@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from traceback import format_exc
@@ -7,6 +7,7 @@ from zato.common.odb.model import OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
 
 class GetList(AdminService):
     name: Any

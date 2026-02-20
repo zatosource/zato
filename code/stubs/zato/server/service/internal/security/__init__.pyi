@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from zato.common.api import SEC_DEF_TYPE
@@ -8,6 +8,7 @@ from zato.common.odb.model import SecurityBase
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, GetListAdminSIO
 from zato.common.typing_ import any_
+
 
 class GetByID(AdminService):
     def handle(self: Any) -> None: ...

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.cli import ManageCommand
 from zato.common.util.open_ import open_r
@@ -18,6 +18,7 @@ import os
 from psutil import AccessDenied, Process, NoSuchProcess
 from zato.common.api import INFO_FORMAT
 from zato.common.component_info import get_info
+
 
 class CheckConfig(ManageCommand):
     def get_json_conf(self: Any, conf_name: Any, repo_dir: Any = ...) -> None: ...

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.rules.models import Container, MatchResult, Rule
 from zato.common.rules.cache import CachedRule
@@ -9,6 +9,10 @@ from time import time
 from rule_engine import Rule as RuleImpl
 from zato.common.rules.parser import parse_file
 from zato.common.typing_ import any_, dict_, float_, int_, strdict, strlist
+
+Container = Container
+MatchResult = MatchResult
+Rule = Rule
 
 class RulesManager:
     _all_rules: Any

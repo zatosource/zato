@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from collections.abc import MutableMapping
 from time import time
 from sortedcontainers import SortedKeyList
+
 
 class ExpiringDict(MutableMapping):
     _store: dict

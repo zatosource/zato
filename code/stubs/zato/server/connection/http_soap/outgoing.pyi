@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from contextvars import ContextVar
@@ -32,6 +32,12 @@ from zato.server.base.parallel import ParallelServer
 from zato.server.config import ConfigDict
 from prometheus_client import REGISTRY
 
+_API_Key = SEC_DEF_TYPE.APIKEY
+_Basic_Auth = SEC_DEF_TYPE.BASIC_AUTH
+_NTLM = SEC_DEF_TYPE.NTLM
+_OAuth = SEC_DEF_TYPE.OAUTH
+RESTWrapper = HTTPSOAPWrapper
+
 class Response(_RequestsResponse):
     data: strdictnone
     zato_method: str
@@ -46,7 +52,7 @@ class BaseHTTPSOAPWrapper:
     config: Any
     config_no_sensitive: deepcopy
     RequestsSession: Any
-    server: cast_
+    server: ParallelServer
     session: RequestsSession
     https_adapter: HTTPSAdapter
     _component_name: get_component_name

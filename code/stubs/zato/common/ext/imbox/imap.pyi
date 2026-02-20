@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import ssl as pythonssllib
 from imaplib import IMAP4, IMAP4_SSL
+
 
 class ImapTransport:
     hostname: Any

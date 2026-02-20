@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.vendors.keysight_vision import CreateForm, EditForm
@@ -6,6 +6,7 @@ from zato.admin.web.views import change_password as _change_password, CreateEdit
 from zato.common.api import Wrapper_Type
 from zato.common.model.keysight_ import KeysightVisionConfigObject
 from zato.common.typing_ import any_, strdict
+
 
 class Index(_Index):
     method_allowed: Any

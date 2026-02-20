@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import sys
 from uuid import uuid4
@@ -9,6 +9,7 @@ from argparse import Namespace
 from zato.common.typing_ import anytuple, stranydict
 from os import environ
 from zato.common.util.cli import APIKeyManager, BasicAuthManager
+
 
 class Config:
     ServiceName: Any

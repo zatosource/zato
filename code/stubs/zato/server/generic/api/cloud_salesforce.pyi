@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from traceback import format_exc
@@ -6,6 +6,7 @@ from zato.common.typing_ import cast_
 from zato.server.connection.salesforce import SalesforceClient
 from zato.server.connection.queue import Wrapper
 from zato.common.typing_ import stranydict
+
 
 class _SalesforceClient:
     impl: SalesforceClient.from_config

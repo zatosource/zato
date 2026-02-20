@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from django import forms
 from pytz import common_timezones
 from zato.admin.web import DATE_FORMATS, TIME_FORMATS
+
 
 class BasicSettingsForm(forms.Form):
     timezone: Any

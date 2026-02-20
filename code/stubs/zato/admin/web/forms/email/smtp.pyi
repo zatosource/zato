@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from smtplib import SMTP_PORT
 from django import forms
 from zato.common.api import EMAIL
+
 
 class CreateForm(forms.Form):
     id: Any

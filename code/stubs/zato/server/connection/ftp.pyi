@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import logging
@@ -9,6 +9,7 @@ from fs.ftpfs import FTPFS
 from zato.common.api import SECRET_SHADOW, TRACE1
 from zato.common.exception import Inactive
 from zato.common.ext.future.utils import PY2
+
 
 class FTPFacade(FTPFS):
     def conn(self: Any) -> None: ...

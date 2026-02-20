@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import imaplib
 import io
@@ -13,6 +13,7 @@ from datetime import datetime
 from email.header import decode_header
 from zato.common.ext.imbox.utils import str_encode, str_decode
 import logging
+
 
 class Struct:
     def __init__(self: Any, **entries: Any) -> None: ...

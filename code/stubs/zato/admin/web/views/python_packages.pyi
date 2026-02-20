@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import re
@@ -15,6 +15,7 @@ from zato.admin.web.views.settings.config import python_packages_page_config
 from zato.common.json_internal import dumps, loads
 from zato.common.util.updates import Updater, UpdaterConfig
 import time
+
 
 def json_response(data: Any, success: Any = ...) -> None: ...
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import re
@@ -9,6 +9,7 @@ from logging import getLogger
 from traceback import format_exc
 import yaml
 from zato.common.typing_ import anydict
+
 
 def execute_enmasse_batch(tool_calls: list) -> anydict: ...
 

@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import logging
 from ipaddress import IPv4Address, IPv6Address
 from zato.common.json_internal import dumps
+
 
 class AuditPII:
     _logger: logging.getLogger

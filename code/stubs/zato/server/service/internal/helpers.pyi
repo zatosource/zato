@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from contextlib import closing
@@ -29,6 +29,7 @@ from zato.common.odb.model import GenericConn, HTTPSOAP
 from zato.common.util.openapi_.exporter import build_openapi_spec
 from zato.server.connection.http_soap import BadRequest
 from zato.server.service.internal.helpers import PubInputLogger
+
 
 class User(Model):
     user_id: int

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import sys
 from zato.server.ext.zunicorn import six
@@ -17,6 +17,8 @@ from urllib.parse import urlsplit
 import html
 import marshal
 import cgi
+
+urlsplit = urlsplit
 
 def _check_if_pyc(fname: Any) -> None: ...
 

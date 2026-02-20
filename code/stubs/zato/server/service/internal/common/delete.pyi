@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from copy import deepcopy
@@ -18,6 +18,7 @@ from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.model import Job
 from zato.common.odb.model import GenericConn, GenericConnDef, GenericObject
 from zato.common.odb.model import CacheBuiltin, ChannelAMQP, IMAP, OutgoingAMQP, OutgoingFTP, OutgoingOdoo, OutgoingSAP, Service, SMTP
+
 
 class BaseDeleteObjectsRequest(Model):
     id: intnone

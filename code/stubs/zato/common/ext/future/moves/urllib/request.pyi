@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import
 from zato.common.ext.future.standard_library import suspend_hooks
@@ -10,3 +10,4 @@ from urllib import *
 from urllib2 import *
 from urlparse import *
 from urllib import toBytes
+

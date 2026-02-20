@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import http.client as http_client
 import logging
 import msal
 import requests
 from zato.common.typing_ import anydict, anydictnone, dictnone, strnone
+
 
 class DataverseClient:
     tenant_id: Any

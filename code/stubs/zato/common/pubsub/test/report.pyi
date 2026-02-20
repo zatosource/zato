@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from collections import defaultdict
 from datetime import datetime
 from itertools import groupby
 from typing import Dict, List, Tuple
 from zato.common.pubsub.test.models import Message, TestCollector, QueueStats
+
 
 def _format_time(dt: datetime) -> str: ...
 

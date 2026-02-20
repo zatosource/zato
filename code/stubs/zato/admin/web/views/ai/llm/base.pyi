@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -18,6 +18,7 @@ import os
 from uuid import uuid4
 from zato.admin.web.views.ai.common import get_redis_client
 from zato.common.json_internal import loads
+
 
 class CategorizedToolCalls:
     enmasse: list

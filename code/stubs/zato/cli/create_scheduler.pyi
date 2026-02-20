@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from copy import deepcopy
@@ -18,6 +18,7 @@ from argparse import Namespace
 from zato.common.typing_ import any_, anydict, strdict
 from zato.common.util.api import get_server_client_auth
 from zato.common.util.logging_ import get_logging_conf_contents
+
 
 class ServerConfigForScheduler:
     server_host: str

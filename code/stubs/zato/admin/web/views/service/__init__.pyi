@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from collections import namedtuple
@@ -16,6 +16,7 @@ from zato.common.ext.validate_ import is_boolean
 from zato.common.odb.model import Service
 from zato.common.typing_ import any_, anylist
 import json
+
 
 def _get_channels(client: any_, cluster: any_, id: str, channel_type: str) -> anylist: ...
 

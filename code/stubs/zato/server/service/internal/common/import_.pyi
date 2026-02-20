@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from copy import deepcopy
@@ -12,6 +12,11 @@ from zato.common.typing_ import cast_
 from zato.server.service import Model, Service
 from sqlalchemy.orm.session import Session as SASession
 from zato.common.typing_ import any_, dictlist, strdict
+
+HTTPBasicAuthTable: any_ = HTTPBasicAuth.__table__
+SecurityBaseTable: any_ = SecurityBase.__table__
+HTTPBasicAuthInsert = HTTPBasicAuthTable.insert
+Generic_Attr_Name = GENERIC.ATTR_NAME
 
 class ObjectContainer(Model):
     basic_auth: dictlist | None

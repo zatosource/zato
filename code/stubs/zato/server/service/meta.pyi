@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from inspect import getmodule, isclass
@@ -18,6 +18,7 @@ from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO, GetListAdminSIO
 from zato.server.service import Service
+
 
 def _is_column_required(column: Any) -> None: ...
 

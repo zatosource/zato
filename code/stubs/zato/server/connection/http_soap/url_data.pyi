@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from base64 import b64encode
@@ -18,6 +18,7 @@ from zato.common.util.url_dispatcher import get_match_target
 from zato.server.connection.http_soap import Unauthorized
 from zato.server.connection.http_soap.url_dispatcher import Matcher, PyURLData
 from zato.server.base.worker import WorkerStore
+
 
 class URLData(PyURLData):
     worker: Any

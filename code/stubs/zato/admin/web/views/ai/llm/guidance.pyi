@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from operator import itemgetter
 from fastembed import TextEmbedding
 from zato.common.typing_ import anylist
+
 
 class GuidanceSelector:
     model: Any

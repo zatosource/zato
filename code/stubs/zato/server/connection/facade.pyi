@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from datetime import datetime, timedelta, timezone
@@ -14,6 +14,8 @@ from zato.server.base.parallel import ParallelServer
 from zato.server.config import ConfigDict
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.service import Service
+
+_utz_utc = timezone.utc
 
 class SchedulerFacade:
     server: Any
@@ -40,11 +42,9 @@ class RESTFacade:
     def __getattr__(self: Any, attr_name: str) -> RESTInvoker: ...
 
 class RESTInvoker:
-    conn: HTTPSOAPWrapper
-    container: RESTFacade
-    send: Any
     conn: Any
     container: Any
+    send: Any
     def __init__(self: Any, conn: HTTPSOAPWrapper, container: RESTFacade) -> None: ...
     def call_rest_func(self: Any, func_name: str, conn_name: str, *args: any_, **kwargs: str) -> any_: ...
     def call_wrapper(self: Any, *args: any_, **kwargs: any_) -> any_: ...

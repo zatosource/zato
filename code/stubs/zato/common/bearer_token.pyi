@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime, timedelta, timezone
 from json import dumps, loads
@@ -15,6 +15,7 @@ from zato.cache import Entry
 from zato.common.typing_ import any_, dtnone, intnone, stranydict
 from zato.server.base.parallel import ParallelServer
 from zato.server.connection.cache import Cache
+
 
 class BearerTokenManager:
     cache: Cache

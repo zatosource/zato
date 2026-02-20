@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from copy import deepcopy
 from dataclasses import dataclass
@@ -23,6 +23,8 @@ from zato.common.crypto.const import well_known_data
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
 from zato.common.util.logging_ import get_logging_conf_contents
+
+simple_io_conf_contents = simple_io_conf_contents
 
 class SchedulerConfigForServer:
     scheduler_host: str

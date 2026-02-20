@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from zato.cli.enmasse.config import ModuleCtx
@@ -25,6 +25,7 @@ from zato.cli.enmasse.exporters.pubsub_subscription import PubSubSubscriptionExp
 from zato.common.odb.model import Cluster
 from sqlalchemy.orm.session import Session as SASession
 from zato.common.typing_ import any_, stranydict
+
 
 class EnmasseYAMLExporter:
     cluster_id: Any

@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime
 from typing import List as list_, Optional as optional
 from zato.common.ext.dataclasses import dataclass
+
 
 class Target:
     name: str

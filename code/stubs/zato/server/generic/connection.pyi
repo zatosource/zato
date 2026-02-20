@@ -1,12 +1,12 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from bunch import bunchify
 from zato.common.api import GENERIC
 from zato.common.json_internal import dumps, loads
 from zato.server.generic import attrs_gen_conn
 
+
 class GenericConnection:
-    __slots__: Any
     from_bunch: Any
     id: Any
     name: Any

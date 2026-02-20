@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from operator import itemgetter
 from django import forms
 from zato.common.ext.future.utils import iteritems
 from zato.admin.settings import delivery_friendly_name
 from zato.common.api import AMQP
+
 
 class CreateForm(forms.Form):
     name: Any

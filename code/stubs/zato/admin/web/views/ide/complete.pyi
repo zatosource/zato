@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 import os
@@ -13,6 +13,7 @@ from zato.admin.web.views import method_allowed
 from zato.common.api import IDE_Ignore_Modules
 from zato.common.json_internal import loads
 from django.http import HttpRequest
+
 
 def build_lsp_message(content: Any) -> None: ...
 

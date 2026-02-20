@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -13,6 +13,7 @@ from zato.common.util.api import get_current_user, make_repr
 from zato.common.util.time_ import utcnow
 from portalocker import lock as portalocker_lock, LockException, LOCK_NB, LOCK_EX, unlock
 from typing import BinaryIO
+
 
 class MAX:
     LEN_NS: Any
@@ -31,7 +32,6 @@ class LockTimeout(Exception):
     ...
 
 class LockInfo:
-    __slots__: Any
     lock: Any
     namespace: Any
     name: Any

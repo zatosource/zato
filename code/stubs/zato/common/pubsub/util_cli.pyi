@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 import os
@@ -9,6 +9,7 @@ import orjson
 from zato.common.typing_ import dict_
 from zato.common.util.api import as_bool
 from zato.common.typing_ import dict_, list_
+
 
 def _get_connections_data(vhost: str) -> dict_: ...
 

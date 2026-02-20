@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from contextlib import closing
@@ -13,6 +13,7 @@ from zato.common.util.api import get_response_value, make_cid_public
 from zato.common.util.sql import search as sql_search
 from zato.server.service import AsIs, Bool, Int, Service
 from zato.common.typing_ import anylist
+
 
 class SearchTool:
     _search_attrs: Any

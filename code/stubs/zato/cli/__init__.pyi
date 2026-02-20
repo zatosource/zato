@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from json import dumps, loads
 from zato.common.api import NotGiven
@@ -35,6 +35,7 @@ import platform
 from zato.common.json_internal import load
 from zato.common.util.api import get_client_from_server_conf
 from zato.common.util.python_ import get_full_stack
+
 
 class MS_SQL:
     ZATO_DIRECT: Any

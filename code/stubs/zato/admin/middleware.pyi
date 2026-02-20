@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from http.client import OK
 from logging import getLogger
@@ -13,6 +13,7 @@ from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
 from zato.common.version import get_version
 from zato.common.typing_ import anydict
+
 
 class HeadersEnrichedException(Exception):
     headers: anydict

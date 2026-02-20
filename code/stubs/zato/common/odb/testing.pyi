@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import logging
 from zato.common.api import UNITTEST
+
 
 class UnittestCursor:
     result: Any

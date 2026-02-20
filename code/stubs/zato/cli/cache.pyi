@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from zato.cli import ManageCommand
@@ -7,6 +7,7 @@ from zato.client import JSONResponse
 import sys
 from zato.common.api import NotGiven
 from zato.common.util.cache import Client as CacheClient, CommandConfig
+
 
 class CacheCommand(ManageCommand):
     opts: Any

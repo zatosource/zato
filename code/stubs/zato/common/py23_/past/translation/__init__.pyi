@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import imp
 import logging
@@ -9,6 +9,8 @@ import copy
 from lib2to3.pgen2.parse import ParseError
 from lib2to3.refactor import RefactoringTool
 from libfuturize import fixes
+
+autotranslate = install_hooks
 
 class RTs:
     _rt: Any

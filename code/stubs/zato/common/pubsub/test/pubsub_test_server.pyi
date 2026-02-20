@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import argparse
 from logging import basicConfig, getLogger, INFO
@@ -7,6 +7,7 @@ from zato.common.pubsub.test.config import load_config
 from zato.common.pubsub.test.server import PubSubTestServer
 from typing import Dict, Optional
 from zato.common.pubsub.test.config import AppConfig
+
 
 class GunicornApp(BaseApplication):
     options: Any

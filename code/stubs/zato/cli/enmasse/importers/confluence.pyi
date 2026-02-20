@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.api import GENERIC
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
+
 
 class ConfluenceImporter(GenericConnectionImporter):
     connection_type: Any

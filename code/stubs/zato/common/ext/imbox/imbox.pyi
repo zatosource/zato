@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import imaplib
 import logging
 from zato.common.ext.imbox.imap import ImapTransport
 from zato.common.ext.imbox.messages import Messages
 from zato.common.ext.imbox.vendors import GmailMessages, hostname_vendorname_dict, name_authentication_string_dict
+
 
 class Imbox:
     authentication_error_message: Any

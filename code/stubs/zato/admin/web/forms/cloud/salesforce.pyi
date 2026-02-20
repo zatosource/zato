@@ -1,7 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from django import forms
 from zato.common.api import SALESFORCE
+
+_default = SALESFORCE.Default
 
 class CreateForm(forms.Form):
     name: Any

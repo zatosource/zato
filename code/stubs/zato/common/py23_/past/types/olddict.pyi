@@ -1,7 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import sys
 from zato.common.py23_.past.utils import with_metaclass
+
+_builtin_dict = dict
+ver = sys.version_info[Any]
 
 class BaseOldDict(type):
     def __instancecheck__(cls: Any, instance: Any) -> None: ...

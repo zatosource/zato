@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from browser import document as doc
 from zato.common.json_internal import loads
+
 
 class SelectChanger(object):
     data_source: Any

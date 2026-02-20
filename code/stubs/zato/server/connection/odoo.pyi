@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from zato.common.const import SECRETS
@@ -7,6 +7,7 @@ from zato.server.connection.queue import ConnectionQueue
 from six import PY2
 import openerplib as client_lib
 import odoolib as client_lib
+
 
 class OdooWrapper:
     config: Any

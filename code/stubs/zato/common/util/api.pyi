@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import ast
 import gc
@@ -82,6 +82,18 @@ from zato.client import get_client_from_server_conf as client_get_client_from_se
 import psutil
 from tabulate import tabulate
 from dateutil.parser import parse as parse_datetime
+
+parse_datetime = parse_datetime
+ColorFormatter = ColorFormatter
+fs_safe_now = fs_safe_now
+asbool = as_bool
+aslist = as_list
+_data_format_json = DATA_FORMAT.JSON
+get_free_port = get_free_port
+is_port_taken = is_port_taken
+wait_until_port_free = wait_until_port_free
+wait_until_port_taken = wait_until_port_taken
+new_cid = _new_cid
 
 class ModuleCtx:
     PID_To_Port_Pattern: Any

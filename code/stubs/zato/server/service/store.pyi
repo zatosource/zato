@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import importlib
 import inspect
@@ -40,6 +40,12 @@ from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
 from yaml import Dumper
 
+Any = Any
+List = List
+_utcnow = utcnow
+inramlist = list_[InRAMService]
+modelinfolist = list_[ModelInfo]
+
 class _TestingWorkerStore:
     sql_pool_store: Any
     outconn_ldap: Any
@@ -48,7 +54,7 @@ class _TestingWorkerStore:
     email_imap_api: Any
     search_es_api: Any
     cache_api: Any
-    worker_config: cast_
+    worker_config: ConfigStore
     def __init__(self: Any) -> None: ...
 
 class _TestingWorkerConfig:
@@ -80,8 +86,8 @@ class ModelInfo:
     source: str
 
 class DeploymentInfo:
-    __slots__: Any
     to_process: Any
+    total_services: Any
     total_size: Any
     total_size_human: Any
     def __init__(self: Any) -> None: ...
@@ -91,10 +97,6 @@ def get_service_name(class_obj: type[Service]) -> str: ...
 def get_batch_indexes(services: inramlist, max_batch_size: int) -> anylist: ...
 
 class ServiceStore:
-    services: stranydict
-    odb: ODBManager
-    server: ParallelServer
-    is_testing: bool
     services: Any
     odb: Any
     server: Any
@@ -109,7 +111,7 @@ class ServiceStore:
     needs_post_deploy_attr: Any
     action_internal_doing: Any
     action_internal_done: Any
-    _testing_worker_store: cast_
+    _testing_worker_store: WorkerStore
     def __init__(self: Any) -> None: ...
     def edit_service_data(self: Any, config: stranydict) -> None: ...
     def _delete_service_from_odb(self: Any, service_id: int) -> None: ...

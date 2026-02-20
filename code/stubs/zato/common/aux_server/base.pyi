@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from json import dumps
@@ -16,6 +16,7 @@ from zato.common.util.auth import check_basic_auth
 from zato.common.util.json_ import json_loads
 from zato.common.typing_ import any_, anydict, byteslist, callable_, callnone, intnone, strdict, strnone, type_
 from zato.common.util.cli import read_stdin_data
+
 
 class StatusCode:
     OK: Any
@@ -56,12 +57,9 @@ class AuxServer:
     crypto_manager_class: type_[CryptoManager]
     needs_odb: bool
     has_credentials: bool
-    parent_server_name: str
-    parent_server_pid: int
-    config: Any
     parent_server_name: Any
     parent_server_pid: Any
-    api_server: WSGIServer
+    config: Any
     def __init__(self: Any, config: AuxServerConfig) -> None: ...
     @classmethod
     def before_config_hook(class_: type_[AuxServer]) -> None: ...

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from datetime import datetime
@@ -19,6 +19,7 @@ from zato.common.util.api import pprint
 from zato.common.py23_.past.builtins import unicode
 from zato.common.util.api import parse_datetime
 from dateutil.parser import parse as parse_datetime
+
 
 def _get_start_date(start_date: Any) -> None: ...
 

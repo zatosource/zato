@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import getLogger
@@ -10,6 +10,7 @@ from zato.common.util.api import as_bool
 from zato.common.util.env import get_list_from_environment
 from zato.common.util.file_system import resolve_path
 from zato.common.typing_ import iterator_, list_, pathlist, strdictdict
+
 
 def get_project_info(root: Any, src_dir_name: Any) -> list_[HotDeployProject] | None: ...
 

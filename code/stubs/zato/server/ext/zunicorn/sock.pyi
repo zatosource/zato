@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import errno
 import os
@@ -9,6 +9,7 @@ import time
 from zato.common.util.platform_ import is_posix
 from zato.server.ext.zunicorn import util
 from zato.server.ext.zunicorn.six import string_types
+
 
 class BaseSocket:
     log: Any

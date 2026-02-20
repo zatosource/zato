@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from traceback import format_exc
@@ -10,6 +10,7 @@ from zato.common.typing_ import any_
 from zato.cy.simpleio import SIOServerConfig
 from zato.server.base.parallel import ParallelServer
 from zato.server.service import Service
+
 
 class DataClassSimpleIO:
     service_class: Service

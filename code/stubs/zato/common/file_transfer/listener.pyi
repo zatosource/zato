@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import argparse
 import fnmatch
@@ -16,6 +16,7 @@ from zato.common.util.api import new_cid, publish_file, publish_enmasse, publish
 from watchdog.events import FileSystemEvent
 from watchdog.observers.api import BaseObserver
 from zato.common.typing_ import strlist, strlistnone
+
 
 def find_base_directories(directory_path: str, pattern: str) -> strlist: ...
 

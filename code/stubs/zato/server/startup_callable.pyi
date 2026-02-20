@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from importlib import import_module
 from logging import getLogger
 from traceback import format_exc
 from bunch import Bunch
+
 
 class PhaseCtx:
     phase: Any

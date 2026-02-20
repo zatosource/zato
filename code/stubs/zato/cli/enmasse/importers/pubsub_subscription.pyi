@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from zato.common.api import PubSub
@@ -7,6 +7,7 @@ from zato.common.util.api import new_sub_key
 from zato.common.util.sql import set_instance_opaque_attrs
 from zato.common.typing_ import any_, anydict, stranydict
 from sqlalchemy.orm.session import Session as SASession
+
 
 class PubSubSubscriptionImporter:
     importer: Any

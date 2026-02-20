@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import sys
 from datetime import timedelta
@@ -25,6 +25,7 @@ from kombu.messaging import Producer as KombuProducer
 from kombu.pools import ProducerPool as KombuProducerPool
 from zato.common.typing_ import any_, callable_, strdict, strdictnone, strtuple, type_
 
+
 def get_connection_class(object_name: str, suffix: str, is_tls: bool) -> type_[KombuAMQPConnection]: ...
 
 def _is_tls_config(config: Bunch) -> bool: ...
@@ -40,7 +41,6 @@ def _do_close_connection(cid: str, connection: KombuAMQPConnection, max_wait_tim
 def close_connection(cid: str, connection: KombuAMQPConnection, max_wait_time: int = ...) -> None: ...
 
 class _AMQPMessage:
-    __slots__: Any
     body: Any
     impl: Any
     def __init__(self: Any, body: Any, impl: Any) -> None: ...

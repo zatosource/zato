@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from zato.cli.enmasse.util import get_type_from_engine
@@ -8,6 +8,7 @@ from sqlalchemy.orm.session import Session as SASession
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.typing_ import anydict, list_
+
 
 class SQLExporter:
     exporter: Any

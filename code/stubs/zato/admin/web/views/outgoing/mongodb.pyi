@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import logging
@@ -7,6 +7,7 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.mongodb import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection
 from zato.common.odb.model import GenericConn
+
 
 class Index(_Index):
     method_allowed: Any

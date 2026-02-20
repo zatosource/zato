@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from sqlalchemy import and_, delete, exists, insert, update
@@ -10,6 +10,9 @@ from zato.common.util.api import utcnow
 from zato.common.util.sql import get_dict_with_opaque
 from sqlalchemy.orm import Session as SASession
 from zato.common.typing_ import any_, dictlist, intnone, strdict, strintnone, strnone
+
+_generic_attr_name = GENERIC.ATTR_NAME
+ModelGenericObjectTable: any_ = ModelGenericObject.__table__
 
 class GenericObjectWrapper:
     type_: strnone

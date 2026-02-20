@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import print_function
 import email.utils
@@ -27,6 +27,8 @@ from importlib import import_module
 import pwd
 import fcntl
 from os import closerange
+
+is_forking = is_linux
 
 def load_class(uri: Any, default: Any = ..., section: Any = ...) -> None: ...
 

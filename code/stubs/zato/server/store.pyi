@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import weakref
@@ -8,6 +8,7 @@ from traceback import format_exc
 from bunch import Bunch
 from zato.common.api import SECRET_SHADOW
 from zato.common.exception import Inactive
+
 
 class BaseAPI:
     _conn_store: Any

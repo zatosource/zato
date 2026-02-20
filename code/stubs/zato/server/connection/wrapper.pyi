@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from logging import getLogger
@@ -7,6 +7,7 @@ from zato.common.util.api import spawn_greenlet
 import typing
 from bunch import Bunch
 from zato.server.base.parallel import ParallelServer
+
 
 class Wrapper:
     needs_self_client: Any

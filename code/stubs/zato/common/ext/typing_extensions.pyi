@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import abc
 import collections
@@ -13,6 +13,21 @@ from typing import _next_in_mro, _type_check
 from typing import _BaseGenericAlias
 from typing import GenericAlias
 import warnings
+
+ClassVar = typing.ClassVar
+_overload_dummy = typing._overload_dummy
+overload = typing.overload
+Type = typing.Type
+Awaitable = typing.Awaitable
+Coroutine = typing.Coroutine
+AsyncIterable = typing.AsyncIterable
+AsyncIterator = typing.AsyncIterator
+ContextManager = typing.ContextManager
+DefaultDict = typing.DefaultDict
+NewType = typing.NewType
+Text = typing.Text
+TYPE_CHECKING = typing.TYPE_CHECKING
+runtime = runtime_checkable
 
 def _no_slots_copy(dct: Any) -> None: ...
 

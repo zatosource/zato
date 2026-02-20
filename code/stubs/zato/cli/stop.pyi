@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from zato.cli import ManageCommand
@@ -7,6 +7,7 @@ import os
 import sys
 import signal
 from zato.common.util.updates import setup_update_file_logger
+
 
 class Stop(ManageCommand):
     def signal(self: Any, component_name: Any, signal_name: Any, signal_code: Any, pidfile: Any = ..., component_dir: Any = ..., ignore_missing: Any = ..., needs_logging: Any = ...) -> None: ...

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from traceback import format_exc
@@ -7,6 +7,7 @@ from zato.admin.web.forms.channel.amqp_ import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, Index as _Index, method_allowed
 from zato.common.json_internal import dumps
 from zato.common.odb.model import ChannelAMQP
+
 
 def _get_edit_create_message(params: Any, prefix: Any = ...) -> None: ...
 

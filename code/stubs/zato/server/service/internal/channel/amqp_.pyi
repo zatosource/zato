@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from traceback import format_exc
@@ -7,6 +7,7 @@ from zato.common.exception import ServiceMissingException
 from zato.common.odb.model import ChannelAMQP, Cluster, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
 
 class GetList(AdminService):
     name: Any

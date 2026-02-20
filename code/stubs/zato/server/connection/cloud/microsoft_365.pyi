@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from zato.common.typing_ import stranydict
 from O365 import Account as Office365Account
 from json import loads
 from O365 import Account
+
 
 class Microsoft365Client:
     config: Any

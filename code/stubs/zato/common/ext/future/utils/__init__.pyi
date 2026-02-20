@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import types
 import sys
@@ -14,6 +14,10 @@ from zato.common.ext.future.types.newbytes import newbytes
 from zato.common.ext.future.types.newstr import newstr
 from zato.common.ext.future.types.newint import newint
 from zato.common.ext.future.types.newdict import newdict
+
+reraise = raise_
+native_str = str
+native_bytes = bytes
 
 def python_2_unicode_compatible(cls: Any) -> None: ...
 

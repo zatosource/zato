@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import logging
@@ -9,6 +9,7 @@ from zato.common.api import SECRET_SHADOW
 from zato.common.dispatch import dispatcher
 from zato.common.exception import Inactive
 from zato.common.util.api import new_cid_server
+
 
 class BasePoolAPI:
     get: Any

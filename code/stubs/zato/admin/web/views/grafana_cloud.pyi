@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import getLogger
@@ -22,6 +22,7 @@ import subprocess
 import tempfile
 from zato.admin.web.views.otelcol_config import template as otelcol_template
 import time
+
 
 def json_response(data: Any, success: Any = ...) -> None: ...
 

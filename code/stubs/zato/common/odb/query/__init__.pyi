@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from functools import wraps
@@ -9,6 +9,11 @@ from zato.common.api import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_S
 from zato.common.json_internal import loads
 from zato.common.odb.model import APIKeySecurity, CacheBuiltin, ChannelAMQP, Cluster, DeployedService, ElasticSearch, HTTPBasicAuth, HTTPSOAP, IMAP, IntervalBasedJob, Job, NTLM, OAuth, OutgoingOdoo, OutgoingAMQP, OutgoingFTP, PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase, Server, Service, SMTP, SQLConnectionPool, OutgoingSAP
 from zato.common.util.search import SearchResults as _SearchResults
+
+pubsub_publisher = PubSub.API_Client.Publisher
+pubsub_subscriber = PubSub.API_Client.Subscriber
+pubsub_publisher_subscriber = PubSub.API_Client.Publisher_Subscriber
+_gen_attr = GENERIC.ATTR_NAME
 
 def count(session: Any, q: Any) -> None: ...
 

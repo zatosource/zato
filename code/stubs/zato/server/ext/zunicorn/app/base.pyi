@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import print_function
 import os
@@ -9,6 +9,7 @@ from zato.server.ext.zunicorn import util
 from zato.server.ext.zunicorn.arbiter import Arbiter
 from zato.server.ext.zunicorn.config import Config, get_default_config_file
 from zato.server.ext.zunicorn import debug
+
 
 class BaseApplication:
     usage: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from logging import getLogger
@@ -7,6 +7,7 @@ from zato.common.util.api import ping_sap
 from zato.common.const import SECRETS
 from zato.server.connection.queue import Wrapper
 import pyrfc
+
 
 class SAPWrapper(Wrapper):
     pyrfc: Any

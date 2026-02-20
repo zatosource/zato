@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from dataclasses import dataclass
@@ -23,6 +23,9 @@ from typing import Dict
 from zato.common.typing_ import any_, anydict, anydictnone, callable_, dictlist, strlist, strnone
 from zato.server.base.parallel import ParallelServer
 import logging
+
+_default_priority = PubSub.Message.Priority_Default
+_default_expiration = PubSub.Message.Default_Expiration
 
 class _InvokeWithCallbackCtx:
     producer: Producer

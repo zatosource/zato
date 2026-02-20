@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import socket
@@ -11,6 +11,7 @@ from zato.common.py23_.past.builtins import xrange
 from zato.common.api import ZATO_OK
 from zato.common.test.tls_material import ca_cert, server1_cert, server1_key
 import psutil
+
 
 def get_free_port(start: Any = ..., end: Any = ...) -> None: ...
 

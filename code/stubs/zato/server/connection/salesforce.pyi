@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from json import dumps
 from requests import get as request_get, post as requests_post
 from zato.common.typing_ import any_, anydict, dictnone, stranydict, strnone
+
 
 class ModuleCtx:
     PathLogin: Any
@@ -11,20 +12,14 @@ class ModuleCtx:
     MethodPost: Any
 
 class SalesforceClient:
-    api_version: str
-    address: str
-    username: str
-    password: str
-    consumer_key: str
-    consumer_secret: str
-    access_token: str
-    http_bearer: str
     api_version: Any
     address: Any
     username: Any
     password: Any
     consumer_key: Any
     consumer_secret: Any
+    access_token: str
+    http_bearer: str
     def __init__(self: Any) -> None: ...
     @staticmethod
     def from_config(config: stranydict) -> SalesforceClient: ...

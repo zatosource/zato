@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from sqlalchemy import and_, func, select
@@ -8,6 +8,9 @@ from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.common.odb.query.generic import GroupsWrapper
 from zato.common.typing_ import any_, anydict, anylist, intnone, list_, strlist
 from zato.server.base.parallel import ParallelServer
+
+_generic_attr_name = GENERIC.ATTR_NAME
+ModelGenericObjectTable: any_ = ModelGenericObject.__table__
 
 class GroupsManager:
     server: Any

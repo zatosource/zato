@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import copy as _copy
 import os as _os
@@ -8,6 +8,7 @@ import textwrap as _textwrap
 from gettext import gettext as _
 from sets import Set as set
 import warnings
+
 
 def _callable(obj: Any) -> None: ...
 

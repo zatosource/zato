@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime
 from dataclasses import dataclass
@@ -14,6 +14,8 @@ import requests
 from zato.common.api import PubSub
 from zato.common.util.api import get_absolute_path
 from zato.common.typing_ import any_, strdict
+
+_default_port_publish = PubSub.REST_Server.Default_Port_Publish
 
 class ClientConfig:
     server_url: str

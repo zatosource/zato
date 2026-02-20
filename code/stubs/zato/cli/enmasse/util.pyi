@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -9,6 +9,7 @@ from sqlalchemy.orm.session import Session as SASession
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.common.odb.model import HTTPSOAP
 from zato.common.typing_ import any_, anydict, bool_, strdict
+
 
 def get_engine_from_type(raw_type: str) -> str: ...
 

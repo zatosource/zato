@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from base import BaseFileClient
 from typing import BinaryIO
 from fs.ftpfs import FTPFS
 from fs.info import Info
+
 
 class FTPFileClient(BaseFileClient):
     conn: Any

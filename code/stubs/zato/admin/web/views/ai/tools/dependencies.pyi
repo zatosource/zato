@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import ast
 from logging import getLogger
 import yaml
 from zato.common.typing_ import anydict, anylist
+
 
 def _get_config() -> anydict: ...
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from copy import deepcopy
@@ -13,6 +13,7 @@ from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 import cloghandler
 from zato.common.typing_ import any_, list_
 from zato.scheduler.api import SchedulerAPI
+
 
 def wait_for_odb_service_by_odb(session: any_, cluster_id: int, service_name: str) -> None: ...
 

@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from django.db import models
 from django.contrib.auth.models import User
 from zato.admin.web import DATE_FORMATS, MONTH_YEAR_FORMATS, TIME_FORMATS
 from zato.common.json_internal import loads
+
 
 def _on_delete(*unused_args: Any, **unused_kwargs: Any) -> None: ...
 

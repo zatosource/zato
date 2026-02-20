@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from six import add_metaclass
@@ -11,6 +11,10 @@ from zato.common.odb.query import out_odoo_list
 from zato.common.util.api import ping_odoo
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+model = OutgoingOdoo
+broker_message = OUTGOING
+list_func = out_odoo_list
 
 def instance_hook(service: Any, input: Any, instance: Any, attrs: Any) -> None: ...
 

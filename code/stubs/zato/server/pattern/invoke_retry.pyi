@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime
 from logging import getLogger
@@ -7,6 +7,8 @@ from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
 from zato.common.util.api import new_cid
 from zato.server.service import Service
+
+utcnow = datetime.utcnow
 
 def retry_failed_msg(so_far: Any, retry_repeats: Any, service_name: Any, retry_seconds: Any, orig_cid: Any, e: Any) -> None: ...
 

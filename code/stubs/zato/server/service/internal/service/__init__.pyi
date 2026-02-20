@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import subprocess
@@ -27,6 +27,8 @@ from zato.server.service import Boolean, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from datetime import datetime
 from zato.common.typing_ import any_, anydict, strnone
+
+Service = Service
 
 class GetList(AdminService):
     _filter_by: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from enum import Enum, unique
@@ -9,6 +9,8 @@ from zato.admin.web.views import Index as _Index
 from zato.common.typing_ import cast_
 from django.core.handlers.wsgi import WSGIRequest
 from zato.common.typing_ import any_
+
+default_action = Action.Index.value
 
 class BaseEnum(Enum):
     @classmethod

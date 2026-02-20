@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from queue import Queue, Empty
@@ -16,6 +16,11 @@ from zato.common.pubsub.util import set_time_since
 from zato.common.util.api import as_bool, utcnow
 from zato.common.pubsub.models import Subscription
 from zato.common.typing_ import any_, anydict
+
+_default_priority = PubSub.Message.Priority_Default
+_default_expiration = PubSub.Message.Default_Expiration
+_max_len_limit = PubSub.Message.Default_Max_Len
+_default_max_messages = PubSub.Message.Default_Max_Messages
 
 class PubSubRESTServerPull(BaseRESTServer):
     server_type: Any

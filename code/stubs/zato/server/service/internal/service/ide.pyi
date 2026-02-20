@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from dataclasses import dataclass
@@ -13,6 +13,7 @@ from zato.common.util.api import get_demo_py_fs_locations, wait_for_file, utcnow
 from zato.common.util.open_ import open_r, open_w
 from zato.server.service import Model, Service
 from zato.common.typing_ import any_, dictlist, strlistdict
+
 
 def make_fs_location_url_safe(data: str) -> str: ...
 

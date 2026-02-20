@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import random
 import time
 from zato.common.monitoring.api import create_context, get_metrics_data, incr_global, push_global
 import argparse
+
 
 class PrometheusTestServer:
     host: Any

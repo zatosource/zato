@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime
 from logging import getLogger
@@ -32,6 +32,8 @@ from mock import MagicMock, Mock
 import os
 from zato.common.util.cli import CommandLineInvoker
 from zato.common.util.cli import CommandLineServiceInvoker
+
+rand_nested = rand_opaque
 
 class test_odb_data:
     cluster_id: Any

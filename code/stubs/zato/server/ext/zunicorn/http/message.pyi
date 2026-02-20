@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import regex as re
 import socket
@@ -11,6 +11,7 @@ from zato.server.ext.zunicorn.http.errors import InvalidProxyLine, ForbiddenProx
 from zato.server.ext.zunicorn.http.errors import InvalidSchemeHeaders
 from zato.server.ext.zunicorn.six import BytesIO, string_types
 from zato.server.ext.zunicorn.util import split_request_uri
+
 
 class Message:
     cfg: Any

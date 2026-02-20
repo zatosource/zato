@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from copy import deepcopy
 from logging import getLogger
@@ -13,6 +13,7 @@ from zato.common.util.config import resolve_name, resolve_value
 from zato.common.util.sql import ElemsWithOpaqueMaker
 from zato.common.typing_ import anylist, stranydict
 from zato.server.connection.ftp import FTPStore
+
 
 class ConfigDict:
     __setitem__: Any

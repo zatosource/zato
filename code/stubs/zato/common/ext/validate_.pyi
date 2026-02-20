@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import re
 import sys
@@ -6,6 +6,7 @@ from pprint import pprint
 import socket
 import struct
 import doctest
+
 
 def dottedQuadToNum(ip: Any) -> None: ...
 

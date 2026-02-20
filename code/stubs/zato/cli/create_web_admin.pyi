@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from copy import deepcopy
 from zato.cli import common_odb_opts, ZatoCommand
@@ -23,6 +23,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import CommandError
 from django.db import connection
 from django.db.utils import IntegrityError
+
 
 class Create(ZatoCommand):
     needs_empty_dir: Any

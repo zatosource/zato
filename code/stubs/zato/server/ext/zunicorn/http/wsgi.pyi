@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import io
 import logging
@@ -11,6 +11,7 @@ from zato.server.ext.zunicorn.http.errors import InvalidHeader, InvalidHeaderNam
 from zato.server.ext.zunicorn.six import string_types, binary_type, reraise
 from os import sendfile
 from _sendfile import sendfile
+
 
 class FileWrapper:
     filelike: Any

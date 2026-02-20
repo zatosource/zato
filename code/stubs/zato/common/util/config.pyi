@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import getLogger
@@ -16,6 +16,7 @@ from zato.common.typing_ import any_, strdict
 from zato.server.base.parallel import ParallelServer
 from io import StringIO
 from zato.common.util import get_config
+
 
 def get_url_protocol_from_config_item(use_tls: bool) -> str: ...
 

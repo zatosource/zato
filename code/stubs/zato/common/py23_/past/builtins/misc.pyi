@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import unicode_literals
 import inspect
@@ -9,3 +9,4 @@ import builtins
 from zato.common.py23_.past.builtins import str as oldstr
 from sys import intern
 import __builtin__
+

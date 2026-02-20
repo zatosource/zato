@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from logging import getLogger
@@ -9,6 +9,7 @@ from zato.common.odb.api import SessionWrapper
 from zato.common.odb.model import SecurityBase as SecurityBaseModel, Server as ServerModel
 from zato.common.typing_ import callable_, intnone, list_, strnone
 from zato.server.base.parallel import ParallelServer
+
 
 class CredentialsConfig:
     sec_def_name: Any

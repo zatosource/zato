@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import random
 import time
 from datetime import datetime, timedelta
 from zato.common.util.api import utcnow
+
 
 def get_remaining_time(start_time: datetime, max_seconds: int) -> timedelta: ...
 

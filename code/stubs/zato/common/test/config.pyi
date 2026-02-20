@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
+
 
 class TestConfig:
     pubsub_topic_shared: Any

@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from django import forms
 from zato.admin.web.util import get_pubsub_security_choices
 from zato.common.api import PubSub
+
 
 def get_rest_endpoint_choices(req: Any) -> None: ...
 

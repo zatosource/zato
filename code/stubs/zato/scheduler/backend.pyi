@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import datetime
 from logging import getLogger
@@ -11,6 +11,7 @@ from zato.common.util.api import make_repr, new_cid, spawn_greenlet
 from zato.common.util.scheduler import load_scheduler_jobs_by_api, load_scheduler_jobs_by_odb, add_startup_jobs_to_odb_by_api, add_startup_jobs_to_odb_by_odb
 from zato.common.typing_ import stranydict
 from zato.scheduler.server import SchedulerServerConfig, SchedulerAPI
+
 
 class Interval:
     __repr__: Any

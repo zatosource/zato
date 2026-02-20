@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from django.urls import path, re_path as url
 from django.contrib.auth.decorators import login_required
@@ -43,3 +43,4 @@ from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import client
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
+

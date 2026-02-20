@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from traceback import format_exc
@@ -8,6 +8,7 @@ from zato.common.json_internal import dumps
 import redis
 import time
 import json
+
 
 def toggle_streaming(req: Any) -> None: ...
 

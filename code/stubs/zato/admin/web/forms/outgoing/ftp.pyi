@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from ftplib import FTP_PORT
 from django import forms
+
 
 class CreateForm(forms.Form):
     name: Any

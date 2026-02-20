@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from traceback import format_exc
@@ -7,6 +7,7 @@ from zato.server.base.worker.common import WorkerImpl
 from bunch import Bunch
 from zato.common.typing_ import any_, dictnone, strnone
 from zato.server.base.worker import WorkerStore
+
 
 class AMQP(WorkerImpl):
     def amqp_connection_create(self: WorkerStore, msg: Bunch) -> None: ...

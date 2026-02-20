@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import traceback
 from logging import getLogger
@@ -6,6 +6,8 @@ import cython as cy
 from zato.common.api import DATA_FORMAT
 from zato.simpleio import CySimpleIO
 from zato.common.py23_.past.builtins import unicode as past_unicode
+
+DATA_FORMAT_DICT: str = DATA_FORMAT.DICT
 
 class SimpleIOPayload:
     sio: Any

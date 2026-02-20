@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from django.http import JsonResponse
@@ -7,6 +7,7 @@ from zato.admin.web.forms.pubsub.client import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.admin.web.util import get_pubsub_security_definitions
 from zato.common.odb.model import PubSubPermission
+
 
 class Index(_Index):
     method_allowed: Any

@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import oracledb as oracledb_impl
+
 
 class OracleParam:
     is_out: Any

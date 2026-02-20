@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from copy import deepcopy
@@ -21,6 +21,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster
 from zato.common.util.api import get_engine, get_session
+
 
 class CryptoMaterialLocation:
     ca_dir: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from time import time
@@ -13,6 +13,10 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 from bunch import Bunch
 from zato.common.typing_ import any_
 from zato.server.service import Service
+
+model = IMAP
+broker_message = EMAIL
+list_func = email_imap_list
 
 def instance_hook(service: Service, input: Bunch, instance: any_, attrs: any_) -> None: ...
 

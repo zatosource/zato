@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import sys
@@ -10,6 +10,7 @@ import platform
 from zato.common.api import CLI_ARG_SEP
 from zato.common.util.open_ import open_r
 from zato.common.typing_ import any_, strdict, textio_
+
 
 def get_executable() -> str: ...
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime
 from logging import getLogger
@@ -6,6 +6,7 @@ from zato.common import CHANNEL
 from zato.common.util import spawn_greenlet
 from zato.server.pattern.model import CacheEntry, InvocationResponse, ParallelCtx, Target
 from zato.server.service import Service
+
 
 class ParallelBase:
     call_channel: Any

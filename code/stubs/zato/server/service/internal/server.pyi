@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from contextlib import closing
@@ -9,6 +9,9 @@ from zato.common.odb.model import Server
 from zato.common.odb.query import server_list
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.meta import GetListMeta
+
+model = Server
+list_func = server_list
 
 def response_hook(self: Any, input: Any, _ignored_instance: Any, attrs: Any, service_type: Any) -> None: ...
 

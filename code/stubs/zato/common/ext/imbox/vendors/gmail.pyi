@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.ext.imbox.messages import Messages
 from zato.common.ext.imbox.vendors.helpers import merge_two_dicts
+
 
 class GmailMessages(Messages):
     authentication_error_message: Any

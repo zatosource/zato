@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 import logging
@@ -6,6 +6,7 @@ from datetime import datetime
 from redis import Redis
 import redis
 from traceback import format_exc
+
 
 class RedisHandler(logging.Handler):
     channel: Any

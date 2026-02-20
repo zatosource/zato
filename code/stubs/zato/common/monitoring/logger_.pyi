@@ -1,23 +1,19 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from logging import Logger
 from zato.common.typing_ import any_, strnone
 from zato.server.base.parallel import ParallelServer
 
+
 class DatadogLogger(Logger):
-    cid: str
-    server: ParallelServer
-    service_name: str
-    process_name: str
-    service: any_
-    warn: Any
     cid: Any
     server: Any
     service_name: Any
     process_name: Any
-    datadog_tracer: Any
     service: Any
+    warn: Any
+    datadog_tracer: Any
     def __init__(self: Any, cid: str, server: ParallelServer, service_name: str, process_name: str, service: any_ = ...) -> None: ...
     def _zato_emit_log(self: Any, level: str, msg: str, event: strnone) -> None: ...
     def debug(self: Any, msg: any_, *args: any_, **kwargs: any_) -> None: ...

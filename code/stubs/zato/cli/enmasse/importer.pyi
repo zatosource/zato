@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -29,6 +29,7 @@ from zato.cli.enmasse.importers.channel_openapi import ChannelOpenAPIImporter
 from zato.common.odb.model import Cluster
 from sqlalchemy.orm.session import Session as SASession
 from zato.common.typing_ import any_, stranydict
+
 
 class EnmasseYAMLImporter:
     cluster_id: Any

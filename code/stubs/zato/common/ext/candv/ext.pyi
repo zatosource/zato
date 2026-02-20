@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import operator
 from core import Constants
 from core import SimpleConstant
 from exceptions import CandvValueNotFoundError
 from _utils import export
+
 
 class VerboseMixin:
     verbose_name: kwargs.pop

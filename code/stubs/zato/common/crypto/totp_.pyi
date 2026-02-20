@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import pyotp
 from pyotp.totp import TOTP
+
 
 class TOTPManager:
     @staticmethod

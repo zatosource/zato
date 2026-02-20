@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from elasticsearch.client import Elasticsearch
 from zato.server.store import BaseAPI, BaseStore
+
 
 class ElasticSearchAPI(BaseAPI):
     ...

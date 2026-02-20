@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import argparse
 import logging
@@ -24,6 +24,9 @@ from zato.common.typing_ import anydictnone, dictnone
 from zato.common.pubsub.server.rest_base import PubSubRESTServer
 from prometheus_client import REGISTRY
 from zato.common.pubsub.cli_enmasse import run_enmasse_command
+
+_default_port_publish = PubSub.REST_Server.Default_Port_Publish
+_default_port_pull = PubSub.REST_Server.Default_Port_Get
 
 class TimingWorker(SyncWorker):
     _socket_times: Any

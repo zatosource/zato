@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.typing_ import anydict, anydictnone
 from zato.server.base.parallel import ParallelServer
+
 
 class SecurityFacade:
     server: Any

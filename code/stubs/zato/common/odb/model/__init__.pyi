@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime, timezone
 from ftplib import FTP_PORT
@@ -10,6 +10,7 @@ from zato.common.odb.model.base import Base, _JSON
 from zato.common.typing_ import any_, boolnone, floatnone, intnone, strnone
 from zato.common.util.search import SearchResults
 from sqlalchemy.orm.query import Query
+
 
 def _to_str(item: Any) -> None: ...
 

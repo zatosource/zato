@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import socket
 import logging
 from re import sub
 from zato.server.ext.zunicorn.glogging import Logger
 from zato.server.ext.zunicorn import six
+
 
 class Statsd(Logger):
     prefix: sub

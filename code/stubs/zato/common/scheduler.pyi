@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dataclasses import dataclass
 from zato.common.typing_ import list_, strdict, strlist
 from zato.common.util.api import get_config_from_string
+
 
 class SchedulerCredentials:
     username: str

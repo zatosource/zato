@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from bunch import bunchify
 from zato.url_dispatcher import Matcher
+
 
 class Response:
     data: Any

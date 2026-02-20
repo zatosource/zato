@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import getLogger
@@ -14,6 +14,9 @@ from zato.common.api import PubSub
 from zato.common.util.api import as_bool, new_cid_pubsub, utcnow
 from zato.common.pubsub.backend.rest_backend import RESTBackend
 from zato.common.typing_ import any_, strdict, strdictnone
+
+_default_priority = PubSub.Message.Priority_Default
+_default_expiration = PubSub.Message.Default_Expiration
 
 class ModuleCtx:
     Exchange_Name: Any

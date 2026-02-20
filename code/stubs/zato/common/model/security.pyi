@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.typing_ import dataclass
 from zato.server.service import Model
 from zato.common.typing_ import datetime, dtnone, intnone, stranydict, timedelta
+
 
 class BearerTokenConfig(Model):
     sec_def_name: str

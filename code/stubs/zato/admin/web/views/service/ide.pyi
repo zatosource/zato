@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from django.template.response import TemplateResponse
 from zato.admin.web.views import BaseCallView, invoke_action_handler, method_allowed
 from django.http import HttpRequest, HttpResponse
 from zato.common.typing_ import any_
+
 
 class IDE(BaseCallView):
     method_allowed: Any

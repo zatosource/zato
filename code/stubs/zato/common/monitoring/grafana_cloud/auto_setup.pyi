@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import argparse
 import base64
@@ -11,6 +11,7 @@ import requests
 from zato.common.typing_ import strdict, strlist, strnone
 from logging import getLogger
 from traceback import format_exc
+
 
 class SetupResult:
     access_policy_id: str

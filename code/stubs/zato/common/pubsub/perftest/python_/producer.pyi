@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from json import dumps
@@ -9,6 +9,7 @@ from zato.common.util.api import utcnow
 from zato.common.pubsub.perftest.python_.client import Client
 from zato.common.typing_ import anydict, intnone
 from zato.common.pubsub.perftest.python_.progress_tracker import ProgressTracker
+
 
 class Producer(Client):
     reqs_per_producer: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import copy
 import inspect
@@ -18,6 +18,8 @@ import argparse
 import pwd
 import grp
 from zato.server.ext.zunicorn import SERVER_SOFTWARE
+
+PLATFORM = sys.platform
 
 def make_settings(ignore: Any = ...) -> None: ...
 

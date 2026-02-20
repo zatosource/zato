@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from threading import Lock
 from colorama import Fore, Style
 from zato.common.util.api import utcnow
 from datetime import timedelta
+
 
 class ProgressTracker:
     total_producers: Any

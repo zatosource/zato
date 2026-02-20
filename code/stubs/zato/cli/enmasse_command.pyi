@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.cli import ZatoCommand
 from zato.common.util.api import asbool
@@ -12,6 +12,7 @@ from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.util import FileWriter
 from zato.common.util.api import get_client_from_server_conf
 from zato.common.ext.configobj_ import ConfigObj
+
 
 class Enmasse(ZatoCommand):
     opts: dictlist

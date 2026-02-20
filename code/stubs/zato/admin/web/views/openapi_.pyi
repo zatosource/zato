@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import subprocess
@@ -14,6 +14,7 @@ from django.http.response import HttpResponseServerError
 from zato.admin.web.views import method_allowed
 from zato.common.json_internal import dumps, loads
 from zato.common.util import openapi_ as openapi_module
+
 
 def json_response(data: Any, success: Any = ...) -> None: ...
 

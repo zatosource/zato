@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from http.client import OK
@@ -12,6 +12,7 @@ from zato.common.test.config import TestConfig
 from requests import Response
 from zato.common.typing_ import any_, anydictnone, anytuple, callable_, optional
 from zato.common.util.cli import get_zato_sh_command
+
 
 class RESTClientTestCase(BaseZatoTestCase):
     needs_bunch: Any

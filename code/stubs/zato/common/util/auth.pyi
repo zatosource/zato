@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import getLogger
@@ -14,6 +14,7 @@ from lxml import etree
 from yaml import dump
 from yaml import CDumper as Dumper
 from yaml import Dumper
+
 
 def parse_basic_auth(auth: Any, prefix: Any = ...) -> None: ...
 

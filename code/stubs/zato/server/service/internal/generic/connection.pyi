@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from copy import deepcopy
@@ -26,6 +26,9 @@ from zato.server.service import Service
 from json import dumps, loads
 from urllib.parse import parse_qs, urlsplit
 from O365 import Account
+
+model = ModelGenericConn
+broker_message = GENERIC
 
 def ensure_ints(data: strdict) -> None: ...
 

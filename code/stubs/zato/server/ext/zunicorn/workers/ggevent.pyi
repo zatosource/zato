@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime
 from functools import partial
@@ -15,6 +15,7 @@ from zato.server.ext.zunicorn.workers.base_async import AsyncWorker
 from zato.server.ext.zunicorn.http.wsgi import sendfile as o_sendfile
 from zato.server.ext.zunicorn.util import is_forking
 from zato.server.ext.zunicorn.http import wsgi
+
 
 def _gevent_sendfile(fdout: Any, fdin: Any, offset: Any, nbytes: Any) -> None: ...
 

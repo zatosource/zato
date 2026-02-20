@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -7,6 +7,11 @@ from bunch import Bunch
 from zato.common.defaults import http_plain_server_port
 from zato.common.ext.imbox import Imbox
 from zato.common.typing_ import any_
+
+Secret_Shadow = SECRET_SHADOW
+Zato_None = ZATO_NONE
+Sec_Def_Type = SEC_DEF_TYPE
+Data_Format = DATA_FORMAT
 
 class OS_Env:
     Zato_Enable_Memory_Profiler: Any
@@ -261,7 +266,6 @@ class HotDeploy:
     Default_Patterns: Any
 
 class SourceCodeInfo:
-    __slots__: Any
     source: Any
     source_html: Any
     len_source: Any
@@ -276,17 +280,6 @@ class IDEDeploy:
     Username: Any
 
 class SMTPMessage:
-    from_: any_
-    to: any_
-    subject: any_
-    body: any_
-    attachments: any_
-    cc: any_
-    bcc: any_
-    is_html: any_
-    headers: any_
-    charset: any_
-    is_rfc2231: any_
     from_: Any
     to: Any
     subject: Any

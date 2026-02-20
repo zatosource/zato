@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from base64 import b64decode
 from zato.common.api import CACHE
@@ -6,6 +6,7 @@ from zato.server.base.worker.common import WorkerImpl
 from zato.common.py23_ import pickle_loads
 from bunch import Bunch
 from zato.server.base.worker import WorkerStore
+
 
 class CacheBuiltin(WorkerImpl):
     def on_broker_msg_CACHE_BUILTIN_CREATE(self: WorkerStore, msg: Any) -> None: ...

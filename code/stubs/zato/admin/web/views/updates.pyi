@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import getLogger
@@ -10,6 +10,7 @@ from zato.admin.web.views.settings.utils import json_response
 from zato.common.util.updates import Updater, UpdaterConfig
 from django.http import FileResponse, HttpResponse
 import redis
+
 
 class UpdatesView(SettingsBaseView):
     schedule_handler: ScheduleHandler

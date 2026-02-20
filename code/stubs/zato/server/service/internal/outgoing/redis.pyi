@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from zato.common.util.config import get_config_object, update_config_file
@@ -7,6 +7,7 @@ from zato.server.service.internal import AdminService, ChangePasswordBase
 from bunch import Bunch
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.typing_ import any_, anylist, strdict
+
 
 class ModuleCtx:
     StaticID: Any

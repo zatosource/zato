@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from zato.common.ext.imbox.query import build_search_query
 from zato.common.ext.imbox.parser import fetch_email_by_uid
+
 
 class Messages:
     IMAP_ATTRIBUTE_LOOKUP: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import errno
 from datetime import datetime, timedelta
@@ -12,8 +12,8 @@ import psutil
 from requests import get as requests_get
 from zato.common.util.api import wait_for_predicate
 
+
 class SocketReaderCtx:
-    __slots__: Any
     conn_id: Any
     socket: Any
     max_wait_time: Any

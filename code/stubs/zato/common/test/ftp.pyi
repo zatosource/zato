@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from tempfile import gettempdir
 from threading import Thread
 from pyftpdlib.authorizers import DummyAuthorizer as _DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler as _FTPHandler
 from pyftpdlib.servers import FTPServer as _ImplFTPServer
+
 
 class config:
     port: Any

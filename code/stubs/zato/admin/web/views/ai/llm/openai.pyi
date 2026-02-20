@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 from logging import getLogger
@@ -7,6 +7,7 @@ from zato.admin.web.views.ai.browser_tools import is_browser_tool
 from zato.admin.web.views.ai.llm.base import BaseLLMClient, Max_Tool_Iterations
 from zato.admin.web.views.ai.llm.execution import ExecutionLog
 from zato.common.typing_ import anylist, generator_
+
 
 class OpenAIClient(BaseLLMClient):
     def stream_chat(self: Any, model: str, messages: list) -> generator_: ...

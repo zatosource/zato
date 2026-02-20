@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from traceback import format_exc
@@ -14,6 +14,7 @@ from zato.server.connection.http_soap import BadRequest
 from zato.server.service import AsIs, Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.common.typing_ import any_, anylist, strdict, strintdict
+
 
 class _HTTPSOAPService:
     def notify_worker_threads(self: Any, params: Any, action: Any) -> None: ...

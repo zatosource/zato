@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import importlib
 import sys
@@ -10,6 +10,7 @@ from pathlib import Path
 from threading import current_thread
 from zato.common.typing_ import cast_, module_
 from zato.common.typing_ import intnone
+
 
 class ModuleInfo:
     name: str

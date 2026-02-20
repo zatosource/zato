@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import errno
 import socket
@@ -9,6 +9,7 @@ import zato.server.ext.zunicorn.http.wsgi as wsgi
 import zato.server.ext.zunicorn.util as util
 import zato.server.ext.zunicorn.workers.base as base
 from zato.server.ext.zunicorn import six
+
 
 class AsyncWorker(base.Worker):
     worker_connections: Any

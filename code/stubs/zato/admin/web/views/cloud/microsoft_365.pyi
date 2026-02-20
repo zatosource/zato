@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.admin.web.forms.cloud.microsoft_365 import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed, ping_connection
 from zato.common.api import GENERIC, generic_attrs
 from zato.common.model.microsoft_365 import Microsoft365ConfigObject
+
 
 class Index(_Index):
     method_allowed: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from http.client import BAD_REQUEST
 from logging import getLogger
@@ -7,6 +7,7 @@ from zato.admin.web.views import method_allowed
 from zato.admin.web.views.ai.common import delete_api_key, get_all_api_key_status, is_valid_provider, set_api_key
 from zato.common.ai.models import get_all_models
 from zato.common.json_internal import dumps, loads
+
 
 def get_keys(req: Any) -> HttpResponse: ...
 

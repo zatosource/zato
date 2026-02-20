@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import requests
@@ -6,6 +6,7 @@ import sys
 from dataclasses import dataclass
 from zato.common.marshal_.api import Model
 from zato.common.typing_ import anydict, list_, optional, strdict
+
 
 class GrafanaGridPos(Model):
     x: int

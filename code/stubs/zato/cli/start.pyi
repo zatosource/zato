@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from shutil import copy as shutil_copy
@@ -16,6 +16,7 @@ import redis
 from zato.common.util.updates import setup_update_file_logger
 from zato.common.json_internal import loads
 from zato.common.util import proc
+
 
 class ModuleCtx:
     Deploy_Dirs: Any

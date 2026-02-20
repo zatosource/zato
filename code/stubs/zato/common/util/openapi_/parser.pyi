@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import argparse
 import json
@@ -7,6 +7,7 @@ import traceback
 from dataclasses import asdict, dataclass
 import requests
 import yaml
+
 
 class OpenAPIPathItem:
     name: str

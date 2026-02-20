@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.typing_ import boolnone, dataclass, intnone, strnone
 from zato.server.base.parallel import ParallelServer
+
 
 class ConnectorConfig:
     id: int

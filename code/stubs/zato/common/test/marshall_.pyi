@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.ext.dataclasses import dataclass, field
 from zato.common.marshal_.api import Model
 from zato.common.typing_ import anynone, anydictnone, anylistnone, dict_field, list_, list_field, optional
+
 
 def get_default_address_details() -> None: ...
 

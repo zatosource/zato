@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dacite.core import from_dict
 from zato.common.typing_ import callnone, dataclass, intnone, stranydict, strnone
 from zato.common.model.connector import ConnectorConfig
+
 
 class AMQPConnectorConfig(ConnectorConfig):
     host: str

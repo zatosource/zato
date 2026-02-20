@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -15,6 +15,7 @@ import sys
 from json import loads
 from zato.common.util.api import parse_cmd_line_options
 from zato.common.util.env import populate_environment_from_file
+
 
 def update_password(base_dir: str) -> None: ...
 

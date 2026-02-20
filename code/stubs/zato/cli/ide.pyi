@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from contextlib import closing
@@ -11,6 +11,7 @@ from zato.common.api import IDEDeploy
 from zato.common.crypto.api import CryptoManager, ServerCryptoManager
 from zato.common.odb.model import HTTPBasicAuth
 from zato.common.util.cli import CommandLineServiceInvoker
+
 
 class SetIDEPassword(ManageCommand):
     opts: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import ast
 import os
@@ -13,6 +13,7 @@ from pathlib import Path
 from zato.common.typing_ import any_, strdict
 import json
 import sys
+
 
 def parse_file(path: str | Path, container_name: str) -> strdict: ...
 

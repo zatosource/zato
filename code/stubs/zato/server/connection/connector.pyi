@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from copy import deepcopy
 from datetime import datetime
@@ -9,6 +9,7 @@ from bunch import Bunch
 from zato.common.typing_ import any_, dict_, dictnone, callable_, callnone, type_
 from zato.common.model.connector import ConnectorConfig
 from zato.server.base.parallel import ParallelServer
+
 
 class Connector_Type:
     ...

@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import sys
 import numbers
+
 
 def with_metaclass(meta: Any, *bases: Any) -> None: ...
 

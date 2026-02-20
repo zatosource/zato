@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from bunch import Bunch
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.worker import WorkerStore
 from zato.server.connection.http_soap.url_data import URLData
+
 
 class WorkerImpl:
     server: ParallelServer

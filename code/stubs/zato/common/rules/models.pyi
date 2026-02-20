@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from copy import deepcopy
 from dataclasses import dataclass
@@ -7,13 +7,13 @@ from rule_engine import Rule as RuleImpl
 from zato.common.marshal_.api import Model
 from zato.common.typing_ import any_, anydict, dict_, strdict
 
+
 def resolve_then_values(then_dict: Any, data: Any) -> None: ...
 
 class MatchResult(Model):
-    _has_matched: bool
+    _has_matched: Any
     then: any_
     full_name: str
-    _has_matched: Any
     def __init__(self: Any, has_matched: bool) -> None: ...
     def __bool__(self: Any) -> bool: ...
 
@@ -31,8 +31,6 @@ class Rule(Model):
     def match(self: Any, data: anydict) -> MatchResult: ...
 
 class Container(Model):
-    name: str
-    _rules: dict_[str, Rule]
     name: Any
     _rules: Any
     def __init__(self: Any, name: str) -> None: ...

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from traceback import format_exc
@@ -11,6 +11,7 @@ from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, 
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 from sqlalchemy.orm import Session as SASession
 from zato.common.typing_ import any_
+
 
 class GetList(AdminService):
     _filter_by: Any

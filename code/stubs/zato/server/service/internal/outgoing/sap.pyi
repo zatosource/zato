@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from contextlib import closing
@@ -11,6 +11,10 @@ from zato.common.odb.query import out_sap_list
 from zato.common.util.api import ping_sap
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+model = OutgoingSAP
+broker_message = OUTGOING
+list_func = out_sap_list
 
 def instance_hook(service: Any, input: Any, instance: Any, attrs: Any) -> None: ...
 

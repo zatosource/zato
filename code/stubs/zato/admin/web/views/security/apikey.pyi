@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.apikey import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import APIKeySecurity
+
 
 class Index(_Index):
     method_allowed: Any

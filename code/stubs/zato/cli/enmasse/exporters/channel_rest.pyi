@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from contextlib import closing
@@ -10,6 +10,7 @@ from zato.common.util.sql import elems_with_opaque
 from sqlalchemy.orm.session import Session as SASession
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.common.typing_ import anydict, list_
+
 
 class ChannelExporter:
     exporter: Any

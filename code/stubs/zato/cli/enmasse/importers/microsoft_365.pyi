@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from zato.common.api import GENERIC
 from zato.cli.enmasse.importers.generic import GenericConnectionImporter
+
 
 class Microsoft365Importer(GenericConnectionImporter):
     connection_type: Any

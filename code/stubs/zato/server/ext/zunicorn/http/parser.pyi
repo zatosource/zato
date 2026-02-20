@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.server.ext.zunicorn.http.message import Request
 from zato.server.ext.zunicorn.http.unreader import SocketUnreader, IterUnreader
+
 
 class Parser:
     mesg_class: Any

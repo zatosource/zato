@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 import uuid
@@ -6,6 +6,7 @@ from logging import getLogger
 from zato.admin.web.views.ai.common import get_redis_client
 from zato.admin.web.views.ai.mcp.base import MCPClient
 from zato.common.typing_ import anydict, anylist
+
 
 class MCPRegistry:
     @classmethod

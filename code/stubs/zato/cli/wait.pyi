@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.cli import ZatoCommand
 from argparse import Namespace
@@ -7,6 +7,7 @@ from os import environ
 import sys
 from zato.common.util.api import get_client_from_server_conf
 from zato.common.util.tcp import wait_for_zato
+
 
 class Wait(ZatoCommand):
     opts: Any

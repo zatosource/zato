@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import requests
 from zato.common.typing_ import anydict, intnone
 from zato.common.pubsub.perftest.python_.progress_tracker import ProgressTracker
+
 
 class Client:
     client_id: Any

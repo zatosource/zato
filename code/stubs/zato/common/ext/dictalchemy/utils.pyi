@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division
 import copy
@@ -8,6 +8,7 @@ from sqlalchemy.orm.dynamic import AppenderMixin
 from sqlalchemy.orm.query import Query
 from zato.common.ext.dictalchemy import constants
 from zato.common.ext.dictalchemy import errors
+
 
 def arg_to_dict(arg: Any) -> None: ...
 

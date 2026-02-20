@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import argparse
 import copy
@@ -6,6 +6,7 @@ import logging
 import os
 import yaml
 from zato.common.typing_ import strdict
+
 
 class EnmasseGenerator:
     current_dir: os.path.dirname

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from base64 import b64encode
@@ -18,6 +18,9 @@ from django.urls import reverse as django_url_reverse
 from django.utils.text import slugify
 from zato.client import ServiceInvokeResponse
 from zato.common.typing_ import any_, anylist
+
+django_url_reverse = django_url_reverse
+slugify = slugify
 
 def parse_response_data(response: Any) -> None: ...
 

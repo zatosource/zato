@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import copy
@@ -10,6 +10,7 @@ from traceback import format_exc
 from sqlalchemy.sql import text
 import pymysql
 import pg8000
+
 
 def ping_database(params: Any, ping_query: Any) -> None: ...
 

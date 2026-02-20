@@ -1,9 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from numbers import Integral
 from zato.common.py23_.past.utils import PY2, with_metaclass
 from collections import Iterable
 from collections.abc import Iterable
+
+_builtin_bytes = bytes
 
 class BaseOldStr(type):
     def __instancecheck__(cls: Any, instance: Any) -> None: ...

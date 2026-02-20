@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime
 import os
@@ -19,6 +19,7 @@ from zato.server.ext.zunicorn.http.errors import InvalidSchemeHeaders
 from zato.server.ext.zunicorn.http.wsgi import default_environ, Response
 from zato.server.ext.zunicorn.six import MAXSIZE
 from traceback import format_exc
+
 
 class Worker:
     PIPE: Any

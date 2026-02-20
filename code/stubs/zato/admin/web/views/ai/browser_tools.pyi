@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from uuid import uuid4
 from zato.admin.web.views.ai.common import get_redis_client
 from zato.common.json_internal import dumps, loads
 from zato.common.typing_ import any_, anydict
+
 
 class BrowserToolExecutor:
     yield_event: Any

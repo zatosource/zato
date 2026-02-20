@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dataclasses import dataclass, field
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, NOT_IMPLEMENTED, OK, UNAUTHORIZED
@@ -7,6 +7,8 @@ from zato.common.api import PubSub
 from zato.common.typing_ import union_
 from datetime import datetime
 from zato.common.typing_ import any_, dataclass, field, list_
+
+_base_response = union_[APIResponse, ErrorResponse, UnauthorizedResponse, BadRequestResponse, MethodNotAllowedResponse, NotImplementedResponse, HealthCheckResponse, StatusResponse, MessagesResponse, PubResponse]
 
 class PubMessage(TypedDict):
     data: any_

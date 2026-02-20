@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.cli import common_odb_opts, ZatoCommand
 from zato.common.odb.model import Base
+
 
 class Create(ZatoCommand):
     opts: Any

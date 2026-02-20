@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import base64
 import binascii
@@ -13,6 +13,7 @@ import traceback
 from zato.server.ext.zunicorn import util
 from zato.server.ext.zunicorn.six import PY3, string_types
 from logging.config import dictConfig
+
 
 def loggers() -> None: ...
 

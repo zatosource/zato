@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from json import dumps
 from operator import itemgetter
@@ -7,6 +7,8 @@ from zato.common.broker_message import Groups as Broker_Message_Groups
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.server.service import AsIs, Service
 from zato.common.typing_ import any_, strlist
+
+ModelGenericObjectTable: any_ = ModelGenericObject.__table__
 
 class GetList(Service):
     input: any_

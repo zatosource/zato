@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import annotations
 import logging
@@ -33,7 +33,6 @@ from zato.server.connection.search import SearchAPI
 from zato.server.pattern.api import FanOut
 from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
 from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.cy.reqresp.response import Response
 from zato.common.ext.dataclasses import dataclass
@@ -57,6 +56,39 @@ from zato.server.base.parallel import ParallelServer
 from zato.server.config import ConfigDict, ConfigStore
 from zato.simpleio import CySimpleIO
 
+if TYPE_CHECKING:
+    from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
+
+AsIs = AsIs
+CSV = CSV
+Bool = Bool
+dataclass = dataclass
+Date = Date
+DateTime = DateTime
+Decimal = Decimal
+DataverseClient = DataverseClient
+Dict = Dict
+DictList = DictList
+Float = Float
+Int = Int
+List = List
+Model = Model
+ModelCtx = ModelCtx
+Opaque = Opaque
+Text = Text
+UTC = UTC
+UUID = UUID
+_get_logger = logging.getLogger
+Boolean = Bool
+Integer = Int
+ForceType = SIOElem
+ListOfDicts = DictList
+Nested = Opaque
+Unicode = Text
+_async_callback = CHANNEL.INVOKE_ASYNC_CALLBACK
+_utcnow = utcnow
+SOAPAdapter = RESTAdapter
+
 def call_hook_no_service(hook: callable_) -> None: ...
 
 def call_hook_with_service(hook: callable_, service: Service) -> None: ...
@@ -78,7 +110,6 @@ class AsyncCtx:
     callback: listnone
 
 class ChannelInfo:
-    __slots__: Any
     id: Any
     name: Any
     type: Any
@@ -94,7 +125,6 @@ class ChannelInfo:
     def to_dict(self: Any, needs_impl: bool = ...) -> strdict: ...
 
 class ChannelSecurityInfo:
-    __slots__: Any
     id: Any
     name: Any
     type: Any
@@ -104,10 +134,9 @@ class ChannelSecurityInfo:
     def to_dict(self: Any, needs_impl: bool = ...) -> strdict: ...
 
 class AMQPFacade:
-    __slots__: Any
+    publish: Any
 
 class PatternsFacade:
-    __slots__: Any
     invoke_retry: InvokeRetry
     fanout: FanOut
     parallel: ParallelExec
@@ -177,7 +206,6 @@ class Service:
     slow_threshold: Any
     out: Outgoing
     outgoing: Outgoing
-    rest: RESTFacade
     def __init__(self: Any, *ignored_args: any_, **ignored_kwargs: any_) -> None: ...
     @staticmethod
     def get_name_static(class_: type[Service]) -> str: ...

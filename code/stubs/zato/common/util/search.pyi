@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from typing import Callable
 from zato.common.util.api import make_repr
+
 
 class SearchResults:
     q: Any

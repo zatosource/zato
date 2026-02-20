@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from datetime import timedelta
@@ -14,15 +14,15 @@ from kombu.transport.pyamqp import Message as KombuMessage
 from zato.broker.client import BrokerClient
 from zato.common.typing_ import any_, anydictnone, dict_, strdict, strlist, strnone
 
+_prefix = PubSub.Prefix
+
 class ModuleCtx:
     Exchange_Name: Any
 
 class Backend:
-    topics: dict_[str, Topic]
-    subs_by_topic: topic_subs
-    broker_client: Any
     topics: Any
     subs_by_topic: Any
+    broker_client: Any
     _main_lock: RLock
     _invoke_lock: RLock
     _publish_counter_lock: RLock

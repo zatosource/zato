@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -9,6 +9,7 @@ from zato.admin.web.forms.channel.openapi import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.api import CONNECTION, GENERIC, generic_attrs, URL_TYPE
 from zato.common.util.openapi_.exporter import build_openapi_spec as _build_openapi_spec
+
 
 def get_openapi_path_prefix() -> None: ...
 

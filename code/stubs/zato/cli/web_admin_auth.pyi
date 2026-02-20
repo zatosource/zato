@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from zato.cli import common_totp_opts, ManageCommand
@@ -22,6 +22,7 @@ from zato.common.crypto.api import WebAdminCryptoManager
 from zato.common.py23_.past.builtins import unicode
 from django.core.validators import EmailValidator
 from django.core import exceptions
+
 
 class _WebAdminAuthCommand(ManageCommand):
     def _prepare(self: Any, args: Any) -> None: ...

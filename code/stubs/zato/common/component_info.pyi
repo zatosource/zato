@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from datetime import datetime
@@ -15,6 +15,7 @@ from zato.common.json_internal import dumps as json_dumps, loads as json_loads
 from zato.common.util.api import current_host
 from zato.common.util.open_ import open_r
 from zato.common.typing_ import stranydict
+
 
 def format_connections(conns: Any, format: Any) -> None: ...
 

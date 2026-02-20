@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from traceback import format_exc
@@ -7,6 +7,7 @@ from sqlalchemy.pool.dbapi_proxy import _DBProxy
 from zato.common.api import MS_SQL
 from zato.common.typing_ import stranydict
 import pytds
+
 
 def get_queue_pool(pool_kwargs: Any) -> None: ...
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -13,6 +13,7 @@ from zato.common.odb.query import service_list
 from zato.common.util.api import get_config, get_odb_session_from_server_config, get_repo_dir_from_component_dir, utcnow
 from zato.common.util.cli import read_stdin_data
 from zato.common.typing_ import any_, anydict, bool_, strnone
+
 
 def get_session_from_server_dir(server_dir: str, stdin_data: strnone = ...) -> any_: ...
 

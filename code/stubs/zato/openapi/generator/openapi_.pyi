@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import yaml
+
 
 class TypeConversionError(Exception):
     ...

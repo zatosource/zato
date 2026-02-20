@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from json import dumps
 from zato.common.api import GENERIC, WEB_SOCKET
@@ -9,6 +9,8 @@ from zato.server.connection.pool_wrapper import ConnectionPoolWrapper
 from zato.common.typing_ import any_, anydict, stranydict, strintdict, strlist, strlistnone
 from zato.server.generic.api.outconn.wsx.base import OutconnWSXWrapper
 from zato.server.generic.api.outconn.wsx.client_zato import _ZatoWSXClientImpl
+
+ExtraProperties = WEB_SOCKET.ExtraProperties
 
 class _ParallelServer:
     zato_lock_manager: LockManager
@@ -24,29 +26,19 @@ class WSXOutconnBaseCase(CommandLineTestCase):
     def _check_connection_result(self: Any, wrapper: OutconnWSXWrapper, wsx_channel_address: str) -> None: ...
 
 class WSXChannelManager:
-    test_case: CommandLineTestCase
-    username: str
-    password: str
-    channel_id: str
-    security_id: str
-    security_name: str
-    pubsub_endpoint_id: int
-    needs_credentials: bool
-    wsx_channel_address: str
-    run_cli: bool
-    topics: strlistnone
     test_case: Any
     username: Any
     password: Any
-    needs_pubsub: Any
-    needs_credentials: Any
-    run_cli: Any
-    topics: Any
-    topic_name_to_id: Any
     channel_id: Any
     security_id: Any
     security_name: Any
+    pubsub_endpoint_id: int
+    needs_credentials: Any
     wsx_channel_address: Any
+    run_cli: Any
+    topics: Any
+    needs_pubsub: Any
+    topic_name_to_id: Any
     def __init__(self: Any, test_case: CommandLineTestCase, username: str = ..., password: str = ..., needs_credentials: bool = ..., needs_pubsub: bool = ..., run_cli: bool = ..., topics: strlistnone = ...) -> None: ...
     def create_basic_auth(self: Any) -> None: ...
     def create_topics(self: Any, topics: strlist) -> None: ...

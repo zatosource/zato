@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime, timedelta, timezone
 from time import time, time_ns
@@ -7,6 +7,8 @@ import arrow
 from tzlocal import get_localzone
 from zato.common.py23_.past.builtins import unicode
 from zato.common.typing_ import any_
+
+utcnow = utc_now
 
 class ModuleCtx:
     Date_Format: Any

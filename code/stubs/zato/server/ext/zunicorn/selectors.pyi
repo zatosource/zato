@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple, Mapping
@@ -7,6 +7,7 @@ import select
 import sys
 from zato.server.ext.zunicorn._compat import wrap_error, InterruptedError
 from zato.server.ext.zunicorn import six
+
 
 def _fileobj_to_fd(fileobj: Any) -> None: ...
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from copy import deepcopy
@@ -21,11 +21,13 @@ from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.search import SearchAPI
-from zato.server.service import AMQPFacade, Service
 from zato.simpleio import CySimpleIO
 
+if TYPE_CHECKING:
+    from zato.server.service import AMQPFacade, Service
+
+
 class HTTPRequestData:
-    __slots__: Any
     method: Any
     GET: _Bunch
     POST: _Bunch
@@ -42,32 +44,31 @@ class HTTPRequestData:
     def to_dict(self: Any) -> stranydict: ...
 
 class AMQPRequestData:
-    __slots__: Any
     msg: Any
     ack: Any
     reject: Any
     def __init__(self: Any, msg: Any) -> None: ...
 
 class Request:
-    text: any_
-    __slots__: Any
-    bunchified: Any
+    text: Any
     service: Any
-    logger: cast_
+    logger: Logger
     payload: Any
     text: Any
     input: Any
-    cid: cast_
-    data_format: cast_
-    transport: cast_
-    http: HTTPRequestData
-    _wsgi_environ: cast_
-    channel_params: cast_
-    merge_channel_params: Any
-    amqp: cast_
+    cid: str
+    data_format: str
+    transport: str
     encrypt_func: Any
     encrypt_secrets: Any
-    bytes_to_str_encoding: cast_
+    bytes_to_str_encoding: str
+    _wsgi_environ: stranydict
+    channel_params: stranydict
+    merge_channel_params: Any
+    http: HTTPRequestData
+    amqp: AMQPRequestData
+    enforce_string_encoding: Any
+    bunchified: Any
     def __init__(self: Any, service: Any, simple_io_config: Any = ..., data_format: Any = ..., transport: Any = ...) -> None: ...
     def init(self: Any, is_sio: Any, cid: Any, sio: Any, data_format: Any, transport: Any, wsgi_environ: Any, encrypt_func: Any) -> None: ...
     @property
@@ -76,21 +77,24 @@ class Request:
     def to_bunch(self: Any) -> None: ...
 
 class Outgoing:
-    __slots__: Any
-    amqp: cast_
-    odoo: cast_
-    rest: cast_
+    amqp: AMQPFacade
+    ftp: Any
+    odoo: ConfigDict
     plain_http: Any
-    soap: cast_
-    sql: cast_
-    sap: cast_
-    ldap: cast_
-    mongodb: cast_
-    redis: cast_
+    rest: ConfigDict
+    soap: ConfigDict
+    sql: PoolStore
+    sap: ConfigDict
+    ldap: stranydict
+    mongodb: stranydict
+    redis: Any
     def __init__(self: Any, amqp: Any = ..., odoo: Any = ..., plain_http: Any = ..., soap: Any = ..., sql: Any = ..., sap: Any = ..., ldap: Any = ..., mongodb: Any = ..., redis: Any = ...) -> None: ...
 
 class Cloud:
-    __slots__: Any
+    confluence: Any
+    jira: Any
+    salesforce: Any
+    ms365: Any
     confluence: stranydict
     jira: stranydict
     salesforce: stranydict

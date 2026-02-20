@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import re
@@ -13,6 +13,7 @@ import compiler
 from zato.common.util.config import get_env_config_ctx, get_env_config_value
 import warnings
 from zato.common.ext.validate_ import VdtTypeError
+
 
 def match_utf8(encoding: Any) -> None: ...
 

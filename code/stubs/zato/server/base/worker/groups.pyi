@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.api import Groups
 from zato.server.base.worker.common import WorkerImpl
 from bunch import Bunch
 from zato.common.typing_ import any_
 from zato.server.base.worker import WorkerStore
+
 
 class SecurityGroups(WorkerImpl):
     def _yield_security_groups_ctx_items(self: WorkerStore) -> any_: ...

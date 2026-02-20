@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import
 import functools
@@ -8,6 +8,10 @@ import types
 from zato.common.py23_.past.builtins import basestring, execfile, long, unicode
 import io
 import StringIO
+
+execfile = execfile
+next = advance_iterator
+__package__ = __name__
 
 def _add_doc(func: Any, doc: Any) -> None: ...
 

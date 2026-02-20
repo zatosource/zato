@@ -1,10 +1,12 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dataclasses import dataclass
 from logging import getLogger
 from yaml import safe_load as yaml_load
 from zato.common.api import PubSub
 from zato.common.pubsub.test.users_yaml import calculate_expected_messages
+
+_default_port_publish = PubSub.REST_Server.Default_Port_Publish
 
 class ServerConfig:
     host: str

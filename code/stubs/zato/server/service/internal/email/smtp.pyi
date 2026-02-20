@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from contextlib import closing
@@ -11,6 +11,10 @@ from zato.common.version import get_version
 from zato.common.odb.query import email_smtp_list
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+model = SMTP
+broker_message = EMAIL
+list_func = email_smtp_list
 
 def instance_hook(service: Any, input: Any, instance: Any, attrs: Any) -> None: ...
 

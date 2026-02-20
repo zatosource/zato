@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import time
@@ -10,6 +10,7 @@ from statistics import mean, median, stdev
 from zato.common.rules.api import RulesManager
 from colorama import Fore, Style, init
 import tempfile
+
 
 class ASCIITable:
     @staticmethod

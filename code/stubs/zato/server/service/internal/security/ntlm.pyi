@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from traceback import format_exc
@@ -9,6 +9,7 @@ from zato.common.odb.model import Cluster, NTLM
 from zato.common.odb.query import ntlm_list
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 from zato.common.typing_ import any_
+
 
 class GetList(AdminService):
     _filter_by: Any

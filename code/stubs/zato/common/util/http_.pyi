@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import copy
 from collections.abc import Mapping
@@ -6,6 +6,7 @@ from io import BytesIO
 from urllib.parse import parse_qsl, quote, urlencode
 from multipart import parse_form_data
 from zato.common.typing_ import any_, stranydict
+
 
 def get_proxy_config(config: Any) -> None: ...
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from copy import deepcopy
@@ -6,6 +6,7 @@ from uuid import uuid4
 from zato.common.api import ADAPTER_PARAMS, HTTPException
 from zato.common.json_internal import dumps, loads
 from zato.server.service import Service
+
 
 class JSONAdapter(Service):
     outconn: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 import subprocess
@@ -9,5 +9,6 @@ from zato.admin.web.views import method_allowed
 from zato.common.json_internal import loads
 from django.http import HttpRequest
 import os
+
 
 def lint_python(req: HttpRequest) -> JsonResponse: ...

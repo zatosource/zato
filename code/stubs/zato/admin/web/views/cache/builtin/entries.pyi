@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from base64 import b64decode, b64encode
@@ -6,6 +6,7 @@ from bunch import Bunch
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import Delete as _Delete, Index as _Index
 from zato.common.typing_ import any_, strdict
+
 
 class CacheEntry:
     id: Any

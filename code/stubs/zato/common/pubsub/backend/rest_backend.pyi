@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from zato.common.pubsub.backend.common import Backend
@@ -7,6 +7,7 @@ from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.util.api import replace_secrets, spawn_greenlet
 from zato.broker.client import BrokerClient
 from zato.common.typing_ import strdict
+
 
 class RESTBackend(Backend):
     rest_server: Any

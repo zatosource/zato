@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -7,6 +7,7 @@ from zato.common.api import PubSub
 from zato.common.pubsub.util import validate_pattern, validate_topic_name
 from typing import Pattern
 from zato.common.typing_ import anydict, strlist
+
 
 class ModuleCtx:
     Max_Length: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from http.client import OK
 from logging import getLogger
@@ -12,6 +12,7 @@ from zato.common.pubsub.util import get_broker_config
 from zato.common.util.api import new_cid_broker_client, wait_for_predicate
 from zato.common.pubsub.common import BrokerConfig
 from zato.common.typing_ import any_, dictlist, strdictnone, strlist, callable_
+
 
 class BrokerConnection(KombuConnection):
     def ensure_connection(self: Any, *args: Any, **kwargs: Any) -> None: ...

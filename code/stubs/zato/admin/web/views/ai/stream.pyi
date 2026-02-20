@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from traceback import format_exc
@@ -14,6 +14,7 @@ from zato.admin.web.views.ai.browser_tools import submit_browser_tool_result
 from curl_cffi import requests as curl_requests
 from html.parser import HTMLParser
 from zato.admin.web.views.ai.llm.execution import clear_session_state
+
 
 def _get_provider_for_model(model_id: str) -> str | None: ...
 

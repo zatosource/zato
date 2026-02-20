@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 import logging
@@ -8,6 +8,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from logging import getLogger
 from zato.common.util.api import as_bool
+
 
 def setup_logging() -> None: ...
 

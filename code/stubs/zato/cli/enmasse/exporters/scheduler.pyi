@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from zato.common.odb.model import to_json
@@ -7,6 +7,7 @@ from sqlalchemy.orm.session import Session as SASession
 from zato.cli.enmasse.exporter import EnmasseYAMLExporter
 from zato.common.odb.model import Job
 from zato.common.typing_ import anydict, list_
+
 
 class SchedulerExporter:
     exporter: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from zato.common.ext.dataclasses import dataclass
@@ -8,6 +8,7 @@ from zato.common.typing_ import any_, anylist, generator_, stranydict
 from zato.server.base.parallel import ParallelServer
 from zato.server.connection.server.rpc.config import ConfigSource, RPCServerInvocationCtx
 from zato.server.connection.server.rpc.invoker import PerPIDResponse, ServerInvoker
+
 
 class InvokeAllResult:
     is_ok: bool

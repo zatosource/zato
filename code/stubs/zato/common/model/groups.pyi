@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.typing_ import strlist
+
 
 class GroupObject:
     _config_attrs: Any

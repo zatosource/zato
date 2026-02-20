@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from uuid import uuid4
@@ -10,6 +10,7 @@ from sqlalchemy.orm.session import Session as SASession
 from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.common.typing_ import any_, anydict, anylist, listtuple
 from zato.common.json_internal import loads
+
 
 class SecurityImporter:
     importer: Any

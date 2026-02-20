@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import json
 import uuid
@@ -7,6 +7,7 @@ from logging import getLogger
 from traceback import format_exc
 from urllib.parse import urlparse
 from zato.common.typing_ import any_, anydict, anylist
+
 
 class AuthType:
     NoAuth: Any

@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import hashlib
 from json import dumps
 from time import time
 from zato.common.typing_ import any_, callable_, float_, int_, strdict
+
 
 class CacheStats:
     hits: Any

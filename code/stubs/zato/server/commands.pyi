@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import warnings
 from dataclasses import dataclass
@@ -16,6 +16,7 @@ from pathlib import Path
 from zato.common.typing_ import any_
 from zato.server.base.parallel import ParallelServer
 from zato.server.service import Service
+
 
 class Config:
     UsePubSub: Any

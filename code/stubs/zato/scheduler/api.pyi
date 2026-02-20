@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from traceback import format_exc
@@ -11,6 +11,7 @@ from zato.broker.client import BrokerClient
 from zato.common.typing_ import strdict, strdictnone
 from zato.scheduler.server import SchedulerServerConfig
 from dateutil.parser import parse as parse_datetime
+
 
 def _start_date(job_data: Any) -> None: ...
 

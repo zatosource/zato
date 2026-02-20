@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.cli import ManageCommand, ZatoCommand
 from zato.common.crypto.api import CryptoManager
@@ -7,6 +7,7 @@ from zato.common.crypto.api import ServerCryptoManager
 from zato.common.crypto.api import SchedulerCryptoManager
 import os
 from zato.common.json_internal import dumps
+
 
 class CreateSecretKey(ZatoCommand):
     def execute(self: Any, args: Any) -> None: ...

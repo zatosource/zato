@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import redis
+
 
 def get_redis_client() -> redis.Redis: ...
 

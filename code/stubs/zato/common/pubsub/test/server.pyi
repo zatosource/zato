@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from datetime import datetime
 from json import dumps, loads
@@ -10,6 +10,7 @@ from werkzeug.wrappers import Request, Response
 from zato.common.pubsub.test.models import Message, TestCollector, QueueStats
 from zato.common.pubsub.test.config import AppConfig
 from zato.common.pubsub.test.report import generate_html_report
+
 
 class PubSubTestServer:
     config: Any

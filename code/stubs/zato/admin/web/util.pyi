@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import mimetypes
 import posixpath
@@ -12,6 +12,7 @@ from zato.common.crypto.api import CryptoManager
 from zato.common.json_internal import loads
 from zato.common.util.platform_ import is_windows
 from zato.admin.web.models import UserProfile
+
 
 def get_template_response(req: Any, template_name: Any, return_data: Any) -> None: ...
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from logging import getLogger
@@ -6,6 +6,7 @@ from uuid import uuid4
 from bunch import bunchify
 from pymongo import MongoClient
 from zato.server.connection.wrapper import Wrapper
+
 
 class OutconnMongoDBWrapper(Wrapper):
     wrapper_type: Any

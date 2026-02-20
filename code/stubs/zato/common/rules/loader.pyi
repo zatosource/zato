@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from pathlib import Path
@@ -8,6 +8,7 @@ from zato.common.rules.parser import parse_file
 from zato.common.typing_ import any_, dict_, str, strdict, strlist
 from zato.common.rules.cache import CachedRule
 from rule_engine import Rule as RuleImpl
+
 
 class RuleLoader:
     _lock: RLock

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from json import dumps
@@ -8,6 +8,7 @@ from zato.common.odb.model import HTTPSOAP
 from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Service
 from zato.common.typing_ import stranydict
+
 
 def _replace_suffix_from_dict_name(data: stranydict, wrapper_type: str) -> str: ...
 

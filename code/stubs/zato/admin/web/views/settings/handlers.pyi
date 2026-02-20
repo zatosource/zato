@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from zato.admin.web.views.settings.utils import json_response, restart_component
@@ -9,6 +9,7 @@ from zato.common.json_internal import loads
 import time
 import redis
 import requests
+
 
 class RestartHandler:
     updater: Any

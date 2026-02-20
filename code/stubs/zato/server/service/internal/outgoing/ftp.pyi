@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from contextlib import closing
@@ -9,6 +9,7 @@ from zato.common.odb.query import out_ftp, out_ftp_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+
 
 class _FTPService(AdminService):
     def notify_worker_threads(self: Any, params: Any, action: Any = ...) -> None: ...

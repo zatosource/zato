@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from operator import itemgetter
@@ -13,6 +13,7 @@ from zato.common.odb.query import out_sql_list
 from zato.common.util.api import get_sql_engine_display_name
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+
 
 class _SQLService:
     def notify_worker_threads(self: Any, params: Any, action: Any = ...) -> None: ...

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import inspect
@@ -52,6 +52,8 @@ from zato.server.config import ConfigStore
 from zato.server.connection.http_soap.outgoing import BaseHTTPSOAPWrapper
 from zato.server.service import Service
 from zato.server.store import BaseAPI
+
+_data_format_dict = DATA_FORMAT.DICT
 
 class _generic_msg:
     create: Any

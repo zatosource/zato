@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from copy import deepcopy
 from logging import getLogger
 from rule_engine.ast import ExpressionBase, LogicExpression
 from zato.common.rules.api import MatchResult, Rule
 from zato.common.typing_ import any_, anydict, bool_, dict_
+
 
 class CachedRule:
     rule: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
@@ -82,6 +82,8 @@ from zato.common.util.api import find_internal_modules
 from zato.server.service import internal
 import sys
 
+servernone = optional[ParallelServer]
+
 class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     odb: ODBManager
     config: ConfigStore
@@ -130,7 +132,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     pickup_config: Bunch
     logging_config: Bunch
     logging_conf_path: Any
-    sio_config: cast_
+    sio_config: SIOServerConfig
     connector_server_grace_time: Any
     id: Any
     name: Any
@@ -192,7 +194,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     is_enabled_for_warn: logging.getLogger.isEnabledFor
     is_admin_enabled_for_info: logging.getLogger.isEnabledFor
     rules: RulesManager
-    config: ConfigStore
     log_streaming_manager: LogStreamingManager
     def __init__(self: Any) -> None: ...
     def maybe_on_first_worker(self: Any, server: ParallelServer) -> anyset: ...

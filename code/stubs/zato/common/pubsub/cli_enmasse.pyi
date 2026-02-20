@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import argparse
 import logging
@@ -8,6 +8,7 @@ import tempfile
 from logging import basicConfig, getLogger, INFO
 from traceback import format_exc
 from zato.common.test.enmasse_.base import BaseEnmasseTestCase
+
 
 class EnmasseCLI(BaseEnmasseTestCase):
     def run_enmasse_import(self: Any, yaml_content: str) -> bool: ...

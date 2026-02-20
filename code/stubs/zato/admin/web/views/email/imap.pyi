@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 from django.http import HttpResponse, HttpResponseServerError
@@ -7,6 +7,7 @@ from zato.admin.web.forms.email.imap import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
 from zato.common.api import EMAIL
 from zato.common.odb.model import IMAP
+
 
 class Index(_Index):
     method_allowed: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import division, absolute_import, print_function
 from itertools import chain, starmap
@@ -8,5 +8,6 @@ from zato.common.py23_.past.utils import PY3
 import builtins
 from functools import reduce
 import __builtin__
+
 
 def flatmap(f: Any, items: Any) -> None: ...

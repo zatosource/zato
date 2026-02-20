@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import logging
 import os
 import socket
 from ddtrace import patch
 from ddtrace.trace import tracer
+
 
 class DatadogDemo:
     host_name: socket.gethostname

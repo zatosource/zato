@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from zato.common.api import PubSub
@@ -10,11 +10,11 @@ from zato.common.typing_ import callable_, dict_, strdict, strlist
 from zato.server.connection.amqp_ import Consumer
 from zato.server.base.worker import WorkerStore
 
+
 class ConsumerBackend(Backend):
-    consumers: dict_[str, Consumer]
+    consumers: Any
     worker_store: Any
     broker_client: Any
-    consumers: Any
     def __init__(self: Any, worker_store: WorkerStore, broker_client: BrokerClient) -> None: ...
     def _add_consumer(self: Any, sub_key: str, consumer: Consumer) -> None: ...
     def _remove_consumer(self: Any, sub_key: str) -> None: ...

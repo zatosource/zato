@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from zato.distlock import PassThrough as PassThroughLock
@@ -6,13 +6,11 @@ from zato.common.typing_ import any_, anylist, callable_
 from zato.distlock import Lock
 from zato.server.base.parallel import ParallelServer
 
+
 class ConnectionPoolWrapper:
-    type_: str
-    items: anylist
-    server: ParallelServer
-    server: Any
     type_: Any
     items: Any
+    server: Any
     def __init__(self: Any, server: ParallelServer, type_: str) -> None: ...
     def _lock(self: Any, config_id: any_) -> Lock: ...
     def get_update_lock(self: Any) -> callable_: ...

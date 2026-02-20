@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from zato.server.ext.zunicorn import six
+
 
 class Unreader:
     buf: six.BytesIO

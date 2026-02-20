@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from builtins import bool as stdlib_bool
@@ -23,6 +23,21 @@ from zato.util_convert import to_bool
 from zato.bunch import Bunch, bunchify
 from zato.common.py23_.past.builtins import basestring, str as past_str
 from zato.server.base.parallel import ParallelServer
+
+_zato_none: str = ZATO_NONE
+_builtin_float = float
+_builtin_int = int
+DATA_FORMAT_CSV: object = DATA_FORMAT.CSV
+DATA_FORMAT_DICT: object = DATA_FORMAT.DICT
+DATA_FORMAT_JSON: object = DATA_FORMAT.JSON
+DATA_FORMAT_POST: object = DATA_FORMAT.POST
+DATA_FORMAT_FORM: object = DATA_FORMAT.FORM_DATA
+sio_text_type: int = ElemType.text
+Opaque = AsIs
+Boolean = Bool
+Integer = Int
+ListOfDicts = DictList
+Unicode = Text
 
 def _not_implemented(func: Any) -> None: ...
 

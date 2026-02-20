@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 import logging
@@ -6,6 +6,7 @@ from zato.admin.web.forms.search.es import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.api import SEARCH
 from zato.common.odb.model import ElasticSearch
+
 
 class Index(_Index):
     method_allowed: Any

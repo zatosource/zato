@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.common.typing_ import str_
 from zato.common.monitoring.context import ProcessContext, get_global_metrics
 from zato.common.monitoring.metrics import get_global_metrics_store
+
 
 def create_context(process_name: str_, ctx_id: str_) -> ProcessContext: ...
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from http.client import OK
@@ -13,6 +13,7 @@ from zato.cy.reqresp.payload import SimpleIOPayload
 from zato.common.py23_.past.builtins import unicode as past_unicode
 from zato.common.typing_ import any_
 from zato.simpleio import CySimpleIO
+
 
 class Response:
     result: Any

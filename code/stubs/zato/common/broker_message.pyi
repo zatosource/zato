@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from inspect import isclass
 from zato.common.ext.future.utils import iteritems
 from zato.common.py23_.past.builtins import cmp
 from zato.common.ext.candv import Constants as _Constants, ValueConstant as _ValueConstant
+
 
 class Constants(_Constants):
     values: Any

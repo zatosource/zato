@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from zato.admin.web.views.ai.tools.definitions_create import all_create_tools
 from zato.admin.web.views.ai.tools.definitions_delete import all_delete_tools
 from zato.admin.web.views.ai.tools.definitions_update import all_update_tools
 from zato.common.typing_ import anylist
+
 
 def get_all_tools() -> anylist: ...
 

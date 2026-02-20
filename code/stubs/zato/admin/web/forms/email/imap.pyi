@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from imaplib import IMAP4_SSL_PORT
 from django import forms
 from zato.common.api import EMAIL
+
 
 class CreateForm(forms.Form):
     id: Any

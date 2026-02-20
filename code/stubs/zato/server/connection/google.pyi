@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import getLogger
@@ -12,20 +12,16 @@ from zato.common.typing_ import cast_, list_field
 from zato.common.util.file_system import fs_safe_now
 from zato.common.typing_ import any_, anylist, stranydict, strnone
 
+
 class GoogleClient:
     conn: any_
     files: any_
-    api_name: str
-    api_version: str
-    user: str
-    scopes: anylist
-    service_file_dict: str
-    dir_map: stranydict
     api_name: Any
     api_version: Any
     user: Any
     scopes: Any
     service_file_dict: Any
+    dir_map: stranydict
     _dir_map: Any
     def __init__(self: Any, api_name: str, api_version: str, user: str, scopes: anylist, service_file_dict: str) -> None: ...
     def connect(self: Any) -> any_: ...

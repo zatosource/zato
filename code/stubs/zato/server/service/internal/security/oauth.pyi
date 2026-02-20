@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from traceback import format_exc
@@ -10,6 +10,7 @@ from zato.common.odb.query import oauth_list
 from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 from zato.common.typing_ import any_, anylist
+
 
 class GetList(AdminService):
     _filter_by: Any

@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 from logging import Formatter
 from zato.common.util.platform_ import is_posix
 from zato.common.util.platform_ import is_linux
+
 
 class ColorFormatter(Formatter):
     RESET_SEQ: Any

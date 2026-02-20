@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from dataclasses import dataclass
 from logging import getLogger
@@ -9,6 +9,7 @@ from zato.common.pubsub.util import get_broker_config
 from zato.server.connection.amqp_ import Consumer
 from zato.common.typing_ import any_, callable_, strdict
 import logging
+
 
 class ConsumerConfig:
     cid: str

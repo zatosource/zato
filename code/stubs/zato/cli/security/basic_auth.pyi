@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import sys
 from uuid import uuid4
@@ -7,6 +7,7 @@ from zato.common.util.api import fs_safe_now
 from argparse import Namespace
 from os import environ
 from zato.common.util.cli import BasicAuthManager
+
 
 class CreateDefinition(ServerAwareCommand):
     allow_empty_secrets: Any

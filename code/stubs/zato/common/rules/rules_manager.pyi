@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from logging import getLogger
 from time import time
@@ -6,6 +6,7 @@ from zato.common.rules.api import RulesManager as BaseRulesManager, MatchResult
 from zato.common.rules.rule_cache import CachedRule
 from pathlib import Path
 from zato.common.typing_ import any_, dict_, strdict, strlist
+
 
 class RulesManager(BaseRulesManager):
     cached_rules: Any

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import re
 import sys
@@ -6,6 +6,7 @@ import copy
 import types
 import inspect
 import keyword
+
 
 class FrozenInstanceError(AttributeError):
     ...
@@ -28,14 +29,13 @@ class InitVar:
     ...
 
 class Field:
-    __slots__: Any
     name: Any
     type: Any
     default: Any
     default_factory: Any
-    init: Any
     repr: Any
     hash: Any
+    init: Any
     compare: Any
     metadata: Any
     _field_type: Any
@@ -44,7 +44,6 @@ class Field:
     def __set_name__(self: Any, owner: Any, name: Any) -> None: ...
 
 class _DataclassParams:
-    __slots__: Any
     init: Any
     repr: Any
     eq: Any

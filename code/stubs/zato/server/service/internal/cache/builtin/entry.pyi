@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 from arrow import get as arrow_get
@@ -10,6 +10,7 @@ from zato.common.exception import BadRequest
 from zato.common.util.search import SearchResults
 from zato.server.service import AsIs, Bool, Float, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
 
 class _Base(AdminService):
     def _get_cache_by_input(self: Any, needs_odb: Any = ...) -> None: ...

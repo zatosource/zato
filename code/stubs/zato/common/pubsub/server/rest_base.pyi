@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import gc
@@ -22,6 +22,9 @@ from zato.common.pubsub.server.base import BaseServer
 from zato.common.pubsub.util import get_broker_config
 from zato.common.typing_ import any_, anydict, dict_, list_
 from zato.common.pubsub.util import validate_topic_name
+
+_default_priority = PubSub.Message.Priority_Default
+_default_expiration = PubSub.Message.Default_Expiration
 
 class UnauthorizedException(Exception):
     cid: Any

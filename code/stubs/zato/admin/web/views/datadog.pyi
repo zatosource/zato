@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import os
 import socket
@@ -16,6 +16,7 @@ from zato.admin.web.views import method_allowed
 from zato.admin.web.views.settings.config import datadog_page_config
 from zato.common.json_internal import dumps, loads
 from zato.common.util.updates import Updater, UpdaterConfig
+
 
 def json_response(data: Any, success: Any = ...) -> None: ...
 

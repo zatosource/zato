@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from threading import RLock
 from ddtrace.vendor.dogstatsd.base import statsd
 from zato.common.typing_ import anydict, floatnone
 from zato.common.util.time_ import utcnow_as_ms
 from zato.server.service import Service
+
 
 class MetricsStore:
     _lock: RLock

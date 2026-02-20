@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import argparse
 import logging
 from zato.openapi.generator import db_openapi
+
 
 def parse_args() -> argparse.Namespace: ...
 

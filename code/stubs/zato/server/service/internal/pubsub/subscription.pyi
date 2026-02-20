@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from contextlib import closing
 from operator import itemgetter
@@ -16,6 +16,8 @@ from zato.server.service import AsIs, PubSubMessage, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from bunch import Bunch
 from zato.common.typing_ import strdict, strlist
+
+_push_type = PubSub.Push_Type
 
 def _build_topic_objects_list(topic_data_list: Any = ..., topics: Any = ..., topic_data_by_name: Any = ...) -> None: ...
 

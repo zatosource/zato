@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from bunch import Bunch
 from zato.common.api import GENERIC as COMMON_GENERIC, LDAP, ZATO_NONE
@@ -12,6 +12,7 @@ from zato.server.generic.connection import GenericConnection
 from logging import Logger
 from zato.common.typing_ import any_, callable_, stranydict, strnone, tuple_
 from zato.server.connection.queue import Wrapper
+
 
 class Generic(WorkerImpl):
     logger: Logger

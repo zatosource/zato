@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from itertools import chain
 from logging import DEBUG, getLogger
@@ -10,6 +10,7 @@ from zato.common.odb.model import Base, SecurityBase
 from zato.common.util.search import SearchResults
 from bunch import Bunch
 from zato.common.typing_ import any_
+
 
 def search(search_func: Any, config: Any, filter_by: Any, session: Any = ..., cluster_id: Any = ..., *args: Any, **kwargs: Any) -> None: ...
 
