@@ -638,6 +638,15 @@
             }
             instance.codeEditor = ZatoIDEEditorAce.create(editorArea, editorOptions);
             console.log('[ZatoIDE] initCodeEditor: editor created, codeEditor=' + (instance.codeEditor ? 'ok' : 'null'));
+
+            if (typeof ZatoDebuggerGutter !== 'undefined' && instance.codeEditor && instance.codeEditor.aceEditor) {
+                instance.gutterInstance = ZatoDebuggerGutter.create(instance.codeEditor.aceEditor, null, {
+                    getFilename: function() {
+                        return instance.activeFile || 'untitled.py';
+                    }
+                });
+                console.log('[ZatoIDE] initCodeEditor: gutter created for breakpoints');
+            }
         },
 
         /**

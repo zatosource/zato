@@ -444,7 +444,7 @@ Examples:
             return
 
         bind_address = f'{host}:{port}'
-        workers = 8
+        workers = 2
 
         # Gunicorn PID file must match what `zato stop` expects: component_dir/pidfile
         pid_file = os.path.join(component_path, 'pidfile')
