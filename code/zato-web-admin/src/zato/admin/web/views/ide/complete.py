@@ -214,46 +214,66 @@ def complete_python(req:'HttpRequest') -> 'JsonResponse':
                         elif isinstance(lsp_result, list):
                             items = lsp_result
 
+                        # .. allowed dunder methods for zato types ..
+                        allowed_dunders = {'__getattr__', '__getitem__', '__dict__'}
+
+                        kind_map = {
+                            1: 'text',
+                            2: 'method',
+                            3: 'function',
+                            4: 'constructor',
+                            5: 'field',
+                            6: 'variable',
+                            7: 'class',
+                            8: 'interface',
+                            9: 'module',
+                            10: 'property',
+                            11: 'unit',
+                            12: 'value',
+                            13: 'enum',
+                            14: 'keyword',
+                            15: 'snippet',
+                            16: 'color',
+                            17: 'file',
+                            18: 'reference',
+                            19: 'folder',
+                            20: 'enum_member',
+                            21: 'constant',
+                            22: 'struct',
+                            23: 'event',
+                            24: 'operator',
+                            25: 'type_parameter'
+                        }
+
+                        regular_items = []
+                        dunder_items = []
+
                         for item in items:
                             label = item.get('label', '')
                             kind = item.get('kind', 1)
                             detail = item.get('detail', '')
-
-                            kind_map = {
-                                1: 'text',
-                                2: 'method',
-                                3: 'function',
-                                4: 'constructor',
-                                5: 'field',
-                                6: 'variable',
-                                7: 'class',
-                                8: 'interface',
-                                9: 'module',
-                                10: 'property',
-                                11: 'unit',
-                                12: 'value',
-                                13: 'enum',
-                                14: 'keyword',
-                                15: 'snippet',
-                                16: 'color',
-                                17: 'file',
-                                18: 'reference',
-                                19: 'folder',
-                                20: 'enum_member',
-                                21: 'constant',
-                                22: 'struct',
-                                23: 'event',
-                                24: 'operator',
-                                25: 'type_parameter'
-                            }
                             kind_str = kind_map.get(kind, 'text')
 
-                            completions.append({
-                                'name': label,
-                                'value': label,
-                                'type': kind_str,
-                                'detail': detail
-                            })
+                            # .. filter dunders for zato types ..
+                            is_dunder = label.startswith('__') and label.endswith('__')
+                            if is_dunder:
+                                if label in allowed_dunders:
+                                    dunder_items.append({
+                                        'name': label,
+                                        'value': label,
+                                        'type': kind_str,
+                                        'detail': detail
+                                    })
+                            else:
+                                regular_items.append({
+                                    'name': label,
+                                    'value': label,
+                                    'type': kind_str,
+                                    'detail': detail
+                                })
+
+                        # .. regular items first, then allowed dunders at the end ..
+                        completions = regular_items + dunder_items
                     break
 
         return JsonResponse({'success': True, 'completions': completions})
