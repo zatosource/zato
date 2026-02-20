@@ -55,7 +55,7 @@
 .zato-debugger-toolbar-icon {
     width: 16px;
     height: 16px;
-    filter: brightness(0) saturate(100%) invert(85%) sepia(30%) saturate(500%) hue-rotate(10deg) brightness(100%);
+    filter: brightness(0) saturate(100%) invert(75%) sepia(15%) saturate(300%) hue-rotate(10deg) brightness(95%);
 }
 
 .zato-debugger-panels {
