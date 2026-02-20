@@ -158,10 +158,11 @@
             return html;
         },
 
-        renderToolbarButton: function(action, title, shortcut, iconSvg) {
+        renderToolbarButton: function(action, title, shortcut, iconPath) {
             var tooltip = title + ' (' + shortcut + ')';
+            var iconHtml = iconPath.startsWith('<') ? iconPath : '<img src="' + iconPath + '" alt="' + title + '" class="zato-debugger-toolbar-icon">';
             return '<button class="zato-debugger-toolbar-button" data-action="' + action + '" title="' + tooltip + '">' +
-                   iconSvg + '</button>';
+                   iconHtml + '</button>';
         },
 
         renderCallStackPanel: function(instance) {
@@ -680,19 +681,19 @@
         },
 
         getStepOverIcon: function() {
-            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M14 8a6 6 0 01-6 6H4v-2h4a4 4 0 000-8H4V2h4a6 6 0 016 6z"/><path d="M6 4L2 8l4 4V4z"/></svg>';
+            return '/static/img/debugger/step-over.svg';
         },
 
         getStepIntoIcon: function() {
-            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 2v8"/><path d="M4 6l4 4 4-4"/><rect x="4" y="12" width="8" height="2"/></svg>';
+            return '/static/img/debugger/step-into.svg';
         },
 
         getStepOutIcon: function() {
-            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 14V6"/><path d="M4 10l4-4 4 4"/><rect x="4" y="2" width="8" height="2"/></svg>';
+            return '/static/img/debugger/step-out.svg';
         },
 
         getRestartIcon: function() {
-            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M12.75 8a4.75 4.75 0 01-9.5 0 4.75 4.75 0 019.5 0z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v4l3-2-3-2z"/></svg>';
+            return '/static/img/debugger/restart.svg';
         },
 
         getStopIcon: function() {

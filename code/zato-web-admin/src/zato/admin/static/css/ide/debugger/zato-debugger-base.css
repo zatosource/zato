@@ -52,6 +52,12 @@
     height: 16px;
 }
 
+.zato-debugger-toolbar-icon {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(0.9);
+}
+
 .zato-debugger-panels {
     flex: 1;
     display: flex;
