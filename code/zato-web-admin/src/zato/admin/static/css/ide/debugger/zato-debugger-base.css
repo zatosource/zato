@@ -39,6 +39,14 @@
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.15s ease;
+    outline: none;
+    box-shadow: none;
+}
+
+.zato-debugger-toolbar-button:focus,
+.zato-debugger-toolbar-button:active {
+    outline: none;
+    box-shadow: none;
 }
 
 .zato-debugger-toolbar-button:disabled,
