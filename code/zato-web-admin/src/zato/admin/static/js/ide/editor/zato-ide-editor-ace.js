@@ -350,6 +350,33 @@
             return modeMap[language] || 'ace/mode/text';
         },
 
+        isEditableFile: function(filename) {
+            var ext = filename.split('.').pop().toLowerCase();
+            var editableExtensions = [
+                'py', 'pyw', 'pyi', 'js', 'mjs', 'jsx', 'ts', 'tsx',
+                'json', 'xml', 'html', 'htm', 'css', 'scss', 'sass', 'less',
+                'sql', 'yaml', 'yml', 'md', 'txt', 'rst', 'log', 'csv',
+                'java', 'rs', 'go', 'c', 'h', 'cpp', 'cc', 'cxx', 'hpp',
+                'cs', 'rb', 'php', 'swift', 'kt', 'kts', 'scala',
+                'sh', 'bash', 'zsh', 'ps1', 'bat', 'cmd',
+                'lua', 'pl', 'pm', 'r', 'R', 'dart',
+                'ex', 'exs', 'erl', 'hrl', 'hs', 'lhs',
+                'clj', 'cljs', 'fs', 'fsx', 'ml', 'mli',
+                'ini', 'cfg', 'conf', 'toml', 'diff', 'patch',
+                'gitignore', 'gitattributes', 'editorconfig',
+                'makefile', 'dockerfile', 'svg'
+            ];
+            var editableFilenames = [
+                'Makefile', 'makefile', 'Dockerfile', 'Vagrantfile',
+                'Gemfile', 'Rakefile', 'Procfile', '.gitignore',
+                '.gitattributes', '.editorconfig', '.env'
+            ];
+            if (editableFilenames.indexOf(filename) !== -1) {
+                return true;
+            }
+            return editableExtensions.indexOf(ext) !== -1;
+        },
+
         getLanguageFromExtension: function(filename) {
             var ext = filename.split('.').pop().toLowerCase();
             var extMap = {

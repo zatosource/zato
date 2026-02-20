@@ -11,7 +11,7 @@ import json
 import os
 
 # Django
-from django.http import JsonResponse
+from django.http import FileResponse, JsonResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
@@ -242,3 +242,28 @@ def read_file(req:'HttpRequest'):
         'filename': filename,
         'content': content
     })
+
+@method_allowed('GET')
+def download_file(req:'HttpRequest'):
+
+    path = req.GET.get('path', '')
+
+    if not path:
+        return JsonResponse({'success': False, 'error': 'Path is required'}, status=400)
+
+    path = os.path.expanduser(path)
+    path = os.path.abspath(path)
+
+    if not os.path.exists(path):
+        return JsonResponse({'success': False, 'error': 'File does not exist'}, status=404)
+
+    if not os.path.isfile(path):
+        return JsonResponse({'success': False, 'error': 'Path is not a file'}, status=400)
+
+    try:
+        response = FileResponse(open(path, 'rb'), as_attachment=True, filename=os.path.basename(path))
+        return response
+    except PermissionError:
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

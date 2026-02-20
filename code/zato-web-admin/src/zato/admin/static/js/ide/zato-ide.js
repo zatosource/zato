@@ -1309,9 +1309,22 @@
                     console.log('[ZatoIDE] File selected:', item.path);
                 },
                 onFileDoubleClick: function(item) {
-                    self.openFileFromPath(instance, item.path, item.name);
+                    if (typeof ZatoIDEEditorAce !== 'undefined' && ZatoIDEEditorAce.isEditableFile(item.name)) {
+                        self.openFileFromPath(instance, item.path, item.name);
+                    } else {
+                        self.downloadFile(item.path, item.name);
+                    }
                 }
             });
+        },
+
+        downloadFile: function(filePath, fileName) {
+            var link = document.createElement('a');
+            link.href = '/zato/ide/explorer/download/?path=' + encodeURIComponent(filePath);
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         },
 
         openFileFromPath: function(instance, filePath, fileName) {
