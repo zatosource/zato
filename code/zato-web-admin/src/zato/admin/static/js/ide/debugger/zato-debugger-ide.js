@@ -125,6 +125,11 @@
             this.setupGutter(instance);
             console.log('[DebuggerIDE] debugCurrentFile: setupGutter complete');
 
+            if (instance.gutterHandler && instance.debugger) {
+                console.log('[DebuggerIDE] debugCurrentFile: attaching debugger to gutter');
+                ZatoDebuggerGutter.attachDebugger(instance.gutterHandler, instance.debugger);
+            }
+
             console.log('[DebuggerIDE] debugCurrentFile: calling ZatoDebuggerCore.startSession');
             ZatoDebuggerCore.startSession(instance.debugger, content, filename);
             console.log('[DebuggerIDE] debugCurrentFile: startSession complete');
@@ -247,6 +252,13 @@
 
             var ide = instance.ide;
             if (!ide.codeEditor || !ide.codeEditor.aceEditor) {
+                return;
+            }
+
+            var existingGutter = ZatoDebuggerGutter.getInstanceForEditor(ide.codeEditor.aceEditor);
+            if (existingGutter) {
+                console.log('[DebuggerIDE] setupGutter: found existing gutter instance=' + existingGutter.id);
+                instance.gutterHandler = existingGutter;
                 return;
             }
 

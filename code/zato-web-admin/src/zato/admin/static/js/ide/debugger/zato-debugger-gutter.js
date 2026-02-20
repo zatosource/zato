@@ -54,6 +54,15 @@
             return this.instances[instanceId] || null;
         },
 
+        getInstanceForEditor: function(aceEditor) {
+            for (var id in this.instances) {
+                if (this.instances[id].editor === aceEditor) {
+                    return this.instances[id];
+                }
+            }
+            return null;
+        },
+
         destroy: function(instanceId) {
             var instance = this.instances[instanceId];
             if (instance) {
@@ -574,30 +583,41 @@
         },
 
         updateCurrentLineMarker: function(instance) {
+            console.log('[Gutter] updateCurrentLineMarker: START');
             var editor = instance.editor;
             var session = editor.session;
 
             if (instance.currentLineMarkerId !== null) {
+                console.log('[Gutter] updateCurrentLineMarker: removing old marker');
                 session.removeMarker(instance.currentLineMarkerId);
                 instance.currentLineMarkerId = null;
             }
 
             if (!instance.debugger) {
+                console.log('[Gutter] updateCurrentLineMarker: no debugger, returning');
                 return;
             }
 
             var dbg = instance.debugger;
+            console.log('[Gutter] updateCurrentLineMarker: dbg.state=' + dbg.state);
+            console.log('[Gutter] updateCurrentLineMarker: dbg.currentFile=' + dbg.currentFile);
+            console.log('[Gutter] updateCurrentLineMarker: dbg.currentLine=' + dbg.currentLine);
+
             if (!ZatoDebuggerCore.isPaused(dbg)) {
+                console.log('[Gutter] updateCurrentLineMarker: not paused, returning');
                 return;
             }
 
             var currentFile = this.getCurrentFile(instance);
+            console.log('[Gutter] updateCurrentLineMarker: currentFile=' + currentFile);
             if (dbg.currentFile !== currentFile) {
+                console.log('[Gutter] updateCurrentLineMarker: file mismatch, returning');
                 return;
             }
 
             var line = dbg.currentLine;
             if (!line) {
+                console.log('[Gutter] updateCurrentLineMarker: no currentLine, returning');
                 return;
             }
 
@@ -605,7 +625,9 @@
             var Range = ace.require('ace/range').Range;
             var range = new Range(row, 0, row, 1);
 
+            console.log('[Gutter] updateCurrentLineMarker: adding marker at row=' + row);
             instance.currentLineMarkerId = session.addMarker(range, 'zato-debugger-current-line', 'fullLine', true);
+            console.log('[Gutter] updateCurrentLineMarker: markerId=' + instance.currentLineMarkerId);
 
             editor.scrollToLine(row, true, true);
         },
