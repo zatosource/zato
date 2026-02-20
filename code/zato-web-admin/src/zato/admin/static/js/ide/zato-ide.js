@@ -1349,12 +1349,43 @@
         },
 
         handleDebugAction: function(instance, action) {
-            console.log('[ZatoIDE] Debug action:', action, 'file:', instance.activeFile);
-            if (action === 'debug-file') {
-                console.log('[ZatoIDE] Debug current file:', instance.activeFile);
-            } else if (action === 'connect-server') {
-                console.log('[ZatoIDE] Connect to server');
+            console.log('[ZatoIDE] handleDebugAction: START action=' + action + ' file=' + instance.activeFile);
+
+            console.log('[ZatoIDE] handleDebugAction: checking ZatoDebuggerIDE availability');
+            console.log('[ZatoIDE] handleDebugAction: typeof ZatoDebuggerIDE=' + (typeof ZatoDebuggerIDE));
+            console.log('[ZatoIDE] handleDebugAction: typeof ZatoDebuggerCore=' + (typeof ZatoDebuggerCore));
+            console.log('[ZatoIDE] handleDebugAction: typeof ZatoDebuggerUI=' + (typeof ZatoDebuggerUI));
+            console.log('[ZatoIDE] handleDebugAction: typeof ZatoDebuggerProtocol=' + (typeof ZatoDebuggerProtocol));
+            console.log('[ZatoIDE] handleDebugAction: typeof ZatoDebuggerGutter=' + (typeof ZatoDebuggerGutter));
+
+            if (!instance.debuggerIDE && typeof ZatoDebuggerIDE !== 'undefined') {
+                console.log('[ZatoIDE] handleDebugAction: creating ZatoDebuggerIDE instance');
+                instance.debuggerIDE = ZatoDebuggerIDE.create(instance, {
+                    theme: instance.options.theme
+                });
+                console.log('[ZatoIDE] handleDebugAction: ZatoDebuggerIDE instance created=' + (instance.debuggerIDE ? 'ok' : 'null'));
+            } else if (!instance.debuggerIDE) {
+                console.log('[ZatoIDE] handleDebugAction: ZatoDebuggerIDE is not defined, cannot create debugger');
+            } else {
+                console.log('[ZatoIDE] handleDebugAction: using existing debuggerIDE instance');
             }
+
+            if (action === 'debug-file') {
+                console.log('[ZatoIDE] handleDebugAction: action is debug-file');
+                if (instance.debuggerIDE) {
+                    console.log('[ZatoIDE] handleDebugAction: calling ZatoDebuggerIDE.debugCurrentFile');
+                    var result = ZatoDebuggerIDE.debugCurrentFile(instance.debuggerIDE);
+                    console.log('[ZatoIDE] handleDebugAction: debugCurrentFile returned=' + result);
+                } else {
+                    console.log('[ZatoIDE] handleDebugAction: no debuggerIDE instance, cannot debug');
+                }
+            } else if (action === 'connect-server') {
+                console.log('[ZatoIDE] handleDebugAction: action is connect-server - not yet implemented');
+            } else {
+                console.log('[ZatoIDE] handleDebugAction: unknown action=' + action);
+            }
+
+            console.log('[ZatoIDE] handleDebugAction: END');
         },
 
         toggleSearchPopup: function(instance, button) {
