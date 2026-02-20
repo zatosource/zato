@@ -63,6 +63,8 @@
             this.render(instance);
             console.log('[DebuggerUI] create: render complete');
 
+            this.initTooltip(instance);
+
             console.log('[DebuggerUI] create: calling bindEvents');
             this.bindEvents(instance);
             console.log('[DebuggerUI] create: bindEvents complete');
@@ -75,6 +77,24 @@
 
         getInstance: function(containerId) {
             return this.instances[containerId] || null;
+        },
+
+        initTooltip: function(instance) {
+            console.log('[DebuggerUI] initTooltip: START');
+            console.log('[DebuggerUI] initTooltip: instance.id=' + instance.id);
+            console.log('[DebuggerUI] initTooltip: ZatoTooltip defined=' + (typeof ZatoTooltip !== 'undefined'));
+            if (typeof ZatoTooltip !== 'undefined') {
+                console.log('[DebuggerUI] initTooltip: calling ZatoTooltip.create');
+                instance.tooltip = ZatoTooltip.create(instance.id, {
+                    theme: 'dark',
+                    attribute: 'data-tooltip'
+                });
+                console.log('[DebuggerUI] initTooltip: tooltip created=' + (instance.tooltip ? 'yes' : 'no'));
+                if (instance.tooltip) {
+                    console.log('[DebuggerUI] initTooltip: tooltip.container=' + (instance.tooltip.container ? 'found' : 'null'));
+                }
+            }
+            console.log('[DebuggerUI] initTooltip: END');
         },
 
         destroy: function(containerId) {
@@ -161,7 +181,7 @@
         renderToolbarButton: function(action, title, shortcut, iconPath) {
             var tooltip = title + ' (' + shortcut + ')';
             var iconHtml = iconPath.startsWith('<') ? iconPath : '<img src="' + iconPath + '" alt="' + title + '" class="zato-debugger-toolbar-icon">';
-            return '<button class="zato-debugger-toolbar-button" data-action="' + action + '" title="' + tooltip + '">' +
+            return '<button class="zato-debugger-toolbar-button" data-action="' + action + '" data-tooltip="' + tooltip + '">' +
                    iconHtml + '</button>';
         },
 
@@ -171,7 +191,7 @@
             html += '<div class="zato-debugger-panel-header" data-panel="callStack">';
             html += '<span class="zato-debugger-panel-toggle">' + this.getChevronIcon() + '</span>';
             html += '<span class="zato-debugger-panel-title">Call stack</span>';
-            html += '<button class="zato-debugger-copy-btn" data-copy="callstack" title="Copy to clipboard">Copy</button>';
+            html += '<button class="zato-debugger-copy-btn" data-copy="callstack" data-tooltip="Copy to clipboard">Copy</button>';
             html += '</div>';
             html += '<div class="zato-debugger-panel-content">';
             html += '<div class="zato-debugger-callstack-list"></div>';
@@ -186,7 +206,7 @@
             html += '<div class="zato-debugger-panel-header" data-panel="variables">';
             html += '<span class="zato-debugger-panel-toggle">' + this.getChevronIcon() + '</span>';
             html += '<span class="zato-debugger-panel-title">Variables</span>';
-            html += '<button class="zato-debugger-copy-btn" data-copy="variables" title="Copy to clipboard">Copy</button>';
+            html += '<button class="zato-debugger-copy-btn" data-copy="variables" data-tooltip="Copy to clipboard">Copy</button>';
             html += '</div>';
             html += '<div class="zato-debugger-panel-content">';
             html += '<div class="zato-debugger-variables-list"></div>';

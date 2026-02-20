@@ -35,43 +35,65 @@
         },
 
         initInstance: function(instance) {
+            console.log('[ZatoTooltip] initInstance: containerId=' + instance.containerId);
             instance.container = document.getElementById(instance.containerId);
+            console.log('[ZatoTooltip] initInstance: getElementById=' + (instance.container ? 'found' : 'null'));
             if (!instance.container) {
                 instance.container = document.querySelector('.' + instance.containerId);
+                console.log('[ZatoTooltip] initInstance: querySelector=' + (instance.container ? 'found' : 'null'));
             }
             if (!instance.container) {
+                console.log('[ZatoTooltip] initInstance: container not found, returning');
                 return;
             }
 
             instance.tooltipEl = document.createElement('div');
             instance.tooltipEl.className = 'zato-tooltip zato-tooltip-theme-' + instance.theme;
             document.body.appendChild(instance.tooltipEl);
+            console.log('[ZatoTooltip] initInstance: tooltipEl created and appended');
 
             this.attachEvents(instance);
+            console.log('[ZatoTooltip] initInstance: events attached');
         },
 
         attachEvents: function(instance) {
             var self = this;
 
             instance.handlers.mouseenter = function(e) {
+                console.log('[ZatoTooltip] mouseenter: e.target=' + e.target.tagName + ', class=' + e.target.className);
                 if (instance.isLocked) {
+                    console.log('[ZatoTooltip] mouseenter: locked, returning');
                     return;
                 }
 
                 var target = e.target;
 
-                if (!target.hasAttribute || !target.hasAttribute(instance.attribute)) {
+                while (target && target !== instance.container) {
+                    if (target.hasAttribute && target.hasAttribute(instance.attribute)) {
+                        break;
+                    }
+                    target = target.parentElement;
+                }
+                console.log('[ZatoTooltip] mouseenter: after walk, target=' + (target ? target.tagName : 'null'));
+
+                if (!target || target === instance.container || !target.hasAttribute || !target.hasAttribute(instance.attribute)) {
+                    console.log('[ZatoTooltip] mouseenter: no tooltip attr, returning');
                     return;
                 }
 
+                console.log('[ZatoTooltip] mouseenter: tooltip attr=' + target.getAttribute(instance.attribute));
+
                 if (!instance.container.contains(target)) {
+                    console.log('[ZatoTooltip] mouseenter: not in container, returning');
                     return;
                 }
 
                 if (instance.isPopupOpen && instance.isPopupOpen(target)) {
+                    console.log('[ZatoTooltip] mouseenter: popup open, returning');
                     return;
                 }
 
+                console.log('[ZatoTooltip] mouseenter: calling show');
                 self.show(instance, target);
 
                 var timeout = target.getAttribute(instance.timeoutAttribute);
@@ -97,12 +119,16 @@
         },
 
         show: function(instance, target) {
+            console.log('[ZatoTooltip] show: START containerId=' + instance.containerId);
             if (!instance.tooltipEl) {
+                console.log('[ZatoTooltip] show: no tooltipEl, returning');
                 return;
             }
 
             var text = target.getAttribute(instance.attribute);
+            console.log('[ZatoTooltip] show: text=' + text);
             if (!text) {
+                console.log('[ZatoTooltip] show: no text, returning');
                 return;
             }
 
@@ -110,8 +136,10 @@
             instance.tooltipEl.textContent = text;
             instance.tooltipEl.style.opacity = '1';
             instance.tooltipEl.style.visibility = 'visible';
+            console.log('[ZatoTooltip] show: set opacity=1, visibility=visible');
 
             this.position(instance, target);
+            console.log('[ZatoTooltip] show: position called, tooltipEl.style.left=' + instance.tooltipEl.style.left + ', top=' + instance.tooltipEl.style.top);
         },
 
         position: function(instance, target) {
@@ -123,6 +151,10 @@
 
             var left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
             var top = rect.top - tooltipRect.height - 6;
+
+            if (top < 5) {
+                top = rect.bottom + 6;
+            }
 
             if (left < 5) {
                 left = 5;
