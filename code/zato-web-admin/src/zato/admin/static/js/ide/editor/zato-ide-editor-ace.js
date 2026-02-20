@@ -186,7 +186,9 @@
             var lintPending = false;
             var lintDelay = opts.lintDelay;
             editor.session.on('change', function() {
+                console.log('[ZatoIDEEditorAce] session change event, language=' + instance.options.language);
                 if (instance.options.language !== 'python') {
+                    console.log('[ZatoIDEEditorAce] not python, skipping lint');
                     return;
                 }
                 if (lintTimeout) {
@@ -495,9 +497,15 @@
         },
 
         setLanguage: function(instance, language) {
+            console.log('[ZatoIDEEditorAce] setLanguage: language=' + language + ', previous=' + instance.options.language);
             instance.options.language = language;
             if (instance.aceEditor) {
+                console.log('[ZatoIDEEditorAce] setLanguage: setting mode to ' + this.getAceMode(language));
                 instance.aceEditor.session.setMode(this.getAceMode(language));
+                if (language !== 'python') {
+                    console.log('[ZatoIDEEditorAce] setLanguage: clearing annotations for non-python');
+                    instance.aceEditor.session.setAnnotations([]);
+                }
             }
             var langItem = instance.elements.statusbar.querySelector('[data-item-id="language"]');
             if (langItem) {

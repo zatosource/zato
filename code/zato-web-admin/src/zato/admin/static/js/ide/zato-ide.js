@@ -669,10 +669,13 @@
 
             instance.activeFile = filename;
             var file = instance.files[filename];
+            console.log('[ZatoIDE] switchToFile: file.language=' + file.language);
 
             if (instance.codeEditor) {
-                ZatoIDEEditorAce.setValue(instance.codeEditor, file.content);
+                console.log('[ZatoIDE] switchToFile: calling setLanguage with language=' + file.language);
                 ZatoIDEEditorAce.setLanguage(instance.codeEditor, file.language);
+                console.log('[ZatoIDE] switchToFile: calling setValue');
+                ZatoIDEEditorAce.setValue(instance.codeEditor, file.content);
             }
 
             this.syncTabToFile(instance, filename);
