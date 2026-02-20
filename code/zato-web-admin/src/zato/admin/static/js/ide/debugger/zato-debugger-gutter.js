@@ -78,16 +78,26 @@
             gutter._zatoGutterBound = true;
 
             gutter.addEventListener('mousedown', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            });
+                var gutterRect = gutter.getBoundingClientRect();
+                var clickX = e.clientX - gutterRect.left;
+                if (clickX < 16) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                }
+            }, true);
 
             gutter.addEventListener('click', function(e) {
-                console.log('[Gutter] click event fired, instance.id=' + instance.id);
-                e.preventDefault();
-                e.stopPropagation();
-                self.handleGutterClick(instance, e);
-            });
+                var gutterRect = gutter.getBoundingClientRect();
+                var clickX = e.clientX - gutterRect.left;
+                if (clickX < 16) {
+                    console.log('[Gutter] click event fired, instance.id=' + instance.id);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    self.handleGutterClick(instance, e);
+                }
+            }, true);
 
             gutter.addEventListener('contextmenu', function(e) {
                 self.handleGutterContextMenu(instance, e);
