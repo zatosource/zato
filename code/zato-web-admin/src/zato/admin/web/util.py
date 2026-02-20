@@ -73,10 +73,10 @@ def get_user_profile(user, needs_logging=True):
         if needs_logging:
             logger.debug('Created a profile for user `%s`', user)
 
-    finally:
-        if needs_logging:
-            logger.debug('Returning a user profile for `%s`', user)
-        return user_profile
+    if needs_logging:
+        logger.debug('Returning a user profile for `%s`', user)
+
+    return user_profile
 
 # ################################################################################################################################
 # ################################################################################################################################

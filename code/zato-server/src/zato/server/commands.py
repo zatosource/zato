@@ -255,16 +255,12 @@ class CommandsFacade:
                 out.len_stderr_human,
                 cid)
 
-        # .. no matter if there was a timeout or not, we can invoke our callback, if we have any,
-        # .. and return our output now ..
-        finally:
+        # .. no matter if there was a timeout or not, we can invoke our callback, if we have any ..
+        if callback:
+            self._run_callback(cid, callback, out, use_pubsub)
 
-            # .. run the callback ..
-            if callback:
-                self._run_callback(cid, callback, out, use_pubsub)
-
-            # .. return the output, assuming that the callback did not raise an exception.
-            return out
+        # .. return the output, assuming that the callback did not raise an exception.
+        return out
 
 # ################################################################################################################################
 

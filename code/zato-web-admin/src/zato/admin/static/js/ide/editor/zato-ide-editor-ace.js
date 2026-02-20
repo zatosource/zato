@@ -40,7 +40,6 @@
 
             this.render(instance);
             this.setupCallbacks(instance);
-            this.loadState(instance);
             this.setupAutoSave(instance);
 
             return instance;

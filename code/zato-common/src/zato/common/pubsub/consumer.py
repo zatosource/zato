@@ -115,9 +115,8 @@ def start_consumer(consumer_config:'ConsumerConfig') -> 'Consumer':
     except Exception as e:
         logger.warning(f'{cid_prefix} CONSUMER {e}')
 
-    finally:
-        logger.debug(f'Connected -> {consumer_config}')
-        return consumer
+    logger.debug(f'Connected -> {consumer_config}')
+    return consumer
 
 # ################################################################################################################################
 # ################################################################################################################################

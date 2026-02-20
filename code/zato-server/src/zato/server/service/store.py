@@ -1177,8 +1177,8 @@ class ServiceStore:
             logger.error(msg, file_name, format_exc())
         else:
             to_process.extend(visit_func(mod_info.module, is_internal, mod_info.file_name))
-        finally:
-            return to_process
+
+        return to_process
 
 # ################################################################################################################################
 
@@ -1624,8 +1624,8 @@ class ServiceStore:
             logger.error(
                 'Exception while visiting module:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
                 mod, is_internal, fs_location, format_exc())
-        finally:
-            return to_process
+
+        return to_process
 
 # ################################################################################################################################
 

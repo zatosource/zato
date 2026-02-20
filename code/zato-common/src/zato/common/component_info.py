@@ -81,8 +81,8 @@ def get_worker_pids(component_path):
         out = sorted(elem.pid for elem in Process(master_proc_pid).children())
     except NoSuchProcess:
         out = []
-    finally:
-        return out
+
+    return out
 
 def get_info(component_path, format, _now=datetime.utcnow) -> 'stranydict':
 
