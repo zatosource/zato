@@ -244,10 +244,9 @@
                         }
                         instance.leftPanel.style.width = Math.round(collapsedLeftWidth) + 'px';
                         instance.splitPercent = (collapsedLeftWidth / containerWidth) * 100;
-                        instance.isDragging = false;
-                        instance.resizer.classList.remove('dragging');
-                        document.body.style.cursor = '';
-                        document.body.style.userSelect = '';
+                        instance.wasCollapsedOnMousedown = true;
+                        instance.expandedDuringThisDrag = false;
+                        instance.dragStartX = e.clientX;
                         self.saveSplitPosition(instance);
                         if (instance.onResize) {
                             instance.onResize(instance);
