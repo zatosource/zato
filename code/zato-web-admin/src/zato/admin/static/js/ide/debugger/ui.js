@@ -228,7 +228,10 @@
             html += '</div>';
             html += '<div class="zato-debugger-panel-content">';
             html += '<div class="zato-debugger-watches-list"></div>';
-            html += '<input type="text" class="zato-debugger-watch-input" placeholder="Add expression...">';
+            html += '<div class="zato-debugger-watch-input-wrapper">';
+            html += '<span class="zato-debugger-console-prompt">&gt;</span>';
+            html += '<input type="text" class="zato-debugger-watch-input" placeholder="Add expression ..">';
+            html += '</div>';
             html += '</div>';
             html += '</div>';
             return html;
@@ -265,7 +268,7 @@
             html += '<div class="zato-debugger-console-output"></div>';
             html += '<div class="zato-debugger-console-input-wrapper">';
             html += '<span class="zato-debugger-console-prompt">&gt;</span>';
-            html += '<input type="text" class="zato-debugger-console-input" placeholder="Evaluate expression...">';
+            html += '<input type="text" class="zato-debugger-console-input" placeholder="Evaluate expression ..">';
             html += '</div>';
             html += '</div>';
             html += '</div>';

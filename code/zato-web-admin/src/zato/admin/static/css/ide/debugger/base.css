@@ -283,9 +283,15 @@
     opacity: 1;
 }
 
+.zato-debugger-watch-input-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+}
+
 .zato-debugger-watch-input {
-    width: 100%;
-    padding: 4px 12px;
+    flex: 1;
+    padding: 4px 8px;
     border: none;
     outline: none;
     box-shadow: none;
