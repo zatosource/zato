@@ -283,9 +283,11 @@
                 var copyBtn = e.target.closest('.zato-debugger-copy-btn');
                 if (copyBtn) {
                     e.stopPropagation();
+                    e.preventDefault();
                     var copyType = copyBtn.getAttribute('data-copy');
                     self.copyPanelContent(instance, copyType);
                     if (instance.tooltip && typeof ZatoTooltip !== 'undefined') {
+                        ZatoTooltip.hideImmediate(instance.tooltip);
                         ZatoTooltip.showTemporary(instance.tooltip, copyBtn, 'Copied to clipboard', 1100);
                     }
                     return;
@@ -294,6 +296,7 @@
                 var actionBtn = e.target.closest('.zato-debugger-panel-action');
                 if (actionBtn) {
                     e.stopPropagation();
+                    e.preventDefault();
                     var action = actionBtn.getAttribute('data-action');
                     self.handleAction(instance, action, e);
                     if (instance.tooltip && typeof ZatoTooltip !== 'undefined') {
@@ -303,13 +306,14 @@
                 }
 
                 var button = e.target.closest('[data-action]');
-                if (button) {
+                if (button && !button.classList.contains('zato-debugger-panel-action')) {
                     var action = button.getAttribute('data-action');
                     self.handleAction(instance, action, e);
+                    return;
                 }
 
                 var header = e.target.closest('.zato-debugger-panel-header[data-panel]');
-                if (header) {
+                if (header && !e.target.closest('.zato-debugger-panel-action') && !e.target.closest('.zato-debugger-copy-btn')) {
                     var panel = header.getAttribute('data-panel');
                     self.togglePanel(instance, panel);
                 }

@@ -77,6 +77,14 @@
                     return;
                 }
 
+                var closerContainer = target.parentElement;
+                while (closerContainer && closerContainer !== instance.container) {
+                    if (self.instances[closerContainer.id]) {
+                        return;
+                    }
+                    closerContainer = closerContainer.parentElement;
+                }
+
                 if (instance.isPopupOpen && instance.isPopupOpen(target)) {
                     return;
                 }
@@ -192,8 +200,12 @@
 
             var self = this;
             instance.hideTimerId = setTimeout(function() {
-                instance.isLocked = false;
-                self.hide(instance);
+                instance.tooltipEl.style.opacity = '0';
+                instance.tooltipEl.style.visibility = 'hidden';
+                instance.currentTarget = null;
+                setTimeout(function() {
+                    instance.isLocked = false;
+                }, 300);
             }, duration);
         },
 
@@ -205,13 +217,9 @@
                 clearTimeout(instance.hideTimerId);
                 instance.hideTimerId = null;
             }
-            instance.isLocked = true;
             instance.tooltipEl.style.opacity = '0';
             instance.tooltipEl.style.visibility = 'hidden';
             instance.currentTarget = null;
-            setTimeout(function() {
-                instance.isLocked = false;
-            }, 100);
         },
 
         setTheme: function(instance, theme) {
