@@ -163,14 +163,14 @@
                 instance.resizer.classList.add('dragging');
                 document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
-                
+
                 var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
                 instance.wasCollapsedOnMousedown = contentEl && contentEl.classList.contains('collapsed');
                 if (instance.wasCollapsedOnMousedown) {
                     contentEl.classList.remove('collapsed');
                 }
             });
-            
+
             instance.resizer.addEventListener('click', function(e) {
                 if (instance.hasDragged) {
                     instance.wasCollapsedOnMousedown = false;
@@ -196,7 +196,7 @@
                 if (!instance.isDragging) {
                     return;
                 }
-                
+
                 instance.hasDragged = true;
 
                 var containerRect = instance.container.getBoundingClientRect();
