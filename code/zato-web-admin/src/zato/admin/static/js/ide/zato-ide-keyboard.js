@@ -186,6 +186,91 @@
                 ideInstance.mainSplit.savedSplitPercentByView = {};
             }
             
+            var logEditorPosition = function(label) {
+                var leftPanel = ideInstance.mainSplit.leftPanel;
+                var editorArea = document.getElementById(ideInstance.id + '-editor-area');
+                var aceContainer = editorArea ? editorArea.querySelector('.ace_editor') : null;
+                var aceContent = aceContainer ? aceContainer.querySelector('.ace_content') : null;
+                var aceGutter = aceContainer ? aceContainer.querySelector('.ace_gutter') : null;
+                var aceScroller = aceContainer ? aceContainer.querySelector('.ace_scroller') : null;
+                var aceGutterLayer = aceGutter ? aceGutter.querySelector('.ace_gutter-layer') : null;
+                
+                console.log('[toggleSidePanelContent] ' + label);
+                if (leftPanel) {
+                    var lpRect = leftPanel.getBoundingClientRect();
+                    var lpStyle = window.getComputedStyle(leftPanel);
+                    console.log('  leftPanel: left=' + lpRect.left.toFixed(2) + ', width=' + lpRect.width.toFixed(2) + ', paddingLeft=' + lpStyle.paddingLeft + ', marginLeft=' + lpStyle.marginLeft);
+                }
+                if (editorArea) {
+                    var eaRect = editorArea.getBoundingClientRect();
+                    var eaStyle = window.getComputedStyle(editorArea);
+                    console.log('  editorArea: left=' + eaRect.left.toFixed(2) + ', width=' + eaRect.width.toFixed(2) + ', paddingLeft=' + eaStyle.paddingLeft + ', marginLeft=' + eaStyle.marginLeft);
+                }
+                if (aceContainer) {
+                    var acRect = aceContainer.getBoundingClientRect();
+                    var acStyle = window.getComputedStyle(aceContainer);
+                    console.log('  aceContainer: left=' + acRect.left.toFixed(2) + ', width=' + acRect.width.toFixed(2) + ', paddingLeft=' + acStyle.paddingLeft + ', marginLeft=' + acStyle.marginLeft);
+                }
+                if (aceGutter) {
+                    var agRect = aceGutter.getBoundingClientRect();
+                    var agStyle = window.getComputedStyle(aceGutter);
+                    console.log('  aceGutter: left=' + agRect.left.toFixed(2) + ', width=' + agRect.width.toFixed(2) + ', style.width=' + agStyle.width);
+                }
+                if (aceGutterLayer) {
+                    var aglRect = aceGutterLayer.getBoundingClientRect();
+                    var aglStyle = window.getComputedStyle(aceGutterLayer);
+                    console.log('  aceGutterLayer: left=' + aglRect.left.toFixed(2) + ', width=' + aglRect.width.toFixed(2) + ', style.width=' + aglStyle.width);
+                }
+                if (aceScroller) {
+                    var asRect = aceScroller.getBoundingClientRect();
+                    var asStyle = window.getComputedStyle(aceScroller);
+                    console.log('  aceScroller: left=' + asRect.left.toFixed(2) + ', width=' + asRect.width.toFixed(2) + ', style.left=' + asStyle.left);
+                }
+                if (aceContent) {
+                    var acnRect = aceContent.getBoundingClientRect();
+                    var acnStyle = window.getComputedStyle(aceContent);
+                    console.log('  aceContent: left=' + acnRect.left.toFixed(2) + ', width=' + acnRect.width.toFixed(2) + ', marginLeft=' + acnStyle.marginLeft);
+                }
+            };
+            
+            var splitContainer = document.querySelector('.zato-ide-split-container');
+            if (splitContainer) {
+                var scRect = splitContainer.getBoundingClientRect();
+                console.log('[toggleSidePanelContent] splitContainer: left=' + scRect.left.toFixed(2));
+            }
+            
+            logEditorPosition('BEFORE toggle');
+            
+            var aceScroller = document.querySelector('.ace_scroller');
+            if (aceScroller) {
+                console.log('[toggleSidePanelContent] aceScroller.style.left raw=' + aceScroller.style.left);
+                var renderer = ideInstance.codeEditor && ideInstance.codeEditor.aceEditor ? ideInstance.codeEditor.aceEditor.renderer : null;
+                if (renderer) {
+                    console.log('[toggleSidePanelContent] renderer.gutterWidth=' + renderer.gutterWidth);
+                    console.log('[toggleSidePanelContent] renderer.$gutterLayer.gutterWidth=' + (renderer.$gutterLayer ? renderer.$gutterLayer.gutterWidth : 'n/a'));
+                }
+            }
+            
+            if (ideInstance.codeEditor && ideInstance.codeEditor.aceEditor) {
+                var renderer = ideInstance.codeEditor.aceEditor.renderer;
+                var gutterLayerWidth = renderer && renderer.$gutterLayer ? renderer.$gutterLayer.gutterWidth : null;
+                
+                ideInstance.codeEditor.aceEditor.resize();
+                
+                if (renderer && gutterLayerWidth !== null) {
+                    var gutterEl = renderer.$gutter;
+                    if (gutterEl) {
+                        gutterEl.style.width = gutterLayerWidth + 'px';
+                    }
+                    renderer.gutterWidth = gutterLayerWidth;
+                    if (aceScroller) {
+                        aceScroller.style.left = gutterLayerWidth + 'px';
+                    }
+                    console.log('[toggleSidePanelContent] synced gutterWidth to gutterLayer value: ' + gutterLayerWidth);
+                }
+                logEditorPosition('AFTER pre-resize');
+            }
+            
             if (contentContainer.classList.contains('collapsed')) {
                 contentContainer.classList.remove('collapsed');
                 sidePanel.style.minWidth = '';
@@ -195,6 +280,7 @@
                     ideInstance.mainSplit.splitPercent = savedPercent;
                     ZatoIDESplit.applySplitPosition(ideInstance.mainSplit);
                 }
+                logEditorPosition('AFTER expand');
             } else {
                 contentContainer.classList.add('collapsed');
                 ideInstance.sidePanelContentHidden = true;
@@ -205,11 +291,17 @@
                 var resizerWidth = ideInstance.mainSplit.resizer ? ideInstance.mainSplit.resizer.offsetWidth : 4;
                 var newLeftWidth = Math.round(containerWidth - actualIconsWidth - resizerWidth);
                 ideInstance.mainSplit.leftPanel.style.width = newLeftWidth + 'px';
+                logEditorPosition('AFTER collapse');
             }
 
             if (ideInstance.codeEditor && ideInstance.codeEditor.aceEditor) {
+                var savedScrollerLeft = aceScroller ? aceScroller.style.left : null;
                 setTimeout(function() {
                     ideInstance.codeEditor.aceEditor.resize();
+                    if (savedScrollerLeft && aceScroller) {
+                        aceScroller.style.left = savedScrollerLeft;
+                    }
+                    logEditorPosition('AFTER ace resize');
                 }, 20);
             }
         }

@@ -81,6 +81,7 @@
             editor.setHighlightActiveLine(true);
             editor.setHighlightSelectedWord(true);
             editor.setDisplayIndentGuides(false);
+            editor.setOption('fixedWidthGutter', true);
             editor.commands.removeCommand('foldall');
             editor.commands.removeCommand('unfoldall');
             editor.commands.removeCommand('toggleFoldWidget');
