@@ -332,10 +332,46 @@
 
             var consoleInput = instance.elements.consoleInput;
             if (consoleInput) {
+                var historyKey = 'zato.debugger.console-history';
+                var history = [];
+                var historyIndex = -1;
+                try {
+                    var stored = localStorage.getItem(historyKey);
+                    if (stored) {
+                        history = JSON.parse(stored);
+                    }
+                } catch (err) {
+                    history = [];
+                }
+
                 consoleInput.addEventListener('keydown', function(e) {
                     if (e.key === 'Enter' && consoleInput.value.trim()) {
-                        self.evaluateInConsole(instance, consoleInput.value.trim());
+                        var expr = consoleInput.value.trim();
+                        self.evaluateInConsole(instance, expr);
+                        history.push(expr);
+                        if (history.length > 100) {
+                            history = history.slice(-100);
+                        }
+                        try {
+                            localStorage.setItem(historyKey, JSON.stringify(history));
+                        } catch (err) {}
+                        historyIndex = history.length;
                         consoleInput.value = '';
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (history.length > 0 && historyIndex > 0) {
+                            historyIndex--;
+                            consoleInput.value = history[historyIndex];
+                        }
+                    } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (historyIndex < history.length - 1) {
+                            historyIndex++;
+                            consoleInput.value = history[historyIndex];
+                        } else {
+                            historyIndex = history.length;
+                            consoleInput.value = '';
+                        }
                     }
                 });
             }
@@ -588,7 +624,7 @@
                 html += '<div class="zato-debugger-watch-item" data-watch-id="' + w.id + '">';
                 html += '<span class="zato-debugger-watch-expr">' + this.escapeHtml(w.expression) + '</span>';
                 html += '<span class="zato-debugger-watch-separator">:</span>';
-                html += '<span class="zato-debugger-watch-value">' + this.escapeHtml(w.value || '<not available>') + '</span>';
+                html += '<span class="zato-debugger-watch-value">' + this.highlightPythonValue(w.value || '<not available>') + '</span>';
                 html += '<button class="zato-debugger-watch-remove" data-action="remove-watch" data-watch-id="' + w.id + '">';
                 html += this.getCloseIcon();
                 html += '</button>';
@@ -669,9 +705,25 @@
 
             var line = document.createElement('div');
             line.className = 'zato-debugger-console-line zato-debugger-console-' + category;
-            line.textContent = text;
+            if (category === 'output') {
+                line.innerHTML = this.highlightPythonValue(text);
+            } else {
+                line.textContent = text;
+            }
             output.appendChild(line);
             output.scrollTop = output.scrollHeight;
+        },
+
+        highlightPythonValue: function(text) {
+            if (text === null || text === undefined) {
+                return '';
+            }
+            var escaped = this.escapeHtml(String(text));
+            escaped = escaped.replace(/\b(True|False|None)\b/g, '<span class="zato-debugger-hl-keyword">$1</span>');
+            escaped = escaped.replace(/\b(\d+\.?\d*)\b/g, '<span class="zato-debugger-hl-number">$1</span>');
+            escaped = escaped.replace(/('[^']*'|"[^"]*")/g, '<span class="zato-debugger-hl-string">$1</span>');
+            escaped = escaped.replace(/&lt;([^&]+)&gt;/g, '<span class="zato-debugger-hl-type">&lt;$1&gt;</span>');
+            return escaped;
         },
 
         highlightCurrentLine: function(instance) {

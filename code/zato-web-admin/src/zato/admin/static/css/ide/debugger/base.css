@@ -288,7 +288,8 @@
     padding: 4px 12px;
     border: none;
     outline: none;
-    font-family: inherit;
+    box-shadow: none;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 12px;
 }
 
@@ -339,9 +340,10 @@
 .zato-debugger-console {
     flex: 0 0 auto;
     min-height: 120px;
-    max-height: 200px;
     display: flex;
     flex-direction: column;
+    resize: vertical;
+    overflow: auto;
 }
 
 .zato-debugger-console-output {
@@ -349,7 +351,7 @@
     overflow-y: auto;
     padding: 4px 0;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .zato-debugger-console-line {
@@ -376,8 +378,9 @@
     flex: 1;
     border: none;
     outline: none;
+    box-shadow: none;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .zato-debugger-panel-container {
@@ -449,9 +452,10 @@
     border-width: 1px;
     border-style: solid;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 10px;
+    font-size: 12px;
     margin-bottom: 12px;
     box-sizing: border-box;
+    box-shadow: none;
 }
 
 .zato-debugger-condition-input:focus {
