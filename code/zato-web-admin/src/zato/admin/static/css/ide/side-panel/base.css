@@ -9,7 +9,6 @@
     flex: 1;
     min-width: 0;
     overflow: hidden;
-    transition: flex 0.15s ease, width 0.15s ease;
 }
 
 .zato-ide-side-panel-1-content.collapsed {
