@@ -358,35 +358,8 @@
             }
 
             var containerWidth = instance.container.offsetWidth;
-            var resizerWidth = instance.resizer ? instance.resizer.offsetWidth : 4;
-            var minWidth = instance.minPanelWidth;
-            var fallbackRightWidth = instance.fallbackRightPanelWidth || this.fallbackRightPanelWidth;
-
-            var maxLeftWidth = containerWidth - minWidth - resizerWidth;
-
-            if (savedPixels >= minWidth && savedPixels <= maxLeftWidth) {
-                instance.leftPanel.style.width = savedPixels + 'px';
-                instance.splitPercent = (savedPixels / containerWidth) * 100;
-                return;
-            }
-
-            var fallbackLeftWidth = containerWidth - fallbackRightWidth - resizerWidth;
-            if (fallbackLeftWidth >= minWidth && fallbackLeftWidth <= maxLeftWidth) {
-                instance.leftPanel.style.width = Math.round(fallbackLeftWidth) + 'px';
-                instance.splitPercent = (fallbackLeftWidth / containerWidth) * 100;
-                return;
-            }
-
-            var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
-            if (contentEl) {
-                contentEl.classList.add('collapsed');
-            }
-            var iconsEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-icons') : null;
-            var iconsWidth = iconsEl ? iconsEl.offsetWidth : 48;
-            var collapsedLeftWidth = containerWidth - iconsWidth - resizerWidth;
-            if (collapsedLeftWidth >= minWidth) {
-                instance.leftPanel.style.width = Math.round(collapsedLeftWidth) + 'px';
-            }
+            instance.leftPanel.style.width = savedPixels + 'px';
+            instance.splitPercent = (savedPixels / containerWidth) * 100;
         },
 
         /**
