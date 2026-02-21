@@ -157,9 +157,22 @@
                 document.body.style.userSelect = 'none';
                 
                 var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
-                if (contentEl && contentEl.classList.contains('collapsed')) {
+                instance.wasCollapsedOnMousedown = contentEl && contentEl.classList.contains('collapsed');
+                console.log('[ZatoIDESplit] mousedown: wasCollapsedOnMousedown=' + instance.wasCollapsedOnMousedown);
+                if (instance.wasCollapsedOnMousedown) {
                     contentEl.classList.remove('collapsed');
                 }
+            });
+            
+            instance.resizer.addEventListener('click', function(e) {
+                console.log('[ZatoIDESplit] resizer click: wasCollapsedOnMousedown=' + instance.wasCollapsedOnMousedown);
+                if (instance.wasCollapsedOnMousedown) {
+                    console.log('[ZatoIDESplit] resizer click: calling toggleSidePanelContent');
+                    if (typeof ZatoIDEKeyboard !== 'undefined' && ZatoIDEKeyboard.toggleSidePanelContent) {
+                        ZatoIDEKeyboard.toggleSidePanelContent();
+                    }
+                }
+                instance.wasCollapsedOnMousedown = false;
             });
 
             document.addEventListener('mousemove', function(e) {
