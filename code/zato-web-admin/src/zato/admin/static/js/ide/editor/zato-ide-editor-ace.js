@@ -56,12 +56,11 @@
             editorContainer.className = 'zato-ide-ace-editor';
             editorContainer.id = instance.id + '-editor';
 
-            var statusbar = document.createElement('div');
-            statusbar.className = 'zato-ide-editor-statusbar zato-ide-ace-statusbar';
-
             wrapper.appendChild(editorContainer);
-            wrapper.appendChild(statusbar);
             container.appendChild(wrapper);
+
+            var ideContainerId = opts.ideContainerId || container.id.replace('-editor-area', '');
+            var statusbar = document.getElementById(ideContainerId + '-statusbar');
 
             instance.elements = {
                 wrapper: wrapper,

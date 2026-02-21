@@ -144,6 +144,9 @@
             html += '<div class="zato-ide-main-area" id="' + instance.id + '-main-split">';
             html += '</div>';
 
+            html += '<div class="zato-ide-statusbar" id="' + instance.id + '-statusbar">';
+            html += '</div>';
+
             html += '</div>';
 
             instance.container.innerHTML = html;
@@ -621,6 +624,7 @@
                 language: file ? file.language : 'python',
                 tabSize: instance.options.tabSize,
                 content: file ? file.content : '',
+                ideContainerId: instance.id,
                 onContentChange: function(content) {
                     if (instance.activeFile && instance.files[instance.activeFile]) {
                         var file = instance.files[instance.activeFile];
