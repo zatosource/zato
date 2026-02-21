@@ -297,7 +297,7 @@
                     var action = actionBtn.getAttribute('data-action');
                     self.handleAction(instance, action, e);
                     if (instance.tooltip && typeof ZatoTooltip !== 'undefined') {
-                        ZatoTooltip.hide(instance.tooltip);
+                        ZatoTooltip.hideImmediate(instance.tooltip);
                     }
                     return;
                 }

@@ -7,6 +7,12 @@
     overflow: hidden;
 }
 
+.zato-debugger-container *:focus,
+.zato-debugger-container *:active {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .zato-debugger-toolbar {
     display: flex;
     align-items: center;

@@ -177,6 +177,11 @@
                 return;
             }
 
+            if (instance.hideTimerId) {
+                clearTimeout(instance.hideTimerId);
+                instance.hideTimerId = null;
+            }
+
             instance.isLocked = true;
             instance.currentTarget = target;
             instance.tooltipEl.textContent = text;
@@ -190,6 +195,23 @@
                 instance.isLocked = false;
                 self.hide(instance);
             }, duration);
+        },
+
+        hideImmediate: function(instance) {
+            if (!instance.tooltipEl) {
+                return;
+            }
+            if (instance.hideTimerId) {
+                clearTimeout(instance.hideTimerId);
+                instance.hideTimerId = null;
+            }
+            instance.isLocked = true;
+            instance.tooltipEl.style.opacity = '0';
+            instance.tooltipEl.style.visibility = 'hidden';
+            instance.currentTarget = null;
+            setTimeout(function() {
+                instance.isLocked = false;
+            }, 100);
         },
 
         setTheme: function(instance, theme) {

@@ -79,14 +79,21 @@
     color: #ce9178;
 }
 
+.zato-debugger-theme-dark .zato-debugger-watch-input-wrapper {
+    background: #252526;
+}
+
 .zato-debugger-theme-dark .zato-debugger-watch-input {
     background: #3c3c3c;
     color: #cccccc;
     border: 1px solid #3c3c3c;
+    border-radius: 3px;
 }
 
 .zato-debugger-theme-dark .zato-debugger-watch-input:focus {
-    border-color: #007acc;
+    border-color: #3c3c3c;
+    outline: none;
+    box-shadow: none;
 }
 
 .zato-debugger-theme-dark .zato-debugger-watch-input::placeholder {
@@ -144,7 +151,7 @@
 .zato-debugger-theme-dark .zato-debugger-console-input:focus {
     outline: none;
     box-shadow: none;
-    border-color: #007acc;
+    border-color: #3c3c3c;
 }
 
 .zato-debugger-theme-dark .zato-debugger-panel-container {
