@@ -44,6 +44,7 @@
                 return null;
             }
 
+            var savedExpanded = this.loadState('expanded') || {};
             var instance = {
                 id: containerId,
                 container: container,
@@ -51,11 +52,11 @@
                 options: opts,
                 elements: {},
                 expanded: {
-                    callStack: true,
-                    variables: true,
-                    breakpoints: true,
-                    watches: true,
-                    console: true
+                    callStack: savedExpanded.callStack !== false,
+                    variables: savedExpanded.variables !== false,
+                    breakpoints: savedExpanded.breakpoints !== false,
+                    watches: savedExpanded.watches !== false,
+                    console: savedExpanded.console !== false
                 }
             };
             console.log('[DebuggerUI] create: instance created');
@@ -71,6 +72,8 @@
             console.log('[DebuggerUI] create: bindEvents complete');
 
             this.updateToolbarState(instance);
+            this.restoreConsoleOutput(instance);
+            this.restoreWatches(instance);
 
             this.instances[containerId] = instance;
 
@@ -80,6 +83,23 @@
 
         getInstance: function(containerId) {
             return this.instances[containerId] || null;
+        },
+
+        storagePrefix: 'zato.debugger.',
+
+        loadState: function(key) {
+            try {
+                var stored = localStorage.getItem(this.storagePrefix + key);
+                return stored ? JSON.parse(stored) : null;
+            } catch (err) {
+                return null;
+            }
+        },
+
+        saveState: function(key, value) {
+            try {
+                localStorage.setItem(this.storagePrefix + key, JSON.stringify(value));
+            } catch (err) {}
         },
 
         initTooltip: function(instance) {
@@ -357,6 +377,7 @@
                         ZatoDebuggerCore.addWatch(instance.debugger, watchInput.value.trim());
                         watchInput.value = '';
                         self.updateWatches(instance);
+                        self.saveWatches(instance);
                     }
                 });
             }
@@ -497,10 +518,20 @@
                     if (instance.elements.consoleOutput) {
                         instance.elements.consoleOutput.innerHTML = '';
                     }
+                    this.saveState('console-output', []);
                     break;
                 case 'add-watch':
                     if (instance.elements.watchInput) {
                         instance.elements.watchInput.focus();
+                    }
+                    break;
+                case 'remove-watch':
+                    var watchId = event.target.closest('[data-watch-id]');
+                    if (watchId) {
+                        var id = parseInt(watchId.getAttribute('data-watch-id'), 10);
+                        ZatoDebuggerCore.removeWatch(dbg, id);
+                        this.updateWatches(instance);
+                        this.saveWatches(instance);
                     }
                     break;
             }
@@ -512,6 +543,7 @@
             if (panel) {
                 panel.classList.toggle('collapsed', !instance.expanded[panelName]);
             }
+            this.saveState('expanded', instance.expanded);
         },
 
         copyPanelContent: function(instance, copyType) {
@@ -686,6 +718,31 @@
             list.innerHTML = html;
         },
 
+        saveWatches: function(instance) {
+            var watches = instance.debugger ? instance.debugger.watches : [];
+            var expressions = [];
+            if (watches && watches.length > 0) {
+                for (var i = 0; i < watches.length; i++) {
+                    expressions.push(watches[i].expression);
+                }
+            }
+            this.saveState('watches', expressions);
+        },
+
+        restoreWatches: function(instance) {
+            var expressions = this.loadState('watches');
+            if (!expressions || !Array.isArray(expressions) || expressions.length === 0) {
+                return;
+            }
+            if (!instance.debugger || typeof ZatoDebuggerCore === 'undefined') {
+                return;
+            }
+            for (var i = 0; i < expressions.length; i++) {
+                ZatoDebuggerCore.addWatch(instance.debugger, expressions[i]);
+            }
+            this.updateWatches(instance);
+        },
+
         updateBreakpoints: function(instance) {
             var list = instance.elements.breakpointsList;
             if (!list) {
@@ -737,16 +794,24 @@
         evaluateInConsole: function(instance, expression) {
             this.appendConsoleOutput(instance, 'input', '> ' + expression);
 
-            if (instance.debugger && ZatoDebuggerCore.isPaused(instance.debugger)) {
-                var frame = instance.debugger.currentFrame;
-                if (frame && typeof ZatoDebuggerProtocol !== 'undefined') {
-                    var self = this;
-                    ZatoDebuggerProtocol.evaluate(instance.debugger, expression, frame.id, function(result) {
-                        self.appendConsoleOutput(instance, 'output', result.result);
-                    });
-                }
-            } else {
-                this.appendConsoleOutput(instance, 'error', 'Cannot evaluate: debugger not paused');
+            if (!instance.debugger || typeof ZatoDebuggerCore === 'undefined') {
+                this.appendConsoleOutput(instance, 'error', 'Debugger not running');
+                return;
+            }
+            if (!ZatoDebuggerCore.isDebugging(instance.debugger)) {
+                this.appendConsoleOutput(instance, 'error', 'Debugger not running');
+                return;
+            }
+            if (!ZatoDebuggerCore.isPaused(instance.debugger)) {
+                this.appendConsoleOutput(instance, 'error', 'Debugger not paused');
+                return;
+            }
+            var frame = instance.debugger.currentFrame;
+            if (frame && typeof ZatoDebuggerProtocol !== 'undefined') {
+                var self = this;
+                ZatoDebuggerProtocol.evaluate(instance.debugger, expression, frame.id, function(result) {
+                    self.appendConsoleOutput(instance, 'output', result.result);
+                });
             }
         },
 
@@ -765,6 +830,49 @@
             }
             output.appendChild(line);
             output.scrollTop = output.scrollHeight;
+            this.saveConsoleOutput(instance);
+        },
+
+        saveConsoleOutput: function(instance) {
+            var output = instance.elements.consoleOutput;
+            if (!output) {
+                return;
+            }
+            var lines = output.querySelectorAll('.zato-debugger-console-line');
+            var data = [];
+            for (var i = 0; i < lines.length && i < 200; i++) {
+                var line = lines[i];
+                var category = 'output';
+                if (line.classList.contains('zato-debugger-console-input')) {
+                    category = 'input';
+                } else if (line.classList.contains('zato-debugger-console-error')) {
+                    category = 'error';
+                }
+                data.push({ category: category, text: line.textContent });
+            }
+            this.saveState('console-output', data);
+        },
+
+        restoreConsoleOutput: function(instance) {
+            var data = this.loadState('console-output');
+            if (!data || !Array.isArray(data)) {
+                return;
+            }
+            var output = instance.elements.consoleOutput;
+            if (!output) {
+                return;
+            }
+            for (var i = 0; i < data.length; i++) {
+                var item = data[i];
+                var line = document.createElement('div');
+                line.className = 'zato-debugger-console-line zato-debugger-console-' + item.category;
+                if (item.category === 'output') {
+                    line.innerHTML = this.highlightPythonValue(item.text);
+                } else {
+                    line.textContent = item.text;
+                }
+                output.appendChild(line);
+            }
         },
 
         highlightPythonValue: function(text) {
