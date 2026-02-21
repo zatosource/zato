@@ -18,8 +18,8 @@
 }
 
 .zato-ide-split-panel-right {
-    flex: 1;
-    min-width: 50px;
+    flex: 1 1 auto;
+    min-width: 48px;
 }
 
 .zato-ide-split-resizer {

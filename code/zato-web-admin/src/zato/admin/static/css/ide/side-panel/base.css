@@ -2,7 +2,7 @@
     display: flex !important;
     flex-direction: row-reverse !important;
     height: 100%;
-    flex: 1 !important;
+    width: 100%;
 }
 
 .zato-ide-side-panel-1-content {
@@ -16,6 +16,9 @@
     flex: 0 0 0 !important;
     width: 0 !important;
     min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
     overflow: hidden !important;
 }
 
@@ -25,7 +28,6 @@
     width: 48px;
     min-width: 48px;
     padding: 4px 0;
-    border-right: 1px solid #3c3c3c;
 }
 
 .zato-ide-side-panel-1-icon {
