@@ -54,7 +54,8 @@
                     callStack: true,
                     variables: true,
                     breakpoints: true,
-                    watches: true
+                    watches: true,
+                    console: true
                 }
             };
             console.log('[DebuggerUI] create: instance created');
@@ -253,16 +254,19 @@
         renderConsolePanel: function(instance) {
             var html = '';
             html += '<div class="zato-debugger-panel zato-debugger-console">';
-            html += '<div class="zato-debugger-panel-header">';
+            html += '<div class="zato-debugger-panel-header" data-panel="console">';
+            html += '<span class="zato-debugger-panel-toggle">' + this.getChevronIcon() + '</span>';
             html += '<span class="zato-debugger-panel-title">Debug console</span>';
             html += '<button class="zato-debugger-panel-action" data-action="clear-console" title="Clear console">';
             html += this.getTrashIcon();
             html += '</button>';
             html += '</div>';
+            html += '<div class="zato-debugger-panel-content zato-debugger-console-content">';
             html += '<div class="zato-debugger-console-output"></div>';
             html += '<div class="zato-debugger-console-input-wrapper">';
             html += '<span class="zato-debugger-console-prompt">&gt;</span>';
             html += '<input type="text" class="zato-debugger-console-input" placeholder="Evaluate expression...">';
+            html += '</div>';
             html += '</div>';
             html += '</div>';
             return html;
@@ -273,6 +277,14 @@
             var container = instance.container;
 
             container.addEventListener('click', function(e) {
+                var copyBtn = e.target.closest('.zato-debugger-copy-btn');
+                if (copyBtn) {
+                    e.stopPropagation();
+                    var copyType = copyBtn.getAttribute('data-copy');
+                    self.copyPanelContent(instance, copyType);
+                    return;
+                }
+
                 var button = e.target.closest('[data-action]');
                 if (button) {
                     var action = button.getAttribute('data-action');
@@ -309,13 +321,6 @@
                 var varItem = e.target.closest('.zato-debugger-variable-item');
                 if (varItem && varItem.classList.contains('expandable')) {
                     self.toggleVariable(instance, varItem);
-                }
-
-                var copyBtn = e.target.closest('.zato-debugger-copy-btn');
-                if (copyBtn) {
-                    e.stopPropagation();
-                    var copyType = copyBtn.getAttribute('data-copy');
-                    self.copyPanelContent(instance, copyType);
                 }
             });
 

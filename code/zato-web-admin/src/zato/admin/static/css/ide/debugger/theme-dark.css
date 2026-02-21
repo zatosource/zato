@@ -134,13 +134,17 @@
 }
 
 .zato-debugger-theme-dark .zato-debugger-console-input {
-    background: transparent;
-    border: none;
+    background: #3c3c3c;
+    border: 1px solid #3c3c3c;
+    color: #cccccc;
+    padding: 4px 8px;
+    border-radius: 3px;
 }
 
 .zato-debugger-theme-dark .zato-debugger-console-input:focus {
     outline: none;
     box-shadow: none;
+    border-color: #007acc;
 }
 
 .zato-debugger-theme-dark .zato-debugger-panel-container {

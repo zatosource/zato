@@ -339,9 +339,15 @@
 
 .zato-debugger-console {
     flex: 0 0 auto;
-    min-height: 120px;
     display: flex;
     flex-direction: column;
+}
+
+.zato-debugger-console-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 120px;
+    max-height: none;
     resize: vertical;
     overflow: auto;
 }
@@ -487,11 +493,18 @@
     cursor: pointer;
     text-shadow: none;
     box-shadow: none;
+    outline: none;
 }
 
 .zato-debugger-copy-btn:hover {
     background: #4c4c4c;
     color: #ccc;
+}
+
+.zato-debugger-copy-btn:focus,
+.zato-debugger-copy-btn:active {
+    outline: none;
+    box-shadow: none;
 }
 
 .ace_gutter-cell.zato-debugger-breakpoint::before {
