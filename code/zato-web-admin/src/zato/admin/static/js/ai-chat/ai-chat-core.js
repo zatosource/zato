@@ -109,9 +109,15 @@
         },
 
         recalculateSplitPositions: function(trigger) {
-            var splitInstance = window.ZatoIDESplit ? ZatoIDESplit.getInstance('ai-chat-split-wrapper') : null;
-            if (splitInstance) {
-                ZatoIDESplit.applySplitPosition(splitInstance);
+            if (this.chatEnabled) {
+                var splitInstance = window.ZatoIDESplit ? ZatoIDESplit.getInstance('ai-chat-split-wrapper') : null;
+                if (splitInstance) {
+                    ZatoIDESplit.applySplitPosition(splitInstance);
+                }
+            } else {
+                if (window.AIChatEvents && AIChatEvents.applyChatVisibility) {
+                    AIChatEvents.applyChatVisibility(this);
+                }
             }
 
             var ideInstance = null;
