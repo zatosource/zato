@@ -70,6 +70,8 @@
             this.bindEvents(instance);
             console.log('[DebuggerUI] create: bindEvents complete');
 
+            this.updateToolbarState(instance);
+
             this.instances[containerId] = instance;
 
             console.log('[DebuggerUI] create: END returning instance');
@@ -313,7 +315,10 @@
                 }
 
                 var header = e.target.closest('.zato-debugger-panel-header[data-panel]');
-                if (header && !e.target.closest('.zato-debugger-panel-action') && !e.target.closest('.zato-debugger-copy-btn')) {
+                if (header) {
+                    if (e.target.closest('.zato-debugger-panel-action') || e.target.closest('.zato-debugger-copy-btn')) {
+                        return;
+                    }
                     var panel = header.getAttribute('data-panel');
                     self.togglePanel(instance, panel);
                 }
@@ -484,7 +489,9 @@
                     break;
                 case 'clear-breakpoints':
                     ZatoDebuggerCore.clearAllBreakpoints(dbg);
-                    this.updateBreakpoints(instance);
+                    if (instance.elements.breakpointsList) {
+                        instance.elements.breakpointsList.innerHTML = '';
+                    }
                     break;
                 case 'clear-console':
                     if (instance.elements.consoleOutput) {
@@ -542,7 +549,19 @@
 
         updateToolbarState: function(instance) {
             var dbg = instance.debugger;
-            if (!dbg) {
+            var continueBtn = instance.elements.continueBtn;
+
+            if (!dbg || typeof ZatoDebuggerCore === 'undefined') {
+                this.setButtonEnabled(continueBtn, true);
+                this.setButtonEnabled(instance.elements.pauseBtn, false);
+                this.setButtonEnabled(instance.elements.stepOverBtn, false);
+                this.setButtonEnabled(instance.elements.stepIntoBtn, false);
+                this.setButtonEnabled(instance.elements.stepOutBtn, false);
+                this.setButtonEnabled(instance.elements.restartBtn, false);
+                this.setButtonEnabled(instance.elements.stopBtn, false);
+                if (continueBtn) {
+                    continueBtn.setAttribute('data-tooltip', 'Start (F5)');
+                }
                 return;
             }
 
@@ -551,13 +570,21 @@
             var isRunning = state === ZatoDebuggerCore.DebugState.RUNNING;
             var isDebugging = ZatoDebuggerCore.isDebugging(dbg);
 
-            this.setButtonEnabled(instance.elements.continueBtn, isPaused);
+            this.setButtonEnabled(continueBtn, !isDebugging || isPaused);
             this.setButtonEnabled(instance.elements.pauseBtn, isRunning);
             this.setButtonEnabled(instance.elements.stepOverBtn, isPaused);
             this.setButtonEnabled(instance.elements.stepIntoBtn, isPaused);
             this.setButtonEnabled(instance.elements.stepOutBtn, isPaused);
             this.setButtonEnabled(instance.elements.restartBtn, isDebugging);
             this.setButtonEnabled(instance.elements.stopBtn, isDebugging);
+
+            if (continueBtn) {
+                if (isDebugging) {
+                    continueBtn.setAttribute('data-tooltip', 'Continue (F5)');
+                } else {
+                    continueBtn.setAttribute('data-tooltip', 'Start (F5)');
+                }
+            }
         },
 
         setButtonEnabled: function(button, enabled) {

@@ -1168,7 +1168,8 @@
                 { id: 'notes', file: 'notes.svg', tooltip: 'Notes' }
             ];
 
-            instance.sidePanel1ActiveView = 'explorer';
+            var savedView = localStorage.getItem('zato.ide.sidePanel1View');
+            instance.sidePanel1ActiveView = savedView || 'explorer';
 
             icons.forEach(function(iconDef) {
                 var iconDiv = document.createElement('div');
@@ -1223,6 +1224,7 @@
             });
 
             instance.sidePanel1ActiveView = viewId;
+            localStorage.setItem('zato.ide.sidePanel1View', viewId);
 
             var contentContainer = document.getElementById(instance.id + '-side-panel-1-content');
             if (contentContainer) {
@@ -1324,6 +1326,8 @@
 
             if (instance.sidePanel1ActiveView === 'explorer') {
                 this.initExplorer(instance, contentContainer);
+            } else if (instance.sidePanel1ActiveView === 'debugger') {
+                this.initDebuggerPanel(instance, contentContainer);
             }
         },
 
