@@ -3,6 +3,231 @@
 
     var AIChatEvents = {
 
+        logLayoutPositions: function(trigger) {
+            var data = {
+                trigger: trigger,
+                timestamp: new Date().toISOString(),
+                viewport: {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                },
+                elements: {}
+            };
+
+            var widget = document.getElementById('ai-chat-widget');
+            if (widget) {
+                var rect = widget.getBoundingClientRect();
+                data.elements.widget = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    offsetWidth: widget.offsetWidth,
+                    offsetHeight: widget.offsetHeight,
+                    classList: widget.className
+                };
+            }
+
+            var splitWrapper = document.getElementById('ai-chat-split-wrapper');
+            if (splitWrapper) {
+                var rect = splitWrapper.getBoundingClientRect();
+                data.elements.splitWrapper = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    offsetWidth: splitWrapper.offsetWidth,
+                    offsetHeight: splitWrapper.offsetHeight
+                };
+            }
+
+            var leftPanel = document.querySelector('.zato-ide-split-panel-left');
+            if (leftPanel) {
+                var rect = leftPanel.getBoundingClientRect();
+                data.elements.leftPanel = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    offsetWidth: leftPanel.offsetWidth,
+                    offsetHeight: leftPanel.offsetHeight,
+                    styleWidth: leftPanel.style.width
+                };
+            }
+
+            var rightPanel = document.querySelector('.zato-ide-split-panel-right');
+            if (rightPanel) {
+                var rect = rightPanel.getBoundingClientRect();
+                var computedStyle = getComputedStyle(rightPanel);
+                data.elements.rightPanel = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    offsetWidth: rightPanel.offsetWidth,
+                    offsetHeight: rightPanel.offsetHeight,
+                    display: computedStyle.display
+                };
+            }
+
+            var resizer = document.querySelector('.zato-ide-split-resizer');
+            if (resizer) {
+                var rect = resizer.getBoundingClientRect();
+                var computedStyle = getComputedStyle(resizer);
+                data.elements.resizer = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    display: computedStyle.display
+                };
+            }
+
+            var ideContainer = document.querySelector('.zato-ide-container');
+            if (ideContainer) {
+                var rect = ideContainer.getBoundingClientRect();
+                data.elements.ideContainer = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    offsetWidth: ideContainer.offsetWidth,
+                    offsetHeight: ideContainer.offsetHeight
+                };
+            }
+
+            var toolbar = document.querySelector('.zato-ide-toolbar');
+            if (toolbar) {
+                var rect = toolbar.getBoundingClientRect();
+                data.elements.toolbar = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height
+                };
+            }
+
+            var editorArea = document.querySelector('.zato-ide-editor-area');
+            if (editorArea) {
+                var rect = editorArea.getBoundingClientRect();
+                data.elements.editorArea = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height
+                };
+            }
+
+            var aceEditor = document.querySelector('.ace_editor');
+            if (aceEditor) {
+                var rect = aceEditor.getBoundingClientRect();
+                data.elements.aceEditor = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    offsetWidth: aceEditor.offsetWidth,
+                    offsetHeight: aceEditor.offsetHeight
+                };
+            }
+
+            var aceGutter = document.querySelector('.ace_gutter');
+            if (aceGutter) {
+                var rect = aceGutter.getBoundingClientRect();
+                var computedStyle = getComputedStyle(aceGutter);
+                data.elements.aceGutter = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    offsetWidth: aceGutter.offsetWidth,
+                    styleWidth: computedStyle.width
+                };
+            }
+
+            var aceScroller = document.querySelector('.ace_scroller');
+            if (aceScroller) {
+                var rect = aceScroller.getBoundingClientRect();
+                var computedStyle = getComputedStyle(aceScroller);
+                data.elements.aceScroller = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    styleLeft: computedStyle.left
+                };
+            }
+
+            var aceContent = document.querySelector('.ace_content');
+            if (aceContent) {
+                var rect = aceContent.getBoundingClientRect();
+                data.elements.aceContent = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height
+                };
+            }
+
+            var sidePanel1 = document.querySelector('.zato-ide-side-panel-1');
+            if (sidePanel1) {
+                var rect = sidePanel1.getBoundingClientRect();
+                data.elements.sidePanel1 = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height
+                };
+            }
+
+            var sidePanel1Content = document.querySelector('.zato-ide-side-panel-1-content');
+            if (sidePanel1Content) {
+                var rect = sidePanel1Content.getBoundingClientRect();
+                data.elements.sidePanel1Content = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    collapsed: sidePanel1Content.classList.contains('collapsed')
+                };
+            }
+
+            var mainSplit = document.getElementById('zato-ide-panel-main-split');
+            if (mainSplit) {
+                var rect = mainSplit.getBoundingClientRect();
+                data.elements.mainSplit = {
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height
+                };
+            }
+
+            var ideInstance = null;
+            if (typeof ZatoIDE !== 'undefined' && ZatoIDE.instances) {
+                for (var key in ZatoIDE.instances) {
+                    ideInstance = ZatoIDE.instances[key];
+                    break;
+                }
+            }
+            if (ideInstance && ideInstance.codeEditor && ideInstance.codeEditor.aceEditor) {
+                var renderer = ideInstance.codeEditor.aceEditor.renderer;
+                data.aceRenderer = {
+                    gutterWidth: renderer.gutterWidth,
+                    gutterLayerWidth: renderer.$gutterLayer ? renderer.$gutterLayer.gutterWidth : null,
+                    scrollLeft: renderer.scrollLeft,
+                    scrollTop: renderer.scrollTop,
+                    layerConfig: renderer.layerConfig ? {
+                        width: renderer.layerConfig.width,
+                        height: renderer.layerConfig.height,
+                        gutterOffset: renderer.layerConfig.gutterOffset
+                    } : null
+                };
+            }
+
+            console.log('[layout-diag] ' + trigger + ':', JSON.stringify(data, null, 2));
+        },
+
         toggleIDE: function(core) {
             console.log('[F9] toggleIDE: ideEnabled=' + core.ideEnabled + ' -> ' + !core.ideEnabled);
             if (!window.AIChatIDEIntegration) {
@@ -19,6 +244,7 @@
 
         toggleChat: function(core) {
             console.log('[F8] toggleChat: ideEnabled=' + core.ideEnabled + ' chatEnabled=' + core.chatEnabled);
+            this.logLayoutPositions('F8-before');
             if (!window.AIChatIDEIntegration) {
                 console.log('[F8] toggleChat: no AIChatIDEIntegration, returning');
                 return;
@@ -31,12 +257,14 @@
                 AIChatIDEIntegration.setChatEnabled(false);
                 core.render();
                 this.applyChatVisibility(core);
+                this.logLayoutPositions('F8-after-render');
                 return;
             }
             core.chatEnabled = !core.chatEnabled;
             AIChatIDEIntegration.setChatEnabled(core.chatEnabled);
             console.log('[F8] toggleChat: toggled chatEnabled to ' + core.chatEnabled);
             this.applyChatVisibility(core);
+            this.logLayoutPositions('F8-after');
         },
 
         applyChatVisibility: function(core) {

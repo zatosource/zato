@@ -66,10 +66,16 @@
                     AIChatMCP.loadServers(function() {
                         self.render();
                         self.focusInputIfNotMinimized();
+                        if (window.AIChatEvents && AIChatEvents.logLayoutPositions) {
+                            AIChatEvents.logLayoutPositions('app-load');
+                        }
                     });
                 } else {
                     self.render();
                     self.focusInputIfNotMinimized();
+                    if (window.AIChatEvents && AIChatEvents.logLayoutPositions) {
+                        AIChatEvents.logLayoutPositions('app-load');
+                    }
                 }
             }
 
@@ -86,6 +92,11 @@
 
             window.addEventListener('focus', function() {
                 self.focusInputIfNotMinimized();
+                self.recalculateSplitPositions('window-focus');
+            });
+
+            window.addEventListener('resize', function() {
+                self.recalculateSplitPositions('window-resize');
             });
 
         },
@@ -95,6 +106,31 @@
                 return;
             }
             AIChatTabActions.focusInput(this.widget, this.activeTabId);
+        },
+
+        recalculateSplitPositions: function(trigger) {
+            var splitInstance = window.ZatoIDESplit ? ZatoIDESplit.getInstance('ai-chat-split-wrapper') : null;
+            if (splitInstance) {
+                ZatoIDESplit.applySplitPosition(splitInstance);
+            }
+
+            var ideInstance = null;
+            if (typeof ZatoIDE !== 'undefined' && ZatoIDE.instances) {
+                for (var key in ZatoIDE.instances) {
+                    ideInstance = ZatoIDE.instances[key];
+                    break;
+                }
+            }
+            if (ideInstance && ideInstance.mainSplit) {
+                ZatoIDESplit.applySplitPosition(ideInstance.mainSplit);
+            }
+            if (ideInstance && ideInstance.codeEditor && ideInstance.codeEditor.aceEditor) {
+                ideInstance.codeEditor.aceEditor.resize();
+            }
+
+            if (window.AIChatEvents && AIChatEvents.logLayoutPositions) {
+                AIChatEvents.logLayoutPositions(trigger);
+            }
         },
 
         tooltipInstance: null,

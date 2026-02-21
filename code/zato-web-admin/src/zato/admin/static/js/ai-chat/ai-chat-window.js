@@ -4,6 +4,9 @@
     var AIChatWindow = {
 
         toggleMinimize: function(widget, core) {
+            if (window.AIChatEvents && AIChatEvents.logLayoutPositions) {
+                AIChatEvents.logLayoutPositions('minimize-before');
+            }
             if (core.isMaximized && !core.isMinimized) {
                 if (core.preMaximizeState) {
                     widget.style.left = core.preMaximizeState.left;
@@ -37,15 +40,25 @@
 
             if (wasMinimized && !core.isMinimized) {
                 setTimeout(function() {
+                    if (window.AIChat && AIChat.recalculateSplitPositions) {
+                        AIChat.recalculateSplitPositions('minimize-after-restore');
+                    }
                     var input = widget.querySelector('.ai-chat-input');
                     if (input) {
                         input.focus();
                     }
                 }, 50);
+            } else {
+                if (window.AIChatEvents && AIChatEvents.logLayoutPositions) {
+                    AIChatEvents.logLayoutPositions('minimize-after');
+                }
             }
         },
 
         toggleMaximize: function(widget, core) {
+            if (window.AIChatEvents && AIChatEvents.logLayoutPositions) {
+                AIChatEvents.logLayoutPositions('maximize-before');
+            }
             if (core.isMinimized) {
                 this.toggleMinimize(widget, core);
             }
@@ -79,6 +92,11 @@
             }
             core.saveState();
             core.render();
+
+            if (window.AIChat && AIChat.recalculateSplitPositions) {
+                AIChat.recalculateSplitPositions('maximize-after');
+            }
+
             AIChatTabActions.focusInput(widget, core.activeTabId);
         }
     };
