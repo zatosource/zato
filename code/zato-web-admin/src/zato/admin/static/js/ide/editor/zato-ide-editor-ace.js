@@ -8,7 +8,8 @@
             language: 'python',
             fontSize: 12,
             tabSize: 4,
-            lintDelay: 125
+            lintDelay: 125,
+            printMarginColumn: 120
         },
 
         completionMetaSelectedColor: '#ddd',
@@ -77,7 +78,8 @@
             editor.setFontSize(opts.fontSize + 'px');
             editor.session.setTabSize(opts.tabSize);
             editor.session.setUseSoftTabs(true);
-            editor.setShowPrintMargin(false);
+            editor.setShowPrintMargin(true);
+            editor.setPrintMarginColumn(opts.printMarginColumn);
             editor.setHighlightActiveLine(true);
             editor.setHighlightSelectedWord(true);
             editor.setDisplayIndentGuides(false);
