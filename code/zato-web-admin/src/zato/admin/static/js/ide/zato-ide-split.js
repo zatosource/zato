@@ -180,6 +180,18 @@
 
                 instance.splitPercent = (newIdeWidth / containerWidth) * 100;
                 self.applySplitPosition(instance);
+
+                var rightPanelWidth = containerWidth - newIdeWidth - resizerWidth;
+                var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
+                var iconsEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-icons') : null;
+                console.log('[ZatoIDESplit] drag: clientX=' + e.clientX + ', containerLeft=' + containerRect.left + ', newIdeWidth=' + newIdeWidth + ', rightPanelWidth=' + rightPanelWidth);
+                console.log('[ZatoIDESplit] drag: splitPercent=' + instance.splitPercent.toFixed(2) + '%, resizerWidth=' + resizerWidth + ', containerWidth=' + containerWidth);
+                if (contentEl) {
+                    console.log('[ZatoIDESplit] drag: content offsetWidth=' + contentEl.offsetWidth + ', collapsed=' + contentEl.classList.contains('collapsed'));
+                }
+                if (iconsEl) {
+                    console.log('[ZatoIDESplit] drag: icons offsetWidth=' + iconsEl.offsetWidth);
+                }
             });
 
             document.addEventListener('mouseup', function() {
