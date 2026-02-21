@@ -288,7 +288,7 @@
                     self.copyPanelContent(instance, copyType);
                     if (instance.tooltip && typeof ZatoTooltip !== 'undefined') {
                         ZatoTooltip.hideImmediate(instance.tooltip);
-                        ZatoTooltip.showTemporary(instance.tooltip, copyBtn, 'Copied to clipboard', 1100);
+                        ZatoTooltip.showTemporary(instance.tooltip, copyBtn, 'Copied to clipboard', 350);
                     }
                     return;
                 }
