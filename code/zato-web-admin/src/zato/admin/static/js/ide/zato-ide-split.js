@@ -152,6 +152,7 @@
             instance.resizer.addEventListener('mousedown', function(e) {
                 e.preventDefault();
                 instance.isDragging = true;
+                instance.hasDragged = false;
                 instance.resizer.classList.add('dragging');
                 document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
@@ -165,9 +166,22 @@
             });
             
             instance.resizer.addEventListener('click', function(e) {
-                console.log('[ZatoIDESplit] resizer click: wasCollapsedOnMousedown=' + instance.wasCollapsedOnMousedown);
+                console.log('[ZatoIDESplit] resizer click: wasCollapsedOnMousedown=' + instance.wasCollapsedOnMousedown + ', hasDragged=' + instance.hasDragged);
+                if (instance.hasDragged) {
+                    instance.wasCollapsedOnMousedown = false;
+                    return;
+                }
                 if (instance.wasCollapsedOnMousedown) {
-                    console.log('[ZatoIDESplit] resizer click: calling toggleSidePanelContent');
+                    console.log('[ZatoIDESplit] resizer click: restoring saved position');
+                    if (instance.savedSplitPercent !== undefined) {
+                        instance.splitPercent = instance.savedSplitPercent;
+                        self.applySplitPosition(instance);
+                    }
+                    if (instance.onResize) {
+                        instance.onResize(instance);
+                    }
+                } else {
+                    console.log('[ZatoIDESplit] resizer click: collapsing');
                     if (typeof ZatoIDEKeyboard !== 'undefined' && ZatoIDEKeyboard.toggleSidePanelContent) {
                         ZatoIDEKeyboard.toggleSidePanelContent();
                     }
@@ -179,6 +193,8 @@
                 if (!instance.isDragging) {
                     return;
                 }
+                
+                instance.hasDragged = true;
 
                 var containerRect = instance.container.getBoundingClientRect();
                 var containerWidth = containerRect.width;
