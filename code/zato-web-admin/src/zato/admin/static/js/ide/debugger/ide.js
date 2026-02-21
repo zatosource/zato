@@ -59,9 +59,6 @@
                 if (instance.gutterHandler) {
                     ZatoDebuggerGutter.destroy(instance.gutterHandler.id);
                 }
-                if (instance.panelContainer) {
-                    instance.panelContainer.remove();
-                }
                 delete this.instances[instanceId];
             }
         },
@@ -144,70 +141,57 @@
             }
         },
 
-        showDebugPanel: function(instance) {
-            console.log('[DebuggerIDE] showDebugPanel: START');
-            console.log('[DebuggerIDE] showDebugPanel: instance.panelVisible=' + instance.panelVisible);
+        showDebugPanelInContainer: function(instance, containerId) {
+            console.log('[DebuggerIDE] showDebugPanelInContainer: START containerId=' + containerId);
 
-            if (instance.panelVisible) {
-                console.log('[DebuggerIDE] showDebugPanel: panel already visible, returning');
+            var container = document.getElementById(containerId);
+            if (!container) {
+                console.log('[DebuggerIDE] showDebugPanelInContainer: container not found');
                 return;
             }
 
-            var ide = instance.ide;
-            console.log('[DebuggerIDE] showDebugPanel: ide.id=' + ide.id);
-
-            var editorAreaId = ide.id + '-editor-area';
-            console.log('[DebuggerIDE] showDebugPanel: looking for editorArea id=' + editorAreaId);
-            var editorArea = document.getElementById(editorAreaId);
-            console.log('[DebuggerIDE] showDebugPanel: editorArea=' + (editorArea ? 'found' : 'not found'));
-
-            if (!editorArea) {
-                console.log('[DebuggerIDE] showDebugPanel: editorArea not found, returning');
-                return;
-            }
-
-            var wrapper = editorArea.parentElement;
-            console.log('[DebuggerIDE] showDebugPanel: wrapper=' + (wrapper ? wrapper.className : 'null'));
-
-            var panelContainer = document.createElement('div');
-            panelContainer.id = instance.id + '-panel';
-            panelContainer.className = 'zato-debugger-panel-container';
-            console.log('[DebuggerIDE] showDebugPanel: created panelContainer id=' + panelContainer.id);
-
-            wrapper.appendChild(panelContainer);
-            console.log('[DebuggerIDE] showDebugPanel: appended panelContainer to wrapper');
-
-            instance.panelContainer = panelContainer;
+            instance.panelContainer = container;
             instance.panelVisible = true;
 
-            console.log('[DebuggerIDE] showDebugPanel: typeof ZatoDebuggerUI=' + (typeof ZatoDebuggerUI));
             if (typeof ZatoDebuggerUI === 'undefined') {
-                console.log('[DebuggerIDE] showDebugPanel: ZatoDebuggerUI is undefined, cannot create UI');
+                console.log('[DebuggerIDE] showDebugPanelInContainer: ZatoDebuggerUI is undefined');
                 return;
             }
 
-            console.log('[DebuggerIDE] showDebugPanel: calling ZatoDebuggerUI.create');
-            instance.debuggerUI = ZatoDebuggerUI.create(panelContainer.id, instance.debugger, {
-                theme: ide.options.theme
+            instance.debuggerUI = ZatoDebuggerUI.create(containerId, instance.debugger, {
+                theme: instance.ide.options.theme
             });
-            console.log('[DebuggerIDE] showDebugPanel: debuggerUI created=' + (instance.debuggerUI ? 'ok' : 'null'));
 
-            instance.debuggerUI.onJumpToLine = function(file, line) {
-                console.log('[DebuggerIDE] onJumpToLine: file=' + file + ' line=' + line);
-                if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
-                    ZatoIDE.jumpToLine(ide, line);
-                }
-            };
+            var ide = instance.ide;
+            if (instance.debuggerUI) {
+                instance.debuggerUI.onJumpToLine = function(file, line) {
+                    console.log('[DebuggerIDE] onJumpToLine: file=' + file + ' line=' + line);
+                    if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
+                        ZatoIDE.jumpToLine(ide, line);
+                    }
+                };
 
-            instance.debuggerUI.onHighlightLine = function(file, line) {
-                console.log('[DebuggerIDE] onHighlightLine: file=' + file + ' line=' + line);
-                if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
-                    ZatoIDE.jumpToLine(ide, line);
-                }
-            };
+                instance.debuggerUI.onHighlightLine = function(file, line) {
+                    console.log('[DebuggerIDE] onHighlightLine: file=' + file + ' line=' + line);
+                    if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
+                        ZatoIDE.jumpToLine(ide, line);
+                    }
+                };
+            }
 
-            console.log('[DebuggerIDE] showDebugPanel: calling adjustEditorLayout');
-            this.adjustEditorLayout(instance);
+            this.setupGutter(instance);
+            console.log('[DebuggerIDE] showDebugPanelInContainer: END');
+        },
+
+        showDebugPanel: function(instance) {
+            console.log('[DebuggerIDE] showDebugPanel: START');
+            console.log('[DebuggerIDE] showDebugPanel: redirecting to sidePanel1');
+
+            var ide = instance.ide;
+            if (ide && typeof ZatoIDE !== 'undefined') {
+                ZatoIDE.switchSidePanel1View(ide, 'debugger');
+            }
+
             console.log('[DebuggerIDE] showDebugPanel: END');
         },
 
@@ -221,13 +205,8 @@
                 instance.debuggerUI = null;
             }
 
-            if (instance.panelContainer) {
-                instance.panelContainer.remove();
-                instance.panelContainer = null;
-            }
-
+            instance.panelContainer = null;
             instance.panelVisible = false;
-            this.adjustEditorLayout(instance);
         },
 
         toggleDebugPanel: function(instance) {

@@ -1230,8 +1230,28 @@
 
                 if (viewId === 'explorer') {
                     self.initExplorer(instance, contentContainer);
+                } else if (viewId === 'debugger') {
+                    self.initDebuggerPanel(instance, contentContainer);
                 }
             }
+        },
+
+        initDebuggerPanel: function(instance, container) {
+            if (typeof ZatoDebuggerIDE === 'undefined') {
+                return;
+            }
+
+            var debuggerIDE = ZatoDebuggerIDE.getInstanceForIDE(instance);
+            if (!debuggerIDE) {
+                debuggerIDE = ZatoDebuggerIDE.create(instance, {});
+            }
+
+            var debuggerDiv = document.createElement('div');
+            debuggerDiv.id = instance.id + '-debugger-panel';
+            debuggerDiv.className = 'zato-ide-debugger-panel';
+            container.appendChild(debuggerDiv);
+
+            ZatoDebuggerIDE.showDebugPanelInContainer(debuggerIDE, debuggerDiv.id);
         },
 
         initMainSplit: function(instance) {
