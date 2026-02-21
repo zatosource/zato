@@ -59,6 +59,11 @@
         snapThreshold: 250,
 
         /**
+         * Percentage of snapThreshold at which the panel starts expanding from collapsed state.
+         */
+        expandStartPercent: 20,
+
+        /**
          * Map of container ID to instance object.
          */
         instances: {},
@@ -222,18 +227,16 @@
                 if (instance.wasCollapsedOnMousedown) {
                     var dragDelta = instance.dragStartX - e.clientX;
                     console.log('[Split] expand mode: dragDelta=' + dragDelta + ', threshold=' + snapThreshold + ', willExpand=' + (dragDelta >= snapThreshold));
-                    if (dragDelta >= snapThreshold) {
-                        console.log('[Split] expanding now');
+                    var expandStartThreshold = Math.round(snapThreshold * self.expandStartPercent / 100);
+                    if (dragDelta >= expandStartThreshold) {
                         var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
                         if (contentEl) {
                             contentEl.classList.remove('collapsed');
-                            console.log('[Split] removed collapsed class');
                         }
                         instance.wasCollapsedOnMousedown = false;
                         instance.expandedDuringThisDrag = true;
                         instance.leftPanel.style.width = Math.round(maxIdeWidth) + 'px';
                         instance.splitPercent = (maxIdeWidth / containerWidth) * 100;
-                        console.log('[Split] set leftPanel width to maxIdeWidth=' + maxIdeWidth);
                         return;
                     } else {
                         return;
