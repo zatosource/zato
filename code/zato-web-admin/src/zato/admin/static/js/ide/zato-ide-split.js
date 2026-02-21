@@ -155,6 +155,11 @@
                 instance.resizer.classList.add('dragging');
                 document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
+                
+                var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
+                if (contentEl && contentEl.classList.contains('collapsed')) {
+                    contentEl.classList.remove('collapsed');
+                }
             });
 
             document.addEventListener('mousemove', function(e) {
