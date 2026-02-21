@@ -43,6 +43,11 @@
         defaultSplitPercent: 50,
 
         /**
+         * Fallback width in pixels from the right edge when exact position cannot be restored.
+         */
+        fallbackRightPanelWidth: 300,
+
+        /**
          * Minimum width in pixels for either panel.
          * Prevents panels from being resized too small.
          */
@@ -81,25 +86,27 @@
 
             var storageKey = opts.storageKey || this.storageKey;
             var defaultPercent = opts.defaultSplitPercent || this.defaultSplitPercent;
-            var savedPercent = this.loadSplitPosition(storageKey);
-            var splitPercent = savedPercent !== null ? savedPercent : defaultPercent;
+            var fallbackRightPanelWidth = opts.fallbackRightPanelWidth || this.fallbackRightPanelWidth;
 
             var instance = {
                 id: containerId,
                 container: container,
-                splitPercent: splitPercent,
+                splitPercent: defaultPercent,
+                savedLeftPanelPixels: null,
                 isDragging: false,
                 leftPanel: null,
                 rightPanel: null,
                 resizer: null,
                 onResize: opts.onResize || null,
-                storageKey: opts.storageKey || this.storageKey,
-                defaultSplitPercent: opts.defaultSplitPercent || this.defaultSplitPercent,
+                storageKey: storageKey,
+                defaultSplitPercent: defaultPercent,
+                fallbackRightPanelWidth: fallbackRightPanelWidth,
                 minPanelWidth: opts.minPanelWidth || this.minPanelWidth
             };
 
             this.render(instance);
             this.bindEvents(instance);
+            this.restoreSplitPosition(instance);
             this.instances[containerId] = instance;
 
             return instance;
@@ -219,7 +226,7 @@
                     instance.resizer.classList.remove('dragging');
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
-                    self.saveSplitPosition(instance.splitPercent, instance.storageKey);
+                    self.saveSplitPosition(instance);
 
                     if (instance.onResize) {
                         instance.onResize(instance);
@@ -255,39 +262,75 @@
         },
 
         /**
-         * Saves the split position to localStorage.
+         * Saves the split position to localStorage as pixels.
          *
-         * @param {number} percent - split position as percentage (0-100)
+         * @param {Object} instance - the split instance object
          */
-        saveSplitPosition: function(percent, storageKey) {
-            var key = storageKey || this.storageKey;
+        saveSplitPosition: function(instance) {
+            var key = instance.storageKey || this.storageKey;
+            var leftWidth = instance.leftPanel ? instance.leftPanel.offsetWidth : 0;
             try {
-                localStorage.setItem(key, percent.toString());
+                localStorage.setItem(key, leftWidth.toString());
             } catch (e) {
                 console.warn('ZatoIDESplit: failed to save split position:', e);
             }
         },
 
         /**
-         * Loads the split position from localStorage.
+         * Restores the split position from localStorage.
+         * Applies fallback logic if exact position cannot be restored.
          *
-         * @param {string} storageKey - optional custom storage key
-         * @returns {number|null} split position as percentage, or null if not saved
+         * @param {Object} instance - the split instance object
          */
-        loadSplitPosition: function(storageKey) {
-            var key = storageKey || this.storageKey;
+        restoreSplitPosition: function(instance) {
+            var key = instance.storageKey || this.storageKey;
+            var savedPixels = null;
             try {
                 var saved = localStorage.getItem(key);
                 if (saved !== null) {
-                    var percent = parseFloat(saved);
-                    if (!isNaN(percent) && percent >= 10 && percent <= 90) {
-                        return percent;
+                    savedPixels = parseInt(saved, 10);
+                    if (isNaN(savedPixels) || savedPixels < 0) {
+                        savedPixels = null;
                     }
                 }
             } catch (e) {
                 console.warn('ZatoIDESplit: failed to load split position:', e);
             }
-            return null;
+
+            if (savedPixels === null) {
+                return;
+            }
+
+            var containerWidth = instance.container.offsetWidth;
+            var resizerWidth = instance.resizer ? instance.resizer.offsetWidth : 4;
+            var minWidth = instance.minPanelWidth;
+            var fallbackRightWidth = instance.fallbackRightPanelWidth || this.fallbackRightPanelWidth;
+
+            var maxLeftWidth = containerWidth - minWidth - resizerWidth;
+
+            if (savedPixels >= minWidth && savedPixels <= maxLeftWidth) {
+                instance.leftPanel.style.width = savedPixels + 'px';
+                instance.splitPercent = (savedPixels / containerWidth) * 100;
+                return;
+            }
+
+            var fallbackLeftWidth = containerWidth - fallbackRightWidth - resizerWidth;
+            if (fallbackLeftWidth >= minWidth && fallbackLeftWidth <= maxLeftWidth) {
+                instance.leftPanel.style.width = Math.round(fallbackLeftWidth) + 'px';
+                instance.splitPercent = (fallbackLeftWidth / containerWidth) * 100;
+                return;
+            }
+
+            var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
+            if (contentEl) {
+                contentEl.classList.add('collapsed');
+            }
+            var iconsEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-icons') : null;
+            var iconsWidth = iconsEl ? iconsEl.offsetWidth : 48;
+            var collapsedLeftWidth = containerWidth - iconsWidth - resizerWidth;
+            if (collapsedLeftWidth >= minWidth) {
+                instance.leftPanel.style.width = Math.round(collapsedLeftWidth) + 'px';
+            }
         },
 
         /**
