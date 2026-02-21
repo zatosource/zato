@@ -179,21 +179,16 @@
 
             var contentContainer = document.getElementById(ideInstance.id + '-side-panel-1-content');
             var sidePanel = document.getElementById(ideInstance.id + '-side-panel-1');
-            var resizer = ideInstance.mainSplit.resizer;
             
             if (!contentContainer || !sidePanel) {
                 return;
             }
 
             var iconsWidth = 52;
-            var resizerWidth = 4;
             
             if (contentContainer.classList.contains('collapsed')) {
                 contentContainer.classList.remove('collapsed');
                 sidePanel.style.minWidth = '';
-                if (resizer) {
-                    resizer.style.display = '';
-                }
                 ideInstance.sidePanelContentHidden = false;
                 if (typeof ZatoIDESplit !== 'undefined' && ideInstance.mainSplit.savedSplitPercent !== undefined) {
                     ideInstance.mainSplit.splitPercent = ideInstance.mainSplit.savedSplitPercent;
@@ -203,10 +198,8 @@
                 contentContainer.classList.add('collapsed');
                 ideInstance.sidePanelContentHidden = true;
                 ideInstance.mainSplit.savedSplitPercent = ideInstance.mainSplit.splitPercent;
-                if (resizer) {
-                    resizer.style.display = 'none';
-                }
                 var containerWidth = ideInstance.mainSplit.container.offsetWidth;
+                var resizerWidth = ideInstance.mainSplit.resizer ? ideInstance.mainSplit.resizer.offsetWidth : 4;
                 var newLeftWidth = containerWidth - iconsWidth - resizerWidth;
                 ideInstance.mainSplit.leftPanel.style.width = newLeftWidth + 'px';
                 sidePanel.style.minWidth = iconsWidth + 'px';
