@@ -166,9 +166,8 @@
 
                 var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
                 instance.wasCollapsedOnMousedown = contentEl && contentEl.classList.contains('collapsed');
-                if (instance.wasCollapsedOnMousedown) {
-                    contentEl.classList.remove('collapsed');
-                }
+                instance.dragStartX = e.clientX;
+                console.log('[Split] mousedown: wasCollapsedOnMousedown=' + instance.wasCollapsedOnMousedown + ', startX=' + e.clientX);
             });
 
             instance.resizer.addEventListener('click', function(e) {
@@ -203,16 +202,60 @@
                 var containerWidth = containerRect.width;
                 var resizerWidth = instance.resizer.offsetWidth;
                 var minWidth = instance.minPanelWidth;
+                var snapThreshold = 50;
+
+                var iconsEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-icons') : null;
+                var iconsWidth = iconsEl ? iconsEl.offsetWidth : 48;
+                var collapsedLeftWidth = containerWidth - iconsWidth - resizerWidth;
 
                 var newIdeWidth = e.clientX - containerRect.left;
+                var maxIdeWidth = containerWidth - minWidth - resizerWidth;
+
+                if (instance.wasCollapsedOnMousedown) {
+                    var expandThreshold = collapsedLeftWidth - snapThreshold;
+                    if (newIdeWidth < expandThreshold) {
+                        var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
+                        if (contentEl) {
+                            contentEl.classList.remove('collapsed');
+                        }
+                        instance.isDragging = false;
+                        instance.resizer.classList.remove('dragging');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                        instance.leftPanel.style.width = Math.round(maxIdeWidth) + 'px';
+                        instance.splitPercent = (maxIdeWidth / containerWidth) * 100;
+                        self.saveSplitPosition(instance);
+                        if (instance.onResize) {
+                            instance.onResize(instance);
+                        }
+                    }
+                    return;
+                }
+
+                if (newIdeWidth > maxIdeWidth) {
+                    var overDrag = newIdeWidth - maxIdeWidth;
+                    if (overDrag >= snapThreshold) {
+                        var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
+                        if (contentEl) {
+                            contentEl.classList.add('collapsed');
+                        }
+                        instance.leftPanel.style.width = Math.round(collapsedLeftWidth) + 'px';
+                        instance.splitPercent = (collapsedLeftWidth / containerWidth) * 100;
+                        instance.isDragging = false;
+                        instance.resizer.classList.remove('dragging');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                        self.saveSplitPosition(instance);
+                        if (instance.onResize) {
+                            instance.onResize(instance);
+                        }
+                        return;
+                    }
+                    newIdeWidth = maxIdeWidth;
+                }
 
                 if (newIdeWidth < minWidth) {
                     newIdeWidth = minWidth;
-                }
-
-                var maxIdeWidth = containerWidth - minWidth - resizerWidth;
-                if (newIdeWidth > maxIdeWidth) {
-                    newIdeWidth = maxIdeWidth;
                 }
 
                 instance.splitPercent = (newIdeWidth / containerWidth) * 100;
@@ -222,6 +265,7 @@
 
             document.addEventListener('mouseup', function() {
                 if (instance.isDragging) {
+                    console.log('[Split] mouseup: saving position');
                     instance.isDragging = false;
                     instance.resizer.classList.remove('dragging');
                     document.body.style.cursor = '';
