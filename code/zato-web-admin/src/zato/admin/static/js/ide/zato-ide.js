@@ -1274,7 +1274,6 @@
             instance.mainSplit = ZatoIDESplit.create(splitContainerId, {
                 storageKey: 'zato.ide.main-split-position',
                 defaultSplitPercent: 75,
-                minPanelWidth: 200,
                 onResize: function() {
                     if (instance.aceEditor) {
                         instance.aceEditor.resize();

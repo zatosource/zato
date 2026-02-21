@@ -51,7 +51,12 @@
          * Minimum width in pixels for either panel.
          * Prevents panels from being resized too small.
          */
-        minPanelWidth: 200,
+        minPanelWidth: 300,
+
+        /**
+         * Distance in pixels to drag past the limit before snap collapse/expand triggers.
+         */
+        snapThreshold: 250,
 
         /**
          * Map of container ID to instance object.
@@ -203,7 +208,7 @@
                 var containerWidth = containerRect.width;
                 var resizerWidth = instance.resizer.offsetWidth;
                 var minWidth = instance.minPanelWidth;
-                var snapThreshold = 50;
+                var snapThreshold = self.snapThreshold;
 
                 var iconsEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-icons') : null;
                 var iconsWidth = iconsEl ? iconsEl.offsetWidth : 48;
