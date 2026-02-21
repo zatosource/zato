@@ -194,6 +194,7 @@
                 var aceGutter = aceContainer ? aceContainer.querySelector('.ace_gutter') : null;
                 var aceScroller = aceContainer ? aceContainer.querySelector('.ace_scroller') : null;
                 var aceGutterLayer = aceGutter ? aceGutter.querySelector('.ace_gutter-layer') : null;
+                var aceScrollBarH = aceContainer ? aceContainer.querySelector('.ace_scrollbar-h') : null;
                 
                 console.log('[toggleSidePanelContent] ' + label);
                 if (leftPanel) {
@@ -230,6 +231,15 @@
                     var acnRect = aceContent.getBoundingClientRect();
                     var acnStyle = window.getComputedStyle(aceContent);
                     console.log('  aceContent: left=' + acnRect.left.toFixed(2) + ', width=' + acnRect.width.toFixed(2) + ', marginLeft=' + acnStyle.marginLeft);
+                }
+                if (aceScrollBarH) {
+                    var asbhRect = aceScrollBarH.getBoundingClientRect();
+                    var asbhStyle = window.getComputedStyle(aceScrollBarH);
+                    console.log('  aceScrollBarH: left=' + asbhRect.left.toFixed(2) + ', height=' + asbhRect.height.toFixed(2) + ', style.left=' + asbhStyle.left + ', style.display=' + asbhStyle.display);
+                }
+                var renderer = ideInstance.codeEditor && ideInstance.codeEditor.aceEditor ? ideInstance.codeEditor.aceEditor.renderer : null;
+                if (renderer) {
+                    console.log('  renderer: gutterWidth=' + renderer.gutterWidth + ', $gutterLayer.gutterWidth=' + (renderer.$gutterLayer ? renderer.$gutterLayer.gutterWidth : 'n/a') + ', scrollBarV.width=' + (renderer.scrollBarV ? renderer.scrollBarV.getWidth() : 'n/a'));
                 }
             };
             
@@ -295,11 +305,25 @@
             }
 
             if (ideInstance.codeEditor && ideInstance.codeEditor.aceEditor) {
-                var savedScrollerLeft = aceScroller ? aceScroller.style.left : null;
+                var renderer = ideInstance.codeEditor.aceEditor.renderer;
+                var gutterLayerWidth = renderer && renderer.$gutterLayer ? renderer.$gutterLayer.gutterWidth : null;
+                
                 setTimeout(function() {
                     ideInstance.codeEditor.aceEditor.resize();
-                    if (savedScrollerLeft && aceScroller) {
-                        aceScroller.style.left = savedScrollerLeft;
+                    
+                    if (renderer && gutterLayerWidth !== null) {
+                        var gutterEl = renderer.$gutter;
+                        if (gutterEl) {
+                            gutterEl.style.width = gutterLayerWidth + 'px';
+                        }
+                        renderer.gutterWidth = gutterLayerWidth;
+                        if (aceScroller) {
+                            aceScroller.style.left = gutterLayerWidth + 'px';
+                        }
+                        var aceScrollBarH = renderer.scrollBarH ? renderer.scrollBarH.element : null;
+                        if (aceScrollBarH) {
+                            aceScrollBarH.style.left = gutterLayerWidth + 'px';
+                        }
                     }
                     logEditorPosition('AFTER ace resize');
                 }, 20);
