@@ -235,6 +235,11 @@
                     }
                 }
 
+                if (instance.expandedDuringThisDrag && newIdeWidth <= maxIdeWidth) {
+                    instance.expandedDuringThisDrag = false;
+                    instance.dragStartX = e.clientX;
+                }
+
                 if (newIdeWidth > maxIdeWidth && !instance.expandedDuringThisDrag) {
                     var overDrag = newIdeWidth - maxIdeWidth;
                     if (overDrag >= snapThreshold) {
