@@ -166,6 +166,7 @@
 
                 var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
                 instance.wasCollapsedOnMousedown = contentEl && contentEl.classList.contains('collapsed');
+                instance.expandedDuringThisDrag = false;
                 instance.dragStartX = e.clientX;
                 console.log('[Split] mousedown: wasCollapsedOnMousedown=' + instance.wasCollapsedOnMousedown + ', startX=' + e.clientX);
             });
@@ -211,28 +212,30 @@
                 var newIdeWidth = e.clientX - containerRect.left;
                 var maxIdeWidth = containerWidth - minWidth - resizerWidth;
 
+                console.log('[Split] mousemove: clientX=' + e.clientX + ', isDragging=' + instance.isDragging + ', wasCollapsed=' + instance.wasCollapsedOnMousedown + ', dragStartX=' + instance.dragStartX);
+
                 if (instance.wasCollapsedOnMousedown) {
-                    var expandThreshold = collapsedLeftWidth - snapThreshold;
-                    if (newIdeWidth < expandThreshold) {
+                    var dragDelta = instance.dragStartX - e.clientX;
+                    console.log('[Split] expand mode: dragDelta=' + dragDelta + ', threshold=' + snapThreshold + ', willExpand=' + (dragDelta >= snapThreshold));
+                    if (dragDelta >= snapThreshold) {
+                        console.log('[Split] expanding now');
                         var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
                         if (contentEl) {
                             contentEl.classList.remove('collapsed');
+                            console.log('[Split] removed collapsed class');
                         }
-                        instance.isDragging = false;
-                        instance.resizer.classList.remove('dragging');
-                        document.body.style.cursor = '';
-                        document.body.style.userSelect = '';
+                        instance.wasCollapsedOnMousedown = false;
+                        instance.expandedDuringThisDrag = true;
                         instance.leftPanel.style.width = Math.round(maxIdeWidth) + 'px';
                         instance.splitPercent = (maxIdeWidth / containerWidth) * 100;
-                        self.saveSplitPosition(instance);
-                        if (instance.onResize) {
-                            instance.onResize(instance);
-                        }
+                        console.log('[Split] set leftPanel width to maxIdeWidth=' + maxIdeWidth);
+                        return;
+                    } else {
+                        return;
                     }
-                    return;
                 }
 
-                if (newIdeWidth > maxIdeWidth) {
+                if (newIdeWidth > maxIdeWidth && !instance.expandedDuringThisDrag) {
                     var overDrag = newIdeWidth - maxIdeWidth;
                     if (overDrag >= snapThreshold) {
                         var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
