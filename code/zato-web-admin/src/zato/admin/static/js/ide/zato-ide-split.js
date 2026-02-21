@@ -172,13 +172,13 @@
                     return;
                 }
                 if (instance.wasCollapsedOnMousedown) {
-                    console.log('[ZatoIDESplit] resizer click: restoring saved position');
-                    if (instance.savedSplitPercent !== undefined) {
-                        instance.splitPercent = instance.savedSplitPercent;
-                        self.applySplitPosition(instance);
+                    console.log('[ZatoIDESplit] resizer click: was collapsed, restoring position via toggle');
+                    var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
+                    if (contentEl) {
+                        contentEl.classList.add('collapsed');
                     }
-                    if (instance.onResize) {
-                        instance.onResize(instance);
+                    if (typeof ZatoIDEKeyboard !== 'undefined' && ZatoIDEKeyboard.toggleSidePanelContent) {
+                        ZatoIDEKeyboard.toggleSidePanelContent();
                     }
                 } else {
                     console.log('[ZatoIDESplit] resizer click: collapsing');

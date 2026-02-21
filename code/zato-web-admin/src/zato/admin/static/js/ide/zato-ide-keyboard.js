@@ -180,19 +180,25 @@
             }
 
             var iconsWidth = 48;
+            var activeView = ideInstance.sidePanel1ActiveView || 'explorer';
+            
+            if (!ideInstance.mainSplit.savedSplitPercentByView) {
+                ideInstance.mainSplit.savedSplitPercentByView = {};
+            }
             
             if (contentContainer.classList.contains('collapsed')) {
                 contentContainer.classList.remove('collapsed');
                 sidePanel.style.minWidth = '';
                 ideInstance.sidePanelContentHidden = false;
-                if (typeof ZatoIDESplit !== 'undefined' && ideInstance.mainSplit.savedSplitPercent !== undefined) {
-                    ideInstance.mainSplit.splitPercent = ideInstance.mainSplit.savedSplitPercent;
+                var savedPercent = ideInstance.mainSplit.savedSplitPercentByView[activeView];
+                if (typeof ZatoIDESplit !== 'undefined' && savedPercent !== undefined) {
+                    ideInstance.mainSplit.splitPercent = savedPercent;
                     ZatoIDESplit.applySplitPosition(ideInstance.mainSplit);
                 }
             } else {
                 contentContainer.classList.add('collapsed');
                 ideInstance.sidePanelContentHidden = true;
-                ideInstance.mainSplit.savedSplitPercent = ideInstance.mainSplit.splitPercent;
+                ideInstance.mainSplit.savedSplitPercentByView[activeView] = ideInstance.mainSplit.splitPercent;
                 var iconsEl = document.getElementById(ideInstance.id + '-side-panel-1-icons');
                 var actualIconsWidth = iconsEl ? iconsEl.offsetWidth : iconsWidth;
                 var containerWidth = ideInstance.mainSplit.container.offsetWidth;

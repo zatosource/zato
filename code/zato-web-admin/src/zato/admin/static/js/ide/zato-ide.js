@@ -1192,6 +1192,15 @@
                 xhr.send();
 
                 iconDiv.addEventListener('click', function() {
+                    var contentContainer = document.getElementById(instance.id + '-side-panel-1-content');
+                    var isCollapsed = contentContainer && contentContainer.classList.contains('collapsed');
+                    
+                    if (isCollapsed) {
+                        if (typeof ZatoIDEKeyboard !== 'undefined' && ZatoIDEKeyboard.toggleSidePanelContent) {
+                            ZatoIDEKeyboard.toggleSidePanelContent();
+                        }
+                    }
+                    
                     self.switchSidePanel1View(instance, iconDef.id);
                 });
             });
