@@ -8,7 +8,8 @@
 .zato-ide-side-panel-1-content {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .zato-ide-side-panel-1-content.collapsed {
