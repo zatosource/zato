@@ -240,7 +240,7 @@
             html += '<div class="zato-debugger-panel-header" data-panel="breakpoints">';
             html += '<span class="zato-debugger-panel-toggle">' + this.getChevronIcon() + '</span>';
             html += '<span class="zato-debugger-panel-title">Breakpoints</span>';
-            html += '<button class="zato-debugger-panel-action" data-action="clear-breakpoints" title="Remove all breakpoints">';
+            html += '<button class="zato-debugger-panel-action" data-action="clear-breakpoints" data-tooltip="Remove all breakpoints">';
             html += this.getTrashIcon();
             html += '</button>';
             html += '</div>';
@@ -257,7 +257,7 @@
             html += '<div class="zato-debugger-panel-header" data-panel="console">';
             html += '<span class="zato-debugger-panel-toggle">' + this.getChevronIcon() + '</span>';
             html += '<span class="zato-debugger-panel-title">Debug console</span>';
-            html += '<button class="zato-debugger-panel-action" data-action="clear-console" title="Clear console">';
+            html += '<button class="zato-debugger-panel-action" data-action="clear-console" data-tooltip="Clear console">';
             html += this.getTrashIcon();
             html += '</button>';
             html += '</div>';
@@ -282,6 +282,20 @@
                     e.stopPropagation();
                     var copyType = copyBtn.getAttribute('data-copy');
                     self.copyPanelContent(instance, copyType);
+                    if (instance.tooltip && typeof ZatoTooltip !== 'undefined') {
+                        ZatoTooltip.showTemporary(instance.tooltip, copyBtn, 'Copied to clipboard', 1100);
+                    }
+                    return;
+                }
+
+                var actionBtn = e.target.closest('.zato-debugger-panel-action');
+                if (actionBtn) {
+                    e.stopPropagation();
+                    var action = actionBtn.getAttribute('data-action');
+                    self.handleAction(instance, action, e);
+                    if (instance.tooltip && typeof ZatoTooltip !== 'undefined') {
+                        ZatoTooltip.hide(instance.tooltip);
+                    }
                     return;
                 }
 

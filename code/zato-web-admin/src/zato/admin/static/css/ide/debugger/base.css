@@ -489,7 +489,7 @@
     border: none;
     border-radius: 3px;
     background: #3c3c3c;
-    color: #999;
+    color: #ddd;
     cursor: pointer;
     text-shadow: none;
     box-shadow: none;
@@ -498,11 +498,27 @@
 
 .zato-debugger-copy-btn:hover {
     background: #4c4c4c;
-    color: #ccc;
+    color: #fff;
 }
 
 .zato-debugger-copy-btn:focus,
 .zato-debugger-copy-btn:active {
+    outline: none;
+    box-shadow: none;
+}
+
+.zato-debugger-panel-action {
+    color: #ddd;
+    outline: none;
+    box-shadow: none;
+}
+
+.zato-debugger-panel-action:hover {
+    color: #fff;
+}
+
+.zato-debugger-panel-action:focus,
+.zato-debugger-panel-action:active {
     outline: none;
     box-shadow: none;
 }
