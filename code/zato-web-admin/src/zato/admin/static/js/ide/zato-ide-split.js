@@ -159,20 +159,17 @@
                 
                 var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
                 instance.wasCollapsedOnMousedown = contentEl && contentEl.classList.contains('collapsed');
-                console.log('[ZatoIDESplit] mousedown: wasCollapsedOnMousedown=' + instance.wasCollapsedOnMousedown);
                 if (instance.wasCollapsedOnMousedown) {
                     contentEl.classList.remove('collapsed');
                 }
             });
             
             instance.resizer.addEventListener('click', function(e) {
-                console.log('[ZatoIDESplit] resizer click: wasCollapsedOnMousedown=' + instance.wasCollapsedOnMousedown + ', hasDragged=' + instance.hasDragged);
                 if (instance.hasDragged) {
                     instance.wasCollapsedOnMousedown = false;
                     return;
                 }
                 if (instance.wasCollapsedOnMousedown) {
-                    console.log('[ZatoIDESplit] resizer click: was collapsed, restoring position via toggle');
                     var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
                     if (contentEl) {
                         contentEl.classList.add('collapsed');
@@ -181,7 +178,6 @@
                         ZatoIDEKeyboard.toggleSidePanelContent();
                     }
                 } else {
-                    console.log('[ZatoIDESplit] resizer click: collapsing');
                     if (typeof ZatoIDEKeyboard !== 'undefined' && ZatoIDEKeyboard.toggleSidePanelContent) {
                         ZatoIDEKeyboard.toggleSidePanelContent();
                     }
@@ -215,17 +211,6 @@
                 instance.splitPercent = (newIdeWidth / containerWidth) * 100;
                 self.applySplitPosition(instance);
 
-                var rightPanelWidth = containerWidth - newIdeWidth - resizerWidth;
-                var contentEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-content') : null;
-                var iconsEl = instance.rightPanel ? instance.rightPanel.querySelector('.zato-ide-side-panel-1-icons') : null;
-                console.log('[ZatoIDESplit] drag: clientX=' + e.clientX + ', containerLeft=' + containerRect.left + ', newIdeWidth=' + newIdeWidth + ', rightPanelWidth=' + rightPanelWidth);
-                console.log('[ZatoIDESplit] drag: splitPercent=' + instance.splitPercent.toFixed(2) + '%, resizerWidth=' + resizerWidth + ', containerWidth=' + containerWidth);
-                if (contentEl) {
-                    console.log('[ZatoIDESplit] drag: content offsetWidth=' + contentEl.offsetWidth + ', collapsed=' + contentEl.classList.contains('collapsed'));
-                }
-                if (iconsEl) {
-                    console.log('[ZatoIDESplit] drag: icons offsetWidth=' + iconsEl.offsetWidth);
-                }
             });
 
             document.addEventListener('mouseup', function() {
