@@ -249,7 +249,7 @@
             }
 
             if (instance.leftPanel) {
-                instance.leftPanel.style.width = leftWidth + 'px';
+                instance.leftPanel.style.width = Math.round(leftWidth) + 'px';
             }
         },
 

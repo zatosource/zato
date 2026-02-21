@@ -197,7 +197,7 @@
                 var actualIconsWidth = iconsEl ? iconsEl.offsetWidth : iconsWidth;
                 var containerWidth = ideInstance.mainSplit.container.offsetWidth;
                 var resizerWidth = ideInstance.mainSplit.resizer ? ideInstance.mainSplit.resizer.offsetWidth : 4;
-                var newLeftWidth = containerWidth - actualIconsWidth - resizerWidth;
+                var newLeftWidth = Math.round(containerWidth - actualIconsWidth - resizerWidth);
                 ideInstance.mainSplit.leftPanel.style.width = newLeftWidth + 'px';
             }
 

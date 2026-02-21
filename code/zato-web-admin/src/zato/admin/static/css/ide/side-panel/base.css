@@ -28,10 +28,12 @@
     min-width: 48px;
     padding: 4px 0;
     background: #222 !important;
+    box-sizing: border-box;
+    border-left: 1px solid transparent;
 }
 
 .zato-ide-side-panel-1:has(.zato-ide-side-panel-1-content:not(.collapsed)) .zato-ide-side-panel-1-icons {
-    border-left: 1px solid #3c3c3c;
+    border-left-color: #3c3c3c;
 }
 
 .zato-ide-side-panel-1-icon {
