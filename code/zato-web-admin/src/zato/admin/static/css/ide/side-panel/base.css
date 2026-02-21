@@ -29,6 +29,10 @@
     padding: 4px 0;
 }
 
+.zato-ide-side-panel-1:has(.zato-ide-side-panel-1-content:not(.collapsed)) .zato-ide-side-panel-1-icons {
+    border-left: 1px solid #00ff00;
+}
+
 .zato-ide-side-panel-1-icon {
     display: flex;
     align-items: center;
