@@ -11,7 +11,6 @@
                 return;
             }
             this.initialized = true;
-            console.log('[ZatoIDEKeyboard] Initializing keyboard handler');
 
             var self = this;
 
@@ -24,7 +23,6 @@
             }, true);
 
             var handleCtrlW = function(e) {
-                console.log('[ZatoIDEKeyboard] keydown: key=' + e.key + ', keyCode=' + e.keyCode);
                 if (e.ctrlKey && (e.key === 'w' || e.key === 'W' || e.keyCode === 87 || e.which === 87 || e.which === 119)) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -33,7 +31,6 @@
                     return false;
                 }
                 if (e.key === 'F2' || e.keyCode === 113) {
-                    console.log('[ZatoIDEKeyboard] F2 detected, toggling side panel');
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
@@ -163,7 +160,6 @@
         },
 
         toggleSidePanelContent: function() {
-            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: START');
             var ideInstance = null;
             if (typeof ZatoIDE !== 'undefined' && ZatoIDE.instances) {
                 for (var key in ZatoIDE.instances) {
@@ -173,7 +169,6 @@
             }
 
             if (!ideInstance || !ideInstance.mainSplit) {
-                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: no ideInstance or mainSplit found');
                 return;
             }
 
@@ -211,7 +206,6 @@
                     ideInstance.codeEditor.aceEditor.resize();
                 }, 20);
             }
-            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: END');
         }
     };
 
