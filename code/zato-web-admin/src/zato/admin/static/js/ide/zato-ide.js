@@ -1269,15 +1269,15 @@
                 rightPanel.id = instance.id + '-side-panel-1';
                 rightPanel.className += ' zato-ide-side-panel-1';
 
-                var contentDiv = document.createElement('div');
-                contentDiv.id = instance.id + '-side-panel-1-content';
-                contentDiv.className = 'zato-ide-side-panel-1-content';
-                rightPanel.appendChild(contentDiv);
-
                 var iconsDiv = document.createElement('div');
                 iconsDiv.id = instance.id + '-side-panel-1-icons';
                 iconsDiv.className = 'zato-ide-side-panel-1-icons';
                 rightPanel.appendChild(iconsDiv);
+
+                var contentDiv = document.createElement('div');
+                contentDiv.id = instance.id + '-side-panel-1-content';
+                contentDiv.className = 'zato-ide-side-panel-1-content';
+                rightPanel.appendChild(contentDiv);
                 console.log('[ZatoIDE] initMainSplit: side panel elements created');
             }
             console.log('[ZatoIDE] initMainSplit: END');
