@@ -272,9 +272,24 @@
             if (!splitWrapper) {
                 return;
             }
-            var rightPanel = splitWrapper.querySelector('.zato-ide-split-panel-right');
-            var resizer = splitWrapper.querySelector('.zato-ide-split-resizer');
-            var leftPanel = splitWrapper.querySelector('.zato-ide-split-panel-left');
+            var splitContainer = splitWrapper.querySelector('.zato-ide-split-container');
+            if (!splitContainer) {
+                return;
+            }
+            var rightPanel = null;
+            var resizer = null;
+            var leftPanel = null;
+            var children = splitContainer.children;
+            for (var i = 0; i < children.length; i++) {
+                var child = children[i];
+                if (child.classList.contains('zato-ide-split-panel-right')) {
+                    rightPanel = child;
+                } else if (child.classList.contains('zato-ide-split-resizer')) {
+                    resizer = child;
+                } else if (child.classList.contains('zato-ide-split-panel-left')) {
+                    leftPanel = child;
+                }
+            }
             if (!rightPanel || !resizer || !leftPanel) {
                 return;
             }
