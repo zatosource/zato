@@ -260,6 +260,73 @@
         },
 
         /**
+         * Collapses the right panel, expanding the left panel to fill the space.
+         * Stores the previous split position for restoration.
+         *
+         * @param {Object} instance - the split instance object
+         */
+        collapseRightPanel: function(instance) {
+            if (!instance || instance.rightPanelCollapsed) {
+                return;
+            }
+            instance.savedSplitPercent = instance.splitPercent;
+            instance.rightPanelCollapsed = true;
+            if (instance.rightPanel) {
+                instance.rightPanel.style.display = 'none';
+            }
+            if (instance.resizer) {
+                instance.resizer.style.display = 'none';
+            }
+            if (instance.leftPanel) {
+                instance.leftPanel.style.width = '100%';
+            }
+            if (instance.onResize) {
+                instance.onResize(instance);
+            }
+        },
+
+        /**
+         * Expands the right panel, restoring the previous split position.
+         *
+         * @param {Object} instance - the split instance object
+         */
+        expandRightPanel: function(instance) {
+            if (!instance || !instance.rightPanelCollapsed) {
+                return;
+            }
+            instance.rightPanelCollapsed = false;
+            if (instance.rightPanel) {
+                instance.rightPanel.style.display = '';
+            }
+            if (instance.resizer) {
+                instance.resizer.style.display = '';
+            }
+            if (instance.savedSplitPercent !== undefined) {
+                instance.splitPercent = instance.savedSplitPercent;
+            }
+            this.applySplitPosition(instance);
+            if (instance.onResize) {
+                instance.onResize(instance);
+            }
+        },
+
+        /**
+         * Toggles the right panel collapsed state.
+         *
+         * @param {Object} instance - the split instance object
+         */
+        toggleRightPanel: function(instance) {
+            if (!instance) {
+                return;
+            }
+            if (instance.rightPanelCollapsed) {
+                this.expandRightPanel(instance);
+            } else {
+                this.collapseRightPanel(instance);
+            }
+        },
+
+        /**
          * Returns the left panel element.
          *
          * @param {Object} instance - the split instance object

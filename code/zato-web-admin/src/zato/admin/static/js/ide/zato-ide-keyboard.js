@@ -166,46 +166,56 @@
             console.log('[ZatoIDEKeyboard] toggleSidePanelContent: START');
             var ideInstance = null;
             if (typeof ZatoIDE !== 'undefined' && ZatoIDE.instances) {
-                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: ZatoIDE.instances keys=' + Object.keys(ZatoIDE.instances).join(','));
                 for (var key in ZatoIDE.instances) {
                     ideInstance = ZatoIDE.instances[key];
                     break;
                 }
             }
 
-            if (!ideInstance) {
-                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: no ideInstance found');
-                return;
-            }
-            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: ideInstance.id=' + ideInstance.id);
-
-            var expectedId = ideInstance.id + '-side-panel-1-content';
-            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: looking for id=' + expectedId);
-            var contentContainer = document.getElementById(expectedId);
-            if (!contentContainer) {
-                var allContent = document.querySelectorAll('.zato-ide-side-panel-1-content');
-                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: found by class=' + allContent.length);
-                if (allContent.length > 0) {
-                    contentContainer = allContent[0];
-                }
-            }
-            console.log('[ZatoIDEKeyboard] toggleSidePanelContent: contentContainer=' + !!contentContainer);
-            if (!contentContainer) {
+            if (!ideInstance || !ideInstance.mainSplit) {
+                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: no ideInstance or mainSplit found');
                 return;
             }
 
+            var contentContainer = document.getElementById(ideInstance.id + '-side-panel-1-content');
+            var sidePanel = document.getElementById(ideInstance.id + '-side-panel-1');
+            var resizer = ideInstance.mainSplit.resizer;
+            
+            if (!contentContainer || !sidePanel) {
+                return;
+            }
+
+            var iconsWidth = 52;
+            var resizerWidth = 4;
+            
             if (contentContainer.classList.contains('collapsed')) {
-                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: expanding content');
                 contentContainer.classList.remove('collapsed');
+                sidePanel.style.minWidth = '';
+                if (resizer) {
+                    resizer.style.display = '';
+                }
                 ideInstance.sidePanelContentHidden = false;
+                if (typeof ZatoIDESplit !== 'undefined' && ideInstance.mainSplit.savedSplitPercent !== undefined) {
+                    ideInstance.mainSplit.splitPercent = ideInstance.mainSplit.savedSplitPercent;
+                    ZatoIDESplit.applySplitPosition(ideInstance.mainSplit);
+                }
             } else {
-                console.log('[ZatoIDEKeyboard] toggleSidePanelContent: collapsing content');
                 contentContainer.classList.add('collapsed');
                 ideInstance.sidePanelContentHidden = true;
+                ideInstance.mainSplit.savedSplitPercent = ideInstance.mainSplit.splitPercent;
+                if (resizer) {
+                    resizer.style.display = 'none';
+                }
+                var containerWidth = ideInstance.mainSplit.container.offsetWidth;
+                var newLeftWidth = containerWidth - iconsWidth - resizerWidth;
+                ideInstance.mainSplit.leftPanel.style.width = newLeftWidth + 'px';
+                sidePanel.style.minWidth = iconsWidth + 'px';
             }
 
-            if (ideInstance.aceEditor) {
-                ideInstance.aceEditor.resize();
+            if (ideInstance.codeEditor && ideInstance.codeEditor.aceEditor) {
+                setTimeout(function() {
+                    ideInstance.codeEditor.aceEditor.resize();
+                }, 20);
             }
             console.log('[ZatoIDEKeyboard] toggleSidePanelContent: END');
         }
