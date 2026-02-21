@@ -30,7 +30,7 @@
 }
 
 .zato-ide-side-panel-1:has(.zato-ide-side-panel-1-content:not(.collapsed)) .zato-ide-side-panel-1-icons {
-    border-left: 1px solid #00ff00;
+    border-left: 1px solid #3c3c3c;
 }
 
 .zato-ide-side-panel-1-icon {
