@@ -27,6 +27,7 @@
     width: 48px;
     min-width: 48px;
     padding: 4px 0;
+    background: #222 !important;
 }
 
 .zato-ide-side-panel-1:has(.zato-ide-side-panel-1-content:not(.collapsed)) .zato-ide-side-panel-1-icons {
