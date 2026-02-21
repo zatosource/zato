@@ -1319,7 +1319,7 @@
             container.appendChild(explorerDiv);
 
             instance.explorer = ZatoIDEExplorer.create(explorerId, {
-                rootPath: '~',
+                rootPath: '~/projects',
                 onFileSelect: function(item) {
                     console.log('[ZatoIDE] File selected:', item.path);
                 },
