@@ -716,12 +716,15 @@
                 console.log('[ZatoIDE] switchToFile: calling setValue');
                 ZatoIDEEditorAce.setValue(instance.codeEditor, file.content);
 
-                if (savedCursorLine) {
+                if (savedCursorLine && file.content) {
                     var aceEditor = instance.codeEditor.aceEditor;
                     if (aceEditor) {
                         console.log('[ZatoIDE] switchToFile: restoring cursor to line=' + savedCursorLine + ' col=' + savedCursorCol);
-                        aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
-                        console.log('[ZatoIDE] switchToFile: gotoLine complete');
+                        var renderer = aceEditor.renderer;
+                        aceEditor.moveCursorTo(savedCursorLine - 1, (savedCursorCol || 1) - 1);
+                        renderer.scrollToLine(savedCursorLine - 1, true, false);
+                        aceEditor.resize(true);
+                        console.log('[ZatoIDE] switchToFile: scroll restore complete');
                     }
                 }
 
@@ -1663,11 +1666,109 @@
                             if (savedCursorLine) {
                                 var aceEditor = instance.codeEditor.aceEditor;
                                 if (aceEditor) {
-                                    console.log('[ZatoIDE] loadFileContent: restoring cursor to line=' + savedCursorLine + ' col=' + savedCursorCol);
+                                    console.log('[ZatoIDE] loadFileContent: === start cursor restore ===');
+                                    console.log('[ZatoIDE] loadFileContent: savedCursorLine=' + savedCursorLine + ' savedCursorCol=' + savedCursorCol);
                                     
-                                    aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
-                                    ZatoIDEEditorAce.saveState(instance.codeEditor);
-                                    console.log('[ZatoIDE] loadFileContent: gotoLine complete');
+                                    var renderer = aceEditor.renderer;
+                                    var session = aceEditor.session;
+                                    var container = renderer.container;
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- container dimensions ---');
+                                    console.log('[ZatoIDE] loadFileContent: container.offsetWidth=' + container.offsetWidth + ' container.offsetHeight=' + container.offsetHeight);
+                                    console.log('[ZatoIDE] loadFileContent: container.clientWidth=' + container.clientWidth + ' container.clientHeight=' + container.clientHeight);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- renderer.$size before resize ---');
+                                    console.log('[ZatoIDE] loadFileContent: $size.width=' + renderer.$size.width + ' $size.height=' + renderer.$size.height);
+                                    console.log('[ZatoIDE] loadFileContent: $size.scrollerWidth=' + renderer.$size.scrollerWidth + ' $size.scrollerHeight=' + renderer.$size.scrollerHeight);
+                                    console.log('[ZatoIDE] loadFileContent: $size.$dirty=' + renderer.$size.$dirty);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- layerConfig before resize ---');
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.width=' + renderer.layerConfig.width + ' layerConfig.height=' + renderer.layerConfig.height);
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.firstRow=' + renderer.layerConfig.firstRow + ' layerConfig.lastRow=' + renderer.layerConfig.lastRow);
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.firstRowScreen=' + renderer.layerConfig.firstRowScreen);
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.lineHeight=' + renderer.layerConfig.lineHeight);
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.offset=' + renderer.layerConfig.offset);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- session state before resize ---');
+                                    console.log('[ZatoIDE] loadFileContent: session.getScrollTop()=' + session.getScrollTop());
+                                    console.log('[ZatoIDE] loadFileContent: session.getScrollLeft()=' + session.getScrollLeft());
+                                    console.log('[ZatoIDE] loadFileContent: session.getLength()=' + session.getLength());
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- renderer state before resize ---');
+                                    console.log('[ZatoIDE] loadFileContent: renderer.scrollTop=' + renderer.scrollTop);
+                                    console.log('[ZatoIDE] loadFileContent: renderer.scrollLeft=' + renderer.scrollLeft);
+                                    console.log('[ZatoIDE] loadFileContent: renderer.$loop.pending=' + renderer.$loop.pending);
+                                    console.log('[ZatoIDE] loadFileContent: renderer.$changes=' + renderer.$changes);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- renderer.$size before scroll ---');
+                                    console.log('[ZatoIDE] loadFileContent: $size.width=' + renderer.$size.width + ' $size.height=' + renderer.$size.height);
+                                    console.log('[ZatoIDE] loadFileContent: $size.scrollerWidth=' + renderer.$size.scrollerWidth + ' $size.scrollerHeight=' + renderer.$size.scrollerHeight);
+                                    console.log('[ZatoIDE] loadFileContent: $size.$dirty=' + renderer.$size.$dirty);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- layerConfig after resize ---');
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.width=' + renderer.layerConfig.width + ' layerConfig.height=' + renderer.layerConfig.height);
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.firstRow=' + renderer.layerConfig.firstRow + ' layerConfig.lastRow=' + renderer.layerConfig.lastRow);
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.firstRowScreen=' + renderer.layerConfig.firstRowScreen);
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.lineHeight=' + renderer.layerConfig.lineHeight);
+                                    console.log('[ZatoIDE] loadFileContent: layerConfig.offset=' + renderer.layerConfig.offset);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- session state after resize ---');
+                                    console.log('[ZatoIDE] loadFileContent: session.getScrollTop()=' + session.getScrollTop());
+                                    console.log('[ZatoIDE] loadFileContent: session.getScrollLeft()=' + session.getScrollLeft());
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- renderer state after resize ---');
+                                    console.log('[ZatoIDE] loadFileContent: renderer.scrollTop=' + renderer.scrollTop);
+                                    console.log('[ZatoIDE] loadFileContent: renderer.scrollLeft=' + renderer.scrollLeft);
+                                    console.log('[ZatoIDE] loadFileContent: renderer.$loop.pending=' + renderer.$loop.pending);
+                                    console.log('[ZatoIDE] loadFileContent: renderer.$changes=' + renderer.$changes);
+                                    
+                                    var targetRow = savedCursorLine - 1;
+                                    var targetCol = (savedCursorCol || 1) - 1;
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- visibility check ---');
+                                    var isVisible = aceEditor.isRowFullyVisible(targetRow);
+                                    var firstVisible = renderer.getFirstFullyVisibleRow();
+                                    var lastVisible = renderer.getLastFullyVisibleRow();
+                                    var firstVisibleRow = aceEditor.getFirstVisibleRow();
+                                    var lastVisibleRow = aceEditor.getLastVisibleRow();
+                                    console.log('[ZatoIDE] loadFileContent: targetRow=' + targetRow);
+                                    console.log('[ZatoIDE] loadFileContent: isRowFullyVisible(targetRow)=' + isVisible);
+                                    console.log('[ZatoIDE] loadFileContent: getFirstFullyVisibleRow()=' + firstVisible);
+                                    console.log('[ZatoIDE] loadFileContent: getLastFullyVisibleRow()=' + lastVisible);
+                                    console.log('[ZatoIDE] loadFileContent: getFirstVisibleRow()=' + firstVisibleRow);
+                                    console.log('[ZatoIDE] loadFileContent: getLastVisibleRow()=' + lastVisibleRow);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- calling moveCursorTo(' + targetRow + ', ' + targetCol + ') ---');
+                                    aceEditor.moveCursorTo(targetRow, targetCol);
+                                    var cursorPos = aceEditor.getCursorPosition();
+                                    console.log('[ZatoIDE] loadFileContent: after moveCursorTo - cursor.row=' + cursorPos.row + ' cursor.column=' + cursorPos.column);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- pixel position calculation ---');
+                                    var pixelPos = renderer.$cursorLayer.getPixelPosition({row: targetRow, column: 0});
+                                    console.log('[ZatoIDE] loadFileContent: pixelPos.top=' + pixelPos.top + ' pixelPos.left=' + pixelPos.left);
+                                    var expectedScrollTop = pixelPos.top - (renderer.$size.scrollerHeight / 2);
+                                    console.log('[ZatoIDE] loadFileContent: expectedScrollTop (centered)=' + expectedScrollTop);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- before scrollToLine ---');
+                                    console.log('[ZatoIDE] loadFileContent: session.getScrollTop()=' + session.getScrollTop());
+                                    console.log('[ZatoIDE] loadFileContent: renderer.scrollTop=' + renderer.scrollTop);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- calling renderer.scrollToLine + resize(true) ---');
+                                    renderer.scrollToLine(targetRow, true, false);
+                                    aceEditor.resize(true);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- after scrollToLine + resize ---');
+                                    console.log('[ZatoIDE] loadFileContent: session.getScrollTop()=' + session.getScrollTop());
+                                    console.log('[ZatoIDE] loadFileContent: renderer.scrollTop=' + renderer.scrollTop);
+                                    console.log('[ZatoIDE] loadFileContent: renderer.$loop.pending=' + renderer.$loop.pending);
+                                    console.log('[ZatoIDE] loadFileContent: renderer.$changes=' + renderer.$changes);
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: --- final visibility check ---');
+                                    console.log('[ZatoIDE] loadFileContent: isRowFullyVisible(targetRow)=' + aceEditor.isRowFullyVisible(targetRow));
+                                    console.log('[ZatoIDE] loadFileContent: getFirstFullyVisibleRow()=' + renderer.getFirstFullyVisibleRow());
+                                    console.log('[ZatoIDE] loadFileContent: getLastFullyVisibleRow()=' + renderer.getLastFullyVisibleRow());
+                                    
+                                    console.log('[ZatoIDE] loadFileContent: === end cursor restore ===');
                                 }
                             }
                             file.cursorLine = savedCursorLine;

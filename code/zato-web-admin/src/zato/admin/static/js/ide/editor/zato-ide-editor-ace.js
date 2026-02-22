@@ -294,10 +294,6 @@
 
             this.renderStatusbar(instance);
             this.updateStatusbar(instance);
-
-            setTimeout(function() {
-                editor.resize();
-            }, 0);
         },
 
         getAceMode: function(language) {
