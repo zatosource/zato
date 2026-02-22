@@ -720,19 +720,12 @@
                     var aceEditor = instance.codeEditor.aceEditor;
                     if (aceEditor) {
                         console.log('[ZatoIDE] switchToFile: restoring cursor to line=' + savedCursorLine + ' col=' + savedCursorCol);
-                        var renderer = aceEditor.renderer;
-                        var targetRow = savedCursorLine - 1;
-                        var targetCol = (savedCursorCol || 1) - 1;
                         requestAnimationFrame(function() {
-                            renderer.$loop.pending = false;
-                            renderer.$changes = 0;
-                            aceEditor.resize(true);
-                            aceEditor.moveCursorTo(targetRow, targetCol);
-                            renderer.scrollToLine(targetRow, true, false);
-                            renderer.$renderChanges(renderer.CHANGE_FULL, true);
-                            renderer.$loop.pending = false;
-                            renderer.$changes = 0;
-                            console.log('[ZatoIDE] switchToFile: raf scroll restore complete');
+                            requestAnimationFrame(function() {
+                                aceEditor.resize(true);
+                                aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
+                                console.log('[ZatoIDE] switchToFile: double raf gotoLine complete');
+                            });
                         });
                     }
                 }
@@ -1762,17 +1755,13 @@
                                     console.log('[ZatoIDE] loadFileContent: session.getScrollTop()=' + session.getScrollTop());
                                     console.log('[ZatoIDE] loadFileContent: renderer.scrollTop=' + renderer.scrollTop);
                                     
-                                    console.log('[ZatoIDE] loadFileContent: --- using requestAnimationFrame for scroll ---');
+                                    console.log('[ZatoIDE] loadFileContent: --- using double raf + gotoLine ---');
                                     requestAnimationFrame(function() {
-                                        renderer.$loop.pending = false;
-                                        renderer.$changes = 0;
-                                        aceEditor.resize(true);
-                                        renderer.scrollToLine(targetRow, true, false);
-                                        renderer.$renderChanges(renderer.CHANGE_FULL, true);
-                                        renderer.$loop.pending = false;
-                                        renderer.$changes = 0;
-                                        console.log('[ZatoIDE] loadFileContent: raf complete, gutter first=' + 
-                                            renderer.$gutterLayer.element.querySelector('.ace_gutter-cell').textContent);
+                                        requestAnimationFrame(function() {
+                                            aceEditor.resize(true);
+                                            aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
+                                            console.log('[ZatoIDE] loadFileContent: double raf gotoLine complete');
+                                        });
                                     });
                                     
                                     console.log('[ZatoIDE] loadFileContent: --- after scrollToLine + resize ---');
