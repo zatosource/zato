@@ -180,7 +180,7 @@
 
 .ace-zato-dark .ace_gutter-cell.ace_error {
     background-image: none;
-    background-color: rgba(244, 71, 71, 0.3);
+    background-color: rgba(244, 71, 71, 0.12);
     border-left: 3px solid #f44747;
     color: #b0b0b0;
     cursor: pointer;
