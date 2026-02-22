@@ -43,6 +43,13 @@
             lineNumbers: true
         },
 
+        storageKeys: {
+            tabs: 'zato.ide.tabs',
+            activeTab: 'zato.ide.active-tab',
+            closedTabsHistory: 'zato.ide.closed-tabs-history',
+            cursorPositions: 'zato.ide.cursor-positions'
+        },
+
         /**
          * Map of container ID to instance object.
          * Used to retrieve instances later via getInstance().
@@ -253,9 +260,24 @@
 
             this.bindEvents(instance);
 
-            console.log('[ZatoIDE] render: switching to initial file my_service.py');
-            this.switchToFile(instance, 'my_service.py');
+            var activeTab = this.getActiveTab(instance);
+            var initialFile = activeTab ? activeTab.title : 'my_service.py';
+            console.log('[ZatoIDE] render: switching to initial file ' + initialFile);
+            this.switchToFile(instance, initialFile);
             console.log('[ZatoIDE] render: complete');
+        },
+
+        getActiveTab: function(instance) {
+            if (!instance.tabsManager || !instance.tabsManager.tabs) {
+                return null;
+            }
+            var activeTabId = instance.tabsManager.activeTabId;
+            for (var i = 0; i < instance.tabsManager.tabs.length; i++) {
+                if (instance.tabsManager.tabs[i].id === activeTabId) {
+                    return instance.tabsManager.tabs[i];
+                }
+            }
+            return instance.tabsManager.tabs[0] || null;
         },
 
         /**
@@ -639,6 +661,10 @@
                 },
                 onCursorChange: function(line, col) {
                     self.syncDropdownsToLine(instance, line);
+                    if (instance.activeFile && instance.files[instance.activeFile]) {
+                        instance.files[instance.activeFile].cursorLine = line;
+                        instance.files[instance.activeFile].cursorCol = col;
+                    }
                 }
             };
             if (instance.options.fontSize) {
@@ -669,6 +695,9 @@
 
             if (instance.activeFile && instance.codeEditor) {
                 instance.files[instance.activeFile].content = ZatoIDEEditorAce.getValue(instance.codeEditor);
+                var cursorPos = ZatoIDEEditorAce.getCursorPosition(instance.codeEditor);
+                instance.files[instance.activeFile].cursorLine = cursorPos.line;
+                instance.files[instance.activeFile].cursorCol = cursorPos.col;
             }
 
             instance.activeFile = filename;
@@ -680,10 +709,19 @@
                 ZatoIDEEditorAce.setLanguage(instance.codeEditor, file.language);
                 console.log('[ZatoIDE] switchToFile: calling setValue');
                 ZatoIDEEditorAce.setValue(instance.codeEditor, file.content);
+
+                if (file.cursorLine && file.cursorLine > 1) {
+                    var aceEditor = instance.codeEditor.aceEditor;
+                    if (aceEditor) {
+                        aceEditor.moveCursorTo(file.cursorLine - 1, (file.cursorCol || 1) - 1);
+                        aceEditor.scrollToLine(file.cursorLine - 1, true, true);
+                    }
+                }
             }
 
             this.syncTabToFile(instance, filename);
             this.updateSymbols(instance);
+            this.saveTabsState(instance);
         },
 
         /**
@@ -1413,7 +1451,6 @@
                 id: tabId,
                 title: fileName,
                 filePath: filePath,
-                content: content,
                 language: language
             };
 
@@ -1430,12 +1467,15 @@
                 originalContent: content,
                 language: language,
                 filePath: filePath,
-                modified: false
+                modified: false,
+                cursorLine: 1,
+                cursorCol: 1
             };
 
             this.renderTabs(instance);
             this.bindTabEvents(instance);
             this.switchToTab(instance, tabId);
+            this.saveTabsState(instance);
         },
 
         switchToTab: function(instance, tabId) {
@@ -1541,20 +1581,127 @@
                 }
             });
 
-            var files = [
-                { id: 'file-1', title: 'my_service.py' },
-                { id: 'file-2', title: 'queries.sql' },
-                { id: 'file-3', title: 'config.yaml' },
-                { id: 'file-4', title: 'data.json' },
-                { id: 'file-5', title: 'settings.ini' }
-            ];
+            var savedState = this.loadTabsState();
+            var files;
+            var activeTabId;
+
+            if (savedState && savedState.tabs && savedState.tabs.length > 0) {
+                files = savedState.tabs;
+                activeTabId = savedState.activeTabId || files[0].id;
+                instance.closedTabsHistory = savedState.closedTabsHistory || [];
+                this.restoreFilesFromTabs(instance, files);
+            } else {
+                files = [
+                    { id: 'file-1', title: 'my_service.py' },
+                    { id: 'file-2', title: 'queries.sql' },
+                    { id: 'file-3', title: 'config.yaml' },
+                    { id: 'file-4', title: 'data.json' },
+                    { id: 'file-5', title: 'settings.ini' }
+                ];
+                activeTabId = files[0].id;
+                instance.closedTabsHistory = [];
+            }
 
             instance.tabsManager.tabs = files;
-            instance.tabsManager.activeTabId = files[0].id;
+            instance.tabsManager.activeTabId = activeTabId;
             instance.tabsManager.container = document.getElementById(tabsContainerId);
 
             this.renderTabs(instance);
             this.bindTabEvents(instance);
+        },
+
+        restoreFilesFromTabs: function(instance, tabs) {
+            var self = this;
+            tabs.forEach(function(tab) {
+                if (tab.filePath && !instance.files[tab.title]) {
+                    instance.files[tab.title] = {
+                        content: tab.content || '',
+                        originalContent: tab.content || '',
+                        language: tab.language || 'text',
+                        filePath: tab.filePath,
+                        modified: false,
+                        cursorLine: tab.cursorLine || 1,
+                        cursorCol: tab.cursorCol || 1
+                    };
+                    if (tab.content === undefined && tab.filePath) {
+                        self.loadFileContent(instance, tab.filePath, tab.title);
+                    }
+                }
+            });
+        },
+
+        loadFileContent: function(instance, filePath, fileName) {
+            var self = this;
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/zato/ide/explorer/read/?path=' + encodeURIComponent(filePath), true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response.success && instance.files[fileName]) {
+                        instance.files[fileName].content = response.content;
+                        instance.files[fileName].originalContent = response.content;
+                        if (instance.activeFile === fileName && instance.codeEditor) {
+                            ZatoIDEEditorAce.setValue(instance.codeEditor, response.content);
+                        }
+                    }
+                }
+            };
+            xhr.send();
+        },
+
+        saveTabsState: function(instance) {
+            if (!instance.tabsManager) {
+                return;
+            }
+
+            var tabs = instance.tabsManager.tabs.map(function(tab) {
+                var file = instance.files[tab.title];
+                var tabData = {
+                    id: tab.id,
+                    title: tab.title,
+                    filePath: tab.filePath || (file ? file.filePath : null),
+                    language: tab.language || (file ? file.language : 'text')
+                };
+                if (file && file.filePath) {
+                    tabData.cursorLine = file.cursorLine || 1;
+                    tabData.cursorCol = file.cursorCol || 1;
+                }
+                return tabData;
+            });
+
+            var state = {
+                tabs: tabs,
+                activeTabId: instance.tabsManager.activeTabId,
+                closedTabsHistory: instance.closedTabsHistory || [],
+                timestamp: Date.now()
+            };
+
+            try {
+                localStorage.setItem(this.storageKeys.tabs, JSON.stringify(state));
+            } catch (e) {
+                console.warn('[ZatoIDE] Failed to save tabs state:', e);
+            }
+        },
+
+        loadTabsState: function() {
+            try {
+                var stored = localStorage.getItem(this.storageKeys.tabs);
+                if (stored) {
+                    return JSON.parse(stored);
+                }
+            } catch (e) {
+                console.warn('[ZatoIDE] Failed to load tabs state:', e);
+            }
+            return null;
+        },
+
+        saveCursorPosition: function(instance, fileName, line, col) {
+            if (!instance.files[fileName]) {
+                return;
+            }
+            instance.files[fileName].cursorLine = line;
+            instance.files[fileName].cursorCol = col;
+            this.saveTabsState(instance);
         },
 
         /**
@@ -1602,8 +1749,12 @@
                 return;
             }
 
-            instance.closedTabsHistory = [];
-            instance.clearedMessagesBuffer = {};
+            if (!instance.closedTabsHistory) {
+                instance.closedTabsHistory = [];
+            }
+            if (!instance.clearedMessagesBuffer) {
+                instance.clearedMessagesBuffer = {};
+            }
 
             var tabsInstance = {
                 containerId: instance.id + '-tabs',
@@ -1657,11 +1808,20 @@
                     }
                 },
                 onAddToClosedHistory: function(tab) {
+                    var file = instance.files[tab.title];
+                    var tabData = JSON.parse(JSON.stringify(tab));
+                    if (file) {
+                        tabData.filePath = file.filePath;
+                        tabData.language = file.language;
+                        tabData.cursorLine = file.cursorLine || 1;
+                        tabData.cursorCol = file.cursorCol || 1;
+                    }
                     instance.closedTabsHistory.unshift({
-                        tabs: [JSON.parse(JSON.stringify(tab))],
+                        tabs: [tabData],
                         closedAt: Date.now()
                     });
                     tabsInstance.closedTabsHistory = instance.closedTabsHistory;
+                    self.saveTabsState(instance);
                 },
                 onFlushClosedHistory: function() {
                 },
@@ -1677,8 +1837,22 @@
                         tab.id = ZatoTabsEvents.generateTabId();
                         tabsInstance.tabs.push(tab);
                         reopened.push(tab);
+
+                        if (tab.filePath && !instance.files[tab.title]) {
+                            instance.files[tab.title] = {
+                                content: '',
+                                originalContent: '',
+                                language: tab.language || 'text',
+                                filePath: tab.filePath,
+                                modified: false,
+                                cursorLine: tab.cursorLine || 1,
+                                cursorCol: tab.cursorCol || 1
+                            };
+                            self.loadFileContent(instance, tab.filePath, tab.title);
+                        }
                     }
                     tabsInstance.closedTabsHistory = instance.closedTabsHistory;
+                    self.saveTabsState(instance);
                     return reopened;
                 },
                 onClearMessages: function(tabId, messages) {
@@ -1731,6 +1905,15 @@
                         popup.classList.remove('open');
                     }
                 }
+            });
+
+            window.addEventListener('beforeunload', function() {
+                if (instance.activeFile && instance.codeEditor) {
+                    var cursorPos = ZatoIDEEditorAce.getCursorPosition(instance.codeEditor);
+                    instance.files[instance.activeFile].cursorLine = cursorPos.line;
+                    instance.files[instance.activeFile].cursorCol = cursorPos.col;
+                }
+                self.saveTabsState(instance);
             });
         },
 
