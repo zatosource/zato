@@ -216,7 +216,10 @@
 
 .ace-zato-dark .ace_marker-layer .ace_unused_variable {
     position: absolute;
-    border-bottom: 1px dashed #d64848;
+    border: none;
+    border-bottom: 1px dotted #a78b8b !important;
+    border-radius: 0 !important;
+    background: none;
 }
 
 .ace-zato-dark .ace_tooltip {
