@@ -189,7 +189,7 @@
 
             var ide = instance.ide;
             if (ide && typeof ZatoIDE !== 'undefined') {
-                ZatoIDE.switchSidePanel1View(ide, 'debugger');
+                ZatoIDEPanels.switchSidePanel1View(ide, 'debugger');
             }
 
             console.log('[DebuggerIDE] showDebugPanel: END');
