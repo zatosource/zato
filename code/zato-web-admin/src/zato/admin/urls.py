@@ -1025,6 +1025,8 @@ urlpatterns += [
         login_required(ide_debug.debug_sse), name='ide-debug-sse'),
     url(r'^zato/ide/debug/command/$',
         login_required(ide_debug.debug_command), name='ide-debug-command'),
+    url(r'^zato/ide/debug/connect-server/$',
+        login_required(ide_debug.debug_connect_server), name='ide-debug-connect-server'),
 
     # IDE explorer
 

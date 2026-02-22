@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import os
 import socket
 import struct
 import subprocess
@@ -17,9 +18,18 @@ import tempfile
 import threading
 import time
 import uuid
+from pathlib import Path
+from traceback import format_exc
+
+# psutil
+import psutil
 
 # Redis
 import redis
+
+# urllib
+import urllib.request
+import urllib.error
 
 # Django
 from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
@@ -631,8 +641,15 @@ def debug_sse(request):
     if not session_id:
         return HttpResponse('Missing session_id', status=400)
 
-    manager = DebugSessionManager()
-    session = manager.get_or_create_session(session_id)
+    attach_session = get_or_create_attach_session(session_id)
+
+    if attach_session:
+        logger.info('[debug_sse] Using attach session for session_id=%s', session_id)
+        session = attach_session
+    else:
+        manager = DebugSessionManager()
+        session = manager.get_or_create_session(session_id)
+
     logger.info('[debug_sse] Session ready for session_id=%s', session_id)
 
     def event_stream():
@@ -661,6 +678,579 @@ def debug_sse(request):
     return response
 
 
+def find_zato_server_worker_pid(server_base_dir):
+    """
+    Finds the PID of a gunicorn worker process that is serving the Zato server.
+    Looks for processes with cmdline containing "gunicorn: zato".
+
+    Returns the worker PID or None if not found.
+    Excludes the gunicorn arbiter (master) process.
+    """
+    logger.info('[find_zato_server_worker_pid] Looking for Zato server worker')
+
+    for proc in psutil.process_iter(['pid', 'cmdline']):
+        try:
+            cmdline = proc.info['cmdline']
+            if not cmdline:
+                continue
+
+            cmdline_str = ' '.join(cmdline)
+
+            if 'gunicorn: zato' in cmdline_str and 'gunicorn: master' not in cmdline_str:
+                pid = proc.info['pid']
+                logger.info('[find_zato_server_worker_pid] Found Zato worker: PID %s', pid)
+                return pid
+
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    logger.info('[find_zato_server_worker_pid] No Zato server worker found')
+    return None
+
+
+def create_debugpy_injection_script(debugpy_port):
+    """
+    Creates a temporary Python script that will be injected into the target process
+    via sys.remote_exec() (PEP 768). This script starts debugpy listening on the given port.
+    """
+    script_content = f'''
+import os
+import logging
+
+os.environ['GEVENT_SUPPORT'] = 'True'
+os.environ['PYDEVD_DISABLE_FILE_VALIDATION'] = '1'
+
+logger = logging.getLogger('zato_debugpy_inject')
+logger.info('[zato_debugpy_inject] Script starting on port {debugpy_port}')
+
+try:
+    import debugpy
+    debugpy.listen(("127.0.0.1", {debugpy_port}), in_process_debug_adapter=True)
+    logger.info('[zato_debugpy_inject] debugpy.listen completed on port {debugpy_port}')
+except Exception as e:
+    logger.error('[zato_debugpy_inject] Failed to start debugpy: %s', e)
+'''
+
+    script_file = tempfile.NamedTemporaryFile(
+        mode='w',
+        suffix='.py',
+        prefix='zato_debugpy_inject_',
+        delete=False
+    )
+    script_file.write(script_content)
+    script_file.flush()
+    script_file.close()
+
+    return script_file.name
+
+
+class AttachSession:
+    """
+    Debug session for attaching to a running Zato server process using PEP 768 (sys.remote_exec).
+    """
+
+    def __init__(self, session_id, target_pid, debugpy_port):
+        self.session_id = session_id
+        self.target_pid = target_pid
+        self.debugpy_port = debugpy_port
+        self.dap_client = None
+        self.state = 'idle'
+        self.redis_client = get_redis_client()
+        self.events_key = Redis_Key_Prefix_Debug_Events + session_id
+        self.redis_client.delete(self.events_key)
+        self.breakpoints = {}
+        self.thread_id = None
+        self.running = False
+        self.initialized = False
+        self.injection_script = None
+
+    def start(self):
+        logger.info('[AttachSession] Starting attach session %s to PID %d on port %d',
+                    self.session_id, self.target_pid, self.debugpy_port)
+
+        self.injection_script = create_debugpy_injection_script(self.debugpy_port)
+        logger.info('[AttachSession] Created injection script: %s', self.injection_script)
+
+        try:
+            logger.info('[AttachSession] Calling sys.remote_exec(%d, %s)', self.target_pid, self.injection_script)
+            sys.remote_exec(self.target_pid, self.injection_script)
+            logger.info('[AttachSession] sys.remote_exec completed')
+        except Exception:
+            logger.error('[AttachSession] sys.remote_exec failed: %s', format_exc())
+            self._cleanup_injection_script()
+            return False
+
+        self._trigger_server_activity()
+        time.sleep(1.0)
+
+        self.dap_client = DAPClient('127.0.0.1', self.debugpy_port)
+        self.dap_client.event_callback = self._handle_dap_event
+
+        connected = False
+        for attempt in range(30):
+            try:
+                self.dap_client.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.dap_client.socket.connect(('127.0.0.1', self.debugpy_port))
+                self.dap_client.running = True
+                self.dap_client.receive_thread = threading.Thread(target=self.dap_client._receive_loop, daemon=True)
+                self.dap_client.receive_thread.start()
+                logger.info('[AttachSession] Connected to debugpy on attempt %d', attempt + 1)
+                connected = True
+                break
+            except ConnectionRefusedError:
+                logger.info('[AttachSession] Connection attempt %d failed, retrying...', attempt + 1)
+                time.sleep(0.2)
+            except Exception:
+                logger.error('[AttachSession] Connection error: %s', format_exc())
+                time.sleep(0.2)
+
+        if not connected:
+            logger.error('[AttachSession] Failed to connect to debugpy after 30 attempts')
+            self.stop()
+            return False
+
+        try:
+            self.dap_client.send_request_sync('initialize', {
+                'clientID': 'zato-ide',
+                'clientName': 'Zato IDE',
+                'adapterID': 'python',
+                'pathFormat': 'path',
+                'linesStartAt1': True,
+                'columnsStartAt1': True,
+                'supportsVariableType': True,
+                'supportsVariablePaging': False,
+                'supportsRunInTerminalRequest': False,
+                'locale': 'en-us'
+            })
+        except Exception:
+            logger.error('[AttachSession] Initialize failed: %s', format_exc())
+            self.stop()
+            return False
+
+        try:
+            self.dap_client.send_request_sync('attach', {
+                'justMyCode': False,
+                'subProcess': False
+            })
+        except Exception:
+            logger.error('[AttachSession] Attach failed: %s', format_exc())
+            self.stop()
+            return False
+
+        self.state = 'running'
+        self.running = True
+        self.initialized = True
+
+        self._send_event('initialized', {})
+
+        self._start_command_processor()
+
+        return True
+
+    def _start_command_processor(self):
+        """Start a thread that processes commands from other workers via Redis."""
+        self.commands_key = 'zato.ide.debug.commands.' + self.session_id
+        self.responses_key = 'zato.ide.debug.responses.' + self.session_id
+
+        def process_commands():
+            logger.info('[AttachSession] Command processor started for session %s', self.session_id)
+            while self.running:
+                try:
+                    result = self.redis_client.blpop(self.commands_key, timeout=1)
+                    if not result:
+                        continue
+
+                    _, request_data = result
+                    request = json.loads(request_data)
+                    request_id = request['id']
+                    command = request['command']
+                    arguments = request['arguments']
+
+                    logger.info('[AttachSession] Processing proxied command %s', command)
+                    response = self.handle_command(command, arguments)
+
+                    response_key = self.responses_key + '.' + request_id
+                    self.redis_client.rpush(response_key, json.dumps(response))
+                    self.redis_client.expire(response_key, 60)
+
+                except Exception:
+                    logger.error('[AttachSession] Command processor error: %s', format_exc())
+
+            logger.info('[AttachSession] Command processor stopped for session %s', self.session_id)
+
+        self.command_thread = threading.Thread(target=process_commands, daemon=True)
+        self.command_thread.start()
+
+    def _handle_dap_event(self, event):
+        event_name = event.get('event')
+        body = event.get('body', {})
+        logger.info('[AttachSession] DAP event: %s', event_name)
+
+        if event_name == 'stopped':
+            self.thread_id = body.get('threadId', 1)
+            self.state = 'paused'
+            self._send_event('stopped', body)
+        elif event_name == 'continued':
+            self.state = 'running'
+            self._send_event('continued', body)
+        elif event_name == 'terminated':
+            self.state = 'stopped'
+            self._send_event('terminated', body)
+        elif event_name == 'output':
+            self._send_event('output', body)
+        elif event_name == 'thread':
+            pass
+        elif event_name == 'initialized':
+            self._send_event('initialized', body)
+        elif event_name == 'process':
+            pass
+
+    def stop(self):
+        logger.info('[AttachSession] Stopping session %s', self.session_id)
+        self.running = False
+
+        if self.dap_client:
+            try:
+                self.dap_client.send_request('disconnect', {'terminateDebuggee': False})
+            except Exception:
+                pass
+            self.dap_client.disconnect()
+            self.dap_client = None
+
+        self._cleanup_injection_script()
+
+        self.state = 'stopped'
+        self._send_event('terminated', {})
+
+    def _cleanup_injection_script(self):
+        if self.injection_script:
+            try:
+                os.unlink(self.injection_script)
+            except Exception:
+                pass
+            self.injection_script = None
+
+    def _trigger_server_activity(self):
+        """
+        Send a request to the Zato server to trigger forward progress,
+        which causes the injected script to execute.
+        """
+        logger.info('[AttachSession] Triggering server activity')
+        try:
+            req = urllib.request.Request('http://127.0.0.1:17010/zato/ping', method='GET')
+            urllib.request.urlopen(req, timeout=2)
+            logger.info('[AttachSession] Server ping completed')
+        except urllib.error.URLError:
+            logger.info('[AttachSession] Server ping failed, trying alternative')
+            try:
+                req = urllib.request.Request('http://127.0.0.1:11223/zato/ping', method='GET')
+                urllib.request.urlopen(req, timeout=2)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _send_event(self, event_type, body):
+        event = {
+            'type': 'event',
+            'event': event_type,
+            'body': body
+        }
+        logger.info('[AttachSession] Sending event to Redis: %s', event_type)
+        self.redis_client.rpush(self.events_key, json.dumps(event))
+        self.redis_client.expire(self.events_key, 3600)
+
+    def get_events(self, timeout=1):
+        events = []
+        result = self.redis_client.blpop(self.events_key, timeout=timeout)
+        if result:
+            _, event_data = result
+            events.append(json.loads(event_data))
+            while True:
+                event_data = self.redis_client.lpop(self.events_key)
+                if not event_data:
+                    break
+                events.append(json.loads(event_data))
+        return events
+
+    def handle_command(self, command, arguments):
+        logger.info('[AttachSession] Command: %s args: %s', command, arguments)
+
+        if command == 'initialize':
+            return self._cmd_initialize(arguments)
+
+        if not self.dap_client or not self.dap_client.running:
+            logger.error('[AttachSession] Not connected to debugger')
+            return {'success': False, 'message': 'Not connected to debugger'}
+
+        handler = getattr(self, f'_cmd_{command}', None)
+        if handler:
+            return handler(arguments)
+
+        logger.error('[AttachSession] Unknown command: %s', command)
+        return {'success': False, 'message': f'Unknown command: {command}'}
+
+    def _cmd_initialize(self, args):
+        return {
+            'success': True,
+            'body': {
+                'supportsConfigurationDoneRequest': True,
+                'supportsConditionalBreakpoints': True,
+                'supportsEvaluateForHovers': True,
+                'supportsSetVariable': True,
+                'supportTerminateDebuggee': False,
+                'supportsTerminateRequest': False,
+            }
+        }
+
+    def _cmd_configurationDone(self, args):
+        try:
+            self.dap_client.send_request_sync('configurationDone', {})
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_setBreakpoints(self, args):
+        source = args.get('source', {})
+        breakpoints = args.get('breakpoints', [])
+
+        try:
+            response = self.dap_client.send_request_sync('setBreakpoints', {
+                'source': source,
+                'breakpoints': breakpoints,
+                'sourceModified': False
+            })
+            return {'success': True, 'body': response.get('body', {})}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_threads(self, args):
+        try:
+            response = self.dap_client.send_request_sync('threads', {})
+            return {'success': True, 'body': response.get('body', {})}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_stackTrace(self, args):
+        try:
+            response = self.dap_client.send_request_sync('stackTrace', args)
+            return {'success': True, 'body': response.get('body', {})}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_scopes(self, args):
+        try:
+            response = self.dap_client.send_request_sync('scopes', args)
+            return {'success': True, 'body': response.get('body', {})}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_variables(self, args):
+        try:
+            response = self.dap_client.send_request_sync('variables', args)
+            return {'success': True, 'body': response.get('body', {})}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_continue(self, args):
+        try:
+            response = self.dap_client.send_request_sync('continue', args)
+            return {'success': True, 'body': response.get('body', {})}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_next(self, args):
+        try:
+            self.dap_client.send_request_sync('next', args)
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_stepIn(self, args):
+        try:
+            self.dap_client.send_request_sync('stepIn', args)
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_stepOut(self, args):
+        try:
+            self.dap_client.send_request_sync('stepOut', args)
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_pause(self, args):
+        try:
+            self.dap_client.send_request_sync('pause', args)
+            return {'success': True}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_evaluate(self, args):
+        try:
+            response = self.dap_client.send_request_sync('evaluate', args)
+            return {'success': True, 'body': response.get('body', {})}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+
+    def _cmd_disconnect(self, args):
+        self.stop()
+        return {'success': True}
+
+
+_attach_sessions = {}
+_attach_sessions_lock = threading.Lock()
+
+Redis_Key_Prefix_Attach_Session = 'zato.ide.debug.attach.'
+
+
+def store_attach_session_info(session_id, target_pid, debugpy_port):
+    """Store attach session info in Redis so all workers can access it."""
+    redis_client = get_redis_client()
+    key = Redis_Key_Prefix_Attach_Session + session_id
+    data = json.dumps({
+        'session_id': session_id,
+        'target_pid': target_pid,
+        'debugpy_port': debugpy_port
+    })
+    redis_client.set(key, data)
+    redis_client.expire(key, 3600)
+
+
+def get_attach_session_info(session_id):
+    """Get attach session info from Redis."""
+    redis_client = get_redis_client()
+    key = Redis_Key_Prefix_Attach_Session + session_id
+    data = redis_client.get(key)
+    if data:
+        return json.loads(data)
+    return None
+
+
+def get_or_create_attach_session(session_id):
+    """
+    Get existing attach session from memory, or create a proxy that forwards commands
+    to the original session via Redis.
+    """
+    with _attach_sessions_lock:
+        if session_id in _attach_sessions:
+            return _attach_sessions[session_id]
+
+    info = get_attach_session_info(session_id)
+    if not info:
+        return None
+
+    session = AttachSessionProxy(session_id, info['target_pid'], info['debugpy_port'])
+
+    with _attach_sessions_lock:
+        _attach_sessions[session_id] = session
+
+    return session
+
+
+class AttachSessionProxy:
+    """
+    Proxy for attach sessions in other workers.
+    Forwards commands via Redis and reads events from Redis.
+    """
+
+    def __init__(self, session_id, target_pid, debugpy_port):
+        self.session_id = session_id
+        self.target_pid = target_pid
+        self.debugpy_port = debugpy_port
+        self.redis_client = get_redis_client()
+        self.events_key = Redis_Key_Prefix_Debug_Events + session_id
+        self.commands_key = 'zato.ide.debug.commands.' + session_id
+        self.responses_key = 'zato.ide.debug.responses.' + session_id
+
+    def get_events(self, timeout=1):
+        events = []
+        result = self.redis_client.blpop(self.events_key, timeout=timeout)
+        if result:
+            _, event_data = result
+            events.append(json.loads(event_data))
+            while True:
+                event_data = self.redis_client.lpop(self.events_key)
+                if not event_data:
+                    break
+                events.append(json.loads(event_data))
+        return events
+
+    def handle_command(self, command, arguments):
+        logger.info('[AttachSessionProxy] Forwarding command %s to session %s', command, self.session_id)
+
+        request_id = str(uuid.uuid4())
+        request = {
+            'id': request_id,
+            'command': command,
+            'arguments': arguments
+        }
+
+        self.redis_client.rpush(self.commands_key, json.dumps(request))
+        self.redis_client.expire(self.commands_key, 60)
+
+        result = self.redis_client.blpop(self.responses_key + '.' + request_id, timeout=30)
+        if result:
+            _, response_data = result
+            return json.loads(response_data)
+
+        return {'success': False, 'message': 'Timeout waiting for response'}
+
+
+def debug_connect_server(request):
+    """
+    Endpoint to connect to a running Zato server for debugging.
+    Uses PEP 768 sys.remote_exec() to inject debugpy into the target process.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    server_base_dir = data.get('server_base_dir', '~/env/qs-1/server1')
+    logger.info('[debug_connect_server] server_base_dir=%s', server_base_dir)
+
+    target_pid = find_zato_server_worker_pid(server_base_dir)
+    if not target_pid:
+        return JsonResponse({
+            'success': False,
+            'message': f'No Zato server worker found for {server_base_dir}'
+        })
+
+    logger.info('[debug_connect_server] Found target PID: %d', target_pid)
+
+    session_id = str(uuid.uuid4())
+    debugpy_port = 5678 + hash(session_id) % 1000
+
+    session = AttachSession(session_id, target_pid, debugpy_port)
+
+    with _attach_sessions_lock:
+        _attach_sessions[session_id] = session
+
+    store_attach_session_info(session_id, target_pid, debugpy_port)
+
+    started = session.start()
+
+    if not started:
+        with _attach_sessions_lock:
+            _attach_sessions.pop(session_id, None)
+        return JsonResponse({
+            'success': False,
+            'message': 'Failed to attach to server process'
+        })
+
+    return JsonResponse({
+        'success': True,
+        'session_id': session_id,
+        'target_pid': target_pid,
+        'debugpy_port': debugpy_port
+    })
+
+
 def debug_command(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -682,6 +1272,22 @@ def debug_command(request):
 
     if not command:
         return JsonResponse({'error': 'Missing command'}, status=400)
+
+    attach_session = get_or_create_attach_session(session_id)
+
+    if attach_session:
+        logger.info('[debug_command] Using attach session %s', session_id)
+        result = attach_session.handle_command(command, arguments)
+        response = {
+            'type': 'response',
+            'request_seq': seq,
+            'success': result.get('success', True),
+            'command': command,
+            'body': result.get('body', {})
+        }
+        if 'message' in result:
+            response['message'] = result['message']
+        return JsonResponse(response)
 
     manager = DebugSessionManager()
     session = manager.get_session(session_id)

@@ -48,6 +48,55 @@
             return this.sequenceCounter++;
         },
 
+        connectWithSessionId: function(instance, sessionId, callback) {
+            this.attachUnloadHandler();
+            console.log('[DebugProtocol] connectWithSessionId: START instance.id=' + instance.id + ' sessionId=' + sessionId);
+            var self = this;
+
+            if (this.connections[instance.id]) {
+                console.log('[DebugProtocol] connectWithSessionId: closing existing connection');
+                this.disconnect(instance);
+            }
+
+            this.sessionIds[instance.id] = sessionId;
+
+            var sseUrl = this.getSSEUrl(instance, sessionId);
+            console.log('[DebugProtocol] connectWithSessionId: sseUrl=' + sseUrl);
+
+            var eventSource = new EventSource(sseUrl);
+
+            eventSource.onopen = function() {
+                console.log('[DebugProtocol] SSE connected (with session ID)');
+                self.connections[instance.id] = eventSource;
+                if (callback) {
+                    callback(true);
+                }
+            };
+
+            eventSource.onmessage = function(event) {
+                console.log('[DebugProtocol] SSE message received');
+                self.handleMessage(instance, event.data);
+            };
+
+            eventSource.onerror = function(error) {
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    console.log('[DebugProtocol] SSE connection closed');
+                    delete self.connections[instance.id];
+                    delete self.sessionIds[instance.id];
+                    ZatoDebuggerCore.handleTerminated(instance);
+                }
+                if (callback) {
+                    callback(false, 'Connection error');
+                    callback = null;
+                }
+            };
+
+            eventSource.addEventListener('debug', function(event) {
+                console.log('[DebugProtocol] SSE debug event received');
+                self.handleMessage(instance, event.data);
+            });
+        },
+
         connect: function(instance, callback) {
             this.attachUnloadHandler();
             console.log('[DebugProtocol] connect: START instance.id=' + instance.id);
