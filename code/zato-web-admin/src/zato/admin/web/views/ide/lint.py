@@ -78,7 +78,8 @@ def lint_python(req:'HttpRequest') -> 'JsonResponse':
                             'startCol': column - 1,
                             'endRow': end_row,
                             'endCol': end_column - 1,
-                            'type': 'unused'
+                            'type': 'unused',
+                            'message': text
                         })
             except json.JSONDecodeError:
                 pass
