@@ -14,23 +14,29 @@
     background-color: rgba(var(--zato-ide-debugger-active-line), 0.22) !important;
 }
 
-.ace_gutter-cell.ace_breakpoint,
-.ace_gutter-cell.ace_breakpoint-disabled,
-.ace_gutter-cell.ace_breakpoint-conditional {
-    background-repeat: no-repeat;
-    background-position: 8px center;
+.ace_gutter-cell.ace_breakpoint::before,
+.ace_gutter-cell.ace_breakpoint-disabled::before,
+.ace_gutter-cell.ace_breakpoint-conditional::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
 }
 
-.ace_gutter-cell.ace_breakpoint {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Ccircle cx='6' cy='6' r='5' fill='%23e51400'/%3E%3C/svg%3E");
+.ace_gutter-cell.ace_breakpoint::before {
+    background-color: #e51400;
 }
 
-.ace_gutter-cell.ace_breakpoint-disabled {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Ccircle cx='6' cy='6' r='5' fill='%23555555'/%3E%3C/svg%3E");
+.ace_gutter-cell.ace_breakpoint-disabled::before {
+    background-color: #555555;
 }
 
-.ace_gutter-cell.ace_breakpoint-conditional {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Ccircle cx='6' cy='6' r='5' fill='%23f0a000'/%3E%3C/svg%3E");
+.ace_gutter-cell.ace_breakpoint-conditional::before {
+    background-color: #f0a000;
 }
 
 .zato-debugger-current-line {
