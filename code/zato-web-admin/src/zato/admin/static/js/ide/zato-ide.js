@@ -722,7 +722,7 @@
                 if (file.content) {
                     var aceEditor = instance.codeEditor.aceEditor;
                     if (aceEditor) {
-                        self.scrollLog('switchToFile restore: file=' + filename + ' savedScrollLine=' + savedScrollLine + ' savedCursorLine=' + savedCursorLine);
+                        ZatoIDE.scrollLog('switchToFile restore: file=' + filename + ' savedScrollLine=' + savedScrollLine + ' savedCursorLine=' + savedCursorLine);
                         if (savedScrollLine !== null) {
                             aceEditor.moveCursorTo((savedCursorLine || 1) - 1, (savedCursorCol || 1) - 1);
                             aceEditor.scrollToRow(savedScrollLine);
@@ -1684,16 +1684,18 @@
                             if (aceEditor) {
                                 requestAnimationFrame(function() {
                                     requestAnimationFrame(function() {
-                                        aceEditor.resize(true);
-                                        self.scrollLog('loadFileContent restore: file=' + fileName + ' savedScrollLine=' + savedScrollLine + ' savedCursorLine=' + savedCursorLine);
-                                        if (savedScrollLine !== null) {
-                                            aceEditor.moveCursorTo((savedCursorLine || 1) - 1, (savedCursorCol || 1) - 1);
-                                            aceEditor.scrollToRow(savedScrollLine);
-                                        } else if (savedCursorLine) {
-                                            aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
-                                        }
                                         file.cursorLine = savedCursorLine;
                                         file.cursorCol = savedCursorCol;
+                                        if (instance.activeFile === fileName) {
+                                            aceEditor.resize(true);
+                                            ZatoIDE.scrollLog('loadFileContent restore: file=' + fileName + ' savedScrollLine=' + savedScrollLine + ' savedCursorLine=' + savedCursorLine);
+                                            if (savedScrollLine !== null) {
+                                                aceEditor.moveCursorTo((savedCursorLine || 1) - 1, (savedCursorCol || 1) - 1);
+                                                aceEditor.scrollToRow(savedScrollLine);
+                                            } else if (savedCursorLine) {
+                                                aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
+                                            }
+                                        }
                                         instance.isLoadingContent = false;
                                     });
                                 });
