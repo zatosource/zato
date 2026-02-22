@@ -716,6 +716,7 @@ def create_debugpy_injection_script(debugpy_port):
     script_content = f'''
 import os
 import logging
+from traceback import format_exc
 
 os.environ['GEVENT_SUPPORT'] = 'True'
 os.environ['PYDEVD_DISABLE_FILE_VALIDATION'] = '1'
@@ -725,10 +726,12 @@ logger.info('[zato_debugpy_inject] Script starting on port {debugpy_port}')
 
 try:
     import debugpy
+    import debugpy.server.api as _debugpy_api
+    _debugpy_api.listen.called = False
     debugpy.listen(("127.0.0.1", {debugpy_port}), in_process_debug_adapter=True)
     logger.info('[zato_debugpy_inject] debugpy.listen completed on port {debugpy_port}')
-except Exception as e:
-    logger.error('[zato_debugpy_inject] Failed to start debugpy: %s', e)
+except Exception:
+    logger.error('[zato_debugpy_inject] Failed to start debugpy: %s', format_exc())
 '''
 
     script_file = tempfile.NamedTemporaryFile(
