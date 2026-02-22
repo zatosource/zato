@@ -602,9 +602,12 @@
                     if (xhr.status === 200) {
                         try {
                             var response = JSON.parse(xhr.responseText);
+                            console.log('[Lint] response:', JSON.stringify(response));
                             if (response.success && response.annotations) {
                                 editor.session.setAnnotations(response.annotations);
                             }
+                            console.log('[Lint] markers:', JSON.stringify(response.markers));
+                            ZatoIDEEditorAce.applyUnusedMarkers(editor, response.markers || []);
                         } catch (e) {
                             console.warn('[Lint] Failed to parse response:', e);
                         }
@@ -615,6 +618,33 @@
                 }
             };
             xhr.send(JSON.stringify({ code: code }));
+        },
+
+        unusedMarkerIds: [],
+
+        applyUnusedMarkers: function(editor, markers) {
+            console.log('[Lint] applyUnusedMarkers: START, markers.length=' + markers.length);
+            var session = editor.session;
+            console.log('[Lint] applyUnusedMarkers: session=' + (session ? 'exists' : 'null'));
+            var Range = ace.require('ace/range').Range;
+            console.log('[Lint] applyUnusedMarkers: Range=' + (Range ? 'exists' : 'null'));
+
+            console.log('[Lint] applyUnusedMarkers: removing old markers, count=' + this.unusedMarkerIds.length);
+            for (var i = 0; i < this.unusedMarkerIds.length; i++) {
+                session.removeMarker(this.unusedMarkerIds[i]);
+            }
+            this.unusedMarkerIds = [];
+
+            for (var i = 0; i < markers.length; i++) {
+                var m = markers[i];
+                console.log('[Lint] applyUnusedMarkers: marker ' + i + ': startRow=' + m.startRow + ' startCol=' + m.startCol + ' endRow=' + m.endRow + ' endCol=' + m.endCol);
+                var range = new Range(m.startRow, m.startCol, m.endRow, m.endCol);
+                console.log('[Lint] applyUnusedMarkers: range created: ' + JSON.stringify({start: range.start, end: range.end}));
+                var markerId = session.addMarker(range, 'ace_unused_variable', 'text', true);
+                console.log('[Lint] applyUnusedMarkers: markerId=' + markerId);
+                this.unusedMarkerIds.push(markerId);
+            }
+            console.log('[Lint] applyUnusedMarkers: END, total markers added=' + this.unusedMarkerIds.length);
         },
 
         getCsrfToken: function() {

@@ -51,6 +51,7 @@ def lint_python(req:'HttpRequest') -> 'JsonResponse':
         )
 
         annotations = []
+        markers = []
         if result.stdout:
             try:
                 ruff_output = json.loads(result.stdout)
@@ -67,10 +68,22 @@ def lint_python(req:'HttpRequest') -> 'JsonResponse':
                         'text': text,
                         'type': 'error'
                     })
+
+                    if code_str in ('F841', 'F401'):
+                        end_location = item.get('end_location', {})
+                        end_row = end_location.get('row', row + 1) - 1
+                        end_column = end_location.get('column', column)
+                        markers.append({
+                            'startRow': row,
+                            'startCol': column - 1,
+                            'endRow': end_row,
+                            'endCol': end_column - 1,
+                            'type': 'unused'
+                        })
             except json.JSONDecodeError:
                 pass
 
-        return JsonResponse({'success': True, 'annotations': annotations})
+        return JsonResponse({'success': True, 'annotations': annotations, 'markers': markers})
 
     except subprocess.TimeoutExpired:
         logger.warning('Ruff linting timed out')
