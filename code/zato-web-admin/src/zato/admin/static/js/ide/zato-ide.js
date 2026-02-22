@@ -1743,6 +1743,7 @@
                 containerId: instance.id + '-tabs',
                 tabs: instance.tabsManager.tabs,
                 activeTabId: instance.tabsManager.activeTabId,
+                allowCloseLastTab: instance.tabsManager.allowCloseLastTab,
                 theme: instance.options.theme,
                 closedTabsHistory: instance.closedTabsHistory,
                 clearedMessagesBuffer: instance.clearedMessagesBuffer
@@ -1751,6 +1752,18 @@
             var callbacks = {
                 onTabChange: function(tab) {
                     if (tab && tab.title) {
+                        if (!instance.files[tab.title]) {
+                            var lang = 'text';
+                            if (typeof ZatoIDEEditorAce !== 'undefined') {
+                                lang = ZatoIDEEditorAce.getLanguageFromExtension(tab.title);
+                            }
+                            instance.files[tab.title] = {
+                                content: '',
+                                originalContent: '',
+                                language: lang,
+                                modified: false
+                            };
+                        }
                         self.switchToFile(instance, tab.title);
                     }
                     if (instance.onTabChange) {

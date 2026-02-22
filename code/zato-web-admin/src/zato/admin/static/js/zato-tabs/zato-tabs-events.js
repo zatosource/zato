@@ -310,6 +310,22 @@
                             var newActiveTab = self.getTabById(instance.tabs, instance.activeTabId);
                             callbacks.onTabChange(newActiveTab);
                         }
+                    } else if (instance.allowCloseLastTab) {
+                        var newTab = {
+                            id: self.generateTabId(),
+                            title: 'file-1.py'
+                        };
+                        if (callbacks.createTabData) {
+                            var customData = callbacks.createTabData(1);
+                            if (customData && customData.title) {
+                                newTab.title = customData.title;
+                            }
+                        }
+                        instance.tabs.push(newTab);
+                        instance.activeTabId = newTab.id;
+                        if (callbacks.onTabChange) {
+                            callbacks.onTabChange(newTab);
+                        }
                     } else {
                         instance.activeTabId = null;
                         if (callbacks.onTabChange) {
