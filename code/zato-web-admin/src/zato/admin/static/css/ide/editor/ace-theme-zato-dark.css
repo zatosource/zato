@@ -214,15 +214,9 @@
     color: var(--zato-gutter-active-line-color);
 }
 
-.ace-zato-dark .ace_unused_variable {
-    position: absolute;
-    color: #f44747 !important;
-    text-decoration: underline wavy #f44747;
-}
-
 .ace-zato-dark .ace_marker-layer .ace_unused_variable {
     position: absolute;
-    border-bottom: 2px solid #f44747;
+    border-bottom: 1px solid #6a6a6a;
 }
 
 .ace-zato-dark .ace_tooltip {
