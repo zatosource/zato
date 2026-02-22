@@ -756,9 +756,16 @@
                         tooltipEl.style.display = 'block';
                         var tooltipRect = tooltipEl.getBoundingClientRect();
 
-                        var left = coords.pageX;
-                        var top = coords.pageY + 16;
-                        console.log('[Tooltip] mousemove: positioning BELOW text, top=' + top);
+                        var tooltipWidth = tooltipRect.width;
+                        var left = coords.pageX - (tooltipWidth / 2);
+                        if (left < 5) {
+                            left = 5;
+                        }
+                        var top = coords.pageY - tooltipRect.height - 2;
+                        if (top < 5) {
+                            top = coords.pageY + 20;
+                        }
+                        console.log('[Tooltip] mousemove: positioning ABOVE text, left=' + left + ' top=' + top);
 
                         tooltipEl.style.left = left + 'px';
                         tooltipEl.style.top = top + 'px';
@@ -769,6 +776,16 @@
                         console.log('[Tooltip] mousemove: no unusedTooltipInstance or tooltipEl');
                     }
                 } else if (!foundMessage && lastMessage && !tooltipHovered) {
+                    if (self.unusedTooltipInstance && self.unusedTooltipInstance.tooltipEl) {
+                        var tooltipEl = self.unusedTooltipInstance.tooltipEl;
+                        var rect = tooltipEl.getBoundingClientRect();
+                        var mouseCoords = editor.renderer.textToScreenCoordinates(row, col);
+                        console.log('[Tooltip] mousemove: checking if mouse near tooltip, mouseY=' + mouseCoords.pageY + ' rect.bottom=' + rect.bottom);
+                        if (mouseCoords.pageY >= rect.top - 5 && mouseCoords.pageY <= rect.bottom + 20) {
+                            console.log('[Tooltip] mousemove: mouse is near tooltip area, not hiding');
+                            return;
+                        }
+                    }
                     console.log('[Tooltip] mousemove: hiding tooltip');
                     lastMessage = null;
                     if (self.unusedTooltipInstance) {
@@ -795,7 +812,7 @@
                     var mouseX = e.clientX;
                     var mouseY = e.clientY;
                     console.log('[Tooltip] mouseleave: mouseX=' + mouseX + ' mouseY=' + mouseY + ' rect=' + JSON.stringify({left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom}));
-                    if (mouseX >= rect.left && mouseX <= rect.right && mouseY >= rect.top - 5 && mouseY <= rect.bottom + 5) {
+                    if (mouseX >= rect.left - 10 && mouseX <= rect.right + 10 && mouseY >= rect.top - 10 && mouseY <= rect.bottom + 10) {
                         console.log('[Tooltip] mouseleave: mouse is heading to tooltip, not hiding');
                         return;
                     }
