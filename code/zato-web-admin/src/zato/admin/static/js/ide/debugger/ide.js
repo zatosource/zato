@@ -248,6 +248,10 @@
                 {
                     getFilename: function() {
                         return ide.activeFile;
+                    },
+                    getFilePath: function() {
+                        var file = ide.files[ide.activeFile];
+                        return file ? file.filePath : ide.activeFile;
                     }
                 }
             );

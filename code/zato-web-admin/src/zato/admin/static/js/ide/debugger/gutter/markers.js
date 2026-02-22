@@ -7,6 +7,9 @@
         var editor = instance.editor;
         var session = editor.session;
         var file = this.getCurrentFile(instance);
+        if (!file) {
+            return;
+        }
         var breakpoints = [];
 
         if (instance.debugger) {

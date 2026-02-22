@@ -356,10 +356,13 @@
     };
 
     G.getCurrentFile = function(instance) {
+        if (instance.options.getFilePath) {
+            return instance.options.getFilePath();
+        }
         if (instance.options.getFilename) {
             return instance.options.getFilename();
         }
-        return 'untitled.py';
+        return null;
     };
 
     G.getLineType = function(lineText) {

@@ -76,6 +76,10 @@
                 instance.gutterInstance = ZatoDebuggerGutter.create(instance.codeEditor.aceEditor, null, {
                     getFilename: function() {
                         return instance.activeFile || 'untitled.py';
+                    },
+                    getFilePath: function() {
+                        var file = instance.files[instance.activeFile];
+                        return file ? file.filePath : instance.activeFile;
                     }
                 });
             }
