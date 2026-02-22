@@ -43,35 +43,6 @@
             lineNumbers: true
         },
 
-        scrollLogKey: 'zato.ide.scroll-debug-log',
-
-        scrollLog: function(msg) {
-            var entry = new Date().toISOString() + ' ' + msg;
-            console.log('[ZatoIDE] ' + msg);
-            try {
-                var existing = localStorage.getItem(this.scrollLogKey) || '[]';
-                var arr = JSON.parse(existing);
-                arr.push(entry);
-                if (arr.length > 200) {
-                    arr = arr.slice(-200);
-                }
-                localStorage.setItem(this.scrollLogKey, JSON.stringify(arr));
-            } catch(e) {}
-        },
-
-        dumpScrollLog: function() {
-            try {
-                var stored = localStorage.getItem(this.scrollLogKey);
-                if (stored) {
-                    var arr = JSON.parse(stored);
-                    console.log('[ZatoIDE] === scroll debug log from previous session (' + arr.length + ' entries) ===');
-                    arr.forEach(function(entry) { console.log(entry); });
-                    console.log('[ZatoIDE] === end of previous session log ===');
-                    localStorage.removeItem(this.scrollLogKey);
-                }
-            } catch(e) {}
-        },
-
         storageKeys: {
             tabs: 'zato.ide.tabs',
             activeTab: 'zato.ide.active-tab',
@@ -100,7 +71,6 @@
          *   - content: current editor content
          */
         create: function(containerId, options) {
-            this.dumpScrollLog();
             var opts = {};
             var key;
             for (key in this.defaultOptions) {
@@ -659,16 +629,12 @@
                     if (instance.activeFile && instance.files[instance.activeFile] && !instance.isLoadingContent) {
                         instance.files[instance.activeFile].cursorLine = line;
                         instance.files[instance.activeFile].cursorCol = col;
-                        console.log('[ZatoIDE] onCursorChange: file=' + instance.activeFile + ' line=' + line + ' col=' + col);
                     }
                 },
                 onScrollChange: function(firstVisibleRow) {
                     if (instance.activeFile && instance.files[instance.activeFile] && !instance.isLoadingContent) {
                         instance.files[instance.activeFile].scrollLine = firstVisibleRow;
-                        self.scrollLog('scroll save: file=' + instance.activeFile + ' scrollLine=' + firstVisibleRow);
                         self.saveTabsState(instance);
-                    } else {
-                        self.scrollLog('scroll save: SKIPPED isLoadingContent=' + instance.isLoadingContent + ' file=' + instance.activeFile);
                     }
                 }
             };
@@ -676,7 +642,6 @@
                 editorOptions.fontSize = instance.options.fontSize;
             }
             instance.codeEditor = ZatoIDEEditorAce.create(editorArea, editorOptions);
-            console.log('[ZatoIDE] initCodeEditor: editor created, codeEditor=' + (instance.codeEditor ? 'ok' : 'null'));
 
             if (typeof ZatoDebuggerGutter !== 'undefined' && instance.codeEditor && instance.codeEditor.aceEditor) {
                 instance.gutterInstance = ZatoDebuggerGutter.create(instance.codeEditor.aceEditor, null, {
@@ -684,7 +649,6 @@
                         return instance.activeFile || 'untitled.py';
                     }
                 });
-                console.log('[ZatoIDE] initCodeEditor: gutter created for breakpoints');
             }
         },
 
@@ -722,7 +686,6 @@
                 if (file.content) {
                     var aceEditor = instance.codeEditor.aceEditor;
                     if (aceEditor) {
-                        ZatoIDE.scrollLog('switchToFile restore: file=' + filename + ' savedScrollLine=' + savedScrollLine + ' savedCursorLine=' + savedCursorLine);
                         if (savedScrollLine !== null) {
                             aceEditor.moveCursorTo((savedCursorLine || 1) - 1, (savedCursorCol || 1) - 1);
                             aceEditor.scrollToRow(savedScrollLine);
@@ -1643,7 +1606,6 @@
             var self = this;
             tabs.forEach(function(tab) {
                 if (tab.filePath && !instance.files[tab.title]) {
-                    self.scrollLog('restoreFilesFromTabs: file=' + tab.title + ' cursorLine=' + tab.cursorLine + ' cursorCol=' + tab.cursorCol + ' scrollLine=' + tab.scrollLine);
                     instance.files[tab.title] = {
                         content: tab.content || '',
                         originalContent: tab.content || '',
@@ -1688,7 +1650,6 @@
                                         file.cursorCol = savedCursorCol;
                                         if (instance.activeFile === fileName) {
                                             aceEditor.resize(true);
-                                            ZatoIDE.scrollLog('loadFileContent restore: file=' + fileName + ' savedScrollLine=' + savedScrollLine + ' savedCursorLine=' + savedCursorLine);
                                             if (savedScrollLine !== null) {
                                                 aceEditor.moveCursorTo((savedCursorLine || 1) - 1, (savedCursorCol || 1) - 1);
                                                 aceEditor.scrollToRow(savedScrollLine);
