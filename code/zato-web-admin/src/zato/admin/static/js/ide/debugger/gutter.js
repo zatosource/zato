@@ -42,7 +42,6 @@
 
             this.instances[instanceId] = instance;
             this.bindEvents(instance);
-            this.applyStyles(instance);
             console.log('[Gutter] create: calling updateBreakpointMarkers');
             this.updateBreakpointMarkers(instance);
 
@@ -636,73 +635,6 @@
             instance.currentGutterRow = row;
 
             editor.scrollToLine(row, true, true);
-        },
-
-        applyStyles: function(instance) {
-            console.log('[Gutter] applyStyles: START');
-            if (document.getElementById('zato-debugger-gutter-styles')) {
-                console.log('[Gutter] applyStyles: styles already exist, skipping');
-                return;
-            }
-
-            console.log('[Gutter] applyStyles: creating new style element');
-            var style = document.createElement('style');
-            style.id = 'zato-debugger-gutter-styles';
-            style.textContent = this.getGutterStyles();
-            document.head.appendChild(style);
-            console.log('[Gutter] applyStyles: END');
-        },
-
-        getGutterStyles: function() {
-            var css = '';
-
-            var redCircle = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5" fill="#e51400"/></svg>');
-            var grayCircle = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5" fill="#555555"/></svg>');
-            var orangeCircle = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5" fill="#f0a000"/></svg>');
-
-            css += '.ace_gutter-cell.ace_breakpoint {';
-            css += '  background-image: url("' + redCircle + '");';
-            css += '  background-repeat: no-repeat;';
-            css += '  background-position: 8px center;';
-            css += '}';
-
-            css += '.ace_gutter-cell.ace_breakpoint-disabled {';
-            css += '  background-image: url("' + grayCircle + '");';
-            css += '  background-repeat: no-repeat;';
-            css += '  background-position: 8px center;';
-            css += '}';
-
-            css += '.ace_gutter-cell.ace_breakpoint-conditional {';
-            css += '  background-image: url("' + orangeCircle + '");';
-            css += '  background-repeat: no-repeat;';
-            css += '  background-position: 8px center;';
-            css += '}';
-
-            css += '.zato-debugger-current-line {';
-            css += '  position: absolute;';
-            css += '  background: rgba(50, 205, 50, 0.08);';
-            css += '  border-left: 2px solid rgba(50, 205, 50, 0.5);';
-            css += '}';
-
-            css += '.ace_gutter-cell.ace_gutter-active-line {';
-            css += '  background: rgba(50, 205, 50, 0.12) !important;';
-            css += '  background-color: rgba(50, 205, 50, 0.12) !important;';
-            css += '}';
-
-            css += '.ace_gutter-cell.ace_gutter-active-line:hover {';
-            css += '  background: rgba(50, 205, 50, 0.22) !important;';
-            css += '  background-color: rgba(50, 205, 50, 0.22) !important;';
-            css += '}';
-
-            css += '.ace_gutter-cell {';
-            css += '  cursor: pointer;';
-            css += '}';
-
-            css += '.ace_gutter-cell:not(.ace_gutter-active-line):hover {';
-            css += '  background-color: rgba(50, 205, 50, 0.08) !important;';
-            css += '}';
-
-            return css;
         },
 
         clearAllMarkers: function(instance) {

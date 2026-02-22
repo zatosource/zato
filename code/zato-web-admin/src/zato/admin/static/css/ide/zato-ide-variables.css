@@ -27,4 +27,6 @@
 
     --zato-ide-scrollbar-track: #1a1a1a;
     --zato-ide-scrollbar-thumb: #444;
+
+    --zato-ide-debugger-active-line: 50, 205, 50;
 }
