@@ -694,7 +694,7 @@
                 var tooltipEl = self.unusedTooltipInstance.tooltipEl;
                 tooltipEl.style.pointerEvents = 'auto';
                 tooltipEl.style.userSelect = 'text';
-                tooltipEl.style.cursor = 'text';
+                tooltipEl.style.cursor = 'pointer';
 
                 tooltipEl.addEventListener('mouseenter', function() {
                     console.log('[Tooltip] tooltipEl mouseenter');
@@ -706,6 +706,23 @@
                     tooltipHovered = false;
                     lastMessage = null;
                     ZatoTooltip.hide(self.unusedTooltipInstance);
+                });
+
+                tooltipEl.addEventListener('click', function() {
+                    console.log('[Tooltip] tooltipEl click');
+                    var textToCopy = tooltipEl.textContent;
+                    navigator.clipboard.writeText(textToCopy).then(function() {
+                        console.log('[Tooltip] copied to clipboard: ' + textToCopy);
+                        var originalText = tooltipEl.textContent;
+                        tooltipEl.textContent = 'Copied to clipboard';
+                        setTimeout(function() {
+                            tooltipHovered = false;
+                            lastMessage = null;
+                            ZatoTooltip.hide(self.unusedTooltipInstance);
+                        }, 350);
+                    }).catch(function(err) {
+                        console.log('[Tooltip] clipboard write failed: ' + err);
+                    });
                 });
             }
 
