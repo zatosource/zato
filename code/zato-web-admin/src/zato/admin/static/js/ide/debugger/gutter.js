@@ -87,25 +87,17 @@
             gutter._zatoGutterBound = true;
 
             gutter.addEventListener('mousedown', function(e) {
-                var gutterRect = gutter.getBoundingClientRect();
-                var clickX = e.clientX - gutterRect.left;
-                if (clickX < 16) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                }
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
             }, true);
 
             gutter.addEventListener('click', function(e) {
-                var gutterRect = gutter.getBoundingClientRect();
-                var clickX = e.clientX - gutterRect.left;
-                if (clickX < 16) {
-                    console.log('[Gutter] click event fired, instance.id=' + instance.id);
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    self.handleGutterClick(instance, e);
-                }
+                console.log('[Gutter] click event fired, instance.id=' + instance.id);
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                self.handleGutterClick(instance, e);
             }, true);
 
             gutter.addEventListener('contextmenu', function(e) {
@@ -593,6 +585,11 @@
                 instance.currentLineMarkerId = null;
             }
 
+            if (instance.currentGutterRow !== undefined && instance.currentGutterRow !== null) {
+                session.removeGutterDecoration(instance.currentGutterRow, 'ace_gutter-active-line');
+                instance.currentGutterRow = null;
+            }
+
             if (!instance.debugger) {
                 console.log('[Gutter] updateCurrentLineMarker: no debugger, returning');
                 return;
@@ -628,6 +625,9 @@
             console.log('[Gutter] updateCurrentLineMarker: adding marker at row=' + row);
             instance.currentLineMarkerId = session.addMarker(range, 'zato-debugger-current-line', 'fullLine', true);
             console.log('[Gutter] updateCurrentLineMarker: markerId=' + instance.currentLineMarkerId);
+
+            session.addGutterDecoration(row, 'ace_gutter-active-line');
+            instance.currentGutterRow = row;
 
             editor.scrollToLine(row, true, true);
         },
@@ -674,16 +674,26 @@
 
             css += '.zato-debugger-current-line {';
             css += '  position: absolute;';
-            css += '  background: rgba(255, 238, 0, 0.2);';
-            css += '  border-left: 2px solid #ffee00;';
+            css += '  background: rgba(50, 205, 50, 0.08);';
+            css += '  border-left: 2px solid rgba(50, 205, 50, 0.5);';
+            css += '}';
+
+            css += '.ace_gutter-cell.ace_gutter-active-line {';
+            css += '  background: rgba(50, 205, 50, 0.12) !important;';
+            css += '  background-color: rgba(50, 205, 50, 0.12) !important;';
+            css += '}';
+
+            css += '.ace_gutter-cell.ace_gutter-active-line:hover {';
+            css += '  background: rgba(50, 205, 50, 0.22) !important;';
+            css += '  background-color: rgba(50, 205, 50, 0.22) !important;';
             css += '}';
 
             css += '.ace_gutter-cell {';
             css += '  cursor: pointer;';
             css += '}';
 
-            css += '.ace_gutter-cell:hover {';
-            css += '  background-color: rgba(255, 255, 255, 0.15) !important;';
+            css += '.ace_gutter-cell:not(.ace_gutter-active-line):hover {';
+            css += '  background-color: rgba(50, 205, 50, 0.08) !important;';
             css += '}';
 
             return css;
@@ -701,6 +711,11 @@
             if (instance.currentLineMarkerId !== null) {
                 session.removeMarker(instance.currentLineMarkerId);
                 instance.currentLineMarkerId = null;
+            }
+
+            if (instance.currentGutterRow !== undefined && instance.currentGutterRow !== null) {
+                session.removeGutterDecoration(instance.currentGutterRow, 'ace_gutter-active-line');
+                instance.currentGutterRow = null;
             }
         }
     };
