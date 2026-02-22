@@ -87,6 +87,8 @@
             editor.commands.removeCommand('foldall');
             editor.commands.removeCommand('unfoldall');
             editor.commands.removeCommand('toggleFoldWidget');
+            editor.commands.removeCommand('togglerecording');
+            editor.commands.removeCommand('replaymacro');
             var zubanCompleter = {
                 getCompletions: function(aceEditor, session, pos, prefix, callback) {
                     console.log('[Complete] getCompletions called, pos:', pos, 'prefix:', prefix);

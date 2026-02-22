@@ -30,7 +30,7 @@
                     self.handleCloseTab();
                     return false;
                 }
-                if (e.key === 'F2' || e.keyCode === 113) {
+                if (e.key === 'F2') {
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
