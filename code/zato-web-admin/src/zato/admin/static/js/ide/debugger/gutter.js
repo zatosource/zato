@@ -46,9 +46,30 @@
             this.updateBreakpointMarkers(instance);
 
             var self = this;
-            aceEditor.renderer.on('afterRender', function onFirstRender() {
-                aceEditor.renderer.off('afterRender', onFirstRender);
-                self.updateBreakpointMarkers(instance);
+            var renderCount = 0;
+            aceEditor.renderer.on('afterRender', function onRender() {
+                renderCount++;
+                console.log('[Gutter] afterRender #' + renderCount + ': fired');
+                var gutterCells = aceEditor.renderer.$gutterLayer.element.querySelectorAll('.ace_gutter-cell');
+                console.log('[Gutter] afterRender #' + renderCount + ': gutterCells.length=' + gutterCells.length);
+                
+                var gutterElement = aceEditor.renderer.$gutterLayer.element;
+                var gutterRect = gutterElement.getBoundingClientRect();
+                console.log('[Gutter] afterRender #' + renderCount + ': gutter left=' + gutterRect.left + ' width=' + gutterRect.width);
+                
+                for (var i = 0; i < gutterCells.length; i++) {
+                    if (gutterCells[i].classList.contains('ace_breakpoint')) {
+                        var style = window.getComputedStyle(gutterCells[i]);
+                        var cellRect = gutterCells[i].getBoundingClientRect();
+                        console.log('[Gutter] afterRender #' + renderCount + ': cell[' + i + '] has breakpoint, bg-pos=' + style.backgroundPosition + ' cellLeft=' + cellRect.left + ' cellWidth=' + cellRect.width);
+                    }
+                }
+                
+                if (gutterCells.length > 1 && renderCount === 1) {
+                    console.log('[Gutter] afterRender: first render with cells, calling updateBreakpointMarkers');
+                    self.updateBreakpointMarkers(instance);
+                    self.setupMutationObserver(instance);
+                }
             });
 
             console.log('[Gutter] create: END, instanceId=' + instanceId);
@@ -575,7 +596,18 @@
                 } else if (bp.condition) {
                     bpClass = 'ace_breakpoint ace_breakpoint-conditional';
                 }
+                console.log('[Gutter] updateBreakpointMarkers: setting breakpoint row=' + row + ' class=' + bpClass);
                 session.setBreakpoint(row, bpClass);
+                var gutterCells = editor.renderer.$gutterLayer.element.querySelectorAll('.ace_gutter-cell');
+                console.log('[Gutter] updateBreakpointMarkers: gutterCells.length=' + gutterCells.length);
+                if (gutterCells[row]) {
+                    console.log('[Gutter] updateBreakpointMarkers: gutterCells[' + row + '].className=' + gutterCells[row].className);
+                    var computedStyle = window.getComputedStyle(gutterCells[row]);
+                    console.log('[Gutter] updateBreakpointMarkers: background-image=' + computedStyle.backgroundImage);
+                    console.log('[Gutter] updateBreakpointMarkers: background-position=' + computedStyle.backgroundPosition);
+                    var beforeStyle = window.getComputedStyle(gutterCells[row], '::before');
+                    console.log('[Gutter] updateBreakpointMarkers: ::before left=' + beforeStyle.left + ' position=' + beforeStyle.position + ' content=' + beforeStyle.content);
+                }
             }
         },
 
@@ -655,6 +687,68 @@
                 session.removeGutterDecoration(instance.currentGutterRow, 'ace_gutter-active-line');
                 instance.currentGutterRow = null;
             }
+        },
+
+        setupMutationObserver: function(instance) {
+            console.log('[Gutter] setupMutationObserver: START');
+            var editor = instance.editor;
+            var gutterElement = editor.renderer.$gutterLayer.element;
+            console.log('[Gutter] setupMutationObserver: gutterElement=' + (gutterElement ? 'exists' : 'null'));
+
+            if (instance.mutationObserver) {
+                console.log('[Gutter] setupMutationObserver: observer already exists, disconnecting');
+                instance.mutationObserver.disconnect();
+            }
+
+            var self = this;
+            instance.mutationObserver = new MutationObserver(function(mutations) {
+                for (var i = 0; i < mutations.length; i++) {
+                    var mutation = mutations[i];
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        var target = mutation.target;
+                        if (target.classList.contains('ace_gutter-cell')) {
+                            var oldValue = mutation.oldValue || '';
+                            var newValue = target.className;
+                            var hadBreakpoint = oldValue.indexOf('ace_breakpoint') !== -1;
+                            var hasBreakpoint = newValue.indexOf('ace_breakpoint') !== -1;
+                            if (hadBreakpoint && !hasBreakpoint) {
+                                console.log('[Gutter] MutationObserver: breakpoint class REMOVED from cell');
+                                console.log('[Gutter] MutationObserver: oldValue=' + oldValue);
+                                console.log('[Gutter] MutationObserver: newValue=' + newValue);
+                                console.log('[Gutter] MutationObserver: stack=' + new Error().stack);
+                            }
+                        }
+                    }
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                        var target = mutation.target;
+                        if (target.classList.contains('ace_gutter-cell') && target.classList.contains('ace_breakpoint')) {
+                            console.log('[Gutter] MutationObserver: style changed on breakpoint cell');
+                            console.log('[Gutter] MutationObserver: newStyle=' + target.getAttribute('style'));
+                            console.log('[Gutter] MutationObserver: stack=' + new Error().stack);
+                        }
+                    }
+                    if (mutation.type === 'childList') {
+                        for (var j = 0; j < mutation.removedNodes.length; j++) {
+                            var node = mutation.removedNodes[j];
+                            if (node.nodeType === 1 && node.classList && node.classList.contains('ace_gutter-cell')) {
+                                if (node.classList.contains('ace_breakpoint')) {
+                                    console.log('[Gutter] MutationObserver: breakpoint cell REMOVED from DOM');
+                                    console.log('[Gutter] MutationObserver: className=' + node.className);
+                                    console.log('[Gutter] MutationObserver: stack=' + new Error().stack);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            instance.mutationObserver.observe(gutterElement, {
+                attributes: true,
+                attributeOldValue: true,
+                childList: true,
+                subtree: true
+            });
+            console.log('[Gutter] setupMutationObserver: observer started');
         }
     };
 

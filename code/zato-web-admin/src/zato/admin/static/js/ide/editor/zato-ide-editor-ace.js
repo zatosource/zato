@@ -603,8 +603,20 @@
                     if (xhr.status === 200) {
                         try {
                             var response = JSON.parse(xhr.responseText);
+                            console.log('[Lint] response received, annotations=' + (response.annotations ? response.annotations.length : 0));
                             if (response.success && response.annotations) {
+                                console.log('[Lint] calling setAnnotations');
                                 editor.session.setAnnotations(response.annotations);
+                                console.log('[Lint] setAnnotations complete, re-applying breakpoints');
+                                if (typeof ZatoDebuggerGutter !== 'undefined') {
+                                    var gutterInstance = ZatoDebuggerGutter.getInstanceForEditor(editor);
+                                    if (gutterInstance) {
+                                        console.log('[Lint] found gutter instance, calling updateBreakpointMarkers');
+                                        ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstance);
+                                    } else {
+                                        console.log('[Lint] no gutter instance found for editor');
+                                    }
+                                }
                             }
                             ZatoIDEEditorAce.applyUnusedMarkers(editor, response.markers || []);
                         } catch (e) {
