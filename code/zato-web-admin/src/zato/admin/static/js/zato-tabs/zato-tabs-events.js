@@ -280,7 +280,7 @@
         },
 
         closeTab: function(instance, tabId, callbacks) {
-            if (instance.tabs.length <= 1) {
+            if (instance.tabs.length <= 1 && !instance.allowCloseLastTab) {
                 return;
             }
 

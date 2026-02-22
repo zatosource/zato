@@ -262,9 +262,10 @@
             this.bindEvents(instance);
 
             var activeTab = this.getActiveTab(instance);
-            var initialFile = activeTab ? activeTab.title : 'my_service.py';
-            console.log('[ZatoIDE] render: switching to initial file ' + initialFile);
-            this.switchToFile(instance, initialFile);
+            if (activeTab && activeTab.title) {
+                console.log('[ZatoIDE] render: switching to initial file ' + activeTab.title);
+                this.switchToFile(instance, activeTab.title);
+            }
             console.log('[ZatoIDE] render: complete');
         },
 
@@ -285,45 +286,8 @@
          * Initializes sample files with content.
          */
         initFiles: function(instance) {
-            var pythonContent = this.getPythonContent();
-            var sqlContent = this.getSQLContent();
-            var yamlContent = this.getYAMLContent();
-            var jsonContent = this.getJSONContent();
-            var iniContent = this.getINIContent();
-
-            instance.files = {
-                'my_service.py': {
-                    content: pythonContent,
-                    originalContent: pythonContent,
-                    language: 'python',
-                    modified: false
-                },
-                'queries.sql': {
-                    content: sqlContent,
-                    originalContent: sqlContent,
-                    language: 'sql',
-                    modified: false
-                },
-                'config.yaml': {
-                    content: yamlContent,
-                    originalContent: yamlContent,
-                    language: 'yaml',
-                    modified: false
-                },
-                'data.json': {
-                    content: jsonContent,
-                    originalContent: jsonContent,
-                    language: 'json',
-                    modified: false
-                },
-                'settings.ini': {
-                    content: iniContent,
-                    originalContent: iniContent,
-                    language: 'ini',
-                    modified: false
-                }
-            };
-            instance.activeFile = 'my_service.py';
+            instance.files = {};
+            instance.activeFile = null;
         },
 
         getPythonContent: function() {
@@ -1600,14 +1564,8 @@
                 instance.closedTabsHistory = savedState.closedTabsHistory || [];
                 this.restoreFilesFromTabs(instance, files);
             } else {
-                files = [
-                    { id: 'file-1', title: 'my_service.py' },
-                    { id: 'file-2', title: 'queries.sql' },
-                    { id: 'file-3', title: 'config.yaml' },
-                    { id: 'file-4', title: 'data.json' },
-                    { id: 'file-5', title: 'settings.ini' }
-                ];
-                activeTabId = files[0].id;
+                files = [];
+                activeTabId = null;
                 instance.closedTabsHistory = [];
             }
 

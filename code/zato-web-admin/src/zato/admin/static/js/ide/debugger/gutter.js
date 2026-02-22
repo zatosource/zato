@@ -46,6 +46,12 @@
             console.log('[Gutter] create: calling updateBreakpointMarkers');
             this.updateBreakpointMarkers(instance);
 
+            var self = this;
+            aceEditor.renderer.on('afterRender', function onFirstRender() {
+                aceEditor.renderer.off('afterRender', onFirstRender);
+                self.updateBreakpointMarkers(instance);
+            });
+
             console.log('[Gutter] create: END, instanceId=' + instanceId);
             return instance;
         },
