@@ -725,15 +725,22 @@
                 var foundRange = null;
                 console.log('[Tooltip] mousemove: row=' + row + ' col=' + col + ' unusedMarkerRanges.length=' + self.unusedMarkerRanges.length);
 
-                for (var i = 0; i < self.unusedMarkerRanges.length; i++) {
-                    var item = self.unusedMarkerRanges[i];
-                    var r = item.range;
-                    console.log('[Tooltip] mousemove: checking range ' + i + ': startRow=' + r.start.row + ' startCol=' + r.start.column + ' endRow=' + r.end.row + ' endCol=' + r.end.column);
-                    if (row === r.start.row && col >= r.start.column && col <= r.end.column) {
-                        foundMessage = item.message;
-                        foundRange = r;
-                        console.log('[Tooltip] mousemove: MATCH! message=' + foundMessage);
-                        break;
+                var lineLength = editor.session.getLine(row).length;
+                console.log('[Tooltip] mousemove: lineLength=' + lineLength);
+
+                if (col > lineLength) {
+                    console.log('[Tooltip] mousemove: col > lineLength, skipping');
+                } else {
+                    for (var i = 0; i < self.unusedMarkerRanges.length; i++) {
+                        var item = self.unusedMarkerRanges[i];
+                        var r = item.range;
+                        console.log('[Tooltip] mousemove: checking range ' + i + ': startRow=' + r.start.row + ' startCol=' + r.start.column + ' endRow=' + r.end.row + ' endCol=' + r.end.column);
+                        if (row === r.start.row && col >= r.start.column && col < r.end.column) {
+                            foundMessage = item.message;
+                            foundRange = r;
+                            console.log('[Tooltip] mousemove: MATCH! message=' + foundMessage);
+                            break;
+                        }
                     }
                 }
 
