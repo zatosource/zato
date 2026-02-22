@@ -715,11 +715,22 @@
                 tooltipEl.addEventListener('click', function() {
                     console.log('[Tooltip] tooltipEl click');
                     var textToCopy = tooltipEl.textContent;
+                    var originalLeft = parseFloat(tooltipEl.style.left);
+                    var originalTop = parseFloat(tooltipEl.style.top);
+                    var originalRect = tooltipEl.getBoundingClientRect();
+                    var originalCenterX = originalRect.left + (originalRect.width / 2);
+
                     navigator.clipboard.writeText(textToCopy).then(function() {
                         console.log('[Tooltip] copied to clipboard: ' + textToCopy);
                         tooltipLocked = true;
                         tooltipEl.textContent = 'Copied to clipboard';
-                        console.log('[Tooltip] showing Copied to clipboard message');
+
+                        var newRect = tooltipEl.getBoundingClientRect();
+                        var newLeft = originalCenterX - (newRect.width / 2);
+                        tooltipEl.style.left = newLeft + 'px';
+                        tooltipEl.style.top = originalTop + 'px';
+
+                        console.log('[Tooltip] showing Copied to clipboard message at left=' + newLeft);
                         setTimeout(function() {
                             console.log('[Tooltip] hiding after copied message');
                             tooltipLocked = false;
