@@ -538,7 +538,7 @@
 .ace_gutter-cell.zato-debugger-breakpoint::before {
     content: '';
     position: absolute;
-    left: 4px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
     width: 10px;
@@ -550,7 +550,7 @@
 .ace_gutter-cell.zato-debugger-breakpoint-disabled::before {
     content: '';
     position: absolute;
-    left: 4px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
     width: 10px;
@@ -563,7 +563,7 @@
 .ace_gutter-cell.zato-debugger-breakpoint-conditional::before {
     content: '';
     position: absolute;
-    left: 4px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
     width: 10px;

@@ -603,11 +603,9 @@
                     if (xhr.status === 200) {
                         try {
                             var response = JSON.parse(xhr.responseText);
-                            console.log('[Lint] response:', JSON.stringify(response));
                             if (response.success && response.annotations) {
                                 editor.session.setAnnotations(response.annotations);
                             }
-                            console.log('[Lint] markers:', JSON.stringify(response.markers));
                             ZatoIDEEditorAce.applyUnusedMarkers(editor, response.markers || []);
                         } catch (e) {
                             console.warn('[Lint] Failed to parse response:', e);
@@ -628,13 +626,9 @@
         unusedTooltipInstance: null,
 
         applyUnusedMarkers: function(editor, markers) {
-            console.log('[Lint] applyUnusedMarkers: START, markers.length=' + markers.length);
             var session = editor.session;
-            console.log('[Lint] applyUnusedMarkers: session=' + (session ? 'exists' : 'null'));
             var Range = ace.require('ace/range').Range;
-            console.log('[Lint] applyUnusedMarkers: Range=' + (Range ? 'exists' : 'null'));
 
-            console.log('[Lint] applyUnusedMarkers: removing old markers, count=' + this.unusedMarkerIds.length);
             for (var i = 0; i < this.unusedMarkerIds.length; i++) {
                 session.removeMarker(this.unusedMarkerIds[i]);
             }
@@ -643,46 +637,28 @@
 
             for (var i = 0; i < markers.length; i++) {
                 var m = markers[i];
-                console.log('[Lint] applyUnusedMarkers: marker ' + i + ': startRow=' + m.startRow + ' startCol=' + m.startCol + ' endRow=' + m.endRow + ' endCol=' + m.endCol + ' message=' + m.message);
                 var range = new Range(m.startRow, m.startCol, m.endRow, m.endCol);
-                console.log('[Lint] applyUnusedMarkers: range created: ' + JSON.stringify({start: range.start, end: range.end}));
                 var markerId = session.addMarker(range, 'ace_unused_variable', 'text', true);
-                console.log('[Lint] applyUnusedMarkers: markerId=' + markerId);
                 this.unusedMarkerIds.push(markerId);
                 this.unusedMarkerRanges.push({
                     range: range,
                     message: m.message || 'Unused'
                 });
             }
-            console.log('[Lint] applyUnusedMarkers: END, total markers added=' + this.unusedMarkerIds.length);
-            console.log('[Lint] applyUnusedMarkers: unusedMarkerRanges.length=' + this.unusedMarkerRanges.length);
 
             this.setupUnusedHover(editor);
         },
 
         setupUnusedHover: function(editor) {
-            console.log('[Tooltip] setupUnusedHover: START');
-            console.log('[Tooltip] setupUnusedHover: unusedHoverBound=' + this.unusedHoverBound);
-            console.log('[Tooltip] setupUnusedHover: ZatoTooltip=' + (typeof ZatoTooltip));
-            console.log('[Tooltip] setupUnusedHover: editor=' + (editor ? 'exists' : 'null'));
-            console.log('[Tooltip] setupUnusedHover: editor.container=' + (editor.container ? 'exists' : 'null'));
-            console.log('[Tooltip] setupUnusedHover: editor.container.id=' + (editor.container ? editor.container.id : 'N/A'));
-
             if (this.unusedHoverBound) {
-                console.log('[Tooltip] setupUnusedHover: already bound, skipping');
                 return;
             }
             this.unusedHoverBound = true;
-            console.log('[Tooltip] setupUnusedHover: setting unusedHoverBound=true');
 
             var self = this;
 
             if (typeof ZatoTooltip !== 'undefined' && !this.unusedTooltipInstance) {
-                console.log('[Tooltip] setupUnusedHover: creating ZatoTooltip instance');
                 this.unusedTooltipInstance = ZatoTooltip.create(editor.container.id, { theme: 'dark' });
-                console.log('[Tooltip] setupUnusedHover: unusedTooltipInstance=' + JSON.stringify(this.unusedTooltipInstance ? 'created' : 'null'));
-            } else {
-                console.log('[Tooltip] setupUnusedHover: ZatoTooltip not available or instance already exists');
             }
 
             var lastMessage = null;
@@ -698,12 +674,10 @@
                 tooltipEl.style.cursor = 'pointer';
 
                 tooltipEl.addEventListener('mouseenter', function() {
-                    console.log('[Tooltip] tooltipEl mouseenter');
                     tooltipHovered = true;
                 });
 
                 tooltipEl.addEventListener('mouseleave', function() {
-                    console.log('[Tooltip] tooltipEl mouseleave, tooltipLocked=' + tooltipLocked);
                     if (tooltipLocked) {
                         return;
                     }
@@ -713,15 +687,12 @@
                 });
 
                 tooltipEl.addEventListener('click', function() {
-                    console.log('[Tooltip] tooltipEl click');
                     var textToCopy = tooltipEl.textContent;
-                    var originalLeft = parseFloat(tooltipEl.style.left);
                     var originalTop = parseFloat(tooltipEl.style.top);
                     var originalRect = tooltipEl.getBoundingClientRect();
                     var originalCenterX = originalRect.left + (originalRect.width / 2);
 
                     navigator.clipboard.writeText(textToCopy).then(function() {
-                        console.log('[Tooltip] copied to clipboard: ' + textToCopy);
                         tooltipLocked = true;
                         tooltipEl.textContent = 'Copied to clipboard';
 
@@ -730,22 +701,17 @@
                         tooltipEl.style.left = newLeft + 'px';
                         tooltipEl.style.top = originalTop + 'px';
 
-                        console.log('[Tooltip] showing Copied to clipboard message at left=' + newLeft);
                         setTimeout(function() {
-                            console.log('[Tooltip] hiding after copied message');
                             tooltipLocked = false;
                             tooltipHovered = false;
                             lastMessage = null;
                             tooltipEl.style.opacity = '0';
                             tooltipEl.style.visibility = 'hidden';
                         }, 350);
-                    }).catch(function(err) {
-                        console.log('[Tooltip] clipboard write failed: ' + err);
                     });
                 });
             }
 
-            console.log('[Tooltip] setupUnusedHover: adding mousemove listener to editor');
             editor.on('mousemove', function(e) {
                 var pos = e.getDocumentPosition();
                 var row = pos.row;
@@ -759,33 +725,25 @@
 
                 var foundMessage = null;
                 var foundRange = null;
-                console.log('[Tooltip] mousemove: row=' + row + ' col=' + col + ' unusedMarkerRanges.length=' + self.unusedMarkerRanges.length);
 
                 var lineLength = editor.session.getLine(row).length;
-                console.log('[Tooltip] mousemove: lineLength=' + lineLength);
 
-                if (col > lineLength) {
-                    console.log('[Tooltip] mousemove: col > lineLength, skipping');
-                } else {
+                if (col <= lineLength) {
                     for (var i = 0; i < self.unusedMarkerRanges.length; i++) {
                         var item = self.unusedMarkerRanges[i];
                         var r = item.range;
-                        console.log('[Tooltip] mousemove: checking range ' + i + ': startRow=' + r.start.row + ' startCol=' + r.start.column + ' endRow=' + r.end.row + ' endCol=' + r.end.column);
                         if (row === r.start.row && col >= r.start.column && col < r.end.column) {
                             foundMessage = item.message;
                             foundRange = r;
-                            console.log('[Tooltip] mousemove: MATCH! message=' + foundMessage);
                             break;
                         }
                     }
                 }
 
                 if (foundMessage && foundMessage !== lastMessage) {
-                    console.log('[Tooltip] mousemove: showing tooltip, message=' + foundMessage);
                     lastMessage = foundMessage;
                     if (self.unusedTooltipInstance && self.unusedTooltipInstance.tooltipEl) {
                         var coords = editor.renderer.textToScreenCoordinates(row, col);
-                        console.log('[Tooltip] mousemove: coords=' + JSON.stringify(coords));
 
                         var tooltipEl = self.unusedTooltipInstance.tooltipEl;
                         tooltipEl.textContent = foundMessage;
@@ -801,45 +759,30 @@
                         if (top < 5) {
                             top = coords.pageY + 20;
                         }
-                        console.log('[Tooltip] mousemove: positioning ABOVE text, left=' + left + ' top=' + top);
 
                         tooltipEl.style.left = left + 'px';
                         tooltipEl.style.top = top + 'px';
                         tooltipEl.style.opacity = '1';
                         tooltipEl.style.visibility = 'visible';
-                        console.log('[Tooltip] mousemove: tooltip shown at left=' + left + ' top=' + top);
-                    } else {
-                        console.log('[Tooltip] mousemove: no unusedTooltipInstance or tooltipEl');
                     }
                 } else if (!foundMessage && lastMessage && !tooltipHovered) {
                     if (self.unusedTooltipInstance && self.unusedTooltipInstance.tooltipEl) {
                         var tooltipEl = self.unusedTooltipInstance.tooltipEl;
                         var rect = tooltipEl.getBoundingClientRect();
                         var mouseCoords = editor.renderer.textToScreenCoordinates(row, col);
-                        console.log('[Tooltip] mousemove: checking if mouse near tooltip, mouseY=' + mouseCoords.pageY + ' rect.bottom=' + rect.bottom);
                         if (mouseCoords.pageY >= rect.top - 5 && mouseCoords.pageY <= rect.bottom + 20) {
-                            console.log('[Tooltip] mousemove: mouse is near tooltip area, not hiding');
                             return;
                         }
                     }
-                    console.log('[Tooltip] mousemove: hiding tooltip');
                     lastMessage = null;
                     if (self.unusedTooltipInstance) {
-                        try {
-                            ZatoTooltip.hide(self.unusedTooltipInstance);
-                            console.log('[Tooltip] mousemove: ZatoTooltip.hide called');
-                        } catch (err) {
-                            console.log('[Tooltip] mousemove: ZatoTooltip.hide ERROR: ' + err.message);
-                        }
+                        ZatoTooltip.hide(self.unusedTooltipInstance);
                     }
                 }
             });
 
-            console.log('[Tooltip] setupUnusedHover: adding mouseleave listener to editor.container');
             editor.container.addEventListener('mouseleave', function(e) {
-                console.log('[Tooltip] mouseleave: tooltipHovered=' + tooltipHovered);
                 if (tooltipHovered) {
-                    console.log('[Tooltip] mouseleave: tooltip is hovered, not hiding');
                     return;
                 }
                 if (self.unusedTooltipInstance && self.unusedTooltipInstance.tooltipEl) {
@@ -847,27 +790,17 @@
                     var rect = tooltipEl.getBoundingClientRect();
                     var mouseX = e.clientX;
                     var mouseY = e.clientY;
-                    console.log('[Tooltip] mouseleave: mouseX=' + mouseX + ' mouseY=' + mouseY + ' rect=' + JSON.stringify({left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom}));
                     if (mouseX >= rect.left - 10 && mouseX <= rect.right + 10 && mouseY >= rect.top - 10 && mouseY <= rect.bottom + 10) {
-                        console.log('[Tooltip] mouseleave: mouse is heading to tooltip, not hiding');
                         return;
                     }
                 }
-                console.log('[Tooltip] mouseleave: hiding tooltip');
                 lastMessage = null;
                 lastRow = -1;
                 lastCol = -1;
                 if (self.unusedTooltipInstance) {
-                    try {
-                        ZatoTooltip.hide(self.unusedTooltipInstance);
-                        console.log('[Tooltip] mouseleave: ZatoTooltip.hide called');
-                    } catch (err) {
-                        console.log('[Tooltip] mouseleave: ZatoTooltip.hide ERROR: ' + err.message);
-                    }
+                    ZatoTooltip.hide(self.unusedTooltipInstance);
                 }
             });
-
-            console.log('[Tooltip] setupUnusedHover: END');
         },
 
         getCsrfToken: function() {
