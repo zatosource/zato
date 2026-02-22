@@ -520,6 +520,7 @@
         setValue: function(instance, value) {
             instance.content = value;
             if (instance.aceEditor) {
+                this.applyUnusedMarkers(instance.aceEditor, []);
                 var cursorPos = instance.aceEditor.getCursorPosition();
                 instance.aceEditor.setValue(value, -1);
                 instance.aceEditor.moveCursorToPosition(cursorPos);
