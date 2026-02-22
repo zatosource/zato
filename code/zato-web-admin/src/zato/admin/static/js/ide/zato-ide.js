@@ -678,12 +678,7 @@
                 if (savedCursorLine && file.content) {
                     var aceEditor = instance.codeEditor.aceEditor;
                     if (aceEditor) {
-                        requestAnimationFrame(function() {
-                            requestAnimationFrame(function() {
-                                aceEditor.resize(true);
-                                aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
-                            });
-                        });
+                        aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
                     }
                 }
 
@@ -822,6 +817,26 @@
                     callbacks.onSave();
                 }
             });
+
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    closeDialog();
+                    if (callbacks.onCancel) {
+                        callbacks.onCancel();
+                    }
+                }
+            });
+
+            var escHandler = function(e) {
+                if (e.key === 'Escape') {
+                    closeDialog();
+                    document.removeEventListener('keydown', escHandler);
+                    if (callbacks.onCancel) {
+                        callbacks.onCancel();
+                    }
+                }
+            };
+            document.addEventListener('keydown', escHandler);
 
             saveBtn.focus();
         },
@@ -1786,6 +1801,13 @@
                     var filename = tab.title;
                     var file = instance.files[filename];
                     if (file && file.modified) {
+                        var contentTrimmed = (file.content || '').trim();
+                        if (contentTrimmed === '') {
+                            file.content = '';
+                            file.modified = false;
+                            doClose();
+                            return;
+                        }
                         self.showSaveDialog(instance, filename, {
                             onDontSave: function() {
                                 file.modified = false;
