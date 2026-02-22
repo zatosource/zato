@@ -663,19 +663,19 @@
             css += '.ace_gutter-cell.ace_breakpoint {';
             css += '  background-image: url("' + redCircle + '");';
             css += '  background-repeat: no-repeat;';
-            css += '  background-position: 2px center;';
+            css += '  background-position: 8px center;';
             css += '}';
 
             css += '.ace_gutter-cell.ace_breakpoint-disabled {';
             css += '  background-image: url("' + grayCircle + '");';
             css += '  background-repeat: no-repeat;';
-            css += '  background-position: 2px center;';
+            css += '  background-position: 8px center;';
             css += '}';
 
             css += '.ace_gutter-cell.ace_breakpoint-conditional {';
             css += '  background-image: url("' + orangeCircle + '");';
             css += '  background-repeat: no-repeat;';
-            css += '  background-position: 2px center;';
+            css += '  background-position: 8px center;';
             css += '}';
 
             css += '.zato-debugger-current-line {';
