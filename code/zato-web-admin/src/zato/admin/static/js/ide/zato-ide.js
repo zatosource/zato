@@ -94,7 +94,8 @@
                 codeEditor: null,
                 content: '',
                 files: {},
-                activeFile: null
+                activeFile: null,
+                isLoadingContent: false
             };
 
             this.render(instance);
@@ -661,9 +662,10 @@
                 },
                 onCursorChange: function(line, col) {
                     self.syncDropdownsToLine(instance, line);
-                    if (instance.activeFile && instance.files[instance.activeFile]) {
+                    if (instance.activeFile && instance.files[instance.activeFile] && !instance.isLoadingContent) {
                         instance.files[instance.activeFile].cursorLine = line;
                         instance.files[instance.activeFile].cursorCol = col;
+                        console.log('[ZatoIDE] onCursorChange: file=' + instance.activeFile + ' line=' + line + ' col=' + col);
                     }
                 }
             };
@@ -705,18 +707,27 @@
             console.log('[ZatoIDE] switchToFile: file.language=' + file.language);
 
             if (instance.codeEditor) {
+                var savedCursorLine = file.cursorLine;
+                var savedCursorCol = file.cursorCol;
+                instance.isLoadingContent = true;
+
                 console.log('[ZatoIDE] switchToFile: calling setLanguage with language=' + file.language);
                 ZatoIDEEditorAce.setLanguage(instance.codeEditor, file.language);
                 console.log('[ZatoIDE] switchToFile: calling setValue');
                 ZatoIDEEditorAce.setValue(instance.codeEditor, file.content);
 
-                if (file.cursorLine && file.cursorLine > 1) {
+                if (savedCursorLine) {
                     var aceEditor = instance.codeEditor.aceEditor;
                     if (aceEditor) {
-                        aceEditor.moveCursorTo(file.cursorLine - 1, (file.cursorCol || 1) - 1);
-                        aceEditor.scrollToLine(file.cursorLine - 1, true, true);
+                        console.log('[ZatoIDE] switchToFile: restoring cursor to line=' + savedCursorLine + ' col=' + savedCursorCol);
+                        aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
+                        console.log('[ZatoIDE] switchToFile: gotoLine complete');
                     }
                 }
+
+                file.cursorLine = savedCursorLine;
+                file.cursorCol = savedCursorCol;
+                instance.isLoadingContent = false;
             }
 
             this.syncTabToFile(instance, filename);
@@ -1638,10 +1649,30 @@
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     var response = JSON.parse(xhr.responseText);
                     if (response.success && instance.files[fileName]) {
-                        instance.files[fileName].content = response.content;
-                        instance.files[fileName].originalContent = response.content;
+                        var file = instance.files[fileName];
+                        var savedCursorLine = file.cursorLine;
+                        var savedCursorCol = file.cursorCol;
+                        console.log('[ZatoIDE] loadFileContent: fileName=' + fileName + ' savedCursorLine=' + savedCursorLine + ' savedCursorCol=' + savedCursorCol);
+
+                        file.content = response.content;
+                        file.originalContent = response.content;
+
                         if (instance.activeFile === fileName && instance.codeEditor) {
+                            instance.isLoadingContent = true;
                             ZatoIDEEditorAce.setValue(instance.codeEditor, response.content);
+                            if (savedCursorLine) {
+                                var aceEditor = instance.codeEditor.aceEditor;
+                                if (aceEditor) {
+                                    console.log('[ZatoIDE] loadFileContent: restoring cursor to line=' + savedCursorLine + ' col=' + savedCursorCol);
+                                    
+                                    aceEditor.gotoLine(savedCursorLine, (savedCursorCol || 1) - 1, false);
+                                    ZatoIDEEditorAce.saveState(instance.codeEditor);
+                                    console.log('[ZatoIDE] loadFileContent: gotoLine complete');
+                                }
+                            }
+                            file.cursorLine = savedCursorLine;
+                            file.cursorCol = savedCursorCol;
+                            instance.isLoadingContent = false;
                         }
                     }
                 }
@@ -1662,10 +1693,9 @@
                     filePath: tab.filePath || (file ? file.filePath : null),
                     language: tab.language || (file ? file.language : 'text')
                 };
-                if (file && file.filePath) {
-                    tabData.cursorLine = file.cursorLine || 1;
-                    tabData.cursorCol = file.cursorCol || 1;
-                }
+                tabData.cursorLine = file ? (file.cursorLine || 1) : 1;
+                tabData.cursorCol = file ? (file.cursorCol || 1) : 1;
+                console.log('[ZatoIDE] saveTabsState: tab=' + tab.title + ' cursorLine=' + tabData.cursorLine + ' cursorCol=' + tabData.cursorCol);
                 return tabData;
             });
 
