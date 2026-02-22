@@ -504,6 +504,12 @@
                 }
             });
 
+            editor.session.on('changeScrollTop', function() {
+                if (opts.onScrollChange) {
+                    opts.onScrollChange(editor.getFirstVisibleRow());
+                }
+            });
+
             editor.on('focus', function() {
                 instance.focused = true;
             });
