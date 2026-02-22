@@ -689,6 +689,7 @@
             var lastRow = -1;
             var lastCol = -1;
             var tooltipHovered = false;
+            var tooltipLocked = false;
 
             if (self.unusedTooltipInstance && self.unusedTooltipInstance.tooltipEl) {
                 var tooltipEl = self.unusedTooltipInstance.tooltipEl;
@@ -702,7 +703,10 @@
                 });
 
                 tooltipEl.addEventListener('mouseleave', function() {
-                    console.log('[Tooltip] tooltipEl mouseleave');
+                    console.log('[Tooltip] tooltipEl mouseleave, tooltipLocked=' + tooltipLocked);
+                    if (tooltipLocked) {
+                        return;
+                    }
                     tooltipHovered = false;
                     lastMessage = null;
                     ZatoTooltip.hide(self.unusedTooltipInstance);
@@ -713,12 +717,16 @@
                     var textToCopy = tooltipEl.textContent;
                     navigator.clipboard.writeText(textToCopy).then(function() {
                         console.log('[Tooltip] copied to clipboard: ' + textToCopy);
-                        var originalText = tooltipEl.textContent;
+                        tooltipLocked = true;
                         tooltipEl.textContent = 'Copied to clipboard';
+                        console.log('[Tooltip] showing Copied to clipboard message');
                         setTimeout(function() {
+                            console.log('[Tooltip] hiding after copied message');
+                            tooltipLocked = false;
                             tooltipHovered = false;
                             lastMessage = null;
-                            ZatoTooltip.hide(self.unusedTooltipInstance);
+                            tooltipEl.style.opacity = '0';
+                            tooltipEl.style.visibility = 'hidden';
                         }, 350);
                     }).catch(function(err) {
                         console.log('[Tooltip] clipboard write failed: ' + err);
