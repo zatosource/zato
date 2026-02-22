@@ -721,10 +721,19 @@
                     if (aceEditor) {
                         console.log('[ZatoIDE] switchToFile: restoring cursor to line=' + savedCursorLine + ' col=' + savedCursorCol);
                         var renderer = aceEditor.renderer;
-                        aceEditor.moveCursorTo(savedCursorLine - 1, (savedCursorCol || 1) - 1);
-                        renderer.scrollToLine(savedCursorLine - 1, true, false);
-                        aceEditor.resize(true);
-                        console.log('[ZatoIDE] switchToFile: scroll restore complete');
+                        var targetRow = savedCursorLine - 1;
+                        var targetCol = (savedCursorCol || 1) - 1;
+                        requestAnimationFrame(function() {
+                            renderer.$loop.pending = false;
+                            renderer.$changes = 0;
+                            aceEditor.resize(true);
+                            aceEditor.moveCursorTo(targetRow, targetCol);
+                            renderer.scrollToLine(targetRow, true, false);
+                            renderer.$renderChanges(renderer.CHANGE_FULL, true);
+                            renderer.$loop.pending = false;
+                            renderer.$changes = 0;
+                            console.log('[ZatoIDE] switchToFile: raf scroll restore complete');
+                        });
                     }
                 }
 
@@ -1753,9 +1762,18 @@
                                     console.log('[ZatoIDE] loadFileContent: session.getScrollTop()=' + session.getScrollTop());
                                     console.log('[ZatoIDE] loadFileContent: renderer.scrollTop=' + renderer.scrollTop);
                                     
-                                    console.log('[ZatoIDE] loadFileContent: --- calling renderer.scrollToLine + resize(true) ---');
-                                    renderer.scrollToLine(targetRow, true, false);
-                                    aceEditor.resize(true);
+                                    console.log('[ZatoIDE] loadFileContent: --- using requestAnimationFrame for scroll ---');
+                                    requestAnimationFrame(function() {
+                                        renderer.$loop.pending = false;
+                                        renderer.$changes = 0;
+                                        aceEditor.resize(true);
+                                        renderer.scrollToLine(targetRow, true, false);
+                                        renderer.$renderChanges(renderer.CHANGE_FULL, true);
+                                        renderer.$loop.pending = false;
+                                        renderer.$changes = 0;
+                                        console.log('[ZatoIDE] loadFileContent: raf complete, gutter first=' + 
+                                            renderer.$gutterLayer.element.querySelector('.ace_gutter-cell').textContent);
+                                    });
                                     
                                     console.log('[ZatoIDE] loadFileContent: --- after scrollToLine + resize ---');
                                     console.log('[ZatoIDE] loadFileContent: session.getScrollTop()=' + session.getScrollTop());
@@ -1768,7 +1786,31 @@
                                     console.log('[ZatoIDE] loadFileContent: getFirstFullyVisibleRow()=' + renderer.getFirstFullyVisibleRow());
                                     console.log('[ZatoIDE] loadFileContent: getLastFullyVisibleRow()=' + renderer.getLastFullyVisibleRow());
                                     
+                                    var gutterCells = renderer.$gutterLayer.element.querySelectorAll('.ace_gutter-cell');
+                                    var firstGutterLine = gutterCells.length > 0 ? gutterCells[0].textContent : 'n/a';
+                                    var lastGutterLine = gutterCells.length > 0 ? gutterCells[gutterCells.length - 1].textContent : 'n/a';
+                                    console.log('[ZatoIDE] loadFileContent: html gutter first=' + firstGutterLine + ' last=' + lastGutterLine + ' count=' + gutterCells.length);
+                                    
+                                    var contentTransform = renderer.content.style.transform;
+                                    console.log('[ZatoIDE] loadFileContent: content.style.transform=' + contentTransform);
+                                    
                                     console.log('[ZatoIDE] loadFileContent: === end cursor restore ===');
+                                    
+                                    setTimeout(function() {
+                                        var gutterCells2 = renderer.$gutterLayer.element.querySelectorAll('.ace_gutter-cell');
+                                        var first2 = gutterCells2.length > 0 ? gutterCells2[0].textContent : 'n/a';
+                                        var last2 = gutterCells2.length > 0 ? gutterCells2[gutterCells2.length - 1].textContent : 'n/a';
+                                        console.log('[ZatoIDE] loadFileContent: 50ms later html gutter first=' + first2 + ' last=' + last2 + ' scrollTop=' + session.getScrollTop());
+                                    }, 50);
+                                    
+                                    var expectedScroll = session.getScrollTop();
+                                    session.on('changeScrollTop', function(newScroll) {
+                                        if (Math.abs(newScroll - expectedScroll) > 50) {
+                                            console.log('[ZatoIDE] scroll changed from ' + expectedScroll + ' to ' + newScroll);
+                                            console.log('[ZatoIDE] stack: ' + new Error().stack);
+                                            expectedScroll = newScroll;
+                                        }
+                                    });
                                 }
                             }
                             file.cursorLine = savedCursorLine;
@@ -1796,7 +1838,8 @@
                 };
                 tabData.cursorLine = file ? (file.cursorLine || 1) : 1;
                 tabData.cursorCol = file ? (file.cursorCol || 1) : 1;
-                console.log('[ZatoIDE] saveTabsState: tab=' + tab.title + ' cursorLine=' + tabData.cursorLine + ' cursorCol=' + tabData.cursorCol);
+                var acePos = (instance.codeEditor && instance.codeEditor.aceEditor) ? instance.codeEditor.aceEditor.getCursorPosition() : null;
+                console.log('[ZatoIDE] saveTabsState: tab=' + tab.title + ' file.cursorLine=' + (file ? file.cursorLine : 'n/a') + ' aceRow=' + (acePos ? acePos.row : 'n/a') + ' saving=' + tabData.cursorLine);
                 return tabData;
             });
 
