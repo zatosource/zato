@@ -303,11 +303,18 @@
                 instance.tabs.splice(tabIndex, 1);
 
                 if (instance.activeTabId === tabId) {
-                    var newActiveIndex = Math.min(tabIndex, instance.tabs.length - 1);
-                    instance.activeTabId = instance.tabs[newActiveIndex].id;
-                    if (callbacks.onTabChange) {
-                        var newActiveTab = self.getTabById(instance.tabs, instance.activeTabId);
-                        callbacks.onTabChange(newActiveTab);
+                    if (instance.tabs.length > 0) {
+                        var newActiveIndex = Math.min(tabIndex, instance.tabs.length - 1);
+                        instance.activeTabId = instance.tabs[newActiveIndex].id;
+                        if (callbacks.onTabChange) {
+                            var newActiveTab = self.getTabById(instance.tabs, instance.activeTabId);
+                            callbacks.onTabChange(newActiveTab);
+                        }
+                    } else {
+                        instance.activeTabId = null;
+                        if (callbacks.onTabChange) {
+                            callbacks.onTabChange(null);
+                        }
                     }
                 }
 

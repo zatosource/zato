@@ -1478,10 +1478,6 @@
                 return;
             }
 
-            if (instance.tabsManager.tabs.length <= 1) {
-                return;
-            }
-
             var tabId = tab.id;
             var filename = tab.title;
             var file = instance.files ? instance.files[filename] : null;
@@ -1571,6 +1567,7 @@
 
             instance.tabsManager.tabs = files;
             instance.tabsManager.activeTabId = activeTabId;
+            instance.tabsManager.allowCloseLastTab = true;
             instance.tabsManager.container = document.getElementById(tabsContainerId);
 
             this.renderTabs(instance);
@@ -1703,6 +1700,7 @@
                 containerId: instance.id + '-tabs',
                 tabs: instance.tabsManager.tabs,
                 activeTabId: instance.tabsManager.activeTabId,
+                allowCloseLastTab: instance.tabsManager.allowCloseLastTab,
                 theme: instance.options.theme,
                 closedTabsHistory: instance.closedTabsHistory || [],
                 clearedMessagesBuffer: instance.clearedMessagesBuffer || {}

@@ -225,7 +225,6 @@
                 };
             }
 
-            console.log('[layout-diag] ' + trigger + ':', JSON.stringify(data, null, 2));
         },
 
         toggleIDE: function(core) {

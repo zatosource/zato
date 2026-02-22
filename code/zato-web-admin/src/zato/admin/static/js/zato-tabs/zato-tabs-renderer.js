@@ -74,7 +74,8 @@
 
                 html += '<span class="zato-tab-title">' + this.escapeHtml(tab.title) + '</span>';
 
-                if (opts.showCloseButton && tabs.length > 1 && !tab.locked && !tab.pinned) {
+                var canClose = (tabs.length > 1 || instance.allowCloseLastTab) && !tab.locked && !tab.pinned;
+                if (opts.showCloseButton && canClose) {
                     var modifiedClass = tab.modified ? ' modified' : '';
                     html += '<span class="zato-tab-close-wrapper' + modifiedClass + '" data-tab-id="' + tab.id + '">';
                     html += '<span class="zato-tab-modified-dot"></span>';
@@ -140,7 +141,7 @@
             var hasMessages = tab && tab.messages && tab.messages.length > 0;
             var closedTabsHistory = instance.closedTabsHistory || [];
             var hasClosedTabs = closedTabsHistory.length > 0;
-            var canClose = tabs.length > 1 && !isLocked && !isPinned;
+            var canClose = (tabs.length > 1 || instance.allowCloseLastTab) && !isLocked && !isPinned;
 
             var html = '';
 
