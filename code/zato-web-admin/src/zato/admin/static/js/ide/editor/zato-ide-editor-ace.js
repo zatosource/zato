@@ -688,6 +688,26 @@
             var lastMessage = null;
             var lastRow = -1;
             var lastCol = -1;
+            var tooltipHovered = false;
+
+            if (self.unusedTooltipInstance && self.unusedTooltipInstance.tooltipEl) {
+                var tooltipEl = self.unusedTooltipInstance.tooltipEl;
+                tooltipEl.style.pointerEvents = 'auto';
+                tooltipEl.style.userSelect = 'text';
+                tooltipEl.style.cursor = 'text';
+
+                tooltipEl.addEventListener('mouseenter', function() {
+                    console.log('[Tooltip] tooltipEl mouseenter');
+                    tooltipHovered = true;
+                });
+
+                tooltipEl.addEventListener('mouseleave', function() {
+                    console.log('[Tooltip] tooltipEl mouseleave');
+                    tooltipHovered = false;
+                    lastMessage = null;
+                    ZatoTooltip.hide(self.unusedTooltipInstance);
+                });
+            }
 
             console.log('[Tooltip] setupUnusedHover: adding mousemove listener to editor');
             editor.on('mousemove', function(e) {
@@ -730,10 +750,8 @@
                         var tooltipRect = tooltipEl.getBoundingClientRect();
 
                         var left = coords.pageX;
-                        var top = coords.pageY - tooltipRect.height - 6;
-                        if (top < 5) {
-                            top = coords.pageY + 20;
-                        }
+                        var top = coords.pageY + 16;
+                        console.log('[Tooltip] mousemove: positioning BELOW text, top=' + top);
 
                         tooltipEl.style.left = left + 'px';
                         tooltipEl.style.top = top + 'px';
@@ -743,7 +761,7 @@
                     } else {
                         console.log('[Tooltip] mousemove: no unusedTooltipInstance or tooltipEl');
                     }
-                } else if (!foundMessage && lastMessage) {
+                } else if (!foundMessage && lastMessage && !tooltipHovered) {
                     console.log('[Tooltip] mousemove: hiding tooltip');
                     lastMessage = null;
                     if (self.unusedTooltipInstance) {
@@ -758,7 +776,23 @@
             });
 
             console.log('[Tooltip] setupUnusedHover: adding mouseleave listener to editor.container');
-            editor.container.addEventListener('mouseleave', function() {
+            editor.container.addEventListener('mouseleave', function(e) {
+                console.log('[Tooltip] mouseleave: tooltipHovered=' + tooltipHovered);
+                if (tooltipHovered) {
+                    console.log('[Tooltip] mouseleave: tooltip is hovered, not hiding');
+                    return;
+                }
+                if (self.unusedTooltipInstance && self.unusedTooltipInstance.tooltipEl) {
+                    var tooltipEl = self.unusedTooltipInstance.tooltipEl;
+                    var rect = tooltipEl.getBoundingClientRect();
+                    var mouseX = e.clientX;
+                    var mouseY = e.clientY;
+                    console.log('[Tooltip] mouseleave: mouseX=' + mouseX + ' mouseY=' + mouseY + ' rect=' + JSON.stringify({left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom}));
+                    if (mouseX >= rect.left && mouseX <= rect.right && mouseY >= rect.top - 5 && mouseY <= rect.bottom + 5) {
+                        console.log('[Tooltip] mouseleave: mouse is heading to tooltip, not hiding');
+                        return;
+                    }
+                }
                 console.log('[Tooltip] mouseleave: hiding tooltip');
                 lastMessage = null;
                 lastRow = -1;
