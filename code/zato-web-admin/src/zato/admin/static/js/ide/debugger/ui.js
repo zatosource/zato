@@ -138,35 +138,50 @@
 
             instance.isConnecting = true;
 
+            var self = this;
             var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
             var consolePanel = instance.container.querySelector('.zato-debugger-console');
+            var startButton = panelsContainer ? panelsContainer.querySelector('.zato-debugger-start-button') : null;
 
-            if (panelsContainer) {
-                panelsContainer.style.display = '';
-                instance._savedPanelsHTML = panelsContainer.innerHTML;
-                panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
-                    '<span class="zato-debugger-message-box">' +
-                    '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
-                    ' Connecting .. <span class="zato-debugger-countdown">10.00 s</span></span>' +
-                    '</div>';
+            function showSpinner() {
+                if (panelsContainer) {
+                    panelsContainer.style.display = '';
+                    instance._savedPanelsHTML = panelsContainer.innerHTML;
+                    panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
+                        '<span class="zato-debugger-message-box">' +
+                        '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
+                        ' Connecting .. <span class="zato-debugger-countdown">10.00 s</span></span>' +
+                        '</div>';
+                }
+
+                if (consolePanel) {
+                    instance._savedConsoleDisplay = consolePanel.style.display;
+                    consolePanel.style.display = 'none';
+                }
+
+                if (instance.elements) {
+                    self.setButtonEnabled(instance.elements.continueBtn, false);
+                    self.setButtonEnabled(instance.elements.pauseBtn, false);
+                    self.setButtonEnabled(instance.elements.stepOverBtn, false);
+                    self.setButtonEnabled(instance.elements.stepIntoBtn, false);
+                    self.setButtonEnabled(instance.elements.stepOutBtn, false);
+                    self.setButtonEnabled(instance.elements.restartBtn, false);
+                    self.setButtonEnabled(instance.elements.stopBtn, false);
+                }
+
+                self.startConnectingCountdown(instance);
             }
 
-            if (consolePanel) {
-                instance._savedConsoleDisplay = consolePanel.style.display;
-                consolePanel.style.display = 'none';
+            if (startButton) {
+                startButton.style.transition = 'opacity 70ms ease-out';
+                startButton.style.opacity = '0';
+                startButton.addEventListener('transitionend', function handler() {
+                    startButton.removeEventListener('transitionend', handler);
+                    showSpinner();
+                }, { once: true });
+            } else {
+                showSpinner();
             }
-
-            if (instance.elements) {
-                this.setButtonEnabled(instance.elements.continueBtn, false);
-                this.setButtonEnabled(instance.elements.pauseBtn, false);
-                this.setButtonEnabled(instance.elements.stepOverBtn, false);
-                this.setButtonEnabled(instance.elements.stepIntoBtn, false);
-                this.setButtonEnabled(instance.elements.stepOutBtn, false);
-                this.setButtonEnabled(instance.elements.restartBtn, false);
-                this.setButtonEnabled(instance.elements.stopBtn, false);
-            }
-
-            this.startConnectingCountdown(instance);
         },
 
         startConnectingCountdown: function(instance) {
