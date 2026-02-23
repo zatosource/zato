@@ -80,6 +80,73 @@
             return this.instances[containerId] || null;
         },
 
+        reattach: function(instance, containerId) {
+            console.log('[DebuggerUI] reattach: START containerId=' + containerId);
+            console.log('[DebuggerUI] reattach: isConnected=' + instance.isConnected + ' isConnecting=' + instance.isConnecting);
+
+            var container = document.getElementById(containerId);
+            if (!container) {
+                console.log('[DebuggerUI] reattach: container not found');
+                return;
+            }
+
+            instance.container = container;
+            instance.id = containerId;
+
+            this.render(instance);
+            this.initTooltip(instance);
+            this.bindEvents(instance);
+            this.cacheElements(instance);
+            this.updateToolbarState(instance);
+
+            if (instance.isConnecting) {
+                console.log('[DebuggerUI] reattach: restoring connecting state');
+                this.restoreConnectingState(instance);
+            } else if (instance._errorMessage) {
+                console.log('[DebuggerUI] reattach: restoring error state');
+                this.showError(instance, instance._errorMessage);
+            } else {
+                this.updatePanelsVisibility(instance);
+            }
+
+            this.restoreConsoleOutput(instance);
+            this.restoreWatches(instance);
+
+            this.instances[containerId] = instance;
+            console.log('[DebuggerUI] reattach: END');
+        },
+
+        restoreConnectingState: function(instance) {
+            console.log('[DebuggerUI] restoreConnectingState: START');
+            var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
+            var consolePanel = instance.container.querySelector('.zato-debugger-console');
+
+            if (panelsContainer) {
+                var remaining = instance._countdownRemaining || 10.00;
+                panelsContainer.style.display = '';
+                panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
+                    '<span class="zato-debugger-message-box">' +
+                    '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
+                    ' Connecting .. <span class="zato-debugger-countdown">' + remaining.toFixed(2) + ' s</span></span>' +
+                    '</div>';
+            }
+
+            if (consolePanel) {
+                consolePanel.style.display = 'none';
+            }
+
+            if (instance.elements) {
+                this.setButtonEnabled(instance.elements.continueBtn, false);
+                this.setButtonEnabled(instance.elements.pauseBtn, false);
+                this.setButtonEnabled(instance.elements.stepOverBtn, false);
+                this.setButtonEnabled(instance.elements.stepIntoBtn, false);
+                this.setButtonEnabled(instance.elements.stepOutBtn, false);
+                this.setButtonEnabled(instance.elements.restartBtn, false);
+                this.setButtonEnabled(instance.elements.stopBtn, false);
+            }
+            console.log('[DebuggerUI] restoreConnectingState: END');
+        },
+
         storagePrefix: 'zato.debugger.',
 
         loadState: function(key) {
@@ -132,11 +199,16 @@
         },
 
         showConnecting: function(instance) {
+            console.log('[DebuggerUI] showConnecting: START instance=' + (instance ? 'ok' : 'null'));
             if (!instance) {
+                console.log('[DebuggerUI] showConnecting: no instance, returning');
                 return;
             }
 
             instance.isConnecting = true;
+            console.log('[DebuggerUI] showConnecting: set isConnecting=true');
+
+            this.startConnectingCountdown(instance);
 
             var self = this;
             var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
@@ -144,13 +216,17 @@
             var startButton = panelsContainer ? panelsContainer.querySelector('.zato-debugger-start-button') : null;
 
             function showSpinner() {
+                if (!instance.isConnecting) {
+                    console.log('[DebuggerUI] showSpinner: isConnecting=false, skipping');
+                    return;
+                }
                 if (panelsContainer) {
                     panelsContainer.style.display = '';
                     instance._savedPanelsHTML = panelsContainer.innerHTML;
                     panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
                         '<span class="zato-debugger-message-box">' +
                         '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
-                        ' Connecting .. <span class="zato-debugger-countdown">10.00 s</span></span>' +
+                        ' Connecting .. <span class="zato-debugger-countdown">' + (instance._countdownRemaining || 10).toFixed(2) + ' s</span></span>' +
                         '</div>';
                 }
 
@@ -168,8 +244,6 @@
                     self.setButtonEnabled(instance.elements.restartBtn, false);
                     self.setButtonEnabled(instance.elements.stopBtn, false);
                 }
-
-                self.startConnectingCountdown(instance);
             }
 
             if (startButton) {
@@ -195,22 +269,28 @@
         startConnectingCountdown: function(instance) {
             var self = this;
             var remaining = 10.00;
-            var countdownEl = instance.container.querySelector('.zato-debugger-countdown');
+            instance._countdownRemaining = remaining;
 
             if (instance._countdownInterval) {
                 clearInterval(instance._countdownInterval);
             }
 
+            console.log('[DebuggerUI] startConnectingCountdown: starting interval');
             instance._countdownInterval = setInterval(function() {
                 remaining -= 0.01;
+                instance._countdownRemaining = remaining;
                 if (remaining <= 0) {
+                    console.log('[DebuggerUI] startConnectingCountdown: countdown reached 0, isConnecting=' + instance.isConnecting);
                     clearInterval(instance._countdownInterval);
                     delete instance._countdownInterval;
+                    delete instance._countdownRemaining;
                     if (instance.isConnecting) {
+                        console.log('[DebuggerUI] startConnectingCountdown: still connecting, showing timeout error');
                         self.showError(instance, 'UI connection timeout');
                     }
                     return;
                 }
+                var countdownEl = instance.container.querySelector('.zato-debugger-countdown');
                 if (countdownEl) {
                     countdownEl.textContent = remaining.toFixed(2) + ' s';
                 }
@@ -225,10 +305,13 @@
         },
 
         hideConnecting: function(instance) {
+            console.log('[DebuggerUI] hideConnecting: START instance=' + (instance ? 'ok' : 'null'));
             if (!instance) {
+                console.log('[DebuggerUI] hideConnecting: no instance, returning');
                 return;
             }
 
+            console.log('[DebuggerUI] hideConnecting: setting isConnecting=false');
             instance.isConnecting = false;
             this.stopConnectingCountdown(instance);
 
@@ -250,6 +333,7 @@
         },
 
         setConnected: function(instance, connected) {
+            console.log('[DebuggerUI] setConnected: connected=' + connected);
             if (!instance) {
                 return;
             }
@@ -259,6 +343,7 @@
         },
 
         updatePanelsVisibility: function(instance) {
+            console.log('[DebuggerUI] updatePanelsVisibility: isConnected=' + instance.isConnected + ' isConnecting=' + instance.isConnecting);
             if (!instance) {
                 return;
             }
@@ -266,6 +351,7 @@
             var consolePanel = instance.container.querySelector('.zato-debugger-console');
 
             if (instance.isConnected) {
+                console.log('[DebuggerUI] updatePanelsVisibility: showing connected panels');
                 if (panelsContainer) {
                     panelsContainer.style.display = '';
                 }
@@ -273,6 +359,7 @@
                     consolePanel.style.display = '';
                 }
             } else {
+                console.log('[DebuggerUI] updatePanelsVisibility: showing Start debugging button');
                 if (panelsContainer) {
                     panelsContainer.style.display = '';
                     panelsContainer.innerHTML = '<div class="zato-debugger-start-container">' +
@@ -286,6 +373,7 @@
         },
 
         showError: function(instance, errorMessage) {
+            console.log('[DebuggerUI] showError: errorMessage=' + errorMessage);
             if (!instance) {
                 return;
             }

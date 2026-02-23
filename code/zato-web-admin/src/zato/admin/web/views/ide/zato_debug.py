@@ -716,6 +716,7 @@ def create_debugpy_injection_script(debugpy_port):
     script_content = f'''
 import os
 import logging
+import socket
 from traceback import format_exc
 
 os.environ['GEVENT_SUPPORT'] = 'True'
@@ -727,9 +728,28 @@ logger.info('[zato_debugpy_inject] Script starting on port {debugpy_port}')
 try:
     import debugpy
     import debugpy.server.api as _debugpy_api
-    _debugpy_api.listen.called = False
-    debugpy.listen(("127.0.0.1", {debugpy_port}), in_process_debug_adapter=True)
-    logger.info('[zato_debugpy_inject] debugpy.listen completed on port {debugpy_port}')
+
+    logger.info('[zato_debugpy_inject] debugpy module loaded')
+
+    already_listening = False
+    test_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    test_sock.settimeout(0.5)
+    try:
+        test_sock.connect(('127.0.0.1', {debugpy_port}))
+        logger.info('[zato_debugpy_inject] Port {debugpy_port} already accepting connections, debugpy already running')
+        test_sock.close()
+        already_listening = True
+    except Exception:
+        pass
+
+    if already_listening:
+        logger.info('[zato_debugpy_inject] Skipping debugpy.listen, already listening on port {debugpy_port}')
+    else:
+        logger.info('[zato_debugpy_inject] Calling debugpy.listen on port {debugpy_port}')
+        _debugpy_api.listen.called = False
+        result = debugpy.listen(("127.0.0.1", {debugpy_port}), in_process_debug_adapter=True)
+        logger.info('[zato_debugpy_inject] debugpy.listen returned: %s', result)
+
 except Exception:
     logger.error('[zato_debugpy_inject] Failed to start debugpy: %s', format_exc())
 '''
@@ -790,6 +810,7 @@ class AttachSession:
         self.dap_client.event_callback = self._handle_dap_event
 
         connected = False
+        logger.info('[AttachSession] Attempting to connect to debugpy at 127.0.0.1:%d', self.debugpy_port)
         for attempt in range(25):
             try:
                 self.dap_client.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -801,14 +822,19 @@ class AttachSession:
                 connected = True
                 break
             except ConnectionRefusedError:
-                logger.info('[AttachSession] Connection attempt %d failed, retrying...', attempt + 1)
+                if attempt == 0:
+                    logger.info('[AttachSession] Connection attempt %d to port %d failed (connection refused), retrying...',
+                               attempt + 1, self.debugpy_port)
+                elif attempt == 24:
+                    logger.info('[AttachSession] Connection attempt %d to port %d failed (connection refused)',
+                               attempt + 1, self.debugpy_port)
                 time.sleep(0.15)
             except Exception:
-                logger.error('[AttachSession] Connection error: %s', format_exc())
+                logger.error('[AttachSession] Connection error on attempt %d: %s', attempt + 1, format_exc())
                 time.sleep(0.15)
 
         if not connected:
-            logger.error('[AttachSession] Failed to connect to debugpy after 25 attempts')
+            logger.error('[AttachSession] Failed to connect to debugpy on port %d after 25 attempts', self.debugpy_port)
             self.stop()
             return False
 
@@ -921,9 +947,22 @@ class AttachSession:
             self.dap_client = None
 
         self._cleanup_injection_script()
+        self._cleanup_redis_session()
 
         self.state = 'stopped'
         self._send_event('terminated', {})
+
+    def _cleanup_redis_session(self):
+        """Remove session info from Redis so it won't be reused."""
+        try:
+            redis_client = get_redis_client()
+            session_key = Redis_Key_Prefix_Attach_Session + self.session_id
+            pid_key = Redis_Key_Prefix_Attach_Session + 'pid.' + str(self.target_pid)
+            redis_client.delete(session_key)
+            redis_client.delete(pid_key)
+            logger.info('[AttachSession] Cleaned up Redis keys for session %s', self.session_id)
+        except Exception as e:
+            logger.warning('[AttachSession] Failed to clean up Redis keys: %s', e)
 
     def _cleanup_injection_script(self):
         if self.injection_script:
@@ -1106,6 +1145,7 @@ _attach_sessions = {}
 _attach_sessions_lock = threading.Lock()
 
 Redis_Key_Prefix_Attach_Session = 'zato.ide.debug.attach.'
+Redis_Key_Prefix_Debugpy_Port = 'zato.ide.debug.debugpy_port.'
 
 
 def store_attach_session_info(session_id, target_pid, debugpy_port):
@@ -1119,6 +1159,38 @@ def store_attach_session_info(session_id, target_pid, debugpy_port):
     })
     redis_client.set(key, data)
     redis_client.expire(key, 3600)
+
+    pid_key = Redis_Key_Prefix_Attach_Session + 'pid.' + str(target_pid)
+    redis_client.set(pid_key, session_id)
+    redis_client.expire(pid_key, 3600)
+
+    port_key = Redis_Key_Prefix_Debugpy_Port + str(target_pid)
+    redis_client.set(port_key, str(debugpy_port))
+    redis_client.expire(port_key, 86400)
+
+
+def get_debugpy_port_for_pid(target_pid):
+    """Get the debugpy port that was used for a PID (persists across sessions)."""
+    redis_client = get_redis_client()
+    port_key = Redis_Key_Prefix_Debugpy_Port + str(target_pid)
+    port = redis_client.get(port_key)
+    if port:
+        if isinstance(port, bytes):
+            port = port.decode('utf-8')
+        return int(port)
+    return None
+
+
+def get_attach_session_by_pid(target_pid):
+    """Get attach session info from Redis by target PID."""
+    redis_client = get_redis_client()
+    pid_key = Redis_Key_Prefix_Attach_Session + 'pid.' + str(target_pid)
+    session_id = redis_client.get(pid_key)
+    if session_id:
+        if isinstance(session_id, bytes):
+            session_id = session_id.decode('utf-8')
+        return get_attach_session_info(session_id)
+    return None
 
 
 def get_attach_session_info(session_id):
@@ -1226,8 +1298,40 @@ def debug_connect_server(request):
 
     logger.info('[debug_connect_server] Found target PID: %d', target_pid)
 
+    existing_session_info = get_attach_session_by_pid(target_pid)
+    if existing_session_info:
+        existing_session_id = existing_session_info['session_id']
+        existing_debugpy_port = existing_session_info['debugpy_port']
+        logger.info('[debug_connect_server] Found existing session %s for PID %d on port %d in Redis, reusing it',
+                   existing_session_id, target_pid, existing_debugpy_port)
+
+        redis_client = get_redis_client()
+        events_key = Redis_Key_Prefix_Debug_Events + existing_session_id
+        event_data = json.dumps({'type': 'event', 'event': 'initialized', 'body': {}})
+        redis_client.rpush(events_key, event_data)
+        logger.info('[debug_connect_server] Sent initialized event to Redis for session %s', existing_session_id)
+
+        response_data = {
+            'success': True,
+            'session_id': existing_session_id,
+            'target_pid': target_pid,
+            'debugpy_port': existing_debugpy_port,
+            'reused': True
+        }
+        logger.info('[debug_connect_server] Returning reused session response: %s', response_data)
+        return JsonResponse(response_data)
+
     session_id = str(uuid.uuid4())
-    debugpy_port = 5678 + hash(session_id) % 1000
+
+    existing_port = get_debugpy_port_for_pid(target_pid)
+    if existing_port:
+        debugpy_port = existing_port
+        logger.info('[debug_connect_server] Reusing existing debugpy port %d for PID %d', debugpy_port, target_pid)
+    else:
+        debugpy_port = 5678 + hash(session_id) % 1000
+        logger.info('[debug_connect_server] New debugpy port %d for PID %d', debugpy_port, target_pid)
+
+    logger.info('[debug_connect_server] New session_id=%s debugpy_port=%d', session_id, debugpy_port)
 
     session = AttachSession(session_id, target_pid, debugpy_port)
 
@@ -1246,12 +1350,14 @@ def debug_connect_server(request):
             'message': 'Failed to attach to server process'
         })
 
-    return JsonResponse({
+    response_data = {
         'success': True,
         'session_id': session_id,
         'target_pid': target_pid,
         'debugpy_port': debugpy_port
-    })
+    }
+    logger.info('[debug_connect_server] Returning new session response: %s', response_data)
+    return JsonResponse(response_data)
 
 
 def debug_command(request):

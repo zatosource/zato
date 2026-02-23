@@ -109,26 +109,32 @@
                 return;
             }
 
-            instance.debuggerUI = ZatoDebuggerUI.create(containerId, instance.debugger, {
-                theme: instance.ide.options.theme,
-                ide: instance.ide
-            });
-
-            var ide = instance.ide;
             if (instance.debuggerUI) {
-                instance.debuggerUI.onJumpToLine = function(file, line) {
-                    console.log('[DebuggerIDE] onJumpToLine: file=' + file + ' line=' + line);
-                    if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
-                        ZatoIDE.jumpToLine(ide, line);
-                    }
-                };
+                console.log('[DebuggerIDE] showDebugPanelInContainer: reusing existing debuggerUI');
+                ZatoDebuggerUI.reattach(instance.debuggerUI, containerId);
+            } else {
+                console.log('[DebuggerIDE] showDebugPanelInContainer: creating new debuggerUI');
+                instance.debuggerUI = ZatoDebuggerUI.create(containerId, instance.debugger, {
+                    theme: instance.ide.options.theme,
+                    ide: instance.ide
+                });
 
-                instance.debuggerUI.onHighlightLine = function(file, line) {
-                    console.log('[DebuggerIDE] onHighlightLine: file=' + file + ' line=' + line);
-                    if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
-                        ZatoIDE.jumpToLine(ide, line);
-                    }
-                };
+                var ide = instance.ide;
+                if (instance.debuggerUI) {
+                    instance.debuggerUI.onJumpToLine = function(file, line) {
+                        console.log('[DebuggerIDE] onJumpToLine: file=' + file + ' line=' + line);
+                        if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
+                            ZatoIDE.jumpToLine(ide, line);
+                        }
+                    };
+
+                    instance.debuggerUI.onHighlightLine = function(file, line) {
+                        console.log('[DebuggerIDE] onHighlightLine: file=' + file + ' line=' + line);
+                        if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
+                            ZatoIDE.jumpToLine(ide, line);
+                        }
+                    };
+                }
             }
 
             this.setupGutter(instance);

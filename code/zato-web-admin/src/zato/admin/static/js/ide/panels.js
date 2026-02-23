@@ -110,6 +110,7 @@
         },
 
         switchSidePanel1View: function(instance, viewId) {
+            console.log('[ZatoIDEPanels] switchSidePanel1View: viewId=' + viewId);
             var self = this;
             var iconsContainer = document.getElementById(instance.id + '-side-panel-1-icons');
             if (!iconsContainer) { return; }
@@ -125,26 +126,37 @@
             localStorage.setItem('zato.ide.sidePanel1View', viewId);
             var contentContainer = document.getElementById(instance.id + '-side-panel-1-content');
             if (contentContainer) {
+                console.log('[ZatoIDEPanels] switchSidePanel1View: clearing contentContainer');
                 contentContainer.innerHTML = '';
                 if (viewId === 'explorer') {
+                    console.log('[ZatoIDEPanels] switchSidePanel1View: initializing explorer');
                     self.initExplorer(instance, contentContainer);
                 } else if (viewId === 'debugger') {
+                    console.log('[ZatoIDEPanels] switchSidePanel1View: initializing debugger panel');
                     self.initDebuggerPanel(instance, contentContainer);
                 }
             }
         },
 
         initDebuggerPanel: function(instance, container) {
+            console.log('[ZatoIDEPanels] initDebuggerPanel: START');
             if (typeof ZatoDebuggerIDE === 'undefined') { return; }
             var debuggerIDE = ZatoDebuggerIDE.getInstanceForIDE(instance);
+            console.log('[ZatoIDEPanels] initDebuggerPanel: existing debuggerIDE=' + !!debuggerIDE);
             if (!debuggerIDE) {
                 debuggerIDE = ZatoDebuggerIDE.create(instance, {});
+            }
+            console.log('[ZatoIDEPanels] initDebuggerPanel: debuggerIDE.debuggerUI=' + !!debuggerIDE.debuggerUI);
+            if (debuggerIDE.debuggerUI) {
+                console.log('[ZatoIDEPanels] initDebuggerPanel: debuggerUI.isConnected=' + debuggerIDE.debuggerUI.isConnected);
+                console.log('[ZatoIDEPanels] initDebuggerPanel: debuggerUI.isConnecting=' + debuggerIDE.debuggerUI.isConnecting);
             }
             var debuggerDiv = document.createElement('div');
             debuggerDiv.id = instance.id + '-debugger-panel';
             debuggerDiv.className = 'zato-ide-debugger-panel';
             container.appendChild(debuggerDiv);
             ZatoDebuggerIDE.showDebugPanelInContainer(debuggerIDE, debuggerDiv.id);
+            console.log('[ZatoIDEPanels] initDebuggerPanel: END');
         },
 
         initExplorer: function(instance, container) {

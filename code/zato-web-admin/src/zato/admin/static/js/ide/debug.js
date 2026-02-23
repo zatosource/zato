@@ -34,10 +34,13 @@
                 })
             })
             .then(function(response) {
-                return response.json();
+                console.log('[ZatoIDE] connectToServer: response.status=' + response.status + ' response.ok=' + response.ok);
+                return response.text();
             })
-            .then(function(data) {
-                console.log('[ZatoIDE] connectToServer: response=', data);
+            .then(function(text) {
+                console.log('[ZatoIDE] connectToServer: raw response text=' + text);
+                var data = JSON.parse(text);
+                console.log('[ZatoIDE] connectToServer: parsed response=', data);
                 if (data.success) {
                     console.log('[ZatoIDE] connectToServer: attached to PID ' + data.target_pid + ' on port ' + data.debugpy_port);
 
@@ -67,10 +70,15 @@
                         ZatoDebuggerProtocol.connections[debuggerInstance.id] = eventSource;
 
                         eventSource.onopen = function() {
-                            console.log('[ZatoIDE] connectToServer: SSE connected');
+                            console.log('[ZatoIDE] connectToServer: SSE onopen fired');
+                            console.log('[ZatoIDE] connectToServer: instance.debuggerIDE=' + (instance.debuggerIDE ? 'ok' : 'null'));
+                            console.log('[ZatoIDE] connectToServer: instance.debuggerIDE.debuggerUI=' + (instance.debuggerIDE && instance.debuggerIDE.debuggerUI ? 'ok' : 'null'));
                             if (instance.debuggerIDE && instance.debuggerIDE.debuggerUI) {
+                                console.log('[ZatoIDE] connectToServer: calling hideConnecting and setConnected');
                                 ZatoDebuggerUI.hideConnecting(instance.debuggerIDE.debuggerUI);
                                 ZatoDebuggerUI.setConnected(instance.debuggerIDE.debuggerUI, true);
+                            } else {
+                                console.log('[ZatoIDE] connectToServer: debuggerUI not available, cannot update UI');
                             }
                             ZatoDebuggerCore.setState(debuggerInstance, ZatoDebuggerCore.DebugState.RUNNING);
                         };
