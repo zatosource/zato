@@ -616,7 +616,7 @@
     background: rgba(255, 255, 255, 0.15);
 }
 
-.zato-debugger-console {
+.zato-debugger-panel.zato-debugger-console {
     display: flex;
     flex-direction: column;
     overflow: hidden;
