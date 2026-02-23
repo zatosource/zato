@@ -1019,6 +1019,11 @@ urlpatterns += [
     url(r'^zato/ide/complete/python/$',
         login_required(ide_complete.complete_python), name='ide-complete-python'),
 
+    # IDE go-to-definition
+
+    url(r'^zato/ide/definition/python/$',
+        login_required(ide_complete.goto_definition), name='ide-definition-python'),
+
     # IDE debugger
 
     url(r'^zato/ide/debug/sse/$',

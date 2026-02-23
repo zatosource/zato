@@ -231,3 +231,9 @@
     font-size: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
+
+.ace-zato-dark .ace_marker-layer .ace_definition_highlight {
+    position: absolute;
+    background-color: rgba(255, 213, 79, 0.35);
+    border-radius: 2px;
+}

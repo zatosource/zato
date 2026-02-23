@@ -287,3 +287,182 @@ def complete_python(req:'HttpRequest') -> 'JsonResponse':
     except Exception:
         logger.warning('Zuban completion failed: %s', format_exc())
         return JsonResponse({'success': False, 'error': 'Completion failed'}, status=INTERNAL_SERVER_ERROR)
+
+@method_allowed('POST')
+def goto_definition(req:'HttpRequest') -> 'JsonResponse':
+    """ Runs Zuban LSP to get go-to-definition for Python code.
+    """
+    try:
+        body = loads(req.body)
+    except Exception:
+        logger.warning('Invalid request body: %s', format_exc())
+        return JsonResponse({'success': False, 'error': 'Invalid request body'}, status=BAD_REQUEST)
+
+    code = body.get('code', '')
+    line = body.get('line', 1)
+    column = body.get('column', 0)
+    current_file_path = body.get('file_path', '')
+
+    if not code:
+        return JsonResponse({'success': True, 'definitions': []})
+
+    try:
+        stubs_path = None
+        for path in sys.path:
+            if 'zato-server' in path and path.endswith('src'):
+                code_dir = os.path.dirname(os.path.dirname(path))
+                stubs_path = os.path.join(code_dir, 'stubs')
+                break
+
+        if stubs_path and os.path.exists(stubs_path):
+            fake_file_path = os.path.join(stubs_path, 'zato', 'server', '_ide_temp_service.py')
+            root_uri = 'file://' + stubs_path
+        else:
+            fake_file_path = '/tmp/_ide_temp_service.py'
+            root_uri = None
+
+        file_uri = 'file://' + fake_file_path
+
+        initialize_request = {
+            'jsonrpc': '2.0',
+            'id': 1,
+            'method': 'initialize',
+            'params': {
+                'processId': os.getpid(),
+                'rootUri': root_uri,
+                'capabilities': {
+                    'textDocument': {
+                        'definition': {
+                            'linkSupport': True
+                        }
+                    }
+                },
+                'initializationOptions': {
+                    'mypy_path': [p for p in sys.path if 'zato' in p.lower()]
+                }
+            }
+        }
+
+        initialized_notification = {
+            'jsonrpc': '2.0',
+            'method': 'initialized',
+            'params': {}
+        }
+
+        did_open_notification = {
+            'jsonrpc': '2.0',
+            'method': 'textDocument/didOpen',
+            'params': {
+                'textDocument': {
+                    'uri': file_uri,
+                    'languageId': 'python',
+                    'version': 1,
+                    'text': code
+                }
+            }
+        }
+
+        definition_request = {
+            'jsonrpc': '2.0',
+            'id': 2,
+            'method': 'textDocument/definition',
+            'params': {
+                'textDocument': {'uri': file_uri},
+                'position': {'line': line - 1, 'character': column}
+            }
+        }
+
+        shutdown_request = {
+            'jsonrpc': '2.0',
+            'id': 3,
+            'method': 'shutdown',
+            'params': None
+        }
+
+        exit_notification = {
+            'jsonrpc': '2.0',
+            'method': 'exit',
+            'params': None
+        }
+
+        lsp_input = ''
+        lsp_input += build_lsp_message(initialize_request)
+        lsp_input += build_lsp_message(initialized_notification)
+        lsp_input += build_lsp_message(did_open_notification)
+        lsp_input += build_lsp_message(definition_request)
+        lsp_input += build_lsp_message(shutdown_request)
+        lsp_input += build_lsp_message(exit_notification)
+
+        env = os.environ.copy()
+        if stubs_path and os.path.exists(stubs_path):
+            env['PYTHONPATH'] = stubs_path
+        else:
+            zato_paths = []
+            for p in sys.path:
+                if 'zato' not in p.lower():
+                    continue
+                should_skip = False
+                for ignore_module in IDE_Ignore_Modules:
+                    if ignore_module in p.lower():
+                        should_skip = True
+                        break
+                if not should_skip:
+                    zato_paths.append(p)
+            env['PYTHONPATH'] = ':'.join(zato_paths)
+        env['ZUBAN_CRASH_ON_ERROR'] = '1'
+
+        proc = subprocess.Popen(
+            ['zuban', 'server'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env
+        )
+
+        stdout, stderr = proc.communicate(input=lsp_input, timeout=10)
+
+        logger.info('Zuban definition file_uri: %s', file_uri)
+        logger.info('Zuban definition stdout length: %s', len(stdout) if stdout else 0)
+
+        definitions = []
+        if stdout:
+            responses = parse_lsp_response(stdout)
+            for resp in responses:
+                if resp.get('id') == 2:
+                    lsp_result = resp.get('result')
+                    logger.info('Zuban definition result for line %s col %s: %s', line, column, lsp_result)
+                    if lsp_result:
+                        items = []
+                        if isinstance(lsp_result, dict):
+                            items = [lsp_result]
+                        elif isinstance(lsp_result, list):
+                            items = lsp_result
+
+                        for item in items:
+                            uri = item.get('uri', '')
+                            target_range = item.get('range', item.get('targetRange', {}))
+                            start = target_range.get('start', {})
+                            target_line = start.get('line', 0) + 1
+                            target_column = start.get('character', 0)
+
+                            file_path = uri.replace('file://', '') if uri.startswith('file://') else uri
+
+                            definitions.append({
+                                'file_path': file_path,
+                                'line': target_line,
+                                'column': target_column
+                            })
+                    break
+
+        return JsonResponse({'success': True, 'definitions': definitions})
+
+    except subprocess.TimeoutExpired:
+        logger.warning('Zuban definition timed out')
+        return JsonResponse({'success': False, 'error': 'Definition lookup timed out'}, status=INTERNAL_SERVER_ERROR)
+    except FileNotFoundError:
+        logger.warning('Zuban not found')
+        return JsonResponse({'success': False, 'error': 'Zuban not installed'}, status=INTERNAL_SERVER_ERROR)
+    except Exception:
+        logger.warning('Zuban definition failed: %s', format_exc())
+        return JsonResponse({'success': False, 'error': 'Definition lookup failed'}, status=INTERNAL_SERVER_ERROR)

@@ -66,6 +66,13 @@
                         instance.files[instance.activeFile].scrollLine = firstVisibleRow;
                         ZatoIDETabs.saveTabsState(instance);
                     }
+                },
+                getFilePath: function() {
+                    var file = instance.files[instance.activeFile];
+                    return file ? file.filePath : instance.activeFile;
+                },
+                onGotoDefinition: function(filePath, line, column) {
+                    ZatoIDEEditorSetup.gotoDefinitionInFile(instance, filePath, line, column);
                 }
             };
             if (instance.options.fontSize) {
@@ -126,6 +133,44 @@
             ZatoIDETabs.syncTabToFile(instance, filename);
             ZatoIDEDropdowns.updateSymbols(instance);
             ZatoIDETabs.saveTabsState(instance);
+        },
+
+        gotoDefinitionInFile: function(instance, filePath, line, column) {
+            var self = this;
+            var fileName = filePath.split('/').pop();
+
+            var existingTab = ZatoIDETabs.findTabByPath(instance, filePath);
+            if (existingTab) {
+                ZatoIDETabs.switchToTab(instance, existingTab.id);
+                self.scrollToDefinitionAndHighlight(instance, line, column);
+                return;
+            }
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/zato/ide/explorer/read/?path=' + encodeURIComponent(filePath), true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            instance.pendingDefinitionLine = line;
+                            instance.pendingDefinitionColumn = column;
+                            ZatoIDETabs.openFileInNewTab(instance, filePath, fileName, response.content);
+                            self.scrollToDefinitionAndHighlight(instance, line, column);
+                        }
+                    }
+                }
+            };
+            xhr.send();
+        },
+
+        scrollToDefinitionAndHighlight: function(instance, line, column) {
+            var aceEditor = instance.codeEditor ? instance.codeEditor.aceEditor : null;
+            if (!aceEditor) {
+                return;
+            }
+            aceEditor.gotoLine(line, column, true);
+            ZatoIDEEditorAce.highlightDefinition(aceEditor, instance.codeEditor, line, column);
         }
     };
 

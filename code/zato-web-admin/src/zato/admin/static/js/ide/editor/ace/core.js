@@ -94,6 +94,7 @@
             this.setupLinting(editor, instance, opts);
             this.setupIndentDots(editor);
             this.setupGutterAnnotationClick(editor, instance);
+            this.setupGotoDefinition(editor, instance);
 
             editor.renderer.setScrollMargin(7, 7, 0, 0);
             editor.renderer.$gutterLayer.$fixedWidth = true;
