@@ -258,6 +258,19 @@
     border-bottom: none;
 }
 
+.zato-debugger-panel[draggable="true"] {
+    cursor: grab;
+}
+
+.zato-debugger-panel.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.zato-debugger-panel.drag-over {
+    border-top: 2px solid #4a9eff;
+}
+
 .zato-debugger-panel.collapsed .zato-debugger-panel-content {
     display: none;
 }

@@ -246,6 +246,84 @@
                 UI.handleAction(instance, 'restart');
             }
         });
+
+        UI.bindPanelDragEvents(instance);
+    };
+
+    UI.bindPanelDragEvents = function(instance) {
+        var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
+        if (!panelsContainer) {
+            return;
+        }
+
+        var draggedPanel = null;
+
+        panelsContainer.addEventListener('dragstart', function(e) {
+            var panel = e.target.closest('.zato-debugger-panel[data-panel-id]');
+            if (panel) {
+                draggedPanel = panel;
+                panel.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', panel.getAttribute('data-panel-id'));
+            }
+        });
+
+        panelsContainer.addEventListener('dragend', function(e) {
+            if (draggedPanel) {
+                draggedPanel.classList.remove('dragging');
+                draggedPanel = null;
+            }
+            var panels = panelsContainer.querySelectorAll('.zato-debugger-panel[data-panel-id]');
+            for (var i = 0; i < panels.length; i++) {
+                panels[i].classList.remove('drag-over');
+            }
+        });
+
+        panelsContainer.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            var targetPanel = e.target.closest('.zato-debugger-panel[data-panel-id]');
+            if (targetPanel && targetPanel !== draggedPanel) {
+                var panels = panelsContainer.querySelectorAll('.zato-debugger-panel[data-panel-id]');
+                for (var i = 0; i < panels.length; i++) {
+                    panels[i].classList.remove('drag-over');
+                }
+                targetPanel.classList.add('drag-over');
+            }
+        });
+
+        panelsContainer.addEventListener('dragleave', function(e) {
+            var targetPanel = e.target.closest('.zato-debugger-panel[data-panel-id]');
+            if (targetPanel) {
+                targetPanel.classList.remove('drag-over');
+            }
+        });
+
+        panelsContainer.addEventListener('drop', function(e) {
+            e.preventDefault();
+            var targetPanel = e.target.closest('.zato-debugger-panel[data-panel-id]');
+            if (targetPanel && draggedPanel && targetPanel !== draggedPanel) {
+                var panels = Array.prototype.slice.call(panelsContainer.querySelectorAll('.zato-debugger-panel[data-panel-id]'));
+                var draggedIndex = panels.indexOf(draggedPanel);
+                var targetIndex = panels.indexOf(targetPanel);
+
+                if (draggedIndex < targetIndex) {
+                    panelsContainer.insertBefore(draggedPanel, targetPanel.nextSibling);
+                } else {
+                    panelsContainer.insertBefore(draggedPanel, targetPanel);
+                }
+
+                var newOrder = [];
+                var reorderedPanels = panelsContainer.querySelectorAll('.zato-debugger-panel[data-panel-id]');
+                for (var i = 0; i < reorderedPanels.length; i++) {
+                    newOrder.push(reorderedPanels[i].getAttribute('data-panel-id'));
+                }
+                UI.savePanelOrder(newOrder);
+            }
+            if (targetPanel) {
+                targetPanel.classList.remove('drag-over');
+            }
+        });
     };
 
     UI.handleAction = function(instance, action, event) {

@@ -8,16 +8,47 @@
         html += '<div class="zato-debugger-container zato-debugger-theme-' + instance.options.theme + '">';
         html += UI.renderToolbar(instance);
         html += '<div class="zato-debugger-panels">';
-        html += UI.renderCallStackPanel(instance);
-        html += UI.renderVariablesPanel(instance);
-        html += UI.renderWatchesPanel(instance);
-        html += UI.renderBreakpointsPanel(instance);
+        
+        var panelOrder = UI.loadPanelOrder();
+        var panelRenderers = {
+            'callStack': UI.renderCallStackPanel,
+            'variables': UI.renderVariablesPanel,
+            'watches': UI.renderWatchesPanel,
+            'breakpoints': UI.renderBreakpointsPanel
+        };
+        for (var i = 0; i < panelOrder.length; i++) {
+            var panelId = panelOrder[i];
+            if (panelRenderers[panelId]) {
+                html += panelRenderers[panelId](instance);
+            }
+        }
+        
         html += '</div>';
         html += UI.renderConsolePanel(instance);
         html += '</div>';
 
         instance.container.innerHTML = html;
         UI.cacheElements(instance);
+    };
+    
+    UI.loadPanelOrder = function() {
+        var defaultOrder = ['callStack', 'variables', 'watches', 'breakpoints'];
+        try {
+            var stored = localStorage.getItem('zato-debugger-panel-order');
+            if (stored) {
+                var order = JSON.parse(stored);
+                if (Array.isArray(order) && order.length === 4) {
+                    return order;
+                }
+            }
+        } catch (e) {}
+        return defaultOrder;
+    };
+    
+    UI.savePanelOrder = function(order) {
+        try {
+            localStorage.setItem('zato-debugger-panel-order', JSON.stringify(order));
+        } catch (e) {}
     };
 
     UI.cacheElements = function(instance) {
@@ -77,7 +108,7 @@
 
     UI.renderCallStackPanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-callstack">';
+        html += '<div class="zato-debugger-panel zato-debugger-callstack" data-panel-id="callStack" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="callStack">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Call stack</span>';
@@ -92,7 +123,7 @@
 
     UI.renderVariablesPanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-variables">';
+        html += '<div class="zato-debugger-panel zato-debugger-variables" data-panel-id="variables" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="variables">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Variables</span>';
@@ -107,7 +138,7 @@
 
     UI.renderWatchesPanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-watches">';
+        html += '<div class="zato-debugger-panel zato-debugger-watches" data-panel-id="watches" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="watches">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Watch</span>';
@@ -128,7 +159,7 @@
 
     UI.renderBreakpointsPanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-breakpoints">';
+        html += '<div class="zato-debugger-panel zato-debugger-breakpoints" data-panel-id="breakpoints" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="breakpoints">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Breakpoints</span>';
