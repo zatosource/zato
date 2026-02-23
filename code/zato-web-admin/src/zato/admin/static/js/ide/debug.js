@@ -16,7 +16,13 @@
             this.showDebugPanel(instance);
 
             if (instance.debuggerIDE && instance.debuggerIDE.debuggerUI) {
-                ZatoDebuggerUI.showConnecting(instance.debuggerIDE.debuggerUI);
+                var ui = instance.debuggerIDE.debuggerUI;
+                if (ui.isConnected) {
+                    return;
+                }
+                if (!ui.isConnecting) {
+                    ZatoDebuggerUI.showConnecting(ui);
+                }
             }
 
             var serverBaseDir = '~/env/qs-1/server1';
