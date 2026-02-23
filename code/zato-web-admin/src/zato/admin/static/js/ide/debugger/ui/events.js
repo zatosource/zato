@@ -34,6 +34,9 @@
 
             var button = e.target.closest('[data-action]');
             if (button && !button.classList.contains('zato-debugger-panel-action')) {
+                if (instance.tooltip && typeof ZatoTooltip !== 'undefined') {
+                    ZatoTooltip.hideImmediate(instance.tooltip);
+                }
                 var action = button.getAttribute('data-action');
                 UI.handleAction(instance, action, e);
                 return;
