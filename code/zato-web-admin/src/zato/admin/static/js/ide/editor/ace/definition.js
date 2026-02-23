@@ -8,6 +8,10 @@
 
             instance.definitionHighlightMarkerId = null;
             instance.ctrlPressed = false;
+            instance.prefetchedDefinition = null;
+            instance.prefetchLine = null;
+            instance.prefetchColumn = null;
+            instance.prefetchXhr = null;
 
             editor.container.addEventListener('click', function(e) {
                 if (!e.ctrlKey) {
@@ -57,8 +61,10 @@
 
                 if (token && self.isNavigableToken(token)) {
                     self.showHoverHighlight(editor, instance, pos.row, token);
+                    self.prefetchDefinition(editor, instance, pos.row + 1, token.start);
                 } else {
                     self.clearHoverHighlight(editor, instance);
+                    self.clearPrefetch(instance);
                 }
             });
 
@@ -134,10 +140,80 @@
             return null;
         },
 
+        prefetchDefinition: function(editor, instance, line, column) {
+            var self = this;
+
+            if (instance.prefetchLine === line && instance.prefetchColumn === column) {
+                return;
+            }
+
+            self.clearPrefetch(instance);
+
+            instance.prefetchLine = line;
+            instance.prefetchColumn = column;
+
+            var code = editor.getValue();
+            if (!code.trim()) {
+                return;
+            }
+
+            var csrfToken = this.getCsrfToken();
+            var xhr = new XMLHttpRequest();
+            instance.prefetchXhr = xhr;
+
+            xhr.open('POST', '/zato/ide/definition/python/', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            if (csrfToken) {
+                xhr.setRequestHeader('X-CSRFToken', csrfToken);
+            }
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response.success && response.definitions && response.definitions.length > 0) {
+                                instance.prefetchedDefinition = response.definitions[0];
+                            }
+                        } catch (e) {
+                            instance.prefetchedDefinition = null;
+                        }
+                    }
+                    instance.prefetchXhr = null;
+                }
+            };
+
+            var requestBody = JSON.stringify({
+                code: code,
+                line: line,
+                column: column
+            });
+            xhr.send(requestBody);
+        },
+
+        clearPrefetch: function(instance) {
+            if (instance.prefetchXhr) {
+                instance.prefetchXhr.abort();
+                instance.prefetchXhr = null;
+            }
+            instance.prefetchedDefinition = null;
+            instance.prefetchLine = null;
+            instance.prefetchColumn = null;
+        },
+
         gotoDefinition: function(editor, instance, line, column) {
             var self = this;
-            var code = editor.getValue();
 
+            if (instance.prefetchedDefinition && instance.prefetchLine === line) {
+                var def = instance.prefetchedDefinition;
+                self.clearPrefetch(instance);
+                self.navigateToDefinition(editor, instance, def);
+                return;
+            }
+
+            self.clearPrefetch(instance);
+
+            var code = editor.getValue();
             if (!code.trim()) {
                 return;
             }
@@ -156,8 +232,7 @@
                         try {
                             var response = JSON.parse(xhr.responseText);
                             if (response.success && response.definitions && response.definitions.length > 0) {
-                                var def = response.definitions[0];
-                                self.navigateToDefinition(editor, instance, def);
+                                self.navigateToDefinition(editor, instance, response.definitions[0]);
                             }
                         } catch (e) {
                             console.warn('[GotoDefinition] Failed to parse response:', e);
