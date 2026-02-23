@@ -597,9 +597,10 @@
 }
 
 .zato-debugger-console {
-    flex: 0 0 auto;
+    flex: 0 0 auto !important;
     display: flex;
     flex-direction: column;
+    margin-top: auto;
 }
 
 .zato-debugger-console-content {
