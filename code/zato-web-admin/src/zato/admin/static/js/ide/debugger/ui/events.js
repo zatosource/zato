@@ -110,14 +110,38 @@
 
             var breakpointItem = e.target.closest('.zato-debugger-breakpoint-item');
             if (breakpointItem && !e.target.closest('.zato-debugger-breakpoint-icon') && !e.target.closest('.zato-debugger-breakpoint-remove')) {
-                var file = breakpointItem.getAttribute('data-file');
-                var line = parseInt(breakpointItem.getAttribute('data-line'), 10);
-                UI.jumpToBreakpoint(instance, file, line);
+                var itemFile = breakpointItem.getAttribute('data-file');
+                var itemLine = parseInt(breakpointItem.getAttribute('data-line'), 10);
+                var currentEnabled = breakpointItem.getAttribute('data-enabled') === 'true';
+                var newEnabled = !currentEnabled;
+                console.log('[DebuggerUI] breakpoint item click: file=' + itemFile + ' line=' + itemLine + ' enabled=' + currentEnabled + ' -> ' + newEnabled);
+                UI.setBreakpointEnabledInStorage(itemFile, itemLine, newEnabled);
+                if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
+                    ZatoDebuggerCore.enableBreakpoint(instance.debugger, itemFile, itemLine, newEnabled);
+                }
+                UI.updateBreakpoints(instance);
+                if (typeof ZatoDebuggerGutter !== 'undefined') {
+                    var gutterInstances = ZatoDebuggerGutter.instances || {};
+                    for (var gId in gutterInstances) {
+                        gutterInstances[gId].localBreakpoints = null;
+                        ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
+                    }
+                }
             }
 
             var varItem = e.target.closest('.zato-debugger-variable-item');
             if (varItem && varItem.classList.contains('expandable')) {
                 UI.toggleVariable(instance, varItem);
+            }
+        });
+
+        instance.container.addEventListener('dblclick', function(e) {
+            var breakpointItem = e.target.closest('.zato-debugger-breakpoint-item');
+            if (breakpointItem && !e.target.closest('.zato-debugger-breakpoint-remove')) {
+                var dblFile = breakpointItem.getAttribute('data-file');
+                var dblLine = parseInt(breakpointItem.getAttribute('data-line'), 10);
+                console.log('[DebuggerUI] breakpoint item dblclick: file=' + dblFile + ' line=' + dblLine);
+                UI.jumpToBreakpoint(instance, dblFile, dblLine);
             }
         });
 
