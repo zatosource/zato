@@ -173,12 +173,20 @@
             }
 
             if (startButton) {
-                startButton.style.transition = 'opacity 70ms ease-out';
-                startButton.style.opacity = '0';
-                startButton.addEventListener('transitionend', function handler() {
-                    startButton.removeEventListener('transitionend', handler);
+                var transitionFired = false;
+                function onFadeComplete() {
+                    if (transitionFired) {
+                        return;
+                    }
+                    transitionFired = true;
                     showSpinner();
-                }, { once: true });
+                }
+                startButton.style.transition = 'opacity 70ms ease-out';
+                startButton.addEventListener('transitionend', onFadeComplete);
+                window.requestAnimationFrame(function() {
+                    startButton.style.opacity = '0';
+                });
+                instance._fadeOutTimer = window.setTimeout(onFadeComplete, 80);
             } else {
                 showSpinner();
             }
@@ -268,8 +276,7 @@
                 if (panelsContainer) {
                     panelsContainer.style.display = '';
                     panelsContainer.innerHTML = '<div class="zato-debugger-start-container">' +
-                        '<button class="zato-debugger-start-button" data-action="start-debugging" ' +
-                        'data-tooltip="Connect to server" data-tooltip-position="bottom">Start debugging</button>' +
+                        '<button class="zato-debugger-start-button" data-action="start-debugging">Start debugging</button>' +
                         '</div>';
                 }
                 if (consolePanel) {
