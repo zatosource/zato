@@ -108,16 +108,27 @@
                 UI.selectFrame(instance, frameId);
             }
 
+            var gotoBtn = e.target.closest('.zato-debugger-breakpoint-goto');
+            if (gotoBtn) {
+                e.stopPropagation();
+                e.preventDefault();
+                var gotoFile = gotoBtn.getAttribute('data-file');
+                var gotoLine = parseInt(gotoBtn.getAttribute('data-line'), 10);
+                console.log('[DebuggerUI] goto button click: file=' + gotoFile + ' line=' + gotoLine);
+                UI.jumpToBreakpoint(instance, gotoFile, gotoLine);
+                return;
+            }
+
             var breakpointItem = e.target.closest('.zato-debugger-breakpoint-item');
-            if (breakpointItem && !e.target.closest('.zato-debugger-breakpoint-icon') && !e.target.closest('.zato-debugger-breakpoint-remove')) {
-                var itemFile = breakpointItem.getAttribute('data-file');
-                var itemLine = parseInt(breakpointItem.getAttribute('data-line'), 10);
-                var currentEnabled = breakpointItem.getAttribute('data-enabled') === 'true';
-                var newEnabled = !currentEnabled;
-                console.log('[DebuggerUI] breakpoint item click: file=' + itemFile + ' line=' + itemLine + ' enabled=' + currentEnabled + ' -> ' + newEnabled);
-                UI.setBreakpointEnabledInStorage(itemFile, itemLine, newEnabled);
+            if (breakpointItem && !e.target.closest('.zato-debugger-breakpoint-icon') && !e.target.closest('.zato-debugger-breakpoint-remove') && !e.target.closest('.zato-debugger-breakpoint-goto')) {
+                var clickFile = breakpointItem.getAttribute('data-file');
+                var clickLine = parseInt(breakpointItem.getAttribute('data-line'), 10);
+                var clickEnabled = breakpointItem.getAttribute('data-enabled') === 'true';
+                var newEnabled = !clickEnabled;
+                console.log('[DebuggerUI] breakpoint item click: file=' + clickFile + ' line=' + clickLine + ' enabled=' + clickEnabled + ' -> ' + newEnabled);
+                UI.setBreakpointEnabledInStorage(clickFile, clickLine, newEnabled);
                 if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
-                    ZatoDebuggerCore.enableBreakpoint(instance.debugger, itemFile, itemLine, newEnabled);
+                    ZatoDebuggerCore.enableBreakpoint(instance.debugger, clickFile, clickLine, newEnabled);
                 }
                 UI.updateBreakpoints(instance);
                 if (typeof ZatoDebuggerGutter !== 'undefined') {
@@ -132,16 +143,6 @@
             var varItem = e.target.closest('.zato-debugger-variable-item');
             if (varItem && varItem.classList.contains('expandable')) {
                 UI.toggleVariable(instance, varItem);
-            }
-        });
-
-        instance.container.addEventListener('dblclick', function(e) {
-            var breakpointItem = e.target.closest('.zato-debugger-breakpoint-item');
-            if (breakpointItem && !e.target.closest('.zato-debugger-breakpoint-remove')) {
-                var dblFile = breakpointItem.getAttribute('data-file');
-                var dblLine = parseInt(breakpointItem.getAttribute('data-line'), 10);
-                console.log('[DebuggerUI] breakpoint item dblclick: file=' + dblFile + ' line=' + dblLine);
-                UI.jumpToBreakpoint(instance, dblFile, dblLine);
             }
         });
 

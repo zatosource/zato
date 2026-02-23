@@ -210,6 +210,7 @@
             html += '<div class="zato-debugger-breakpoint-item' + enabledClass + '" data-file="' + UI.escapeHtml(bp.file) + '" data-line="' + bp.line + '" data-enabled="' + (bp.enabled ? 'true' : 'false') + '">';
             html += '<span class="zato-debugger-breakpoint-icon' + enabledClass + '" data-action="toggle-enabled">' + UI.getBreakpointIcon() + '</span>';
             html += '<span class="zato-debugger-breakpoint-file">' + UI.escapeHtml(filename) + '</span>';
+            html += '<button class="zato-debugger-breakpoint-goto" data-file="' + UI.escapeHtml(bp.file) + '" data-line="' + bp.line + '">Go to file</button>';
             html += '<span class="zato-debugger-breakpoint-line">:' + bp.line + '</span>';
             if (bp.condition) {
                 html += '<span class="zato-debugger-breakpoint-condition">' + UI.escapeHtml(bp.condition) + '</span>';

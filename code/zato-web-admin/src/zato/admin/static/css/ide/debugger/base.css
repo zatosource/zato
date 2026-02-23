@@ -480,6 +480,7 @@
     gap: 6px;
     cursor: pointer;
     font-size: 10px;
+    user-select: none;
 }
 
 .zato-debugger-breakpoint-item:hover {
@@ -528,6 +529,41 @@
     font-style: italic;
 }
 
+.zato-debugger-breakpoint-goto {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    color: inherit;
+    font-size: 9px;
+    flex-shrink: 0;
+    margin-left: 6px;
+    box-shadow: none;
+    text-shadow: none;
+    outline: none;
+}
+
+.zato-debugger-breakpoint-item:hover .zato-debugger-breakpoint-goto {
+    display: flex;
+}
+
+.zato-debugger-breakpoint-item.disabled .zato-debugger-breakpoint-goto {
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.zato-debugger-breakpoint-item.disabled .zato-debugger-breakpoint-remove {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.zato-debugger-breakpoint-goto:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .zato-debugger-breakpoint-remove {
     display: flex;
     align-items: center;
@@ -552,6 +588,7 @@
 
 .zato-debugger-breakpoint-remove:hover {
     opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .zato-debugger-console {

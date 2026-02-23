@@ -124,14 +124,14 @@
                     instance.debuggerUI.onJumpToLine = function(file, line) {
                         console.log('[DebuggerIDE] onJumpToLine: file=' + file + ' line=' + line);
                         if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
-                            ZatoIDE.jumpToLine(ide, line);
+                            ZatoIDEDropdowns.jumpToLine(ide, line);
                         }
                     };
 
                     instance.debuggerUI.onHighlightLine = function(file, line) {
                         console.log('[DebuggerIDE] onHighlightLine: file=' + file + ' line=' + line);
                         if (ide.activeFile === file || file.endsWith(ide.activeFile)) {
-                            ZatoIDE.jumpToLine(ide, line);
+                            ZatoIDEDropdowns.jumpToLine(ide, line);
                         }
                     };
                 }
