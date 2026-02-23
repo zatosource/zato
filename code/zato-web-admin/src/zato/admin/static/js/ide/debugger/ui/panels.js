@@ -8,7 +8,8 @@
         var continueBtn = instance.elements.continueBtn;
 
         if (!instance.isConnected) {
-            UI.setButtonEnabled(continueBtn, false);
+            var enableContinue = !instance.isConnecting;
+            UI.setButtonEnabled(continueBtn, enableContinue);
             UI.setButtonEnabled(instance.elements.pauseBtn, false);
             UI.setButtonEnabled(instance.elements.stepOverBtn, false);
             UI.setButtonEnabled(instance.elements.stepIntoBtn, false);
@@ -16,7 +17,7 @@
             UI.setButtonEnabled(instance.elements.restartBtn, false);
             UI.setButtonEnabled(instance.elements.stopBtn, false);
             if (continueBtn) {
-                continueBtn.setAttribute('data-tooltip', 'Connect to server first');
+                continueBtn.setAttribute('data-tooltip', 'Start debugging (F5)');
             }
             return;
         }

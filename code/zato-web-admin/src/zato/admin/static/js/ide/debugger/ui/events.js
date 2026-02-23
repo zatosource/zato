@@ -193,7 +193,11 @@
 
         switch (action) {
             case 'continue':
-                ZatoDebuggerCore.resume(dbg);
+                if (!instance.isConnected && instance.ide) {
+                    ZatoIDE.handleDebugAction(instance.ide, 'connect-server');
+                } else {
+                    ZatoDebuggerCore.resume(dbg);
+                }
                 break;
             case 'pause':
                 ZatoDebuggerCore.pause(dbg);

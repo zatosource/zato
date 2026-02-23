@@ -25,7 +25,7 @@
             for (key in options) {
                 opts[key] = options[key];
             }
-            console.log('[DebuggerUI] create: opts=' + JSON.stringify(opts));
+            console.log('[DebuggerUI] create: opts.theme=' + opts.theme + ' opts.ide=' + (opts.ide ? 'present' : 'null'));
 
             var container = document.getElementById(containerId);
             console.log('[DebuggerUI] create: container=' + (container ? 'found' : 'not found'));
@@ -41,7 +41,9 @@
                 debugger: debuggerInstance,
                 options: opts,
                 elements: {},
+                ide: opts.ide || null,
                 isConnected: false,
+                isConnecting: false,
                 expanded: {
                     callStack: savedExpanded.callStack !== false,
                     variables: savedExpanded.variables !== false,
@@ -228,15 +230,7 @@
                 consolePanel.style.display = 'none';
             }
 
-            if (instance.elements) {
-                this.setButtonEnabled(instance.elements.continueBtn, false);
-                this.setButtonEnabled(instance.elements.pauseBtn, false);
-                this.setButtonEnabled(instance.elements.stepOverBtn, false);
-                this.setButtonEnabled(instance.elements.stepIntoBtn, false);
-                this.setButtonEnabled(instance.elements.stepOutBtn, false);
-                this.setButtonEnabled(instance.elements.restartBtn, false);
-                this.setButtonEnabled(instance.elements.stopBtn, false);
-            }
+            this.updateToolbarState(instance);
         },
 
         escapeHtml: function(text) {

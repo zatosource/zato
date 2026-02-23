@@ -110,7 +110,8 @@
             }
 
             instance.debuggerUI = ZatoDebuggerUI.create(containerId, instance.debugger, {
-                theme: instance.ide.options.theme
+                theme: instance.ide.options.theme,
+                ide: instance.ide
             });
 
             var ide = instance.ide;
