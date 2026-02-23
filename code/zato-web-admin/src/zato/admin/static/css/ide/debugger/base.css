@@ -95,6 +95,64 @@
     align-content: flex-start;
     flex-wrap: wrap;
     height: auto;
+    position: relative;
+    overflow: hidden;
+    background: rgba(0, 10, 0, 0.4);
+}
+
+.zato-debugger-connecting::before {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: 0;
+    right: 0;
+    height: 200%;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='120'%3E%3Ctext x='2' y='12' fill='%2300ff41' fill-opacity='0.08' font-family='monospace' font-size='10'%3Eｱ%3C/text%3E%3Ctext x='2' y='24' fill='%2300ff41' fill-opacity='0.07' font-family='monospace' font-size='10'%3E7%3C/text%3E%3Ctext x='2' y='36' fill='%2300ff41' fill-opacity='0.06' font-family='monospace' font-size='10'%3Eｳ%3C/text%3E%3Ctext x='2' y='48' fill='%2300ff41' fill-opacity='0.05' font-family='monospace' font-size='10'%3E3%3C/text%3E%3Ctext x='2' y='60' fill='%2300ff41' fill-opacity='0.04' font-family='monospace' font-size='10'%3Eｵ%3C/text%3E%3Ctext x='2' y='72' fill='%2300ff41' fill-opacity='0.03' font-family='monospace' font-size='10'%3E9%3C/text%3E%3Ctext x='2' y='84' fill='%2300ff41' fill-opacity='0.02' font-family='monospace' font-size='10'%3Eﾎ%3C/text%3E%3Ctext x='2' y='96' fill='%2300ff41' fill-opacity='0.015' font-family='monospace' font-size='10'%3E1%3C/text%3E%3Ctext x='2' y='108' fill='%2300ff41' fill-opacity='0.01' font-family='monospace' font-size='10'%3Eﾝ%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 20px 120px;
+    animation: matrix-rain-fall 4s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes matrix-rain-fall {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(50%);
+    }
+}
+
+.zato-debugger-connecting::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(0deg,
+        transparent 0px,
+        rgba(0, 0, 0, 0.05) 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+.zato-debugger-connecting > * {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes matrix-rain-fall {
+    0% {
+        background-position: 0 -100px;
+    }
+    100% {
+        background-position: 0 0;
+    }
 }
 
 .zato-debugger-panels:has(.zato-debugger-connecting) {
