@@ -104,7 +104,7 @@ class DAPClient:
         self._send_message(request)
         return seq
 
-    def send_request_sync(self, command, arguments=None, timeout=30):
+    def send_request_sync(self, command, arguments=None, timeout=3):
         event = threading.Event()
         result = {'response': None, 'error': None}
 
@@ -790,7 +790,7 @@ class AttachSession:
         self.dap_client.event_callback = self._handle_dap_event
 
         connected = False
-        for attempt in range(30):
+        for attempt in range(25):
             try:
                 self.dap_client.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.dap_client.socket.connect(('127.0.0.1', self.debugpy_port))
@@ -802,13 +802,13 @@ class AttachSession:
                 break
             except ConnectionRefusedError:
                 logger.info('[AttachSession] Connection attempt %d failed, retrying...', attempt + 1)
-                time.sleep(0.2)
+                time.sleep(0.15)
             except Exception:
                 logger.error('[AttachSession] Connection error: %s', format_exc())
-                time.sleep(0.2)
+                time.sleep(0.15)
 
         if not connected:
-            logger.error('[AttachSession] Failed to connect to debugpy after 30 attempts')
+            logger.error('[AttachSession] Failed to connect to debugpy after 25 attempts')
             self.stop()
             return False
 

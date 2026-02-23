@@ -243,6 +243,15 @@
     color: #4ec9b0;
 }
 
+.zato-matrix-text-soft {
+    font-family: 'Courier New', 'Consolas', monospace;
+    color: #00dd38;
+    text-shadow:
+        0 0 1px #00dd38,
+        0 0 3px #00aa2a;
+    letter-spacing: 1px;
+}
+
 .zato-matrix-text {
     font-family: 'Courier New', 'Consolas', monospace;
     font-weight: bold;
@@ -250,10 +259,9 @@
     text-shadow:
         0 0 2px #00ff41,
         0 0 4px #00ff41,
-        0 0 8px #00cc33,
-        0 0 12px #009922;
+        0 0 6px #00cc33;
     letter-spacing: 2px;
-    animation: matrix-flicker 0.08s infinite alternate;
+    animation: matrix-flicker 0.1s infinite alternate;
 }
 
 @keyframes matrix-flicker {
@@ -274,4 +282,16 @@
             0 0 18px #009922,
             0 0 24px #006611;
     }
+}
+
+.zato-matrix-spinner {
+    filter: brightness(0) saturate(100%) invert(67%) sepia(89%) saturate(401%) hue-rotate(79deg) brightness(95%) contrast(92%);
+}
+
+.zato-debugger-countdown {
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-weight: bold;
+    color: #00ff41;
+    text-shadow: 0 0 2px #00cc33;
+    letter-spacing: 1px;
 }
