@@ -1,3 +1,7 @@
+.zato-ide-debugger-panel {
+    height: 100%;
+}
+
 .zato-debugger-container {
     display: flex;
     flex-direction: column;
@@ -85,13 +89,21 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 40px 20px;
+    padding: 20px 12px;
     color: #a0a0a0;
     font-size: 13px;
+    align-content: flex-start;
+    flex-wrap: wrap;
+    height: auto;
+}
+
+.zato-debugger-panels:has(.zato-debugger-connecting) {
+    justify-content: flex-start;
 }
 
 .zato-debugger-error {
     padding: 12px;
+    flex: 1;
 }
 
 .zato-debugger-error-header {
