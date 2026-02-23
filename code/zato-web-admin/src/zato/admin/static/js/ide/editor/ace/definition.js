@@ -7,6 +7,7 @@
             var self = this;
 
             instance.definitionHighlightMarkerId = null;
+            instance.ctrlPressed = false;
 
             editor.container.addEventListener('click', function(e) {
                 if (!e.ctrlKey) {
@@ -31,13 +32,102 @@
                 self.gotoDefinition(editor, instance, pos.row + 1, pos.column);
             });
 
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Control' && !instance.ctrlPressed) {
+                    instance.ctrlPressed = true;
+                    editor.container.classList.add('zato-ctrl-hover-mode');
+                }
+            });
+
+            document.addEventListener('keyup', function(e) {
+                if (e.key === 'Control') {
+                    instance.ctrlPressed = false;
+                    editor.container.classList.remove('zato-ctrl-hover-mode');
+                    self.clearHoverHighlight(editor, instance);
+                }
+            });
+
+            editor.container.addEventListener('mousemove', function(e) {
+                if (!instance.ctrlPressed) {
+                    return;
+                }
+
+                var pos = editor.renderer.screenToTextCoordinates(e.clientX, e.clientY);
+                var token = editor.session.getTokenAt(pos.row, pos.column);
+
+                if (token && self.isNavigableToken(token)) {
+                    self.showHoverHighlight(editor, instance, pos.row, token);
+                } else {
+                    self.clearHoverHighlight(editor, instance);
+                }
+            });
+
+            editor.container.addEventListener('mouseleave', function() {
+                self.clearHoverHighlight(editor, instance);
+            });
+
             editor.session.on('change', function() {
                 self.clearDefinitionHighlight(editor, instance);
+                self.clearHoverHighlight(editor, instance);
             });
 
             editor.on('changeSession', function() {
                 self.clearDefinitionHighlight(editor, instance);
+                self.clearHoverHighlight(editor, instance);
             });
+        },
+
+        isNavigableToken: function(token) {
+            if (!token || !token.type) {
+                return false;
+            }
+            return token.type === 'identifier' ||
+                   token.type === 'entity.name.function' ||
+                   token.type === 'support.function' ||
+                   token.type === 'variable' ||
+                   token.type.indexOf('identifier') !== -1 ||
+                   token.type.indexOf('variable') !== -1;
+        },
+
+        showHoverHighlight: function(editor, instance, row, token) {
+            var self = this;
+
+            if (instance.hoverRow === row && instance.hoverTokenStart === token.start) {
+                return;
+            }
+
+            self.clearHoverHighlight(editor, instance);
+
+            instance.hoverRow = row;
+            instance.hoverTokenStart = token.start;
+
+            var textLayer = editor.renderer.$textLayer;
+            var lineElement = textLayer.element.children[row - editor.renderer.getFirstVisibleRow()];
+            if (lineElement) {
+                var tokens = lineElement.querySelectorAll('span');
+                var charCount = 0;
+                for (var i = 0; i < tokens.length; i++) {
+                    var span = tokens[i];
+                    var spanText = span.textContent;
+                    var spanStart = charCount;
+                    var spanEnd = charCount + spanText.length;
+                    if (spanStart <= token.start && token.start < spanEnd) {
+                        span.classList.add('ace_definition_hover_text');
+                        instance.hoverTextElement = span;
+                        break;
+                    }
+                    charCount = spanEnd;
+                }
+            }
+        },
+
+        clearHoverHighlight: function(editor, instance) {
+            if (instance.hoverTextElement) {
+                instance.hoverTextElement.classList.remove('ace_definition_hover_text');
+                instance.hoverTextElement = null;
+            }
+            instance.hoverRow = null;
+            instance.hoverTokenStart = null;
         },
 
         getWordAtPosition: function(editor, pos) {
@@ -140,9 +230,17 @@
 
             var range = new Range(line - 1, wordStart, line - 1, wordEnd);
             instance.definitionHighlightMarkerId = editor.session.addMarker(range, 'ace_definition_highlight', 'text', true);
+
+            instance.definitionFlashTimeout = window.setTimeout(function() {
+                self.clearDefinitionHighlight(editor, instance);
+            }, 550);
         },
 
         clearDefinitionHighlight: function(editor, instance) {
+            if (instance.definitionFlashTimeout) {
+                window.clearTimeout(instance.definitionFlashTimeout);
+                instance.definitionFlashTimeout = null;
+            }
             if (instance.definitionHighlightMarkerId) {
                 editor.session.removeMarker(instance.definitionHighlightMarkerId);
                 instance.definitionHighlightMarkerId = null;

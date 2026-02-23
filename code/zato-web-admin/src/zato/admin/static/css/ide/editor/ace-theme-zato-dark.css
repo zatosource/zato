@@ -237,3 +237,13 @@
     background-color: rgba(255, 213, 79, 0.35);
     border-radius: 2px;
 }
+
+.ace-zato-dark .ace_definition_hover_text {
+    color: var(--zato-gutter-active-line-color) !important;
+    text-decoration: underline;
+    text-decoration-color: var(--zato-gutter-active-line-color);
+}
+
+.zato-ctrl-hover-mode .ace_content {
+    cursor: pointer;
+}
