@@ -97,10 +97,9 @@
     height: auto;
     position: relative;
     overflow: hidden;
-    background: rgba(0, 10, 0, 0.4);
 }
 
-.zato-debugger-connecting::before {
+.zato-debugger-connecting-matrix::before {
     content: '';
     position: absolute;
     top: -100%;
@@ -108,10 +107,10 @@
     right: 0;
     height: 200%;
     background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='120'%3E%3Ctext x='2' y='12' fill='%2300ff41' fill-opacity='0.08' font-family='monospace' font-size='10'%3Eｱ%3C/text%3E%3Ctext x='2' y='24' fill='%2300ff41' fill-opacity='0.07' font-family='monospace' font-size='10'%3E7%3C/text%3E%3Ctext x='2' y='36' fill='%2300ff41' fill-opacity='0.06' font-family='monospace' font-size='10'%3Eｳ%3C/text%3E%3Ctext x='2' y='48' fill='%2300ff41' fill-opacity='0.05' font-family='monospace' font-size='10'%3E3%3C/text%3E%3Ctext x='2' y='60' fill='%2300ff41' fill-opacity='0.04' font-family='monospace' font-size='10'%3Eｵ%3C/text%3E%3Ctext x='2' y='72' fill='%2300ff41' fill-opacity='0.03' font-family='monospace' font-size='10'%3E9%3C/text%3E%3Ctext x='2' y='84' fill='%2300ff41' fill-opacity='0.02' font-family='monospace' font-size='10'%3Eﾎ%3C/text%3E%3Ctext x='2' y='96' fill='%2300ff41' fill-opacity='0.015' font-family='monospace' font-size='10'%3E1%3C/text%3E%3Ctext x='2' y='108' fill='%2300ff41' fill-opacity='0.01' font-family='monospace' font-size='10'%3Eﾝ%3C/text%3E%3C/svg%3E");
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='60'%3E%3Ctext x='2' y='12' fill='%2300ff41' fill-opacity='0.07' font-family='monospace' font-size='10'%3Eｱ%3C/text%3E%3Ctext x='2' y='24' fill='%2300ff41' fill-opacity='0.05' font-family='monospace' font-size='10'%3E3%3C/text%3E%3Ctext x='2' y='36' fill='%2300ff41' fill-opacity='0.03' font-family='monospace' font-size='10'%3Eﾎ%3C/text%3E%3Ctext x='2' y='48' fill='%2300ff41' fill-opacity='0.02' font-family='monospace' font-size='10'%3E7%3C/text%3E%3Ctext x='22' y='6' fill='%2300ff41' fill-opacity='0.06' font-family='monospace' font-size='10'%3E9%3C/text%3E%3Ctext x='22' y='18' fill='%2300ff41' fill-opacity='0.04' font-family='monospace' font-size='10'%3Eｳ%3C/text%3E%3Ctext x='22' y='30' fill='%2300ff41' fill-opacity='0.03' font-family='monospace' font-size='10'%3E1%3C/text%3E%3Ctext x='22' y='42' fill='%2300ff41' fill-opacity='0.02' font-family='monospace' font-size='10'%3Eﾝ%3C/text%3E%3Ctext x='22' y='54' fill='%2300ff41' fill-opacity='0.01' font-family='monospace' font-size='10'%3E5%3C/text%3E%3Ctext x='42' y='10' fill='%2300ff41' fill-opacity='0.07' font-family='monospace' font-size='10'%3Eｵ%3C/text%3E%3Ctext x='42' y='22' fill='%2300ff41' fill-opacity='0.05' font-family='monospace' font-size='10'%3E0%3C/text%3E%3Ctext x='42' y='34' fill='%2300ff41' fill-opacity='0.03' font-family='monospace' font-size='10'%3Eｶ%3C/text%3E%3Ctext x='42' y='46' fill='%2300ff41' fill-opacity='0.02' font-family='monospace' font-size='10'%3E8%3C/text%3E%3Ctext x='62' y='4' fill='%2300ff41' fill-opacity='0.06' font-family='monospace' font-size='10'%3E2%3C/text%3E%3Ctext x='62' y='16' fill='%2300ff41' fill-opacity='0.05' font-family='monospace' font-size='10'%3Eｷ%3C/text%3E%3Ctext x='62' y='28' fill='%2300ff41' fill-opacity='0.04' font-family='monospace' font-size='10'%3E6%3C/text%3E%3Ctext x='62' y='40' fill='%2300ff41' fill-opacity='0.02' font-family='monospace' font-size='10'%3Eﾏ%3C/text%3E%3Ctext x='62' y='52' fill='%2300ff41' fill-opacity='0.01' font-family='monospace' font-size='10'%3E4%3C/text%3E%3Ctext x='82' y='8' fill='%2300ff41' fill-opacity='0.07' font-family='monospace' font-size='10'%3Eｸ%3C/text%3E%3Ctext x='82' y='20' fill='%2300ff41' fill-opacity='0.05' font-family='monospace' font-size='10'%3E5%3C/text%3E%3Ctext x='82' y='32' fill='%2300ff41' fill-opacity='0.03' font-family='monospace' font-size='10'%3Eﾐ%3C/text%3E%3Ctext x='82' y='44' fill='%2300ff41' fill-opacity='0.02' font-family='monospace' font-size='10'%3E1%3C/text%3E%3C/svg%3E");
     background-repeat: repeat;
-    background-size: 20px 120px;
-    animation: matrix-rain-fall 4s linear infinite;
+    background-size: 100px 60px;
+    animation: matrix-rain-fall 2s linear infinite;
     pointer-events: none;
     z-index: 0;
 }
@@ -125,7 +124,7 @@
     }
 }
 
-.zato-debugger-connecting::after {
+.zato-debugger-connecting-matrix::after {
     content: '';
     position: absolute;
     top: 0;
