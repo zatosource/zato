@@ -66,15 +66,6 @@
                 self.clearHoverHighlight(editor, instance);
             });
 
-            editor.session.on('change', function() {
-                self.clearDefinitionHighlight(editor, instance);
-                self.clearHoverHighlight(editor, instance);
-            });
-
-            editor.on('changeSession', function() {
-                self.clearDefinitionHighlight(editor, instance);
-                self.clearHoverHighlight(editor, instance);
-            });
         },
 
         isNavigableToken: function(token) {
