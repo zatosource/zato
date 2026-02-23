@@ -354,6 +354,17 @@
                 console.log('[DebuggerUI] updatePanelsVisibility: showing connected panels');
                 if (panelsContainer) {
                     panelsContainer.style.display = '';
+                    var hasRealPanels = panelsContainer.querySelector('.zato-debugger-callstack');
+                    if (!hasRealPanels) {
+                        console.log('[DebuggerUI] updatePanelsVisibility: restoring panels HTML');
+                        panelsContainer.innerHTML = this.renderCallStackPanel(instance) +
+                            this.renderVariablesPanel(instance) +
+                            this.renderWatchesPanel(instance) +
+                            this.renderBreakpointsPanel(instance);
+                        this.cacheElements(instance);
+                        this.restoreWatches(instance);
+                        this.updateBreakpoints(instance);
+                    }
                 }
                 if (consolePanel) {
                     consolePanel.style.display = '';
