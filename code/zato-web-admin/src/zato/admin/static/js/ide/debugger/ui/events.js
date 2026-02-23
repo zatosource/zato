@@ -189,7 +189,11 @@
     };
 
     UI.handleAction = function(instance, action, event) {
+        var connectionState = instance.isConnected ? 'connected' : (instance.isConnecting ? 'connecting' : 'disconnected');
+        console.log('[DebuggerUI] handleAction: action=' + action + ' connectionState=' + connectionState);
+
         if (action === 'start-debugging') {
+            console.log('[DebuggerUI] handleAction: start-debugging, calling connect-server');
             if (instance.ide) {
                 ZatoIDEDebug.handleDebugAction(instance.ide, 'connect-server');
             }
@@ -198,34 +202,46 @@
 
         var dbg = instance.debugger;
         if (!dbg) {
+            console.log('[DebuggerUI] handleAction: no debugger instance');
             return;
         }
 
         switch (action) {
             case 'continue':
+                console.log('[DebuggerUI] handleAction: continue, isConnected=' + instance.isConnected);
                 if (!instance.isConnected && instance.ide) {
+                    console.log('[DebuggerUI] handleAction: not connected, calling connect-server');
                     ZatoIDEDebug.handleDebugAction(instance.ide, 'connect-server');
                 } else {
+                    console.log('[DebuggerUI] handleAction: connected, calling resume');
                     ZatoDebuggerCore.resume(dbg);
                 }
                 break;
             case 'pause':
+                console.log('[DebuggerUI] handleAction: pause');
                 ZatoDebuggerCore.pause(dbg);
                 break;
             case 'step-over':
+                console.log('[DebuggerUI] handleAction: step-over');
                 ZatoDebuggerCore.stepOver(dbg);
                 break;
             case 'step-into':
+                console.log('[DebuggerUI] handleAction: step-into');
                 ZatoDebuggerCore.stepInto(dbg);
                 break;
             case 'step-out':
+                console.log('[DebuggerUI] handleAction: step-out');
                 ZatoDebuggerCore.stepOut(dbg);
                 break;
             case 'restart':
+                console.log('[DebuggerUI] handleAction: restart');
                 ZatoDebuggerCore.restart(dbg);
                 break;
             case 'stop':
+                console.log('[DebuggerUI] handleAction: stop, isConnected=' + instance.isConnected);
                 ZatoDebuggerCore.stopSession(dbg);
+                UI.setConnected(instance, false);
+                console.log('[DebuggerUI] handleAction: stop complete, isConnected=' + instance.isConnected);
                 break;
             case 'clear-breakpoints':
                 ZatoDebuggerCore.clearAllBreakpoints(dbg);
