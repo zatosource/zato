@@ -7,6 +7,20 @@
         var dbg = instance.debugger;
         var continueBtn = instance.elements.continueBtn;
 
+        if (!instance.isConnected) {
+            UI.setButtonEnabled(continueBtn, false);
+            UI.setButtonEnabled(instance.elements.pauseBtn, false);
+            UI.setButtonEnabled(instance.elements.stepOverBtn, false);
+            UI.setButtonEnabled(instance.elements.stepIntoBtn, false);
+            UI.setButtonEnabled(instance.elements.stepOutBtn, false);
+            UI.setButtonEnabled(instance.elements.restartBtn, false);
+            UI.setButtonEnabled(instance.elements.stopBtn, false);
+            if (continueBtn) {
+                continueBtn.setAttribute('data-tooltip', 'Connect to server first');
+            }
+            return;
+        }
+
         if (!dbg || typeof ZatoDebuggerCore === 'undefined') {
             UI.setButtonEnabled(continueBtn, true);
             UI.setButtonEnabled(instance.elements.pauseBtn, false);

@@ -64,6 +64,7 @@
             var debugButton = document.getElementById(instance.id + '-debug-button');
             if (debugButton) {
                 debugButton.addEventListener('click', function() {
+                    debugButton.blur();
                     ZatoIDE.handleDebugAction(instance, 'connect-server');
                 });
             }

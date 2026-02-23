@@ -70,6 +70,7 @@
                             console.log('[ZatoIDE] connectToServer: SSE connected');
                             if (instance.debuggerIDE && instance.debuggerIDE.debuggerUI) {
                                 ZatoDebuggerUI.hideConnecting(instance.debuggerIDE.debuggerUI);
+                                ZatoDebuggerUI.setConnected(instance.debuggerIDE.debuggerUI, true);
                             }
                             ZatoDebuggerCore.setState(debuggerInstance, ZatoDebuggerCore.DebugState.RUNNING);
                         };
@@ -85,6 +86,9 @@
                         eventSource.onerror = function() {
                             if (eventSource.readyState === EventSource.CLOSED) {
                                 console.log('[ZatoIDE] connectToServer: SSE closed');
+                                if (instance.debuggerIDE && instance.debuggerIDE.debuggerUI) {
+                                    ZatoDebuggerUI.setConnected(instance.debuggerIDE.debuggerUI, false);
+                                }
                                 ZatoDebuggerCore.handleTerminated(debuggerInstance);
                             }
                         };

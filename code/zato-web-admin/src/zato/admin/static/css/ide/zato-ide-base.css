@@ -203,9 +203,10 @@
     box-shadow: none;
 }
 
-.zato-ide-theme-dark .zato-ide-debug-button:focus {
-    border-color: var(--zato-ide-control-border-active);
-    background: var(--zato-ide-control-bg-hover);
+.zato-ide-theme-dark .zato-ide-debug-button:focus,
+.zato-ide-theme-dark .zato-ide-debug-button:focus-visible {
+    border-color: var(--zato-ide-control-border);
+    background: var(--zato-ide-control-bg);
     color: var(--zato-ide-control-text);
     text-shadow: none;
     box-shadow: none;

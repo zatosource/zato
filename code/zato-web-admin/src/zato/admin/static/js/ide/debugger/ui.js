@@ -41,6 +41,7 @@
                 debugger: debuggerInstance,
                 options: opts,
                 elements: {},
+                isConnected: false,
                 expanded: {
                     callStack: savedExpanded.callStack !== false,
                     variables: savedExpanded.variables !== false,
@@ -62,6 +63,7 @@
             console.log('[DebuggerUI] create: bindEvents complete');
 
             this.updateToolbarState(instance);
+            this.updatePanelsVisibility(instance);
             this.restoreConsoleOutput(instance);
             this.restoreWatches(instance);
 
@@ -123,10 +125,13 @@
                 return;
             }
 
+            instance.isConnecting = true;
+
             var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
             var consolePanel = instance.container.querySelector('.zato-debugger-console');
 
             if (panelsContainer) {
+                panelsContainer.style.display = '';
                 instance._savedPanelsHTML = panelsContainer.innerHTML;
                 panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
                     '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
@@ -155,6 +160,8 @@
                 return;
             }
 
+            instance.isConnecting = false;
+
             var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
             var consolePanel = instance.container.querySelector('.zato-debugger-console');
 
@@ -172,10 +179,36 @@
             this.updateToolbarState(instance);
         },
 
+        setConnected: function(instance, connected) {
+            if (!instance) {
+                return;
+            }
+            instance.isConnected = connected;
+            this.updatePanelsVisibility(instance);
+            this.updateToolbarState(instance);
+        },
+
+        updatePanelsVisibility: function(instance) {
+            if (!instance) {
+                return;
+            }
+            var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
+            var consolePanel = instance.container.querySelector('.zato-debugger-console');
+
+            if (panelsContainer) {
+                panelsContainer.style.display = instance.isConnected ? '' : 'none';
+            }
+            if (consolePanel) {
+                consolePanel.style.display = instance.isConnected ? '' : 'none';
+            }
+        },
+
         showError: function(instance, errorMessage) {
             if (!instance) {
                 return;
             }
+
+            instance.isConnecting = false;
 
             var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
             var consolePanel = instance.container.querySelector('.zato-debugger-console');
