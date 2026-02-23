@@ -183,30 +183,22 @@
     };
 
     UI.updateBreakpoints = function(instance) {
-        console.log('[DebuggerUI] updateBreakpoints: START');
         var list = instance.elements.breakpointsList;
         if (!list) {
-            console.log('[DebuggerUI] updateBreakpoints: no breakpointsList element found');
             return;
         }
 
-        console.log('[DebuggerUI] updateBreakpoints: loading from localStorage');
         var breakpoints = UI.loadBreakpointsFromStorage();
-        console.log('[DebuggerUI] updateBreakpoints: loaded ' + breakpoints.length + ' breakpoints');
-        console.log('[DebuggerUI] updateBreakpoints: breakpoints=' + JSON.stringify(breakpoints));
         if (!breakpoints || breakpoints.length === 0) {
-            console.log('[DebuggerUI] updateBreakpoints: no breakpoints, showing empty message');
             list.innerHTML = '<div class="zato-debugger-empty">No breakpoints</div>';
             return;
         }
 
-        console.log('[DebuggerUI] updateBreakpoints: rendering ' + breakpoints.length + ' items to list');
         var html = '';
         for (var i = 0; i < breakpoints.length; i++) {
             var bp = breakpoints[i];
             var filename = bp.file.split('/').pop();
             var enabledClass = bp.enabled ? '' : ' disabled';
-            console.log('[DebuggerUI] updateBreakpoints: rendering item ' + i + ': file=' + filename + ' line=' + bp.line + ' enabled=' + bp.enabled);
             html += '<div class="zato-debugger-breakpoint-item' + enabledClass + '" data-file="' + UI.escapeHtml(bp.file) + '" data-line="' + bp.line + '" data-enabled="' + (bp.enabled ? 'true' : 'false') + '">';
             html += '<span class="zato-debugger-breakpoint-icon' + enabledClass + '" data-action="toggle-enabled">' + UI.getBreakpointIcon() + '</span>';
             html += '<span class="zato-debugger-breakpoint-file">' + UI.escapeHtml(filename) + '</span>';
@@ -220,9 +212,7 @@
             html += '</button>';
             html += '</div>';
         }
-        console.log('[DebuggerUI] updateBreakpoints: setting list.innerHTML, html.length=' + html.length);
         list.innerHTML = html;
-        console.log('[DebuggerUI] updateBreakpoints: list updated, childElementCount=' + list.childElementCount);
     };
 
     UI.selectFrame = function(instance, frameId) {
@@ -263,10 +253,8 @@
     };
 
     UI.loadBreakpointsFromStorage = function() {
-        console.log('[DebuggerUI] loadBreakpointsFromStorage: reading localStorage');
         try {
             var stored = localStorage.getItem('zato-ide-breakpoints');
-            console.log('[DebuggerUI] loadBreakpointsFromStorage: raw=' + stored);
             if (stored) {
                 var data = JSON.parse(stored);
                 var breakpoints = [];
@@ -277,13 +265,11 @@
                         breakpoints.push(bp);
                     }
                 }
-                console.log('[DebuggerUI] loadBreakpointsFromStorage: parsed ' + breakpoints.length + ' breakpoints');
                 return breakpoints;
             }
         } catch (e) {
             console.error('[DebuggerUI] Failed to load breakpoints from storage:', e);
         }
-        console.log('[DebuggerUI] loadBreakpointsFromStorage: returning empty array');
         return [];
     };
 
@@ -305,10 +291,8 @@
     };
 
     UI.removeBreakpointFromStorage = function(file, line) {
-        console.log('[DebuggerUI] removeBreakpointFromStorage: file=' + file + ' line=' + line);
         try {
             var stored = localStorage.getItem('zato-ide-breakpoints');
-            console.log('[DebuggerUI] removeBreakpointFromStorage: before=' + stored);
             if (stored) {
                 var data = JSON.parse(stored);
                 if (data[file] && data[file][line]) {
@@ -317,12 +301,7 @@
                         delete data[file];
                     }
                     localStorage.setItem('zato-ide-breakpoints', JSON.stringify(data));
-                    console.log('[DebuggerUI] removeBreakpointFromStorage: after=' + localStorage.getItem('zato-ide-breakpoints'));
-                } else {
-                    console.log('[DebuggerUI] removeBreakpointFromStorage: breakpoint not found in storage');
                 }
-            } else {
-                console.log('[DebuggerUI] removeBreakpointFromStorage: no breakpoints in storage');
             }
         } catch (e) {
             console.error('[DebuggerUI] Failed to remove breakpoint from storage:', e);

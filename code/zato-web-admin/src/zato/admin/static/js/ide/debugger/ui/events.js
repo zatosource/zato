@@ -34,12 +34,10 @@
 
             var trashBtn = e.target.closest('.zato-debugger-breakpoint-remove');
             if (trashBtn) {
-                console.log('[DebuggerUI] trash click: START');
                 e.stopPropagation();
                 e.preventDefault();
                 var removeFile = trashBtn.getAttribute('data-file');
                 var removeLine = parseInt(trashBtn.getAttribute('data-line'), 10);
-                console.log('[DebuggerUI] trash click: file=' + removeFile + ' line=' + removeLine);
                 UI.removeBreakpointFromStorage(removeFile, removeLine);
                 if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
                     ZatoDebuggerCore.removeBreakpoint(instance.debugger, removeFile, removeLine);
@@ -52,13 +50,11 @@
                         ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
                     }
                 }
-                console.log('[DebuggerUI] trash click: END');
                 return;
             }
 
             var iconBtn = e.target.closest('.zato-debugger-breakpoint-icon');
             if (iconBtn) {
-                console.log('[DebuggerUI] icon click: START');
                 e.stopPropagation();
                 e.preventDefault();
                 var item = iconBtn.closest('.zato-debugger-breakpoint-item');
@@ -66,7 +62,6 @@
                 var iconLine = parseInt(item.getAttribute('data-line'), 10);
                 var currentEnabled = item.getAttribute('data-enabled') === 'true';
                 var newEnabled = !currentEnabled;
-                console.log('[DebuggerUI] icon click: file=' + iconFile + ' line=' + iconLine + ' enabled=' + currentEnabled + ' -> ' + newEnabled);
                 UI.setBreakpointEnabledInStorage(iconFile, iconLine, newEnabled);
                 if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
                     ZatoDebuggerCore.enableBreakpoint(instance.debugger, iconFile, iconLine, newEnabled);
@@ -79,7 +74,6 @@
                         ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
                     }
                 }
-                console.log('[DebuggerUI] icon click: END');
                 return;
             }
 
@@ -114,7 +108,6 @@
                 e.preventDefault();
                 var gotoFile = gotoBtn.getAttribute('data-file');
                 var gotoLine = parseInt(gotoBtn.getAttribute('data-line'), 10);
-                console.log('[DebuggerUI] goto button click: file=' + gotoFile + ' line=' + gotoLine);
                 UI.jumpToBreakpoint(instance, gotoFile, gotoLine);
                 return;
             }
@@ -125,7 +118,6 @@
                 var clickLine = parseInt(breakpointItem.getAttribute('data-line'), 10);
                 var clickEnabled = breakpointItem.getAttribute('data-enabled') === 'true';
                 var newEnabled = !clickEnabled;
-                console.log('[DebuggerUI] breakpoint item click: file=' + clickFile + ' line=' + clickLine + ' enabled=' + clickEnabled + ' -> ' + newEnabled);
                 UI.setBreakpointEnabledInStorage(clickFile, clickLine, newEnabled);
                 if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
                     ZatoDebuggerCore.enableBreakpoint(instance.debugger, clickFile, clickLine, newEnabled);
@@ -257,11 +249,7 @@
     };
 
     UI.handleAction = function(instance, action, event) {
-        var connectionState = instance.isConnected ? 'connected' : (instance.isConnecting ? 'connecting' : 'disconnected');
-        console.log('[DebuggerUI] handleAction: action=' + action + ' connectionState=' + connectionState);
-
         if (action === 'start-debugging') {
-            console.log('[DebuggerUI] handleAction: start-debugging, calling connect-server');
             if (instance.ide) {
                 ZatoIDEDebug.handleDebugAction(instance.ide, 'connect-server');
             }
@@ -270,46 +258,35 @@
 
         var dbg = instance.debugger;
         if (!dbg) {
-            console.log('[DebuggerUI] handleAction: no debugger instance');
             return;
         }
 
         switch (action) {
             case 'continue':
-                console.log('[DebuggerUI] handleAction: continue, isConnected=' + instance.isConnected);
                 if (!instance.isConnected && instance.ide) {
-                    console.log('[DebuggerUI] handleAction: not connected, calling connect-server');
                     ZatoIDEDebug.handleDebugAction(instance.ide, 'connect-server');
                 } else {
-                    console.log('[DebuggerUI] handleAction: connected, calling resume');
                     ZatoDebuggerCore.resume(dbg);
                 }
                 break;
             case 'pause':
-                console.log('[DebuggerUI] handleAction: pause');
                 ZatoDebuggerCore.pause(dbg);
                 break;
             case 'step-over':
-                console.log('[DebuggerUI] handleAction: step-over');
                 ZatoDebuggerCore.stepOver(dbg);
                 break;
             case 'step-into':
-                console.log('[DebuggerUI] handleAction: step-into');
                 ZatoDebuggerCore.stepInto(dbg);
                 break;
             case 'step-out':
-                console.log('[DebuggerUI] handleAction: step-out');
                 ZatoDebuggerCore.stepOut(dbg);
                 break;
             case 'restart':
-                console.log('[DebuggerUI] handleAction: restart');
                 ZatoDebuggerCore.restart(dbg);
                 break;
             case 'stop':
-                console.log('[DebuggerUI] handleAction: stop, isConnected=' + instance.isConnected);
                 ZatoDebuggerCore.stopSession(dbg);
                 UI.setConnected(instance, false);
-                console.log('[DebuggerUI] handleAction: stop complete, isConnected=' + instance.isConnected);
                 break;
             case 'clear-breakpoints':
                 ZatoDebuggerCore.clearAllBreakpoints(dbg);

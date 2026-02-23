@@ -4,10 +4,6 @@
     var UI = window.ZatoDebuggerUI;
 
     UI.render = function(instance) {
-        console.log('[DebuggerUI] render: START');
-        console.log('[DebuggerUI] render: instance.container=' + (instance.container ? 'ok' : 'null'));
-        console.log('[DebuggerUI] render: theme=' + instance.options.theme);
-
         var html = '';
         html += '<div class="zato-debugger-container zato-debugger-theme-' + instance.options.theme + '">';
         html += UI.renderToolbar(instance);
@@ -20,12 +16,8 @@
         html += UI.renderConsolePanel(instance);
         html += '</div>';
 
-        console.log('[DebuggerUI] render: html.length=' + html.length);
         instance.container.innerHTML = html;
-        console.log('[DebuggerUI] render: innerHTML set');
-
         UI.cacheElements(instance);
-        console.log('[DebuggerUI] render: END');
     };
 
     UI.cacheElements = function(instance) {
