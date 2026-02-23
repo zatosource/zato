@@ -13,6 +13,10 @@
             instance.prefetchColumn = null;
             instance.prefetchXhr = null;
 
+            if (typeof ZatoIDELocalSymbols !== 'undefined') {
+                ZatoIDELocalSymbols.create(editor, instance);
+            }
+
             editor.container.addEventListener('click', function(e) {
                 if (!e.ctrlKey) {
                     return;
@@ -33,7 +37,7 @@
                     return;
                 }
 
-                self.gotoDefinition(editor, instance, pos.row + 1, pos.column);
+                self.gotoDefinition(editor, instance, pos.row + 1, pos.column, word);
             });
 
             document.addEventListener('keydown', function(e) {
@@ -201,8 +205,17 @@
             instance.prefetchColumn = null;
         },
 
-        gotoDefinition: function(editor, instance, line, column) {
+        gotoDefinition: function(editor, instance, line, column, word) {
             var self = this;
+
+            if (word && typeof ZatoIDELocalSymbols !== 'undefined' && instance.localSymbols) {
+                var localDef = ZatoIDELocalSymbols.findDefinition(instance, word, line);
+                if (localDef && localDef.type !== 'import') {
+                    editor.gotoLine(localDef.line, localDef.column, true);
+                    self.highlightDefinition(editor, instance, localDef.line, localDef.column);
+                    return;
+                }
+            }
 
             if (instance.prefetchedDefinition && instance.prefetchLine === line) {
                 var def = instance.prefetchedDefinition;
