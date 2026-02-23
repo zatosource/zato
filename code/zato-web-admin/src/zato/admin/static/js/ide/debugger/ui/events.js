@@ -275,6 +275,8 @@
                     }
                 }
             }
+        } else if (copyType === 'error') {
+            text = instance._errorMessage || '';
         }
 
         if (text) {

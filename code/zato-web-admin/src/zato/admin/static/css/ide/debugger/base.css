@@ -80,6 +80,46 @@
     min-height: 0;
 }
 
+.zato-debugger-connecting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px 20px;
+    color: #a0a0a0;
+    font-size: 13px;
+}
+
+.zato-debugger-error {
+    padding: 12px;
+}
+
+.zato-debugger-error-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.zato-debugger-error-title {
+    color: #f48771;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.zato-debugger-error-message {
+    color: #a0a0a0;
+    font-size: 12px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 3px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
 .zato-debugger-panel {
     display: flex;
     flex-direction: column;

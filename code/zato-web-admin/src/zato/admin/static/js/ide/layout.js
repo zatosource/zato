@@ -14,7 +14,7 @@
             html += '</div>';
             html += '<div class="zato-ide-toolbar-center">';
             html += '<div class="zato-ide-debug-container" id="' + instance.id + '-debug-container">';
-            html += '<button class="zato-ide-debug-button" id="' + instance.id + '-debug-button">Debug</button>';
+            html += '<button class="zato-ide-debug-button" id="' + instance.id + '-debug-button" data-tooltip="Connect to server" data-tooltip-position="bottom">Debug</button>';
             html += '</div>';
             html += '<span class="zato-ide-toolbar-separator"></span>';
             html += '<span class="zato-ide-search-button" title="Search"></span>';

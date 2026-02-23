@@ -116,6 +116,103 @@
                 instance.container.innerHTML = '';
                 delete this.instances[containerId];
             }
+        },
+
+        showConnecting: function(instance) {
+            if (!instance) {
+                return;
+            }
+
+            var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
+            var consolePanel = instance.container.querySelector('.zato-debugger-console');
+
+            if (panelsContainer) {
+                instance._savedPanelsHTML = panelsContainer.innerHTML;
+                panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
+                    '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
+                    '<span>Connecting..</span>' +
+                    '</div>';
+            }
+
+            if (consolePanel) {
+                instance._savedConsoleDisplay = consolePanel.style.display;
+                consolePanel.style.display = 'none';
+            }
+
+            if (instance.elements) {
+                this.setButtonEnabled(instance.elements.continueBtn, false);
+                this.setButtonEnabled(instance.elements.pauseBtn, false);
+                this.setButtonEnabled(instance.elements.stepOverBtn, false);
+                this.setButtonEnabled(instance.elements.stepIntoBtn, false);
+                this.setButtonEnabled(instance.elements.stepOutBtn, false);
+                this.setButtonEnabled(instance.elements.restartBtn, false);
+                this.setButtonEnabled(instance.elements.stopBtn, false);
+            }
+        },
+
+        hideConnecting: function(instance) {
+            if (!instance) {
+                return;
+            }
+
+            var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
+            var consolePanel = instance.container.querySelector('.zato-debugger-console');
+
+            if (panelsContainer && instance._savedPanelsHTML) {
+                panelsContainer.innerHTML = instance._savedPanelsHTML;
+                delete instance._savedPanelsHTML;
+                this.cacheElements(instance);
+            }
+
+            if (consolePanel && instance._savedConsoleDisplay !== undefined) {
+                consolePanel.style.display = instance._savedConsoleDisplay;
+                delete instance._savedConsoleDisplay;
+            }
+
+            this.updateToolbarState(instance);
+        },
+
+        showError: function(instance, errorMessage) {
+            if (!instance) {
+                return;
+            }
+
+            var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
+            var consolePanel = instance.container.querySelector('.zato-debugger-console');
+
+            if (panelsContainer) {
+                instance._errorMessage = errorMessage;
+                panelsContainer.innerHTML = '<div class="zato-debugger-error">' +
+                    '<div class="zato-debugger-error-header">' +
+                    '<span class="zato-debugger-error-title">Connection failed</span>' +
+                    '<button class="zato-debugger-copy-btn" data-copy="error" data-tooltip="Copy to clipboard">Copy</button>' +
+                    '</div>' +
+                    '<div class="zato-debugger-error-message">' + this.escapeHtml(errorMessage) + '</div>' +
+                    '</div>';
+            }
+
+            if (consolePanel) {
+                consolePanel.style.display = 'none';
+            }
+
+            if (instance.elements) {
+                this.setButtonEnabled(instance.elements.continueBtn, false);
+                this.setButtonEnabled(instance.elements.pauseBtn, false);
+                this.setButtonEnabled(instance.elements.stepOverBtn, false);
+                this.setButtonEnabled(instance.elements.stepIntoBtn, false);
+                this.setButtonEnabled(instance.elements.stepOutBtn, false);
+                this.setButtonEnabled(instance.elements.restartBtn, false);
+                this.setButtonEnabled(instance.elements.stopBtn, false);
+            }
+        },
+
+        escapeHtml: function(text) {
+            if (text === null || text === undefined) {
+                return '';
+            }
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     };
 

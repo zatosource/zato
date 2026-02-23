@@ -13,6 +13,12 @@
             console.log('[ZatoIDE] connectToServer: START');
             var self = this;
 
+            this.showDebugPanel(instance);
+
+            if (instance.debuggerIDE && instance.debuggerIDE.debuggerUI) {
+                ZatoDebuggerUI.showConnecting(instance.debuggerIDE.debuggerUI);
+            }
+
             var serverBaseDir = '~/env/qs-1/server1';
 
             var csrfToken = this.getCsrfToken();
@@ -34,8 +40,6 @@
                 console.log('[ZatoIDE] connectToServer: response=', data);
                 if (data.success) {
                     console.log('[ZatoIDE] connectToServer: attached to PID ' + data.target_pid + ' on port ' + data.debugpy_port);
-
-                    self.showDebugPanel(instance);
 
                     if (!instance.debuggerIDE) {
                         console.error('[ZatoIDE] connectToServer: debuggerIDE not created');
@@ -64,6 +68,9 @@
 
                         eventSource.onopen = function() {
                             console.log('[ZatoIDE] connectToServer: SSE connected');
+                            if (instance.debuggerIDE && instance.debuggerIDE.debuggerUI) {
+                                ZatoDebuggerUI.hideConnecting(instance.debuggerIDE.debuggerUI);
+                            }
                             ZatoDebuggerCore.setState(debuggerInstance, ZatoDebuggerCore.DebugState.RUNNING);
                         };
 
@@ -84,12 +91,16 @@
                     }
                 } else {
                     console.error('[ZatoIDE] connectToServer: failed - ' + data.message);
-                    alert('Failed to connect to server: ' + data.message);
+                    if (instance.debuggerIDE && instance.debuggerIDE.debuggerUI) {
+                        ZatoDebuggerUI.showError(instance.debuggerIDE.debuggerUI, data.message);
+                    }
                 }
             })
             .catch(function(error) {
                 console.error('[ZatoIDE] connectToServer: error', error);
-                alert('Error connecting to server: ' + error.message);
+                if (instance.debuggerIDE && instance.debuggerIDE.debuggerUI) {
+                    ZatoDebuggerUI.showError(instance.debuggerIDE.debuggerUI, error.message);
+                }
             });
         },
 
