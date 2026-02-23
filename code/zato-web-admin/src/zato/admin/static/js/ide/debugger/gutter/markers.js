@@ -4,21 +4,33 @@
     var G = window.ZatoDebuggerGutter;
 
     G.updateBreakpointMarkers = function(instance) {
+        console.log('[Gutter] updateBreakpointMarkers: START');
         var editor = instance.editor;
         var session = editor.session;
         var file = this.getCurrentFile(instance);
+        console.log('[Gutter] updateBreakpointMarkers: file=' + file);
         if (!file) {
+            console.log('[Gutter] updateBreakpointMarkers: no file, returning');
             return;
         }
         var breakpoints = [];
 
+        if (!instance.localBreakpoints) {
+            console.log('[Gutter] updateBreakpointMarkers: loading breakpoints from storage');
+            instance.localBreakpoints = this.loadBreakpointsFromStorage();
+            console.log('[Gutter] updateBreakpointMarkers: loaded=' + JSON.stringify(instance.localBreakpoints));
+        }
+
         if (instance.debugger) {
+            console.log('[Gutter] updateBreakpointMarkers: using debugger core');
             breakpoints = ZatoDebuggerCore.getBreakpointsForFile(instance.debugger, file);
         } else if (instance.localBreakpoints && instance.localBreakpoints[file]) {
+            console.log('[Gutter] updateBreakpointMarkers: using localBreakpoints');
             for (var line in instance.localBreakpoints[file]) {
                 breakpoints.push(instance.localBreakpoints[file][line]);
             }
         }
+        console.log('[Gutter] updateBreakpointMarkers: breakpoints for file=' + JSON.stringify(breakpoints));
 
         session.clearBreakpoints();
 

@@ -80,9 +80,13 @@
             console.log('[Gutter] toggleLocalBreakpoint: adding breakpoint at line ' + targetLine);
             instance.localBreakpoints[file][targetLine] = { line: targetLine, enabled: true };
         }
-        console.log('[Gutter] toggleLocalBreakpoint: localBreakpoints[' + file + ']=' + JSON.stringify(instance.localBreakpoints[file]));
+        console.log('[Gutter] toggleLocalBreakpoint: saving to localStorage');
+        console.log('[Gutter] toggleLocalBreakpoint: localBreakpoints=' + JSON.stringify(instance.localBreakpoints));
         this.saveBreakpointsToStorage(instance.localBreakpoints);
+        console.log('[Gutter] toggleLocalBreakpoint: localStorage after save=' + localStorage.getItem('zato-ide-breakpoints'));
         this.updateBreakpointMarkers(instance);
+        console.log('[Gutter] toggleLocalBreakpoint: notifying UI panel to update');
+        this.notifyUIPanel();
     };
 
     G.loadBreakpointsFromStorage = function() {
@@ -97,7 +101,20 @@
         return {};
     };
 
+    G.notifyUIPanel = function() {
+        console.log('[Gutter] notifyUIPanel: looking for debuggerUI instances');
+        if (typeof ZatoDebuggerUI !== 'undefined' && ZatoDebuggerUI.instances) {
+            for (var id in ZatoDebuggerUI.instances) {
+                console.log('[Gutter] notifyUIPanel: updating breakpoints for UI instance ' + id);
+                ZatoDebuggerUI.updateBreakpoints(ZatoDebuggerUI.instances[id]);
+            }
+        } else {
+            console.log('[Gutter] notifyUIPanel: ZatoDebuggerUI not available or no instances');
+        }
+    };
+
     G.saveBreakpointsToStorage = function(breakpoints) {
+        console.log('[Gutter] saveBreakpointsToStorage: breakpoints=' + JSON.stringify(breakpoints));
         try {
             localStorage.setItem('zato-ide-breakpoints', JSON.stringify(breakpoints));
         } catch (e) {

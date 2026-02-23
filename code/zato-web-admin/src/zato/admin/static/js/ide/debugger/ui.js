@@ -370,15 +370,26 @@
                     consolePanel.style.display = '';
                 }
             } else {
-                console.log('[DebuggerUI] updatePanelsVisibility: showing Start debugging button');
+                console.log('[DebuggerUI] updatePanelsVisibility: showing disconnected panels');
                 if (panelsContainer) {
                     panelsContainer.style.display = '';
-                    panelsContainer.innerHTML = '<div class="zato-debugger-start-container">' +
-                        '<button class="zato-debugger-start-button" data-action="start-debugging">Start debugging</button>' +
-                        '</div>';
+                    var hasRealPanels = panelsContainer.querySelector('.zato-debugger-callstack');
+                    if (!hasRealPanels) {
+                        console.log('[DebuggerUI] updatePanelsVisibility: restoring panels HTML for disconnected state');
+                        panelsContainer.innerHTML = '<div class="zato-debugger-start-container" style="display:none;">' +
+                            '<button class="zato-debugger-start-button" data-action="start-debugging">Start debugging</button>' +
+                            '</div>' +
+                            this.renderCallStackPanel(instance) +
+                            this.renderVariablesPanel(instance) +
+                            this.renderWatchesPanel(instance) +
+                            this.renderBreakpointsPanel(instance);
+                        this.cacheElements(instance);
+                        this.restoreWatches(instance);
+                        this.updateBreakpoints(instance);
+                    }
                 }
                 if (consolePanel) {
-                    consolePanel.style.display = 'none';
+                    consolePanel.style.display = '';
                 }
             }
         },

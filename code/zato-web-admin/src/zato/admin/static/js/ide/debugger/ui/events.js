@@ -57,8 +57,45 @@
                 UI.selectFrame(instance, frameId);
             }
 
+            var bpRemoveBtn = e.target.closest('.zato-debugger-breakpoint-remove');
+            if (bpRemoveBtn) {
+                console.log('[DebuggerUI] trash click: START');
+                e.stopPropagation();
+                e.preventDefault();
+                var removeFile = bpRemoveBtn.getAttribute('data-file');
+                var removeLine = parseInt(bpRemoveBtn.getAttribute('data-line'), 10);
+                console.log('[DebuggerUI] trash click: file=' + removeFile + ' line=' + removeLine);
+                var bpItemToRemove = bpRemoveBtn.closest('.zato-debugger-breakpoint-item');
+                if (bpItemToRemove) {
+                    console.log('[DebuggerUI] trash click: fading out item');
+                    bpItemToRemove.style.transition = 'opacity 60ms ease-out';
+                    bpItemToRemove.style.opacity = '0';
+                    setTimeout(function() {
+                        console.log('[DebuggerUI] trash click: fade complete, removing from storage');
+                        UI.removeBreakpointFromStorage(removeFile, removeLine);
+                        if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
+                            console.log('[DebuggerUI] trash click: also removing from debugger core');
+                            ZatoDebuggerCore.removeBreakpoint(instance.debugger, removeFile, removeLine);
+                        }
+                        console.log('[DebuggerUI] trash click: updating UI panel');
+                        UI.updateBreakpoints(instance);
+                        if (typeof ZatoDebuggerGutter !== 'undefined') {
+                            console.log('[DebuggerUI] trash click: updating gutter markers');
+                            var gutterInstances = ZatoDebuggerGutter.instances || {};
+                            for (var gId in gutterInstances) {
+                                console.log('[DebuggerUI] trash click: invalidating gutter cache for ' + gId);
+                                gutterInstances[gId].localBreakpoints = null;
+                                ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
+                            }
+                        }
+                        console.log('[DebuggerUI] trash click: END');
+                    }, 60);
+                }
+                return;
+            }
+
             var bpItem = e.target.closest('.zato-debugger-breakpoint-item');
-            if (bpItem && !e.target.closest('.zato-debugger-breakpoint-checkbox')) {
+            if (bpItem && !e.target.closest('.zato-debugger-breakpoint-checkbox') && !e.target.closest('.zato-debugger-breakpoint-remove')) {
                 var file = bpItem.getAttribute('data-file');
                 var line = parseInt(bpItem.getAttribute('data-line'), 10);
                 UI.jumpToBreakpoint(instance, file, line);
@@ -69,7 +106,17 @@
                 var bpFile = bpCheckbox.closest('.zato-debugger-breakpoint-item').getAttribute('data-file');
                 var bpLine = parseInt(bpCheckbox.closest('.zato-debugger-breakpoint-item').getAttribute('data-line'), 10);
                 var enabled = bpCheckbox.checked;
-                ZatoDebuggerCore.enableBreakpoint(instance.debugger, bpFile, bpLine, enabled);
+                UI.setBreakpointEnabledInStorage(bpFile, bpLine, enabled);
+                if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
+                    ZatoDebuggerCore.enableBreakpoint(instance.debugger, bpFile, bpLine, enabled);
+                }
+                UI.updateBreakpoints(instance);
+                if (typeof ZatoDebuggerGutter !== 'undefined') {
+                    var gutterInstances = ZatoDebuggerGutter.instances || {};
+                    for (var gId in gutterInstances) {
+                        ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
+                    }
+                }
             }
 
             var varItem = e.target.closest('.zato-debugger-variable-item');
