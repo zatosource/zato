@@ -64,6 +64,7 @@
             this.bindEvents(instance);
             console.log('[DebuggerUI] create: bindEvents complete');
 
+            this.applyExpandedState(instance);
             this.updateToolbarState(instance);
             this.updatePanelsVisibility(instance);
             this.restoreConsoleOutput(instance);
@@ -98,6 +99,7 @@
             this.initTooltip(instance);
             this.bindEvents(instance);
             this.cacheElements(instance);
+            this.applyExpandedState(instance);
             this.updateToolbarState(instance);
 
             if (instance.isConnecting) {
@@ -163,6 +165,17 @@
             try {
                 localStorage.setItem(this.storagePrefix + key, JSON.stringify(value));
             } catch (err) {}
+        },
+
+        applyExpandedState: function(instance) {
+            var panelNames = ['callStack', 'variables', 'watches', 'breakpoints', 'console'];
+            for (var i = 0; i < panelNames.length; i++) {
+                var name = panelNames[i];
+                var panel = instance.container.querySelector('.zato-debugger-' + name.toLowerCase());
+                if (panel) {
+                    panel.classList.toggle('collapsed', !instance.expanded[name]);
+                }
+            }
         },
 
         initTooltip: function(instance) {
@@ -363,9 +376,10 @@
                             this.renderWatchesPanel(instance) +
                             this.renderBreakpointsPanel(instance);
                         this.cacheElements(instance);
+                        this.applyExpandedState(instance);
                         this.restoreWatches(instance);
-                        this.updateBreakpoints(instance);
                     }
+                    this.updateBreakpoints(instance);
                 }
                 if (consolePanel) {
                     consolePanel.style.display = '';
@@ -385,9 +399,10 @@
                             this.renderWatchesPanel(instance) +
                             this.renderBreakpointsPanel(instance);
                         this.cacheElements(instance);
+                        this.applyExpandedState(instance);
                         this.restoreWatches(instance);
-                        this.updateBreakpoints(instance);
                     }
+                    this.updateBreakpoints(instance);
                 }
                 if (consolePanel) {
                     consolePanel.style.display = '';
