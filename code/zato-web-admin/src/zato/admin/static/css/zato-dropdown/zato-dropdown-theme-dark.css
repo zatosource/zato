@@ -1,17 +1,17 @@
 .zato-dropdown-theme-dark .zato-dropdown-trigger {
-    background: #1a1a1a;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #a0a0a0;
+    background: var(--zato-ide-control-bg);
+    border: 1px solid var(--zato-ide-control-border);
+    color: var(--zato-ide-control-text);
 }
 
 .zato-dropdown-theme-dark .zato-dropdown-trigger:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: #222;
+    border-color: var(--zato-ide-control-border-hover);
+    background: var(--zato-ide-control-bg-hover);
 }
 
 .zato-dropdown-theme-dark.open .zato-dropdown-trigger {
-    border-color: #4a9eff;
-    background: #222;
+    border-color: var(--zato-ide-control-border-active);
+    background: var(--zato-ide-control-bg-hover);
 }
 
 .zato-dropdown-theme-dark .zato-dropdown-menu {

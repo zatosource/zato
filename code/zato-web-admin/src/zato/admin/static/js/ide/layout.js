@@ -14,10 +14,7 @@
             html += '</div>';
             html += '<div class="zato-ide-toolbar-center">';
             html += '<div class="zato-ide-debug-container" id="' + instance.id + '-debug-container">';
-            html += '<select class="zato-ide-debug-select zato-ide-symbol-select" id="' + instance.id + '-debug-select">';
-            html += '<option value="">Debug</option>';
-            html += '<option value="connect-server">Connect to server</option>';
-            html += '</select>';
+            html += '<button class="zato-ide-debug-button" id="' + instance.id + '-debug-button">Debug</button>';
             html += '</div>';
             html += '<span class="zato-ide-toolbar-separator"></span>';
             html += '<span class="zato-ide-search-button" title="Search"></span>';

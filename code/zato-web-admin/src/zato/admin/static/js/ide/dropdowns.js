@@ -61,31 +61,10 @@
                 });
             }
 
-            var debugSelect = document.getElementById(instance.id + '-debug-select');
-            if (debugSelect && typeof ZatoDropdown !== 'undefined') {
-                instance.debugDropdown = ZatoDropdown.init(debugSelect, {
-                    theme: instance.options.theme,
-                    id: instance.id + '-debug-dropdown',
-                    onBeforeOpen: function(container) {
-                        var menu = container.querySelector('.zato-dropdown-menu');
-                        var trigger = container.querySelector('.zato-dropdown-trigger');
-                        if (menu && trigger) {
-                            var rect = trigger.getBoundingClientRect();
-                            menu.style.position = 'fixed';
-                            menu.style.bottom = 'auto';
-                            menu.style.left = rect.left + 'px';
-                            menu.style.top = (rect.bottom + 2) + 'px';
-                            menu.style.minWidth = rect.width + 'px';
-                        }
-                    },
-                    onChange: function(value, text) {
-                        if (value) {
-                            ZatoIDE.handleDebugAction(instance, value);
-                            if (instance.debugDropdown) {
-                                ZatoDropdown.setValue(instance.debugDropdown, '');
-                            }
-                        }
-                    }
+            var debugButton = document.getElementById(instance.id + '-debug-button');
+            if (debugButton) {
+                debugButton.addEventListener('click', function() {
+                    ZatoIDE.handleDebugAction(instance, 'connect-server');
                 });
             }
         },

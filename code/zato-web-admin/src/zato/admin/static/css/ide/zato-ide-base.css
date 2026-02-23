@@ -19,6 +19,7 @@
     position: relative;
     z-index: 100;
     overflow: visible;
+    font-size: 12px;
 }
 
 .zato-ide-toolbar-left {
@@ -177,4 +178,44 @@
 
 .zato-ide-debug-container {
     position: relative;
+}
+
+.zato-ide-theme-dark .zato-ide-debug-button {
+    background: var(--zato-ide-control-bg);
+    border: 1px solid var(--zato-ide-control-border);
+    color: var(--zato-ide-control-text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    padding: 4px 10px;
+    text-shadow: none;
+    box-shadow: none;
+    outline: none;
+    border-radius: 4px;
+}
+
+.zato-ide-theme-dark .zato-ide-debug-button:hover {
+    border-color: var(--zato-ide-control-border-hover);
+    background: var(--zato-ide-control-bg-hover);
+    color: var(--zato-ide-control-text);
+    text-shadow: none;
+    box-shadow: none;
+}
+
+.zato-ide-theme-dark .zato-ide-debug-button:focus {
+    border-color: var(--zato-ide-control-border-active);
+    background: var(--zato-ide-control-bg-hover);
+    color: var(--zato-ide-control-text);
+    text-shadow: none;
+    box-shadow: none;
+    outline: none;
+}
+
+.zato-ide-theme-dark .zato-ide-debug-button:active {
+    border-color: var(--zato-ide-control-border-active);
+    background: var(--zato-ide-control-bg-hover);
+    color: var(--zato-ide-control-text);
+    text-shadow: none;
+    box-shadow: none;
 }

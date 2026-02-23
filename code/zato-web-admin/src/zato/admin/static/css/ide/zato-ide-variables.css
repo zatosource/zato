@@ -29,4 +29,11 @@
     --zato-ide-scrollbar-thumb: #444;
 
     --zato-ide-debugger-active-line: 50, 205, 50;
+
+    --zato-ide-control-bg: #1a1a1a;
+    --zato-ide-control-bg-hover: #222;
+    --zato-ide-control-border: rgba(255, 255, 255, 0.1);
+    --zato-ide-control-border-hover: rgba(255, 255, 255, 0.2);
+    --zato-ide-control-border-active: #4a9eff;
+    --zato-ide-control-text: #a0a0a0;
 }
