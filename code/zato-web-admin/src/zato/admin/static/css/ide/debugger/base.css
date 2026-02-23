@@ -479,6 +479,7 @@
     padding: 4px 12px;
     gap: 6px;
     cursor: pointer;
+    font-size: 10px;
 }
 
 .zato-debugger-breakpoint-item:hover {
@@ -500,6 +501,7 @@
     width: 12px;
     height: 12px;
     flex-shrink: 0;
+    cursor: pointer;
 }
 
 .zato-debugger-breakpoint-icon.disabled svg {
@@ -511,11 +513,13 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 10px;
 }
 
 .zato-debugger-breakpoint-line {
     opacity: 0.6;
     flex-shrink: 0;
+    font-size: 10px;
 }
 
 .zato-debugger-breakpoint-condition {

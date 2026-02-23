@@ -32,8 +32,59 @@
                 return;
             }
 
+            var trashBtn = e.target.closest('.zato-debugger-breakpoint-remove');
+            if (trashBtn) {
+                console.log('[DebuggerUI] trash click: START');
+                e.stopPropagation();
+                e.preventDefault();
+                var removeFile = trashBtn.getAttribute('data-file');
+                var removeLine = parseInt(trashBtn.getAttribute('data-line'), 10);
+                console.log('[DebuggerUI] trash click: file=' + removeFile + ' line=' + removeLine);
+                UI.removeBreakpointFromStorage(removeFile, removeLine);
+                if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
+                    ZatoDebuggerCore.removeBreakpoint(instance.debugger, removeFile, removeLine);
+                }
+                UI.updateBreakpoints(instance);
+                if (typeof ZatoDebuggerGutter !== 'undefined') {
+                    var gutterInstances = ZatoDebuggerGutter.instances || {};
+                    for (var gId in gutterInstances) {
+                        gutterInstances[gId].localBreakpoints = null;
+                        ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
+                    }
+                }
+                console.log('[DebuggerUI] trash click: END');
+                return;
+            }
+
+            var iconBtn = e.target.closest('.zato-debugger-breakpoint-icon');
+            if (iconBtn) {
+                console.log('[DebuggerUI] icon click: START');
+                e.stopPropagation();
+                e.preventDefault();
+                var item = iconBtn.closest('.zato-debugger-breakpoint-item');
+                var iconFile = item.getAttribute('data-file');
+                var iconLine = parseInt(item.getAttribute('data-line'), 10);
+                var currentEnabled = item.getAttribute('data-enabled') === 'true';
+                var newEnabled = !currentEnabled;
+                console.log('[DebuggerUI] icon click: file=' + iconFile + ' line=' + iconLine + ' enabled=' + currentEnabled + ' -> ' + newEnabled);
+                UI.setBreakpointEnabledInStorage(iconFile, iconLine, newEnabled);
+                if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
+                    ZatoDebuggerCore.enableBreakpoint(instance.debugger, iconFile, iconLine, newEnabled);
+                }
+                UI.updateBreakpoints(instance);
+                if (typeof ZatoDebuggerGutter !== 'undefined') {
+                    var gutterInstances = ZatoDebuggerGutter.instances || {};
+                    for (var gId in gutterInstances) {
+                        gutterInstances[gId].localBreakpoints = null;
+                        ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
+                    }
+                }
+                console.log('[DebuggerUI] icon click: END');
+                return;
+            }
+
             var button = e.target.closest('[data-action]');
-            if (button && !button.classList.contains('zato-debugger-panel-action')) {
+            if (button && !button.classList.contains('zato-debugger-panel-action') && !button.classList.contains('zato-debugger-breakpoint-remove')) {
                 if (instance.tooltip && typeof ZatoTooltip !== 'undefined') {
                     ZatoTooltip.hideImmediate(instance.tooltip);
                 }
@@ -57,66 +108,11 @@
                 UI.selectFrame(instance, frameId);
             }
 
-            var bpRemoveBtn = e.target.closest('.zato-debugger-breakpoint-remove');
-            if (bpRemoveBtn) {
-                console.log('[DebuggerUI] trash click: START');
-                e.stopPropagation();
-                e.preventDefault();
-                var removeFile = bpRemoveBtn.getAttribute('data-file');
-                var removeLine = parseInt(bpRemoveBtn.getAttribute('data-line'), 10);
-                console.log('[DebuggerUI] trash click: file=' + removeFile + ' line=' + removeLine);
-                var bpItemToRemove = bpRemoveBtn.closest('.zato-debugger-breakpoint-item');
-                if (bpItemToRemove) {
-                    console.log('[DebuggerUI] trash click: fading out item');
-                    bpItemToRemove.style.transition = 'opacity 60ms ease-out';
-                    bpItemToRemove.style.opacity = '0';
-                    setTimeout(function() {
-                        console.log('[DebuggerUI] trash click: fade complete, removing from storage');
-                        UI.removeBreakpointFromStorage(removeFile, removeLine);
-                        if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
-                            console.log('[DebuggerUI] trash click: also removing from debugger core');
-                            ZatoDebuggerCore.removeBreakpoint(instance.debugger, removeFile, removeLine);
-                        }
-                        console.log('[DebuggerUI] trash click: updating UI panel');
-                        UI.updateBreakpoints(instance);
-                        if (typeof ZatoDebuggerGutter !== 'undefined') {
-                            console.log('[DebuggerUI] trash click: updating gutter markers');
-                            var gutterInstances = ZatoDebuggerGutter.instances || {};
-                            for (var gId in gutterInstances) {
-                                console.log('[DebuggerUI] trash click: invalidating gutter cache for ' + gId);
-                                gutterInstances[gId].localBreakpoints = null;
-                                ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
-                            }
-                        }
-                        console.log('[DebuggerUI] trash click: END');
-                    }, 60);
-                }
-                return;
-            }
-
-            var bpItem = e.target.closest('.zato-debugger-breakpoint-item');
-            if (bpItem && !e.target.closest('.zato-debugger-breakpoint-checkbox') && !e.target.closest('.zato-debugger-breakpoint-remove')) {
-                var file = bpItem.getAttribute('data-file');
-                var line = parseInt(bpItem.getAttribute('data-line'), 10);
+            var breakpointItem = e.target.closest('.zato-debugger-breakpoint-item');
+            if (breakpointItem && !e.target.closest('.zato-debugger-breakpoint-icon') && !e.target.closest('.zato-debugger-breakpoint-remove')) {
+                var file = breakpointItem.getAttribute('data-file');
+                var line = parseInt(breakpointItem.getAttribute('data-line'), 10);
                 UI.jumpToBreakpoint(instance, file, line);
-            }
-
-            var bpCheckbox = e.target.closest('.zato-debugger-breakpoint-checkbox');
-            if (bpCheckbox) {
-                var bpFile = bpCheckbox.closest('.zato-debugger-breakpoint-item').getAttribute('data-file');
-                var bpLine = parseInt(bpCheckbox.closest('.zato-debugger-breakpoint-item').getAttribute('data-line'), 10);
-                var enabled = bpCheckbox.checked;
-                UI.setBreakpointEnabledInStorage(bpFile, bpLine, enabled);
-                if (instance.debugger && typeof ZatoDebuggerCore !== 'undefined') {
-                    ZatoDebuggerCore.enableBreakpoint(instance.debugger, bpFile, bpLine, enabled);
-                }
-                UI.updateBreakpoints(instance);
-                if (typeof ZatoDebuggerGutter !== 'undefined') {
-                    var gutterInstances = ZatoDebuggerGutter.instances || {};
-                    for (var gId in gutterInstances) {
-                        ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
-                    }
-                }
             }
 
             var varItem = e.target.closest('.zato-debugger-variable-item');

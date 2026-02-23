@@ -68,6 +68,7 @@
             this.updatePanelsVisibility(instance);
             this.restoreConsoleOutput(instance);
             this.restoreWatches(instance);
+            this.updateBreakpoints(instance);
             this.preloadSpinner();
 
             this.instances[containerId] = instance;

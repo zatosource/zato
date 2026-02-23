@@ -207,9 +207,8 @@
             var filename = bp.file.split('/').pop();
             var enabledClass = bp.enabled ? '' : ' disabled';
             console.log('[DebuggerUI] updateBreakpoints: rendering item ' + i + ': file=' + filename + ' line=' + bp.line + ' enabled=' + bp.enabled);
-            html += '<div class="zato-debugger-breakpoint-item' + enabledClass + '" data-file="' + UI.escapeHtml(bp.file) + '" data-line="' + bp.line + '">';
-            html += '<input type="checkbox" class="zato-debugger-breakpoint-checkbox"' + (bp.enabled ? ' checked' : '') + '>';
-            html += '<span class="zato-debugger-breakpoint-icon' + enabledClass + '">' + UI.getBreakpointIcon() + '</span>';
+            html += '<div class="zato-debugger-breakpoint-item' + enabledClass + '" data-file="' + UI.escapeHtml(bp.file) + '" data-line="' + bp.line + '" data-enabled="' + (bp.enabled ? 'true' : 'false') + '">';
+            html += '<span class="zato-debugger-breakpoint-icon' + enabledClass + '" data-action="toggle-enabled">' + UI.getBreakpointIcon() + '</span>';
             html += '<span class="zato-debugger-breakpoint-file">' + UI.escapeHtml(filename) + '</span>';
             html += '<span class="zato-debugger-breakpoint-line">:' + bp.line + '</span>';
             if (bp.condition) {
