@@ -16,7 +16,6 @@
             html += '<div class="zato-ide-debug-container" id="' + instance.id + '-debug-container">';
             html += '<select class="zato-ide-debug-select zato-ide-symbol-select" id="' + instance.id + '-debug-select">';
             html += '<option value="">Debug</option>';
-            html += '<option value="debug-file">Debug current file</option>';
             html += '<option value="connect-server">Connect to server</option>';
             html += '</select>';
             html += '</div>';

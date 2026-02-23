@@ -5,7 +5,6 @@
      * ZatoDebuggerIDE - connects the debugger to the IDE.
      *
      * Handles:
-     * - Debug current file action from toolbar
      * - Debugger panel visibility
      * - Editor gutter setup for breakpoints
      * - Coordinating debugger state with IDE state
@@ -85,54 +84,6 @@
             }
 
             console.log('[DebuggerIDE] initDebugger: END');
-        },
-
-        debugCurrentFile: function(instance) {
-            console.log('[DebuggerIDE] debugCurrentFile: START');
-            console.log('[DebuggerIDE] debugCurrentFile: instance.id=' + instance.id);
-            console.log('[DebuggerIDE] debugCurrentFile: instance.ide=' + (instance.ide ? 'ok' : 'null'));
-            console.log('[DebuggerIDE] debugCurrentFile: instance.debugger=' + (instance.debugger ? 'ok' : 'null'));
-
-            var ide = instance.ide;
-            console.log('[DebuggerIDE] debugCurrentFile: ide.activeFile=' + ide.activeFile);
-            console.log('[DebuggerIDE] debugCurrentFile: ide.files keys=' + Object.keys(ide.files || {}).join(', '));
-
-            if (!ide.activeFile || !ide.files[ide.activeFile]) {
-                console.warn('[DebuggerIDE] debugCurrentFile: No active file to debug');
-                return false;
-            }
-
-            var file = ide.files[ide.activeFile];
-            var filename = ide.activeFile;
-            var content = file.content;
-            console.log('[DebuggerIDE] debugCurrentFile: filename=' + filename);
-            console.log('[DebuggerIDE] debugCurrentFile: file.language=' + file.language);
-            console.log('[DebuggerIDE] debugCurrentFile: content.length=' + (content ? content.length : 0));
-
-            if (file.language !== 'python') {
-                console.warn('[DebuggerIDE] debugCurrentFile: Only Python files can be debugged, got language=' + file.language);
-                return false;
-            }
-
-            console.log('[DebuggerIDE] debugCurrentFile: calling showDebugPanel');
-            this.showDebugPanel(instance);
-            console.log('[DebuggerIDE] debugCurrentFile: showDebugPanel complete');
-
-            console.log('[DebuggerIDE] debugCurrentFile: calling setupGutter');
-            this.setupGutter(instance);
-            console.log('[DebuggerIDE] debugCurrentFile: setupGutter complete');
-
-            if (instance.gutterHandler && instance.debugger) {
-                console.log('[DebuggerIDE] debugCurrentFile: attaching debugger to gutter');
-                ZatoDebuggerGutter.attachDebugger(instance.gutterHandler, instance.debugger);
-            }
-
-            console.log('[DebuggerIDE] debugCurrentFile: calling ZatoDebuggerCore.startSession');
-            ZatoDebuggerCore.startSession(instance.debugger, content, filename);
-            console.log('[DebuggerIDE] debugCurrentFile: startSession complete');
-
-            console.log('[DebuggerIDE] debugCurrentFile: END returning true');
-            return true;
         },
 
         stopDebugging: function(instance) {
