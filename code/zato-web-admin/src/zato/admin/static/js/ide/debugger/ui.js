@@ -136,8 +136,9 @@
                 panelsContainer.style.display = '';
                 instance._savedPanelsHTML = panelsContainer.innerHTML;
                 panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
+                    '<span class="zato-debugger-message-box">' +
                     '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
-                    '<span>Connecting .. <span class="zato-debugger-countdown">10.00 s</span></span>' +
+                    ' Connecting .. <span class="zato-debugger-countdown">10.00 s</span></span>' +
                     '</div>';
             }
 

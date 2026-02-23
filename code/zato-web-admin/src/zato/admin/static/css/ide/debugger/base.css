@@ -176,13 +176,24 @@
     font-weight: 500;
 }
 
-.zato-debugger-error-message {
-    color: #a0a0a0;
+.zato-debugger-message-box {
+    color: var(--zato-debugger-message-color, #a0a0a0);
     font-size: 12px;
     font-family: monospace;
     white-space: pre-wrap;
     word-break: break-word;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--zato-debugger-message-bg, rgba(0, 0, 0, 0.2));
+    padding: 8px;
+    border-radius: 3px;
+}
+
+.zato-debugger-error-message {
+    color: var(--zato-debugger-message-color, #a0a0a0);
+    font-size: 12px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--zato-debugger-message-bg, rgba(0, 0, 0, 0.2));
     padding: 8px;
     border-radius: 3px;
     max-height: 200px;
