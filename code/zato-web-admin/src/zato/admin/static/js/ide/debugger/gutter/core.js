@@ -128,6 +128,16 @@
 
         attachDebugger: function(instance, debuggerInstance) {
             instance.debugger = debuggerInstance;
+            var localBreakpoints = instance.localBreakpoints || this.loadBreakpointsFromStorage();
+            for (var file in localBreakpoints) {
+                for (var line in localBreakpoints[file]) {
+                    var bp = localBreakpoints[file][line];
+                    ZatoDebuggerCore.addBreakpoint(debuggerInstance, file, bp.line, bp.condition || null);
+                    if (!bp.enabled) {
+                        ZatoDebuggerCore.enableBreakpoint(debuggerInstance, file, bp.line, false);
+                    }
+                }
+            }
             this.bindDebuggerEvents(instance);
         },
 

@@ -301,13 +301,6 @@
             var currentFile = instance.currentFile || 'my_service.py';
             console.log('[DebugProtocol] handleInitialized: currentFile=' + currentFile);
 
-            if (breakpoints.length === 0) {
-                var firstBreakableLine = this.findFirstBreakableLine(instance);
-                console.log('[DebugProtocol] handleInitialized: no breakpoints, auto-setting on line ' + firstBreakableLine);
-                ZatoDebuggerCore.addBreakpoint(instance, currentFile, firstBreakableLine);
-                breakpoints = ZatoDebuggerCore.getAllBreakpoints(instance);
-            }
-
             var fileBreakpoints = {};
             for (var i = 0; i < breakpoints.length; i++) {
                 var bp = breakpoints[i];
