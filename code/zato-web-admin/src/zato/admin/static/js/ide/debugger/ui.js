@@ -68,6 +68,7 @@
             this.updatePanelsVisibility(instance);
             this.restoreConsoleOutput(instance);
             this.restoreWatches(instance);
+            this.preloadSpinner();
 
             this.instances[containerId] = instance;
 
@@ -119,6 +120,14 @@
             if (instance) {
                 instance.container.innerHTML = '';
                 delete this.instances[containerId];
+            }
+        },
+
+        preloadSpinner: function() {
+            if (!this._spinnerPreloaded) {
+                var img = new Image();
+                img.src = '/static/img/spinner.svg';
+                this._spinnerPreloaded = true;
             }
         },
 
