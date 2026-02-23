@@ -44,7 +44,7 @@
     };
 
     UI.getCloseIcon = function() {
-        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M12 4L4 12M4 4l8 8"/></svg>';
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" stroke="currentColor" stroke-width="1.5"><path d="M12 4L4 12M4 4l8 8"/></svg>';
     };
 
     UI.getBreakpointIcon = function() {

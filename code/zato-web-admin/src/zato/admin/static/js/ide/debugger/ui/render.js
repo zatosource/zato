@@ -157,8 +157,11 @@
         html += '<div class="zato-debugger-panel-header" data-panel="watches">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Watch</span>';
-        html += '<button class="zato-debugger-panel-action" data-action="add-watch" title="Add expression">';
+        html += '<button class="zato-debugger-panel-action zato-debugger-add-watch-btn" data-action="add-watch" title="Add expression">';
         html += UI.getPlusIcon();
+        html += '</button>';
+        html += '<button class="zato-debugger-panel-action" data-action="clear-watches" data-tooltip="Remove all watches">';
+        html += UI.getTrashIcon();
         html += '</button>';
         html += '</div>';
         html += '<div class="zato-debugger-panel-content">';

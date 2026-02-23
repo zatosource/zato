@@ -468,6 +468,12 @@
             return false;
         },
 
+        clearAllWatches: function(instance) {
+            if (instance && instance.watches) {
+                instance.watches.length = 0;
+            }
+        },
+
         evaluateWatch: function(instance, watch) {
             if (instance.state !== this.DebugState.PAUSED || !instance.currentFrame) {
                 watch.value = '<not available>';

@@ -296,6 +296,10 @@
     display: none;
 }
 
+.zato-debugger-panel .zato-debugger-add-watch-btn {
+    display: flex;
+}
+
 .zato-debugger-panel-header {
     display: flex;
     align-items: center;
@@ -453,8 +457,10 @@
 .zato-debugger-watch-item {
     display: flex;
     align-items: center;
-    padding: 2px 12px;
+    height: var(--zato-debugger-item-height);
+    padding: 0 12px;
     gap: 4px;
+    box-sizing: border-box;
 }
 
 .zato-debugger-watch-expr {

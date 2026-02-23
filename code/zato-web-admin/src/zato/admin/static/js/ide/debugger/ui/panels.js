@@ -159,7 +159,7 @@
             html += '<span class="zato-debugger-watch-separator">:</span>';
             html += '<span class="zato-debugger-watch-value">' + UI.highlightPythonValue(w.value || '<not available>') + '</span>';
             html += '<button class="zato-debugger-watch-remove" data-action="remove-watch" data-watch-id="' + w.id + '">';
-            html += UI.getCloseIcon();
+            html += UI.getTrashIcon();
             html += '</button>';
             html += '</div>';
         }

@@ -372,8 +372,14 @@
                 break;
             case 'clear-breakpoints':
                 ZatoDebuggerCore.clearAllBreakpoints(dbg);
-                if (instance.elements.breakpointsList) {
-                    instance.elements.breakpointsList.innerHTML = '';
+                localStorage.removeItem('zato-ide-breakpoints');
+                UI.updateBreakpoints(instance);
+                if (typeof ZatoDebuggerGutter !== 'undefined') {
+                    var gutterInstances = ZatoDebuggerGutter.instances || {};
+                    for (var gId in gutterInstances) {
+                        gutterInstances[gId].localBreakpoints = null;
+                        ZatoDebuggerGutter.updateBreakpointMarkers(gutterInstances[gId]);
+                    }
                 }
                 break;
             case 'clear-console':
@@ -388,13 +394,18 @@
                 }
                 break;
             case 'remove-watch':
-                var watchId = event.target.closest('[data-watch-id]');
-                if (watchId) {
-                    var id = parseInt(watchId.getAttribute('data-watch-id'), 10);
-                    ZatoDebuggerCore.removeWatch(dbg, id);
+                var watchEl = event.target.closest('[data-watch-id]');
+                if (watchEl) {
+                    var watchId = watchEl.getAttribute('data-watch-id');
+                    ZatoDebuggerCore.removeWatch(dbg, watchId);
                     UI.updateWatches(instance);
                     UI.saveWatches(instance);
                 }
+                break;
+            case 'clear-watches':
+                ZatoDebuggerCore.clearAllWatches(dbg);
+                UI.updateWatches(instance);
+                UI.saveWatches(instance);
                 break;
         }
     };
