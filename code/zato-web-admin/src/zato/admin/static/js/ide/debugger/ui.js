@@ -137,7 +137,7 @@
                 instance._savedPanelsHTML = panelsContainer.innerHTML;
                 panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
                     '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
-                    '<span>Connecting ..</span>' +
+                    '<span>Connecting .. <span class="zato-debugger-countdown zato-matrix-text">10.00 s</span></span>' +
                     '</div>';
             }
 
@@ -155,6 +155,51 @@
                 this.setButtonEnabled(instance.elements.restartBtn, false);
                 this.setButtonEnabled(instance.elements.stopBtn, false);
             }
+
+            this.startConnectingCountdown(instance);
+        },
+
+        startConnectingCountdown: function(instance) {
+            var self = this;
+            var remaining = 10.00;
+            var countdownEl = instance.container.querySelector('.zato-debugger-countdown');
+
+            if (instance._countdownInterval) {
+                clearInterval(instance._countdownInterval);
+            }
+
+            instance._countdownInterval = setInterval(function() {
+                remaining -= 0.01;
+                if (remaining <= 0) {
+                    clearInterval(instance._countdownInterval);
+                    delete instance._countdownInterval;
+                    if (instance.isConnecting) {
+                        self.showError(instance, 'UI connection timeout');
+                    }
+                    return;
+                }
+                if (countdownEl) {
+                    var displayText = remaining.toFixed(2) + ' s';
+                    var glitchChars = '0123456789.';
+                    var glitched = '';
+                    for (var i = 0; i < displayText.length; i++) {
+                        var ch = displayText[i];
+                        if (ch >= '0' && ch <= '9' && Math.random() < 0.15) {
+                            glitched += glitchChars[Math.floor(Math.random() * 10)];
+                        } else {
+                            glitched += ch;
+                        }
+                    }
+                    countdownEl.textContent = glitched;
+                }
+            }, 10);
+        },
+
+        stopConnectingCountdown: function(instance) {
+            if (instance._countdownInterval) {
+                clearInterval(instance._countdownInterval);
+                delete instance._countdownInterval;
+            }
         },
 
         hideConnecting: function(instance) {
@@ -163,6 +208,7 @@
             }
 
             instance.isConnecting = false;
+            this.stopConnectingCountdown(instance);
 
             var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
             var consolePanel = instance.container.querySelector('.zato-debugger-console');
@@ -211,6 +257,7 @@
             }
 
             instance.isConnecting = false;
+            this.stopConnectingCountdown(instance);
 
             var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
             var consolePanel = instance.container.querySelector('.zato-debugger-console');

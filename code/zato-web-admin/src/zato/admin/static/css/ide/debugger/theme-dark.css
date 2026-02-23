@@ -242,3 +242,36 @@
 .zato-debugger-theme-dark .zato-debugger-hl-type {
     color: #4ec9b0;
 }
+
+.zato-matrix-text {
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-weight: bold;
+    color: #00ff41;
+    text-shadow:
+        0 0 2px #00ff41,
+        0 0 4px #00ff41,
+        0 0 8px #00cc33,
+        0 0 12px #009922;
+    letter-spacing: 2px;
+    animation: matrix-flicker 0.08s infinite alternate;
+}
+
+@keyframes matrix-flicker {
+    0% {
+        opacity: 0.92;
+        text-shadow:
+            0 0 2px #00ff41,
+            0 0 4px #00ff41,
+            0 0 8px #00cc33,
+            0 0 12px #009922;
+    }
+    100% {
+        opacity: 1;
+        text-shadow:
+            0 0 3px #00ff41,
+            0 0 6px #00ff41,
+            0 0 12px #00cc33,
+            0 0 18px #009922,
+            0 0 24px #006611;
+    }
+}
