@@ -255,6 +255,11 @@
     border-bottom-style: solid;
 }
 
+.zato-debugger-panel:last-child {
+    flex: 1;
+    border-bottom: none;
+}
+
 .zato-debugger-panel.collapsed .zato-debugger-panel-content {
     display: none;
 }
