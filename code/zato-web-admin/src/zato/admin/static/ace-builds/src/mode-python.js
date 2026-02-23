@@ -377,7 +377,7 @@ var PythonHighlightRules = function() {
             token: "constant.numeric", // integer
             regex: integer + "\\b"
         }, {
-            token: ["punctuation", "function.support"],// method
+            token: ["punctuation", "identifier"],
             regex: "(\\.)([a-zA-Z_]+)\\b"
         }, {
             token: keywordMapper,
