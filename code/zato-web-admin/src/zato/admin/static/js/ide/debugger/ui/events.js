@@ -189,6 +189,13 @@
     };
 
     UI.handleAction = function(instance, action, event) {
+        if (action === 'start-debugging') {
+            if (instance.ide) {
+                ZatoIDEDebug.handleDebugAction(instance.ide, 'connect-server');
+            }
+            return;
+        }
+
         var dbg = instance.debugger;
         if (!dbg) {
             return;
@@ -197,7 +204,7 @@
         switch (action) {
             case 'continue':
                 if (!instance.isConnected && instance.ide) {
-                    ZatoIDE.handleDebugAction(instance.ide, 'connect-server');
+                    ZatoIDEDebug.handleDebugAction(instance.ide, 'connect-server');
                 } else {
                     ZatoDebuggerCore.resume(dbg);
                 }

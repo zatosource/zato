@@ -185,9 +185,9 @@
     border: 1px solid var(--zato-ide-control-border);
     color: var(--zato-ide-control-text);
     cursor: pointer;
-    font-family: inherit;
-    font-size: inherit;
-    font-weight: inherit;
+    font-family: var(--zato-ide-control-font-family);
+    font-size: var(--zato-ide-control-font-size);
+    font-weight: var(--zato-ide-control-font-weight);
     padding: 4px 10px;
     text-shadow: none;
     box-shadow: none;

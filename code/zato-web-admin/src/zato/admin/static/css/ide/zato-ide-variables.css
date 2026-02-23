@@ -36,4 +36,7 @@
     --zato-ide-control-border-hover: rgba(255, 255, 255, 0.2);
     --zato-ide-control-border-active: #4a9eff;
     --zato-ide-control-text: #a0a0a0;
+    --zato-ide-control-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    --zato-ide-control-font-size: 12px;
+    --zato-ide-control-font-weight: 400;
 }

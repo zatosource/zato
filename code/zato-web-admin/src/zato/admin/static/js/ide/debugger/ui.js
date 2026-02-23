@@ -242,11 +242,24 @@
             var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
             var consolePanel = instance.container.querySelector('.zato-debugger-console');
 
-            if (panelsContainer) {
-                panelsContainer.style.display = instance.isConnected ? '' : 'none';
-            }
-            if (consolePanel) {
-                consolePanel.style.display = instance.isConnected ? '' : 'none';
+            if (instance.isConnected) {
+                if (panelsContainer) {
+                    panelsContainer.style.display = '';
+                }
+                if (consolePanel) {
+                    consolePanel.style.display = '';
+                }
+            } else {
+                if (panelsContainer) {
+                    panelsContainer.style.display = '';
+                    panelsContainer.innerHTML = '<div class="zato-debugger-start-container">' +
+                        '<button class="zato-debugger-start-button" data-action="start-debugging" ' +
+                        'data-tooltip="Connect to server" data-tooltip-position="bottom">Start debugging</button>' +
+                        '</div>';
+                }
+                if (consolePanel) {
+                    consolePanel.style.display = 'none';
+                }
             }
         },
 
