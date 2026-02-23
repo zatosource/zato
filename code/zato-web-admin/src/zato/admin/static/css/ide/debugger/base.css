@@ -3,6 +3,7 @@
 }
 
 .zato-debugger-container {
+    --zato-debugger-item-height: 24px;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -353,9 +354,13 @@
 }
 
 .zato-debugger-empty {
-    padding: 8px 12px;
+    padding: 4px 12px;
     font-style: italic;
     opacity: 0.5;
+    height: var(--zato-debugger-item-height);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
 }
 
 .zato-debugger-callstack-list,
@@ -509,11 +514,13 @@
 .zato-debugger-breakpoint-item {
     display: flex;
     align-items: center;
-    padding: 4px 12px;
+    height: var(--zato-debugger-item-height);
+    padding: 0 12px;
     gap: 6px;
     cursor: pointer;
     font-size: 10px;
     user-select: none;
+    box-sizing: border-box;
 }
 
 .zato-debugger-breakpoint-item:hover {
