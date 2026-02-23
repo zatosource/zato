@@ -123,14 +123,14 @@
 
     UI.renderCallStackPanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-callstack" data-panel-id="callStack" draggable="true">';
+        html += '<div class="zato-debugger-panel zato-debugger-callstack empty" data-panel-id="callStack" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="callStack">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Call stack</span>';
         html += '<button class="zato-debugger-copy-btn" data-copy="callstack" data-tooltip="Copy to clipboard">Copy</button>';
         html += '</div>';
         html += '<div class="zato-debugger-panel-content">';
-        html += '<div class="zato-debugger-callstack-list"></div>';
+        html += '<div class="zato-debugger-callstack-list"><div class="zato-debugger-empty">No call stack</div></div>';
         html += '</div>';
         html += '</div>';
         return html;
@@ -138,14 +138,14 @@
 
     UI.renderVariablesPanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-variables" data-panel-id="variables" draggable="true">';
+        html += '<div class="zato-debugger-panel zato-debugger-variables empty" data-panel-id="variables" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="variables">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Variables</span>';
         html += '<button class="zato-debugger-copy-btn" data-copy="variables" data-tooltip="Copy to clipboard">Copy</button>';
         html += '</div>';
         html += '<div class="zato-debugger-panel-content">';
-        html += '<div class="zato-debugger-variables-list"></div>';
+        html += '<div class="zato-debugger-variables-list"><div class="zato-debugger-empty">No variables</div></div>';
         html += '</div>';
         html += '</div>';
         return html;
@@ -153,7 +153,7 @@
 
     UI.renderWatchesPanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-watches" data-panel-id="watches" draggable="true">';
+        html += '<div class="zato-debugger-panel zato-debugger-watches empty" data-panel-id="watches" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="watches">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Watch</span>';
@@ -162,7 +162,7 @@
         html += '</button>';
         html += '</div>';
         html += '<div class="zato-debugger-panel-content">';
-        html += '<div class="zato-debugger-watches-list"></div>';
+        html += '<div class="zato-debugger-watches-list"><div class="zato-debugger-empty">No watch expressions</div></div>';
         html += '<div class="zato-debugger-watch-input-wrapper">';
         html += '<span class="zato-debugger-console-prompt">&gt;</span>';
         html += '<input type="text" class="zato-debugger-watch-input" placeholder="Add expression ..">';
@@ -174,7 +174,7 @@
 
     UI.renderBreakpointsPanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-breakpoints" data-panel-id="breakpoints" draggable="true">';
+        html += '<div class="zato-debugger-panel zato-debugger-breakpoints empty" data-panel-id="breakpoints" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="breakpoints">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Breakpoints</span>';
@@ -183,7 +183,7 @@
         html += '</button>';
         html += '</div>';
         html += '<div class="zato-debugger-panel-content">';
-        html += '<div class="zato-debugger-breakpoints-list"></div>';
+        html += '<div class="zato-debugger-breakpoints-list"><div class="zato-debugger-empty">No breakpoints</div></div>';
         html += '</div>';
         html += '</div>';
         return html;

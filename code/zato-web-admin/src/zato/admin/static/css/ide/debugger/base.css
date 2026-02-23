@@ -277,7 +277,7 @@
 }
 
 .zato-debugger-panel.drag-over {
-    border-top: 2px solid #4a9eff;
+    box-shadow: inset 0 2px 0 0 #4a9eff;
 }
 
 .zato-debugger-panel.collapsed .zato-debugger-panel-content {
@@ -286,6 +286,13 @@
 
 .zato-debugger-panel.collapsed .zato-debugger-panel-toggle {
     transform: rotate(0deg);
+}
+
+.zato-debugger-panel.collapsed .zato-debugger-panel-action,
+.zato-debugger-panel.collapsed .zato-debugger-copy-btn,
+.zato-debugger-panel.empty .zato-debugger-panel-action,
+.zato-debugger-panel.empty .zato-debugger-copy-btn {
+    display: none;
 }
 
 .zato-debugger-panel-header {

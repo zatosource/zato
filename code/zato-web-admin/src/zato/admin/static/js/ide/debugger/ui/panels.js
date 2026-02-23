@@ -71,10 +71,13 @@
             return;
         }
 
+        var panel = list.closest('.zato-debugger-panel');
         if (!frames || frames.length === 0) {
             list.innerHTML = '<div class="zato-debugger-empty">No call stack</div>';
+            if (panel) panel.classList.add('empty');
             return;
         }
+        if (panel) panel.classList.remove('empty');
 
         var html = '';
         for (var i = 0; i < frames.length; i++) {
@@ -95,10 +98,13 @@
             return;
         }
 
+        var panel = list.closest('.zato-debugger-panel');
         if (!variables || variables.length === 0) {
             list.innerHTML = '<div class="zato-debugger-empty">No variables</div>';
+            if (panel) panel.classList.add('empty');
             return;
         }
+        if (panel) panel.classList.remove('empty');
 
         var html = UI.renderVariablesList(variables, 0);
         list.innerHTML = html;
@@ -136,11 +142,14 @@
             return;
         }
 
+        var panel = list.closest('.zato-debugger-panel');
         var watches = instance.debugger ? instance.debugger.watches : [];
         if (!watches || watches.length === 0) {
             list.innerHTML = '<div class="zato-debugger-empty">No watch expressions</div>';
+            if (panel) panel.classList.add('empty');
             return;
         }
+        if (panel) panel.classList.remove('empty');
 
         var html = '';
         for (var i = 0; i < watches.length; i++) {
@@ -188,11 +197,14 @@
             return;
         }
 
+        var panel = list.closest('.zato-debugger-panel');
         var breakpoints = UI.loadBreakpointsFromStorage();
         if (!breakpoints || breakpoints.length === 0) {
             list.innerHTML = '<div class="zato-debugger-empty">No breakpoints</div>';
+            if (panel) panel.classList.add('empty');
             return;
         }
+        if (panel) panel.classList.remove('empty');
 
         var html = '';
         for (var i = 0; i < breakpoints.length; i++) {
