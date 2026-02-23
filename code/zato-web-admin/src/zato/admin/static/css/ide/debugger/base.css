@@ -619,26 +619,30 @@
 .zato-debugger-console {
     display: flex;
     flex-direction: column;
-    min-height: 56px;
     overflow: hidden;
 }
 
-.zato-debugger-console-content {
+.zato-debugger-console .zato-debugger-panel-content {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    max-height: none;
-    overflow: hidden;
     padding: 0;
+    max-height: none;
+}
+
+.zato-debugger-console.expand .zato-debugger-console-content {
+    flex: 1;
+    max-height: none;
 }
 
 .zato-debugger-console-output {
-    flex: 1;
     overflow-y: auto;
     padding: 4px 0;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: 12px;
+}
+
+.zato-debugger-console.expand .zato-debugger-console-output {
+    flex: 1;
 }
 
 .zato-debugger-console-line {
