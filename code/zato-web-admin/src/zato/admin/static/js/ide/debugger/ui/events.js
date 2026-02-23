@@ -316,7 +316,11 @@
                 var newOrder = [];
                 var reorderedPanels = panelsContainer.querySelectorAll('.zato-debugger-panel[data-panel-id]');
                 for (var i = 0; i < reorderedPanels.length; i++) {
+                    reorderedPanels[i].classList.remove('expand');
                     newOrder.push(reorderedPanels[i].getAttribute('data-panel-id'));
+                }
+                if (reorderedPanels.length > 0) {
+                    reorderedPanels[reorderedPanels.length - 1].classList.add('expand');
                 }
                 UI.savePanelOrder(newOrder);
             }

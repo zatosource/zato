@@ -14,7 +14,8 @@
             'callStack': UI.renderCallStackPanel,
             'variables': UI.renderVariablesPanel,
             'watches': UI.renderWatchesPanel,
-            'breakpoints': UI.renderBreakpointsPanel
+            'breakpoints': UI.renderBreakpointsPanel,
+            'console': UI.renderConsolePanel
         };
         for (var i = 0; i < panelOrder.length; i++) {
             var panelId = panelOrder[i];
@@ -24,25 +25,39 @@
         }
         
         html += '</div>';
-        html += UI.renderConsolePanel(instance);
         html += '</div>';
 
         instance.container.innerHTML = html;
         UI.cacheElements(instance);
+        UI.applyLastPanelExpand(instance);
     };
     
     UI.loadPanelOrder = function() {
-        var defaultOrder = ['callStack', 'variables', 'watches', 'breakpoints'];
+        var defaultOrder = ['callStack', 'variables', 'watches', 'breakpoints', 'console'];
         try {
             var stored = localStorage.getItem('zato-debugger-panel-order');
             if (stored) {
                 var order = JSON.parse(stored);
-                if (Array.isArray(order) && order.length === 4) {
+                if (Array.isArray(order) && order.length === 5) {
                     return order;
                 }
             }
         } catch (e) {}
         return defaultOrder;
+    };
+    
+    UI.applyLastPanelExpand = function(instance) {
+        var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
+        if (!panelsContainer) {
+            return;
+        }
+        var panels = panelsContainer.querySelectorAll('.zato-debugger-panel[data-panel-id]');
+        for (var i = 0; i < panels.length; i++) {
+            panels[i].classList.remove('expand');
+        }
+        if (panels.length > 0) {
+            panels[panels.length - 1].classList.add('expand');
+        }
     };
     
     UI.savePanelOrder = function(order) {
@@ -176,7 +191,7 @@
 
     UI.renderConsolePanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-console">';
+        html += '<div class="zato-debugger-panel zato-debugger-console" data-panel-id="console" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="console">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Debug console</span>';
