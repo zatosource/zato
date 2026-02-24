@@ -30,6 +30,20 @@
                     self.handleCloseTab();
                     return false;
                 }
+                if ((e.ctrlKey || e.metaKey) && (e.key === ':' || e.key === ';')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    self.closeIDETab();
+                    return false;
+                }
+                if ((e.ctrlKey || e.metaKey) && (e.key === 't' || e.key === 'T')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    self.createNewIDETab();
+                    return false;
+                }
                 if (e.key === 'F2') {
                     e.preventDefault();
                     e.stopPropagation();
@@ -106,6 +120,25 @@
             }
         },
 
+        createNewIDETab: function() {
+            var ideInstance = null;
+            if (typeof ZatoIDE !== 'undefined' && ZatoIDE.instances) {
+                for (var key in ZatoIDE.instances) {
+                    ideInstance = ZatoIDE.instances[key];
+                    break;
+                }
+            }
+
+            if (!ideInstance || !ideInstance.tabsManager || !ideInstance.tabsManager.container) {
+                return;
+            }
+
+            var addButton = ideInstance.tabsManager.container.querySelector('.zato-tab-add');
+            if (addButton) {
+                addButton.click();
+            }
+        },
+
         closeIDETab: function() {
             var ideInstance = null;
             if (typeof ZatoIDE !== 'undefined' && ZatoIDE.instances) {
@@ -115,7 +148,7 @@
                 }
             }
 
-            if (!ideInstance || !ideInstance.tabsManager || !ideInstance.tabsManager.tabs) {
+            if (!ideInstance || !ideInstance.tabsManager || !ideInstance.tabsManager.container) {
                 return;
             }
 
@@ -124,16 +157,9 @@
                 return;
             }
 
-            var activeTab = null;
-            for (var i = 0; i < ideInstance.tabsManager.tabs.length; i++) {
-                if (ideInstance.tabsManager.tabs[i].id === activeTabId) {
-                    activeTab = ideInstance.tabsManager.tabs[i];
-                    break;
-                }
-            }
-
-            if (activeTab) {
-                ZatoIDE.closeTab(ideInstance, activeTab);
+            var closeButton = ideInstance.tabsManager.container.querySelector('.zato-tab.active .zato-tab-close');
+            if (closeButton) {
+                closeButton.click();
             }
         },
 
