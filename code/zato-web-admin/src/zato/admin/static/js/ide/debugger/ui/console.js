@@ -41,6 +41,12 @@
         }
         output.appendChild(line);
         output.scrollTop = output.scrollHeight;
+
+        var panel = output.closest('.zato-debugger-console');
+        if (panel) {
+            panel.classList.remove('empty');
+        }
+
         UI.saveConsoleOutput(instance);
     };
 
@@ -83,6 +89,13 @@
                 line.textContent = item.text;
             }
             output.appendChild(line);
+        }
+
+        if (data.length > 0) {
+            var panel = output.closest('.zato-debugger-console');
+            if (panel) {
+                panel.classList.remove('empty');
+            }
         }
     };
 

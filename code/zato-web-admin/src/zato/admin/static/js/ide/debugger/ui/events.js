@@ -385,6 +385,10 @@
             case 'clear-console':
                 if (instance.elements.consoleOutput) {
                     instance.elements.consoleOutput.innerHTML = '';
+                    var consolePanel = instance.elements.consoleOutput.closest('.zato-debugger-console');
+                    if (consolePanel) {
+                        consolePanel.classList.add('empty');
+                    }
                 }
                 UI.saveState('console-output', []);
                 break;

@@ -194,7 +194,7 @@
 
     UI.renderConsolePanel = function(instance) {
         var html = '';
-        html += '<div class="zato-debugger-panel zato-debugger-console" data-panel-id="console" draggable="true">';
+        html += '<div class="zato-debugger-panel zato-debugger-console empty" data-panel-id="console" draggable="true">';
         html += '<div class="zato-debugger-panel-header" data-panel="console">';
         html += '<span class="zato-debugger-panel-toggle">' + UI.getChevronIcon() + '</span>';
         html += '<span class="zato-debugger-panel-title">Debug console</span>';
