@@ -220,6 +220,117 @@
             popup.style.top = (rect.bottom + 4) + 'px';
             popup.style.left = rect.left + 'px';
             instance.container.appendChild(popup);
+        },
+
+        initBottomPanel1: function(instance) {
+            var self = this;
+            var panelContainer = document.getElementById(instance.id + '-bottom-panel-1');
+            var tabsContainer = document.getElementById(instance.id + '-bottom-panel-1-tabs');
+            var contentContainer = document.getElementById(instance.id + '-bottom-panel-1-content');
+
+            if (!panelContainer || !tabsContainer || !contentContainer) {
+                return;
+            }
+
+            var savedCollapsed = localStorage.getItem('zato.ide.bottomPanel1Collapsed');
+            if (savedCollapsed === 'true') {
+                panelContainer.classList.add('collapsed');
+            }
+
+            instance.bottomPanel1TabsManager = ZatoTabsManager.create(instance.id + '-bottom-panel-1-tabs', {
+                theme: 'dark',
+                onTabChange: function(tab) {
+                    self.updateBottomPanel1Content(instance, tab);
+                }
+            });
+
+            var defaultTabs = [
+                { id: 'tab-1', title: 'Tab 1' },
+                { id: 'tab-2', title: 'Tab 2' },
+                { id: 'tab-3', title: 'Tab 3' }
+            ];
+
+            instance.bottomPanel1TabsManager.tabs = defaultTabs;
+            instance.bottomPanel1TabsManager.activeTabId = 'tab-1';
+            instance.bottomPanel1TabsManager.allowCloseLastTab = false;
+
+            ZatoTabsRenderer.render(instance.bottomPanel1TabsManager, tabsContainer, {
+                theme: 'dark',
+                showAddButton: false,
+                showCloseButton: false,
+                showPinIcon: false,
+                showLockIcon: false,
+                containerClass: 'zato-ide-bottom-panel-1-tabs-wrapper'
+            });
+
+            ZatoTabsEvents.bind(tabsContainer, instance.bottomPanel1TabsManager, {
+                onTabChange: function(tabId) {
+                    instance.bottomPanel1TabsManager.activeTabId = tabId;
+                    var tab = ZatoTabsManager.getTabById(instance.bottomPanel1TabsManager, tabId);
+                    self.updateBottomPanel1Content(instance, tab);
+                    self.renderBottomPanel1Tabs(instance);
+                },
+                onSave: function() {},
+                onRender: function() {
+                    self.renderBottomPanel1Tabs(instance);
+                }
+            });
+
+            this.updateBottomPanel1Content(instance, defaultTabs[0]);
+        },
+
+        renderBottomPanel1Tabs: function(instance) {
+            var tabsContainer = document.getElementById(instance.id + '-bottom-panel-1-tabs');
+            if (!tabsContainer || !instance.bottomPanel1TabsManager) {
+                return;
+            }
+            ZatoTabsRenderer.render(instance.bottomPanel1TabsManager, tabsContainer, {
+                theme: 'dark',
+                showAddButton: false,
+                showCloseButton: false,
+                showPinIcon: false,
+                showLockIcon: false,
+                containerClass: 'zato-ide-bottom-panel-1-tabs-wrapper'
+            });
+            ZatoTabsEvents.bind(tabsContainer, instance.bottomPanel1TabsManager, {
+                onTabChange: function(tabId) {
+                    instance.bottomPanel1TabsManager.activeTabId = tabId;
+                    var tab = ZatoTabsManager.getTabById(instance.bottomPanel1TabsManager, tabId);
+                    ZatoIDEPanels.updateBottomPanel1Content(instance, tab);
+                    ZatoIDEPanels.renderBottomPanel1Tabs(instance);
+                },
+                onSave: function() {},
+                onRender: function() {
+                    ZatoIDEPanels.renderBottomPanel1Tabs(instance);
+                }
+            });
+        },
+
+        updateBottomPanel1Content: function(instance, tab) {
+            var contentContainer = document.getElementById(instance.id + '-bottom-panel-1-content');
+            if (!contentContainer || !tab) {
+                return;
+            }
+            contentContainer.innerHTML = '<div class="zato-ide-bottom-panel-1-tab-name">' + tab.title + '</div>';
+        },
+
+        toggleBottomPanel1: function(instance) {
+            var panelContainer = document.getElementById(instance.id + '-bottom-panel-1');
+            if (!panelContainer) {
+                return;
+            }
+
+            if (panelContainer.classList.contains('collapsed')) {
+                panelContainer.classList.remove('collapsed');
+                localStorage.setItem('zato.ide.bottomPanel1Collapsed', 'false');
+            } else {
+                panelContainer.classList.add('collapsed');
+                localStorage.setItem('zato.ide.bottomPanel1Collapsed', 'true');
+            }
+
+            if (instance.codeEditor && instance.codeEditor.aceEditor) {
+                instance.codeEditor.aceEditor.resize();
+            }
         }
     };
 

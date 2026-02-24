@@ -44,6 +44,13 @@
                     self.createNewIDETab();
                     return false;
                 }
+                if (e.key === 'F1') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    self.toggleBottomPanel1();
+                    return false;
+                }
                 if (e.key === 'F2') {
                     e.preventDefault();
                     e.stopPropagation();
@@ -222,6 +229,24 @@
             }
 
             ZatoIDESearch.show(searchInstance, isReplace);
+        },
+
+        toggleBottomPanel1: function() {
+            var ideInstance = null;
+            if (typeof ZatoIDE !== 'undefined' && ZatoIDE.instances) {
+                for (var key in ZatoIDE.instances) {
+                    ideInstance = ZatoIDE.instances[key];
+                    break;
+                }
+            }
+
+            if (!ideInstance) {
+                return;
+            }
+
+            if (typeof ZatoIDEPanels !== 'undefined' && ZatoIDEPanels.toggleBottomPanel1) {
+                ZatoIDEPanels.toggleBottomPanel1(ideInstance);
+            }
         },
 
         toggleSidePanelContent: function() {

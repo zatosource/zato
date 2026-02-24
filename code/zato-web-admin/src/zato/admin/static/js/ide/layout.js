@@ -21,6 +21,10 @@
             html += '</div></div>';
             html += '<div class="zato-ide-tabs-area"><div id="' + instance.id + '-tabs"></div></div>';
             html += '<div class="zato-ide-main-area" id="' + instance.id + '-main-split"></div>';
+            html += '<div class="zato-ide-bottom-panel-1" id="' + instance.id + '-bottom-panel-1">';
+            html += '<div class="zato-ide-bottom-panel-1-tabs" id="' + instance.id + '-bottom-panel-1-tabs"></div>';
+            html += '<div class="zato-ide-bottom-panel-1-content" id="' + instance.id + '-bottom-panel-1-content"></div>';
+            html += '</div>';
             html += '<div class="zato-ide-statusbar" id="' + instance.id + '-statusbar"></div>';
             html += '</div>';
             instance.container.innerHTML = html;
@@ -41,6 +45,7 @@
             ZatoIDEPanels.loadSearchIcon(instance);
             ZatoIDEPanels.loadSidePanel1Icons(instance);
             ZatoIDEPanels.initSidePanel1Content(instance);
+            ZatoIDEPanels.initBottomPanel1(instance);
 
             this.bindEvents(instance);
 
