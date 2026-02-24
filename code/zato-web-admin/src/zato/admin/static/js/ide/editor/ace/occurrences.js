@@ -23,22 +23,48 @@
                     return;
                 }
 
-                var word = token.value;
-                if (!word || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(word)) {
+                var wordInfo = self.getWordAtCursor(editor, pos);
+                if (!wordInfo) {
                     return;
                 }
 
-                var occurrences = self.findAllWordOccurrences(editor, word);
+                var occurrences = self.findAllWordOccurrences(editor, wordInfo.word);
                 if (occurrences.length === 0) {
                     return;
                 }
 
-                self.highlightOccurrences(editor, instance, occurrences, pos.row, token.start);
+                self.highlightOccurrences(editor, instance, occurrences, pos.row, wordInfo.start);
             });
 
             editor.session.on('change', function() {
                 self.clearOccurrenceHighlights(editor, instance);
             });
+        },
+
+        getWordAtCursor: function(editor, pos) {
+            var line = editor.session.getLine(pos.row);
+            var col = pos.column;
+
+            var start = col;
+            var end = col;
+
+            while (start > 0 && /[A-Za-z0-9_]/.test(line.charAt(start - 1))) {
+                start--;
+            }
+            while (end < line.length && /[A-Za-z0-9_]/.test(line.charAt(end))) {
+                end++;
+            }
+
+            if (start === end) {
+                return null;
+            }
+
+            var word = line.substring(start, end);
+            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(word)) {
+                return null;
+            }
+
+            return { word: word, start: start };
         },
 
         findAllWordOccurrences: function(editor, word) {
