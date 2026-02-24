@@ -212,14 +212,9 @@
                     continue;
                 }
                 var rect = tab.getBoundingClientRect();
-                var midX = rect.left + rect.width / 2;
 
                 if (e.clientX > rect.left && e.clientX < rect.right) {
-                    if (e.clientX < midX) {
-                        this.pendingDropIndex = Array.from(tabsContainer.children).indexOf(tab);
-                    } else {
-                        this.pendingDropIndex = Array.from(tabsContainer.children).indexOf(tab) + 1;
-                    }
+                    this.pendingDropIndex = Array.from(tabsContainer.children).indexOf(tab);
                     break;
                 }
             }
@@ -246,30 +241,20 @@
                 if (this.pendingDropIndex !== null && this.pendingDropIndex !== undefined) {
                     var tabs = instance.tabs;
                     var draggedTabIndex = this.getTabIndex(tabs, this.draggedTabId);
-                    if (draggedTabIndex !== -1 && draggedTabIndex !== this.pendingDropIndex) {
+                    var targetIndex = this.pendingDropIndex;
+
+                    console.log('[ZatoTabsEvents] handleMouseUp: draggedTabIndex=', draggedTabIndex, 'targetIndex=', targetIndex);
+
+                    if (draggedTabIndex !== -1 && targetIndex !== -1 && draggedTabIndex !== targetIndex) {
                         var draggedTab = tabs[draggedTabIndex];
+                        var targetTab = tabs[targetIndex];
 
-                        var pinnedCount = 0;
-                        for (var i = 0; i < tabs.length; i++) {
-                            if (tabs[i].pinned) {
-                                pinnedCount++;
-                            } else {
-                                break;
-                            }
-                        }
+                        if (!draggedTab.pinned && !targetTab.pinned && !draggedTab.locked && !targetTab.locked) {
+                            tabs[draggedTabIndex] = targetTab;
+                            tabs[targetIndex] = draggedTab;
 
-                        var insertAt = this.pendingDropIndex;
-                        if (insertAt > draggedTabIndex) {
-                            insertAt = insertAt - 1;
-                        }
+                            console.log('[ZatoTabsEvents] handleMouseUp: swapped tabs');
 
-                        if (!draggedTab.pinned && insertAt < pinnedCount) {
-                            insertAt = pinnedCount;
-                        }
-
-                        if (draggedTabIndex !== insertAt) {
-                            var tab = tabs.splice(draggedTabIndex, 1)[0];
-                            tabs.splice(insertAt, 0, tab);
                             if (callbacks.onReorder) {
                                 callbacks.onReorder(tabs);
                             }
