@@ -21,16 +21,42 @@
 .zato-debugger-toolbar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     height: 36px;
     min-height: 36px;
     padding: 0 8px;
     gap: 4px;
 }
 
+.zato-debugger-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zato-debugger-toolbar-right {
+    display: flex;
+    align-items: center;
+}
+
 .zato-debugger-toolbar-group {
     display: flex;
     align-items: center;
     gap: 2px;
+}
+
+.zato-debugger-connecting-indicator {
+    font-size: 12px;
+    color: #a0a0a0;
+}
+
+.zato-debugger-connecting-indicator.pulsating {
+    animation: zato-debugger-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes zato-debugger-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
 }
 
 .zato-debugger-toolbar-separator {

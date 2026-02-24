@@ -121,21 +121,11 @@
 
         restoreConnectingState: function(instance) {
             console.log('[DebuggerUI] restoreConnectingState: START');
-            var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
-            var consolePanel = instance.container.querySelector('.zato-debugger-console');
 
-            if (panelsContainer) {
-                var remaining = instance._countdownRemaining || 10.00;
-                panelsContainer.style.display = '';
-                panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
-                    '<span class="zato-debugger-message-box">' +
-                    '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
-                    ' Connecting .. <span class="zato-debugger-countdown">' + remaining.toFixed(2) + ' s</span></span>' +
-                    '</div>';
-            }
-
-            if (consolePanel) {
-                consolePanel.style.display = 'none';
+            var indicator = instance.container.querySelector('.zato-debugger-connecting-indicator');
+            if (indicator) {
+                indicator.textContent = 'Connecting ..';
+                indicator.classList.add('pulsating');
             }
 
             if (instance.elements) {
@@ -224,59 +214,20 @@
 
             this.startConnectingCountdown(instance);
 
-            var self = this;
-            var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
-            var consolePanel = instance.container.querySelector('.zato-debugger-console');
-            var startButton = panelsContainer ? panelsContainer.querySelector('.zato-debugger-start-button') : null;
-
-            function showSpinner() {
-                if (!instance.isConnecting) {
-                    console.log('[DebuggerUI] showSpinner: isConnecting=false, skipping');
-                    return;
-                }
-                if (panelsContainer) {
-                    panelsContainer.style.display = '';
-                    instance._savedPanelsHTML = panelsContainer.innerHTML;
-                    panelsContainer.innerHTML = '<div class="zato-debugger-connecting">' +
-                        '<span class="zato-debugger-message-box">' +
-                        '<img src="/static/img/spinner.svg" class="ai-chat-spinner-icon ai-chat-spinner-large" alt="">' +
-                        ' Connecting .. <span class="zato-debugger-countdown">' + (instance._countdownRemaining || 10).toFixed(2) + ' s</span></span>' +
-                        '</div>';
-                }
-
-                if (consolePanel) {
-                    instance._savedConsoleDisplay = consolePanel.style.display;
-                    consolePanel.style.display = 'none';
-                }
-
-                if (instance.elements) {
-                    self.setButtonEnabled(instance.elements.continueBtn, false);
-                    self.setButtonEnabled(instance.elements.pauseBtn, false);
-                    self.setButtonEnabled(instance.elements.stepOverBtn, false);
-                    self.setButtonEnabled(instance.elements.stepIntoBtn, false);
-                    self.setButtonEnabled(instance.elements.stepOutBtn, false);
-                    self.setButtonEnabled(instance.elements.restartBtn, false);
-                    self.setButtonEnabled(instance.elements.stopBtn, false);
-                }
+            var indicator = instance.container.querySelector('.zato-debugger-connecting-indicator');
+            if (indicator) {
+                indicator.textContent = 'Connecting ..';
+                indicator.classList.add('pulsating');
             }
 
-            if (startButton) {
-                var transitionFired = false;
-                function onFadeComplete() {
-                    if (transitionFired) {
-                        return;
-                    }
-                    transitionFired = true;
-                    showSpinner();
-                }
-                startButton.style.transition = 'opacity 70ms ease-out';
-                startButton.addEventListener('transitionend', onFadeComplete);
-                window.requestAnimationFrame(function() {
-                    startButton.style.opacity = '0';
-                });
-                instance._fadeOutTimer = window.setTimeout(onFadeComplete, 80);
-            } else {
-                showSpinner();
+            if (instance.elements) {
+                this.setButtonEnabled(instance.elements.continueBtn, false);
+                this.setButtonEnabled(instance.elements.pauseBtn, false);
+                this.setButtonEnabled(instance.elements.stepOverBtn, false);
+                this.setButtonEnabled(instance.elements.stepIntoBtn, false);
+                this.setButtonEnabled(instance.elements.stepOutBtn, false);
+                this.setButtonEnabled(instance.elements.restartBtn, false);
+                this.setButtonEnabled(instance.elements.stopBtn, false);
             }
         },
 
@@ -329,18 +280,10 @@
             instance.isConnecting = false;
             this.stopConnectingCountdown(instance);
 
-            var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
-            var consolePanel = instance.container.querySelector('.zato-debugger-console');
-
-            if (panelsContainer && instance._savedPanelsHTML) {
-                panelsContainer.innerHTML = instance._savedPanelsHTML;
-                delete instance._savedPanelsHTML;
-                this.cacheElements(instance);
-            }
-
-            if (consolePanel && instance._savedConsoleDisplay !== undefined) {
-                consolePanel.style.display = instance._savedConsoleDisplay;
-                delete instance._savedConsoleDisplay;
+            var indicator = instance.container.querySelector('.zato-debugger-connecting-indicator');
+            if (indicator) {
+                indicator.textContent = '';
+                indicator.classList.remove('pulsating');
             }
 
             this.updateToolbarState(instance);

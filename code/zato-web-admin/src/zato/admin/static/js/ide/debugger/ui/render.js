@@ -95,6 +95,7 @@
     UI.renderToolbar = function(instance) {
         var html = '';
         html += '<div class="zato-debugger-toolbar">';
+        html += '<div class="zato-debugger-toolbar-left">';
         html += '<div class="zato-debugger-toolbar-group">';
         html += UI.renderToolbarButton('continue', 'Continue', 'F5', UI.getContinueIcon());
         html += UI.renderToolbarButton('pause', 'Pause', 'F6', UI.getPauseIcon());
@@ -109,6 +110,10 @@
         html += '<div class="zato-debugger-toolbar-group">';
         html += UI.renderToolbarButton('restart', 'Restart', 'Ctrl+Shift+F5', UI.getRestartIcon());
         html += UI.renderToolbarButton('stop', 'Stop', 'Shift+F5', UI.getStopIcon());
+        html += '</div>';
+        html += '</div>';
+        html += '<div class="zato-debugger-toolbar-right">';
+        html += '<span class="zato-debugger-connecting-indicator"></span>';
         html += '</div>';
         html += '</div>';
         return html;
