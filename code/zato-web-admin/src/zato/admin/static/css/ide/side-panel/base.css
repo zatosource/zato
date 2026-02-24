@@ -1,15 +1,13 @@
 .zato-ide-side-panel-1 {
     display: flex !important;
     flex-direction: row-reverse !important;
-    height: 100%;
     width: 100%;
+    min-height: 0;
 }
 
 .zato-ide-side-panel-1-content {
     flex: 1;
     min-width: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
 }
 
 .zato-ide-side-panel-1-content.collapsed {

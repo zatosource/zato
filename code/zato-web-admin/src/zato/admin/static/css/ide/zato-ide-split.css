@@ -20,6 +20,9 @@
 .zato-ide-split-panel-right {
     flex: 1 1 auto;
     min-width: 48px;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .zato-ide-split-resizer {

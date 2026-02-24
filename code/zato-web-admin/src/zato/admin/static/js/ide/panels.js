@@ -328,10 +328,64 @@
 
                 panelContainer.style.height = newHeight + 'px';
 
+                var sidePanelContent = document.getElementById(instance.id + '-side-panel-1-content');
+                var debuggerPanels = sidePanelContent ? sidePanelContent.querySelector('.zato-debugger-panels') : null;
+                var debuggerConsole = sidePanelContent ? sidePanelContent.querySelector('.zato-debugger-console') : null;
+                var consoleOutput = debuggerConsole ? debuggerConsole.querySelector('.zato-debugger-console-output') : null;
+
+                console.log('[BottomPanel1Resizer] mousemove:');
+                console.log('  sidePanelContent:', sidePanelContent ? 'found' : 'n/a');
+                console.log('  sidePanelContent height:', sidePanelContent ? sidePanelContent.offsetHeight : 'n/a');
+                console.log('  sidePanelContent overflow-y:', sidePanelContent ? getComputedStyle(sidePanelContent).overflowY : 'n/a');
+                console.log('  debuggerPanels:', debuggerPanels ? 'found' : 'n/a');
+                console.log('  debuggerPanels height:', debuggerPanels ? debuggerPanels.offsetHeight : 'n/a');
+                console.log('  debuggerPanels scrollHeight:', debuggerPanels ? debuggerPanels.scrollHeight : 'n/a');
+                console.log('  debuggerPanels overflow-y:', debuggerPanels ? getComputedStyle(debuggerPanels).overflowY : 'n/a');
+                console.log('  debuggerConsole:', debuggerConsole ? 'found' : 'n/a');
+                console.log('  debuggerConsole height:', debuggerConsole ? debuggerConsole.offsetHeight : 'n/a');
+                console.log('  debuggerConsole overflow-y:', debuggerConsole ? getComputedStyle(debuggerConsole).overflowY : 'n/a');
+                console.log('  consoleOutput:', consoleOutput ? 'found' : 'n/a');
+                console.log('  consoleOutput height:', consoleOutput ? consoleOutput.offsetHeight : 'n/a');
+                console.log('  consoleOutput overflow-y:', consoleOutput ? getComputedStyle(consoleOutput).overflowY : 'n/a');
+
+                var allPanels = sidePanelContent ? sidePanelContent.querySelectorAll('.zato-debugger-panel') : [];
+                console.log('  allPanels count:', allPanels.length);
+                for (var i = 0; i < allPanels.length; i++) {
+                    var panel = allPanels[i];
+                    var panelTitle = panel.querySelector('.zato-debugger-panel-title');
+                    var panelContent = panel.querySelector('.zato-debugger-panel-content');
+                    console.log('  panel[' + i + '] title:', panelTitle ? panelTitle.textContent : 'n/a');
+                    console.log('  panel[' + i + '] height:', panel.offsetHeight);
+                    console.log('  panel[' + i + '] overflow-y:', getComputedStyle(panel).overflowY);
+                    if (panelContent) {
+                        console.log('  panel[' + i + '] content height:', panelContent.offsetHeight);
+                        console.log('  panel[' + i + '] content scrollHeight:', panelContent.scrollHeight);
+                        console.log('  panel[' + i + '] content overflow-y:', getComputedStyle(panelContent).overflowY);
+                    }
+                }
+
                 if (instance.codeEditor && instance.codeEditor.aceEditor) {
                     instance.codeEditor.aceEditor.resize();
                 }
             });
+
+            var sidePanelContentForScroll = document.getElementById(instance.id + '-side-panel-1-content');
+            if (sidePanelContentForScroll) {
+                var scrollableElements = sidePanelContentForScroll.querySelectorAll('*');
+                for (var j = 0; j < scrollableElements.length; j++) {
+                    (function(elem) {
+                        elem.addEventListener('scroll', function() {
+                            var classes = elem.className || '';
+                            var id = elem.id || '';
+                            console.log('[Scroll] element scrolled: id=' + id + ' class=' + classes);
+                            console.log('[Scroll] scrollTop=' + elem.scrollTop + ' scrollHeight=' + elem.scrollHeight + ' clientHeight=' + elem.clientHeight);
+                        });
+                    })(scrollableElements[j]);
+                }
+                sidePanelContentForScroll.addEventListener('scroll', function() {
+                    console.log('[Scroll] sidePanelContent scrolled: scrollTop=' + sidePanelContentForScroll.scrollTop);
+                });
+            }
 
             document.addEventListener('mouseup', function() {
                 if (isDragging) {
