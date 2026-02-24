@@ -1,0 +1,282 @@
+.zato-log-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: #1e1e1e;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.zato-log-viewer-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 4px 8px;
+    min-height: 0;
+}
+
+.zato-log-line {
+    white-space: pre;
+    line-height: 1.4;
+    padding: 1px 0;
+    border-left: 2px solid transparent;
+}
+
+.zato-log-line:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.zato-log-line-info {
+    border-left-color: #4fc3f7;
+}
+
+.zato-log-line-warning {
+    border-left-color: #ffb74d;
+}
+
+.zato-log-line-error {
+    border-left-color: #ef5350;
+}
+
+.zato-log-line-debug {
+    border-left-color: #81c784;
+}
+
+.zato-log-line-match {
+    background: rgba(255, 213, 79, 0.15);
+}
+
+.zato-log-line-current-match {
+    background: rgba(255, 213, 79, 0.35);
+}
+
+.zato-log-timestamp {
+    color: #888;
+}
+
+.zato-log-separator {
+    color: #555;
+}
+
+.zato-log-level {
+    font-weight: 600;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.zato-log-level-info {
+    color: #4fc3f7;
+}
+
+.zato-log-level-warning {
+    color: #ffb74d;
+}
+
+.zato-log-level-error {
+    color: #ef5350;
+}
+
+.zato-log-level-debug {
+    color: #81c784;
+}
+
+.zato-log-pid {
+    color: #b39ddb;
+}
+
+.zato-log-thread {
+    color: #9fa8da;
+}
+
+.zato-log-logger {
+    color: #80cbc4;
+}
+
+.zato-log-message {
+    color: #e0e0e0;
+}
+
+.zato-log-viewer-actionbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: #252526;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.zato-log-viewer-actionbar-left,
+.zato-log-viewer-actionbar-center,
+.zato-log-viewer-actionbar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.zato-log-viewer-actionbar-left {
+    flex-shrink: 0;
+}
+
+.zato-log-viewer-actionbar-center {
+    flex: 1;
+    justify-content: center;
+}
+
+.zato-log-viewer-actionbar-right {
+    flex-shrink: 0;
+}
+
+.zato-log-viewer-button {
+    background: #3c3c3c;
+    border: 1px solid #555;
+    border-radius: 3px;
+    color: #ccc;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+}
+
+.zato-log-viewer-button:hover {
+    background: #4a4a4a;
+    border-color: #666;
+}
+
+.zato-log-viewer-button:active {
+    background: #555;
+}
+
+.zato-log-viewer-icon-play {
+    width: 0;
+    height: 0;
+    border-left: 8px solid #4fc3f7;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+}
+
+.zato-log-viewer-icon-stop {
+    width: 8px;
+    height: 8px;
+    background: #ef5350;
+    border-radius: 1px;
+}
+
+.zato-log-viewer-icon-clear {
+    width: 10px;
+    height: 10px;
+    position: relative;
+}
+
+.zato-log-viewer-icon-clear::before,
+.zato-log-viewer-icon-clear::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 2px;
+    background: #ccc;
+    top: 50%;
+    left: 50%;
+}
+
+.zato-log-viewer-icon-clear::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.zato-log-viewer-icon-clear::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.zato-log-viewer-search-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zato-log-viewer-search {
+    background: #3c3c3c;
+    border: 1px solid #555;
+    border-radius: 3px;
+    color: #e0e0e0;
+    padding: 4px 8px;
+    font-size: 12px;
+    width: 200px;
+    outline: none;
+}
+
+.zato-log-viewer-search:focus {
+    border-color: #4fc3f7;
+    box-shadow: 0 0 0 1px rgba(79, 195, 247, 0.3);
+}
+
+.zato-log-viewer-search::placeholder {
+    color: #777;
+}
+
+.zato-log-viewer-search-count {
+    color: #888;
+    font-size: 11px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.zato-log-viewer-search-prev,
+.zato-log-viewer-search-next {
+    font-size: 8px;
+    min-width: 20px;
+    padding: 4px;
+}
+
+.zato-log-viewer-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zato-log-viewer-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #aaa;
+}
+
+.zato-log-viewer-filter-label input {
+    cursor: pointer;
+}
+
+.zato-log-viewer-time-picker {
+    display: flex;
+    align-items: center;
+}
+
+.zato-log-viewer-time-select {
+    background: #3c3c3c;
+    border: 1px solid #555;
+    border-radius: 3px;
+    color: #e0e0e0;
+    padding: 4px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+}
+
+.zato-log-viewer-time-select:hover {
+    border-color: #666;
+}
+
+.zato-log-viewer-time-select:focus {
+    border-color: #4fc3f7;
+}
+
+.zato-log-viewer-time-select option {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}

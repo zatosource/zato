@@ -22,6 +22,7 @@ from zato.admin.web.views.ide import complete as ide_complete
 from zato.admin.web.views.ide import explorer as ide_explorer
 from zato.admin.web.views.ide import zato_debug as ide_debug
 from zato.admin.web.views.ide import lint as ide_lint
+from zato.admin.web.views.ide import logs as ide_logs
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -1041,6 +1042,13 @@ urlpatterns += [
         login_required(ide_explorer.read_file), name='ide-explorer-read'),
     url(r'^zato/ide/explorer/download/$',
         login_required(ide_explorer.download_file), name='ide-explorer-download'),
+
+    # IDE log viewer
+
+    url(r'^zato/ide/logs/stream/$',
+        login_required(ide_logs.stream_logs), name='ide-logs-stream'),
+    url(r'^zato/ide/logs/history/$',
+        login_required(ide_logs.get_log_history), name='ide-logs-history'),
 ]
 
 # ################################################################################################################################

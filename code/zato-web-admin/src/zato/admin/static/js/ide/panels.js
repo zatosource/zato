@@ -245,13 +245,13 @@
             });
 
             var defaultTabs = [
-                { id: 'tab-1', title: 'Tab 1' },
-                { id: 'tab-2', title: 'Tab 2' },
-                { id: 'tab-3', title: 'Tab 3' }
+                { id: 'logs-server', title: 'Server logs', type: 'logs', filePath: '~/env/qs-1/server1/logs/server.log' },
+                { id: 'logs-http', title: 'HTTP access', type: 'logs', filePath: '~/env/qs-1/server1/logs/http_access.log' },
+                { id: 'console-1', title: 'Console', type: 'console' }
             ];
 
             instance.bottomPanel1TabsManager.tabs = defaultTabs;
-            instance.bottomPanel1TabsManager.activeTabId = 'tab-1';
+            instance.bottomPanel1TabsManager.activeTabId = 'logs-server';
             instance.bottomPanel1TabsManager.allowCloseLastTab = false;
 
             ZatoTabsRenderer.render(instance.bottomPanel1TabsManager, tabsContainer, {
@@ -379,7 +379,31 @@
             if (!contentContainer || !tab) {
                 return;
             }
-            contentContainer.innerHTML = '<div class="zato-ide-bottom-panel-1-tab-name">' + tab.title + '</div>';
+
+            if (instance.currentLogViewer) {
+                ZatoLogViewer.destroy(instance.currentLogViewer);
+                instance.currentLogViewer = null;
+            }
+
+            contentContainer.innerHTML = '';
+
+            if (tab.type === 'logs' && tab.filePath) {
+                var logViewerId = instance.id + '-log-viewer-' + tab.id;
+                var logViewerDiv = document.createElement('div');
+                logViewerDiv.id = logViewerId;
+                logViewerDiv.style.width = '100%';
+                logViewerDiv.style.height = '100%';
+                contentContainer.appendChild(logViewerDiv);
+
+                instance.currentLogViewer = logViewerId;
+                ZatoLogViewer.create(logViewerId, {
+                    filePath: tab.filePath
+                });
+            } else if (tab.type === 'console') {
+                contentContainer.innerHTML = '<div class="zato-ide-bottom-panel-1-console">Console output will appear here</div>';
+            } else {
+                contentContainer.innerHTML = '<div class="zato-ide-bottom-panel-1-tab-name">' + tab.title + '</div>';
+            }
         },
 
         toggleBottomPanel1: function(instance) {
