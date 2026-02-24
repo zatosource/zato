@@ -44,6 +44,17 @@
                 if (e.key === 'Control' && !instance.ctrlPressed) {
                     instance.ctrlPressed = true;
                     editor.container.classList.add('zato-ctrl-hover-mode');
+                    console.log('[Definition] keydown Ctrl, added zato-ctrl-hover-mode, classList:', editor.container.classList.toString());
+
+                    if (instance.lastMousePos) {
+                        var pos = instance.lastMousePos;
+                        var token = editor.session.getTokenAt(pos.row, pos.column);
+                        console.log('[Definition] keydown: checking lastMousePos:', JSON.stringify(pos), 'token:', token ? token.value : 'null');
+                        if (token && self.isNavigableToken(token)) {
+                            self.showHoverHighlight(editor, instance, pos.row, token);
+                            self.prefetchDefinition(editor, instance, pos.row + 1, token.start);
+                        }
+                    }
                 }
             });
 
@@ -51,17 +62,22 @@
                 if (e.key === 'Control') {
                     instance.ctrlPressed = false;
                     editor.container.classList.remove('zato-ctrl-hover-mode');
+                    console.log('[Definition] keyup Ctrl, removed zato-ctrl-hover-mode, classList:', editor.container.classList.toString());
                     self.clearHoverHighlight(editor, instance);
                 }
             });
 
             editor.container.addEventListener('mousemove', function(e) {
+                var pos = editor.renderer.screenToTextCoordinates(e.clientX, e.clientY);
+                instance.lastMousePos = pos;
+
                 if (!instance.ctrlPressed) {
                     return;
                 }
 
-                var pos = editor.renderer.screenToTextCoordinates(e.clientX, e.clientY);
                 var token = editor.session.getTokenAt(pos.row, pos.column);
+
+                console.log('[Definition] mousemove with Ctrl, pos:', JSON.stringify(pos), 'token:', token ? JSON.stringify({type: token.type, value: token.value, start: token.start}) : 'null', 'isNavigable:', token ? self.isNavigableToken(token) : false);
 
                 if (token && self.isNavigableToken(token)) {
                     self.showHoverHighlight(editor, instance, pos.row, token);
@@ -94,6 +110,7 @@
             var self = this;
 
             if (instance.hoverRow === row && instance.hoverTokenStart === token.start) {
+                console.log('[Definition] showHoverHighlight: same row/token, skipping');
                 return;
             }
 
@@ -104,9 +121,12 @@
 
             var textLayer = editor.renderer.$textLayer;
             var lineElement = textLayer.element.children[row - editor.renderer.getFirstVisibleRow()];
+            console.log('[Definition] showHoverHighlight: row:', row, 'firstVisibleRow:', editor.renderer.getFirstVisibleRow(), 'lineElement:', lineElement ? 'found' : 'null');
+
             if (lineElement) {
                 var tokens = lineElement.querySelectorAll('span');
                 var charCount = 0;
+                var foundSpan = false;
                 for (var i = 0; i < tokens.length; i++) {
                     var span = tokens[i];
                     var spanText = span.textContent;
@@ -115,9 +135,14 @@
                     if (spanStart <= token.start && token.start < spanEnd) {
                         span.classList.add('ace_definition_hover_text');
                         instance.hoverTextElement = span;
+                        foundSpan = true;
+                        console.log('[Definition] showHoverHighlight: added class to span, text:', spanText, 'classList:', span.classList.toString());
                         break;
                     }
                     charCount = spanEnd;
+                }
+                if (!foundSpan) {
+                    console.log('[Definition] showHoverHighlight: no matching span found, token.start:', token.start, 'total chars:', charCount);
                 }
             }
         },
