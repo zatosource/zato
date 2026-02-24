@@ -37,7 +37,7 @@
                     self.closeIDETab();
                     return false;
                 }
-                if ((e.ctrlKey || e.metaKey) && (e.key === 't' || e.key === 'T')) {
+                if ((e.ctrlKey || e.metaKey) && e.key === ']') {
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();

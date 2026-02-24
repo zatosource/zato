@@ -196,6 +196,10 @@
             if (existingGutter) {
                 console.log('[DebuggerIDE] setupGutter: found existing gutter instance=' + existingGutter.id);
                 instance.gutterHandler = existingGutter;
+                if (instance.debugger) {
+                    console.log('[DebuggerIDE] setupGutter: attaching debugger to existing gutter');
+                    ZatoDebuggerGutter.attachDebugger(existingGutter, instance.debugger);
+                }
                 return;
             }
 
