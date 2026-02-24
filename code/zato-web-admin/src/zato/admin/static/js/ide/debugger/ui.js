@@ -122,11 +122,7 @@
         restoreConnectingState: function(instance) {
             console.log('[DebuggerUI] restoreConnectingState: START');
 
-            var indicator = instance.container.querySelector('.zato-debugger-connecting-indicator');
-            if (indicator) {
-                indicator.textContent = 'Connecting ..';
-                indicator.classList.add('pulsating');
-            }
+            this.updateStatusIndicator(instance);
 
             if (instance.elements) {
                 this.setButtonEnabled(instance.elements.continueBtn, false);
@@ -214,10 +210,11 @@
 
             this.startConnectingCountdown(instance);
 
-            var indicator = instance.container.querySelector('.zato-debugger-connecting-indicator');
+            var indicator = instance.container.querySelector('.zato-debugger-status-indicator');
             if (indicator) {
                 indicator.textContent = 'Connecting ..';
-                indicator.classList.add('pulsating');
+                indicator.classList.remove('not-connected', 'connected');
+                indicator.classList.add('connecting');
             }
 
             if (instance.elements) {
@@ -280,12 +277,7 @@
             instance.isConnecting = false;
             this.stopConnectingCountdown(instance);
 
-            var indicator = instance.container.querySelector('.zato-debugger-connecting-indicator');
-            if (indicator) {
-                indicator.textContent = '';
-                indicator.classList.remove('pulsating');
-            }
-
+            this.updateStatusIndicator(instance);
             this.updateToolbarState(instance);
         },
 
@@ -295,8 +287,27 @@
                 return;
             }
             instance.isConnected = connected;
+            this.updateStatusIndicator(instance);
             this.updatePanelsVisibility(instance);
             this.updateToolbarState(instance);
+        },
+
+        updateStatusIndicator: function(instance) {
+            var indicator = instance.container.querySelector('.zato-debugger-status-indicator');
+            if (!indicator) {
+                return;
+            }
+            indicator.classList.remove('not-connected', 'connected', 'connecting');
+            if (instance.isConnecting) {
+                indicator.textContent = 'Connecting ..';
+                indicator.classList.add('connecting');
+            } else if (instance.isConnected) {
+                indicator.textContent = 'Connected';
+                indicator.classList.add('connected');
+            } else {
+                indicator.textContent = 'Not connected';
+                indicator.classList.add('not-connected');
+            }
         },
 
         updatePanelsVisibility: function(instance) {

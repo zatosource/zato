@@ -113,7 +113,7 @@
         html += '</div>';
         html += '</div>';
         html += '<div class="zato-debugger-toolbar-right">';
-        html += '<span class="zato-debugger-connecting-indicator"></span>';
+        html += '<span class="zato-debugger-status-indicator not-connected">Not connected</span>';
         html += '</div>';
         html += '</div>';
         return html;

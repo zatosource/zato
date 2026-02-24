@@ -45,13 +45,27 @@
     gap: 2px;
 }
 
-.zato-debugger-connecting-indicator {
-    font-size: 12px;
-    color: #a0a0a0;
+.zato-debugger-status-indicator {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    transition: opacity 140ms ease-in-out, background-color 140ms ease-in-out, color 140ms ease-in-out;
 }
 
-.zato-debugger-connecting-indicator.pulsating {
-    animation: zato-debugger-pulse 1.2s ease-in-out infinite;
+.zato-debugger-status-indicator.not-connected {
+    background-color: rgba(80, 80, 80, 0.4);
+    color: #888;
+}
+
+.zato-debugger-status-indicator.connected {
+    background-color: rgba(50, 205, 50, 0.15);
+    color: rgb(50, 205, 50);
+}
+
+.zato-debugger-status-indicator.connecting {
+    background-color: rgba(80, 80, 80, 0.4);
+    color: #a0a0a0;
+    animation: zato-debugger-pulse 0.7s ease-in-out infinite;
 }
 
 @keyframes zato-debugger-pulse {
