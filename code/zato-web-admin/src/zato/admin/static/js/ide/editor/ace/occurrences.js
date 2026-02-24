@@ -73,12 +73,16 @@
 
             self.clearOccurrenceHighlights(editor, instance);
 
+            console.log('[highlightOccurrences] adding', occurrences.length, 'markers, clickedRow:', clickedRow, 'clickedColumn:', clickedColumn);
+
             for (var i = 0; i < occurrences.length; i++) {
                 var occ = occurrences[i];
                 var range = new Range(occ.line - 1, occ.column, occ.line - 1, occ.column + occ.length);
 
                 var isPrimary = (occ.line - 1 === clickedRow && occ.column === clickedColumn);
                 var markerClass = isPrimary ? 'ace_occurrence_primary' : 'ace_occurrence_secondary';
+
+                console.log('[highlightOccurrences] marker', i, 'line:', occ.line, 'col:', occ.column, 'isPrimary:', isPrimary, 'class:', markerClass);
 
                 var markerId = editor.session.addMarker(range, markerClass, 'text', true);
 
