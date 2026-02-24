@@ -253,7 +253,6 @@
 
             var definition = self.findDefinition(instance, name, cursorLine);
             if (!definition) {
-                console.log('[findAllOccurrences] no definition found');
                 return occurrences;
             }
 
@@ -265,8 +264,6 @@
             } else if (definition.type === 'class' || definition.type === 'function' || definition.type === 'import') {
                 defScope = 'module';
             }
-
-            console.log('[findAllOccurrences] defScope:', defScope, 'definition:', JSON.stringify(definition));
 
             var currentClass = null;
             var currentClassIndent = -1;
@@ -297,9 +294,6 @@
                 }
 
                 if (funcMatch) {
-                    if (funcMatch[1] === 'client_json_error') {
-                        console.log('[findAllOccurrences] DETECTED client_json_error at line', lineNum, 'indent:', indent);
-                    }
                     currentFunction = funcMatch[1];
                     currentFunctionIndent = indent;
                 }
@@ -316,10 +310,6 @@
                     isInScope = true;
                 } else if (defScope === lineScope) {
                     isInScope = true;
-                }
-
-                if (lineNum === 130 || lineNum === 131 || lineNum === 132) {
-                    console.log('[findAllOccurrences] line', lineNum, 'lineScope:', lineScope, 'defScope:', defScope, 'isInScope:', isInScope, 'currentFunction:', currentFunction);
                 }
 
                 if (!isInScope) {

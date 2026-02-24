@@ -8,18 +8,8 @@
         markerIds: {},
 
         create: function(aceEditor, debuggerInstance, options) {
-            console.log('[Gutter] create: START');
-            console.log('[Gutter] create: aceEditor=' + (aceEditor ? 'exists' : 'null'));
-            console.log('[Gutter] create: aceEditor.container.id=' + (aceEditor && aceEditor.container ? aceEditor.container.id : 'N/A'));
-            console.log('[Gutter] create: debuggerInstance=' + (debuggerInstance ? 'exists' : 'null'));
-            console.log('[Gutter] create: options=' + JSON.stringify(options));
-            console.log('[Gutter] create: existing instances=' + JSON.stringify(Object.keys(this.instances)));
-            console.log('[Gutter] create: stack trace=', new Error().stack);
-
             var instanceId = 'gutter-' + Date.now();
-
             var loadedBreakpoints = this.loadBreakpointsFromStorage();
-            console.log('[Gutter] create: loadedBreakpoints=' + JSON.stringify(loadedBreakpoints));
 
             var instance = {
                 id: instanceId,
@@ -33,37 +23,19 @@
 
             this.instances[instanceId] = instance;
             this.bindEvents(instance);
-            console.log('[Gutter] create: calling updateBreakpointMarkers');
             this.updateBreakpointMarkers(instance);
 
             var self = this;
             var renderCount = 0;
             aceEditor.renderer.on('afterRender', function onRender() {
                 renderCount++;
-                console.log('[Gutter] afterRender #' + renderCount + ': fired');
                 var gutterCells = aceEditor.renderer.$gutterLayer.element.querySelectorAll('.ace_gutter-cell');
-                console.log('[Gutter] afterRender #' + renderCount + ': gutterCells.length=' + gutterCells.length);
-
-                var gutterElement = aceEditor.renderer.$gutterLayer.element;
-                var gutterRect = gutterElement.getBoundingClientRect();
-                console.log('[Gutter] afterRender #' + renderCount + ': gutter left=' + gutterRect.left + ' width=' + gutterRect.width);
-
-                for (var i = 0; i < gutterCells.length; i++) {
-                    if (gutterCells[i].classList.contains('ace_breakpoint')) {
-                        var style = window.getComputedStyle(gutterCells[i]);
-                        var cellRect = gutterCells[i].getBoundingClientRect();
-                        console.log('[Gutter] afterRender #' + renderCount + ': cell[' + i + '] has breakpoint, bg-pos=' + style.backgroundPosition + ' cellLeft=' + cellRect.left + ' cellWidth=' + cellRect.width);
-                    }
-                }
 
                 if (gutterCells.length > 1 && renderCount === 1) {
-                    console.log('[Gutter] afterRender: first render with cells, calling updateBreakpointMarkers');
                     self.updateBreakpointMarkers(instance);
                     self.setupMutationObserver(instance);
                 }
             });
-
-            console.log('[Gutter] create: END, instanceId=' + instanceId);
             return instance;
         },
 
@@ -89,16 +61,11 @@
         },
 
         bindEvents: function(instance) {
-            console.log('[Gutter] bindEvents: START instance.id=' + instance.id);
             var self = this;
             var editor = instance.editor;
             var gutter = editor.renderer.$gutter;
-            console.log('[Gutter] bindEvents: gutter element=' + (gutter ? 'exists' : 'null'));
-            console.log('[Gutter] bindEvents: gutter.id=' + (gutter ? gutter.id : 'N/A'));
-            console.log('[Gutter] bindEvents: gutter existing listeners=' + (gutter._zatoGutterBound ? 'YES ALREADY BOUND' : 'no'));
 
             if (gutter._zatoGutterBound) {
-                console.log('[Gutter] bindEvents: SKIPPING - already bound');
                 return;
             }
             gutter._zatoGutterBound = true;
@@ -110,7 +77,6 @@
             }, true);
 
             gutter.addEventListener('click', function(e) {
-                console.log('[Gutter] click event fired, instance.id=' + instance.id);
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
