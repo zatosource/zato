@@ -247,3 +247,15 @@
 .zato-ctrl-hover-mode .ace_content {
     cursor: pointer;
 }
+
+.ace-zato-dark .ace_marker-layer .ace_occurrence_primary {
+    position: absolute;
+    background-color: rgba(255, 180, 50, 0.35);
+    border-radius: 2px;
+}
+
+.ace-zato-dark .ace_marker-layer .ace_occurrence_secondary {
+    position: absolute;
+    background-color: rgba(255, 213, 79, 0.25);
+    border-radius: 2px;
+}

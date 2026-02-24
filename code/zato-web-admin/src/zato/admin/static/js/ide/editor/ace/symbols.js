@@ -13,6 +13,7 @@
                 functions: {},
                 variables: {},
                 imports: {},
+                occurrences: {},
                 parseTimeout: null
             };
 
@@ -46,6 +47,7 @@
             instance.localSymbols.functions = {};
             instance.localSymbols.variables = {};
             instance.localSymbols.imports = {};
+            instance.localSymbols.occurrences = {};
 
             var currentClass = null;
             var currentClassIndent = -1;
@@ -241,6 +243,112 @@
             }
 
             return bestMatch;
+        },
+
+        findAllOccurrences: function(editor, instance, name, cursorLine) {
+            var self = this;
+            var content = editor.getValue();
+            var lines = content.split('\n');
+            var occurrences = [];
+
+            var definition = self.findDefinition(instance, name, cursorLine);
+            if (!definition) {
+                console.log('[findAllOccurrences] no definition found');
+                return occurrences;
+            }
+
+            var defScope = null;
+            if (definition.scope === 'local') {
+                defScope = (definition.class ? definition.class + '.' : '') + definition.function;
+            } else if (definition.scope === 'module') {
+                defScope = 'module';
+            } else if (definition.type === 'class' || definition.type === 'function' || definition.type === 'import') {
+                defScope = 'module';
+            }
+
+            console.log('[findAllOccurrences] defScope:', defScope, 'definition:', JSON.stringify(definition));
+
+            var currentClass = null;
+            var currentClassIndent = -1;
+            var currentFunction = null;
+            var currentFunctionIndent = -1;
+
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                var lineNum = i + 1;
+                var indent = self.getIndent(line);
+                var trimmed = line.trim();
+
+                var classMatch = trimmed.match(/^class\s+([A-Za-z_][A-Za-z0-9_]*)/);
+                var funcMatch = trimmed.match(/^(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)/);
+
+                if (trimmed && indent <= currentClassIndent && !classMatch) {
+                    currentClass = null;
+                    currentClassIndent = -1;
+                }
+                if (trimmed && indent <= currentFunctionIndent && !funcMatch) {
+                    currentFunction = null;
+                    currentFunctionIndent = -1;
+                }
+
+                if (classMatch) {
+                    currentClass = classMatch[1];
+                    currentClassIndent = indent;
+                }
+
+                if (funcMatch) {
+                    if (funcMatch[1] === 'client_json_error') {
+                        console.log('[findAllOccurrences] DETECTED client_json_error at line', lineNum, 'indent:', indent);
+                    }
+                    currentFunction = funcMatch[1];
+                    currentFunctionIndent = indent;
+                }
+
+                var lineScope = null;
+                if (currentFunction) {
+                    lineScope = (currentClass ? currentClass + '.' : '') + currentFunction;
+                } else {
+                    lineScope = 'module';
+                }
+
+                var isInScope = false;
+                if (defScope === 'module') {
+                    isInScope = true;
+                } else if (defScope === lineScope) {
+                    isInScope = true;
+                }
+
+                if (lineNum === 130 || lineNum === 131 || lineNum === 132) {
+                    console.log('[findAllOccurrences] line', lineNum, 'lineScope:', lineScope, 'defScope:', defScope, 'isInScope:', isInScope, 'currentFunction:', currentFunction);
+                }
+
+                if (!isInScope) {
+                    continue;
+                }
+
+                var regex = new RegExp('\\b' + name + '\\b', 'g');
+                var match;
+                while ((match = regex.exec(line)) !== null) {
+                    var col = match.index;
+                    var beforeChar = col > 0 ? line.charAt(col - 1) : '';
+                    var afterChar = col + name.length < line.length ? line.charAt(col + name.length) : '';
+
+                    if (beforeChar === '.' || beforeChar === '\'' || beforeChar === '"') {
+                        continue;
+                    }
+                    if (afterChar === '(' && definition.type !== 'function' && definition.type !== 'class') {
+                        continue;
+                    }
+
+                    occurrences.push({
+                        line: lineNum,
+                        column: col,
+                        length: name.length
+                    });
+                }
+            }
+
+            return occurrences;
         }
 
     };
