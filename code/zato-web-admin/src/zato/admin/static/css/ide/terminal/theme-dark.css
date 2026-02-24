@@ -1,0 +1,54 @@
+.zato-terminal-container {
+    width: 100%;
+    height: 100%;
+    background-color: #1e1e1e;
+    overflow: hidden;
+}
+
+.zato-terminal-xterm {
+    width: 100%;
+    height: 100%;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.zato-terminal-xterm .xterm {
+    height: 100%;
+}
+
+.zato-terminal-xterm .xterm-viewport {
+    background-color: #1e1e1e !important;
+}
+
+.zato-terminal-xterm .xterm-screen {
+    height: 100%;
+}
+
+.zato-terminal-xterm .xterm-cursor-layer {
+    z-index: 1;
+}
+
+.zato-terminal-xterm .xterm-selection div {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.zato-terminal-xterm .xterm-rows {
+    color: #d4d4d4;
+}
+
+.zato-terminal-xterm .xterm-viewport::-webkit-scrollbar {
+    width: 10px;
+}
+
+.zato-terminal-xterm .xterm-viewport::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.zato-terminal-xterm .xterm-viewport::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 5px;
+}
+
+.zato-terminal-xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+    background: #555555;
+}

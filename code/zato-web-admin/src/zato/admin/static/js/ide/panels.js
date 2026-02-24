@@ -247,7 +247,7 @@
             var defaultTabs = [
                 { id: 'logs-server', title: 'Server logs', type: 'logs', filePath: '~/env/qs-1/server1/logs/server.log' },
                 { id: 'logs-http', title: 'HTTP access', type: 'logs', filePath: '~/env/qs-1/server1/logs/http_access.log' },
-                { id: 'console-1', title: 'Console', type: 'console' }
+                { id: 'terminal-1', title: 'Terminal', type: 'terminal' }
             ];
 
             instance.bottomPanel1TabsManager.tabs = defaultTabs;
@@ -385,6 +385,11 @@
                 instance.currentLogViewer = null;
             }
 
+            if (instance.currentTerminal && typeof ZatoTerminal !== 'undefined') {
+                ZatoTerminal.destroy(instance.currentTerminal);
+                instance.currentTerminal = null;
+            }
+
             contentContainer.innerHTML = '';
 
             if (tab.type === 'logs' && tab.filePath) {
@@ -399,8 +404,18 @@
                 ZatoLogViewer.create(logViewerId, {
                     filePath: tab.filePath
                 });
-            } else if (tab.type === 'console') {
-                contentContainer.innerHTML = '<div class="zato-ide-bottom-panel-1-console">Console output will appear here</div>';
+            } else if (tab.type === 'terminal') {
+                var terminalId = instance.id + '-terminal-' + tab.id;
+                var terminalDiv = document.createElement('div');
+                terminalDiv.id = terminalId;
+                terminalDiv.style.width = '100%';
+                terminalDiv.style.height = '100%';
+                contentContainer.appendChild(terminalDiv);
+
+                if (typeof ZatoTerminal !== 'undefined') {
+                    instance.currentTerminal = terminalId;
+                    ZatoTerminal.create(terminalId, {});
+                }
             } else {
                 contentContainer.innerHTML = '<div class="zato-ide-bottom-panel-1-tab-name">' + tab.title + '</div>';
             }

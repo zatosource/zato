@@ -23,6 +23,7 @@ from zato.admin.web.views.ide import explorer as ide_explorer
 from zato.admin.web.views.ide import zato_debug as ide_debug
 from zato.admin.web.views.ide import lint as ide_lint
 from zato.admin.web.views.ide import logs as ide_logs
+from zato.admin.web.views.ide import terminal as ide_terminal
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -1049,6 +1050,19 @@ urlpatterns += [
         login_required(ide_logs.stream_logs), name='ide-logs-stream'),
     url(r'^zato/ide/logs/history/$',
         login_required(ide_logs.get_log_history), name='ide-logs-history'),
+
+    # IDE terminal
+
+    url(r'^zato/ide/terminal/create/$',
+        login_required(ide_terminal.terminal_create), name='ide-terminal-create'),
+    url(r'^zato/ide/terminal/write/$',
+        login_required(ide_terminal.terminal_write), name='ide-terminal-write'),
+    url(r'^zato/ide/terminal/resize/$',
+        login_required(ide_terminal.terminal_resize), name='ide-terminal-resize'),
+    url(r'^zato/ide/terminal/close/$',
+        login_required(ide_terminal.terminal_close), name='ide-terminal-close'),
+    url(r'^zato/ide/terminal/stream/$',
+        login_required(ide_terminal.terminal_stream), name='ide-terminal-stream'),
 ]
 
 # ################################################################################################################################
