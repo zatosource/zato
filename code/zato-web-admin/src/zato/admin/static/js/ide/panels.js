@@ -274,6 +274,80 @@
             });
 
             this.updateBottomPanel1Content(instance, defaultTabs[0]);
+            this.initBottomPanel1Resizer(instance);
+        },
+
+        initBottomPanel1Resizer: function(instance) {
+            var self = this;
+            var resizer = document.getElementById(instance.id + '-bottom-panel-1-resizer');
+            var panelContainer = document.getElementById(instance.id + '-bottom-panel-1');
+
+            if (!resizer || !panelContainer) {
+                return;
+            }
+
+            var savedHeight = localStorage.getItem('zato.ide.bottomPanel1Height');
+            if (savedHeight) {
+                panelContainer.style.height = savedHeight + 'px';
+            }
+
+            var isDragging = false;
+            var startY = 0;
+            var startHeight = 0;
+
+            resizer.addEventListener('mousedown', function(e) {
+                if (panelContainer.classList.contains('collapsed')) {
+                    return;
+                }
+                e.preventDefault();
+                isDragging = true;
+                startY = e.clientY;
+                startHeight = panelContainer.offsetHeight;
+                resizer.classList.add('dragging');
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) {
+                    return;
+                }
+
+                var deltaY = startY - e.clientY;
+                var newHeight = startHeight + deltaY;
+
+                var minHeight = 100;
+                var maxHeight = 500;
+
+                if (newHeight < minHeight) {
+                    newHeight = minHeight;
+                }
+                if (newHeight > maxHeight) {
+                    newHeight = maxHeight;
+                }
+
+                panelContainer.style.height = newHeight + 'px';
+
+                if (instance.codeEditor && instance.codeEditor.aceEditor) {
+                    instance.codeEditor.aceEditor.resize();
+                }
+            });
+
+            document.addEventListener('mouseup', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    resizer.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+
+                    var currentHeight = panelContainer.offsetHeight;
+                    localStorage.setItem('zato.ide.bottomPanel1Height', currentHeight);
+
+                    if (instance.codeEditor && instance.codeEditor.aceEditor) {
+                        instance.codeEditor.aceEditor.resize();
+                    }
+                }
+            });
         },
 
         renderBottomPanel1Tabs: function(instance) {

@@ -21,6 +21,7 @@
             html += '</div></div>';
             html += '<div class="zato-ide-tabs-area"><div id="' + instance.id + '-tabs"></div></div>';
             html += '<div class="zato-ide-main-area" id="' + instance.id + '-main-split"></div>';
+            html += '<div class="zato-ide-bottom-panel-1-resizer" id="' + instance.id + '-bottom-panel-1-resizer"></div>';
             html += '<div class="zato-ide-bottom-panel-1" id="' + instance.id + '-bottom-panel-1">';
             html += '<div class="zato-ide-bottom-panel-1-tabs" id="' + instance.id + '-bottom-panel-1-tabs"></div>';
             html += '<div class="zato-ide-bottom-panel-1-content" id="' + instance.id + '-bottom-panel-1-content"></div>';
