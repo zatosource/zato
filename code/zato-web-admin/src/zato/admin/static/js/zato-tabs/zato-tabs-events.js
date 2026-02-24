@@ -23,6 +23,10 @@
             var self = this;
             callbacks = callbacks || {};
 
+            if (this.isTabDragging) {
+                return;
+            }
+
             this.unbind(containerElement);
 
             var clickHandler = function(e) {
