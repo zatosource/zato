@@ -23,10 +23,7 @@
             var self = this;
             callbacks = callbacks || {};
 
-            console.log('[ZatoTabsEvents] bind: containerElement=', containerElement, 'isTabDragging=', this.isTabDragging);
-
             if (this.isTabDragging) {
-                console.log('[ZatoTabsEvents] bind: skipping because isTabDragging=true');
                 return;
             }
 
@@ -130,16 +127,11 @@
         },
 
         handleMouseDown: function(e, containerElement, instance, callbacks) {
-            console.log('[ZatoTabsEvents] handleMouseDown: target=', e.target, 'containerElement=', containerElement);
             var tabElement = e.target.closest('.zato-tab');
-            console.log('[ZatoTabsEvents] handleMouseDown: tabElement=', tabElement);
             if (tabElement && containerElement.contains(tabElement) && !e.target.closest('.zato-tab-close')) {
-                console.log('[ZatoTabsEvents] handleMouseDown: tabElement found and contained');
                 if (tabElement.classList.contains('pinned') || tabElement.classList.contains('locked')) {
-                    console.log('[ZatoTabsEvents] handleMouseDown: tab is pinned or locked, returning');
                     return;
                 }
-                console.log('[ZatoTabsEvents] handleMouseDown: starting drag');
                 this.isTabDragging = true;
                 this.tabDragActivated = false;
                 this.draggedTabId = tabElement.getAttribute('data-tab-id');
@@ -154,10 +146,7 @@
                 this.tabDragOffsetX = e.clientX - tabRect.left;
                 this.tabDragOffsetY = e.clientY - tabRect.top;
 
-                console.log('[ZatoTabsEvents] handleMouseDown: draggedTabId=', this.draggedTabId);
                 e.preventDefault();
-            } else {
-                console.log('[ZatoTabsEvents] handleMouseDown: no valid tab found or not contained');
             }
         },
 
@@ -165,8 +154,6 @@
             if (!this.isTabDragging) {
                 return;
             }
-
-            console.log('[ZatoTabsEvents] handleMouseMove: isTabDragging=true, tabDragActivated=', this.tabDragActivated);
 
             if (!this.tabDragActivated) {
                 var dx = e.clientX - this.tabDragStartX;
@@ -176,7 +163,6 @@
                     return;
                 }
                 this.tabDragActivated = true;
-                console.log('[ZatoTabsEvents] handleMouseMove: drag threshold exceeded, activating drag');
                 var tabRect = this.draggedTabElement.getBoundingClientRect();
                 var clone = this.draggedTabElement.cloneNode(true);
                 clone.classList.add('dragging');
@@ -221,7 +207,6 @@
         },
 
         handleMouseUp: function(e, containerElement, instance, callbacks) {
-            console.log('[ZatoTabsEvents] handleMouseUp: isTabDragging=', this.isTabDragging, 'tabDragActivated=', this.tabDragActivated);
             if (!this.isTabDragging) {
                 return;
             }
@@ -243,8 +228,6 @@
                     var draggedTabIndex = this.getTabIndex(tabs, this.draggedTabId);
                     var targetIndex = this.pendingDropIndex;
 
-                    console.log('[ZatoTabsEvents] handleMouseUp: draggedTabIndex=', draggedTabIndex, 'targetIndex=', targetIndex);
-
                     if (draggedTabIndex !== -1 && targetIndex !== -1 && draggedTabIndex !== targetIndex) {
                         var draggedTab = tabs[draggedTabIndex];
                         var targetTab = tabs[targetIndex];
@@ -252,8 +235,6 @@
                         if (!draggedTab.pinned && !targetTab.pinned && !draggedTab.locked && !targetTab.locked) {
                             tabs[draggedTabIndex] = targetTab;
                             tabs[targetIndex] = draggedTab;
-
-                            console.log('[ZatoTabsEvents] handleMouseUp: swapped tabs');
 
                             if (callbacks.onReorder) {
                                 callbacks.onReorder(tabs);
