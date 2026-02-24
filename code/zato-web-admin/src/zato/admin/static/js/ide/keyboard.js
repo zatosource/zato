@@ -51,6 +51,20 @@
                     self.toggleSidePanelContent();
                     return false;
                 }
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    self.openSearch(false);
+                    return false;
+                }
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'h' || e.key === 'H')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    self.openSearch(true);
+                    return false;
+                }
             };
 
             document.addEventListener('keydown', handleCtrlW, true);
@@ -183,6 +197,31 @@
             }
 
             AIChatTabActions.closeTab(widget, core, core.activeTabId);
+        },
+
+        openSearch: function(isReplace) {
+            var ideInstance = null;
+            if (typeof ZatoIDE !== 'undefined' && ZatoIDE.instances) {
+                for (var key in ZatoIDE.instances) {
+                    ideInstance = ZatoIDE.instances[key];
+                    break;
+                }
+            }
+
+            if (!ideInstance) {
+                return;
+            }
+
+            if (typeof ZatoIDESearch === 'undefined') {
+                return;
+            }
+
+            var searchInstance = ZatoIDESearch.getInstance(ideInstance);
+            if (!searchInstance) {
+                searchInstance = ZatoIDESearch.create(ideInstance);
+            }
+
+            ZatoIDESearch.show(searchInstance, isReplace);
         },
 
         toggleSidePanelContent: function() {

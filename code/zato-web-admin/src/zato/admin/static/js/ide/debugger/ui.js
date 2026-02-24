@@ -371,7 +371,10 @@
             }
 
             instance.isConnecting = false;
+            instance.isConnected = false;
             this.stopConnectingCountdown(instance);
+
+            this.updateStatusIndicator(instance);
 
             var panelsContainer = instance.container.querySelector('.zato-debugger-panels');
             var consolePanel = instance.container.querySelector('.zato-debugger-console');

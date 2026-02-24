@@ -49,6 +49,8 @@
     font-size: 11px;
     padding: 2px 8px;
     border-radius: 3px;
+    min-width: 80px;
+    text-align: center;
     transition: opacity 140ms ease-in-out, background-color 140ms ease-in-out, color 140ms ease-in-out;
 }
 
@@ -69,8 +71,8 @@
 }
 
 @keyframes zato-debugger-pulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 1; }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
 }
 
 .zato-debugger-toolbar-separator {
