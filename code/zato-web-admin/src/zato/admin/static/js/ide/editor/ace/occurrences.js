@@ -19,7 +19,7 @@
                 var pos = editor.getCursorPosition();
                 var token = editor.session.getTokenAt(pos.row, pos.column);
 
-                if (!token || !self.isNavigableToken(token)) {
+                if (!token) {
                     return;
                 }
 
