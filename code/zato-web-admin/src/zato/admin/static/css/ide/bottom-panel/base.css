@@ -17,37 +17,6 @@
 .zato-ide-bottom-panel-1-tabs {
     flex-shrink: 0;
     background: #252526;
-    border-bottom: 1px solid #3c3c3c;
-}
-
-.zato-ide-bottom-panel-1-tabs-wrapper {
-    padding: 0;
-}
-
-.zato-ide-bottom-panel-1-tabs-wrapper .zato-tabs-container {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    padding: 0 8px;
-    height: 32px;
-}
-
-.zato-ide-bottom-panel-1-tabs-wrapper .zato-tab {
-    padding: 6px 16px;
-    font-size: 12px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    color: #888;
-    transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.zato-ide-bottom-panel-1-tabs-wrapper .zato-tab:hover {
-    color: #ccc;
-}
-
-.zato-ide-bottom-panel-1-tabs-wrapper .zato-tab.active {
-    color: #e0e0e0;
-    border-bottom-color: #0078d4;
 }
 
 .zato-ide-bottom-panel-1-content {

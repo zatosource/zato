@@ -256,17 +256,14 @@
 
             ZatoTabsRenderer.render(instance.bottomPanel1TabsManager, tabsContainer, {
                 theme: 'dark',
-                showAddButton: false,
-                showCloseButton: false,
+                showAddButton: true,
+                showCloseButton: true,
                 showPinIcon: false,
-                showLockIcon: false,
-                containerClass: 'zato-ide-bottom-panel-1-tabs-wrapper'
+                showLockIcon: false
             });
 
             ZatoTabsEvents.bind(tabsContainer, instance.bottomPanel1TabsManager, {
-                onTabChange: function(tabId) {
-                    instance.bottomPanel1TabsManager.activeTabId = tabId;
-                    var tab = ZatoTabsManager.getTabById(instance.bottomPanel1TabsManager, tabId);
+                onTabChange: function(tab) {
                     self.updateBottomPanel1Content(instance, tab);
                     self.renderBottomPanel1Tabs(instance);
                 },
@@ -286,16 +283,13 @@
             }
             ZatoTabsRenderer.render(instance.bottomPanel1TabsManager, tabsContainer, {
                 theme: 'dark',
-                showAddButton: false,
-                showCloseButton: false,
+                showAddButton: true,
+                showCloseButton: true,
                 showPinIcon: false,
-                showLockIcon: false,
-                containerClass: 'zato-ide-bottom-panel-1-tabs-wrapper'
+                showLockIcon: false
             });
             ZatoTabsEvents.bind(tabsContainer, instance.bottomPanel1TabsManager, {
-                onTabChange: function(tabId) {
-                    instance.bottomPanel1TabsManager.activeTabId = tabId;
-                    var tab = ZatoTabsManager.getTabById(instance.bottomPanel1TabsManager, tabId);
+                onTabChange: function(tab) {
                     ZatoIDEPanels.updateBottomPanel1Content(instance, tab);
                     ZatoIDEPanels.renderBottomPanel1Tabs(instance);
                 },

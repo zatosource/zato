@@ -23,7 +23,10 @@
             var self = this;
             callbacks = callbacks || {};
 
+            console.log('[ZatoTabsEvents] bind: containerElement=', containerElement, 'isTabDragging=', this.isTabDragging);
+
             if (this.isTabDragging) {
+                console.log('[ZatoTabsEvents] bind: skipping because isTabDragging=true');
                 return;
             }
 
@@ -39,10 +42,14 @@
                 self.handleMouseDown(e, containerElement, instance, callbacks);
             };
             var mouseMoveHandler = function(e) {
-                self.handleMouseMove(e, containerElement, instance, callbacks);
+                if (self.isTabDragging) {
+                    self.handleMouseMove(e, self.currentContainerElement, self.currentInstance, self.currentCallbacks);
+                }
             };
             var mouseUpHandler = function(e) {
-                self.handleMouseUp(e, containerElement, instance, callbacks);
+                if (self.isTabDragging) {
+                    self.handleMouseUp(e, self.currentContainerElement, self.currentInstance, self.currentCallbacks);
+                }
             };
             var docClickHandler = function(e) {
                 if (self.contextMenu && !self.contextMenu.contains(e.target)) {
@@ -123,11 +130,16 @@
         },
 
         handleMouseDown: function(e, containerElement, instance, callbacks) {
+            console.log('[ZatoTabsEvents] handleMouseDown: target=', e.target, 'containerElement=', containerElement);
             var tabElement = e.target.closest('.zato-tab');
+            console.log('[ZatoTabsEvents] handleMouseDown: tabElement=', tabElement);
             if (tabElement && containerElement.contains(tabElement) && !e.target.closest('.zato-tab-close')) {
+                console.log('[ZatoTabsEvents] handleMouseDown: tabElement found and contained');
                 if (tabElement.classList.contains('pinned') || tabElement.classList.contains('locked')) {
+                    console.log('[ZatoTabsEvents] handleMouseDown: tab is pinned or locked, returning');
                     return;
                 }
+                console.log('[ZatoTabsEvents] handleMouseDown: starting drag');
                 this.isTabDragging = true;
                 this.tabDragActivated = false;
                 this.draggedTabId = tabElement.getAttribute('data-tab-id');
@@ -135,12 +147,17 @@
                 this.tabDragStartX = e.clientX;
                 this.tabDragStartY = e.clientY;
                 this.currentInstance = instance;
+                this.currentContainerElement = containerElement;
+                this.currentCallbacks = callbacks;
 
                 var tabRect = tabElement.getBoundingClientRect();
                 this.tabDragOffsetX = e.clientX - tabRect.left;
                 this.tabDragOffsetY = e.clientY - tabRect.top;
 
+                console.log('[ZatoTabsEvents] handleMouseDown: draggedTabId=', this.draggedTabId);
                 e.preventDefault();
+            } else {
+                console.log('[ZatoTabsEvents] handleMouseDown: no valid tab found or not contained');
             }
         },
 
@@ -148,6 +165,8 @@
             if (!this.isTabDragging) {
                 return;
             }
+
+            console.log('[ZatoTabsEvents] handleMouseMove: isTabDragging=true, tabDragActivated=', this.tabDragActivated);
 
             if (!this.tabDragActivated) {
                 var dx = e.clientX - this.tabDragStartX;
@@ -157,6 +176,7 @@
                     return;
                 }
                 this.tabDragActivated = true;
+                console.log('[ZatoTabsEvents] handleMouseMove: drag threshold exceeded, activating drag');
                 var tabRect = this.draggedTabElement.getBoundingClientRect();
                 var clone = this.draggedTabElement.cloneNode(true);
                 clone.classList.add('dragging');
@@ -206,6 +226,7 @@
         },
 
         handleMouseUp: function(e, containerElement, instance, callbacks) {
+            console.log('[ZatoTabsEvents] handleMouseUp: isTabDragging=', this.isTabDragging, 'tabDragActivated=', this.tabDragActivated);
             if (!this.isTabDragging) {
                 return;
             }
