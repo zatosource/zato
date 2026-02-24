@@ -30,17 +30,12 @@
             html += '</div>';
             instance.container.innerHTML = html;
 
-            console.log('[ZatoIDE] render: container set, initializing main split');
             ZatoIDEPanels.initMainSplit(instance);
-            console.log('[ZatoIDE] render: main split initialized, initializing files');
             ZatoIDEEditorSetup.initFiles(instance);
-            console.log('[ZatoIDE] render: files initialized, initializing code editor');
             ZatoIDEEditorSetup.initCodeEditor(instance);
-            console.log('[ZatoIDE] render: code editor initialized');
 
             ZatoIDEDropdowns.initDropdowns(instance);
 
-            console.log('[ZatoIDE] render: initializing tabs');
             ZatoIDETabs.initTabs(instance);
 
             ZatoIDEPanels.loadSearchIcon(instance);
@@ -52,10 +47,8 @@
 
             var activeTab = ZatoIDEEditorSetup.getActiveTab(instance);
             if (activeTab && activeTab.title) {
-                console.log('[ZatoIDE] render: switching to initial file ' + activeTab.title);
                 ZatoIDEEditorSetup.switchToFile(instance, activeTab.title);
             }
-            console.log('[ZatoIDE] render: complete');
         },
 
         bindEvents: function(instance) {

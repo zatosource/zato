@@ -4,19 +4,11 @@
     var ZatoIDEPanels = {
 
         initMainSplit: function(instance) {
-            console.log('[ZatoIDE] initMainSplit: START');
             if (typeof ZatoIDESplit === 'undefined') {
-                console.log('[ZatoIDE] initMainSplit: ZatoIDESplit undefined, returning');
                 return;
             }
             var splitContainerId = instance.id + '-main-split';
-            console.log('[ZatoIDE] initMainSplit: splitContainerId=' + splitContainerId);
             var container = document.getElementById(splitContainerId);
-            console.log('[ZatoIDE] initMainSplit: container found=' + !!container);
-            if (container) {
-                console.log('[ZatoIDE] initMainSplit: container.innerHTML length=' + container.innerHTML.length);
-                console.log('[ZatoIDE] initMainSplit: container.children.length=' + container.children.length);
-            }
             instance.mainSplit = ZatoIDESplit.create(splitContainerId, {
                 storageKey: 'zato.ide.main-split-position',
                 defaultSplitPercent: 75,
@@ -26,22 +18,16 @@
                     }
                 }
             });
-            console.log('[ZatoIDE] initMainSplit: mainSplit created=' + !!instance.mainSplit);
             if (!instance.mainSplit) {
-                console.log('[ZatoIDE] initMainSplit: mainSplit is null, returning');
                 return;
             }
             var leftPanel = ZatoIDESplit.getLeftPanel(instance.mainSplit);
             var rightPanel = ZatoIDESplit.getRightPanel(instance.mainSplit);
-            console.log('[ZatoIDE] initMainSplit: leftPanel=' + !!leftPanel + ', rightPanel=' + !!rightPanel);
             if (leftPanel) {
-                console.log('[ZatoIDE] initMainSplit: setting leftPanel id to ' + instance.id + '-editor-area');
                 leftPanel.id = instance.id + '-editor-area';
                 leftPanel.className += ' zato-ide-editor-area';
             }
             if (rightPanel) {
-                console.log('[ZatoIDE] initMainSplit: setting rightPanel id to ' + instance.id + '-side-panel-1');
-                console.log('[ZatoIDE] initMainSplit: rightPanel current innerHTML length=' + rightPanel.innerHTML.length);
                 rightPanel.id = instance.id + '-side-panel-1';
                 rightPanel.className += ' zato-ide-side-panel-1';
                 var iconsDiv = document.createElement('div');
@@ -52,9 +38,7 @@
                 contentDiv.id = instance.id + '-side-panel-1-content';
                 contentDiv.className = 'zato-ide-side-panel-1-content';
                 rightPanel.appendChild(contentDiv);
-                console.log('[ZatoIDE] initMainSplit: side panel elements created');
             }
-            console.log('[ZatoIDE] initMainSplit: END');
         },
 
         initSidePanel1Content: function(instance) {
@@ -110,7 +94,6 @@
         },
 
         switchSidePanel1View: function(instance, viewId) {
-            console.log('[ZatoIDEPanels] switchSidePanel1View: viewId=' + viewId);
             var self = this;
             var iconsContainer = document.getElementById(instance.id + '-side-panel-1-icons');
             if (!iconsContainer) { return; }
@@ -126,37 +109,26 @@
             localStorage.setItem('zato.ide.sidePanel1View', viewId);
             var contentContainer = document.getElementById(instance.id + '-side-panel-1-content');
             if (contentContainer) {
-                console.log('[ZatoIDEPanels] switchSidePanel1View: clearing contentContainer');
                 contentContainer.innerHTML = '';
                 if (viewId === 'explorer') {
-                    console.log('[ZatoIDEPanels] switchSidePanel1View: initializing explorer');
                     self.initExplorer(instance, contentContainer);
                 } else if (viewId === 'debugger') {
-                    console.log('[ZatoIDEPanels] switchSidePanel1View: initializing debugger panel');
                     self.initDebuggerPanel(instance, contentContainer);
                 }
             }
         },
 
         initDebuggerPanel: function(instance, container) {
-            console.log('[ZatoIDEPanels] initDebuggerPanel: START');
             if (typeof ZatoDebuggerIDE === 'undefined') { return; }
             var debuggerIDE = ZatoDebuggerIDE.getInstanceForIDE(instance);
-            console.log('[ZatoIDEPanels] initDebuggerPanel: existing debuggerIDE=' + !!debuggerIDE);
             if (!debuggerIDE) {
                 debuggerIDE = ZatoDebuggerIDE.create(instance, {});
-            }
-            console.log('[ZatoIDEPanels] initDebuggerPanel: debuggerIDE.debuggerUI=' + !!debuggerIDE.debuggerUI);
-            if (debuggerIDE.debuggerUI) {
-                console.log('[ZatoIDEPanels] initDebuggerPanel: debuggerUI.isConnected=' + debuggerIDE.debuggerUI.isConnected);
-                console.log('[ZatoIDEPanels] initDebuggerPanel: debuggerUI.isConnecting=' + debuggerIDE.debuggerUI.isConnecting);
             }
             var debuggerDiv = document.createElement('div');
             debuggerDiv.id = instance.id + '-debugger-panel';
             debuggerDiv.className = 'zato-ide-debugger-panel';
             container.appendChild(debuggerDiv);
             ZatoDebuggerIDE.showDebugPanelInContainer(debuggerIDE, debuggerDiv.id);
-            console.log('[ZatoIDEPanels] initDebuggerPanel: END');
         },
 
         initExplorer: function(instance, container) {
@@ -169,7 +141,6 @@
             instance.explorer = ZatoIDEExplorer.create(explorerId, {
                 rootPath: '~/projects/zatosource-zato/4.1/code/zato-server/src/zato/server/connection/http_soap',
                 onFileSelect: function(item) {
-                    console.log('[ZatoIDE] File selected:', item.path);
                 },
                 onFileDoubleClick: function(item) {
                     if (typeof ZatoIDEEditorAce !== 'undefined' && ZatoIDEEditorAce.isEditableFile(item.name)) {

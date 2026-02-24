@@ -3,9 +3,12 @@
 
     var instances = {};
 
+    var HTTP_OK = 200;
+
     var ZatoTerminal = {
 
         create: function(containerId, options) {
+            console.log('[ZatoTerminal] create: containerId=' + containerId);
             var container = document.getElementById(containerId);
             if (!container) {
                 console.error('[ZatoTerminal] Container not found:', containerId);
@@ -83,6 +86,7 @@
 
             var self = this;
             instance.terminal.onData(function(data) {
+                console.log('[ZatoTerminal] onData: data=' + JSON.stringify(data) + ', sessionId=' + instance.sessionId + ', isConnected=' + instance.isConnected);
                 self.sendInput(instance, data);
             });
 
@@ -104,12 +108,14 @@
             xhr.setRequestHeader('X-CSRFToken', csrfToken);
 
             xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    console.log('[ZatoTerminal] connect: status=' + xhr.status + ', response=' + xhr.responseText);
+                    if (xhr.status === HTTP_OK) {
                         var response = JSON.parse(xhr.responseText);
                         if (response.success) {
                             instance.sessionId = response.session_id;
                             instance.isConnected = true;
+                            console.log('[ZatoTerminal] connect: sessionId=' + instance.sessionId);
                             self.startStream(instance);
                         }
                     }
@@ -151,7 +157,9 @@
         },
 
         sendInput: function(instance, data) {
+            console.log('[ZatoTerminal] sendInput: sessionId=' + instance.sessionId + ', isConnected=' + instance.isConnected + ', data=' + JSON.stringify(data));
             if (!instance.sessionId || !instance.isConnected) {
+                console.log('[ZatoTerminal] sendInput: skipping, not connected');
                 return;
             }
 
@@ -161,6 +169,11 @@
             xhr.open('POST', '/zato/ide/terminal/write/', true);
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.setRequestHeader('X-CSRFToken', csrfToken);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    console.log('[ZatoTerminal] sendInput response: status=' + xhr.status + ', response=' + xhr.responseText);
+                }
+            };
             xhr.send(JSON.stringify({ session_id: instance.sessionId, data: data }));
         },
 

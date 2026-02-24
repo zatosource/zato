@@ -215,23 +215,19 @@
             self.updatePlayStopButton(instance);
 
             instance.eventSource.onmessage = function(e) {
-                console.log('[log-viewer] onmessage received, data length:', e.data ? e.data.length : 0, 'data:', e.data ? e.data.substring(0, 100) : null);
                 if (e.data) {
                     try {
                         var parsed = JSON.parse(e.data);
                         self.addLine(instance, parsed);
                     } catch (err) {
-                        console.log('[log-viewer] failed to parse JSON:', err, 'data:', e.data);
                     }
                 }
             };
 
             instance.eventSource.onopen = function() {
-                console.log('[log-viewer] SSE connection opened');
             };
 
             instance.eventSource.onerror = function(e) {
-                console.log('[log-viewer] SSE error, readyState:', instance.eventSource.readyState, 'error:', e);
                 if (instance.eventSource.readyState === EventSource.CLOSED) {
                     instance.isStreaming = false;
                     self.updatePlayStopButton(instance);
