@@ -102,6 +102,8 @@ class Enmasse(ZatoCommand):
             # Set environment variables
             for section in env_config:
                 for key, value in env_config[section].items():
+                    if isinstance(value, (int, float)):
+                        value = str(value)
                     os.environ[key] = value
 
         # Get session from server directory
