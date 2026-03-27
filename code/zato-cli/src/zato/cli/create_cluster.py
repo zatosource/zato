@@ -405,20 +405,20 @@ class Create(ZatoCommand):
         from zato.common.odb.model import HTTPSOAP, Service
 
         # Create services
-        publish_service_name = 'pubsub.rest.publish'
-        publish_service = Service(None, publish_service_name, True, publish_service_name, True, cluster)
+        publish_impl = 'zato.server.service.internal.pubsub.rest.Publish'
+        publish_service = Service(None, 'pubsub.rest.publish', True, publish_impl, True, cluster)
         session.add(publish_service)
 
-        get_messages_service_name = 'pubsub.rest.get-messages'
-        get_messages_service = Service(None, get_messages_service_name, True, get_messages_service_name, True, cluster)
+        get_messages_impl = 'zato.server.service.internal.pubsub.rest.GetMessages'
+        get_messages_service = Service(None, 'pubsub.rest.get-messages', True, get_messages_impl, True, cluster)
         session.add(get_messages_service)
 
-        subscribe_service_name = 'pubsub.rest.subscribe'
-        subscribe_service = Service(None, subscribe_service_name, True, subscribe_service_name, True, cluster)
+        subscribe_impl = 'zato.server.service.internal.pubsub.rest.Subscribe'
+        subscribe_service = Service(None, 'pubsub.rest.subscribe', True, subscribe_impl, True, cluster)
         session.add(subscribe_service)
 
-        unsubscribe_service_name = 'pubsub.rest.unsubscribe'
-        unsubscribe_service = Service(None, unsubscribe_service_name, True, unsubscribe_service_name, True, cluster)
+        unsubscribe_impl = 'zato.server.service.internal.pubsub.rest.Unsubscribe'
+        unsubscribe_service = Service(None, 'pubsub.rest.unsubscribe', True, unsubscribe_impl, True, cluster)
         session.add(unsubscribe_service)
 
         # Create channels
