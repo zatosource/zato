@@ -154,7 +154,11 @@ class SchedulerImporter:
         service = session.query(Service).filter(Service.name==service_name).filter(Service.cluster_id==cluster.id).one() # type: ignore
 
         # Parse the start_date from string to datetime object
-        original_start_date = parse_datetime(job_def['start_date'])
+        start_date_value = job_def['start_date']
+        if isinstance(start_date_value, datetime):
+            original_start_date = start_date_value
+        else:
+            original_start_date = parse_datetime(start_date_value)
 
         # Compute the next start date based on current time
         start_date = compute_next_start_date(original_start_date, job_def)
@@ -165,6 +169,8 @@ class SchedulerImporter:
         job_is_active = job_def.get('is_active', False)
         job_type = job_def['job_type']
         job_extra = job_def.get('extra', '')
+        if isinstance(job_extra, list):
+            job_extra = '\n'.join(str(item) for item in job_extra if item)
 
         # Create a new job instance
         job = Job(job_id, job_name, job_is_active, job_type, start_date, job_extra, cluster=cluster, service=service)
@@ -212,7 +218,10 @@ class SchedulerImporter:
             # Handle start_date conversion from string to datetime if present
             elif key == 'start_date' and value:
 
-                original_start_date = parse_datetime(value)
+                if isinstance(value, datetime):
+                    original_start_date = value
+                else:
+                    original_start_date = parse_datetime(value)
                 next_start_date = compute_next_start_date(original_start_date, job_def)
 
                 setattr(job, key, next_start_date)
@@ -224,6 +233,12 @@ class SchedulerImporter:
                 if not service:
                     raise Exception(f'Service {service_name} not found')
                 job.service = service
+
+            # Handle extra - convert list to string if needed
+            elif key == 'extra':
+                if isinstance(value, list):
+                    value = '\n'.join(str(item) for item in value if item)
+                setattr(job, key, value)
 
             # Set all other fields directly, except interval attributes and id
             elif key not in _interval_based_job_attrs:
