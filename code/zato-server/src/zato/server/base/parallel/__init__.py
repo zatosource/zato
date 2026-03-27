@@ -49,6 +49,9 @@ from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub.consumer import start_internal_consumer
+from zato.common.pubsub.matcher import PatternMatcher
+from zato.common.pubsub.redis_backend import RedisPubSubBackend
+from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
@@ -154,6 +157,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
+
+    pubsub_redis: 'RedisPubSubBackend'
+    pubsub_pattern_matcher: 'PatternMatcher'
+    pubsub_subscriptions: 'SubscriptionsStore'
 
     work_dir:'str'
 
@@ -930,6 +937,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'zato-server',
             self.on_pubsub_message
         )
+
+        # Initialize Redis pub/sub backend
+        self.pubsub_redis = RedisPubSubBackend(self.kvdb.conn)
+        self.pubsub_pattern_matcher = PatternMatcher()
+        self.pubsub_subscriptions = SubscriptionsStore()
 
         # Let the worker know the broker client is ready
         self.worker_store.set_broker_client(self.broker_client)
