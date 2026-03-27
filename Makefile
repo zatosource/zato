@@ -140,5 +140,5 @@ stop-dashboard:
 restart-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
 
-stubs:
-	py $(CURDIR)/code/util/generate_stubs.py
+curl-pubsub-tests:
+	$(CURDIR)/code/zato-server/test/zato/pubsub/test_pubsub_curl.sh
