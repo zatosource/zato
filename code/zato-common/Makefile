@@ -22,6 +22,9 @@ run-tests:
 		--ignore=test/zato/common/pubsub
 
 pubsub-tests:
+	cd $(CURDIR) && py -m unittest discover -s test/zato/common/pubsub -p 'test_redis_backend.py' -v
+
+pubsub-live-tests:
 	zato enmasse ~/env/qs-1/server1 --import --input $(CURDIR)/src/zato/common/pubsub/server/config.yaml --verbose
 ifeq ($(Zato_Has_Debug),1)
 	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/live \
