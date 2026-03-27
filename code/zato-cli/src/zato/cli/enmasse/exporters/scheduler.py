@@ -59,11 +59,15 @@ class SchedulerExporter:
 
         for row in jobs:
             # Start with name and service, matching import order
+            start_date = row['start_date']
+            if not isinstance(start_date, str):
+                start_date = str(start_date)
+
             item = {
                 'name': row['name'],
                 'service': row['service_name'],
                 'job_type': row['job_type'],
-                'start_date': row['start_date'],
+                'start_date': start_date,
                 'is_active': row['is_active'],
             }
 
@@ -74,15 +78,14 @@ class SchedulerExporter:
             if repeats := row.get('repeats'):
                 item['repeats'] = repeats
 
-            # Include any extra fields that might be present
-            for field in ['extra', 'max_repeats']:
-                if field_value := row.get(field):
-                    item[field] = field_value
+            if max_repeats := row.get('max_repeats'):
+                item['max_repeats'] = max_repeats
 
             if extra := row.get('extra'):
                 extra = extra.decode('utf8') if isinstance(extra, bytes) else extra
-                if extra.strip():
-                    item['extra'] = extra.splitlines()
+                extra = extra.strip()
+                if extra:
+                    item['extra'] = extra
 
             exported_jobs.append(item)
 
