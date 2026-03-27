@@ -131,6 +131,7 @@ class Create(ZatoCommand):
             self.add_metrics_channel(session, cluster, metrics_service)
             self.add_streaming_channels(session, cluster, ping_service, streaming_sec)
             create_openapi_channel(session, cluster, openapi_handler_service)
+            self.add_pubsub_rest_channels(session, cluster)
 
             # Add other configurations
             self.add_default_caches(session, cluster)
@@ -392,5 +393,57 @@ class Create(ZatoCommand):
             'plain_http', None, '/django', None, '', None, DATA_FORMAT.JSON,
             service=service, cluster=cluster)
         session.add(channel)
+
+# ################################################################################################################################
+
+    def add_pubsub_rest_channels(self, session, cluster):
+        """ Adds REST channels for pub/sub operations.
+        """
+
+        # Zato
+        from zato.common.api import DATA_FORMAT
+        from zato.common.odb.model import HTTPSOAP, Service
+
+        # Create services
+        publish_service_name = 'pubsub.rest.publish'
+        publish_service = Service(None, publish_service_name, True, publish_service_name, True, cluster)
+        session.add(publish_service)
+
+        get_messages_service_name = 'pubsub.rest.get-messages'
+        get_messages_service = Service(None, get_messages_service_name, True, get_messages_service_name, True, cluster)
+        session.add(get_messages_service)
+
+        subscribe_service_name = 'pubsub.rest.subscribe'
+        subscribe_service = Service(None, subscribe_service_name, True, subscribe_service_name, True, cluster)
+        session.add(subscribe_service)
+
+        unsubscribe_service_name = 'pubsub.rest.unsubscribe'
+        unsubscribe_service = Service(None, unsubscribe_service_name, True, unsubscribe_service_name, True, cluster)
+        session.add(unsubscribe_service)
+
+        # Create channels
+        publish_channel = HTTPSOAP(
+            None, 'pubsub.rest.publish', True, True, 'channel',
+            'plain_http', None, '/pubsub/topic/{topic_name}', None, 'POST', None, DATA_FORMAT.JSON,
+            service=publish_service, cluster=cluster)
+        session.add(publish_channel)
+
+        get_messages_channel = HTTPSOAP(
+            None, 'pubsub.rest.get-messages', True, True, 'channel',
+            'plain_http', None, '/pubsub/messages/get', None, 'POST', None, DATA_FORMAT.JSON,
+            service=get_messages_service, cluster=cluster)
+        session.add(get_messages_channel)
+
+        subscribe_channel = HTTPSOAP(
+            None, 'pubsub.rest.subscribe', True, True, 'channel',
+            'plain_http', None, '/pubsub/subscribe/topic/{topic_name}', None, 'POST', None, DATA_FORMAT.JSON,
+            service=subscribe_service, cluster=cluster)
+        session.add(subscribe_channel)
+
+        unsubscribe_channel = HTTPSOAP(
+            None, 'pubsub.rest.unsubscribe', True, True, 'channel',
+            'plain_http', None, '/pubsub/unsubscribe/topic/{topic_name}', None, 'POST', None, DATA_FORMAT.JSON,
+            service=unsubscribe_service, cluster=cluster)
+        session.add(unsubscribe_channel)
 
 # ################################################################################################################################
