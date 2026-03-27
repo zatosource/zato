@@ -17,8 +17,12 @@ from time import sleep
 from traceback import format_exc
 from urllib.parse import urlencode
 
-# Datadog
-from ddtrace import tracer as datadog_tracer
+# Datadog - import conditionally to avoid tokio errors when not enabled
+_datadog_enabled = os.environ.get('Zato_Datadog_Enabled', '').lower() in ('true', '1', 'yes')
+if _datadog_enabled:
+    from ddtrace import tracer as datadog_tracer
+else:
+    datadog_tracer = None
 
 # requests
 from requests import Response as _RequestsResponse
