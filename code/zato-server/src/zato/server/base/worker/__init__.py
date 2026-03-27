@@ -870,26 +870,7 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def init_pubsub(self):
-
-        # Local aliases
-        cid = new_cid_server()
-
-        pubsub_subs = self.worker_config.pubsub_subs.values()
-        pubsub_subs = rebuild_subscription_dict_list(pubsub_subs)
-
-        for item in pubsub_subs:
-
-            config = item['config']
-
-            topic_name_list = config['topic_name_list']
-            sec_name = config['sec_name']
-            sub_key = config['sub_key']
-            is_delivery_active = config['is_delivery_active']
-            delivery_type = config['delivery_type']
-
-            # Push delivery type is no longer supported with Redis backend
-            if delivery_type == PubSub.Delivery_Type.Push:
-                pass
+        pass
 
 # ################################################################################################################################
 
@@ -1705,21 +1686,32 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'bunch_') -> 'None':
-        pass
+        sub_key = msg.get('sub_key')
+        topic_name = msg.get('topic_name')
+        if sub_key and topic_name:
+            self.server.pubsub_redis.subscribe(sub_key, topic_name)
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
         pass
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
-        pass
+        sub_key = msg.get('sub_key')
+        topic_name = msg.get('topic_name')
+        if sub_key and topic_name:
+            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
-        pass
+        old_name = msg.get('old_name')
+        new_name = msg.get('name')
+        if old_name and new_name and old_name != new_name:
+            self.server.pubsub_redis.rename_topic(old_name, new_name)
 
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
-        pass
+        topic_name = msg.get('name')
+        if topic_name:
+            self.server.pubsub_redis.delete_topic(topic_name)
 
 # ################################################################################################################################
 
