@@ -22,6 +22,9 @@ run-tests:
 		--ignore=test/zato/common/pubsub
 
 pubsub-tests:
+	cd $(CURDIR) && py -m unittest discover -s test/zato/common/pubsub -p 'test_redis_backend.py' -v
+
+pubsub-live-tests:
 	zato enmasse ~/env/qs-1/server1 --import --input $(CURDIR)/src/zato/common/pubsub/server/config.yaml --verbose
 ifeq ($(Zato_Has_Debug),1)
 	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/live \
@@ -44,7 +47,6 @@ endif
 	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/backend -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
 	$(Zato_Python_Dir)/pytest test/zato/common/pubsub/rest_server -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
 	$(Zato_Python_Dir)/pytest test/zato/common/matcher -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
-	py -m pytest test/zato/common/pubsub/test_redis_backend.py -v -W ignore::DeprecationWarning -W ignore::gevent.monkey.MonkeyPatchWarning
 #	st run $Zato_Test_PubSub_OpenAPI_File --url http://localhost:44556/ -a $Zato_Test_PubSub_OpenAPI_Username:$Zato_Test_PubSub_OpenAPI_Password --output-sanitize false --warnings off -n 500
 
 generate-enmasse:
