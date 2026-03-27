@@ -1,0 +1,48 @@
+security:
+  - name: demo_sec_def.1
+    type: basic_auth
+    username: user.1
+    password: password.1
+
+outgoing_rest:
+
+  - name: demo.outgoing.rest.1
+    host: https://example.com:443
+    url_path: /demo
+    data_format: json
+    timeout: 60
+
+pubsub_topic:
+  - name: demo.1
+    description: Demo topic 1
+
+  - name: demo.2
+    description: Demo topic 2
+
+  - name: demo.3
+    description: Demo topic 3
+
+  - name: orders.processed
+    description: Orders topic 1
+
+pubsub_permission:
+  - security: demo_sec_def.1
+    pub:
+      - demo.*
+      - orders.*
+    sub:
+      - demo.*
+      - orders.*
+
+pubsub_subscription:
+  - security: demo_sec_def.1
+    delivery_type: pull
+#    delivery_type: push
+#    push_service: demo.outgoing.rest.1
+#    push_rest_endpoint: demo.outgoing.rest.1
+#    max_retry_time: 365d
+    topic_list:
+      - demo.1
+      - demo.2
+      - demo.3
+      - orders.processed
