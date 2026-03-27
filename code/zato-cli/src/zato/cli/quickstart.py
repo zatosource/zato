@@ -306,6 +306,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--no-scheduler', 'help':'Create all the components but not a scheduler', 'action':'store_true'})
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
     opts.append({'name':'--preamble-script', 'help':'Extra script to add to startup scripts'})
+    opts.append({'name':'--force', 'help':'Delete the directory if it already exists', 'action':'store_true'})
 
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)

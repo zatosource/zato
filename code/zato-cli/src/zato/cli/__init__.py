@@ -606,6 +606,11 @@ class ZatoCommand:
             if self.needs_empty_dir:
                 work_dir = os.path.abspath(args.path)
 
+                # Handle --force flag
+                if getattr(args, 'force', False) and os.path.exists(work_dir):
+                    import shutil
+                    shutil.rmtree(work_dir)
+
                 if not os.path.exists(work_dir):
                     self.logger.info('Creating directory `%s`', work_dir)
                     os.makedirs(work_dir)
