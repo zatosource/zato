@@ -26,7 +26,6 @@ from requests.auth import HTTPBasicAuth
 
 # Zato
 from zato.common.api import PubSub
-from zato.common.pubsub.util import cleanup_broker_impl, get_broker_config
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -107,13 +106,8 @@ class PubSubRESTServerBaseTestCase(TestCase):
     def tearDown(self):
         """ Clean up after tests.
         """
-        return
         if self.skip_tests:
             return
-
-        # Clean up broker
-        broker_config = get_broker_config()
-        _ = cleanup_broker_impl(broker_config, 15672)
 
         # Unsubscribe from all topics to clear any existing subscriptions
         # Skip this if the test wants to handle unsubscribe manually
