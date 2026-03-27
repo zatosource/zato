@@ -31,7 +31,6 @@ from kombu.transport.pyamqp import Connection as PyAMQPConnection, SSLTransport,
 
 # Zato
 from zato.common.api import AMQP, CHANNEL, PubSub, SECRET_SHADOW
-from zato.common.pubsub.util import ConsumerManager, get_broker_config
 from zato.common.typing_ import cast_
 from zato.common.util.api import get_component_name, new_cid_queue_consumer, utcnow, wait_for_predicate
 from zato.common.version import get_version
@@ -389,9 +388,6 @@ class Consumer:
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
         self.timeout = config.get('consumer_drain_events_timeout') or PubSub.Timeout.Consumer
 
-        broker_config = get_broker_config()
-        self.consumer_manager = ConsumerManager(self.cid, broker_config)
-
         # This is set to True the first time self.start is called.
         self.start_called = False
 
@@ -434,10 +430,6 @@ class Consumer:
 
         # Log what we're about to do
         logger.debug(f'[{self.cid}] Creating a new consumer -> {self.config.conn_url}')
-
-        # First, close any previous consumers we may have created and which are left over,
-        # e.g. if the connection to the broker was lost and we never had a chance to actually close it.
-        self.consumer_manager.close_consumers(self.config.queue)
 
         # We cannot assume that we will obtain the consumer right-away. For instance, the remote end
         # may be currently available when we are starting. It's OK to block indefinitely (or until self.keep_running is False)
