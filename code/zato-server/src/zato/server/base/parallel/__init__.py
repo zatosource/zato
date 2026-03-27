@@ -1113,9 +1113,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Zato
         from zato.server.commands import CommandsFacade
-        import zato.common.pubsub.server
+        import zato.server.service.internal.pubsub
 
-        config_path = os.path.join(os.path.dirname(zato.common.pubsub.server.__file__), 'enmasse.yaml')
+        config_path = os.path.join(os.path.dirname(zato.server.service.internal.pubsub.__file__), 'enmasse.yaml')
 
         facade = CommandsFacade()
         facade.init(self)
