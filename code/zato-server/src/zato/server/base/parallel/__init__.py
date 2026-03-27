@@ -35,7 +35,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 
 # Zato
 from zato.broker import BrokerMessageReceiver
-from zato.broker.client import BrokerClient
+from zato.broker.redis_client import RedisBrokerClient as BrokerClient
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
@@ -49,7 +49,10 @@ from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
-from zato.common.pubsub.consumer import start_internal_consumer
+from zato.common.pubsub.redis_consumer import start_internal_redis_consumer as start_internal_consumer
+from zato.common.pubsub.matcher import PatternMatcher
+from zato.common.pubsub.redis_backend import RedisPubSubBackend
+from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
@@ -155,6 +158,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
+
+    pubsub_redis: 'RedisPubSubBackend'
+    pubsub_pattern_matcher: 'PatternMatcher'
+    pubsub_subscriptions: 'SubscriptionsStore'
 
     work_dir:'str'
 
@@ -963,6 +970,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.on_pubsub_message
         )
 
+        # Initialize Redis pub/sub backend using broker client's Redis connection
+        self.pubsub_redis = RedisPubSubBackend(self.broker_client.redis)
+        self.pubsub_pattern_matcher = PatternMatcher()
+        self.pubsub_subscriptions = SubscriptionsStore()
+
         # Let the worker know the broker client is ready
         self.worker_store.set_broker_client(self.broker_client)
         self.worker_store.after_broker_client_set()
@@ -1133,9 +1145,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Zato
         from zato.server.commands import CommandsFacade
-        import zato.common.pubsub.server
+        import zato.server.service.internal.pubsub
 
-        config_path = os.path.join(os.path.dirname(zato.common.pubsub.server.__file__), 'enmasse.yaml')
+        config_path = os.path.join(os.path.dirname(zato.server.service.internal.pubsub.__file__), 'enmasse.yaml')
 
         facade = CommandsFacade()
         facade.init(self)

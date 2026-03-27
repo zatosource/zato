@@ -11,7 +11,7 @@ import os
 from logging import captureWarnings, getLogger
 
 # Zato
-from zato.broker.client import BrokerClient
+from zato.broker.redis_client import RedisBrokerClient as BrokerClient
 from zato.common.api import SCHEDULER
 from zato.common.aux_server.base import AuxServer, AuxServerConfig
 from zato.common.crypto.api import SchedulerCryptoManager
