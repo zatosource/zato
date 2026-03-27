@@ -38,7 +38,6 @@ from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.pubsub.backend.consumer_backend import ConsumerBackend
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, parse_datetime, \
     rebuild_subscription_dict_list, spawn_greenlet, update_apikey_username_to_channel, utcnow, visit_py_source, \
@@ -155,7 +154,6 @@ _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
-    pubsub_consumer_backend:'ConsumerBackend'
     broker_client: 'BrokerClient | None' = None
 
     def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
@@ -339,12 +337,6 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def after_broker_client_set(self) -> 'None':
-
-        # Create the container that will start all the queue listeners
-        self.pubsub_consumer_backend = ConsumerBackend(
-            self,
-            self.broker_client # type: ignore
-        )
 
         # Pub/sub
         self.init_pubsub()
@@ -895,19 +887,9 @@ class WorkerStore(_WorkerStoreBase):
             is_delivery_active = config['is_delivery_active']
             delivery_type = config['delivery_type']
 
-            # Start a consumer only if we're to push the messages ourselves
+            # Push delivery type is no longer supported with Redis backend
             if delivery_type == PubSub.Delivery_Type.Push:
-
-                _ = spawn_greenlet(
-                    self.pubsub_consumer_backend.start_public_queue_consumer,
-                    cid,
-                    topic_name_list,
-                    sec_name,
-                    sub_key,
-                    is_delivery_active,
-                    self.on_pubsub_public_message_callback,
-                    timeout=10
-                )
+                pass
 
 # ################################################################################################################################
 
@@ -1723,22 +1705,21 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'bunch_') -> 'None':
-        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(msg)
+        pass
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
-        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(msg)
+        pass
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
-        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(msg.cid, msg.sub_key)
-        # self.invoke('zato.pubsub.subscription.delete', {'sub_key':msg.sub_key, 'should_call_pubsub_consumer_backend':False})
+        pass
 
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
-        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_TOPIC_EDIT(msg)
+        pass
 
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
-        self.pubsub_consumer_backend.on_broker_msg_PUBSUB_TOPIC_DELETE(msg)
+        pass
 
 # ################################################################################################################################
 
