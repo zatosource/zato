@@ -48,8 +48,7 @@ class PubSubTestClient:
     def publish_empty(self, topic_name:'str') -> 'dict':
         url = f'{self.base_url}/pubsub/topic/{topic_name}'
         response = requests.post(url, json={}, auth=self.auth)
-        result = response.json()
-        return result.get('response', {})
+        return {'status_code': response.status_code}
 
 # ################################################################################################################################
 
@@ -70,6 +69,18 @@ class PubSubTestClient:
         payload = {
             'data': data,
             'expiration': expiration
+        }
+        response = requests.post(url, json=payload, auth=self.auth)
+        result = response.json()
+        return result.get('response', {})
+
+# ################################################################################################################################
+
+    def publish_with_pub_time(self, topic_name:'str', data:'any_', pub_time:'str') -> 'dict':
+        url = f'{self.base_url}/pubsub/topic/{topic_name}'
+        payload = {
+            'data': data,
+            'pub_time': pub_time
         }
         response = requests.post(url, json=payload, auth=self.auth)
         result = response.json()

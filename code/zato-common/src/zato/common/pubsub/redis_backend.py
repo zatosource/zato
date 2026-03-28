@@ -76,16 +76,25 @@ class RedisPubSubBackend:
         in_reply_to:'strnone'=None,
         ext_client_id:'strnone'=None,
         publisher:'strnone'=None,
+        pub_time:'strnone'=None,
     ) -> 'str':
         """ Publish a message to a topic stream.
         """
+        # Normalize topic name to lowercase for case-insensitivity
+        topic_name = topic_name.lower()
+
         # Generate message ID
         msg_id = new_msg_id()
 
         # Timestamps
         now = utcnow()
-        pub_time_iso = now.isoformat()
-        expiration_time = now + timedelta(seconds=expiration)
+        if pub_time:
+            pub_time_iso = pub_time
+            pub_time_dt = datetime.fromisoformat(pub_time.replace('Z', '+00:00'))
+            expiration_time = pub_time_dt + timedelta(seconds=expiration)
+        else:
+            pub_time_iso = now.isoformat()
+            expiration_time = now + timedelta(seconds=expiration)
         expiration_time_iso = expiration_time.isoformat()
 
         # Build message
@@ -125,6 +134,9 @@ class RedisPubSubBackend:
     def subscribe(self, sub_key:'str', topic_name:'str') -> 'None':
         """ Subscribe a user to a topic.
         """
+        # Normalize topic name to lowercase for case-insensitivity
+        topic_name = topic_name.lower()
+
         subs_key = self._get_subs_key(sub_key)
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
@@ -152,6 +164,9 @@ class RedisPubSubBackend:
     def unsubscribe(self, sub_key:'str', topic_name:'str') -> 'None':
         """ Unsubscribe a user from a topic.
         """
+        # Normalize topic name to lowercase for case-insensitivity
+        topic_name = topic_name.lower()
+
         subs_key = self._get_subs_key(sub_key)
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
