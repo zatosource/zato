@@ -136,7 +136,7 @@ class RedisPubSubBackend:
 
         # Create consumer group if not exists
         try:
-            _ = self.redis.xgroup_create(stream_key, sub_key, id='0', mkstream=True)
+            _ = self.redis.xgroup_create(stream_key, sub_key, id='$', mkstream=True)
             logger.info('Created consumer group %s for stream %s', sub_key, stream_key)
         except ResponseError as e:
             if 'BUSYGROUP' in str(e):
@@ -242,9 +242,10 @@ class RedisPubSubBackend:
 
                 messages.append(decoded)
 
-                # Acknowledge the message
+                # Acknowledge and delete the message
                 stream_name_str = stream_name.decode('utf-8') if isinstance(stream_name, bytes) else stream_name
                 _ = self.redis.xack(stream_name_str, sub_key, redis_msg_id)
+                _ = self.redis.xdel(stream_name_str, redis_msg_id)
 
         # Sort by priority desc, then by pub_time asc
         messages.sort(key=lambda m: (-m['priority'], m.get('pub_time_iso', '')))

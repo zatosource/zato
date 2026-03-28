@@ -130,6 +130,17 @@ class SubscriptionsStore:
 
 # ################################################################################################################################
 
+    def clear_sub_key(self, username:'str') -> 'None':
+        """ Clear sub_key for a user so a new one is generated on next subscribe.
+        """
+        with self._lock:
+            sub_key = self._username_to_sub_key.pop(username, None)
+            if sub_key:
+                _ = self._sub_key_to_username.pop(sub_key, None)
+                logger.info('Cleared sub_key for user %s', username)
+
+# ################################################################################################################################
+
     def remove_user(self, username:'str') -> 'None':
         """ Remove a user and all their mappings.
         """

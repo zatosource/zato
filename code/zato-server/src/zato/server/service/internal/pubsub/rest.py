@@ -424,6 +424,9 @@ class Unsubscribe(PubSubRESTService):
         # Unsubscribe in Redis
         self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
+        # Clear sub_key so a new one is generated on next subscribe
+        self.server.pubsub_subscriptions.clear_sub_key(username)
+
         # Remove subscription from ODB
         self._remove_subscription(username, topic_name)
 
