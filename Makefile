@@ -31,7 +31,7 @@ web-admin-tests:
 common-tests:
 	cd $(CURDIR)/code/zato-common && make run-tests
 
-pubsub-tests:
+pubsub-unit-tests:
 	cd $(CURDIR)/code/zato-common && Zato_Has_Debug=0 make pubsub-tests
 
 server-tests:
@@ -140,5 +140,5 @@ stop-dashboard:
 restart-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
 
-curl-pubsub-tests:
-	$(CURDIR)/code/zato-server/test/zato/pubsub/test_pubsub_curl.sh
+pubsub-tests:
+	py $(CURDIR)/code/zato-server/test/zato/pubsub/rest/run_all.py
