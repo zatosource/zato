@@ -38,13 +38,32 @@ def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_n
     topic_objects_list = []
 
     if topic_data_list:
-        # For create - we have topic_data_list directly
+        # For create - we have topic_data_list directly (may be strings or dicts)
         for item in topic_data_list:
-            topic_item = {
-                'topic_name': item['topic_name'],
-                'is_pub_enabled': item['is_pub_enabled'],
-                'is_delivery_enabled': item['is_delivery_enabled']
-            }
+            if isinstance(item, str):
+                topic_item = {
+                    'topic_name': item,
+                    'is_pub_enabled': True,
+                    'is_delivery_enabled': True
+                }
+            elif isinstance(item, dict):
+                topic_item = {
+                    'topic_name': item['topic_name'],
+                    'is_pub_enabled': item.get('is_pub_enabled', True),
+                    'is_delivery_enabled': item.get('is_delivery_enabled', True)
+                }
+            elif hasattr(item, 'topic_name'):
+                topic_item = {
+                    'topic_name': item.topic_name,
+                    'is_pub_enabled': getattr(item, 'is_pub_enabled', True),
+                    'is_delivery_enabled': getattr(item, 'is_delivery_enabled', True)
+                }
+            else:
+                topic_item = {
+                    'topic_name': str(item),
+                    'is_pub_enabled': True,
+                    'is_delivery_enabled': True
+                }
             topic_objects_list.append(topic_item)
 
     elif topics and topic_data_by_name:
@@ -226,7 +245,19 @@ class Create(AdminService):
         topic_link_list = []
 
         topic_data_list = input.topic_name_list
-        topic_name_list = sorted([item['topic_name'] for item in topic_data_list])
+
+        # Handle both string and dict formats for topic names
+        topic_name_list = []
+        for item in topic_data_list:
+            if isinstance(item, str):
+                topic_name_list.append(item)
+            elif isinstance(item, dict):
+                topic_name_list.append(item['topic_name'])
+            elif hasattr(item, 'topic_name'):
+                topic_name_list.append(item.topic_name)
+            else:
+                topic_name_list.append(str(item))
+        topic_name_list = sorted(topic_name_list)
 
         self.logger.info('CREATE: Creating subscription for topics: %s', topic_data_list)
 
@@ -247,8 +278,18 @@ class Create(AdminService):
                 topic_data_by_name = {}
 
                 for item in topic_data_list:
-                    topic_name = item['topic_name']
-                    topic_data_by_name[topic_name] = item
+                    if isinstance(item, str):
+                        topic_name = item
+                        topic_data_by_name[topic_name] = {'topic_name': item, 'is_pub_enabled': True, 'is_delivery_enabled': True}
+                    elif isinstance(item, dict):
+                        topic_name = item['topic_name']
+                        topic_data_by_name[topic_name] = item
+                    elif hasattr(item, 'topic_name'):
+                        topic_name = item.topic_name
+                        topic_data_by_name[topic_name] = {'topic_name': topic_name, 'is_pub_enabled': getattr(item, 'is_pub_enabled', True), 'is_delivery_enabled': getattr(item, 'is_delivery_enabled', True)}
+                    else:
+                        topic_name = str(item)
+                        topic_data_by_name[topic_name] = {'topic_name': topic_name, 'is_pub_enabled': True, 'is_delivery_enabled': True}
 
                 for topic_name in topic_name_list:
                     topic = session.query(PubSubTopic).\
@@ -665,9 +706,18 @@ class _BaseModifyTopicList(AdminService):
 
                 logger.info('handle: found %d subscriptions for sec_base_id=%s', len(subscriptions) if subscriptions else 0, sec_base_id)
 
-                # .. if we do not have any subscription, what to do next, depends on whether we are creating
-                # .. new subscriptions, or if we're unsubscribing the client ..
-                if not subscriptions:
+                # Check if there's a subscription for THIS security definition
+                has_subscription_for_this_sec = False
+                if subscriptions:
+                    for item in subscriptions:
+                        item_sec_base_id = item.get('sec_base_id') if isinstance(item, dict) else getattr(item, 'sec_base_id', None)
+                        if item_sec_base_id == sec_base_id:
+                            has_subscription_for_this_sec = True
+                            break
+
+                # .. if we do not have a subscription for this security definition, what to do next depends on
+                # .. whether we are creating new subscriptions, or if we're unsubscribing the client ..
+                if not has_subscription_for_this_sec:
 
                     # .. or, we are to create a new (the very first) subscription ..
                     if self.action == ModuleCtx.Action_Subsctibe:
