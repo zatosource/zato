@@ -939,21 +939,6 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
 
 def _pubsub_subscription(session, cluster_id):
 
-    logger.info('_pubsub_subscription: cluster_id=%s', cluster_id)
-
-    # First log all subscriptions in the database
-    all_subs = session.query(PubSubSubscription).filter(PubSubSubscription.cluster_id == cluster_id).all()
-    logger.info('_pubsub_subscription: found %d PubSubSubscription rows in DB', len(all_subs))
-    for sub in all_subs:
-        logger.info('_pubsub_subscription: DB subscription id=%s, sub_key=%s, sec_base_id=%s', sub.id, sub.sub_key, sub.sec_base_id)
-
-    # Log all subscription-topic associations
-    all_sub_topics = session.query(PubSubSubscriptionTopic).filter(PubSubSubscriptionTopic.cluster_id == cluster_id).all()
-    logger.info('_pubsub_subscription: found %d PubSubSubscriptionTopic rows in DB', len(all_sub_topics))
-    for st in all_sub_topics:
-        logger.info('_pubsub_subscription: DB sub_topic subscription_id=%s, topic_id=%s', st.subscription_id, st.topic_id)
-
-    # Return all subscription-topic pairs without grouping
     return session.query(
         PubSubSubscription.id,
         PubSubSubscription.sub_key,
