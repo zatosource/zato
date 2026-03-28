@@ -404,6 +404,8 @@ class Create(ZatoCommand):
         from zato.common.api import DATA_FORMAT
         from zato.common.odb.model import HTTPSOAP, Service
 
+        self.logger.info('Creating pub/sub REST channels')
+
         # Create services
         publish_impl = 'zato.server.service.internal.pubsub.rest.Publish'
         publish_service = Service(None, 'pubsub.rest.publish', True, publish_impl, True, cluster)
@@ -424,26 +426,30 @@ class Create(ZatoCommand):
         # Create channels
         publish_channel = HTTPSOAP(
             None, 'pubsub.rest.publish', True, True, 'channel',
-            'plain_http', None, '/pubsub/topic/{topic_name}', None, 'POST', None, DATA_FORMAT.JSON,
+            'plain_http', None, '/pubsub/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
             service=publish_service, cluster=cluster)
         session.add(publish_channel)
+        self.logger.info('Created channel: POST /pubsub/topic/{topic_name}')
 
         get_messages_channel = HTTPSOAP(
             None, 'pubsub.rest.get-messages', True, True, 'channel',
-            'plain_http', None, '/pubsub/messages/get', None, 'POST', None, DATA_FORMAT.JSON,
+            'plain_http', None, '/pubsub/messages/get', 'POST', '', None, DATA_FORMAT.JSON,
             service=get_messages_service, cluster=cluster)
         session.add(get_messages_channel)
+        self.logger.info('Created channel: POST /pubsub/messages/get')
 
         subscribe_channel = HTTPSOAP(
             None, 'pubsub.rest.subscribe', True, True, 'channel',
-            'plain_http', None, '/pubsub/subscribe/topic/{topic_name}', None, 'POST', None, DATA_FORMAT.JSON,
+            'plain_http', None, '/pubsub/subscribe/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
             service=subscribe_service, cluster=cluster)
         session.add(subscribe_channel)
+        self.logger.info('Created channel: POST /pubsub/subscribe/topic/{topic_name}')
 
         unsubscribe_channel = HTTPSOAP(
             None, 'pubsub.rest.unsubscribe', True, True, 'channel',
-            'plain_http', None, '/pubsub/unsubscribe/topic/{topic_name}', None, 'POST', None, DATA_FORMAT.JSON,
+            'plain_http', None, '/pubsub/unsubscribe/topic/{topic_name}', 'POST', '', None, DATA_FORMAT.JSON,
             service=unsubscribe_service, cluster=cluster)
         session.add(unsubscribe_channel)
+        self.logger.info('Created channel: POST /pubsub/unsubscribe/topic/{topic_name}')
 
 # ################################################################################################################################

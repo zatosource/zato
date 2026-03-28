@@ -7,13 +7,15 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from base64 import b64decode
 from http.client import BAD_REQUEST, OK, UNAUTHORIZED
 from logging import getLogger
 
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.util import validate_topic_name
-from zato.server.service import Int, Service
+from zato.common.util.auth import check_basic_auth
+from zato.server.service import AsIs, Int, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -39,15 +41,78 @@ _max_len_default = 5_000_000
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Publish(Service):
+def extract_basic_auth_credentials(wsgi_environ:'anydict') -> 'tuple':
+    """ Extracts username and password from HTTP Basic Auth header.
+    """
+    auth_header = wsgi_environ.get('HTTP_AUTHORIZATION', '')
+    if not auth_header.startswith('Basic '):
+        return None, None
+
+    try:
+        encoded = auth_header[6:]
+        decoded = b64decode(encoded).decode('utf-8')
+        username, password = decoded.split(':', 1)
+        return username, password
+    except Exception:
+        return None, None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class PubSubRESTService(Service):
+    """ Base class for pub/sub REST services with common authentication.
+    """
+
+    suppress_internal_errors = True
+
+    def before_handle(self) -> 'None':
+        pass
+
+    def after_handle(self) -> 'None':
+        pass
+
+    def authenticate(self) -> 'tuple':
+        """ Extract and validate credentials. Returns (username, error_response) tuple.
+        """
+        username, password = extract_basic_auth_credentials(self.wsgi_environ)
+
+        if not username:
+            return None, ('Authentication required', UNAUTHORIZED)
+
+        if not self._validate_credentials(username, password):
+            return None, ('Invalid credentials', UNAUTHORIZED)
+
+        return username, None
+
+    def _validate_credentials(self, username:'str', password:'str') -> 'bool':
+        """ Validate username/password against all basic auth security definitions.
+        """
+        basic_auth_config = self.server.worker_store.request_dispatcher.url_data.basic_auth_config
+        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+
+        for sec_def in basic_auth_config.values():
+            config = sec_def.get('config', {})
+            expected_username = config.get('username')
+            expected_password = config.get('password')
+            if expected_username and expected_password:
+                result = check_basic_auth(self.cid, auth_header, expected_username, expected_password)
+                if result is True:
+                    return True
+        return False
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Publish(PubSubRESTService):
     """ Publish a message to a topic.
     """
     name = 'pubsub.rest.publish'
 
     class SimpleIO:
-        input_required = 'topic_name', 'data'
-        input_optional = Int('priority'), Int('expiration'), 'correl_id', 'in_reply_to', 'ext_client_id', 'pub_time'
-        output_optional = 'msg_id', 'is_ok', 'cid', 'status', 'details'
+        input_required = 'topic_name', AsIs('data')
+        input_optional = 'priority', 'expiration', AsIs('correl_id'), AsIs('in_reply_to'), AsIs('ext_client_id'), 'pub_time'
+        output_optional = AsIs('msg_id'), 'is_ok', 'cid', Int('status'), 'details'
+        skip_empty_keys = True
 
 # ################################################################################################################################
 
@@ -57,14 +122,12 @@ class Publish(Service):
         cid = self.cid
         input = self.request.input
 
-        # Get authenticated username
-        username = self.channel.security.username
-
-        if not username:
+        # Authenticate
+        username, error = self.authenticate()
+        if error:
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = UNAUTHORIZED
-            self.response.payload.details = 'Authentication required'
+            self.response.payload.details, self.response.payload.status = error
             return
 
         # Get topic name
@@ -81,7 +144,8 @@ class Publish(Service):
             return
 
         # Check permissions
-        permission_result = self.server.pubsub_pattern_matcher.evaluate(username, topic_name, 'publish')
+        matcher = self.server.pubsub_pattern_matcher
+        permission_result = matcher.evaluate(username, topic_name, 'publish')
 
         if not permission_result.is_ok:
             self.response.payload.is_ok = False
@@ -100,19 +164,27 @@ class Publish(Service):
             self.response.payload.details = "Invalid input: 'data' element missing"
             return
 
-        # Get optional parameters
-        priority = input.priority if input.priority is not None else _default_priority
-        expiration = input.expiration if input.expiration is not None else _default_expiration
+        # Get optional parameters with safe parsing
+        try:
+            priority = int(input.priority) if input.priority not in (None, '') else _default_priority
+        except (ValueError, TypeError):
+            priority = _default_priority
+
+        try:
+            expiration = int(input.expiration) if input.expiration not in (None, '') else _default_expiration
+        except (ValueError, TypeError):
+            expiration = _default_expiration
+
         correl_id = input.correl_id or cid
         in_reply_to = input.in_reply_to or ''
         ext_client_id = input.ext_client_id or ''
+        pub_time = input.pub_time or ''
 
         # Validate priority
         if priority < _min_priority or priority > _max_priority:
             priority = _default_priority
 
         # Validate expiration
-        expiration = round(expiration)
         if expiration < 1:
             expiration = 1
 
@@ -126,6 +198,7 @@ class Publish(Service):
             in_reply_to=in_reply_to,
             ext_client_id=ext_client_id,
             publisher=username,
+            pub_time=pub_time,
         )
 
         # Build response
@@ -136,14 +209,14 @@ class Publish(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetMessages(Service):
+class GetMessages(PubSubRESTService):
     """ Retrieve messages for the authenticated user.
     """
     name = 'pubsub.rest.get-messages'
 
     class SimpleIO:
         input_optional = Int('max_messages'), Int('max_len')
-        output_optional = 'messages', Int('message_count'), 'is_ok', 'cid', 'status', 'details'
+        output_optional = AsIs('messages'), Int('message_count'), 'is_ok', 'cid', Int('status'), 'details'
 
 # ################################################################################################################################
 
@@ -153,14 +226,12 @@ class GetMessages(Service):
         cid = self.cid
         input = self.request.input
 
-        # Get authenticated username
-        username = self.channel.security.username
-
-        if not username:
+        # Authenticate
+        username, error = self.authenticate()
+        if error:
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = UNAUTHORIZED
-            self.response.payload.details = 'Authentication required'
+            self.response.payload.details, self.response.payload.status = error
             return
 
         # Get sub_key for this user
@@ -174,8 +245,8 @@ class GetMessages(Service):
             return
 
         # Get optional parameters
-        max_messages = input.max_messages if input.max_messages is not None else _max_messages_default
-        max_len = input.max_len if input.max_len is not None else _max_len_default
+        max_messages = input.max_messages if input.max_messages else _max_messages_default
+        max_len = input.max_len if input.max_len else _max_len_default
 
         # Fetch messages from Redis
         messages = self.server.pubsub_redis.fetch_messages(
@@ -201,14 +272,14 @@ class GetMessages(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Subscribe(Service):
+class Subscribe(PubSubRESTService):
     """ Subscribe to a topic.
     """
     name = 'pubsub.rest.subscribe'
 
     class SimpleIO:
         input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', 'status', 'details', 'sub_key'
+        output_optional = 'is_ok', 'cid', Int('status'), 'details', 'sub_key'
 
 # ################################################################################################################################
 
@@ -218,14 +289,12 @@ class Subscribe(Service):
         cid = self.cid
         input = self.request.input
 
-        # Get authenticated username
-        username = self.channel.security.username
-
-        if not username:
+        # Authenticate
+        username, error = self.authenticate()
+        if error:
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = UNAUTHORIZED
-            self.response.payload.details = 'Authentication required'
+            self.response.payload.details, self.response.payload.status = error
             return
 
         # Get topic name
@@ -270,10 +339,12 @@ class Subscribe(Service):
     def _persist_subscription(self, username:'str', topic_name:'str', sub_key:'str') -> 'None':
         """ Persist subscription to ODB.
         """
+        sec_name = self._get_sec_name(username)
+
         request = {
             'sub_key': sub_key,
             'topic_name_list': [topic_name],
-            'sec_name': self._get_sec_name(username),
+            'sec_name': sec_name,
             'is_delivery_active': True,
             'is_pub_active': True,
             'delivery_type': PubSub.Delivery_Type.Pull,
@@ -290,14 +361,14 @@ class Subscribe(Service):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Unsubscribe(Service):
+class Unsubscribe(PubSubRESTService):
     """ Unsubscribe from a topic.
     """
     name = 'pubsub.rest.unsubscribe'
 
     class SimpleIO:
         input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', 'status', 'details'
+        output_optional = 'is_ok', 'cid', Int('status'), 'details'
 
 # ################################################################################################################################
 
@@ -307,14 +378,12 @@ class Unsubscribe(Service):
         cid = self.cid
         input = self.request.input
 
-        # Get authenticated username
-        username = self.channel.security.username
-
-        if not username:
+        # Authenticate
+        username, error = self.authenticate()
+        if error:
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
-            self.response.payload.status = UNAUTHORIZED
-            self.response.payload.details = 'Authentication required'
+            self.response.payload.details, self.response.payload.status = error
             return
 
         # Get topic name
@@ -342,6 +411,9 @@ class Unsubscribe(Service):
         # Unsubscribe in Redis
         self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
+        # Clear sub_key so a new one is generated on next subscribe
+        self.server.pubsub_subscriptions.clear_sub_key(username)
+
         # Remove subscription from ODB
         self._remove_subscription(username, topic_name)
 
@@ -354,8 +426,10 @@ class Unsubscribe(Service):
     def _remove_subscription(self, username:'str', topic_name:'str') -> 'None':
         """ Remove subscription from ODB.
         """
+        sec_name = self._get_sec_name(username)
+
         request = {
-            'sec_name': self._get_sec_name(username),
+            'sec_name': sec_name,
             'username': username,
             'topic_name_list': [topic_name],
         }
