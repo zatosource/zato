@@ -124,7 +124,6 @@ class Publish(PubSubRESTService):
 
         # Authenticate
         username, error = self.authenticate()
-        logger.info('Publish auth result: username=%s, error=%s', username, error)
         if error:
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
@@ -133,7 +132,6 @@ class Publish(PubSubRESTService):
 
         # Get topic name
         topic_name = input.topic_name
-        logger.info('Publish request: username=%s, topic=%s', username, topic_name)
 
         # Validate topic name
         try:
@@ -146,20 +144,8 @@ class Publish(PubSubRESTService):
             return
 
         # Check permissions
-        logger.info('Checking permissions: username=%s, topic=%s, action=publish', username, topic_name)
-
         matcher = self.server.pubsub_pattern_matcher
-        logger.info('Pattern matcher clients: %s', list(matcher._clients.keys()))
-
-        client_perms = matcher._clients.get(username)
-        if client_perms:
-            logger.info('Client %s pub_patterns: %s', username, [p.pattern for p in client_perms.pub_patterns])
-            logger.info('Client %s sub_patterns: %s', username, [p.pattern for p in client_perms.sub_patterns])
-        else:
-            logger.info('Client %s not found in matcher', username)
-
         permission_result = matcher.evaluate(username, topic_name, 'publish')
-        logger.info('Permission result is_ok=%s, reason=%s', permission_result.is_ok, getattr(permission_result, 'reason', 'N/A'))
 
         if not permission_result.is_ok:
             self.response.payload.is_ok = False
@@ -201,9 +187,6 @@ class Publish(PubSubRESTService):
         # Validate expiration
         if expiration < 1:
             expiration = 1
-
-        logger.info('Publish params: topic=%s, priority=%s, expiration=%s, correl_id=%s, publisher=%s',
-            topic_name, priority, expiration, correl_id, username)
 
         # Publish to Redis
         msg_id = self.server.pubsub_redis.publish(
@@ -357,8 +340,6 @@ class Subscribe(PubSubRESTService):
         """ Persist subscription to ODB.
         """
         sec_name = self._get_sec_name(username)
-        logger.info('_persist_subscription: username=%s, topic_name=%s, sub_key=%s, sec_name=%s',
-            username, topic_name, sub_key, sec_name)
 
         request = {
             'sub_key': sub_key,
@@ -368,9 +349,7 @@ class Subscribe(PubSubRESTService):
             'is_pub_active': True,
             'delivery_type': PubSub.Delivery_Type.Pull,
         }
-        logger.info('_persist_subscription: invoking zato.pubsub.subscription.subscribe with request=%s', request)
         _ = self.invoke('zato.pubsub.subscription.subscribe', request)
-        logger.info('_persist_subscription: invoke completed')
 
 # ################################################################################################################################
 
@@ -448,16 +427,13 @@ class Unsubscribe(PubSubRESTService):
         """ Remove subscription from ODB.
         """
         sec_name = self._get_sec_name(username)
-        logger.info('_remove_subscription: username=%s, topic_name=%s, sec_name=%s', username, topic_name, sec_name)
 
         request = {
             'sec_name': sec_name,
             'username': username,
             'topic_name_list': [topic_name],
         }
-        logger.info('_remove_subscription: invoking zato.pubsub.subscription.unsubscribe with request=%s', request)
         _ = self.invoke('zato.pubsub.subscription.unsubscribe', request)
-        logger.info('_remove_subscription: invoke completed')
 
 # ################################################################################################################################
 
