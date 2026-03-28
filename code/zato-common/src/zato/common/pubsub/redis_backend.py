@@ -88,13 +88,8 @@ class RedisPubSubBackend:
 
         # Timestamps
         now = utcnow()
-        if pub_time:
-            pub_time_iso = pub_time
-            pub_time_dt = datetime.fromisoformat(pub_time.replace('Z', '+00:00'))
-            expiration_time = pub_time_dt + timedelta(seconds=expiration)
-        else:
-            pub_time_iso = now.isoformat()
-            expiration_time = now + timedelta(seconds=expiration)
+        pub_time_iso = pub_time if pub_time else now.isoformat()
+        expiration_time = now + timedelta(seconds=expiration)
         expiration_time_iso = expiration_time.isoformat()
 
         # Build message
@@ -104,7 +99,7 @@ class RedisPubSubBackend:
             'topic_name': topic_name,
             'priority': str(priority),
             'pub_time_iso': pub_time_iso,
-            'recv_time_iso': pub_time_iso,
+            'recv_time_iso': now.isoformat(),
             'expiration': str(expiration),
             'expiration_time_iso': expiration_time_iso,
         }
