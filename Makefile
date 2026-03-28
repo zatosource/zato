@@ -141,4 +141,4 @@ restart-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
 
 pubsub-tests:
-	py $(CURDIR)/code/zato-server/test/zato/pubsub/rest/run_all.py
+	cd $(CURDIR)/code/zato-server/test/zato/pubsub/rest_tests && py run_all.py

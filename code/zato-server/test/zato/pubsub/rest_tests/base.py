@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import requests
 
 # local
-from .config import TestConfig
+from config import TestConfig
 
 # ################################################################################################################################
 # ################################################################################################################################

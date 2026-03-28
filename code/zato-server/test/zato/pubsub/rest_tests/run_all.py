@@ -10,12 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import sys
 
 # local
-from .test_basic_flow import TestBasicFlow
-from .test_after_unsubscribe import TestAfterUnsubscribe
-from .test_permissions import TestPermissions
-from .test_multi_user import TestMultiUser
-from .test_auth import TestAuth
-from .test_consume_once import TestConsumeOnce
+from test_basic_flow import TestBasicFlow
+from test_after_unsubscribe import TestAfterUnsubscribe
+from test_permissions import TestPermissions
+from test_multi_user import TestMultiUser
+from test_auth import TestAuth
+from test_consume_once import TestConsumeOnce
 
 # ################################################################################################################################
 # ################################################################################################################################
