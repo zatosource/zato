@@ -14,6 +14,7 @@ from logging import getLogger
 # Zato
 from zato.common.api import PubSub
 from zato.common.pubsub.util import validate_topic_name
+from zato.common.util.auth import check_basic_auth
 from zato.server.service import AsIs, Int, Service
 
 # ################################################################################################################################
@@ -87,10 +88,16 @@ class PubSubRESTService(Service):
         """ Validate username/password against all basic auth security definitions.
         """
         basic_auth_config = self.server.worker_store.request_dispatcher.url_data.basic_auth_config
+        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+
         for sec_def in basic_auth_config.values():
             config = sec_def.get('config', {})
-            if config.get('username') == username and config.get('password') == password:
-                return True
+            expected_username = config.get('username')
+            expected_password = config.get('password')
+            if expected_username and expected_password:
+                result = check_basic_auth(self.cid, auth_header, expected_username, expected_password)
+                if result is True:
+                    return True
         return False
 
 # ################################################################################################################################
