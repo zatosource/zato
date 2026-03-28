@@ -129,7 +129,9 @@ class PubSubSubscriptionImporter:
     def create_pubsub_subscription_definition(self, definition:'stranydict', session:'SASession') -> 'PubSubSubscription':
         """ Creates a new pubsub subscription definition in the database.
         """
-        logger.info('Creating pubsub subscription definition: %s', definition)
+        logger.info('CREATE: definition=%s', definition)
+        logger.info('CREATE: session=%s, session.bind=%s', session, session.bind)
+        logger.info('CREATE: session.bind.url=%s', session.bind.url if session.bind else 'NO BIND')
 
         instance = PubSubSubscription()
         instance.cluster_id = self.importer.cluster_id
@@ -141,12 +143,25 @@ class PubSubSubscriptionImporter:
         instance.push_service_name = definition.get('push_service_name')
         instance.is_delivery_active = definition.get('is_delivery_active', True)
 
-        logger.info('Creating subscription: sub_key=%s, sec_base_id=%s, cluster_id=%s', instance.sub_key, instance.sec_base_id, instance.cluster_id)
+        logger.info('CREATE: sub_key=%s, sec_base_id=%s, cluster_id=%s', instance.sub_key, instance.sec_base_id, instance.cluster_id)
+        logger.info('CREATE: before session.add, session.new=%s', list(session.new))
 
         set_instance_opaque_attrs(instance, definition)
         session.add(instance)
+
+        logger.info('CREATE: after session.add, session.new=%s', list(session.new))
+        logger.info('CREATE: calling session.commit()')
+
         session.commit()
-        logger.info('Subscription created with ID %s', instance.id)
+
+        logger.info('CREATE: after session.commit(), instance.id=%s', instance.id)
+        logger.info('CREATE: session.new=%s, session.dirty=%s', list(session.new), list(session.dirty))
+
+        verify_count = session.query(PubSubSubscription).count()
+        logger.info('CREATE: verify query count of PubSubSubscription=%s', verify_count)
+
+        verify_row = session.query(PubSubSubscription).filter_by(id=instance.id).first()
+        logger.info('CREATE: verify row with id=%s exists=%s', instance.id, verify_row is not None)
 
         # Create subscription-topic associations
         logger.info('Creating topic associations for subscription ID %s with topics %s', instance.id, definition['topic_id_list'])
@@ -174,6 +189,14 @@ class PubSubSubscriptionImporter:
 
         session.commit()
         logger.info('All topic associations committed for subscription ID %s', instance.id)
+
+        final_count = session.query(PubSubSubscription).count()
+        logger.info('CREATE: final verify count of PubSubSubscription=%s', final_count)
+
+        all_subs = session.query(PubSubSubscription).all()
+        for sub in all_subs:
+            logger.info('CREATE: final DB row id=%s, sub_key=%s, sec_base_id=%s', sub.id, sub.sub_key, sub.sec_base_id)
+
         return instance
 
 # ################################################################################################################################
@@ -411,6 +434,12 @@ class PubSubSubscriptionImporter:
                     }
 
         logger.info('Pubsub subscription definitions sync completed: created=%d, updated=%d', len(created), len(updated))
+
+        final_all_subs = session.query(PubSubSubscription).all()
+        logger.info('SYNC END: total subscriptions in DB=%d', len(final_all_subs))
+        for sub in final_all_subs:
+            logger.info('SYNC END: DB row id=%s, sub_key=%s, sec_base_id=%s', sub.id, sub.sub_key, sub.sec_base_id)
+
         return created, updated
 
 # ################################################################################################################################

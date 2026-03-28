@@ -4,6 +4,11 @@ security:
     username: user.1
     password: password.1
 
+  - name: demo_sec_def.2
+    type: basic_auth
+    username: user.2
+    password: password.2
+
 outgoing_rest:
 
   - name: demo.outgoing.rest.1
@@ -25,8 +30,19 @@ pubsub_topic:
   - name: orders.processed
     description: Orders topic 1
 
+  - name: forbidden.topic
+    description: Forbidden topic for permission tests
+
 pubsub_permission:
   - security: demo_sec_def.1
+    pub:
+      - demo.*
+      - orders.*
+    sub:
+      - demo.*
+      - orders.*
+
+  - security: demo_sec_def.2
     pub:
       - demo.*
       - orders.*
@@ -37,13 +53,14 @@ pubsub_permission:
 pubsub_subscription:
   - security: demo_sec_def.1
     delivery_type: pull
-#    delivery_type: push
-#    push_service: demo.outgoing.rest.1
-#    push_rest_endpoint: demo.outgoing.rest.1
-#    max_retry_time: 365d
     topic_list:
       - demo.1
       - demo.2
       - demo.3
       - orders.processed
+
+  - security: demo_sec_def.2
+    delivery_type: pull
+    topic_list:
+      - demo.1
 

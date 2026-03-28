@@ -111,7 +111,7 @@ class Publish(PubSubRESTService):
     class SimpleIO:
         input_required = 'topic_name', 'data'
         input_optional = 'priority', 'expiration', 'correl_id', 'in_reply_to', 'ext_client_id', 'pub_time'
-        output_optional = AsIs('msg_id'), 'is_ok', 'cid', 'status', 'details'
+        output_optional = AsIs('msg_id'), 'is_ok', 'cid', Int('status'), 'details'
         skip_empty_keys = True
 
 # ################################################################################################################################
@@ -231,7 +231,7 @@ class GetMessages(PubSubRESTService):
 
     class SimpleIO:
         input_optional = Int('max_messages'), Int('max_len')
-        output_optional = 'messages', Int('message_count'), 'is_ok', 'cid', 'status', 'details'
+        output_optional = 'messages', Int('message_count'), 'is_ok', 'cid', Int('status'), 'details'
 
 # ################################################################################################################################
 
@@ -294,7 +294,7 @@ class Subscribe(PubSubRESTService):
 
     class SimpleIO:
         input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', 'status', 'details', 'sub_key'
+        output_optional = 'is_ok', 'cid', Int('status'), 'details', 'sub_key'
 
 # ################################################################################################################################
 
@@ -354,15 +354,21 @@ class Subscribe(PubSubRESTService):
     def _persist_subscription(self, username:'str', topic_name:'str', sub_key:'str') -> 'None':
         """ Persist subscription to ODB.
         """
+        sec_name = self._get_sec_name(username)
+        logger.info('_persist_subscription: username=%s, topic_name=%s, sub_key=%s, sec_name=%s',
+            username, topic_name, sub_key, sec_name)
+
         request = {
             'sub_key': sub_key,
             'topic_name_list': [topic_name],
-            'sec_name': self._get_sec_name(username),
+            'sec_name': sec_name,
             'is_delivery_active': True,
             'is_pub_active': True,
             'delivery_type': PubSub.Delivery_Type.Pull,
         }
+        logger.info('_persist_subscription: invoking zato.pubsub.subscription.subscribe with request=%s', request)
         _ = self.invoke('zato.pubsub.subscription.subscribe', request)
+        logger.info('_persist_subscription: invoke completed')
 
 # ################################################################################################################################
 
@@ -381,7 +387,7 @@ class Unsubscribe(PubSubRESTService):
 
     class SimpleIO:
         input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', 'status', 'details'
+        output_optional = 'is_ok', 'cid', Int('status'), 'details'
 
 # ################################################################################################################################
 
@@ -439,12 +445,17 @@ class Unsubscribe(PubSubRESTService):
     def _remove_subscription(self, username:'str', topic_name:'str') -> 'None':
         """ Remove subscription from ODB.
         """
+        sec_name = self._get_sec_name(username)
+        logger.info('_remove_subscription: username=%s, topic_name=%s, sec_name=%s', username, topic_name, sec_name)
+
         request = {
-            'sec_name': self._get_sec_name(username),
+            'sec_name': sec_name,
             'username': username,
             'topic_name_list': [topic_name],
         }
+        logger.info('_remove_subscription: invoking zato.pubsub.subscription.unsubscribe with request=%s', request)
         _ = self.invoke('zato.pubsub.subscription.unsubscribe', request)
+        logger.info('_remove_subscription: invoke completed')
 
 # ################################################################################################################################
 
