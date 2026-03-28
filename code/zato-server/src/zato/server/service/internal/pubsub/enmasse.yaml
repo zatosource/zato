@@ -46,3 +46,4 @@ pubsub_subscription:
       - demo.2
       - demo.3
       - orders.processed
+
