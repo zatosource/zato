@@ -755,10 +755,22 @@ class Subscribe(_BaseModifyTopicList):
         # Start with existing topics
         all_topic_names = existing_topic_names[:]
 
+        # Extract topic names from existing items (may be Bunch or dict)
+        existing_names = set()
+        for item in existing_topic_names:
+            if hasattr(item, 'topic_name'):
+                existing_names.add(item.topic_name)
+            elif isinstance(item, dict):
+                existing_names.add(item.get('topic_name', item))
+            else:
+                existing_names.add(item)
+
         # Add new topics that are not already in the list
         for new_topic_name in new_topic_names:
-            if new_topic_name not in all_topic_names:
-                all_topic_names.append(new_topic_name)
+            topic_name = new_topic_name.topic_name if hasattr(new_topic_name, 'topic_name') else new_topic_name
+            if topic_name not in existing_names:
+                new_entry = Bunch(topic_name=topic_name, is_delivery_enabled=True, is_pub_enabled=True)
+                all_topic_names.append(new_entry)
 
         return all_topic_names
 
@@ -772,13 +784,28 @@ class Unsubscribe(_BaseModifyTopicList):
 
     def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
 
-        # Start with existing topics
-        all_topic_names = existing_topic_names[:]
+        # Extract topic names to remove (may be Bunch, dict, or string)
+        names_to_remove = set()
+        for item in new_topic_names:
+            if hasattr(item, 'topic_name'):
+                names_to_remove.add(item.topic_name)
+            elif isinstance(item, dict):
+                names_to_remove.add(item.get('topic_name', item))
+            else:
+                names_to_remove.add(item)
 
-        # Remove topics that are in the new list
-        for topic_to_remove in new_topic_names:
-            if topic_to_remove in all_topic_names:
-                all_topic_names.remove(topic_to_remove)
+        # Filter out topics to remove
+        all_topic_names = []
+        for item in existing_topic_names:
+            if hasattr(item, 'topic_name'):
+                topic_name = item.topic_name
+            elif isinstance(item, dict):
+                topic_name = item.get('topic_name', item)
+            else:
+                topic_name = item
+
+            if topic_name not in names_to_remove:
+                all_topic_names.append(item)
 
         return all_topic_names
 
