@@ -14,31 +14,29 @@ from base import BaseTestCase
 
 class TestAuth(BaseTestCase):
 
-    def run(self):
+    def test_publish_with_wrong_password(self):
         topic = self.config.topic_allowed
-
-        print('1. Publish with wrong password')
         client = self.get_client(self.config.user1_username, 'wrong_password')
-        result = client.publish(topic, 'test message')
-        self.assert_false(result.get('is_ok'), 'Publish with wrong password should fail')
-        self.assert_equal(result.get('status'), 401, 'Should return 401 Unauthorized')
 
-        print('2. Subscribe with wrong password')
+        result = client.publish(topic, 'test message')
+        self.assertFalse(result.get('is_ok'), 'Publish with wrong password should fail')
+        self.assertEqual(result.get('status'), 401, 'Should return 401 Unauthorized')
+
+    def test_subscribe_with_wrong_password(self):
+        topic = self.config.topic_allowed
+        client = self.get_client(self.config.user1_username, 'wrong_password')
+
         result = client.subscribe(topic)
-        self.assert_false(result.get('is_ok'), 'Subscribe with wrong password should fail')
-        self.assert_equal(result.get('status'), 401, 'Should return 401 Unauthorized')
+        self.assertFalse(result.get('is_ok'), 'Subscribe with wrong password should fail')
+        self.assertEqual(result.get('status'), 401, 'Should return 401 Unauthorized')
 
-        print('3. Publish with non-existent user')
+    def test_publish_with_nonexistent_user(self):
+        topic = self.config.topic_allowed
         client = self.get_client('nonexistent_user', 'some_password')
+
         result = client.publish(topic, 'test message')
-        self.assert_false(result.get('is_ok'), 'Publish with non-existent user should fail')
-        self.assert_equal(result.get('status'), 401, 'Should return 401 Unauthorized')
+        self.assertFalse(result.get('is_ok'), 'Publish with non-existent user should fail')
+        self.assertEqual(result.get('status'), 401, 'Should return 401 Unauthorized')
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-if __name__ == '__main__':
-    import sys
-    test = TestAuth()
-    success = test.execute()
-    sys.exit(0 if success else 1)
