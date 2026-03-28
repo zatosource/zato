@@ -6,6 +6,9 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import unittest
+
 # requests
 import requests
 
@@ -60,11 +63,9 @@ class PubSubTestClient:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class BaseTestCase:
+class BaseTestCase(unittest.TestCase):
 
-    def __init__(self):
-        self.config = TestConfig
-        self.errors = []
+    config = TestConfig
 
 # ################################################################################################################################
 
@@ -72,51 +73,6 @@ class BaseTestCase:
         username = username or self.config.user1_username
         password = password or self.config.user1_password
         return PubSubTestClient(username, password)
-
-# ################################################################################################################################
-
-    def assert_true(self, condition, message):
-        if not condition:
-            self.errors.append(message)
-            print(f'FAIL: {message}')
-            return False
-        return True
-
-# ################################################################################################################################
-
-    def assert_false(self, condition, message):
-        return self.assert_true(not condition, message)
-
-# ################################################################################################################################
-
-    def assert_equal(self, actual, expected, message):
-        return self.assert_true(actual == expected, f'{message}: expected {expected}, got {actual}')
-
-# ################################################################################################################################
-
-    def run(self):
-        raise NotImplementedError()
-
-# ################################################################################################################################
-
-    def execute(self):
-        name = self.__class__.__name__
-        print(f'=== {name} ===')
-        print()
-
-        try:
-            self.run()
-        except Exception as e:
-            self.errors.append(f'Exception: {e}')
-            print(f'FAIL: Exception raised: {e}')
-
-        print()
-        if self.errors:
-            print(f'FAILED: {len(self.errors)} error(s)')
-            return False
-        else:
-            print('PASSED')
-            return True
 
 # ################################################################################################################################
 # ################################################################################################################################
