@@ -91,7 +91,7 @@ Unsubscribe_Response=$(curl $Curl_Opts -X POST -u "$Auth" \
 
 echo "Response: $Unsubscribe_Response"
 
-if echo "$Unsubscribe_Response" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if d.get('response',{}).get('sub_key') else 1)"; then
+if echo "$Unsubscribe_Response" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if d.get('response',{}).get('is_ok') else 1)"; then
     echo "OK: Unsubscribed"
 else
     echo "WARN: Unsubscribe response unexpected"
