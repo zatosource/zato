@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from logging import getLogger
 from operator import itemgetter
 from traceback import format_exc
 from urllib.parse import quote
@@ -17,6 +18,8 @@ from bunch import Bunch, bunchify
 
 # Zato
 from zato.common.broker_message import PUBSUB
+
+logger = getLogger(__name__)
 from zato.common.api import PubSub
 from zato.common.odb.model import Cluster, HTTPSOAP, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 from zato.common.odb.query import pubsub_subscription_list
@@ -35,13 +38,32 @@ def _build_topic_objects_list(topic_data_list=None, topics=None, topic_data_by_n
     topic_objects_list = []
 
     if topic_data_list:
-        # For create - we have topic_data_list directly
+        # For create - we have topic_data_list directly (may be strings or dicts)
         for item in topic_data_list:
-            topic_item = {
-                'topic_name': item['topic_name'],
-                'is_pub_enabled': item['is_pub_enabled'],
-                'is_delivery_enabled': item['is_delivery_enabled']
-            }
+            if isinstance(item, str):
+                topic_item = {
+                    'topic_name': item,
+                    'is_pub_enabled': True,
+                    'is_delivery_enabled': True
+                }
+            elif isinstance(item, dict):
+                topic_item = {
+                    'topic_name': item['topic_name'],
+                    'is_pub_enabled': item.get('is_pub_enabled', True),
+                    'is_delivery_enabled': item.get('is_delivery_enabled', True)
+                }
+            elif hasattr(item, 'topic_name'):
+                topic_item = {
+                    'topic_name': item.topic_name,
+                    'is_pub_enabled': getattr(item, 'is_pub_enabled', True),
+                    'is_delivery_enabled': getattr(item, 'is_delivery_enabled', True)
+                }
+            else:
+                topic_item = {
+                    'topic_name': str(item),
+                    'is_pub_enabled': True,
+                    'is_delivery_enabled': True
+                }
             topic_objects_list.append(topic_item)
 
     elif topics and topic_data_by_name:
@@ -110,16 +132,16 @@ class GetList(AdminService):
 
         # Check if password should be included in the response
         needs_password = self.request.input.needs_password
+        cluster_id = self.request.input.cluster_id
 
         # Query always returns password now, but we only need to use it if requested
-        result = self._search(pubsub_subscription_list, session, self.request.input.cluster_id, None, False)
+        result = self._search(pubsub_subscription_list, session, cluster_id, None, False)
 
         # Group by subscription ID
         subscriptions_by_id = {}
         topics_by_id = {}
 
         for item in result:
-
             sub_id = item.id
             topic_name = item.topic_name
             is_pub_enabled = item.is_pub_enabled
@@ -207,7 +229,19 @@ class Create(AdminService):
         topic_link_list = []
 
         topic_data_list = input.topic_name_list
-        topic_name_list = sorted([item['topic_name'] for item in topic_data_list])
+
+        # Handle both string and dict formats for topic names
+        topic_name_list = []
+        for item in topic_data_list:
+            if isinstance(item, str):
+                topic_name_list.append(item)
+            elif isinstance(item, dict):
+                topic_name_list.append(item['topic_name'])
+            elif hasattr(item, 'topic_name'):
+                topic_name_list.append(item.topic_name)
+            else:
+                topic_name_list.append(str(item))
+        topic_name_list = sorted(topic_name_list)
 
         self.logger.info('CREATE: Creating subscription for topics: %s', topic_data_list)
 
@@ -228,8 +262,30 @@ class Create(AdminService):
                 topic_data_by_name = {}
 
                 for item in topic_data_list:
-                    topic_name = item['topic_name']
-                    topic_data_by_name[topic_name] = item
+                    if isinstance(item, str):
+                        topic_name = item
+                        topic_data_by_name[topic_name] = {
+                            'topic_name': item,
+                            'is_pub_enabled': True,
+                            'is_delivery_enabled': True
+                        }
+                    elif isinstance(item, dict):
+                        topic_name = item['topic_name']
+                        topic_data_by_name[topic_name] = item
+                    elif hasattr(item, 'topic_name'):
+                        topic_name = item.topic_name
+                        topic_data_by_name[topic_name] = {
+                            'topic_name': topic_name,
+                            'is_pub_enabled': getattr(item, 'is_pub_enabled', True),
+                            'is_delivery_enabled': getattr(item, 'is_delivery_enabled', True)
+                        }
+                    else:
+                        topic_name = str(item)
+                        topic_data_by_name[topic_name] = {
+                            'topic_name': topic_name,
+                            'is_pub_enabled': True,
+                            'is_delivery_enabled': True
+                        }
 
                 for topic_name in topic_name_list:
                     topic = session.query(PubSubTopic).\
@@ -606,6 +662,7 @@ class _BaseModifyTopicList(AdminService):
         }
 
         get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request, skip_response_elem=True)
+
         return get_list_response
 
 # ################################################################################################################################
@@ -631,9 +688,18 @@ class _BaseModifyTopicList(AdminService):
                 # .. find any existing subscriptions using GetList service  ..
                 subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
 
-                # .. if we do not have any subscription, what to do next, depends on whether we are creating
-                # .. new subscriptions, or if we're unsubscribing the client ..
-                if not subscriptions:
+                # Check if there's a subscription for THIS security definition
+                has_subscription_for_this_sec = False
+                if subscriptions:
+                    for item in subscriptions:
+                        item_sec_base_id = item.get('sec_base_id') if isinstance(item, dict) else getattr(item, 'sec_base_id', None)
+                        if item_sec_base_id == sec_base_id:
+                            has_subscription_for_this_sec = True
+                            break
+
+                # .. if we do not have a subscription for this security definition, what to do next depends on
+                # .. whether we are creating new subscriptions, or if we're unsubscribing the client ..
+                if not has_subscription_for_this_sec:
 
                     # .. or, we are to create a new (the very first) subscription ..
                     if self.action == ModuleCtx.Action_Subsctibe:
@@ -715,9 +781,6 @@ class _BaseModifyTopicList(AdminService):
                 all_topic_names = self._modify_topic_list(existing_topic_names, new_topic_names)
 
                 # Sort the final list by topic name
-                print()
-                print(111, all_topic_names)
-                print()
                 all_topic_names.sort(key=itemgetter('topic_name'))
 
                 # Update existing subscription with the combined topics
@@ -755,10 +818,22 @@ class Subscribe(_BaseModifyTopicList):
         # Start with existing topics
         all_topic_names = existing_topic_names[:]
 
+        # Extract topic names from existing items (may be Bunch or dict)
+        existing_names = set()
+        for item in existing_topic_names:
+            if hasattr(item, 'topic_name'):
+                existing_names.add(item.topic_name)
+            elif isinstance(item, dict):
+                existing_names.add(item.get('topic_name', item))
+            else:
+                existing_names.add(item)
+
         # Add new topics that are not already in the list
         for new_topic_name in new_topic_names:
-            if new_topic_name not in all_topic_names:
-                all_topic_names.append(new_topic_name)
+            topic_name = new_topic_name.topic_name if hasattr(new_topic_name, 'topic_name') else new_topic_name
+            if topic_name not in existing_names:
+                new_entry = Bunch(topic_name=topic_name, is_delivery_enabled=True, is_pub_enabled=True)
+                all_topic_names.append(new_entry)
 
         return all_topic_names
 
@@ -772,13 +847,28 @@ class Unsubscribe(_BaseModifyTopicList):
 
     def _modify_topic_list(self, existing_topic_names:'strlist', new_topic_names:'strlist') -> 'strlist':
 
-        # Start with existing topics
-        all_topic_names = existing_topic_names[:]
+        # Extract topic names to remove (may be Bunch, dict, or string)
+        names_to_remove = set()
+        for item in new_topic_names:
+            if hasattr(item, 'topic_name'):
+                names_to_remove.add(item.topic_name)
+            elif isinstance(item, dict):
+                names_to_remove.add(item.get('topic_name', item))
+            else:
+                names_to_remove.add(item)
 
-        # Remove topics that are in the new list
-        for topic_to_remove in new_topic_names:
-            if topic_to_remove in all_topic_names:
-                all_topic_names.remove(topic_to_remove)
+        # Filter out topics to remove
+        all_topic_names = []
+        for item in existing_topic_names:
+            if hasattr(item, 'topic_name'):
+                topic_name = item.topic_name
+            elif isinstance(item, dict):
+                topic_name = item.get('topic_name', item)
+            else:
+                topic_name = item
+
+            if topic_name not in names_to_remove:
+                all_topic_names.append(item)
 
         return all_topic_names
 

@@ -975,6 +975,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pubsub_pattern_matcher = PatternMatcher()
         self.pubsub_subscriptions = SubscriptionsStore()
 
+        # Load pub/sub permissions from database into pattern matcher
+        self._load_pubsub_permissions()
+
         # Let the worker know the broker client is ready
         self.worker_store.set_broker_client(self.broker_client)
         self.worker_store.after_broker_client_set()
@@ -1040,6 +1043,89 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             if django_created:
                 logger.info('Created Django handler channel')
+
+# ################################################################################################################################
+
+    def _load_pubsub_permissions(self) -> 'None':
+        """ Load pub/sub permissions from database into the pattern matcher.
+        """
+        # stdlib
+        from contextlib import closing
+
+        # Zato
+        from zato.common.api import PubSub
+        from zato.common.odb.model import PubSubPermission, SecurityBase
+
+        logger.info('_load_pubsub_permissions: starting, cluster_id=%s', self.cluster_id)
+
+        with closing(self.odb.session()) as session:
+
+            # First log all SecurityBase entries
+            all_sec = session.query(SecurityBase).all()
+            logger.info('_load_pubsub_permissions: found %d SecurityBase entries in DB', len(all_sec))
+            for sec in all_sec:
+                logger.info('_load_pubsub_permissions: SecurityBase id=%s, name=%s, username=%s', sec.id, sec.name, sec.username)
+
+            # Log all PubSubPermission entries
+            all_perms = session.query(PubSubPermission).filter(PubSubPermission.cluster_id == self.cluster_id).all()
+            logger.info('_load_pubsub_permissions: found %d PubSubPermission entries in DB', len(all_perms))
+            for perm in all_perms:
+                logger.info('_load_pubsub_permissions: PubSubPermission id=%s, sec_base_id=%s, pattern=%s',
+                    perm.id, perm.sec_base_id, perm.pattern)
+
+            permissions = session.query(
+                PubSubPermission.pattern,
+                PubSubPermission.access_type,
+                SecurityBase.username,
+                SecurityBase.name
+            ).join(
+                SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
+            ).filter(
+                PubSubPermission.cluster_id == self.cluster_id
+            ).all()
+
+            logger.info('_load_pubsub_permissions: joined query returned %d rows', len(permissions))
+
+            client_permissions = {}
+            username_to_sec_name = {}
+
+            for pattern_str, access_type, username, sec_name in permissions:
+                logger.info('_load_pubsub_permissions: processing row - pattern=%s, access_type=%s, username=%s, sec_name=%s',
+                    pattern_str, access_type, username, sec_name)
+
+                if username not in client_permissions:
+                    client_permissions[username] = []
+                    username_to_sec_name[username] = sec_name
+
+                # Parse the combined pattern string (e.g. "pub=demo.*\nsub=orders.*")
+                for line in pattern_str.split('\n'):
+                    line = line.strip()
+                    if line.startswith('pub='):
+                        client_permissions[username].append({
+                            'pattern': line[4:],
+                            'access_type': PubSub.API_Client.Publisher
+                        })
+                    elif line.startswith('sub='):
+                        client_permissions[username].append({
+                            'pattern': line[4:],
+                            'access_type': PubSub.API_Client.Subscriber
+                        })
+
+            logger.info('_load_pubsub_permissions: processed %d unique users: %s', len(client_permissions), list(client_permissions.keys()))
+            logger.info('_load_pubsub_permissions: username_to_sec_name=%s', username_to_sec_name)
+
+            for username, perms in client_permissions.items():
+                logger.info('Loading permissions for user %s: %s', username, perms)
+                self.pubsub_pattern_matcher.add_client(username, perms)
+
+                sec_name = username_to_sec_name.get(username)
+                if sec_name:
+                    self.pubsub_subscriptions.register_user(username, sec_name)
+                    logger.info('Registered user %s with sec_name %s', username, sec_name)
+
+                logger.info('Loaded pub/sub permissions for user: %s (%d patterns)', username, len(perms))
+
+        logger.info('_load_pubsub_permissions: completed')
 
 # ################################################################################################################################
 

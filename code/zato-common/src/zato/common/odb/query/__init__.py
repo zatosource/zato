@@ -939,7 +939,6 @@ def pubsub_permission_list(session, cluster_id, filter_by=None, needs_columns=Fa
 
 def _pubsub_subscription(session, cluster_id):
 
-    # Return all subscription-topic pairs without grouping
     return session.query(
         PubSubSubscription.id,
         PubSubSubscription.sub_key,
