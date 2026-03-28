@@ -29,7 +29,7 @@ class Search(Service):
         output_repeated = True
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         date_from = self.request.input.get('date_from')
         date_to = self.request.input.get('date_to')
@@ -77,7 +77,7 @@ class Get(Service):
             'has_errors', 'duration_ms', 'content_saved', 'resubmitted_from', 'custom_attrs'
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         txn = store.get_transaction(self.request.input.id)
 
         if not txn:
@@ -96,7 +96,7 @@ class GetContent(Service):
         input_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         content = store.get_content(self.request.input.id)
 
         if content:
@@ -116,7 +116,7 @@ class GetActivity(Service):
         output_repeated = True
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         entries = store.get_logs_for_transaction(self.request.input.id)
 
         self.response.payload[:] = [
@@ -144,7 +144,7 @@ class GetTasks(Service):
         output_repeated = True
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         tasks = store.get_tasks_for_transaction(self.request.input.id)
 
         self.response.payload[:] = [
@@ -173,7 +173,7 @@ class Resubmit(Service):
         output_required = 'new_id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         engine = FileTransferEngine(store)
 
         new_txn = engine.resubmit(self.request.input.id)
@@ -194,7 +194,7 @@ class Reprocess(Service):
         output_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         engine = FileTransferEngine(store)
 
         txn = engine.reprocess(self.request.input.id)

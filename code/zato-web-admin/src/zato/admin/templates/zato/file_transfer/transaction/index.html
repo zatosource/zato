@@ -1,0 +1,124 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}File transfer - Transactions{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <style>
+    .ft-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #fff;
+    }
+    .ft-badge-done { background: #067f39; }
+    .ft-badge-failed { background: #cc0000; }
+    .ft-badge-warn { background: #b45309; }
+    .ft-badge-delivering { background: var(--primary-dark); }
+    .ft-badge-queued { background: #6b21a8; }
+    .ft-badge-retrying { background: #c2410c; }
+    .ft-badge-new { background: #1d4ed8; }
+    .ft-filter-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .ft-filter-row select, .ft-filter-row input[type="text"] {
+        padding: 4px 8px;
+        font-size: 12px;
+        border: 1px solid var(--primary-dark);
+    }
+    </style>
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">File transfer transactions</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<form method="get" action="" class="ft-filter-row">
+            <select name="status">
+                <option value="">All statuses</option>
+                <option value="Done" {% if filters.status == 'Done' %}selected{% endif %}>Done</option>
+                <option value="Failed" {% if filters.status == 'Failed' %}selected{% endif %}>Failed</option>
+                <option value="Done_W_Errors" {% if filters.status == 'Done_W_Errors' %}selected{% endif %}>Done with errors</option>
+                <option value="Queued" {% if filters.status == 'Queued' %}selected{% endif %}>Queued</option>
+                <option value="New" {% if filters.status == 'New' %}selected{% endif %}>New</option>
+            </select>
+            <select name="doc_type_id">
+                <option value="">All doc types</option>
+                {% for dt in doc_types %}
+                <option value="{{ dt.id }}" {% if filters.doc_type_id == dt.id %}selected{% endif %}>{{ dt.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="sender" placeholder="Sender..." value="{{ filters.sender }}" style="width:120px">
+            <input type="text" name="receiver" placeholder="Receiver..." value="{{ filters.receiver }}" style="width:120px">
+            <input type="text" name="query" placeholder="File name or ID..." value="{{ filters.query }}" style="width:180px">
+            <input type="submit" value="Search" />
+        </form>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Date</a></th>
+                        <th><a href="#">File</a></th>
+                        <th><a href="#">Doc type</a></th>
+                        <th><a href="#">Sender</a></th>
+                        <th><a href="#">Receiver</a></th>
+                        <th><a href="#">Status</a></th>
+                        <th><a href="#">User status</a></th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if transactions %}
+                {% for txn in transactions %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ txn.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td>{{ txn.created }}</td>
+                        <td><a href="{% url 'file-transfer-transaction-detail' txn.id %}">{{ txn.filename }}</a></td>
+                        <td>{{ txn.doc_type_id|no_value_indicator }}</td>
+                        <td>{{ txn.sender|no_value_indicator }}</td>
+                        <td>{{ txn.receiver|no_value_indicator }}</td>
+                        <td>
+                            {% if txn.processing_status == 'Done' %}
+                            <span class="ft-badge ft-badge-done">DONE</span>
+                            {% elif txn.processing_status == 'Failed' %}
+                            <span class="ft-badge ft-badge-failed">FAILED</span>
+                            {% elif txn.processing_status == 'Done_W_Errors' %}
+                            <span class="ft-badge ft-badge-warn">DONE W/ERRORS</span>
+                            {% elif txn.processing_status == 'Queued' %}
+                            <span class="ft-badge ft-badge-queued">QUEUED</span>
+                            {% elif txn.processing_status == 'New' %}
+                            <span class="ft-badge ft-badge-new">NEW</span>
+                            {% else %}
+                            <span class="ft-badge">{{ txn.processing_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ txn.user_status|no_value_indicator }}</td>
+                        <td><a href="{% url 'file-transfer-transaction-detail' txn.id %}">Details</a></td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='9'>No results</td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+{% endblock %}

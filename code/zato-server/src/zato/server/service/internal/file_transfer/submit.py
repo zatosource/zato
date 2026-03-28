@@ -29,7 +29,7 @@ class Submit(Service):
         output_required = 'transaction_id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         engine = FileTransferEngine(store)
 
         content = self.request.input.content

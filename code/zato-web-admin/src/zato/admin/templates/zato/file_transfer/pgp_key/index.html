@@ -1,0 +1,91 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}File transfer - PGP keys{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <style>
+    .ft-enabled { color: #067f39; font-weight: 600; }
+    .ft-disabled { color: #cc0000; font-weight: 600; }
+    </style>
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    function deleteKey(keyId) {
+        jConfirm('Are you sure you want to delete this PGP key?', 'Confirm delete', function(r) {
+            if (r) {
+                $.post('/zato/file-transfer/pgp-key/' + keyId + '/delete/', {
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                }, function() {
+                    location.reload();
+                });
+            }
+        });
+    }
+    </script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">File transfer PGP keys</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div class='page_prompt' style="clear:left">
+            <a href="{% url 'file-transfer-pgp-key-import' %}">Import a PGP key</a>
+            |
+            <a href="{% url 'file-transfer-pgp-key-generate' %}">Generate a new keypair</a>
+        </div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Type</a></th>
+                        <th><a href="#">Usage</a></th>
+                        <th><a href="#">Fingerprint</a></th>
+                        <th><a href="#">Algorithm</a></th>
+                        <th><a href="#">Status</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if pgp_keys %}
+                {% for key in pgp_keys %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ key.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td>{{ key.name }}</td>
+                        <td>{{ key.key_type }}</td>
+                        <td>{{ key.usage }}</td>
+                        <td style="font-family:monospace;font-size:11px">{{ key.fingerprint|truncatechars:20 }}</td>
+                        <td>{{ key.algorithm }} {{ key.key_size }}</td>
+                        <td>
+                            {% if key.is_enabled %}
+                            <span class="ft-enabled">Enabled</span>
+                            {% else %}
+                            <span class="ft-disabled">Disabled</span>
+                            {% endif %}
+                        </td>
+                        <td><a href="{% url 'file-transfer-pgp-key-edit' key.id %}">Edit</a></td>
+                        <td><a href="javascript:deleteKey('{{ key.id }}')">Delete</a></td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='9'>No results</td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+{% endblock %}

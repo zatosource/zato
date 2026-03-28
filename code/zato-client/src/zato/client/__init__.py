@@ -269,6 +269,8 @@ class ServiceInvokeResponse(JSONSIOResponse):
 
     def _handle_response_with_meta(self, data):
 
+        logger.info('ServiceInvokeResponse._handle_response_with_meta: data=%r, type=%s', data, type(data))
+
         if isinstance(data, dict):
             self.meta = data.get('_meta')
             data_keys = list(data.keys())
@@ -282,6 +284,8 @@ class ServiceInvokeResponse(JSONSIOResponse):
                 self.data = data
         else:
             self.data = data
+
+        logger.info('ServiceInvokeResponse._handle_response_with_meta: self.data=%r, type=%s', self.data, type(self.data))
 
     def set_data(self, payload, has_zato_env):
 

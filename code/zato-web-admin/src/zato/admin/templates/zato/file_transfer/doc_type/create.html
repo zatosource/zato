@@ -1,0 +1,193 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block page_title %}File transfer - Create document type{% endblock %}
+
+{% block content %}
+<div class="content-wrap">
+    <nav class="breadcrumb">
+        <a href="{% url 'main-page' %}">Zato</a> &rsaquo;
+        <a href="{% url 'file-transfer-doc-type' %}">Document types</a> &rsaquo;
+        <span>Create</span>
+    </nav>
+
+    <a href="{% url 'file-transfer-doc-type' %}" class="btn btn-default" style="margin-bottom:12px">&larr; Back</a>
+
+    <h2>Create document type</h2>
+
+    <form method="post" action="">
+        {% csrf_token %}
+
+        <ul class="nav nav-tabs" style="margin-bottom:16px">
+            <li class="active"><a href="#tab-basic" data-toggle="tab">Basic</a></li>
+            <li><a href="#tab-recognition" data-toggle="tab">Recognition</a></li>
+            <li><a href="#tab-extraction" data-toggle="tab">Extraction</a></li>
+            <li><a href="#tab-preproc" data-toggle="tab">Pre-processing</a></li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane active" id="tab-basic">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="name" class="form-control" style="max-width:400px" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" class="form-control" rows="2" style="max-width:400px"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>File type</label>
+                    <select name="file_type" class="form-control" style="max-width:200px">
+                        <option value="Xml">XML</option>
+                        <option value="Json">JSON</option>
+                        <option value="Flat_File">Flat file</option>
+                        <option value="Binary">Binary</option>
+                        <option value="Edi">EDI</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" name="is_enabled" checked> Enabled</label>
+                </div>
+            </div>
+
+            <div class="tab-pane" id="tab-recognition">
+                <p style="color:#64748b;margin-bottom:16px">Define rules to recognize this document type. Rules are evaluated in priority order.</p>
+                <div id="recognition-rules-list"></div>
+                <button type="button" class="btn btn-default" onclick="addRecognitionRule()">+ Add recognition rule</button>
+                <input type="hidden" name="recognition_rules_json" id="recognition_rules_json" value="[]">
+            </div>
+
+            <div class="tab-pane" id="tab-extraction">
+                <p style="color:#64748b;margin-bottom:16px">Define rules to extract attributes from documents of this type.</p>
+                <div id="extraction-rules-list"></div>
+                <button type="button" class="btn btn-default" onclick="addExtractionRule()">+ Add extraction rule</button>
+                <input type="hidden" name="extraction_rules_json" id="extraction_rules_json" value="[]">
+            </div>
+
+            <div class="tab-pane" id="tab-preproc">
+                <div class="form-group">
+                    <label><input type="checkbox" name="preprocess_validate"> Validate structure</label>
+                </div>
+                <div class="form-group">
+                    <label>Schema reference</label>
+                    <input type="text" name="preprocess_validate_schema" class="form-control" style="max-width:400px" placeholder="Path to XSD or JSON schema">
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" name="preprocess_dedup"> Check for duplicates</label>
+                </div>
+                <div class="form-group">
+                    <label>Dedup window (days)</label>
+                    <input type="number" name="preprocess_dedup_window_days" class="form-control" style="max-width:100px" value="30">
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" name="preprocess_pgp_verify"> Verify PGP signature</label>
+                </div>
+                <div class="form-group">
+                    <label>PGP key</label>
+                    <select name="preprocess_pgp_key_id" class="form-control" style="max-width:300px">
+                        <option value="">None</option>
+                        {% for key in pgp_keys %}
+                        <option value="{{ key.id }}">{{ key.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" name="preprocess_checksum"> Verify checksum</label>
+                </div>
+                <div class="form-group">
+                    <label>Save policy</label>
+                    <select name="preprocess_save" class="form-control" style="max-width:200px">
+                        <option value="All">All</option>
+                        <option value="Unique">Unique only</option>
+                        <option value="None_">None</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:24px">
+            <button type="submit" class="btn btn-primary">Create</button>
+            <a href="{% url 'file-transfer-doc-type' %}" class="btn btn-default">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+var recognitionRules = [];
+var extractionRules = [];
+
+function addRecognitionRule() {
+    recognitionRules.push({type: 'Filename_Glob', pattern: '', priority: recognitionRules.length + 1});
+    renderRecognitionRules();
+}
+
+function removeRecognitionRule(idx) {
+    recognitionRules.splice(idx, 1);
+    renderRecognitionRules();
+}
+
+function renderRecognitionRules() {
+    var html = '';
+    for (var i = 0; i < recognitionRules.length; i++) {
+        var r = recognitionRules[i];
+        html += '<div class="panel panel-default" style="margin-bottom:10px"><div class="panel-body"><div class="row">';
+        html += '<div class="col-md-3"><label>Type</label><select class="form-control" onchange="recognitionRules['+i+'].type=this.value;updateRecognitionJson()">';
+        html += '<option value="Filename_Glob"' + (r.type === 'Filename_Glob' ? ' selected' : '') + '>Filename glob</option>';
+        html += '<option value="Content_Regex"' + (r.type === 'Content_Regex' ? ' selected' : '') + '>Content regex</option>';
+        html += '<option value="Xml_Root_Tag"' + (r.type === 'Xml_Root_Tag' ? ' selected' : '') + '>XML root tag</option>';
+        html += '<option value="Json_Path"' + (r.type === 'Json_Path' ? ' selected' : '') + '>JSON path</option>';
+        html += '<option value="Pgp_Header"' + (r.type === 'Pgp_Header' ? ' selected' : '') + '>PGP header</option>';
+        html += '<option value="Edi_Segment"' + (r.type === 'Edi_Segment' ? ' selected' : '') + '>EDI segment</option>';
+        html += '</select></div>';
+        html += '<div class="col-md-5"><label>Pattern / Tag / Path</label><input type="text" class="form-control" value="' + (r.pattern || r.tag || r.path || '') + '" onchange="recognitionRules['+i+'].pattern=this.value;recognitionRules['+i+'].tag=this.value;recognitionRules['+i+'].path=this.value;updateRecognitionJson()"></div>';
+        html += '<div class="col-md-2"><label>Priority</label><input type="number" class="form-control" value="' + r.priority + '" onchange="recognitionRules['+i+'].priority=parseInt(this.value);updateRecognitionJson()"></div>';
+        html += '<div class="col-md-2"><label>&nbsp;</label><button type="button" class="btn btn-danger btn-block" onclick="removeRecognitionRule('+i+')">Remove</button></div>';
+        html += '</div></div></div>';
+    }
+    $('#recognition-rules-list').html(html);
+    updateRecognitionJson();
+}
+
+function updateRecognitionJson() {
+    $('#recognition_rules_json').val(JSON.stringify(recognitionRules));
+}
+
+function addExtractionRule() {
+    extractionRules.push({attribute: '', attr_type: 'System', query_type: 'Xpath', query: ''});
+    renderExtractionRules();
+}
+
+function removeExtractionRule(idx) {
+    extractionRules.splice(idx, 1);
+    renderExtractionRules();
+}
+
+function renderExtractionRules() {
+    var html = '';
+    for (var i = 0; i < extractionRules.length; i++) {
+        var r = extractionRules[i];
+        html += '<div class="panel panel-default" style="margin-bottom:10px"><div class="panel-body"><div class="row">';
+        html += '<div class="col-md-3"><label>Attribute</label><input type="text" class="form-control" value="' + r.attribute + '" onchange="extractionRules['+i+'].attribute=this.value;updateExtractionJson()"></div>';
+        html += '<div class="col-md-2"><label>Type</label><select class="form-control" onchange="extractionRules['+i+'].attr_type=this.value;updateExtractionJson()">';
+        html += '<option value="System"' + (r.attr_type === 'System' ? ' selected' : '') + '>System</option>';
+        html += '<option value="Custom"' + (r.attr_type === 'Custom' ? ' selected' : '') + '>Custom</option>';
+        html += '</select></div>';
+        html += '<div class="col-md-2"><label>Query type</label><select class="form-control" onchange="extractionRules['+i+'].query_type=this.value;updateExtractionJson()">';
+        html += '<option value="Xpath"' + (r.query_type === 'Xpath' ? ' selected' : '') + '>XPath</option>';
+        html += '<option value="Jsonpath"' + (r.query_type === 'Jsonpath' ? ' selected' : '') + '>JSONPath</option>';
+        html += '<option value="Regex"' + (r.query_type === 'Regex' ? ' selected' : '') + '>Regex</option>';
+        html += '<option value="Fixed"' + (r.query_type === 'Fixed' ? ' selected' : '') + '>Fixed</option>';
+        html += '</select></div>';
+        html += '<div class="col-md-3"><label>Query / Value</label><input type="text" class="form-control" value="' + r.query + '" onchange="extractionRules['+i+'].query=this.value;updateExtractionJson()"></div>';
+        html += '<div class="col-md-2"><label>&nbsp;</label><button type="button" class="btn btn-danger btn-block" onclick="removeExtractionRule('+i+')">Remove</button></div>';
+        html += '</div></div></div>';
+    }
+    $('#extraction-rules-list').html(html);
+    updateExtractionJson();
+}
+
+function updateExtractionJson() {
+    $('#extraction_rules_json').val(JSON.stringify(extractionRules));
+}
+</script>
+{% endblock %}

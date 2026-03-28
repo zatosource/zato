@@ -29,7 +29,7 @@ class Search(Service):
         output_repeated = True
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         status = self.request.input.get('status')
         txn_id = self.request.input.get('transaction_id')
@@ -76,7 +76,7 @@ class Stop(Service):
         input_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         task_manager = TaskManager(store)
         task_manager.stop_task(self.request.input.id)
 
@@ -90,7 +90,7 @@ class Restart(Service):
         input_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         task_manager = TaskManager(store)
         task_manager.restart_task(self.request.input.id)
 
@@ -104,7 +104,7 @@ class Delete(Service):
         input_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         store.delete_task(self.request.input.id)
 
 # ################################################################################################################################

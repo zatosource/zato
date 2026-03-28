@@ -28,7 +28,7 @@ class Get(Service):
             'default_save_policy', 'max_search_results', 'archive_after_days', 'log_retention_days', 'checksum_algorithm'
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         settings = store.get_settings()
         self.response.payload = settings.to_dict()
 
@@ -43,7 +43,7 @@ class Update(Service):
             'default_save_policy', 'max_search_results', 'archive_after_days', 'log_retention_days', 'checksum_algorithm'
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         settings = store.get_settings()
 

@@ -1,0 +1,82 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}File transfer - User statuses{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    $(document).ready(function() {
+        $('#add-status-form').on('submit', function(e) {
+            e.preventDefault();
+            $.post('{% url "file-transfer-user-status-create" %}', $(this).serialize(), function(data) {
+                if (data.ok) {
+                    location.reload();
+                }
+            });
+        });
+    });
+
+    function deleteStatus(status) {
+        jConfirm('Are you sure you want to delete this status?', 'Confirm delete', function(r) {
+            if (r) {
+                $.post('/zato/file-transfer/user-status/' + encodeURIComponent(status) + '/delete/', {
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                }, function() {
+                    location.reload();
+                });
+            }
+        });
+    }
+    </script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">File transfer user statuses</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<p style="margin-bottom:12px">Custom statuses that can be assigned to transactions.</p>
+
+<div style="margin-bottom:16px">
+    <form id="add-status-form" style="display:flex;gap:10px;align-items:center">
+        {% csrf_token %}
+        <input type="text" name="status" style="width:200px;padding:4px 8px;border:1px solid var(--primary-dark)" placeholder="New status name..." required>
+        <input type="submit" value="Add status" />
+    </form>
+</div>
+
+<div id="markup">
+    <table id="data-table">
+        <thead>
+            <tr class='ignore'>
+                <th>&nbsp;</th>
+                <th><a href="#">Status</a></th>
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% if statuses %}
+        {% for item in statuses %}
+            <tr class="{% cycle 'odd' 'even' %}">
+                <td class='numbering'>&nbsp;</td>
+                <td>{{ item.status }}</td>
+                <td><a href="javascript:deleteStatus('{{ item.status }}')">Delete</a></td>
+            </tr>
+        {% endfor %}
+        {% else %}
+            <tr class='ignore'>
+                <td colspan='3'>No results</td>
+            </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

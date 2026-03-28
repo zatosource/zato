@@ -32,7 +32,7 @@ class GetSummary(Service):
             'avg_duration_ms', 'top_senders', 'top_doc_types', 'recent_failures'
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         date_from = self.request.input.get('date_from')
         date_to = self.request.input.get('date_to')

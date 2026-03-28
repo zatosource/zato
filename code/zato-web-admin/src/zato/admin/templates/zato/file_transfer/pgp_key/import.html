@@ -1,0 +1,41 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block page_title %}File transfer - Import PGP key{% endblock %}
+
+{% block content %}
+<div class="content-wrap">
+    <nav class="breadcrumb">
+        <a href="{% url 'main-page' %}">Zato</a> &rsaquo;
+        <a href="{% url 'file-transfer-pgp-key' %}">PGP keys</a> &rsaquo;
+        <span>Import</span>
+    </nav>
+
+    <a href="{% url 'file-transfer-pgp-key' %}" class="btn btn-default" style="margin-bottom:12px">&larr; Back</a>
+
+    <h2>Import PGP key</h2>
+
+    <form method="post" action="">
+        {% csrf_token %}
+
+        <div class="form-group" style="max-width:400px">
+            <label>Name</label>
+            <input type="text" name="name" class="form-control" required>
+        </div>
+
+        <div class="form-group" style="max-width:600px">
+            <label>Key data (ASCII armored)</label>
+            <textarea name="key_data" class="form-control" rows="10" style="font-family:monospace;font-size:12px" required placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----
+...
+-----END PGP PUBLIC KEY BLOCK-----"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label><input type="checkbox" name="is_enabled" checked> Enabled</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Import</button>
+        <a href="{% url 'file-transfer-pgp-key' %}" class="btn btn-default">Cancel</a>
+    </form>
+</div>
+{% endblock %}

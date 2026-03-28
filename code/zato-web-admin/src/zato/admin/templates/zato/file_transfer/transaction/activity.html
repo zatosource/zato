@@ -1,0 +1,44 @@
+{% load extras %}
+<style>
+.ft-log-entry {
+    display: flex;
+    align-items: flex-start;
+    padding: 7px 0;
+    border-bottom: 1px solid #1e293b;
+    font-size: 13px;
+}
+.ft-log-time {
+    width: 80px;
+    flex-shrink: 0;
+    color: #475569;
+    font-family: monospace;
+    font-size: 12px;
+}
+.ft-log-cls {
+    width: 120px;
+    flex-shrink: 0;
+    color: #64748b;
+    font-size: 12px;
+}
+.ft-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+.ft-dot-error { background: #ef4444; }
+.ft-dot-warn { background: #f59e0b; }
+.ft-dot-info { background: #475569; }
+</style>
+
+{% for entry in entries %}
+<div class="ft-log-entry">
+    <span class="ft-log-time">{{ entry.timestamp|timestamp_to_time }}</span>
+    <span class="ft-dot ft-dot-{% if entry.severity == 'Error' %}error{% elif entry.severity == 'Warning' %}warn{% else %}info{% endif %}"></span>
+    <span class="ft-log-cls">{{ entry.activity_class }}</span>
+    <span style="color:{% if entry.severity == 'Error' %}#fca5a5{% elif entry.severity == 'Warning' %}#fcd34d{% else %}#cbd5e1{% endif %}">{{ entry.message }}</span>
+</div>
+{% empty %}
+<div style="padding:20px;text-align:center;color:#64748b">No activity log entries</div>
+{% endfor %}

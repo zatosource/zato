@@ -1,0 +1,91 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}File transfer - Document types{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <style>
+    .ft-enabled { color: #067f39; font-weight: 600; }
+    .ft-disabled { color: #cc0000; font-weight: 600; }
+    </style>
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    function deleteDocType(dtId) {
+        jConfirm('Are you sure you want to delete this document type?', 'Confirm delete', function(r) {
+            if (r) {
+                $.post('/zato/file-transfer/doc-type/' + dtId + '/delete/', {
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                }, function() {
+                    location.reload();
+                });
+            }
+        });
+    }
+    </script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">File transfer document types</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div class='page_prompt' style="clear:left">
+            <a href="{% url 'file-transfer-doc-type-create' %}">Create a new document type</a>
+        </div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">File type</a></th>
+                        <th><a href="#">Recognition rules</a></th>
+                        <th><a href="#">Status</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if doc_types %}
+                {% for dt in doc_types %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ dt.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td>{{ dt.name }}</td>
+                        <td>{{ dt.file_type }}</td>
+                        <td>
+                            {% if dt.recognition_rules %}
+                            {{ dt.recognition_rules|length }} rule(s)
+                            {% else %}
+                            ---
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if dt.is_enabled %}
+                            <span class="ft-enabled">Enabled</span>
+                            {% else %}
+                            <span class="ft-disabled">Disabled</span>
+                            {% endif %}
+                        </td>
+                        <td><a href="{% url 'file-transfer-doc-type-edit' dt.id %}">Edit</a></td>
+                        <td><a href="javascript:deleteDocType('{{ dt.id }}')">Delete</a></td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='7'>No results</td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+{% endblock %}

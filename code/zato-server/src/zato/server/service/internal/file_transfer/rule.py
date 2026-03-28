@@ -31,7 +31,7 @@ class GetList(Service):
         output_repeated = True
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         rules = store.list_processing_rules()
 
         self.response.payload[:] = [
@@ -59,7 +59,7 @@ class Get(Service):
             'criteria_errors', 'criteria_extended', 'preprocess_overrides', 'actions'
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         rule = store.get_processing_rule(self.request.input.id)
 
         if not rule:
@@ -82,7 +82,7 @@ class Create(Service):
         output_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         rule_id = f'rule-{uuid4().hex[:8]}'
 
@@ -121,7 +121,7 @@ class Edit(Service):
         output_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         rule = store.get_processing_rule(self.request.input.id)
         if not rule:
@@ -147,7 +147,7 @@ class Delete(Service):
         input_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         rule = store.get_processing_rule(self.request.input.id)
         if rule and rule.is_default:
@@ -165,7 +165,7 @@ class Reorder(Service):
         input_required = 'ordered_ids',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         ordered_ids = self.request.input.ordered_ids
         if isinstance(ordered_ids, str):

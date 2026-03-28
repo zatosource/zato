@@ -951,3 +951,97 @@ urlpatterns += [
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+from zato.admin.web.views import file_transfer
+
+urlpatterns += [
+
+    # File transfer - Transactions
+
+    url(r'^zato/file-transfer/transaction/$',
+        login_required(file_transfer.TransactionIndex()), name='file-transfer-transaction'),
+    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/$',
+        login_required(file_transfer.transaction_detail), name='file-transfer-transaction-detail'),
+    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/content/$',
+        login_required(file_transfer.transaction_content), name='file-transfer-transaction-content'),
+    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/activity/$',
+        login_required(file_transfer.transaction_activity), name='file-transfer-transaction-activity'),
+    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/tasks/$',
+        login_required(file_transfer.transaction_tasks), name='file-transfer-transaction-tasks'),
+    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/resubmit/$',
+        login_required(file_transfer.transaction_resubmit), name='file-transfer-transaction-resubmit'),
+    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/reprocess/$',
+        login_required(file_transfer.transaction_reprocess), name='file-transfer-transaction-reprocess'),
+
+    # File transfer - Processing rules
+
+    url(r'^zato/file-transfer/rule/$',
+        login_required(file_transfer.RuleIndex()), name='file-transfer-rule'),
+    url(r'^zato/file-transfer/rule/create/$',
+        login_required(file_transfer.rule_create), name='file-transfer-rule-create'),
+    url(r'^zato/file-transfer/rule/(?P<rule_id>[^/]+)/edit/$',
+        login_required(file_transfer.rule_edit), name='file-transfer-rule-edit'),
+    url(r'^zato/file-transfer/rule/(?P<rule_id>[^/]+)/delete/$',
+        login_required(file_transfer.rule_delete), name='file-transfer-rule-delete'),
+    url(r'^zato/file-transfer/rule/reorder/$',
+        login_required(file_transfer.rule_reorder), name='file-transfer-rule-reorder'),
+
+    # File transfer - Document types
+
+    url(r'^zato/file-transfer/doc-type/$',
+        login_required(file_transfer.DocTypeIndex()), name='file-transfer-doc-type'),
+    url(r'^zato/file-transfer/doc-type/create/$',
+        login_required(file_transfer.doc_type_create), name='file-transfer-doc-type-create'),
+    url(r'^zato/file-transfer/doc-type/(?P<dt_id>[^/]+)/edit/$',
+        login_required(file_transfer.doc_type_edit), name='file-transfer-doc-type-edit'),
+    url(r'^zato/file-transfer/doc-type/(?P<dt_id>[^/]+)/delete/$',
+        login_required(file_transfer.doc_type_delete), name='file-transfer-doc-type-delete'),
+
+    # File transfer - Activity log
+
+    url(r'^zato/file-transfer/activity-log/$',
+        login_required(file_transfer.ActivityLogIndex()), name='file-transfer-activity-log'),
+
+    # File transfer - Settings
+
+    url(r'^zato/file-transfer/settings/$',
+        login_required(file_transfer.settings_index), name='file-transfer-settings'),
+    url(r'^zato/file-transfer/settings/update/$',
+        login_required(file_transfer.settings_update), name='file-transfer-settings-update'),
+
+    # File transfer - PGP keys
+
+    url(r'^zato/file-transfer/pgp-key/$',
+        login_required(file_transfer.PGPKeyIndex()), name='file-transfer-pgp-key'),
+    url(r'^zato/file-transfer/pgp-key/import/$',
+        login_required(file_transfer.pgp_key_import), name='file-transfer-pgp-key-import'),
+    url(r'^zato/file-transfer/pgp-key/generate/$',
+        login_required(file_transfer.pgp_key_generate), name='file-transfer-pgp-key-generate'),
+    url(r'^zato/file-transfer/pgp-key/(?P<key_id>[^/]+)/edit/$',
+        login_required(file_transfer.pgp_key_edit), name='file-transfer-pgp-key-edit'),
+    url(r'^zato/file-transfer/pgp-key/(?P<key_id>[^/]+)/delete/$',
+        login_required(file_transfer.pgp_key_delete), name='file-transfer-pgp-key-delete'),
+
+    # File transfer - User statuses
+
+    url(r'^zato/file-transfer/user-status/$',
+        login_required(file_transfer.UserStatusIndex()), name='file-transfer-user-status'),
+    url(r'^zato/file-transfer/user-status/create/$',
+        login_required(file_transfer.user_status_create), name='file-transfer-user-status-create'),
+    url(r'^zato/file-transfer/user-status/(?P<status>[^/]+)/delete/$',
+        login_required(file_transfer.user_status_delete), name='file-transfer-user-status-delete'),
+
+    # File transfer - Pickup channels
+
+    url(r'^zato/file-transfer/pickup-channel/$',
+        login_required(file_transfer.PickupChannelIndex()), name='file-transfer-pickup-channel'),
+    url(r'^zato/file-transfer/pickup-channel/create/$',
+        login_required(file_transfer.pickup_channel_create), name='file-transfer-pickup-channel-create'),
+    url(r'^zato/file-transfer/pickup-channel/(?P<channel_id>[^/]+)/edit/$',
+        login_required(file_transfer.pickup_channel_edit), name='file-transfer-pickup-channel-edit'),
+    url(r'^zato/file-transfer/pickup-channel/(?P<channel_id>[^/]+)/delete/$',
+        login_required(file_transfer.pickup_channel_delete), name='file-transfer-pickup-channel-delete'),
+]
+
+# ################################################################################################################################
+# ################################################################################################################################

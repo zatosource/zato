@@ -1,0 +1,49 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block page_title %}File transfer - Edit PGP key{% endblock %}
+
+{% block content %}
+<div class="content-wrap">
+    <nav class="breadcrumb">
+        <a href="{% url 'main-page' %}">Zato</a> &rsaquo;
+        <a href="{% url 'file-transfer-pgp-key' %}">PGP keys</a> &rsaquo;
+        <span>{{ pgp_key.name }}</span>
+    </nav>
+
+    <a href="{% url 'file-transfer-pgp-key' %}" class="btn btn-default" style="margin-bottom:12px">&larr; Back</a>
+
+    <h2>Edit: {{ pgp_key.name }}</h2>
+
+    <form method="post" action="">
+        {% csrf_token %}
+
+        <div class="form-group" style="max-width:400px">
+            <label>Name</label>
+            <input type="text" name="name" class="form-control" value="{{ pgp_key.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Type</label>
+            <p style="color:#94a3b8">{{ pgp_key.key_type }}</p>
+        </div>
+
+        <div class="form-group">
+            <label>Fingerprint</label>
+            <p style="font-family:monospace;font-size:12px;color:#64748b">{{ pgp_key.fingerprint }}</p>
+        </div>
+
+        <div class="form-group">
+            <label>Algorithm</label>
+            <p style="color:#94a3b8">{{ pgp_key.algorithm }} {{ pgp_key.key_size }}</p>
+        </div>
+
+        <div class="form-group">
+            <label><input type="checkbox" name="is_enabled" {% if pgp_key.is_enabled %}checked{% endif %}> Enabled</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="{% url 'file-transfer-pgp-key' %}" class="btn btn-default">Cancel</a>
+    </form>
+</div>
+{% endblock %}

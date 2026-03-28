@@ -1,0 +1,241 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block page_title %}File transfer - Transaction {{ transaction.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.ft-detail-header {
+    background: var(--panel-bg, #1e293b);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color, #334155);
+}
+.ft-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    font-size: 13px;
+    margin-top: 12px;
+}
+.ft-detail-grid .label {
+    color: #64748b;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+.ft-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+}
+.ft-badge-done { background: #22c55e; }
+.ft-badge-failed { background: #ef4444; }
+.ft-badge-warn { background: #f59e0b; }
+.ft-badge-delivering { background: #6366f1; }
+.ft-badge-queued { background: #8b5cf6; }
+.ft-kv-row {
+    display: flex;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border-color, #1e293b);
+}
+.ft-kv-key {
+    width: 150px;
+    flex-shrink: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+.ft-kv-val {
+    color: #cbd5e1;
+    font-size: 13px;
+    font-family: monospace;
+}
+.ft-content-view {
+    background: var(--input-bg, #0f172a);
+    border: 1px solid var(--border-color, #334155);
+    border-radius: 4px;
+    padding: 16px;
+    color: #94a3b8;
+    font-size: 12px;
+    overflow: auto;
+    max-height: 300px;
+    font-family: monospace;
+    white-space: pre-wrap;
+}
+.ft-log-entry {
+    display: flex;
+    align-items: flex-start;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border-color, #1e293b);
+    font-size: 13px;
+}
+.ft-log-time {
+    width: 70px;
+    flex-shrink: 0;
+    color: #475569;
+    font-family: monospace;
+    font-size: 12px;
+}
+.ft-log-cls {
+    width: 100px;
+    flex-shrink: 0;
+    color: #64748b;
+    font-size: 12px;
+}
+.ft-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+.ft-dot-error { background: #ef4444; }
+.ft-dot-warn { background: #f59e0b; }
+.ft-dot-info { background: #475569; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrap">
+    <nav class="breadcrumb">
+        <a href="{% url 'main-page' %}">Zato</a> &rsaquo;
+        <a href="{% url 'file-transfer-transaction' %}">File transfer</a> &rsaquo;
+        <span>{{ transaction.id }}</span>
+    </nav>
+
+    <a href="{% url 'file-transfer-transaction' %}" class="btn btn-default" style="margin-bottom:12px">&larr; Back to transactions</a>
+
+    <div class="ft-detail-header">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+                <h2 style="margin:0">{{ transaction.id }}</h2>
+                <span style="color:#64748b;font-size:13px">{{ transaction.filename }}</span>
+            </div>
+            <div>
+                <button class="btn btn-primary" onclick="resubmit('{{ transaction.id }}')">Resubmit</button>
+                <button class="btn btn-default" onclick="reprocess('{{ transaction.id }}')">Reprocess</button>
+                <a href="{% url 'file-transfer-transaction-content' transaction.id %}" class="btn btn-default" target="_blank">Download</a>
+            </div>
+        </div>
+        <div class="ft-detail-grid">
+            <div><div class="label">Doc type</div><div>{{ transaction.doc_type_id|default:"-" }}</div></div>
+            <div><div class="label">Sender</div><div>{{ transaction.sender|default:"-" }}</div></div>
+            <div><div class="label">Receiver</div><div>{{ transaction.receiver|default:"-" }}</div></div>
+            <div><div class="label">Status</div><div>
+                {% if transaction.processing_status == 'Done' %}
+                <span class="ft-badge ft-badge-done">DONE</span>
+                {% elif transaction.processing_status == 'Failed' %}
+                <span class="ft-badge ft-badge-failed">FAILED</span>
+                {% elif transaction.processing_status == 'Done_W_Errors' %}
+                <span class="ft-badge ft-badge-warn">DONE W/ERRORS</span>
+                {% else %}
+                <span class="ft-badge">{{ transaction.processing_status }}</span>
+                {% endif %}
+            </div></div>
+            <div><div class="label">User status</div><div>{{ transaction.user_status|default:"-" }}</div></div>
+            <div><div class="label">Size</div><div>{{ transaction.file_size }} bytes</div></div>
+            <div><div class="label">Matched rule</div><div>{{ transaction.matched_rule_id|default:"-" }}</div></div>
+            <div><div class="label">Date</div><div>{{ transaction.created }}</div></div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs" style="margin-bottom:16px">
+        <li class="active"><a href="#tab-attrs" data-toggle="tab">Attributes</a></li>
+        <li><a href="#tab-content" data-toggle="tab">Content</a></li>
+        <li><a href="#tab-activity" data-toggle="tab">Activity</a></li>
+        <li><a href="#tab-tasks" data-toggle="tab">Tasks</a></li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane active" id="tab-attrs">
+            <div class="ft-kv-row"><span class="ft-kv-key">Transaction ID</span><span class="ft-kv-val">{{ transaction.id }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">File name</span><span class="ft-kv-val">{{ transaction.filename }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Doc type</span><span class="ft-kv-val">{{ transaction.doc_type_id|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Sender</span><span class="ft-kv-val">{{ transaction.sender|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Receiver</span><span class="ft-kv-val">{{ transaction.receiver|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Document ID</span><span class="ft-kv-val">{{ transaction.document_id|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Conversation ID</span><span class="ft-kv-val">{{ transaction.conversation_id|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Group ID</span><span class="ft-kv-val">{{ transaction.group_id|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Size</span><span class="ft-kv-val">{{ transaction.file_size }} bytes</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Source checksum</span><span class="ft-kv-val">{{ transaction.source_checksum|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Source protocol</span><span class="ft-kv-val">{{ transaction.source_protocol|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Source detail</span><span class="ft-kv-val">{{ transaction.source_detail|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Duration</span><span class="ft-kv-val">{{ transaction.duration_ms|default:"-" }} ms</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Content saved</span><span class="ft-kv-val">{{ transaction.content_saved|yesno:"Yes,No" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Has errors</span><span class="ft-kv-val">{{ transaction.has_errors|yesno:"Yes,No" }}</span></div>
+        </div>
+
+        <div class="tab-pane" id="tab-content">
+            <div id="content-area" class="ft-content-view">Loading...</div>
+        </div>
+
+        <div class="tab-pane" id="tab-activity">
+            <div id="activity-area">Loading...</div>
+        </div>
+
+        <div class="tab-pane" id="tab-tasks">
+            <div id="tasks-area">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(function() {
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+        var target = $(e.target).attr('href');
+        if (target === '#tab-content') {
+            loadContent();
+        } else if (target === '#tab-activity') {
+            loadActivity();
+        } else if (target === '#tab-tasks') {
+            loadTasks();
+        }
+    });
+});
+
+function loadContent() {
+    $.get('{% url "file-transfer-transaction-content" transaction.id %}', function(data) {
+        $('#content-area').text(data);
+    }).fail(function() {
+        $('#content-area').text('Content not available');
+    });
+}
+
+function loadActivity() {
+    $.get('{% url "file-transfer-transaction-activity" transaction.id %}', function(data) {
+        $('#activity-area').html(data);
+    });
+}
+
+function loadTasks() {
+    $.get('{% url "file-transfer-transaction-tasks" transaction.id %}', function(data) {
+        $('#tasks-area').html(data);
+    });
+}
+
+function resubmit(txnId) {
+    if (confirm('Resubmit this transaction? A new transaction will be created.')) {
+        $.post('{% url "file-transfer-transaction-resubmit" transaction.id %}', {csrfmiddlewaretoken: '{{ csrf_token }}'}, function(data) {
+            if (data.ok) {
+                window.location.href = '/zato/file-transfer/transaction/' + data.new_id + '/';
+            }
+        });
+    }
+}
+
+function reprocess(txnId) {
+    if (confirm('Reprocess this transaction from rule evaluation?')) {
+        $.post('{% url "file-transfer-transaction-reprocess" transaction.id %}', {csrfmiddlewaretoken: '{{ csrf_token }}'}, function(data) {
+            if (data.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

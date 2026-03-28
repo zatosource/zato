@@ -1,0 +1,94 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}File transfer - Create pickup channel{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Create pickup channel</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="{% url 'file-transfer-pickup-channel' %}">Back to pickup channels</a>
+        </div>
+
+        <form method="post" action="">
+            {% csrf_token %}
+            <table class="form-data">
+                <tr>
+                    <td style="vertical-align:middle; width:20%"><label for="id_name">Name</label></td>
+                    <td><input type="text" name="name" id="id_name" required style="width:300px"></td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:middle"><label for="id_source_type">Source type</label></td>
+                    <td>
+                        <select name="source_type" id="id_source_type" style="width:200px">
+                            <option value="Sftp">SFTP</option>
+                            <option value="Ftp">FTP</option>
+                            <option value="S3">S3</option>
+                            <option value="Azure_Blob">Azure Blob</option>
+                            <option value="Imap">IMAP</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:middle"><label for="id_connection_name">Connection name</label></td>
+                    <td><input type="text" name="connection_name" id="id_connection_name" style="width:300px"></td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:middle"><label for="id_remote_path">Remote path</label></td>
+                    <td><input type="text" name="remote_path" id="id_remote_path" style="width:300px" value="/"></td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:middle"><label for="id_file_pattern">File pattern</label></td>
+                    <td><input type="text" name="file_pattern" id="id_file_pattern" style="width:200px" value="*"></td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:middle"><label for="id_poll_interval_seconds">Poll interval (seconds)</label></td>
+                    <td><input type="text" name="poll_interval_seconds" id="id_poll_interval_seconds" style="width:100px" value="60"></td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:middle"><label for="id_post_processing_action">Post-processing</label></td>
+                    <td>
+                        <select name="post_processing_action" id="id_post_processing_action" style="width:200px">
+                            <option value="Delete">Delete</option>
+                            <option value="Move">Move to archive</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:middle"><label for="id_archive_path">Archive path</label></td>
+                    <td><input type="text" name="archive_path" id="id_archive_path" style="width:300px"></td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:middle"><label for="id_is_enabled">Enabled</label></td>
+                    <td><input type="checkbox" name="is_enabled" id="id_is_enabled" checked></td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="text-align:right; padding-top:10px">
+                        <input type="submit" value="Create" />
+                        <a href="{% url 'file-transfer-pickup-channel' %}" style="margin-left:10px">Cancel</a>
+                    </td>
+                </tr>
+            </table>
+        </form>
+
+    {% endif %}
+
+{% endif %}
+
+{% endblock %}

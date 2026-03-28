@@ -1,0 +1,102 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}File transfer - Activity log{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <style>
+    .ft-filter-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .ft-filter-row select {
+        padding: 4px 8px;
+        font-size: 12px;
+        border: 1px solid var(--primary-dark);
+    }
+    .ft-severity-error { color: #cc0000; font-weight: 600; }
+    .ft-severity-warn { color: #b45309; font-weight: 600; }
+    .ft-severity-info { color: #067f39; }
+    </style>
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">File transfer activity log</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<form method="get" action="" class="ft-filter-row">
+            <select name="activity_class">
+                <option value="">All classes</option>
+                <option value="Receipt" {% if filters.activity_class == 'Receipt' %}selected{% endif %}>Receipt</option>
+                <option value="Recognition" {% if filters.activity_class == 'Recognition' %}selected{% endif %}>Recognition</option>
+                <option value="Extraction" {% if filters.activity_class == 'Extraction' %}selected{% endif %}>Extraction</option>
+                <option value="Pre_Processing" {% if filters.activity_class == 'Pre_Processing' %}selected{% endif %}>Pre-processing</option>
+                <option value="Rule_Evaluation" {% if filters.activity_class == 'Rule_Evaluation' %}selected{% endif %}>Rule evaluation</option>
+                <option value="Action" {% if filters.activity_class == 'Action' %}selected{% endif %}>Action</option>
+                <option value="Delivery" {% if filters.activity_class == 'Delivery' %}selected{% endif %}>Delivery</option>
+                <option value="Completion" {% if filters.activity_class == 'Completion' %}selected{% endif %}>Completion</option>
+                <option value="Error" {% if filters.activity_class == 'Error' %}selected{% endif %}>Error</option>
+            </select>
+            <select name="severity">
+                <option value="">All severities</option>
+                <option value="Error" {% if filters.severity == 'Error' %}selected{% endif %}>Error</option>
+                <option value="Warning" {% if filters.severity == 'Warning' %}selected{% endif %}>Warning</option>
+                <option value="Info" {% if filters.severity == 'Info' %}selected{% endif %}>Info</option>
+            </select>
+            <input type="submit" value="Filter" />
+        </form>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Time</a></th>
+                        <th><a href="#">Severity</a></th>
+                        <th><a href="#">Class</a></th>
+                        <th><a href="#">Transaction</a></th>
+                        <th><a href="#">Message</a></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if entries %}
+                {% for entry in entries %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ entry.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td>{{ entry.timestamp }}</td>
+                        <td>
+                            {% if entry.severity == 'Error' %}
+                            <span class="ft-severity-error">Error</span>
+                            {% elif entry.severity == 'Warning' %}
+                            <span class="ft-severity-warn">Warning</span>
+                            {% else %}
+                            <span class="ft-severity-info">Info</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ entry.activity_class }}</td>
+                        <td><a href="{% url 'file-transfer-transaction-detail' entry.transaction_id %}">{{ entry.transaction_id }}</a></td>
+                        <td>{{ entry.message }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='6'>No results</td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+{% endblock %}

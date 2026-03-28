@@ -453,6 +453,20 @@
                                 </ul>
                             </li>
 
+                            <li class="first-level">
+                                <a class="menu-link" href="#">File transfer &darr;</a>
+                                <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "file-transfer-transaction" %}?cluster={{ cluster_id|default:"1" }}">Transactions</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "file-transfer-rule" %}?cluster={{ cluster_id|default:"1" }}">Processing rules</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "file-transfer-doc-type" %}?cluster={{ cluster_id|default:"1" }}">Document types</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "file-transfer-pickup-channel" %}?cluster={{ cluster_id|default:"1" }}">Pickup channels</a></li>
+                                    <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="{% url "file-transfer-activity-log" %}?cluster={{ cluster_id|default:"1" }}">Activity log</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "file-transfer-pgp-key" %}?cluster={{ cluster_id|default:"1" }}">PGP keys</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "file-transfer-user-status" %}?cluster={{ cluster_id|default:"1" }}">User statuses</a></li>
+                                    <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="{% url "file-transfer-settings" %}?cluster={{ cluster_id|default:"1" }}">Settings</a></li>
+                                </ul>
+                            </li>
+
                             <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>
 
                             <li class="first-level">

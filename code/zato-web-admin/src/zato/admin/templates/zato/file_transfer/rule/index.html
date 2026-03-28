@@ -1,0 +1,169 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}File transfer - Processing rules{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <style>
+    .ft-ordinal {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .ft-ordinal-num {
+        font-weight: 700;
+        width: 24px;
+    }
+    .ft-ordinal-arrows {
+        display: flex;
+        flex-direction: column;
+    }
+    .ft-ordinal-arrows button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 10px;
+        padding: 0;
+        line-height: 1;
+        color: var(--primary-dark);
+    }
+    .ft-ordinal-arrows button:hover {
+        color: #000;
+    }
+    .ft-default-tag {
+        margin-left: 8px;
+        font-size: 10px;
+        background: var(--background-light);
+        padding: 1px 6px;
+        border: 1px solid var(--primary-dark);
+    }
+    .ft-enabled { color: #067f39; font-weight: 600; }
+    .ft-disabled { color: #cc0000; font-weight: 600; }
+    </style>
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    function moveRule(ruleId, direction) {
+        var rows = $('#rules-body tr');
+        var orderedIds = [];
+        rows.each(function() {
+            var id = $(this).data('rule-id');
+            if (id) orderedIds.push(id);
+        });
+
+        var idx = orderedIds.indexOf(ruleId);
+        if (idx < 0) return;
+
+        var newIdx = idx + direction;
+        if (newIdx < 0 || newIdx >= orderedIds.length - 1) return;
+
+        orderedIds.splice(idx, 1);
+        orderedIds.splice(newIdx, 0, ruleId);
+
+        $.post('{% url "file-transfer-rule-reorder" %}', {
+            csrfmiddlewaretoken: '{{ csrf_token }}',
+            ordered_ids: orderedIds.join(',')
+        }, function() {
+            location.reload();
+        });
+    }
+
+    function deleteRule(ruleId) {
+        jConfirm('Are you sure you want to delete this rule?', 'Confirm delete', function(r) {
+            if (r) {
+                $.post('/zato/file-transfer/rule/' + ruleId + '/delete/', {
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                }, function() {
+                    location.reload();
+                });
+            }
+        });
+    }
+    </script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">File transfer processing rules</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div class='page_prompt' style="clear:left">
+            <a href="{% url 'file-transfer-rule-create' %}">Create a new processing rule</a>
+        </div>
+
+        <p style="margin-bottom:12px">Rules evaluate top-to-bottom. First match wins. Default rule is always last.</p>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th style="width:50px"><a href="#">#</a></th>
+                        <th><a href="#">Rule name</a></th>
+                        <th><a href="#">Sender</a></th>
+                        <th><a href="#">Receiver</a></th>
+                        <th><a href="#">Doc type</a></th>
+                        <th><a href="#">Status</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody id="rules-body">
+                {% if rules %}
+                {% for rule in rules %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ rule.id }}' data-rule-id="{{ rule.id }}">
+                        <td class='numbering'>&nbsp;</td>
+                        <td>
+                            <div class="ft-ordinal">
+                                <span class="ft-ordinal-num">{{ rule.ordinal }}</span>
+                                {% if not rule.is_default %}
+                                <div class="ft-ordinal-arrows">
+                                    <button onclick="moveRule('{{ rule.id }}', -1)">&#9650;</button>
+                                    <button onclick="moveRule('{{ rule.id }}', 1)">&#9660;</button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {{ rule.name }}
+                            {% if rule.is_default %}<span class="ft-default-tag">default</span>{% endif %}
+                        </td>
+                        <td>{{ rule.criteria_sender.match|default:"Any" }}</td>
+                        <td>{{ rule.criteria_receiver.match|default:"Any" }}</td>
+                        <td>{{ rule.criteria_doc_type.match|default:"Any" }}</td>
+                        <td>
+                            {% if rule.is_enabled %}
+                            <span class="ft-enabled">Enabled</span>
+                            {% else %}
+                            <span class="ft-disabled">Disabled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not rule.is_default %}
+                            <a href="{% url 'file-transfer-rule-edit' rule.id %}">Edit</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not rule.is_default %}
+                            <a href="javascript:deleteRule('{{ rule.id }}')">Delete</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='9'>No results</td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+{% endblock %}

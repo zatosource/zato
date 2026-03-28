@@ -32,7 +32,7 @@ class GetList(Service):
         output_repeated = True
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         keys = store.list_pgp_keys()
 
         self.response.payload[:] = [
@@ -61,7 +61,7 @@ class Get(Service):
         output_optional = 'id', 'name', 'key_type', 'usage', 'key_data', 'fingerprint', 'algorithm', 'key_size', 'created_at', 'expires_at', 'is_enabled'
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         key = store.get_pgp_key(self.request.input.id)
 
         if not key:
@@ -82,7 +82,7 @@ class Import(Service):
         output_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         pgp_manager = PGPManager()
 
         key = pgp_manager.import_key(self.request.input.key_data)
@@ -108,7 +108,7 @@ class Generate(Service):
         output_required = 'public_key_id', 'private_key_id'
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         pgp_manager = PGPManager()
 
         algorithm = self.request.input.get('algorithm', 'RSA')
@@ -146,7 +146,7 @@ class Edit(Service):
         output_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         key = store.get_pgp_key(self.request.input.id)
         if not key:
@@ -170,7 +170,7 @@ class Delete(Service):
         input_required = 'id',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         store.delete_pgp_key(self.request.input.id)
 
 # ################################################################################################################################

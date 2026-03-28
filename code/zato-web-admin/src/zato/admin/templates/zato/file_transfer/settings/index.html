@@ -1,0 +1,96 @@
+{% extends "zato/settings-base.html" %}
+
+{% block page_title %}File transfer settings{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/settings.css">
+{% endblock %}
+
+{% block extra_page_js %}
+<script type="text/javascript" nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $('#config-save-button').on('click', function() {
+        var $btn = $(this);
+        var $spinner = $('.config-save-spinner');
+        var $saved = $('.config-saved-message');
+
+        $btn.prop('disabled', true);
+        $spinner.addClass('active');
+
+        $.post('{% url "file-transfer-settings-update" %}', $('#settings-form').serialize(), function(data) {
+            $spinner.removeClass('active');
+            $btn.prop('disabled', false);
+            if (data.ok) {
+                $saved.addClass('active');
+                setTimeout(function() { $saved.removeClass('active'); }, 2000);
+            }
+        }).fail(function() {
+            $spinner.removeClass('active');
+            $btn.prop('disabled', false);
+            alert('Error saving settings');
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block section_title %}File transfer settings{% endblock %}
+{% block help_icon_id %}ft-settings-help{% endblock %}
+
+{% block content_rows %}
+<form id="settings-form">
+{% csrf_token %}
+<div class="info-container">
+    <div class="info-row">
+        <div class="info-label">Default retry count</div>
+        <div class="info-value">
+            <input type="text" name="default_retry_count" value="{{ settings.default_retry_count|default:3 }}">
+        </div>
+    </div>
+    <div class="info-row">
+        <div class="info-label">Default retry wait (ms)</div>
+        <div class="info-value">
+            <input type="text" name="default_retry_wait_ms" value="{{ settings.default_retry_wait_ms|default:60000 }}">
+        </div>
+    </div>
+    <div class="info-row">
+        <div class="info-label">Retry backoff factor</div>
+        <div class="info-value">
+            <input type="text" name="default_backoff_factor" value="{{ settings.default_backoff_factor|default:'2.0' }}">
+        </div>
+    </div>
+    <div class="info-row">
+        <div class="info-label">Max search results</div>
+        <div class="info-value">
+            <input type="text" name="max_search_results" value="{{ settings.max_search_results|default:20000 }}">
+        </div>
+    </div>
+    <div class="info-row">
+        <div class="info-label">Archive after (days)</div>
+        <div class="info-value">
+            <input type="text" name="archive_after_days" value="{{ settings.archive_after_days|default:90 }}">
+        </div>
+    </div>
+    <div class="info-row">
+        <div class="info-label">Log retention (days)</div>
+        <div class="info-value">
+            <input type="text" name="log_retention_days" value="{{ settings.log_retention_days|default:365 }}">
+        </div>
+    </div>
+</div>
+</form>
+{% endblock %}
+
+{% block buttons %}
+<div class="button-container">
+    <div class="button-wrapper">
+        <img src="/static/gfx/spinner.svg" class="config-save-spinner">
+        <span class="config-saved-message">Saved</span>
+    </div>
+    <button class="action-button" id="config-save-button" type="button">
+        Save settings
+    </button>
+</div>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}

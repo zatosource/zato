@@ -1,0 +1,91 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}File transfer - Pickup channels{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <style>
+    .ft-enabled { color: #067f39; font-weight: 600; }
+    .ft-disabled { color: #cc0000; font-weight: 600; }
+    </style>
+{% endblock %}
+
+{% block "extra_js" %}
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}">
+    function deleteChannel(channelId) {
+        jConfirm('Are you sure you want to delete this pickup channel?', 'Confirm delete', function(r) {
+            if (r) {
+                $.post('/zato/file-transfer/pickup-channel/' + channelId + '/delete/', {
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                }, function() {
+                    location.reload();
+                });
+            }
+        });
+    }
+    </script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">File transfer pickup channels</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div class='page_prompt' style="clear:left">
+            <a href="{% url 'file-transfer-pickup-channel-create' %}">Create a new pickup channel</a>
+        </div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Source type</a></th>
+                        <th><a href="#">Connection</a></th>
+                        <th><a href="#">Remote path</a></th>
+                        <th><a href="#">Pattern</a></th>
+                        <th><a href="#">Poll interval</a></th>
+                        <th><a href="#">Status</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if channels %}
+                {% for channel in channels %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ channel.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td>{{ channel.name }}</td>
+                        <td>{{ channel.source_type }}</td>
+                        <td>{{ channel.connection_name|no_value_indicator }}</td>
+                        <td>{{ channel.remote_path|no_value_indicator }}</td>
+                        <td>{{ channel.file_pattern }}</td>
+                        <td>{{ channel.poll_interval_seconds }}s</td>
+                        <td>
+                            {% if channel.is_enabled %}
+                            <span class="ft-enabled">Enabled</span>
+                            {% else %}
+                            <span class="ft-disabled">Disabled</span>
+                            {% endif %}
+                        </td>
+                        <td><a href="{% url 'file-transfer-pickup-channel-edit' channel.id %}">Edit</a></td>
+                        <td><a href="javascript:deleteChannel('{{ channel.id }}')">Delete</a></td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='10'>No results</td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+{% endblock %}

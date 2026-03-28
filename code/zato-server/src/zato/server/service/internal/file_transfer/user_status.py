@@ -27,7 +27,7 @@ class GetList(Service):
         output_repeated = True
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         statuses = store.get_user_statuses()
 
         self.response.payload[:] = [{'status': s} for s in statuses]
@@ -42,7 +42,7 @@ class Create(Service):
         input_required = 'status',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         store.add_user_status(self.request.input.status)
 
 # ################################################################################################################################
@@ -55,7 +55,7 @@ class Delete(Service):
         input_required = 'status',
 
     def handle(self):
-        store = FileTransferRedisStore(self.server.kvdb.conn, self.server.cluster_id)
+        store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         store.remove_user_status(self.request.input.status)
 
 # ################################################################################################################################
