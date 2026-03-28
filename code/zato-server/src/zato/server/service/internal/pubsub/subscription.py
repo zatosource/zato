@@ -134,26 +134,14 @@ class GetList(AdminService):
         needs_password = self.request.input.needs_password
         cluster_id = self.request.input.cluster_id
 
-        logger.info('GetList.get_data: cluster_id=%s, needs_password=%s', cluster_id, needs_password)
-
         # Query always returns password now, but we only need to use it if requested
-        result = self._search(pubsub_subscription_list, session, cluster_id, None, False)
-
-        logger.info('GetList.get_data: query returned %d raw rows', len(list(result)) if hasattr(result, '__len__') else -1)
-
-        # Re-run query since we consumed it
         result = self._search(pubsub_subscription_list, session, cluster_id, None, False)
 
         # Group by subscription ID
         subscriptions_by_id = {}
         topics_by_id = {}
 
-        row_count = 0
         for item in result:
-            row_count += 1
-            logger.info('GetList.get_data: row %d: id=%s, sec_base_id=%s, sec_name=%s, topic_name=%s',
-                row_count, item.id, item.sec_base_id, getattr(item, 'sec_name', None), item.topic_name)
-
             sub_id = item.id
             topic_name = item.topic_name
             is_pub_enabled = item.is_pub_enabled
@@ -216,10 +204,6 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             data = self.get_data(session)
-            logger.info('GetList.handle: returning %d subscriptions', len(data) if data else 0)
-            for idx, sub in enumerate(data or []):
-                logger.info('GetList.handle: subscription[%d] = id=%s, sec_base_id=%s, sec_name=%s, sub_key=%s',
-                    idx, sub.get('id'), sub.get('sec_base_id'), sub.get('sec_name'), sub.get('sub_key'))
             self.response.payload[:] = data
 
 # ################################################################################################################################
@@ -672,21 +656,12 @@ class _BaseModifyTopicList(AdminService):
     def _get_subscriptions_by_sec(self, cluster_id, sec_base_id):
         """ Get subscriptions for a security definition.
         """
-        logger.info('_get_subscriptions_by_sec: cluster_id=%s, sec_base_id=%s', cluster_id, sec_base_id)
-
         get_list_request = {
             'cluster_id': cluster_id,
             'sec_base_id': sec_base_id
         }
 
-        logger.info('_get_subscriptions_by_sec: invoking get-list with request=%s', get_list_request)
-
         get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request, skip_response_elem=True)
-
-        logger.info('_get_subscriptions_by_sec: get-list returned %d subscriptions', len(get_list_response) if get_list_response else 0)
-        for idx, sub in enumerate(get_list_response or []):
-            logger.info('_get_subscriptions_by_sec: subscription[%d] = sec_base_id=%s, sec_name=%s, sub_key=%s',
-                idx, sub.get('sec_base_id'), sub.get('sec_name'), sub.get('sub_key'))
 
         return get_list_response
 
@@ -710,13 +685,8 @@ class _BaseModifyTopicList(AdminService):
 
                 sec_base_id = sec_base.id
 
-                logger.info('handle: action=%s, sec_base.id=%s, sec_base.name=%s, lookup_field=%s, lookup_value=%s',
-                    self.action, sec_base_id, sec_base.name, lookup_field, lookup_value)
-
                 # .. find any existing subscriptions using GetList service  ..
                 subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
-
-                logger.info('handle: found %d subscriptions for sec_base_id=%s', len(subscriptions) if subscriptions else 0, sec_base_id)
 
                 # Check if there's a subscription for THIS security definition
                 has_subscription_for_this_sec = False
@@ -767,13 +737,10 @@ class _BaseModifyTopicList(AdminService):
 
                 for item in subscriptions:
                     item = bunchify(item)
-                    logger.info('handle: checking subscription item.sec_base_id=%s against sec_base_id=%s', item.sec_base_id, sec_base_id)
                     if item.sec_base_id == sec_base_id:
                         current_sub = item
-                        logger.info('handle: found matching subscription: sub_key=%s', item.sub_key)
                         break
                 else:
-                    logger.info('handle: no matching subscription found for sec_base_id=%s in %d subscriptions', sec_base_id, len(subscriptions))
                     err_msg = f'{self.action}: Could not find subscription for input {lookup_field} `{lookup_value}` -> {subscriptions}'
                     raise Exception(err_msg)
 

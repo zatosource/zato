@@ -120,8 +120,6 @@ class RedisPubSubBackend:
         stream_key = self._get_stream_key(topic_name)
         _ = self.redis.xadd(stream_key, message, maxlen=ModuleCtx.Default_Max_Len)
 
-        logger.info('Published message %s to topic %s', msg_id, topic_name)
-
         return msg_id
 
 # ################################################################################################################################
@@ -145,14 +143,11 @@ class RedisPubSubBackend:
         # Create consumer group if not exists
         try:
             _ = self.redis.xgroup_create(stream_key, sub_key, id='$', mkstream=True)
-            logger.info('Created consumer group %s for stream %s', sub_key, stream_key)
         except ResponseError as e:
             if 'BUSYGROUP' in str(e):
                 pass  # Group already exists
             else:
                 raise
-
-        logger.info('Subscribed %s to topic %s', sub_key, topic_name)
 
 # ################################################################################################################################
 
@@ -179,11 +174,8 @@ class RedisPubSubBackend:
         if remaining == 0:
             try:
                 _ = self.redis.xgroup_destroy(stream_key, sub_key)
-                logger.info('Destroyed consumer group %s for stream %s', sub_key, stream_key)
             except ResponseError:
                 pass  # Group may not exist
-
-        logger.info('Unsubscribed %s from topic %s', sub_key, topic_name)
 
 # ################################################################################################################################
 
@@ -351,8 +343,6 @@ class RedisPubSubBackend:
         # Delete the topic subscribers set
         _ = self.redis.delete(topic_subs_key)
 
-        logger.info('Deleted topic %s', topic_name)
-
 # ################################################################################################################################
 
     def rename_topic(self, old_topic_name:'str', new_topic_name:'str') -> 'None':
@@ -383,8 +373,6 @@ class RedisPubSubBackend:
             subs_key = self._get_subs_key(sub_key)
             _ = self.redis.srem(subs_key, old_topic_name)
             _ = self.redis.sadd(subs_key, new_topic_name)
-
-        logger.info('Renamed topic %s to %s', old_topic_name, new_topic_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
