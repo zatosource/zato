@@ -26,16 +26,11 @@ if 0:
 class GetList(Service):
     name = 'file-transfer.pickup-channel.get-list'
 
-    class SimpleIO:
-        output_optional = 'id', 'name', 'source_type', 'connection_name', 'remote_path', 'file_pattern', \
-            'poll_interval_seconds', 'post_processing_action', 'archive_path', 'is_enabled'
-        output_repeated = True
-
     def handle(self):
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         channels = store.list_pickup_channels()
 
-        self.response.payload[:] = [
+        self.response.payload = [
             {
                 'id': c.id,
                 'name': c.name,
@@ -57,14 +52,11 @@ class GetList(Service):
 class Get(Service):
     name = 'file-transfer.pickup-channel.get'
 
-    class SimpleIO:
-        input_required = 'id',
-        output_optional = 'id', 'name', 'source_type', 'connection_name', 'remote_path', 'file_pattern', \
-            'poll_interval_seconds', 'post_processing_action', 'archive_path', 'is_enabled'
-
     def handle(self):
+        input = self.request.raw_request or {}
+        channel_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        channel = store.get_pickup_channel(self.request.input.id)
+        channel = store.get_pickup_channel(channel_id)
 
         if not channel:
             self.response.payload = {}
@@ -78,30 +70,27 @@ class Get(Service):
 class Create(Service):
     name = 'file-transfer.pickup-channel.create'
 
-    class SimpleIO:
-        input_required = 'name',
-        input_optional = 'source_type', 'connection_name', 'remote_path', 'file_pattern', \
-            'poll_interval_seconds', 'post_processing_action', 'archive_path', 'is_enabled'
-        output_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
+
+        name = input.get('name')
 
         channel = PickupChannel(
             id=f'pickup-{uuid4().hex[:8]}',
-            name=self.request.input.name,
-            source_type=self.request.input.get('source_type', 'Sftp'),
-            connection_name=self.request.input.get('connection_name', ''),
-            remote_path=self.request.input.get('remote_path', '/'),
-            file_pattern=self.request.input.get('file_pattern', '*'),
-            poll_interval_seconds=float(self.request.input.get('poll_interval_seconds', 60)),
-            post_processing_action=self.request.input.get('post_processing_action', 'Delete'),
-            archive_path=self.request.input.get('archive_path', ''),
-            is_enabled=self.request.input.get('is_enabled', True),
+            name=name,
+            source_type=input.get('source_type', 'Sftp'),
+            connection_name=input.get('connection_name', ''),
+            remote_path=input.get('remote_path', '/'),
+            file_pattern=input.get('file_pattern', '*'),
+            poll_interval_seconds=float(input.get('poll_interval_seconds') or 60),
+            post_processing_action=input.get('post_processing_action', 'Delete'),
+            archive_path=input.get('archive_path', ''),
+            is_enabled=input.get('is_enabled', True),
         )
 
         store.create_pickup_channel(channel)
-        self.response.payload.id = channel.id
+        self.response.payload = {'id': channel.id}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -109,27 +98,23 @@ class Create(Service):
 class Edit(Service):
     name = 'file-transfer.pickup-channel.edit'
 
-    class SimpleIO:
-        input_required = 'id',
-        input_optional = 'name', 'source_type', 'connection_name', 'remote_path', 'file_pattern', \
-            'poll_interval_seconds', 'post_processing_action', 'archive_path', 'is_enabled'
-        output_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        channel_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
-        channel = store.get_pickup_channel(self.request.input.id)
+        channel = store.get_pickup_channel(channel_id)
         if not channel:
-            raise ValueError(f'Pickup channel not found: {self.request.input.id}')
+            raise ValueError(f'Pickup channel not found: {channel_id}')
 
         for field in ('name', 'source_type', 'connection_name', 'remote_path', 'file_pattern',
                       'poll_interval_seconds', 'post_processing_action', 'archive_path', 'is_enabled'):
-            value = getattr(self.request.input, field, None)
+            value = input.get(field)
             if value is not None:
                 setattr(channel, field, value)
 
         store.update_pickup_channel(channel)
-        self.response.payload.id = channel.id
+        self.response.payload = {'id': channel.id}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -137,12 +122,12 @@ class Edit(Service):
 class Delete(Service):
     name = 'file-transfer.pickup-channel.delete'
 
-    class SimpleIO:
-        input_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        channel_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        store.delete_pickup_channel(self.request.input.id)
+        store.delete_pickup_channel(channel_id)
+        self.response.payload = {'ok': True}
 
 # ################################################################################################################################
 # ################################################################################################################################

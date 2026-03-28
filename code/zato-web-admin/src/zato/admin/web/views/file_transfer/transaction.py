@@ -61,9 +61,6 @@ class Index:
 
         doc_types_response = req.zato.client.invoke('file-transfer.doc-type.get-list', {})
 
-        logger.info('Transaction search response: ok=%s, data=%r, type=%s', response.ok, response.data, type(response.data))
-        logger.info('Doc types response: ok=%s, data=%r, type=%s', doc_types_response.ok, doc_types_response.data, type(doc_types_response.data))
-
         return TemplateResponse(req, 'zato/file_transfer/transaction/index.html', {
             'transactions': response.data if response.ok else [],
             'doc_types': doc_types_response.data if doc_types_response.ok else [],

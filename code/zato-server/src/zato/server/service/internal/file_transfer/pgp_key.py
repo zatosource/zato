@@ -27,15 +27,11 @@ if 0:
 class GetList(Service):
     name = 'file-transfer.pgp-key.get-list'
 
-    class SimpleIO:
-        output_optional = 'id', 'name', 'key_type', 'usage', 'fingerprint', 'algorithm', 'key_size', 'expires_at', 'is_enabled'
-        output_repeated = True
-
     def handle(self):
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         keys = store.list_pgp_keys()
 
-        self.response.payload[:] = [
+        self.response.payload = [
             {
                 'id': k.id,
                 'name': k.name,
@@ -56,13 +52,11 @@ class GetList(Service):
 class Get(Service):
     name = 'file-transfer.pgp-key.get'
 
-    class SimpleIO:
-        input_required = 'id',
-        output_optional = 'id', 'name', 'key_type', 'usage', 'key_data', 'fingerprint', 'algorithm', 'key_size', 'created_at', 'expires_at', 'is_enabled'
-
     def handle(self):
+        input = self.request.raw_request or {}
+        key_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        key = store.get_pgp_key(self.request.input.id)
+        key = store.get_pgp_key(key_id)
 
         if not key:
             self.response.payload = {}
@@ -76,25 +70,24 @@ class Get(Service):
 class Import(Service):
     name = 'file-transfer.pgp-key.import'
 
-    class SimpleIO:
-        input_required = 'name', 'key_data'
-        input_optional = 'is_enabled',
-        output_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         pgp_manager = PGPManager()
 
-        key = pgp_manager.import_key(self.request.input.key_data)
-        key.id = f'key-{uuid4().hex[:8]}'
-        key.name = self.request.input.name
+        name = input.get('name')
+        key_data = input.get('key_data')
 
-        is_enabled = self.request.input.get('is_enabled')
+        key = pgp_manager.import_key(key_data)
+        key.id = f'key-{uuid4().hex[:8]}'
+        key.name = name
+
+        is_enabled = input.get('is_enabled')
         if is_enabled is not None:
             key.is_enabled = is_enabled
 
         store.create_pgp_key(key)
-        self.response.payload.id = key.id
+        self.response.payload = {'id': key.id}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,37 +95,34 @@ class Import(Service):
 class Generate(Service):
     name = 'file-transfer.pgp-key.generate'
 
-    class SimpleIO:
-        input_required = 'name', 'email'
-        input_optional = 'algorithm', 'key_size', 'passphrase'
-        output_required = 'public_key_id', 'private_key_id'
-
     def handle(self):
+        input = self.request.raw_request or {}
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         pgp_manager = PGPManager()
 
-        algorithm = self.request.input.get('algorithm', 'RSA')
-        key_size = int(self.request.input.get('key_size', 4096))
-        passphrase = self.request.input.get('passphrase', '')
+        name = input.get('name')
+        email = input.get('email')
+        algorithm = input.get('algorithm', 'RSA')
+        key_size = int(input.get('key_size') or 4096)
+        passphrase = input.get('passphrase', '')
 
         public_key, private_key = pgp_manager.generate_keypair(
-            name=self.request.input.name,
-            email=self.request.input.email,
+            name=name,
+            email=email,
             algorithm=algorithm,
             key_size=key_size,
             passphrase=passphrase,
         )
 
         public_key.id = f'key-{uuid4().hex[:8]}'
-        public_key.name = f'{self.request.input.name} (public)'
+        public_key.name = f'{name} (public)'
         store.create_pgp_key(public_key)
 
         private_key.id = f'key-{uuid4().hex[:8]}'
-        private_key.name = f'{self.request.input.name} (private)'
+        private_key.name = f'{name} (private)'
         store.create_pgp_key(private_key)
 
-        self.response.payload.public_key_id = public_key.id
-        self.response.payload.private_key_id = private_key.id
+        self.response.payload = {'public_key_id': public_key.id, 'private_key_id': private_key.id}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -140,25 +130,22 @@ class Generate(Service):
 class Edit(Service):
     name = 'file-transfer.pgp-key.edit'
 
-    class SimpleIO:
-        input_required = 'id',
-        input_optional = 'name', 'usage', 'is_enabled'
-        output_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        key_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
-        key = store.get_pgp_key(self.request.input.id)
+        key = store.get_pgp_key(key_id)
         if not key:
-            raise ValueError(f'PGP key not found: {self.request.input.id}')
+            raise ValueError(f'PGP key not found: {key_id}')
 
         for field in ('name', 'usage', 'is_enabled'):
-            value = getattr(self.request.input, field, None)
+            value = input.get(field)
             if value is not None:
                 setattr(key, field, value)
 
         store.update_pgp_key(key)
-        self.response.payload.id = key.id
+        self.response.payload = {'id': key.id}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -166,12 +153,12 @@ class Edit(Service):
 class Delete(Service):
     name = 'file-transfer.pgp-key.delete'
 
-    class SimpleIO:
-        input_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        key_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        store.delete_pgp_key(self.request.input.id)
+        store.delete_pgp_key(key_id)
+        self.response.payload = {'ok': True}
 
 # ################################################################################################################################
 # ################################################################################################################################

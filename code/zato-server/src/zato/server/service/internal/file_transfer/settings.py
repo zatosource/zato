@@ -23,10 +23,6 @@ if 0:
 class Get(Service):
     name = 'file-transfer.settings.get'
 
-    class SimpleIO:
-        output_optional = 'default_retry_count', 'default_retry_wait_ms', 'default_backoff_factor', \
-            'default_save_policy', 'max_search_results', 'archive_after_days', 'log_retention_days', 'checksum_algorithm'
-
     def handle(self):
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         settings = store.get_settings()
@@ -38,11 +34,8 @@ class Get(Service):
 class Update(Service):
     name = 'file-transfer.settings.update'
 
-    class SimpleIO:
-        input_optional = 'default_retry_count', 'default_retry_wait_ms', 'default_backoff_factor', \
-            'default_save_policy', 'max_search_results', 'archive_after_days', 'log_retention_days', 'checksum_algorithm'
-
     def handle(self):
+        input = self.request.raw_request or {}
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         settings = store.get_settings()
@@ -50,11 +43,12 @@ class Update(Service):
         for field in ('default_retry_count', 'default_retry_wait_ms', 'default_backoff_factor',
                       'default_save_policy', 'max_search_results', 'archive_after_days',
                       'log_retention_days', 'checksum_algorithm'):
-            value = getattr(self.request.input, field, None)
+            value = input.get(field)
             if value is not None:
                 setattr(settings, field, value)
 
         store.update_settings(settings)
+        self.response.payload = {'ok': True}
 
 # ################################################################################################################################
 # ################################################################################################################################

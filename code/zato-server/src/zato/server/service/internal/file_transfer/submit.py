@@ -23,28 +23,26 @@ if 0:
 class Submit(Service):
     name = 'file-transfer.submit'
 
-    class SimpleIO:
-        input_required = 'filename', 'content'
-        input_optional = 'source_protocol', 'source_detail', 'companion_checksum'
-        output_required = 'transaction_id',
-
     def handle(self):
+        input = self.request.raw_request or {}
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         engine = FileTransferEngine(store)
 
-        content = self.request.input.content
+        filename = input.get('filename')
+        content = input.get('content')
+
         if isinstance(content, str):
             content = content.encode('utf-8')
 
         txn = engine.process_file(
-            filename=self.request.input.filename,
+            filename=filename,
             content=content,
-            source_protocol=self.request.input.get('source_protocol', 'api'),
-            source_detail=self.request.input.get('source_detail', 'file-transfer.submit'),
-            companion_checksum=self.request.input.get('companion_checksum', ''),
+            source_protocol=input.get('source_protocol', 'api'),
+            source_detail=input.get('source_detail', 'file-transfer.submit'),
+            companion_checksum=input.get('companion_checksum', ''),
         )
 
-        self.response.payload.transaction_id = txn.id
+        self.response.payload = {'transaction_id': txn.id}
 
 # ################################################################################################################################
 # ################################################################################################################################

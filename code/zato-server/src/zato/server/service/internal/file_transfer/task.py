@@ -23,11 +23,6 @@ if 0:
 class Search(Service):
     name = 'file-transfer.task.search'
 
-    class SimpleIO:
-        input_optional = 'status', 'transaction_id', 'limit', 'offset'
-        output_optional = 'id', 'transaction_id', 'task_type', 'status', 'created', 'retry_count', 'max_retries', 'next_retry_at', 'error_detail'
-        output_repeated = True
-
     def handle(self):
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
@@ -51,7 +46,7 @@ class Search(Service):
         else:
             tasks = []
 
-        self.response.payload[:] = [
+        self.response.payload = [
             {
                 'id': t.id,
                 'transaction_id': t.transaction_id,
@@ -72,13 +67,13 @@ class Search(Service):
 class Stop(Service):
     name = 'file-transfer.task.stop'
 
-    class SimpleIO:
-        input_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        task_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         task_manager = TaskManager(store)
-        task_manager.stop_task(self.request.input.id)
+        task_manager.stop_task(task_id)
+        self.response.payload = {'ok': True}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,13 +81,13 @@ class Stop(Service):
 class Restart(Service):
     name = 'file-transfer.task.restart'
 
-    class SimpleIO:
-        input_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        task_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         task_manager = TaskManager(store)
-        task_manager.restart_task(self.request.input.id)
+        task_manager.restart_task(task_id)
+        self.response.payload = {'ok': True}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,12 +95,12 @@ class Restart(Service):
 class Delete(Service):
     name = 'file-transfer.task.delete'
 
-    class SimpleIO:
-        input_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        task_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        store.delete_task(self.request.input.id)
+        store.delete_task(task_id)
+        self.response.payload = {'ok': True}
 
 # ################################################################################################################################
 # ################################################################################################################################

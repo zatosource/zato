@@ -26,15 +26,11 @@ if 0:
 class GetList(Service):
     name = 'file-transfer.rule.get-list'
 
-    class SimpleIO:
-        output_optional = 'id', 'name', 'description', 'ordinal', 'is_enabled', 'is_default'
-        output_repeated = True
-
     def handle(self):
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         rules = store.list_processing_rules()
 
-        self.response.payload[:] = [
+        self.response.payload = [
             {
                 'id': r.id,
                 'name': r.name,
@@ -52,15 +48,11 @@ class GetList(Service):
 class Get(Service):
     name = 'file-transfer.rule.get'
 
-    class SimpleIO:
-        input_required = 'id',
-        output_optional = 'id', 'name', 'description', 'ordinal', 'is_enabled', 'is_default', \
-            'criteria_sender', 'criteria_receiver', 'criteria_doc_type', 'criteria_user_status', \
-            'criteria_errors', 'criteria_extended', 'preprocess_overrides', 'actions'
-
     def handle(self):
+        input = self.request.raw_request or {}
+        rule_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        rule = store.get_processing_rule(self.request.input.id)
+        rule = store.get_processing_rule(rule_id)
 
         if not rule:
             self.response.payload = {}
@@ -74,14 +66,8 @@ class Get(Service):
 class Create(Service):
     name = 'file-transfer.rule.create'
 
-    class SimpleIO:
-        input_required = 'name',
-        input_optional = 'description', 'ordinal', 'is_enabled', 'is_default', \
-            'criteria_sender', 'criteria_receiver', 'criteria_doc_type', 'criteria_user_status', \
-            'criteria_errors', 'criteria_extended', 'preprocess_overrides', 'actions'
-        output_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         rule_id = f'rule-{uuid4().hex[:8]}'
@@ -91,21 +77,21 @@ class Create(Service):
 
         data = {
             'id': rule_id,
-            'name': self.request.input.name,
-            'ordinal': self.request.input.get('ordinal', max_ordinal + 1),
+            'name': input.get('name'),
+            'ordinal': input.get('ordinal', max_ordinal + 1),
         }
 
         for field in ('description', 'is_enabled', 'is_default', 'criteria_sender', 'criteria_receiver',
                       'criteria_doc_type', 'criteria_user_status', 'criteria_errors', 'criteria_extended',
                       'preprocess_overrides', 'actions'):
-            value = getattr(self.request.input, field, None)
+            value = input.get(field)
             if value is not None:
                 data[field] = value
 
         rule = ProcessingRule.from_dict(data)
         store.create_processing_rule(rule)
 
-        self.response.payload.id = rule_id
+        self.response.payload = {'id': rule_id}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,29 +99,24 @@ class Create(Service):
 class Edit(Service):
     name = 'file-transfer.rule.edit'
 
-    class SimpleIO:
-        input_required = 'id',
-        input_optional = 'name', 'description', 'ordinal', 'is_enabled', 'is_default', \
-            'criteria_sender', 'criteria_receiver', 'criteria_doc_type', 'criteria_user_status', \
-            'criteria_errors', 'criteria_extended', 'preprocess_overrides', 'actions'
-        output_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        rule_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
-        rule = store.get_processing_rule(self.request.input.id)
+        rule = store.get_processing_rule(rule_id)
         if not rule:
-            raise ValueError(f'Processing rule not found: {self.request.input.id}')
+            raise ValueError(f'Processing rule not found: {rule_id}')
 
         for field in ('name', 'description', 'ordinal', 'is_enabled', 'is_default', 'criteria_sender',
                       'criteria_receiver', 'criteria_doc_type', 'criteria_user_status', 'criteria_errors',
                       'criteria_extended', 'preprocess_overrides', 'actions'):
-            value = getattr(self.request.input, field, None)
+            value = input.get(field)
             if value is not None:
                 setattr(rule, field, value)
 
         store.update_processing_rule(rule)
-        self.response.payload.id = rule.id
+        self.response.payload = {'id': rule.id}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -143,17 +124,16 @@ class Edit(Service):
 class Delete(Service):
     name = 'file-transfer.rule.delete'
 
-    class SimpleIO:
-        input_required = 'id',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        rule_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
-        rule = store.get_processing_rule(self.request.input.id)
+        rule = store.get_processing_rule(rule_id)
         if rule and rule.is_default:
             raise ValueError('Cannot delete the default rule')
 
-        store.delete_processing_rule(self.request.input.id)
+        store.delete_processing_rule(rule_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -161,13 +141,11 @@ class Delete(Service):
 class Reorder(Service):
     name = 'file-transfer.rule.reorder'
 
-    class SimpleIO:
-        input_required = 'ordered_ids',
-
     def handle(self):
+        input = self.request.raw_request or {}
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
-        ordered_ids = self.request.input.ordered_ids
+        ordered_ids = input.get('ordered_ids')
         if isinstance(ordered_ids, str):
             ordered_ids = [x.strip() for x in ordered_ids.split(',')]
 

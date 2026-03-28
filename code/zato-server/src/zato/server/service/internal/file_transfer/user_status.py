@@ -22,15 +22,10 @@ if 0:
 class GetList(Service):
     name = 'file-transfer.user-status.get-list'
 
-    class SimpleIO:
-        output_optional = 'status',
-        output_repeated = True
-
     def handle(self):
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         statuses = store.get_user_statuses()
-
-        self.response.payload[:] = [{'status': s} for s in statuses]
+        self.response.payload = [{'status': s} for s in statuses]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -38,12 +33,12 @@ class GetList(Service):
 class Create(Service):
     name = 'file-transfer.user-status.create'
 
-    class SimpleIO:
-        input_required = 'status',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        status = input.get('status')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        store.add_user_status(self.request.input.status)
+        store.add_user_status(status)
+        self.response.payload = {'ok': True}
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,12 +46,12 @@ class Create(Service):
 class Delete(Service):
     name = 'file-transfer.user-status.delete'
 
-    class SimpleIO:
-        input_required = 'status',
-
     def handle(self):
+        input = self.request.raw_request or {}
+        status = input.get('status')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        store.remove_user_status(self.request.input.status)
+        store.remove_user_status(status)
+        self.response.payload = {'ok': True}
 
 # ################################################################################################################################
 # ################################################################################################################################

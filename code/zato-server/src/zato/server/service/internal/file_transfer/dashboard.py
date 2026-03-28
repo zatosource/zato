@@ -26,11 +26,6 @@ if 0:
 class GetSummary(Service):
     name = 'file-transfer.dashboard.get-summary'
 
-    class SimpleIO:
-        input_optional = 'date_from', 'date_to'
-        output_optional = 'total_transactions', 'success_count', 'failed_count', 'success_rate', \
-            'avg_duration_ms', 'top_senders', 'top_doc_types', 'recent_failures'
-
     def handle(self):
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
@@ -116,14 +111,16 @@ class GetSummary(Service):
             for t in failed_txns
         ]
 
-        self.response.payload.total_transactions = total
-        self.response.payload.success_count = success_count
-        self.response.payload.failed_count = failed_count
-        self.response.payload.success_rate = success_rate
-        self.response.payload.avg_duration_ms = avg_duration
-        self.response.payload.top_senders = top_senders
-        self.response.payload.top_doc_types = top_doc_types
-        self.response.payload.recent_failures = recent_failures
+        self.response.payload = {
+            'total_transactions': total,
+            'success_count': success_count,
+            'failed_count': failed_count,
+            'success_rate': success_rate,
+            'avg_duration_ms': avg_duration,
+            'top_senders': top_senders,
+            'top_doc_types': top_doc_types,
+            'recent_failures': recent_failures,
+        }
 
 # ################################################################################################################################
 # ################################################################################################################################

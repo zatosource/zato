@@ -22,16 +22,12 @@ if 0:
 class Search(Service):
     name = 'file-transfer.activity-log.search'
 
-    class SimpleIO:
-        input_optional = 'date_from', 'date_to', 'activity_class', 'severity', 'limit', 'offset'
-        output_optional = 'id', 'transaction_id', 'timestamp', 'activity_class', 'severity', 'message', 'detail'
-        output_repeated = True
-
     def handle(self):
+        input = self.request.raw_request or {}
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
-        date_from = self.request.input.get('date_from')
-        date_to = self.request.input.get('date_to')
+        date_from = input.get('date_from')
+        date_to = input.get('date_to')
         if date_from:
             date_from = float(date_from)
         if date_to:
@@ -40,13 +36,13 @@ class Search(Service):
         entries, total = store.search_logs(
             date_from=date_from,
             date_to=date_to,
-            activity_class=self.request.input.get('activity_class'),
-            severity=self.request.input.get('severity'),
-            limit=int(self.request.input.get('limit', 100)),
-            offset=int(self.request.input.get('offset', 0)),
+            activity_class=input.get('activity_class'),
+            severity=input.get('severity'),
+            limit=int(input.get('limit') or 100),
+            offset=int(input.get('offset') or 0),
         )
 
-        self.response.payload[:] = [
+        self.response.payload = [
             {
                 'id': e.id,
                 'transaction_id': e.transaction_id,
