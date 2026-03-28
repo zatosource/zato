@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import timedelta
+from datetime import datetime, timedelta
+import json
 from logging import getLogger
 
 # redis
@@ -90,7 +91,7 @@ class RedisPubSubBackend:
         # Build message
         message = {
             'msg_id': msg_id,
-            'data': data if isinstance(data, str) else str(data),
+            'data': data if isinstance(data, str) else json.dumps(data),
             'topic_name': topic_name,
             'priority': str(priority),
             'pub_time_iso': pub_time_iso,
@@ -227,6 +228,20 @@ class RedisPubSubBackend:
                     value = value.decode('utf-8') if isinstance(value, bytes) else value
                     decoded[key] = value
 
+                # Check expiration - skip expired messages
+                expiration_time_iso = decoded.get('expiration_time_iso', '')
+                if expiration_time_iso:
+                    try:
+                        expiration_time = datetime.fromisoformat(expiration_time_iso.replace('Z', '+00:00'))
+                        now = utcnow()
+                        if now > expiration_time:
+                            # Message expired, acknowledge and skip
+                            stream_name_str = stream_name.decode('utf-8') if isinstance(stream_name, bytes) else stream_name
+                            _ = self.redis.xack(stream_name_str, sub_key, redis_msg_id)
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+
                 # Check max_len constraint
                 data_len = len(decoded.get('data', ''))
                 if total_len + data_len > max_len:
@@ -248,12 +263,37 @@ class RedisPubSubBackend:
         # Sort by priority desc, then by pub_time asc
         messages.sort(key=lambda m: (-m['priority'], m.get('pub_time_iso', '')))
 
-        # Remove internal fields before returning
-        for msg in messages:
+        # Format messages according to documentation: {data, meta}
+        formatted_messages = []
+        for msg in messages[:max_messages]:
             _ = msg.pop('_redis_msg_id', None)
             _ = msg.pop('_stream_name', None)
 
-        return messages[:max_messages]
+            data = msg.pop('data', '')
+            meta = {
+                'topic_name': msg.get('topic_name', ''),
+                'size': len(data) if isinstance(data, str) else 0,
+                'priority': msg.get('priority', 5),
+                'expiration': int(msg.get('expiration', 31536000)),
+                'msg_id': msg.get('msg_id', ''),
+                'pub_time_iso': msg.get('pub_time_iso', ''),
+                'recv_time_iso': msg.get('recv_time_iso', ''),
+                'expiration_time_iso': msg.get('expiration_time_iso', ''),
+            }
+
+            if msg.get('correl_id'):
+                meta['correl_id'] = msg['correl_id']
+            if msg.get('in_reply_to'):
+                meta['in_reply_to'] = msg['in_reply_to']
+            if msg.get('ext_client_id'):
+                meta['ext_client_id'] = msg['ext_client_id']
+
+            formatted_messages.append({
+                'data': data,
+                'meta': meta
+            })
+
+        return formatted_messages
 
 # ################################################################################################################################
 

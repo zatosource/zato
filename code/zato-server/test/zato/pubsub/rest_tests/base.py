@@ -34,6 +34,48 @@ class PubSubTestClient:
 
 # ################################################################################################################################
 
+    def publish_json(self, topic_name, data):
+        url = f'{self.base_url}/pubsub/topic/{topic_name}'
+        response = requests.post(url, json={'data': data}, auth=self.auth)
+        return response.json().get('response', {})
+
+# ################################################################################################################################
+
+    def publish_empty(self, topic_name):
+        url = f'{self.base_url}/pubsub/topic/{topic_name}'
+        response = requests.post(url, json={}, auth=self.auth)
+        return response.json().get('response', {})
+
+# ################################################################################################################################
+
+    def publish_with_priority(self, topic_name, data, priority):
+        url = f'{self.base_url}/pubsub/topic/{topic_name}'
+        response = requests.post(url, json={'data': data, 'priority': priority}, auth=self.auth)
+        return response.json().get('response', {})
+
+# ################################################################################################################################
+
+    def publish_with_expiration(self, topic_name, data, expiration):
+        url = f'{self.base_url}/pubsub/topic/{topic_name}'
+        response = requests.post(url, json={'data': data, 'expiration': expiration}, auth=self.auth)
+        return response.json().get('response', {})
+
+# ################################################################################################################################
+
+    def publish_with_metadata(self, topic_name, data, correl_id=None, in_reply_to=None, ext_client_id=None):
+        url = f'{self.base_url}/pubsub/topic/{topic_name}'
+        payload = {'data': data}
+        if correl_id:
+            payload['correl_id'] = correl_id
+        if in_reply_to:
+            payload['in_reply_to'] = in_reply_to
+        if ext_client_id:
+            payload['ext_client_id'] = ext_client_id
+        response = requests.post(url, json=payload, auth=self.auth)
+        return response.json().get('response', {})
+
+# ################################################################################################################################
+
     def subscribe(self, topic_name):
         url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
         response = requests.post(url, auth=self.auth)
@@ -47,6 +89,18 @@ class PubSubTestClient:
     def get_messages(self, sub_key=None):
         url = f'{self.base_url}/pubsub/messages/get'
         payload = {'sub_key': sub_key or self.sub_key}
+        response = requests.post(url, json=payload, auth=self.auth)
+        return response.json().get('response', {})
+
+# ################################################################################################################################
+
+    def get_messages_with_limit(self, max_messages=None, max_len=None):
+        url = f'{self.base_url}/pubsub/messages/get'
+        payload = {'sub_key': self.sub_key}
+        if max_messages is not None:
+            payload['max_messages'] = max_messages
+        if max_len is not None:
+            payload['max_len'] = max_len
         response = requests.post(url, json=payload, auth=self.auth)
         return response.json().get('response', {})
 
