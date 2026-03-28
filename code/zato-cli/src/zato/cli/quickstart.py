@@ -307,6 +307,7 @@ class Create(ZatoCommand):
     opts.append({'name':'--scheduler-only', 'help':'Only create a scheduler, without other components', 'action':'store_true'})
     opts.append({'name':'--preamble-script', 'help':'Extra script to add to startup scripts'})
     opts.append({'name':'--force', 'help':'Delete the directory if it already exists', 'action':'store_true'})
+    opts.append({'name':'--password', 'help':'Password for the environment (same as Zato_Password env variable)'})
 
     opts += deepcopy(common_scheduler_server_address_opts)
     opts += deepcopy(common_scheduler_server_api_client_opts)
@@ -372,6 +373,11 @@ class Create(ZatoCommand):
 
         # Cryptography
         from cryptography.fernet import Fernet
+
+        # Handle --password flag by setting Zato_Password env var
+        password = getattr(args, 'password', None)
+        if password:
+            os.environ['Zato_Password'] = password
 
         # These are shared by all servers
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
@@ -519,7 +525,10 @@ class Create(ZatoCommand):
             create_web_admin_args.path = web_admin_path
             create_web_admin_args.admin_invoke_password = admin_invoke_password
 
-            web_admin_password:'bytes' = CryptoManager.generate_password() # type: ignore
+            if password:
+                web_admin_password:'bytes' = password.encode('utf8')
+            else:
+                web_admin_password = CryptoManager.generate_password() # type: ignore
             admin_created = create_web_admin.Create(create_web_admin_args).execute(
                 create_web_admin_args, False, web_admin_password, True)
 

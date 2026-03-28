@@ -124,9 +124,17 @@ class SubscriptionsStore:
             self._username_to_sub_key[username] = sub_key
             self._sub_key_to_username[sub_key] = username
 
-            logger.info('Created new sub_key %s for user %s', sub_key, username)
-
             return sub_key
+
+# ################################################################################################################################
+
+    def clear_sub_key(self, username:'str') -> 'None':
+        """ Clear sub_key for a user so a new one is generated on next subscribe.
+        """
+        with self._lock:
+            sub_key = self._username_to_sub_key.pop(username, None)
+            if sub_key:
+                _ = self._sub_key_to_username.pop(sub_key, None)
 
 # ################################################################################################################################
 
@@ -147,8 +155,6 @@ class SubscriptionsStore:
             if sec_name:
                 _ = self._sec_name_to_username.pop(sec_name, None)
 
-            logger.info('Removed user %s from subscriptions store', username)
-
 # ################################################################################################################################
 
     def update_username(self, old_username:'str', new_username:'str') -> 'None':
@@ -167,8 +173,6 @@ class SubscriptionsStore:
             if sec_name:
                 self._username_to_sec_name[new_username] = sec_name
                 self._sec_name_to_username[sec_name] = new_username
-
-            logger.info('Updated username from %s to %s in subscriptions store', old_username, new_username)
 
 # ################################################################################################################################
 

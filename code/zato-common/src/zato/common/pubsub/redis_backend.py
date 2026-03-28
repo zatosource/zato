@@ -7,7 +7,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from datetime import timedelta
+from datetime import datetime, timedelta
+import json
 from logging import getLogger
 
 # redis
@@ -75,26 +76,30 @@ class RedisPubSubBackend:
         in_reply_to:'strnone'=None,
         ext_client_id:'strnone'=None,
         publisher:'strnone'=None,
+        pub_time:'strnone'=None,
     ) -> 'str':
         """ Publish a message to a topic stream.
         """
+        # Normalize topic name to lowercase for case-insensitivity
+        topic_name = topic_name.lower()
+
         # Generate message ID
         msg_id = new_msg_id()
 
         # Timestamps
         now = utcnow()
-        pub_time_iso = now.isoformat()
+        pub_time_iso = pub_time if pub_time else now.isoformat()
         expiration_time = now + timedelta(seconds=expiration)
         expiration_time_iso = expiration_time.isoformat()
 
         # Build message
         message = {
             'msg_id': msg_id,
-            'data': data if isinstance(data, str) else str(data),
+            'data': data if isinstance(data, str) else json.dumps(data),
             'topic_name': topic_name,
             'priority': str(priority),
             'pub_time_iso': pub_time_iso,
-            'recv_time_iso': pub_time_iso,
+            'recv_time_iso': now.isoformat(),
             'expiration': str(expiration),
             'expiration_time_iso': expiration_time_iso,
         }
@@ -115,8 +120,6 @@ class RedisPubSubBackend:
         stream_key = self._get_stream_key(topic_name)
         _ = self.redis.xadd(stream_key, message, maxlen=ModuleCtx.Default_Max_Len)
 
-        logger.info('Published message %s to topic %s', msg_id, topic_name)
-
         return msg_id
 
 # ################################################################################################################################
@@ -124,6 +127,9 @@ class RedisPubSubBackend:
     def subscribe(self, sub_key:'str', topic_name:'str') -> 'None':
         """ Subscribe a user to a topic.
         """
+        # Normalize topic name to lowercase for case-insensitivity
+        topic_name = topic_name.lower()
+
         subs_key = self._get_subs_key(sub_key)
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
@@ -136,21 +142,21 @@ class RedisPubSubBackend:
 
         # Create consumer group if not exists
         try:
-            _ = self.redis.xgroup_create(stream_key, sub_key, id='0', mkstream=True)
-            logger.info('Created consumer group %s for stream %s', sub_key, stream_key)
+            _ = self.redis.xgroup_create(stream_key, sub_key, id='$', mkstream=True)
         except ResponseError as e:
             if 'BUSYGROUP' in str(e):
                 pass  # Group already exists
             else:
                 raise
 
-        logger.info('Subscribed %s to topic %s', sub_key, topic_name)
-
 # ################################################################################################################################
 
     def unsubscribe(self, sub_key:'str', topic_name:'str') -> 'None':
         """ Unsubscribe a user from a topic.
         """
+        # Normalize topic name to lowercase for case-insensitivity
+        topic_name = topic_name.lower()
+
         subs_key = self._get_subs_key(sub_key)
         topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
@@ -168,11 +174,8 @@ class RedisPubSubBackend:
         if remaining == 0:
             try:
                 _ = self.redis.xgroup_destroy(stream_key, sub_key)
-                logger.info('Destroyed consumer group %s for stream %s', sub_key, stream_key)
             except ResponseError:
                 pass  # Group may not exist
-
-        logger.info('Unsubscribed %s from topic %s', sub_key, topic_name)
 
 # ################################################################################################################################
 
@@ -204,8 +207,7 @@ class RedisPubSubBackend:
                 groupname=sub_key,
                 consumername=sub_key,
                 streams=streams,
-                count=max_messages,
-                block=0  # Non-blocking
+                count=max_messages
             )
         except ResponseError as e:
             if 'NOGROUP' in str(e):
@@ -228,6 +230,20 @@ class RedisPubSubBackend:
                     value = value.decode('utf-8') if isinstance(value, bytes) else value
                     decoded[key] = value
 
+                # Check expiration - skip expired messages
+                expiration_time_iso = decoded.get('expiration_time_iso', '')
+                if expiration_time_iso:
+                    try:
+                        expiration_time = datetime.fromisoformat(expiration_time_iso.replace('Z', '+00:00'))
+                        now = utcnow()
+                        if now > expiration_time:
+                            # Message expired, acknowledge and skip
+                            stream_name_str = stream_name.decode('utf-8') if isinstance(stream_name, bytes) else stream_name
+                            _ = self.redis.xack(stream_name_str, sub_key, redis_msg_id)
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+
                 # Check max_len constraint
                 data_len = len(decoded.get('data', ''))
                 if total_len + data_len > max_len:
@@ -242,19 +258,44 @@ class RedisPubSubBackend:
 
                 messages.append(decoded)
 
-                # Acknowledge the message
+                # Acknowledge the message for this consumer group
                 stream_name_str = stream_name.decode('utf-8') if isinstance(stream_name, bytes) else stream_name
                 _ = self.redis.xack(stream_name_str, sub_key, redis_msg_id)
 
         # Sort by priority desc, then by pub_time asc
         messages.sort(key=lambda m: (-m['priority'], m.get('pub_time_iso', '')))
 
-        # Remove internal fields before returning
-        for msg in messages:
+        # Format messages according to documentation: {data, meta}
+        formatted_messages = []
+        for msg in messages[:max_messages]:
             _ = msg.pop('_redis_msg_id', None)
             _ = msg.pop('_stream_name', None)
 
-        return messages[:max_messages]
+            data = msg.pop('data', '')
+            meta = {
+                'topic_name': msg.get('topic_name', ''),
+                'size': len(data) if isinstance(data, str) else 0,
+                'priority': msg.get('priority', 5),
+                'expiration': int(msg.get('expiration', 31536000)),
+                'msg_id': msg.get('msg_id', ''),
+                'pub_time_iso': msg.get('pub_time_iso', ''),
+                'recv_time_iso': msg.get('recv_time_iso', ''),
+                'expiration_time_iso': msg.get('expiration_time_iso', ''),
+            }
+
+            if msg.get('correl_id'):
+                meta['correl_id'] = msg['correl_id']
+            if msg.get('in_reply_to'):
+                meta['in_reply_to'] = msg['in_reply_to']
+            if msg.get('ext_client_id'):
+                meta['ext_client_id'] = msg['ext_client_id']
+
+            formatted_messages.append({
+                'data': data,
+                'meta': meta
+            })
+
+        return formatted_messages
 
 # ################################################################################################################################
 
@@ -302,8 +343,6 @@ class RedisPubSubBackend:
         # Delete the topic subscribers set
         _ = self.redis.delete(topic_subs_key)
 
-        logger.info('Deleted topic %s', topic_name)
-
 # ################################################################################################################################
 
     def rename_topic(self, old_topic_name:'str', new_topic_name:'str') -> 'None':
@@ -334,8 +373,6 @@ class RedisPubSubBackend:
             subs_key = self._get_subs_key(sub_key)
             _ = self.redis.srem(subs_key, old_topic_name)
             _ = self.redis.sadd(subs_key, new_topic_name)
-
-        logger.info('Renamed topic %s to %s', old_topic_name, new_topic_name)
 
 # ################################################################################################################################
 # ################################################################################################################################
