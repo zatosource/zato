@@ -204,8 +204,7 @@ class RedisPubSubBackend:
                 groupname=sub_key,
                 consumername=sub_key,
                 streams=streams,
-                count=max_messages,
-                block=0  # Non-blocking
+                count=max_messages
             )
         except ResponseError as e:
             if 'NOGROUP' in str(e):
