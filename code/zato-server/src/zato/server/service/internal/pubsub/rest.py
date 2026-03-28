@@ -109,8 +109,8 @@ class Publish(PubSubRESTService):
     name = 'pubsub.rest.publish'
 
     class SimpleIO:
-        input_required = 'topic_name', 'data'
-        input_optional = 'priority', 'expiration', 'correl_id', 'in_reply_to', 'ext_client_id', 'pub_time'
+        input_required = 'topic_name', AsIs('data')
+        input_optional = 'priority', 'expiration', AsIs('correl_id'), AsIs('in_reply_to'), AsIs('ext_client_id'), 'pub_time'
         output_optional = AsIs('msg_id'), 'is_ok', 'cid', Int('status'), 'details'
         skip_empty_keys = True
 
@@ -231,7 +231,7 @@ class GetMessages(PubSubRESTService):
 
     class SimpleIO:
         input_optional = Int('max_messages'), Int('max_len')
-        output_optional = 'messages', Int('message_count'), 'is_ok', 'cid', Int('status'), 'details'
+        output_optional = AsIs('messages'), Int('message_count'), 'is_ok', 'cid', Int('status'), 'details'
 
 # ################################################################################################################################
 
