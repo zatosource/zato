@@ -241,10 +241,9 @@ class RedisPubSubBackend:
 
                 messages.append(decoded)
 
-                # Acknowledge and delete the message
+                # Acknowledge the message for this consumer group
                 stream_name_str = stream_name.decode('utf-8') if isinstance(stream_name, bytes) else stream_name
                 _ = self.redis.xack(stream_name_str, sub_key, redis_msg_id)
-                _ = self.redis.xdel(stream_name_str, redis_msg_id)
 
         # Sort by priority desc, then by pub_time asc
         messages.sort(key=lambda m: (-m['priority'], m.get('pub_time_iso', '')))
