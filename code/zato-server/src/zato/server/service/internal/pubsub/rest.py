@@ -192,6 +192,7 @@ class Publish(PubSubRESTService):
         correl_id = input.correl_id or cid
         in_reply_to = input.in_reply_to or ''
         ext_client_id = input.ext_client_id or ''
+        pub_time = input.pub_time or ''
 
         # Validate priority
         if priority < _min_priority or priority > _max_priority:
@@ -214,6 +215,7 @@ class Publish(PubSubRESTService):
             in_reply_to=in_reply_to,
             ext_client_id=ext_client_id,
             publisher=username,
+            pub_time=pub_time,
         )
 
         # Build response
