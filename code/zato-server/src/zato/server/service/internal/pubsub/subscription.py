@@ -280,16 +280,28 @@ class Create(AdminService):
                 for item in topic_data_list:
                     if isinstance(item, str):
                         topic_name = item
-                        topic_data_by_name[topic_name] = {'topic_name': item, 'is_pub_enabled': True, 'is_delivery_enabled': True}
+                        topic_data_by_name[topic_name] = {
+                            'topic_name': item,
+                            'is_pub_enabled': True,
+                            'is_delivery_enabled': True
+                        }
                     elif isinstance(item, dict):
                         topic_name = item['topic_name']
                         topic_data_by_name[topic_name] = item
                     elif hasattr(item, 'topic_name'):
                         topic_name = item.topic_name
-                        topic_data_by_name[topic_name] = {'topic_name': topic_name, 'is_pub_enabled': getattr(item, 'is_pub_enabled', True), 'is_delivery_enabled': getattr(item, 'is_delivery_enabled', True)}
+                        topic_data_by_name[topic_name] = {
+                            'topic_name': topic_name,
+                            'is_pub_enabled': getattr(item, 'is_pub_enabled', True),
+                            'is_delivery_enabled': getattr(item, 'is_delivery_enabled', True)
+                        }
                     else:
                         topic_name = str(item)
-                        topic_data_by_name[topic_name] = {'topic_name': topic_name, 'is_pub_enabled': True, 'is_delivery_enabled': True}
+                        topic_data_by_name[topic_name] = {
+                            'topic_name': topic_name,
+                            'is_pub_enabled': True,
+                            'is_delivery_enabled': True
+                        }
 
                 for topic_name in topic_name_list:
                     topic = session.query(PubSubTopic).\
