@@ -130,7 +130,7 @@
 
 <div class="ft-title-row">
     <div>
-        <a href="{% url 'file-transfer-transaction' %}" class="ft-back-link">Back</a>
+        <a href="{% url 'file-transfer-transaction' %}?date_from={{ request.GET.date_from|urlencode }}&date_to={{ request.GET.date_to|urlencode }}&status={{ request.GET.status|urlencode }}&sender={{ request.GET.sender|urlencode }}&receiver={{ request.GET.receiver|urlencode }}&doc_type_id={{ request.GET.doc_type_id|urlencode }}&query={{ request.GET.query|urlencode }}" class="ft-back-link">Back</a>
         <span class="ft-txn-id zato-copyable">{{ transaction.id }}</span>
         {% if transaction.processing_status == 'Done' %}
         <span class="ft-badge ft-badge-done">DONE</span>

@@ -96,7 +96,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ tx.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td>{{ tx.created|from_timestamp }}</td>
-                        <td><a href="{% url 'file-transfer-transaction-detail' tx.id %}">{{ tx.filename }}</a></td>
+                        <td><a href="{% url 'file-transfer-transaction-detail' tx.id %}?date_from={{ filters.date_from|urlencode }}&date_to={{ filters.date_to|urlencode }}&status={{ filters.status|urlencode }}&sender={{ filters.sender|urlencode }}&receiver={{ filters.receiver|urlencode }}&doc_type_id={{ filters.doc_type_id|urlencode }}&query={{ filters.query|urlencode }}">{{ tx.filename }}</a></td>
                         <td>{{ tx.doc_type_id|no_value_indicator }}</td>
                         <td>{{ tx.sender|no_value_indicator }}</td>
                         <td>{{ tx.receiver|no_value_indicator }}</td>
@@ -118,7 +118,7 @@
                             {% endif %}
                         </td>
                         <td>{{ tx.user_status|no_value_indicator }}</td>
-                        <td><a href="{% url 'file-transfer-transaction-detail' tx.id %}">Details</a></td>
+                        <td><a href="{% url 'file-transfer-transaction-detail' tx.id %}?date_from={{ filters.date_from|urlencode }}&date_to={{ filters.date_to|urlencode }}&status={{ filters.status|urlencode }}&sender={{ filters.sender|urlencode }}&receiver={{ filters.receiver|urlencode }}&doc_type_id={{ filters.doc_type_id|urlencode }}&query={{ filters.query|urlencode }}">Details</a></td>
                     </tr>
                 {% endfor %}
                 {% else %}
