@@ -1027,3 +1027,31 @@ div.action-panel a {
 .status-badge.white {
     color: #fff !important;
 }
+
+.zato-copied-tooltip {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: #333;
+    color: #fff;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-family: sans-serif;
+    white-space: nowrap;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.zato-copied-tooltip.show {
+    opacity: 1;
+}
+
+.zato-copyable {
+    cursor: pointer;
+}
+
+.zato-copyable:hover {
+    background: #f0f0f0;
+}

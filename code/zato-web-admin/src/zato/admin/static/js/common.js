@@ -123,6 +123,23 @@ $.namespace('zato.vendors.keysight.vision');
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+$.fn.zato.copy_tooltip_duration = 600;
+
+$.fn.zato.copy_to_clipboard = function(text, elem) {
+    navigator.clipboard.writeText(text).then(function() {
+        var $elem = $(elem);
+        var tooltip = $('<div class="zato-copied-tooltip">Copied to clipboard</div>');
+        $elem.css('position', 'relative').append(tooltip);
+        setTimeout(function() { tooltip.addClass('show'); }, 10);
+        setTimeout(function() {
+            tooltip.removeClass('show');
+            setTimeout(function() { tooltip.remove(); }, 150);
+        }, $.fn.zato.copy_tooltip_duration);
+    });
+};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 $.fn.zato.post = function(url, callback, data, data_type, suppress_user_message, context) {
     if(!data) {
         data = '';

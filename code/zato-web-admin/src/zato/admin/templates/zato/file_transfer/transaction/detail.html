@@ -72,31 +72,6 @@
     font-size: 13px;
     font-family: monospace;
 }
-.ft-copyable {
-    cursor: pointer;
-    position: relative;
-}
-.ft-copyable:hover {
-    background: #f0f0f0;
-}
-.ft-copied-tooltip {
-    position: absolute;
-    left: 0;
-    top: 100%;
-    margin-top: 4px;
-    background: #333;
-    color: #fff;
-    padding: 4px 8px;
-    font-size: 11px;
-    font-family: sans-serif;
-    white-space: nowrap;
-    z-index: 100;
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-.ft-copied-tooltip.show {
-    opacity: 1;
-}
 .ft-content-view {
     background: #f8f8f8;
     border: 1px solid #ddd;
@@ -148,7 +123,7 @@
 <div class="ft-title-row">
     <div>
         <a href="{% url 'file-transfer-transaction' %}" class="ft-back-link">&#9664; Back</a>
-        <span class="ft-txn-id">{{ transaction.id }}</span>
+        <span class="ft-txn-id zato-copyable">{{ transaction.id }}</span>
         {% if transaction.processing_status == 'Done' %}
         <span class="ft-badge ft-badge-done">DONE</span>
         {% elif transaction.processing_status == 'Failed' %}
@@ -181,21 +156,21 @@
     </ul>
     <div class="zato-tabs-content">
         <div class="zato-tabs-panel active" id="tab-attrs">
-            <div class="ft-kv-row"><span class="ft-kv-key">File name</span><span class="ft-kv-val ft-copyable">{{ transaction.filename }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Transaction ID</span><span class="ft-kv-val ft-copyable">{{ transaction.id }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Doc type</span><span class="ft-kv-val ft-copyable">{{ transaction.doc_type_id|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Sender</span><span class="ft-kv-val ft-copyable">{{ transaction.sender|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Receiver</span><span class="ft-kv-val ft-copyable">{{ transaction.receiver|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Document ID</span><span class="ft-kv-val ft-copyable">{{ transaction.document_id|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Conversation ID</span><span class="ft-kv-val ft-copyable">{{ transaction.conversation_id|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Group ID</span><span class="ft-kv-val ft-copyable">{{ transaction.group_id|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Size</span><span class="ft-kv-val ft-copyable">{{ transaction.file_size|filesizeformat }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Source checksum</span><span class="ft-kv-val ft-copyable">{{ transaction.source_checksum|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Source protocol</span><span class="ft-kv-val ft-copyable">{{ transaction.source_protocol|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Source detail</span><span class="ft-kv-val ft-copyable">{{ transaction.source_detail|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Duration</span><span class="ft-kv-val ft-copyable">{{ transaction.duration_ms|default:"-" }} ms</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Content saved</span><span class="ft-kv-val ft-copyable">{{ transaction.content_saved|yesno:"Yes,No" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Has errors</span><span class="ft-kv-val ft-copyable">{{ transaction.has_errors|yesno:"Yes,No" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">File name</span><span class="ft-kv-val zato-copyable">{{ transaction.filename }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Transaction ID</span><span class="ft-kv-val zato-copyable">{{ transaction.id }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Doc type</span><span class="ft-kv-val zato-copyable">{{ transaction.doc_type_id|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Sender</span><span class="ft-kv-val zato-copyable">{{ transaction.sender|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Receiver</span><span class="ft-kv-val zato-copyable">{{ transaction.receiver|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Document ID</span><span class="ft-kv-val zato-copyable">{{ transaction.document_id|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Conversation ID</span><span class="ft-kv-val zato-copyable">{{ transaction.conversation_id|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Group ID</span><span class="ft-kv-val zato-copyable">{{ transaction.group_id|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Size</span><span class="ft-kv-val zato-copyable">{{ transaction.file_size|filesizeformat }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Source checksum</span><span class="ft-kv-val zato-copyable">{{ transaction.source_checksum|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Source protocol</span><span class="ft-kv-val zato-copyable">{{ transaction.source_protocol|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Source detail</span><span class="ft-kv-val zato-copyable">{{ transaction.source_detail|default:"-" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Duration</span><span class="ft-kv-val zato-copyable">{{ transaction.duration_ms|default:"-" }} ms</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Content saved</span><span class="ft-kv-val zato-copyable">{{ transaction.content_saved|yesno:"Yes,No" }}</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Has errors</span><span class="ft-kv-val zato-copyable">{{ transaction.has_errors|yesno:"Yes,No" }}</span></div>
         </div>
 
         <div class="zato-tabs-panel" id="tab-content">
@@ -229,18 +204,8 @@ $(function() {
         loadTasks();
     });
 
-    $('.ft-copyable').on('click', function() {
-        var elem = $(this);
-        var text = elem.text().trim();
-        navigator.clipboard.writeText(text).then(function() {
-            var tooltip = $('<div class="ft-copied-tooltip">Copied to clipboard</div>');
-            elem.append(tooltip);
-            setTimeout(function() { tooltip.addClass('show'); }, 10);
-            setTimeout(function() {
-                tooltip.removeClass('show');
-                setTimeout(function() { tooltip.remove(); }, 150);
-            }, 1500);
-        });
+    $('.zato-copyable').on('click', function() {
+        $.fn.zato.copy_to_clipboard($(this).text().trim(), this);
     });
 });
 
