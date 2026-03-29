@@ -37,11 +37,10 @@
     opacity: 0.7;
 }
 .ft-txn-id {
-    display: inline;
-    font-size: 11px;
-    color: #666;
+    font-size: 14px;
     font-family: monospace;
-    margin-left: 8px;
+    color: #333;
+    margin-left: 12px;
 }
 .ft-badge {
     display: inline-block;
@@ -124,7 +123,6 @@
 <div class="ft-title-row">
     <div>
         <a href="{% url 'file-transfer-transaction' %}" class="ft-back-link">&#9664; Back</a>
-        <h2 class="zato" style="display:inline;margin-left:12px">{{ transaction.filename }}</h2>
         <span class="ft-txn-id">{{ transaction.id }}</span>
         {% if transaction.processing_status == 'Done' %}
         <span class="ft-badge ft-badge-done">DONE</span>
