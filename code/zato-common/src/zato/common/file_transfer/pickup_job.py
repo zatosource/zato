@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 from threading import Event, Thread
-from typing import Dict, List
 
 # Zato
 from zato.common.file_transfer.const import PostProcessingAction
@@ -47,8 +46,8 @@ class FileTransferPickupJob:
         self.connection_pool = connection_pool
         self.default_poll_interval = default_poll_interval
         self._stop_event = Event()
-        self._threads: 'Dict[str, Thread]' = {}
-        self._channel_stop_events: 'Dict[str, Event]' = {}
+        self._threads: 'dict[str, Thread]' = {}
+        self._channel_stop_events: 'dict[str, Event]' = {}
 
 # ################################################################################################################################
 

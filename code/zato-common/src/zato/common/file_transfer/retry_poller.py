@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 from threading import Event, Thread
-from typing import List
 
 # Zato
 from zato.common.file_transfer.tasks import TaskManager
@@ -95,7 +94,7 @@ class RetryPoller:
 
 # ################################################################################################################################
 
-    def poll_once(self) -> 'List[Task]':
+    def poll_once(self) -> 'list[Task]':
         now = time.time()
         due_tasks = self.store.get_due_retries(now)
         executed = []

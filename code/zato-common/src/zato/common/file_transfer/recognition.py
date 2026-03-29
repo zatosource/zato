@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import fnmatch
 import json
 import re
-from typing import List
 
 # lxml
 from lxml import etree
@@ -34,7 +33,7 @@ class RecognitionEngine:
         self,
         filename:'str',
         content:'bytes',
-        doc_types:'List[DocumentType]',
+        doc_types:'list[DocumentType]',
     ) -> 'DocumentType | None':
 
         for doc_type in doc_types:
@@ -48,7 +47,7 @@ class RecognitionEngine:
         self,
         filename:'str',
         content:'bytes',
-        rules:'List[RecognitionRule]',
+        rules:'list[RecognitionRule]',
     ) -> 'bool':
 
         if not rules:

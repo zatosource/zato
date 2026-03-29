@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
-from typing import List
 
 # Zato
 from zato.common.file_transfer.const import (
@@ -221,7 +220,7 @@ class FileTransferRedisStore:
         self.redis.delete(RedisKey.doc_type(self.cluster_id, dt_id))
         self.redis.srem(RedisKey.set_doc_types(self.cluster_id), dt_id)
 
-    def list_document_types(self) -> 'List[DocumentType]':
+    def list_document_types(self) -> 'list[DocumentType]':
         dt_ids = self.redis.smembers(RedisKey.set_doc_types(self.cluster_id))
         doc_types = []
         for dt_id in dt_ids:
@@ -232,7 +231,7 @@ class FileTransferRedisStore:
                 doc_types.append(dt)
         return doc_types
 
-    def list_enabled_document_types(self) -> 'List[DocumentType]':
+    def list_enabled_document_types(self) -> 'list[DocumentType]':
         return [dt for dt in self.list_document_types() if dt.is_enabled]
 
 # ################################################################################################################################
@@ -263,7 +262,7 @@ class FileTransferRedisStore:
         self.redis.srem(RedisKey.set_rules(self.cluster_id), rule_id)
         self.redis.zrem(RedisKey.idx_rule_order(self.cluster_id), rule_id)
 
-    def list_processing_rules(self) -> 'List[ProcessingRule]':
+    def list_processing_rules(self) -> 'list[ProcessingRule]':
         rule_ids = self.redis.zrange(RedisKey.idx_rule_order(self.cluster_id), 0, -1)
         rules = []
         for rule_id in rule_ids:
@@ -274,7 +273,7 @@ class FileTransferRedisStore:
                 rules.append(rule)
         return rules
 
-    def list_enabled_processing_rules(self) -> 'List[ProcessingRule]':
+    def list_enabled_processing_rules(self) -> 'list[ProcessingRule]':
         return [r for r in self.list_processing_rules() if r.is_enabled]
 
     def reorder_rules(self, ordered_ids:'strlist') -> 'None':
@@ -329,7 +328,7 @@ class FileTransferRedisStore:
         self.redis.zrem(RedisKey.idx_task_by_txn(self.cluster_id, task.transaction_id), task.id)
         self.redis.zrem(RedisKey.idx_task_retry_schedule(self.cluster_id), task.id)
 
-    def get_tasks_for_transaction(self, txn_id:'str') -> 'List[Task]':
+    def get_tasks_for_transaction(self, txn_id:'str') -> 'list[Task]':
         task_ids = self.redis.zrange(RedisKey.idx_task_by_txn(self.cluster_id, txn_id), 0, -1)
         tasks = []
         for task_id in task_ids:
@@ -346,7 +345,7 @@ class FileTransferRedisStore:
             task.next_retry_at = next_retry_at
             self.update_task(task)
 
-    def get_due_retries(self, now:'float') -> 'List[Task]':
+    def get_due_retries(self, now:'float') -> 'list[Task]':
         task_ids = self.redis.zrangebyscore(RedisKey.idx_task_retry_schedule(self.cluster_id), 0, now)
         tasks = []
         for task_id in task_ids:
@@ -371,7 +370,7 @@ class FileTransferRedisStore:
         self.redis.zadd(RedisKey.idx_log_by_severity(self.cluster_id, severity_val), {entry.id: entry.timestamp})
         self.redis.zadd(RedisKey.idx_log_global(self.cluster_id), {entry.id: entry.timestamp})
 
-    def get_logs_for_transaction(self, txn_id:'str') -> 'List[ActivityLogEntry]':
+    def get_logs_for_transaction(self, txn_id:'str') -> 'list[ActivityLogEntry]':
         entry_ids = self.redis.zrange(RedisKey.idx_log_by_txn(self.cluster_id, txn_id), 0, -1)
         entries = []
         for entry_id in entry_ids:
@@ -451,7 +450,7 @@ class FileTransferRedisStore:
         self.redis.delete(RedisKey.pgp_key(self.cluster_id, key_id))
         self.redis.srem(RedisKey.set_pgp_keys(self.cluster_id), key_id)
 
-    def list_pgp_keys(self) -> 'List[PGPKey]':
+    def list_pgp_keys(self) -> 'list[PGPKey]':
         key_ids = self.redis.smembers(RedisKey.set_pgp_keys(self.cluster_id))
         keys = []
         for key_id in key_ids:
@@ -532,7 +531,7 @@ class FileTransferRedisStore:
         self.redis.delete(RedisKey.pickup_channel(self.cluster_id, channel_id))
         self.redis.srem(RedisKey.set_pickup_channels(self.cluster_id), channel_id)
 
-    def list_pickup_channels(self) -> 'List[PickupChannel]':
+    def list_pickup_channels(self) -> 'list[PickupChannel]':
         channel_ids = self.redis.smembers(RedisKey.set_pickup_channels(self.cluster_id))
         channels = []
         for channel_id in channel_ids:
@@ -543,7 +542,7 @@ class FileTransferRedisStore:
                 channels.append(channel)
         return channels
 
-    def list_enabled_pickup_channels(self) -> 'List[PickupChannel]':
+    def list_enabled_pickup_channels(self) -> 'list[PickupChannel]':
         return [c for c in self.list_pickup_channels() if c.is_enabled]
 
 # ################################################################################################################################

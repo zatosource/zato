@@ -11,7 +11,6 @@ import fnmatch
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List
 
 # Zato
 from zato.common.file_transfer.const import PickupSourceType, PostProcessingAction
@@ -55,7 +54,7 @@ class BasePickupSource(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'List[FileInfo]':
+    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'list[FileInfo]':
         raise NotImplementedError()
 
     @abstractmethod
@@ -90,7 +89,7 @@ class SFTPPickupSource(BasePickupSource):
     def disconnect(self) -> 'None':
         self._connected = False
 
-    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'List[FileInfo]':
+    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'list[FileInfo]':
         files = []
 
         if not self.connection:
@@ -152,7 +151,7 @@ class FTPPickupSource(BasePickupSource):
     def disconnect(self) -> 'None':
         self._connected = False
 
-    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'List[FileInfo]':
+    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'list[FileInfo]':
         files = []
 
         if not self.connection:
@@ -226,7 +225,7 @@ class S3PickupSource(BasePickupSource):
     def disconnect(self) -> 'None':
         self._connected = False
 
-    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'List[FileInfo]':
+    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'list[FileInfo]':
         files = []
 
         if not self.connection:
@@ -302,7 +301,7 @@ class AzureBlobPickupSource(BasePickupSource):
     def disconnect(self) -> 'None':
         self._connected = False
 
-    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'List[FileInfo]':
+    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'list[FileInfo]':
         files = []
 
         if not self.connection:
@@ -385,7 +384,7 @@ class IMAPPickupSource(BasePickupSource):
                 pass
         self._connected = False
 
-    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'List[FileInfo]':
+    def list_files(self, remote_path:'str', pattern:'str'='*') -> 'list[FileInfo]':
         files = []
 
         if not self.connection:
