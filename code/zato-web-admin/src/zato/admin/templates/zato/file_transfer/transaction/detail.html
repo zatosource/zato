@@ -9,14 +9,23 @@
 .ft-detail-wrap {
     max-width: 900px;
     margin: 0 auto;
+    padding-top: 20px;
 }
 .ft-title-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid #ddd;
+    gap: 16px;
+}
+.ft-title-row > div:first-child {
+    flex: 1;
+    min-width: 0;
+}
+.ft-title-row h2 {
+    word-break: break-word;
 }
 .ft-back-link {
     color: var(--primary-dark, #012845) !important;
@@ -85,6 +94,7 @@
     font-weight: 600;
     padding: 6px 12px;
     border: none;
+    border-radius: 0 !important;
     cursor: pointer;
     text-decoration: none;
 }
