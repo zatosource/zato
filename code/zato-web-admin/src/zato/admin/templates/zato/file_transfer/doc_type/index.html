@@ -16,7 +16,7 @@
 
     <script nonce="{{ CSP_NONCE }}">
     function deleteDocType(dtId) {
-        jConfirm('Are you sure you want to delete this document type?', 'Confirm delete', function(r) {
+        jConfirm('Are you sure you want to delete this document type? This will break any processing rules referencing it.', 'Confirm delete', function(r) {
             if (r) {
                 $.post('/zato/file-transfer/doc-type/' + dtId + '/delete/', {
                     csrfmiddlewaretoken: '{{ csrf_token }}'
@@ -34,55 +34,82 @@
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-<div class='page_prompt' style="clear:left">
-            <a href="{% url 'file-transfer-doc-type-create' %}">Create a new document type</a>
-        </div>
+<div class='page_prompt'>
+    <a href="{% url 'file-transfer-doc-type-create' %}">Add a document type</a>
+</div>
 
-        <div id="markup">
-            <table id="data-table">
-                <thead>
-                    <tr class='ignore'>
-                        <th>&nbsp;</th>
-                        <th><a href="#">Name</a></th>
-                        <th><a href="#">File type</a></th>
-                        <th><a href="#">Recognition rules</a></th>
-                        <th><a href="#">Status</a></th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% if doc_types %}
-                {% for dt in doc_types %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ dt.id }}'>
-                        <td class='numbering'>&nbsp;</td>
-                        <td>{{ dt.name }}</td>
-                        <td>{{ dt.file_type }}</td>
-                        <td>
-                            {% if dt.recognition_rules %}
-                            {{ dt.recognition_rules|length }} rule(s)
+<div id="markup">
+    <table id="data-table">
+        <thead>
+            <tr class='ignore'>
+                <th>&nbsp;</th>
+                <th><a href="#">Name</a></th>
+                <th><a href="#">File type</a></th>
+                <th><a href="#">Recognition summary</a></th>
+                <th><a href="#">Extraction count</a></th>
+                <th><a href="#">Status</a></th>
+                <th>&nbsp;</th>
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% if doc_types %}
+        {% for dt in doc_types %}
+            <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ dt.id }}'>
+                <td class='numbering'>&nbsp;</td>
+                <td><a href="{% url 'file-transfer-doc-type-edit' dt.id %}">{{ dt.name }}</a></td>
+                <td>{{ dt.file_type }}</td>
+                <td class="ft-recognition-summary">
+                    {% if dt.recognition_rules %}
+                        {% with first_rule=dt.recognition_rules.0 %}
+                            {% if first_rule.type == 'Filename_Glob' %}
+                                <span class="ft-mono">Filename: {{ first_rule.pattern }}</span>
+                            {% elif first_rule.type == 'Xml_Root_Tag' %}
+                                <span class="ft-mono">Root tag: {{ first_rule.tag }}</span>
+                            {% elif first_rule.type == 'Json_Path' %}
+                                <span class="ft-mono">JSONPath: {{ first_rule.path }}</span>
+                            {% elif first_rule.type == 'Content_Regex' %}
+                                <span class="ft-mono">Regex: {{ first_rule.pattern }}</span>
+                            {% elif first_rule.type == 'Pgp_Header' %}
+                                <span class="ft-mono">PGP header</span>
+                            {% elif first_rule.type == 'Edi_Segment' %}
+                                <span class="ft-mono">EDI: {{ first_rule.segment }}</span>
                             {% else %}
-                            ---
+                                <span class="ft-mono">{{ first_rule.type }}</span>
                             {% endif %}
-                        </td>
-                        <td>
-                            {% if dt.is_enabled %}
-                            <span class="ft-enabled">Enabled</span>
-                            {% else %}
-                            <span class="ft-disabled">Disabled</span>
-                            {% endif %}
-                        </td>
-                        <td><a href="{% url 'file-transfer-doc-type-edit' dt.id %}">Edit</a></td>
-                        <td><a href="javascript:deleteDocType('{{ dt.id }}')">Delete</a></td>
-                    </tr>
-                {% endfor %}
-                {% else %}
-                    <tr class='ignore'>
-                        <td colspan='7'>No results</td>
-                    </tr>
-                {% endif %}
-                </tbody>
-            </table>
-        </div>
+                        {% endwith %}
+                        {% if dt.recognition_rules|length > 1 %}
+                            <span class="ft-more">+{{ dt.recognition_rules|length|add:"-1" }} more</span>
+                        {% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if dt.extraction_rules %}
+                        {{ dt.extraction_rules|length }} rule{% if dt.extraction_rules|length != 1 %}s{% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if dt.is_enabled %}
+                    <span class="ft-enabled">Enabled</span>
+                    {% else %}
+                    <span class="ft-disabled">Disabled</span>
+                    {% endif %}
+                </td>
+                <td><a href="{% url 'file-transfer-doc-type-edit' dt.id %}">Edit</a></td>
+                <td><a href="javascript:deleteDocType('{{ dt.id }}')">Delete</a></td>
+            </tr>
+        {% endfor %}
+        {% else %}
+            <tr class='ignore'>
+                <td colspan='8'>No results</td>
+            </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
 
 {% endblock %}

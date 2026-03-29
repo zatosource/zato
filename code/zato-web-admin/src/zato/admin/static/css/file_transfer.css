@@ -400,3 +400,70 @@ a.action-button:not(.menu-link):hover {
     color: #cc0000;
     border-color: #cc0000;
 }
+
+.ft-doctype-form .info-value {
+    text-align: left;
+}
+
+.ft-doctype-form .info-label {
+    width: 160px;
+}
+
+.ft-rule-item {
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--background-light);
+    border: 1px solid var(--border-light);
+}
+
+.ft-rule-item:last-child {
+    margin-bottom: 16px;
+}
+
+.ft-preproc-item {
+    margin-bottom: 8px;
+}
+
+.ft-preproc-item:last-child {
+    margin-bottom: 0;
+}
+
+.ft-preproc-detail {
+    display: none;
+}
+
+.ft-readonly-value {
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.ft-edit-buttons {
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.ft-delete-btn {
+    margin-left: auto;
+    color: #cc0000;
+    border-color: #cc0000;
+}
+
+.ft-mono {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.ft-more {
+    font-size: 11px;
+    color: #64748b;
+    margin-left: 4px;
+}
+
+.ft-recognition-summary {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

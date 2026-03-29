@@ -1,123 +1,237 @@
-{% extends "zato/index.html" %}
+{% extends "zato/settings-base.html" %}
 {% load extras %}
 
 {% block page_title %}File transfer - Edit document type{% endblock %}
 
-{% block content %}
-<div class="content-wrap">
-    <nav class="breadcrumb">
-        <a href="{% url 'main-page' %}">Zato</a> &rsaquo;
-        <a href="{% url 'file-transfer-doc-type' %}">Document types</a> &rsaquo;
-        <span>{{ doc_type.name }}</span>
-    </nav>
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/file_transfer.css">
+<link rel="stylesheet" type="text/css" href="/static/css/zato-tabs.css">
+{% endblock %}
 
-    <a href="{% url 'file-transfer-doc-type' %}" class="btn btn-default" style="margin-bottom:12px">&larr; Back</a>
-
-    <h2>Edit: {{ doc_type.name }}</h2>
-
-    <form method="post" action="">
-        {% csrf_token %}
-
-        <ul class="nav nav-tabs" style="margin-bottom:16px">
-            <li class="active"><a href="#tab-basic" data-toggle="tab">Basic</a></li>
-            <li><a href="#tab-recognition" data-toggle="tab">Recognition</a></li>
-            <li><a href="#tab-extraction" data-toggle="tab">Extraction</a></li>
-            <li><a href="#tab-preproc" data-toggle="tab">Pre-processing</a></li>
-        </ul>
-
-        <div class="tab-content">
-            <div class="tab-pane active" id="tab-basic">
-                <div class="form-group">
-                    <label>Name</label>
-                    <input type="text" name="name" class="form-control" style="max-width:400px" value="{{ doc_type.name }}" required>
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" class="form-control" rows="2" style="max-width:400px">{{ doc_type.description }}</textarea>
-                </div>
-                <div class="form-group">
-                    <label>File type</label>
-                    <select name="file_type" class="form-control" style="max-width:200px">
-                        <option value="Xml" {% if doc_type.file_type == 'Xml' %}selected{% endif %}>XML</option>
-                        <option value="Json" {% if doc_type.file_type == 'Json' %}selected{% endif %}>JSON</option>
-                        <option value="Flat_File" {% if doc_type.file_type == 'Flat_File' %}selected{% endif %}>Flat file</option>
-                        <option value="Binary" {% if doc_type.file_type == 'Binary' %}selected{% endif %}>Binary</option>
-                        <option value="Edi" {% if doc_type.file_type == 'Edi' %}selected{% endif %}>EDI</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label><input type="checkbox" name="is_enabled" {% if doc_type.is_enabled %}checked{% endif %}> Enabled</label>
-                </div>
-            </div>
-
-            <div class="tab-pane" id="tab-recognition">
-                <p style="color:#64748b;margin-bottom:16px">Define rules to recognize this document type.</p>
-                <div id="recognition-rules-list"></div>
-                <button type="button" class="btn btn-default" onclick="addRecognitionRule()">+ Add recognition rule</button>
-                <input type="hidden" name="recognition_rules_json" id="recognition_rules_json" value="[]">
-            </div>
-
-            <div class="tab-pane" id="tab-extraction">
-                <p style="color:#64748b;margin-bottom:16px">Define rules to extract attributes from documents.</p>
-                <div id="extraction-rules-list"></div>
-                <button type="button" class="btn btn-default" onclick="addExtractionRule()">+ Add extraction rule</button>
-                <input type="hidden" name="extraction_rules_json" id="extraction_rules_json" value="[]">
-            </div>
-
-            <div class="tab-pane" id="tab-preproc">
-                <div class="form-group">
-                    <label><input type="checkbox" name="preprocess_validate" {% if doc_type.preprocess_validate %}checked{% endif %}> Validate structure</label>
-                </div>
-                <div class="form-group">
-                    <label>Schema reference</label>
-                    <input type="text" name="preprocess_validate_schema" class="form-control" style="max-width:400px" value="{{ doc_type.preprocess_validate_schema }}">
-                </div>
-                <div class="form-group">
-                    <label><input type="checkbox" name="preprocess_dedup" {% if doc_type.preprocess_dedup %}checked{% endif %}> Check for duplicates</label>
-                </div>
-                <div class="form-group">
-                    <label>Dedup window (days)</label>
-                    <input type="number" name="preprocess_dedup_window_days" class="form-control" style="max-width:100px" value="{{ doc_type.preprocess_dedup_window_days|default:30 }}">
-                </div>
-                <div class="form-group">
-                    <label><input type="checkbox" name="preprocess_pgp_verify" {% if doc_type.preprocess_pgp_verify %}checked{% endif %}> Verify PGP signature</label>
-                </div>
-                <div class="form-group">
-                    <label>PGP key</label>
-                    <select name="preprocess_pgp_key_id" class="form-control" style="max-width:300px">
-                        <option value="">None</option>
-                        {% for key in pgp_keys %}
-                        <option value="{{ key.id }}" {% if doc_type.preprocess_pgp_key_id == key.id %}selected{% endif %}>{{ key.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label><input type="checkbox" name="preprocess_checksum" {% if doc_type.preprocess_checksum %}checked{% endif %}> Verify checksum</label>
-                </div>
-                <div class="form-group">
-                    <label>Save policy</label>
-                    <select name="preprocess_save" class="form-control" style="max-width:200px">
-                        <option value="All" {% if doc_type.preprocess_save == 'All' %}selected{% endif %}>All</option>
-                        <option value="Unique" {% if doc_type.preprocess_save == 'Unique' %}selected{% endif %}>Unique only</option>
-                        <option value="None_" {% if doc_type.preprocess_save == 'None_' %}selected{% endif %}>None</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div style="margin-top:24px">
-            <button type="submit" class="btn btn-primary">Save changes</button>
-            <a href="{% url 'file-transfer-doc-type' %}" class="btn btn-default">Cancel</a>
-        </div>
-    </form>
+{% block left_content %}
+<div class="ft-header-row">
+    <a href="{% url 'file-transfer-doc-type' %}" class="secondary-button ft-back-btn">Document types</a>
+    <h3>{{ doc_type.name }}</h3>
 </div>
+<form method="post" action="" class="ft-doctype-form">
+    {% csrf_token %}
+    <div class="progress-panel">
+        <div class="zato-tabs" id="doctype-tabs">
+            <ul class="zato-tabs-nav">
+                <li class="active"><a href="#tab-general">General</a></li>
+                <li><a href="#tab-recognition">Recognition</a></li>
+                <li><a href="#tab-extraction">Extraction</a></li>
+                <li><a href="#tab-preproc">Pre-processing</a></li>
+            </ul>
+            <div class="zato-tabs-content">
+                <div class="zato-tabs-panel active" id="tab-general">
+                    <div class="info-container ft-detail-info">
+                        <div class="info-row">
+                            <div class="info-label">Name</div>
+                            <div class="info-value"><input type="text" name="name" value="{{ doc_type.name }}" required></div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Description</div>
+                            <div class="info-value"><input type="text" name="description" value="{{ doc_type.description }}"></div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">File type</div>
+                            <div class="info-value">
+                                <span class="ft-readonly-value">{{ doc_type.file_type }}</span>
+                                <input type="hidden" name="file_type" id="file-type-select" value="{{ doc_type.file_type }}">
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Status</div>
+                            <div class="info-value">
+                                <select name="is_enabled" class="ft-form-select">
+                                    <option value="on" {% if doc_type.is_enabled %}selected{% endif %}>Enabled</option>
+                                    <option value="" {% if not doc_type.is_enabled %}selected{% endif %}>Disabled</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-<script>
+                <div class="zato-tabs-panel" id="tab-recognition">
+                    <div class="info-container ft-detail-info">
+                        <div class="info-row">
+                            <div class="info-label">Recognition service</div>
+                            <div class="info-value"><input type="text" name="recognition_service" value="{{ doc_type.recognition_service|default:'' }}" placeholder="Optional service name"></div>
+                        </div>
+                    </div>
+                    <div id="recognition-rules-list"></div>
+                    <div class="button-container ft-actions-add">
+                        <button type="button" class="secondary-button" onclick="addRecognitionRule()">Add criterion</button>
+                    </div>
+                    <input type="hidden" name="recognition_rules_json" id="recognition_rules_json" value="[]">
+                </div>
+
+                <div class="zato-tabs-panel" id="tab-extraction">
+                    <div class="info-container ft-detail-info">
+                        <div class="info-row">
+                            <div class="info-label">Extraction service</div>
+                            <div class="info-value"><input type="text" name="extraction_service" value="{{ doc_type.extraction_service|default:'' }}" placeholder="Optional service name"></div>
+                        </div>
+                    </div>
+                    <div id="extraction-rules-list"></div>
+                    <div class="button-container ft-actions-add">
+                        <button type="button" class="secondary-button" onclick="addExtractionRule()">Add extraction rule</button>
+                    </div>
+                    <input type="hidden" name="extraction_rules_json" id="extraction_rules_json" value="[]">
+                </div>
+
+                <div class="zato-tabs-panel" id="tab-preproc">
+                    <div class="ft-preproc-item">
+                        <div class="info-container ft-detail-info">
+                            <div class="info-row">
+                                <div class="info-label">Validate structure</div>
+                                <div class="info-value">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="preprocess_validate" id="preproc-validate" {% if doc_type.preprocess_validate %}checked{% endif %}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="info-row ft-preproc-detail" id="preproc-validate-detail">
+                                <div class="info-label">Schema reference</div>
+                                <div class="info-value"><input type="text" name="preprocess_validate_schema" value="{{ doc_type.preprocess_validate_schema }}" placeholder="Path to XSD or JSON schema"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ft-preproc-item">
+                        <div class="info-container ft-detail-info">
+                            <div class="info-row">
+                                <div class="info-label">Check for duplicates</div>
+                                <div class="info-value">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="preprocess_dedup" id="preproc-dedup" {% if doc_type.preprocess_dedup %}checked{% endif %}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="info-row ft-preproc-detail" id="preproc-dedup-detail">
+                                <div class="info-label">Window (days)</div>
+                                <div class="info-value"><input type="number" name="preprocess_dedup_window_days" value="{{ doc_type.preprocess_dedup_window_days|default:30 }}"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ft-preproc-item">
+                        <div class="info-container ft-detail-info">
+                            <div class="info-row">
+                                <div class="info-label">Verify PGP signature</div>
+                                <div class="info-value">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="preprocess_pgp_verify" id="preproc-pgp" {% if doc_type.preprocess_pgp_verify %}checked{% endif %}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="info-row ft-preproc-detail" id="preproc-pgp-detail">
+                                <div class="info-label">Expected signing key</div>
+                                <div class="info-value">
+                                    <select name="preprocess_pgp_key_id" class="ft-form-select">
+                                        <option value="">Select a key</option>
+                                        {% for key in pgp_keys %}
+                                        <option value="{{ key.id }}" {% if doc_type.preprocess_pgp_key_id == key.id %}selected{% endif %}>{{ key.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ft-preproc-item">
+                        <div class="info-container ft-detail-info">
+                            <div class="info-row">
+                                <div class="info-label">Verify checksum</div>
+                                <div class="info-value">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="preprocess_checksum" id="preproc-checksum" {% if doc_type.preprocess_checksum %}checked{% endif %}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="info-row ft-preproc-detail" id="preproc-checksum-detail">
+                                <div class="info-label">Companion file extension</div>
+                                <div class="info-value"><input type="text" name="preprocess_checksum_ext" value="{{ doc_type.preprocess_checksum_ext|default:'.sha256' }}"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ft-preproc-item">
+                        <div class="info-container ft-detail-info">
+                            <div class="info-row">
+                                <div class="info-label">Save content</div>
+                                <div class="info-value">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="preprocess_save_enabled" id="preproc-save" {% if doc_type.preprocess_save != 'None_' %}checked{% endif %}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="info-row ft-preproc-detail" id="preproc-save-detail">
+                                <div class="info-label">Save policy</div>
+                                <div class="info-value">
+                                    <select name="preprocess_save" class="ft-form-select">
+                                        <option value="All" {% if doc_type.preprocess_save == 'All' %}selected{% endif %}>All files</option>
+                                        <option value="Unique" {% if doc_type.preprocess_save == 'Unique' %}selected{% endif %}>Only if no duplicate exists</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="button-container ft-edit-buttons">
+            <button type="submit" class="action-button">Save and close</button>
+            <a href="{% url 'file-transfer-doc-type' %}" class="secondary-button">Cancel</a>
+            <button type="button" class="secondary-button ft-delete-btn" onclick="deleteDocType()">Delete</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}
+
+{% block extra_page_js %}
+<script type="text/javascript" src="/static/js/zato-tabs.js" nonce="{{ CSP_NONCE }}"></script>
+<script type="text/javascript" src="/static/jquery/jquery.alerts.min.js" nonce="{{ CSP_NONCE }}"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(function() {
+    new ZatoTabs('#doctype-tabs');
+    updatePreprocVisibility();
+    $('#preproc-validate, #preproc-dedup, #preproc-pgp, #preproc-checksum, #preproc-save').on('change', updatePreprocVisibility);
+    renderRecognitionRules();
+    renderExtractionRules();
+});
+
+function updatePreprocVisibility() {
+    $('#preproc-validate-detail').toggle($('#preproc-validate').is(':checked'));
+    $('#preproc-dedup-detail').toggle($('#preproc-dedup').is(':checked'));
+    $('#preproc-pgp-detail').toggle($('#preproc-pgp').is(':checked'));
+    $('#preproc-checksum-detail').toggle($('#preproc-checksum').is(':checked'));
+    $('#preproc-save-detail').toggle($('#preproc-save').is(':checked'));
+}
+
+function deleteDocType() {
+    if (confirm('Are you sure you want to delete this document type? This will break any processing rules referencing it.')) {
+        $.post('/zato/file-transfer/doc-type/{{ doc_type.id }}/delete/', {
+            csrfmiddlewaretoken: '{{ csrf_token }}'
+        }, function() {
+            window.location.href = '{% url "file-transfer-doc-type" %}';
+        });
+    }
+}
+
 var recognitionRules = {{ doc_type.recognition_rules|safe|default:"[]" }};
 var extractionRules = {{ doc_type.extraction_rules|safe|default:"[]" }};
 
+function getFileType() {
+    return $('#file-type-select').val();
+}
+
 function addRecognitionRule() {
-    recognitionRules.push({type: 'Filename_Glob', pattern: '', priority: recognitionRules.length + 1});
+    recognitionRules.push({type: 'Filename_Glob', pattern: '', bytes_limit: 1024, priority: recognitionRules.length + 1});
     renderRecognitionRules();
 }
 
@@ -126,23 +240,85 @@ function removeRecognitionRule(idx) {
     renderRecognitionRules();
 }
 
+function getRecognitionTypeOptions(fileType, selectedType) {
+    var options = [];
+    options.push({value: 'Filename_Glob', label: 'Filename pattern'});
+    options.push({value: 'Content_Regex', label: 'Content regex'});
+    if (fileType === 'Xml') {
+        options.push({value: 'Xml_Root_Tag', label: 'XML root tag'});
+        options.push({value: 'Xml_Namespace', label: 'XML namespace'});
+        options.push({value: 'Xpath_Exists', label: 'XPath exists'});
+    }
+    if (fileType === 'Json') {
+        options.push({value: 'Json_Path', label: 'JSONPath exists'});
+    }
+    if (fileType === 'Binary') {
+        options.push({value: 'Magic_Bytes', label: 'Magic bytes'});
+    }
+    if (fileType === 'Edi') {
+        options.push({value: 'Edi_Segment', label: 'EDI segment identifier'});
+    }
+    var html = '';
+    for (var i = 0; i < options.length; i++) {
+        html += '<option value="' + options[i].value + '"' + (options[i].value === selectedType ? ' selected' : '') + '>' + options[i].label + '</option>';
+    }
+    return html;
+}
+
 function renderRecognitionRules() {
+    var fileType = getFileType();
     var html = '';
     for (var i = 0; i < recognitionRules.length; i++) {
         var r = recognitionRules[i];
-        html += '<div class="panel panel-default" style="margin-bottom:10px"><div class="panel-body"><div class="row">';
-        html += '<div class="col-md-3"><label>Type</label><select class="form-control" onchange="recognitionRules['+i+'].type=this.value;updateRecognitionJson()">';
-        html += '<option value="Filename_Glob"' + (r.type === 'Filename_Glob' ? ' selected' : '') + '>Filename glob</option>';
-        html += '<option value="Content_Regex"' + (r.type === 'Content_Regex' ? ' selected' : '') + '>Content regex</option>';
-        html += '<option value="Xml_Root_Tag"' + (r.type === 'Xml_Root_Tag' ? ' selected' : '') + '>XML root tag</option>';
-        html += '<option value="Json_Path"' + (r.type === 'Json_Path' ? ' selected' : '') + '>JSON path</option>';
-        html += '<option value="Pgp_Header"' + (r.type === 'Pgp_Header' ? ' selected' : '') + '>PGP header</option>';
-        html += '<option value="Edi_Segment"' + (r.type === 'Edi_Segment' ? ' selected' : '') + '>EDI segment</option>';
-        html += '</select></div>';
-        html += '<div class="col-md-5"><label>Pattern / Tag / Path</label><input type="text" class="form-control" value="' + (r.pattern || r.tag || r.path || '') + '" onchange="recognitionRules['+i+'].pattern=this.value;recognitionRules['+i+'].tag=this.value;recognitionRules['+i+'].path=this.value;updateRecognitionJson()"></div>';
-        html += '<div class="col-md-2"><label>Priority</label><input type="number" class="form-control" value="' + r.priority + '" onchange="recognitionRules['+i+'].priority=parseInt(this.value);updateRecognitionJson()"></div>';
-        html += '<div class="col-md-2"><label>&nbsp;</label><button type="button" class="btn btn-danger btn-block" onclick="removeRecognitionRule('+i+')">Remove</button></div>';
-        html += '</div></div></div>';
+        html += '<div class="ft-rule-item">';
+        html += '<div class="info-container ft-detail-info">';
+        html += '<div class="info-row"><div class="info-label">Criteria type</div><div class="info-value">';
+        html += '<select class="ft-form-select" onchange="recognitionRules['+i+'].type=this.value;renderRecognitionRules()">';
+        html += getRecognitionTypeOptions(fileType, r.type);
+        html += '</select></div></div>';
+        if (r.type === 'Filename_Glob') {
+            html += '<div class="info-row"><div class="info-label">Pattern</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.pattern || '') + '" placeholder="e.g., invoice_*.csv" onchange="recognitionRules['+i+'].pattern=this.value;updateRecognitionJson()">';
+            html += '</div></div>';
+        } else if (r.type === 'Content_Regex') {
+            html += '<div class="info-row"><div class="info-label">Pattern</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.pattern || '') + '" placeholder="e.g., ^date,amount,currency" onchange="recognitionRules['+i+'].pattern=this.value;updateRecognitionJson()">';
+            html += '</div></div>';
+            html += '<div class="info-row"><div class="info-label">Bytes to read</div><div class="info-value">';
+            html += '<input type="number" value="' + (r.bytes_limit || 1024) + '" onchange="recognitionRules['+i+'].bytes_limit=parseInt(this.value);updateRecognitionJson()">';
+            html += '</div></div>';
+        } else if (r.type === 'Xml_Root_Tag') {
+            html += '<div class="info-row"><div class="info-label">Tag name</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.tag || '') + '" placeholder="e.g., PurchaseOrder" onchange="recognitionRules['+i+'].tag=this.value;updateRecognitionJson()">';
+            html += '</div></div>';
+        } else if (r.type === 'Xml_Namespace') {
+            html += '<div class="info-row"><div class="info-label">Namespace URI</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.pattern || '') + '" placeholder="e.g., urn:oasis:names:..." onchange="recognitionRules['+i+'].pattern=this.value;updateRecognitionJson()">';
+            html += '</div></div>';
+        } else if (r.type === 'Xpath_Exists') {
+            html += '<div class="info-row"><div class="info-label">XPath expression</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.path || '') + '" placeholder="e.g., /Invoice/Header/InvoiceNumber" onchange="recognitionRules['+i+'].path=this.value;updateRecognitionJson()">';
+            html += '</div></div>';
+        } else if (r.type === 'Json_Path') {
+            html += '<div class="info-row"><div class="info-label">JSONPath expression</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.path || '') + '" placeholder="e.g., $.catalog_version" onchange="recognitionRules['+i+'].path=this.value;updateRecognitionJson()">';
+            html += '</div></div>';
+        } else if (r.type === 'Magic_Bytes') {
+            html += '<div class="info-row"><div class="info-label">Hex sequence</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.pattern || '') + '" placeholder="e.g., 25 50 44 46 for PDF" onchange="recognitionRules['+i+'].pattern=this.value;updateRecognitionJson()">';
+            html += '</div></div>';
+        } else if (r.type === 'Edi_Segment') {
+            html += '<div class="info-row"><div class="info-label">Segment tag</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.segment || '') + '" placeholder="e.g., UNH or ISA" onchange="recognitionRules['+i+'].segment=this.value;updateRecognitionJson()">';
+            html += '</div></div>';
+            html += '<div class="info-row"><div class="info-label">Transaction set</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.transaction_set || '') + '" placeholder="e.g., 856 for X12" onchange="recognitionRules['+i+'].transaction_set=this.value;updateRecognitionJson()">';
+            html += '</div></div>';
+        }
+        html += '<div class="info-row"><div class="info-label"></div><div class="info-value">';
+        html += '<button type="button" class="secondary-button ft-remove-btn" onclick="removeRecognitionRule('+i+')">Remove</button>';
+        html += '</div></div>';
+        html += '</div></div>';
     }
     $('#recognition-rules-list').html(html);
     updateRecognitionJson();
@@ -153,7 +329,7 @@ function updateRecognitionJson() {
 }
 
 function addExtractionRule() {
-    extractionRules.push({attribute: '', attr_type: 'System', query_type: 'Xpath', query: ''});
+    extractionRules.push({attribute: 'sender', attr_type: 'System', query_type: 'Xpath', query: '', required: false});
     renderExtractionRules();
 }
 
@@ -162,25 +338,83 @@ function removeExtractionRule(idx) {
     renderExtractionRules();
 }
 
+function getExtractionQueryOptions(fileType, selectedType) {
+    var options = [];
+    if (fileType === 'Xml') {
+        options.push({value: 'Xpath', label: 'XPath'});
+        options.push({value: 'Regex', label: 'Regex'});
+        options.push({value: 'Fixed', label: 'Fixed value'});
+    } else if (fileType === 'Json') {
+        options.push({value: 'Jsonpath', label: 'JSONPath'});
+        options.push({value: 'Regex', label: 'Regex'});
+        options.push({value: 'Fixed', label: 'Fixed value'});
+    } else if (fileType === 'Flat_File') {
+        options.push({value: 'Regex', label: 'Regex'});
+        options.push({value: 'Column_Index', label: 'Column index'});
+        options.push({value: 'Fixed', label: 'Fixed value'});
+    } else if (fileType === 'Binary') {
+        options.push({value: 'Fixed', label: 'Fixed value'});
+    } else if (fileType === 'Edi') {
+        options.push({value: 'Segment_Path', label: 'Segment path'});
+        options.push({value: 'Regex', label: 'Regex'});
+        options.push({value: 'Fixed', label: 'Fixed value'});
+    }
+    var html = '';
+    for (var i = 0; i < options.length; i++) {
+        html += '<option value="' + options[i].value + '"' + (options[i].value === selectedType ? ' selected' : '') + '>' + options[i].label + '</option>';
+    }
+    return html;
+}
+
 function renderExtractionRules() {
+    var fileType = getFileType();
     var html = '';
     for (var i = 0; i < extractionRules.length; i++) {
         var r = extractionRules[i];
-        html += '<div class="panel panel-default" style="margin-bottom:10px"><div class="panel-body"><div class="row">';
-        html += '<div class="col-md-3"><label>Attribute</label><input type="text" class="form-control" value="' + r.attribute + '" onchange="extractionRules['+i+'].attribute=this.value;updateExtractionJson()"></div>';
-        html += '<div class="col-md-2"><label>Type</label><select class="form-control" onchange="extractionRules['+i+'].attr_type=this.value;updateExtractionJson()">';
-        html += '<option value="System"' + (r.attr_type === 'System' ? ' selected' : '') + '>System</option>';
-        html += '<option value="Custom"' + (r.attr_type === 'Custom' ? ' selected' : '') + '>Custom</option>';
-        html += '</select></div>';
-        html += '<div class="col-md-2"><label>Query type</label><select class="form-control" onchange="extractionRules['+i+'].query_type=this.value;updateExtractionJson()">';
-        html += '<option value="Xpath"' + (r.query_type === 'Xpath' ? ' selected' : '') + '>XPath</option>';
-        html += '<option value="Jsonpath"' + (r.query_type === 'Jsonpath' ? ' selected' : '') + '>JSONPath</option>';
-        html += '<option value="Regex"' + (r.query_type === 'Regex' ? ' selected' : '') + '>Regex</option>';
-        html += '<option value="Fixed"' + (r.query_type === 'Fixed' ? ' selected' : '') + '>Fixed</option>';
-        html += '</select></div>';
-        html += '<div class="col-md-3"><label>Query / Value</label><input type="text" class="form-control" value="' + r.query + '" onchange="extractionRules['+i+'].query=this.value;updateExtractionJson()"></div>';
-        html += '<div class="col-md-2"><label>&nbsp;</label><button type="button" class="btn btn-danger btn-block" onclick="removeExtractionRule('+i+')">Remove</button></div>';
-        html += '</div></div></div>';
+        html += '<div class="ft-rule-item">';
+        html += '<div class="info-container ft-detail-info">';
+        html += '<div class="info-row"><div class="info-label">Attribute</div><div class="info-value">';
+        html += '<select class="ft-form-select" onchange="extractionRules['+i+'].attribute=this.value;extractionRules['+i+'].attr_type=(this.value===\'custom\'?\'Custom\':\'System\');renderExtractionRules()">';
+        html += '<option value="sender"' + (r.attribute === 'sender' ? ' selected' : '') + '>Sender</option>';
+        html += '<option value="receiver"' + (r.attribute === 'receiver' ? ' selected' : '') + '>Receiver</option>';
+        html += '<option value="document_id"' + (r.attribute === 'document_id' ? ' selected' : '') + '>Document ID</option>';
+        html += '<option value="conversation_id"' + (r.attribute === 'conversation_id' ? ' selected' : '') + '>Conversation ID</option>';
+        html += '<option value="group_id"' + (r.attribute === 'group_id' ? ' selected' : '') + '>Group ID</option>';
+        html += '<option value="user_status"' + (r.attribute === 'user_status' ? ' selected' : '') + '>User status</option>';
+        html += '<option value="custom"' + (r.attr_type === 'Custom' ? ' selected' : '') + '>Custom attribute...</option>';
+        html += '</select></div></div>';
+        if (r.attr_type === 'Custom') {
+            html += '<div class="info-row"><div class="info-label">Attribute name</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.attribute !== 'custom' ? r.attribute : '') + '" onchange="extractionRules['+i+'].attribute=this.value;updateExtractionJson()">';
+            html += '</div></div>';
+            html += '<div class="info-row"><div class="info-label">Data type</div><div class="info-value">';
+            html += '<select class="ft-form-select" onchange="extractionRules['+i+'].data_type=this.value;updateExtractionJson()">';
+            html += '<option value="String"' + (r.data_type === 'String' || !r.data_type ? ' selected' : '') + '>String</option>';
+            html += '<option value="Number"' + (r.data_type === 'Number' ? ' selected' : '') + '>Number</option>';
+            html += '<option value="Date"' + (r.data_type === 'Date' ? ' selected' : '') + '>Date</option>';
+            html += '</select></div></div>';
+        }
+        html += '<div class="info-row"><div class="info-label">Query type</div><div class="info-value">';
+        html += '<select class="ft-form-select" onchange="extractionRules['+i+'].query_type=this.value;renderExtractionRules()">';
+        html += getExtractionQueryOptions(fileType, r.query_type);
+        html += '</select></div></div>';
+        html += '<div class="info-row"><div class="info-label">Query expression</div><div class="info-value">';
+        var placeholder = '';
+        if (r.query_type === 'Xpath') placeholder = '/PurchaseOrder/Header/SenderID';
+        else if (r.query_type === 'Jsonpath') placeholder = '$.header.sender_id';
+        else if (r.query_type === 'Regex') placeholder = '^SENDER:(\\w+)';
+        else if (r.query_type === 'Column_Index') placeholder = '0';
+        else if (r.query_type === 'Segment_Path') placeholder = 'UNH/0062';
+        else if (r.query_type === 'Fixed') placeholder = 'e.g., acme_corp';
+        html += '<input type="text" value="' + (r.query || '') + '" placeholder="' + placeholder + '" onchange="extractionRules['+i+'].query=this.value;updateExtractionJson()">';
+        html += '</div></div>';
+        html += '<div class="info-row"><div class="info-label">Required</div><div class="info-value">';
+        html += '<label class="toggle-switch"><input type="checkbox"' + (r.required ? ' checked' : '') + ' onchange="extractionRules['+i+'].required=this.checked;updateExtractionJson()"><span class="toggle-slider"></span></label>';
+        html += '</div></div>';
+        html += '<div class="info-row"><div class="info-label"></div><div class="info-value">';
+        html += '<button type="button" class="secondary-button ft-remove-btn" onclick="removeExtractionRule('+i+')">Remove</button>';
+        html += '</div></div>';
+        html += '</div></div>';
     }
     $('#extraction-rules-list').html(html);
     updateExtractionJson();
@@ -189,10 +423,5 @@ function renderExtractionRules() {
 function updateExtractionJson() {
     $('#extraction_rules_json').val(JSON.stringify(extractionRules));
 }
-
-$(function() {
-    renderRecognitionRules();
-    renderExtractionRules();
-});
 </script>
 {% endblock %}
