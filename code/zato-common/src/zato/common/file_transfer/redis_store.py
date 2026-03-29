@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
-from typing import List, Optional
+from typing import List
 
 # Zato
 from zato.common.file_transfer.const import (
@@ -69,7 +69,7 @@ class FileTransferRedisStore:
         self.redis.hset(key, mapping=txn.to_dict())
         self._add_txn_to_indexes(txn)
 
-    def get_transaction(self, txn_id:'str') -> 'Optional[Transaction]':
+    def get_transaction(self, txn_id:'str') -> 'Transaction | None':
         key = RedisKey.txn(self.cluster_id, txn_id)
         data = self.redis.hgetall(key)
         if not data:
@@ -129,12 +129,12 @@ class FileTransferRedisStore:
 
     def search_transactions(
         self,
-        date_from:'Optional[float]'=None,
-        date_to:'Optional[float]'=None,
-        status:'Optional[str]'=None,
-        sender:'Optional[str]'=None,
-        receiver:'Optional[str]'=None,
-        doc_type_id:'Optional[str]'=None,
+        date_from:'float | None'=None,
+        date_to:'float | None'=None,
+        status:'str | None'=None,
+        sender:'str | None'=None,
+        receiver:'str | None'=None,
+        doc_type_id:'str | None'=None,
         limit:'int'=100,
         offset:'int'=0,
     ) -> 'SearchResult':
@@ -188,7 +188,7 @@ class FileTransferRedisStore:
         key = RedisKey.content(self.cluster_id, txn_id)
         self.redis.set(key, content)
 
-    def get_content(self, txn_id:'str') -> 'Optional[bytes]':
+    def get_content(self, txn_id:'str') -> 'bytes | None':
         key = RedisKey.content(self.cluster_id, txn_id)
         return self.redis.get(key)
 
@@ -205,7 +205,7 @@ class FileTransferRedisStore:
         self.redis.hset(key, mapping=doc_type.to_dict())
         self.redis.sadd(RedisKey.set_doc_types(self.cluster_id), doc_type.id)
 
-    def get_document_type(self, dt_id:'str') -> 'Optional[DocumentType]':
+    def get_document_type(self, dt_id:'str') -> 'DocumentType | None':
         key = RedisKey.doc_type(self.cluster_id, dt_id)
         data = self.redis.hgetall(key)
         if not data:
@@ -245,7 +245,7 @@ class FileTransferRedisStore:
         self.redis.sadd(RedisKey.set_rules(self.cluster_id), rule.id)
         self.redis.zadd(RedisKey.idx_rule_order(self.cluster_id), {rule.id: rule.ordinal})
 
-    def get_processing_rule(self, rule_id:'str') -> 'Optional[ProcessingRule]':
+    def get_processing_rule(self, rule_id:'str') -> 'ProcessingRule | None':
         key = RedisKey.rule(self.cluster_id, rule_id)
         data = self.redis.hgetall(key)
         if not data:
@@ -293,7 +293,7 @@ class FileTransferRedisStore:
         self.redis.hset(key, mapping=task.to_dict())
         self._add_task_to_indexes(task)
 
-    def get_task(self, task_id:'str') -> 'Optional[Task]':
+    def get_task(self, task_id:'str') -> 'Task | None':
         key = RedisKey.task(self.cluster_id, task_id)
         data = self.redis.hgetall(key)
         if not data:
@@ -388,10 +388,10 @@ class FileTransferRedisStore:
 
     def search_logs(
         self,
-        date_from:'Optional[float]'=None,
-        date_to:'Optional[float]'=None,
-        activity_class:'Optional[str]'=None,
-        severity:'Optional[str]'=None,
+        date_from:'float | None'=None,
+        date_to:'float | None'=None,
+        activity_class:'str | None'=None,
+        severity:'str | None'=None,
         limit:'int'=100,
         offset:'int'=0,
     ) -> 'SearchResult':
@@ -435,7 +435,7 @@ class FileTransferRedisStore:
         self.redis.hset(key, mapping=pgp_key.to_dict())
         self.redis.sadd(RedisKey.set_pgp_keys(self.cluster_id), pgp_key.id)
 
-    def get_pgp_key(self, key_id:'str') -> 'Optional[PGPKey]':
+    def get_pgp_key(self, key_id:'str') -> 'PGPKey | None':
         key = RedisKey.pgp_key(self.cluster_id, key_id)
         data = self.redis.hgetall(key)
         if not data:
@@ -496,7 +496,7 @@ class FileTransferRedisStore:
 # Deduplication
 # ################################################################################################################################
 
-    def check_duplicate(self, doc_id:'str', sender:'str', doc_type_id:'str') -> 'Optional[str]':
+    def check_duplicate(self, doc_id:'str', sender:'str', doc_type_id:'str') -> 'str | None':
         key = RedisKey.dedup(self.cluster_id, doc_id, sender, doc_type_id)
         result = self.redis.get(key)
         if result:
@@ -516,7 +516,7 @@ class FileTransferRedisStore:
         self.redis.hset(key, mapping=channel.to_dict())
         self.redis.sadd(RedisKey.set_pickup_channels(self.cluster_id), channel.id)
 
-    def get_pickup_channel(self, channel_id:'str') -> 'Optional[PickupChannel]':
+    def get_pickup_channel(self, channel_id:'str') -> 'PickupChannel | None':
         key = RedisKey.pickup_channel(self.cluster_id, channel_id)
         data = self.redis.hgetall(key)
         if not data:

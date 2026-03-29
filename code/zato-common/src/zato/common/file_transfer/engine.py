@@ -9,13 +9,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import hashlib
 import time
-from typing import Optional
 
 # Zato
 from zato.common.file_transfer.actions import ActionExecutor
 from zato.common.file_transfer.const import ActivityClass, ProcessingStatus, Severity
 from zato.common.file_transfer.extraction import ExtractionEngine
-from zato.common.file_transfer.model import ActivityLogEntry, Transaction
+from zato.common.file_transfer.model import ActivityLogEntry, ExtractionResult, Transaction
 from zato.common.file_transfer.preprocess import PreProcessor
 from zato.common.file_transfer.recognition import RecognitionEngine
 from zato.common.file_transfer.rules import RuleEvaluator
@@ -119,7 +118,7 @@ class FileTransferEngine:
         txn:'Transaction',
         filename:'str',
         content:'bytes',
-    ) -> 'Optional[any_]':
+    ) -> 'any_ | None':
 
         doc_types = self.store.list_enabled_document_types()
         doc_type = self.recognition_engine.recognize(filename, content, doc_types)
@@ -142,28 +141,27 @@ class FileTransferEngine:
         self,
         txn:'Transaction',
         content:'bytes',
-        doc_type:'Optional[any_]',
-    ) -> 'dict':
+        doc_type:'any_ | None',
+    ) -> 'ExtractionResult':
 
         if not doc_type:
             self._log(txn, ActivityClass.Extraction, Severity.Info,
                       'Skipping extraction - no document type')
-            return {}
+            return ExtractionResult()
 
         extracted = self.extraction_engine.extract(content, doc_type)
 
-        txn.sender = extracted.get('sender', '')
-        txn.receiver = extracted.get('receiver', '')
-        txn.document_id = extracted.get('document_id', '')
-        txn.conversation_id = extracted.get('conversation_id', '')
-        txn.group_id = extracted.get('group_id', '')
-        txn.user_status = extracted.get('user_status', '')
-        txn.custom_attrs = extracted.get('custom_attrs', {})
+        txn.sender = extracted.sender
+        txn.receiver = extracted.receiver
+        txn.document_id = extracted.document_id
+        txn.conversation_id = extracted.conversation_id
+        txn.group_id = extracted.group_id
+        txn.user_status = extracted.user_status
+        txn.custom_attrs = extracted.custom_attrs
 
-        extraction_errors = extracted.get('_extraction_errors', [])
-        if extraction_errors:
+        if extracted.errors:
             txn.has_errors = True
-            for err in extraction_errors:
+            for err in extracted.errors:
                 self._log(txn, ActivityClass.Extraction, Severity.Warning, err)
         else:
             self._log(txn, ActivityClass.Extraction, Severity.Info,
@@ -178,8 +176,8 @@ class FileTransferEngine:
         self,
         txn:'Transaction',
         content:'bytes',
-        doc_type:'Optional[any_]',
-        extracted_attrs:'dict',
+        doc_type:'any_ | None',
+        extracted_attrs:'ExtractionResult',
         companion_checksum:'str',
     ) -> 'None':
 
@@ -218,7 +216,7 @@ class FileTransferEngine:
 
 # ################################################################################################################################
 
-    def _phase5_rule_evaluation(self, txn:'Transaction') -> 'Optional[any_]':
+    def _phase5_rule_evaluation(self, txn:'Transaction') -> 'any_ | None':
 
         rules = self.store.list_enabled_processing_rules()
         matched_rule = self.rule_evaluator.evaluate(txn, rules)
@@ -240,7 +238,7 @@ class FileTransferEngine:
     def _phase6_action_execution(
         self,
         txn:'Transaction',
-        matched_rule:'Optional[any_]',
+        matched_rule:'any_ | None',
         content:'bytes',
     ) -> 'None':
 
@@ -284,7 +282,7 @@ class FileTransferEngine:
 
 # ################################################################################################################################
 
-    def resubmit(self, txn_id:'str') -> 'Optional[Transaction]':
+    def resubmit(self, txn_id:'str') -> 'Transaction | None':
 
         original_txn = self.store.get_transaction(txn_id)
         if not original_txn:
@@ -308,7 +306,7 @@ class FileTransferEngine:
 
 # ################################################################################################################################
 
-    def reprocess(self, txn_id:'str') -> 'Optional[Transaction]':
+    def reprocess(self, txn_id:'str') -> 'Transaction | None':
 
         txn = self.store.get_transaction(txn_id)
         if not txn:

@@ -9,14 +9,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import re
-from typing import Any, Dict
+from typing import Any
 
 # lxml
 from lxml import etree
 
 # Zato
 from zato.common.file_transfer.const import AttributeType, ExtractionQueryType
-from zato.common.file_transfer.model import DocumentType, ExtractionRule
+from zato.common.file_transfer.model import DocumentType, ExtractionResult, ExtractionRule
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,17 +29,9 @@ if 0:
 
 class ExtractionEngine:
 
-    def extract(self, content:'bytes', doc_type:'DocumentType') -> 'Dict[str, Any]':
+    def extract(self, content:'bytes', doc_type:'DocumentType') -> 'ExtractionResult':
 
-        result = {
-            'sender': '',
-            'receiver': '',
-            'document_id': '',
-            'conversation_id': '',
-            'group_id': '',
-            'user_status': '',
-            'custom_attrs': {},
-        }
+        result = ExtractionResult()
 
         try:
             try:
@@ -54,8 +46,7 @@ class ExtractionEngine:
 
             if value is None:
                 if rule.required:
-                    result['_extraction_errors'] = result.get('_extraction_errors', [])
-                    result['_extraction_errors'].append(f'Required attribute {rule.attribute} could not be extracted')
+                    result.errors.append(f'Required attribute {rule.attribute} could not be extracted')
                 continue
 
             attr_type = rule.attr_type
@@ -63,10 +54,10 @@ class ExtractionEngine:
                 attr_type = AttributeType(attr_type)
 
             if attr_type == AttributeType.System:
-                if rule.attribute in result:
-                    result[rule.attribute] = value
+                if hasattr(result, rule.attribute):
+                    setattr(result, rule.attribute, value)
             else:
-                result['custom_attrs'][rule.attribute] = value
+                result.custom_attrs[rule.attribute] = value
 
         return result
 

@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # Zato
 from zato.common.file_transfer.const import (
@@ -473,7 +473,7 @@ class ProcessingRule:
 class Transaction:
     id: 'str'
     created: 'float'
-    completed: 'Optional[float]' = None
+    completed: 'float | None' = None
     filename: 'str' = ''
     file_size: 'int' = 0
     source_checksum: 'str' = ''
@@ -578,7 +578,7 @@ class Task:
     max_retries: 'int' = 3
     retry_wait_ms: 'int' = 60000
     backoff_factor: 'float' = 2.0
-    next_retry_at: 'Optional[float]' = None
+    next_retry_at: 'float | None' = None
     error_detail: 'str' = ''
     service_name: 'str' = ''
     delivery_protocol: 'str' = ''
@@ -692,7 +692,7 @@ class PGPKey:
     algorithm: 'str' = ''
     key_size: 'int' = 0
     created_at: 'float' = 0.0
-    expires_at: 'Optional[float]' = None
+    expires_at: 'float | None' = None
     is_enabled: 'bool' = True
 
     def to_dict(self) -> 'strdict':

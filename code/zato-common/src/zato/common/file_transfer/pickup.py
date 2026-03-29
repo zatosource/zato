@@ -11,7 +11,7 @@ import fnmatch
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 # Zato
 from zato.common.file_transfer.const import PickupSourceType, PostProcessingAction

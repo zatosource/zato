@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from typing import List, Optional
+from typing import List
 
 # Zato
 from zato.common.file_transfer.const import CriteriaMatch, ErrorCriteria, ExtendedCriteriaOperator
@@ -28,7 +28,7 @@ class RuleEvaluator:
         self,
         txn:'Transaction',
         rules:'List[ProcessingRule]',
-    ) -> 'Optional[ProcessingRule]':
+    ) -> 'ProcessingRule | None':
 
         sorted_rules = sorted(rules, key=lambda r: r.ordinal)
 

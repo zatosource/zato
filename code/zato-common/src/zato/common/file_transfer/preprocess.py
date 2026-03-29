@@ -15,7 +15,7 @@ from lxml import etree
 
 # Zato
 from zato.common.file_transfer.const import FileType, PreprocessSavePolicy
-from zato.common.file_transfer.model import ActionResult, ChecksumResult, DedupResult, DocumentType, PreprocessResult
+from zato.common.file_transfer.model import ActionResult, ChecksumResult, DedupResult, DocumentType, ExtractionResult, PreprocessResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -259,7 +259,7 @@ class PreProcessor:
         txn_id:'str',
         content:'bytes',
         doc_type:'DocumentType',
-        extracted_attrs:'dict',
+        extracted_attrs:'ExtractionResult',
         companion_checksum:'str'='',
     ) -> 'PreprocessResult':
 
@@ -276,8 +276,8 @@ class PreProcessor:
                 errors.append(('validate', result.error))
 
         if doc_type.preprocess_dedup:
-            doc_id = extracted_attrs.get('document_id', '')
-            sender = extracted_attrs.get('sender', '')
+            doc_id = extracted_attrs.document_id
+            sender = extracted_attrs.sender
             result = self.check_duplicate(
                 doc_id,
                 sender,
@@ -318,8 +318,8 @@ class PreProcessor:
             txn_id,
             content,
             doc_type.preprocess_save,
-            extracted_attrs.get('document_id', ''),
-            extracted_attrs.get('sender', ''),
+            extracted_attrs.document_id,
+            extracted_attrs.sender,
             doc_type.id,
         )
         if not result.is_ok:
