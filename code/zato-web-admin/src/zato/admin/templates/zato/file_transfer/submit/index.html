@@ -4,6 +4,9 @@
 
 {% block extra_page_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/file_transfer.css">
+<style>
+.settings-panel { max-width: 400px; }
+</style>
 {% endblock %}
 
 {% block extra_page_js %}
@@ -23,9 +26,11 @@
         </div>
     </div>
     <div class="button-container">
+        <div class="button-wrapper">
+            <img src="/static/gfx/spinner.svg" class="button-spinner" id="submit-spinner">
+        </div>
         <button class="action-button" id="submit-button">Submit</button>
     </div>
-    <div class="ft-submit-status" id="submit-status"></div>
 </div>
 </div>
 {% endblock %}

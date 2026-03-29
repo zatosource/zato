@@ -325,6 +325,13 @@ a.action-button:not(.menu-link):hover {
 
 .ft-submit-page .info-row {
     justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.ft-submit-page .info-label {
+    width: 50px;
+    flex-shrink: 0;
+    line-height: 21px;
 }
 
 .ft-submit-page .info-value {
@@ -333,9 +340,5 @@ a.action-button:not(.menu-link):hover {
 }
 
 .ft-submit-page .button-container {
-    justify-content: flex-start;
-}
-
-.ft-submit-page .settings-panel {
-    max-width: 500px;
+    justify-content: flex-end;
 }

@@ -7,7 +7,7 @@ $.fn.zato.file_transfer_submit.init = function() {
 $.fn.zato.file_transfer_submit.handleSubmit = function() {
     var fileInput = document.getElementById('file-input');
     var button = $('#submit-button');
-    var status = $('#submit-status');
+    var spinner = $('#submit-spinner');
 
     if (fileInput.files.length === 0) {
         alert('Please select a file');
@@ -15,7 +15,7 @@ $.fn.zato.file_transfer_submit.handleSubmit = function() {
     }
 
     button.prop('disabled', true);
-    status.text('Uploading...');
+    spinner.addClass('active');
 
     var file = fileInput.files[0];
     var formData = new FormData();
@@ -36,12 +36,12 @@ $.fn.zato.file_transfer_submit.handleSubmit = function() {
         success: function(response) {
             if (response.success) {
                 var txnId = response.transaction_id;
-                status.html('Transaction created: <a href="/zato/file-transfer/transaction/' + txnId + '/">' + txnId + '</a>');
-                $('#file-input').val('');
+                window.location.href = '/zato/file-transfer/transaction/' + txnId + '/';
             } else {
-                status.text('Error: ' + (response.error || 'Processing failed'));
+                spinner.removeClass('active');
+                alert('Error: ' + (response.error || 'Processing failed'));
+                button.prop('disabled', false);
             }
-            button.prop('disabled', false);
         },
         error: function(xhr) {
             var errorMsg = 'Processing failed';
@@ -51,7 +51,8 @@ $.fn.zato.file_transfer_submit.handleSubmit = function() {
             } catch(e) {
                 errorMsg = xhr.responseText || errorMsg;
             }
-            status.text('Error: ' + errorMsg);
+            spinner.removeClass('active');
+            alert('Error: ' + errorMsg);
             button.prop('disabled', false);
         }
     });
