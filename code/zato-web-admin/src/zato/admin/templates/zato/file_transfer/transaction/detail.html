@@ -28,18 +28,32 @@
     gap: 12px;
 }
 .ft-back-link {
+    background: #fff;
     color: var(--primary-dark, #012845) !important;
+    border: 1px solid var(--primary-dark, #012845);
     text-decoration: none !important;
-    font-size: 13px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 0 !important;
+    cursor: pointer;
+    text-shadow: none !important;
+    box-shadow: none !important;
+}
+.ft-back-link::before {
+    content: "◀ ";
+    position: relative;
+    top: -1px;
 }
 .ft-back-link:hover {
     text-decoration: none !important;
-    opacity: 0.7;
+    opacity: 0.8;
 }
 .ft-txn-id {
     font-size: 14px;
     font-family: monospace;
     color: #333;
+    line-height: 20px;
 }
 .ft-badge {
     display: inline-block;
@@ -96,12 +110,7 @@
     cursor: pointer;
     text-decoration: none;
 }
-.ft-actions .action-button {
-    background: var(--primary-dark, #012845);
-    color: #fff;
-    text-shadow: none !important;
-    box-shadow: none !important;
-}
+.ft-actions .action-button,
 .ft-actions .secondary-button {
     background: #fff;
     color: var(--primary-dark, #012845);
@@ -121,7 +130,7 @@
 
 <div class="ft-title-row">
     <div>
-        <a href="{% url 'file-transfer-transaction' %}" class="ft-back-link">&#9664; Back</a>
+        <a href="{% url 'file-transfer-transaction' %}" class="ft-back-link">Back</a>
         <span class="ft-txn-id zato-copyable">{{ transaction.id }}</span>
         {% if transaction.processing_status == 'Done' %}
         <span class="ft-badge ft-badge-done">DONE</span>
