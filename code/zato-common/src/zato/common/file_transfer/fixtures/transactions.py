@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
-from typing import List
 
 # Zato
 from zato.common.file_transfer.const import ProcessingStatus
@@ -17,7 +16,7 @@ from zato.common.file_transfer.model import Transaction
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_sample_transactions() -> 'List[Transaction]':
+def get_sample_transactions() -> 'list[Transaction]':
 
     now = time.time()
     hour = 3600
@@ -197,7 +196,7 @@ def get_sample_transactions() -> 'List[Transaction]':
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_sample_user_statuses() -> 'List[str]':
+def get_sample_user_statuses() -> 'list[str]':
 
     return [
         'Processed',

@@ -6,9 +6,6 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from typing import List
-
 # Zato
 from zato.common.file_transfer.const import ActionType, CriteriaMatch, ErrorCriteria, ExecMode
 from zato.common.file_transfer.model import CriteriaSpec, ProcessingRule, RuleAction
@@ -16,7 +13,7 @@ from zato.common.file_transfer.model import CriteriaSpec, ProcessingRule, RuleAc
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_sample_rules() -> 'List[ProcessingRule]':
+def get_sample_rules() -> 'list[ProcessingRule]':
 
     return [
 

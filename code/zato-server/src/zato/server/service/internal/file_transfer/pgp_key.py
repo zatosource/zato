@@ -106,7 +106,7 @@ class Generate(Service):
         key_size = int(input.get('key_size') or 4096)
         passphrase = input.get('passphrase', '')
 
-        public_key, private_key = pgp_manager.generate_keypair(
+        result = pgp_manager.generate_keypair(
             name=name,
             email=email,
             algorithm=algorithm,
@@ -114,15 +114,15 @@ class Generate(Service):
             passphrase=passphrase,
         )
 
-        public_key.id = f'key-{uuid4().hex[:8]}'
-        public_key.name = f'{name} (public)'
-        store.create_pgp_key(public_key)
+        result.public_key.id = f'key-{uuid4().hex[:8]}'
+        result.public_key.name = f'{name} (public)'
+        store.create_pgp_key(result.public_key)
 
-        private_key.id = f'key-{uuid4().hex[:8]}'
-        private_key.name = f'{name} (private)'
-        store.create_pgp_key(private_key)
+        result.private_key.id = f'key-{uuid4().hex[:8]}'
+        result.private_key.name = f'{name} (private)'
+        store.create_pgp_key(result.private_key)
 
-        self.response.payload = {'public_key_id': public_key.id, 'private_key_id': private_key.id}
+        self.response.payload = {'public_key_id': result.public_key.id, 'private_key_id': result.private_key.id}
 
 # ################################################################################################################################
 # ################################################################################################################################

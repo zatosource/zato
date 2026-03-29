@@ -6,9 +6,6 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from typing import List
-
 # Zato
 from zato.common.file_transfer.const import (
     AttributeType,
@@ -22,7 +19,7 @@ from zato.common.file_transfer.model import DocumentType, ExtractionRule, Recogn
 # ################################################################################################################################
 # ################################################################################################################################
 
-def get_sample_doc_types() -> 'List[DocumentType]':
+def get_sample_doc_types() -> 'list[DocumentType]':
 
     return [
 

@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
 
 # Zato
 from zato.common.file_transfer.const import (
@@ -146,8 +145,8 @@ class DocumentType:
     description: 'str' = ''
     is_enabled: 'bool' = True
     file_type: 'FileType' = FileType.Flat_File
-    recognition_rules: 'List[RecognitionRule]' = field(default_factory=list)
-    extraction_rules: 'List[ExtractionRule]' = field(default_factory=list)
+    recognition_rules: 'list[RecognitionRule]' = field(default_factory=list)
+    extraction_rules: 'list[ExtractionRule]' = field(default_factory=list)
     preprocess_validate: 'bool' = False
     preprocess_validate_schema: 'str' = ''
     preprocess_dedup: 'bool' = False
@@ -220,7 +219,7 @@ class DocumentType:
 @dataclass
 class CriteriaSpec:
     match: 'CriteriaMatch' = CriteriaMatch.Any
-    values: 'List[str]' = field(default_factory=list)
+    values: 'list[str]' = field(default_factory=list)
 
     def to_dict(self) -> 'strdict':
         return {
@@ -386,9 +385,9 @@ class ProcessingRule:
     criteria_doc_type: 'CriteriaSpec' = field(default_factory=CriteriaSpec)
     criteria_user_status: 'CriteriaSpec' = field(default_factory=CriteriaSpec)
     criteria_errors: 'ErrorCriteria' = ErrorCriteria.Any
-    criteria_extended: 'List[ExtendedCriteria]' = field(default_factory=list)
+    criteria_extended: 'list[ExtendedCriteria]' = field(default_factory=list)
     preprocess_overrides: 'PreprocessOverrides' = field(default_factory=PreprocessOverrides)
-    actions: 'List[RuleAction]' = field(default_factory=list)
+    actions: 'list[RuleAction]' = field(default_factory=list)
 
     def to_dict(self) -> 'strdict':
         return {
@@ -493,7 +492,7 @@ class Transaction:
     duration_ms: 'int' = 0
     content_saved: 'bool' = False
     resubmitted_from: 'str' = ''
-    custom_attrs: 'Dict[str, Any]' = field(default_factory=dict)
+    custom_attrs: 'strdict' = field(default_factory=dict)
 
     def to_dict(self) -> 'strdict':
         return {
@@ -686,7 +685,7 @@ class PGPKey:
     id: 'str'
     name: 'str'
     key_type: 'KeyType'
-    usage: 'List[KeyUsage]' = field(default_factory=list)
+    usage: 'list[KeyUsage]' = field(default_factory=list)
     key_data: 'str' = ''
     fingerprint: 'str' = ''
     algorithm: 'str' = ''
