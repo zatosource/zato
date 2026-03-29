@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import re
-from typing import Any
 
 # lxml
 from lxml import etree
@@ -22,7 +21,7 @@ from zato.common.file_transfer.model import DocumentType, ExtractionResult, Extr
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import strdict
+    from zato.common.typing_ import any_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -61,7 +60,7 @@ class ExtractionEngine:
 
         return result
 
-    def _extract_value(self, content:'bytes', text:'str', rule:'ExtractionRule') -> 'Any':
+    def _extract_value(self, content:'bytes', text:'str', rule:'ExtractionRule') -> 'any_':
 
         query_type = rule.query_type
         if isinstance(query_type, str):
@@ -83,7 +82,7 @@ class ExtractionEngine:
 
 # ################################################################################################################################
 
-    def _extract_xpath(self, query:'str', content:'bytes') -> 'Any':
+    def _extract_xpath(self, query:'str', content:'bytes') -> 'str | None':
         try:
             root = etree.fromstring(content)
 
@@ -115,7 +114,7 @@ class ExtractionEngine:
 
 # ################################################################################################################################
 
-    def _extract_jsonpath(self, query:'str', text:'str') -> 'Any':
+    def _extract_jsonpath(self, query:'str', text:'str') -> 'any_':
         try:
             data = json.loads(text)
 
@@ -158,7 +157,7 @@ class ExtractionEngine:
 
 # ################################################################################################################################
 
-    def _extract_regex(self, query:'str', text:'str', line:'int') -> 'Any':
+    def _extract_regex(self, query:'str', text:'str', line:'int') -> 'str | None':
         try:
             if line and line > 0:
                 lines = text.split('\n')
