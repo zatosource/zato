@@ -1,7 +1,7 @@
 {% extends "zato/settings-base.html" %}
 {% load extras %}
 
-{% block page_title %}File transfer - Create document type{% endblock %}
+{% block page_title %}File transfer - Create a document type{% endblock %}
 
 {% block extra_page_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/file_transfer.css">
@@ -11,7 +11,7 @@
 {% block left_content %}
 <div class="ft-header-row">
     <a href="{% url 'file-transfer-doc-type' %}" class="secondary-button ft-back-btn">Document types</a>
-    <h3>Create document type</h3>
+    <h3>Create a document type</h3>
 </div>
 <form method="post" action="" class="ft-doctype-form">
     {% csrf_token %}
@@ -369,7 +369,7 @@ function renderExtractionRules() {
         html += '<option value="sender"' + (r.attribute === 'sender' ? ' selected' : '') + '>Sender</option>';
         html += '<option value="receiver"' + (r.attribute === 'receiver' ? ' selected' : '') + '>Receiver</option>';
         html += '<option value="document_id"' + (r.attribute === 'document_id' ? ' selected' : '') + '>Document ID</option>';
-        html += '<option value="conversation_id"' + (r.attribute === 'conversation_id' ? ' selected' : '') + '>Conversation ID</option>';
+        html += '<option value="exchange_id"' + (r.attribute === 'exchange_id' ? ' selected' : '') + '>Exchange ID</option>';
         html += '<option value="group_id"' + (r.attribute === 'group_id' ? ' selected' : '') + '>Group ID</option>';
         html += '<option value="user_status"' + (r.attribute === 'user_status' ? ' selected' : '') + '>User status</option>';
         html += '<option value="custom"' + (r.attr_type === 'Custom' ? ' selected' : '') + '>Custom attribute...</option>';
