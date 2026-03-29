@@ -93,7 +93,7 @@ class ExtractionResult:
     sender: 'str' = ''
     receiver: 'str' = ''
     document_id: 'str' = ''
-    conversation_id: 'str' = ''
+    exchange_id: 'str' = ''
     group_id: 'str' = ''
     user_status: 'str' = ''
     custom_attrs: 'dict' = None

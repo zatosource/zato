@@ -110,8 +110,8 @@ class FileTransferRedisStore:
             self.redis.zadd(RedisKey.idx_tx_by_receiver(self.cluster_id, tx.receiver), {tx.id: score})
         if tx.doc_type_id:
             self.redis.zadd(RedisKey.idx_tx_by_doc_type(self.cluster_id, tx.doc_type_id), {tx.id: score})
-        if tx.conversation_id:
-            self.redis.zadd(RedisKey.idx_tx_by_conv(self.cluster_id, tx.conversation_id), {tx.id: score})
+        if tx.exchange_id:
+            self.redis.zadd(RedisKey.idx_tx_by_exchange(self.cluster_id, tx.exchange_id), {tx.id: score})
         if tx.group_id:
             self.redis.zadd(RedisKey.idx_tx_by_group(self.cluster_id, tx.group_id), {tx.id: score})
 
@@ -125,8 +125,8 @@ class FileTransferRedisStore:
             self.redis.zrem(RedisKey.idx_tx_by_receiver(self.cluster_id, tx.receiver), tx.id)
         if tx.doc_type_id:
             self.redis.zrem(RedisKey.idx_tx_by_doc_type(self.cluster_id, tx.doc_type_id), tx.id)
-        if tx.conversation_id:
-            self.redis.zrem(RedisKey.idx_tx_by_conv(self.cluster_id, tx.conversation_id), tx.id)
+        if tx.exchange_id:
+            self.redis.zrem(RedisKey.idx_tx_by_exchange(self.cluster_id, tx.exchange_id), tx.id)
         if tx.group_id:
             self.redis.zrem(RedisKey.idx_tx_by_group(self.cluster_id, tx.group_id), tx.id)
 

@@ -154,7 +154,7 @@ class FileTransferEngine:
         tx.sender = extracted.sender
         tx.receiver = extracted.receiver
         tx.document_id = extracted.document_id
-        tx.conversation_id = extracted.conversation_id
+        tx.exchange_id = extracted.exchange_id
         tx.group_id = extracted.group_id
         tx.user_status = extracted.user_status
         tx.custom_attrs = extracted.custom_attrs

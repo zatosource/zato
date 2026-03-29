@@ -483,7 +483,7 @@ class Transaction:
     sender: 'str' = ''
     receiver: 'str' = ''
     document_id: 'str' = ''
-    conversation_id: 'str' = ''
+    exchange_id: 'str' = ''
     group_id: 'str' = ''
     processing_status: 'ProcessingStatus' = ProcessingStatus.New
     user_status: 'str' = ''
@@ -509,7 +509,7 @@ class Transaction:
             'sender': self.sender,
             'receiver': self.receiver,
             'document_id': self.document_id,
-            'conversation_id': self.conversation_id,
+            'exchange_id': self.exchange_id,
             'group_id': self.group_id,
             'processing_status': self.processing_status.value if isinstance(self.processing_status, ProcessingStatus) else self.processing_status,
             'user_status': self.user_status,
@@ -550,7 +550,7 @@ class Transaction:
             sender=data.get('sender', ''),
             receiver=data.get('receiver', ''),
             document_id=data.get('document_id', ''),
-            conversation_id=data.get('conversation_id', ''),
+            exchange_id=data.get('exchange_id', ''),
             group_id=data.get('group_id', ''),
             processing_status=processing_status,
             user_status=data.get('user_status', ''),

@@ -332,8 +332,8 @@ class RedisKey:
         return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-doc-type:{dt_id}'
 
     @staticmethod
-    def idx_tx_by_conv(cluster_id, conv_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-conv:{conv_id}'
+    def idx_tx_by_exchange(cluster_id, exchange_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-exchange:{exchange_id}'
 
     @staticmethod
     def idx_tx_by_group(cluster_id, group_id):
