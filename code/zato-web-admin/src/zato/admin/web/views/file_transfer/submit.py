@@ -40,8 +40,8 @@ class Index:
 
         return TemplateResponse(req, 'zato/file_transfer/submit/index.html', {
             'page_config': {
-                'title': 'Submit file',
-                'section_title': 'Submit file',
+                'title': 'Submit a file',
+                'section_title': 'Submit a file',
                 'action_button_label': 'Submit',
             },
         })
