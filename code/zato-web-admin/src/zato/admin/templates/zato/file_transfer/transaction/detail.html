@@ -19,19 +19,20 @@
     border-bottom: 1px solid #ddd;
 }
 .ft-back-link {
-    color: var(--primary-dark, #012845);
-    text-decoration: none;
+    color: var(--primary-dark, #012845) !important;
+    text-decoration: none !important;
     font-size: 13px;
 }
 .ft-back-link:hover {
-    text-decoration: underline;
+    text-decoration: none !important;
+    opacity: 0.7;
 }
 .ft-txn-id {
-    display: block;
+    display: inline;
     font-size: 11px;
     color: #666;
     font-family: monospace;
-    margin-left: 32px;
+    margin-left: 8px;
 }
 .ft-badge {
     display: inline-block;
@@ -90,11 +91,15 @@
 .ft-actions .action-button {
     background: var(--primary-dark, #012845);
     color: #fff;
+    text-shadow: none !important;
+    box-shadow: none !important;
 }
 .ft-actions .secondary-button {
     background: #fff;
     color: var(--primary-dark, #012845);
     border: 1px solid var(--primary-dark, #012845);
+    text-shadow: none !important;
+    box-shadow: none !important;
 }
 </style>
 {% endblock %}
@@ -108,7 +113,7 @@
 
 <div class="ft-title-row">
     <div>
-        <a href="{% url 'file-transfer-transaction' %}" class="ft-back-link">&larr; Back</a>
+        <a href="{% url 'file-transfer-transaction' %}" class="ft-back-link">&#9664; Back</a>
         <h2 class="zato" style="display:inline;margin-left:12px">{{ transaction.filename }}</h2>
         <span class="ft-txn-id">{{ transaction.id }}</span>
         {% if transaction.processing_status == 'Done' %}
