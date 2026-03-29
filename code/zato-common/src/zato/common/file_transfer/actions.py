@@ -7,13 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import re
 import time
-from typing import Optional, Tuple
 
 # Zato
 from zato.common.file_transfer.const import ActionType, ExecMode, TaskStatus, TaskType
-from zato.common.file_transfer.model import RuleAction, Task, Transaction
+from zato.common.file_transfer.model import ActionResult, RuleAction, Task, Transaction
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,8 +43,8 @@ class ActionExecutor:
         self,
         action:'RuleAction',
         txn:'Transaction',
-        content:'Optional[bytes]'=None,
-    ) -> 'Tuple[bool, Optional[str]]':
+        content:'bytes'=None,
+    ) -> 'ActionResult':
 
         action_type = action.type
         if isinstance(action_type, str):
@@ -64,7 +62,7 @@ class ActionExecutor:
         elif action_type == ActionType.Change_Status:
             return self._change_user_status(action, txn)
 
-        return False, f'Unknown action type: {action_type}'
+        return ActionResult(is_ok=False, error=f'Unknown action type: {action_type}')
 
 # ################################################################################################################################
 
@@ -72,8 +70,8 @@ class ActionExecutor:
         self,
         action:'RuleAction',
         txn:'Transaction',
-        content:'Optional[bytes]',
-    ) -> 'Tuple[bool, Optional[str]]':
+        content:'bytes',
+    ) -> 'ActionResult':
 
         exec_mode = action.exec_mode
         if isinstance(exec_mode, str):
@@ -93,7 +91,7 @@ class ActionExecutor:
                 service_name=action.service_name,
             )
             self.store.create_task(task)
-            return True, None
+            return ActionResult()
 
         if self.service_invoker:
             try:
@@ -111,15 +109,15 @@ class ActionExecutor:
 
                 if exec_mode == ExecMode.Asynchronous:
                     self.service_invoker(action.service_name, request_data, async_=True)
-                    return True, None
+                    return ActionResult()
                 else:
-                    result = self.service_invoker(action.service_name, request_data)
-                    return True, None
+                    self.service_invoker(action.service_name, request_data)
+                    return ActionResult()
 
             except Exception as e:
-                return False, f'Service execution failed: {e}'
+                return ActionResult(is_ok=False, error=f'Service execution failed: {e}')
 
-        return True, None
+        return ActionResult()
 
 # ################################################################################################################################
 
@@ -127,8 +125,8 @@ class ActionExecutor:
         self,
         action:'RuleAction',
         txn:'Transaction',
-        content:'Optional[bytes]',
-    ) -> 'Tuple[bool, Optional[str]]':
+        content:'bytes',
+    ) -> 'ActionResult':
 
         task = Task(
             id=self.store.next_task_id(),
@@ -145,7 +143,7 @@ class ActionExecutor:
         )
         self.store.create_task(task)
 
-        return True, None
+        return ActionResult()
 
 # ################################################################################################################################
 
@@ -153,7 +151,7 @@ class ActionExecutor:
         self,
         action:'RuleAction',
         txn:'Transaction',
-    ) -> 'Tuple[bool, Optional[str]]':
+    ) -> 'ActionResult':
 
         subject = self._expand_template(action.subject, txn)
         body = self._expand_template(action.body, txn)
@@ -166,11 +164,11 @@ class ActionExecutor:
                     subject=subject,
                     body=body,
                 )
-                return True, None
+                return ActionResult()
             except Exception as e:
-                return False, f'Notification failed: {e}'
+                return ActionResult(is_ok=False, error=f'Notification failed: {e}')
 
-        return True, None
+        return ActionResult()
 
 # ################################################################################################################################
 
@@ -178,11 +176,11 @@ class ActionExecutor:
         self,
         action:'RuleAction',
         txn:'Transaction',
-    ) -> 'Tuple[bool, Optional[str]]':
+    ) -> 'ActionResult':
 
         txn.user_status = action.new_status
         self.store.update_transaction(txn)
-        return True, None
+        return ActionResult()
 
 # ################################################################################################################################
 

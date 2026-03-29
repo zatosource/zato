@@ -9,10 +9,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import hashlib
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
 
 # Zato
 from zato.common.file_transfer.const import DeliveryMethod
+from zato.common.file_transfer.model import DeliveryResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,7 +31,7 @@ class DeliveryHandler(ABC):
         content:'bytes',
         destination:'str',
         filename:'str',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'DeliveryResult':
         raise NotImplementedError()
 
 # ################################################################################################################################
@@ -47,7 +47,7 @@ class SFTPDeliveryHandler(DeliveryHandler):
         content:'bytes',
         destination:'str',
         filename:'str',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'DeliveryResult':
 
         try:
             parts = destination.split(':', 1)
@@ -65,10 +65,10 @@ class SFTPDeliveryHandler(DeliveryHandler):
                     conn.put(content, full_path)
 
             checksum = hashlib.sha256(content).hexdigest()
-            return True, None, checksum
+            return DeliveryResult(checksum=checksum)
 
         except Exception as e:
-            return False, str(e), ''
+            return DeliveryResult(is_ok=False, error=str(e))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,7 +83,7 @@ class FTPDeliveryHandler(DeliveryHandler):
         content:'bytes',
         destination:'str',
         filename:'str',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'DeliveryResult':
 
         try:
             parts = destination.split(':', 1)
@@ -102,10 +102,10 @@ class FTPDeliveryHandler(DeliveryHandler):
                     conn.storbinary(f'STOR {full_path}', BytesIO(content))
 
             checksum = hashlib.sha256(content).hexdigest()
-            return True, None, checksum
+            return DeliveryResult(checksum=checksum)
 
         except Exception as e:
-            return False, str(e), ''
+            return DeliveryResult(is_ok=False, error=str(e))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -120,7 +120,7 @@ class HTTPDeliveryHandler(DeliveryHandler):
         content:'bytes',
         destination:'str',
         filename:'str',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'DeliveryResult':
 
         try:
             parts = destination.split(':', 1)
@@ -134,13 +134,13 @@ class HTTPDeliveryHandler(DeliveryHandler):
                         'Content-Disposition': f'attachment; filename="{filename}"'
                     })
                     if response.status_code >= 400:
-                        return False, f'HTTP error: {response.status_code}', ''
+                        return DeliveryResult(is_ok=False, error=f'HTTP error: {response.status_code}')
 
             checksum = hashlib.sha256(content).hexdigest()
-            return True, None, checksum
+            return DeliveryResult(checksum=checksum)
 
         except Exception as e:
-            return False, str(e), ''
+            return DeliveryResult(is_ok=False, error=str(e))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -155,7 +155,7 @@ class AMQPDeliveryHandler(DeliveryHandler):
         content:'bytes',
         destination:'str',
         filename:'str',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'DeliveryResult':
 
         try:
             parts = destination.split(':', 1)
@@ -171,10 +171,10 @@ class AMQPDeliveryHandler(DeliveryHandler):
                     })
 
             checksum = hashlib.sha256(content).hexdigest()
-            return True, None, checksum
+            return DeliveryResult(checksum=checksum)
 
         except Exception as e:
-            return False, str(e), ''
+            return DeliveryResult(is_ok=False, error=str(e))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -189,7 +189,7 @@ class SMTPDeliveryHandler(DeliveryHandler):
         content:'bytes',
         destination:'str',
         filename:'str',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'DeliveryResult':
 
         try:
             parts = destination.split(':', 1)
@@ -216,10 +216,10 @@ class SMTPDeliveryHandler(DeliveryHandler):
                     conn.send_message(msg)
 
             checksum = hashlib.sha256(content).hexdigest()
-            return True, None, checksum
+            return DeliveryResult(checksum=checksum)
 
         except Exception as e:
-            return False, str(e), ''
+            return DeliveryResult(is_ok=False, error=str(e))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -234,7 +234,7 @@ class S3DeliveryHandler(DeliveryHandler):
         content:'bytes',
         destination:'str',
         filename:'str',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'DeliveryResult':
 
         try:
             parts = destination.split(':', 1)
@@ -256,10 +256,10 @@ class S3DeliveryHandler(DeliveryHandler):
                     conn.put_object(Bucket=bucket, Key=key, Body=content)
 
             checksum = hashlib.sha256(content).hexdigest()
-            return True, None, checksum
+            return DeliveryResult(checksum=checksum)
 
         except Exception as e:
-            return False, str(e), ''
+            return DeliveryResult(is_ok=False, error=str(e))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -274,7 +274,7 @@ class AzureBlobDeliveryHandler(DeliveryHandler):
         content:'bytes',
         destination:'str',
         filename:'str',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'DeliveryResult':
 
         try:
             parts = destination.split(':', 1)
@@ -297,10 +297,10 @@ class AzureBlobDeliveryHandler(DeliveryHandler):
                     blob_client.upload_blob(content, overwrite=True)
 
             checksum = hashlib.sha256(content).hexdigest()
-            return True, None, checksum
+            return DeliveryResult(checksum=checksum)
 
         except Exception as e:
-            return False, str(e), ''
+            return DeliveryResult(is_ok=False, error=str(e))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -326,16 +326,16 @@ class DeliveryRouter:
         protocol:'str',
         destination:'str',
         filename:'str',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'DeliveryResult':
 
         try:
             method = DeliveryMethod(protocol)
         except ValueError:
-            return False, f'Unknown delivery method: {protocol}', ''
+            return DeliveryResult(is_ok=False, error=f'Unknown delivery method: {protocol}')
 
         handler = self.handlers.get(method)
         if not handler:
-            return False, f'No handler for delivery method: {protocol}', ''
+            return DeliveryResult(is_ok=False, error=f'No handler for delivery method: {protocol}')
 
         return handler.deliver(content, destination, filename)
 

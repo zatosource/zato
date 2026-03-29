@@ -35,7 +35,7 @@ class Search(Service):
         if date_to:
             date_to = float(date_to)
 
-        transactions, total = store.search_transactions(
+        result = store.search_transactions(
             date_from=date_from,
             date_to=date_to,
             status=input.get('status'),
@@ -57,7 +57,7 @@ class Search(Service):
                 'processing_status': t.processing_status.value if hasattr(t.processing_status, 'value') else t.processing_status,
                 'user_status': t.user_status,
             }
-            for t in transactions
+            for t in result.items
         ]
 
 # ################################################################################################################################

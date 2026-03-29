@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 # Zato
 from zato.common.file_transfer.const import (
@@ -23,6 +23,7 @@ from zato.common.file_transfer.model import (
     PGPKey,
     PickupChannel,
     ProcessingRule,
+    SearchResult,
     Settings,
     Task,
     Transaction,
@@ -136,7 +137,7 @@ class FileTransferRedisStore:
         doc_type_id:'Optional[str]'=None,
         limit:'int'=100,
         offset:'int'=0,
-    ) -> 'Tuple[List[Transaction], int]':
+    ) -> 'SearchResult':
 
         if date_from is None:
             date_from = 0
@@ -177,7 +178,7 @@ class FileTransferRedisStore:
             if txn:
                 transactions.append(txn)
 
-        return transactions, total
+        return SearchResult(items=transactions, total=total)
 
 # ################################################################################################################################
 # Content storage
@@ -393,7 +394,7 @@ class FileTransferRedisStore:
         severity:'Optional[str]'=None,
         limit:'int'=100,
         offset:'int'=0,
-    ) -> 'Tuple[List[ActivityLogEntry], int]':
+    ) -> 'SearchResult':
 
         if date_from is None:
             date_from = 0
@@ -423,7 +424,7 @@ class FileTransferRedisStore:
                 decoded = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in data.items()}
                 entries.append(ActivityLogEntry.from_dict(decoded))
 
-        return entries, total
+        return SearchResult(items=entries, total=total)
 
 # ################################################################################################################################
 # PGP key CRUD

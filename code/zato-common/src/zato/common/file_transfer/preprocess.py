@@ -9,14 +9,13 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import hashlib
 import json
-from typing import Optional, Tuple
 
 # lxml
 from lxml import etree
 
 # Zato
 from zato.common.file_transfer.const import FileType, PreprocessSavePolicy
-from zato.common.file_transfer.model import DocumentType
+from zato.common.file_transfer.model import ActionResult, ChecksumResult, DedupResult, DocumentType, PreprocessResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,10 +39,10 @@ class PreProcessor:
         content:'bytes',
         schema_ref:'str',
         file_type:'FileType',
-    ) -> 'Tuple[bool, Optional[str]]':
+    ) -> 'ActionResult':
 
         if not schema_ref:
-            return True, None
+            return ActionResult()
 
         file_type_val = file_type.value if isinstance(file_type, FileType) else file_type
 
@@ -56,11 +55,11 @@ class PreProcessor:
         elif file_type_val == FileType.Flat_File.value:
             return self._validate_csv_columns(content, schema_ref)
 
-        return True, None
+        return ActionResult()
 
 # ################################################################################################################################
 
-    def _validate_xml_schema(self, content:'bytes', schema_ref:'str') -> 'Tuple[bool, Optional[str]]':
+    def _validate_xml_schema(self, content:'bytes', schema_ref:'str') -> 'ActionResult':
         try:
             try:
                 with open(schema_ref, 'rb') as f:
@@ -68,20 +67,20 @@ class PreProcessor:
                 schema_doc = etree.fromstring(schema_content)
                 schema = etree.XMLSchema(schema_doc)
             except Exception as e:
-                return False, f'Could not load XML schema: {e}'
+                return ActionResult(is_ok=False, error=f'Could not load XML schema: {e}')
 
             doc = etree.fromstring(content)
             if schema.validate(doc):
-                return True, None
+                return ActionResult()
             else:
                 errors = [str(err) for err in schema.error_log]
-                return False, f'XML validation failed: {"; ".join(errors)}'
+                return ActionResult(is_ok=False, error=f'XML validation failed: {"; ".join(errors)}')
         except Exception as e:
-            return False, f'XML validation error: {e}'
+            return ActionResult(is_ok=False, error=f'XML validation error: {e}')
 
 # ################################################################################################################################
 
-    def _validate_json_schema(self, content:'bytes', schema_ref:'str') -> 'Tuple[bool, Optional[str]]':
+    def _validate_json_schema(self, content:'bytes', schema_ref:'str') -> 'ActionResult':
         try:
             try:
                 text = content.decode('utf-8')
@@ -94,25 +93,25 @@ class PreProcessor:
                 with open(schema_ref, 'r') as f:
                     schema = json.load(f)
             except Exception as e:
-                return False, f'Could not load JSON schema: {e}'
+                return ActionResult(is_ok=False, error=f'Could not load JSON schema: {e}')
 
             try:
                 import jsonschema
                 jsonschema.validate(instance=data, schema=schema)
-                return True, None
+                return ActionResult()
             except ImportError:
-                return True, None
+                return ActionResult()
             except jsonschema.ValidationError as e:
-                return False, f'JSON validation failed: {e.message}'
+                return ActionResult(is_ok=False, error=f'JSON validation failed: {e.message}')
 
         except json.JSONDecodeError as e:
-            return False, f'Invalid JSON: {e}'
+            return ActionResult(is_ok=False, error=f'Invalid JSON: {e}')
         except Exception as e:
-            return False, f'JSON validation error: {e}'
+            return ActionResult(is_ok=False, error=f'JSON validation error: {e}')
 
 # ################################################################################################################################
 
-    def _validate_csv_columns(self, content:'bytes', schema_ref:'str') -> 'Tuple[bool, Optional[str]]':
+    def _validate_csv_columns(self, content:'bytes', schema_ref:'str') -> 'ActionResult':
         try:
             try:
                 text = content.decode('utf-8')
@@ -121,22 +120,22 @@ class PreProcessor:
 
             lines = text.strip().split('\n')
             if not lines:
-                return False, 'Empty CSV file'
+                return ActionResult(is_ok=False, error='Empty CSV file')
 
             try:
                 expected_columns = int(schema_ref)
             except ValueError:
-                return True, None
+                return ActionResult()
 
             first_line = lines[0]
             actual_columns = len(first_line.split(','))
 
             if actual_columns != expected_columns:
-                return False, f'Expected {expected_columns} columns, found {actual_columns}'
+                return ActionResult(is_ok=False, error=f'Expected {expected_columns} columns, found {actual_columns}')
 
-            return True, None
+            return ActionResult()
         except Exception as e:
-            return False, f'CSV validation error: {e}'
+            return ActionResult(is_ok=False, error=f'CSV validation error: {e}')
 
 # ################################################################################################################################
 
@@ -146,17 +145,17 @@ class PreProcessor:
         sender:'str',
         doc_type_id:'str',
         dedup_window_days:'int',
-    ) -> 'Tuple[bool, Optional[str], Optional[str]]':
+    ) -> 'DedupResult':
 
         if not doc_id:
-            return True, None, None
+            return DedupResult()
 
         existing_txn_id = self.store.check_duplicate(doc_id, sender, doc_type_id)
 
         if existing_txn_id:
-            return False, f'Duplicate document: already processed as {existing_txn_id}', existing_txn_id
+            return DedupResult(is_ok=False, error=f'Duplicate document: already processed as {existing_txn_id}', existing_txn_id=existing_txn_id)
 
-        return True, None, None
+        return DedupResult()
 
 # ################################################################################################################################
 
@@ -179,27 +178,27 @@ class PreProcessor:
         self,
         content:'bytes',
         expected_key_id:'str',
-    ) -> 'Tuple[bool, Optional[str]]':
+    ) -> 'ActionResult':
 
         if not expected_key_id:
-            return True, None
+            return ActionResult()
 
         pgp_key = self.store.get_pgp_key(expected_key_id)
         if not pgp_key:
-            return False, f'PGP key not found: {expected_key_id}'
+            return ActionResult(is_ok=False, error=f'PGP key not found: {expected_key_id}')
 
         try:
             from zato.common.file_transfer.pgp import PGPManager
             pgp_manager = PGPManager()
-            valid, signer = pgp_manager.verify(content, pgp_key.key_data)
-            if valid:
-                return True, None
+            result = pgp_manager.verify(content, pgp_key.key_data)
+            if result.is_ok:
+                return ActionResult()
             else:
-                return False, 'PGP signature verification failed'
+                return ActionResult(is_ok=False, error='PGP signature verification failed')
         except ImportError:
-            return True, None
+            return ActionResult()
         except Exception as e:
-            return False, f'PGP verification error: {e}'
+            return ActionResult(is_ok=False, error=f'PGP verification error: {e}')
 
 # ################################################################################################################################
 
@@ -208,7 +207,7 @@ class PreProcessor:
         content:'bytes',
         companion_checksum:'str',
         algorithm:'str'='SHA-256',
-    ) -> 'Tuple[bool, Optional[str], str]':
+    ) -> 'ChecksumResult':
 
         if algorithm.upper() == 'SHA-256':
             computed = hashlib.sha256(content).hexdigest()
@@ -220,9 +219,9 @@ class PreProcessor:
         if companion_checksum:
             companion_checksum = companion_checksum.strip().lower()
             if computed.lower() != companion_checksum:
-                return False, f'Checksum mismatch: expected {companion_checksum}, computed {computed}', computed
+                return ChecksumResult(is_ok=False, error=f'Checksum mismatch: expected {companion_checksum}, computed {computed}', checksum=computed)
 
-        return True, None, computed
+        return ChecksumResult(checksum=computed)
 
 # ################################################################################################################################
 
@@ -234,24 +233,24 @@ class PreProcessor:
         doc_id:'str'='',
         sender:'str'='',
         doc_type_id:'str'='',
-    ) -> 'Tuple[bool, Optional[str]]':
+    ) -> 'ActionResult':
 
         policy_val = policy.value if isinstance(policy, PreprocessSavePolicy) else policy
 
         if policy_val == PreprocessSavePolicy.None_.value:
-            return True, None
+            return ActionResult()
 
         if policy_val == PreprocessSavePolicy.Unique.value:
             if doc_id:
                 existing = self.store.check_duplicate(doc_id, sender, doc_type_id)
                 if existing:
-                    return True, None
+                    return ActionResult()
 
         try:
             self.store.save_content(txn_id, content)
-            return True, None
+            return ActionResult()
         except Exception as e:
-            return False, f'Failed to save content: {e}'
+            return ActionResult(is_ok=False, error=f'Failed to save content: {e}')
 
 # ################################################################################################################################
 
@@ -262,31 +261,31 @@ class PreProcessor:
         doc_type:'DocumentType',
         extracted_attrs:'dict',
         companion_checksum:'str'='',
-    ) -> 'Tuple[bool, list, str]':
+    ) -> 'PreprocessResult':
 
         errors = []
         computed_checksum = ''
 
         if doc_type.preprocess_validate:
-            success, error = self.validate_structure(
+            result = self.validate_structure(
                 content,
                 doc_type.preprocess_validate_schema,
                 doc_type.file_type,
             )
-            if not success:
-                errors.append(('validate', error))
+            if not result.is_ok:
+                errors.append(('validate', result.error))
 
         if doc_type.preprocess_dedup:
             doc_id = extracted_attrs.get('document_id', '')
             sender = extracted_attrs.get('sender', '')
-            success, error, _ = self.check_duplicate(
+            result = self.check_duplicate(
                 doc_id,
                 sender,
                 doc_type.id,
                 doc_type.preprocess_dedup_window_days,
             )
-            if not success:
-                errors.append(('dedup', error))
+            if not result.is_ok:
+                errors.append(('dedup', result.error))
             else:
                 self.set_dedup_marker(
                     doc_id,
@@ -297,24 +296,25 @@ class PreProcessor:
                 )
 
         if doc_type.preprocess_pgp_verify:
-            success, error = self.verify_pgp_signature(
+            result = self.verify_pgp_signature(
                 content,
                 doc_type.preprocess_pgp_key_id,
             )
-            if not success:
-                errors.append(('pgp_verify', error))
+            if not result.is_ok:
+                errors.append(('pgp_verify', result.error))
 
         if doc_type.preprocess_checksum:
             settings = self.store.get_settings()
-            success, error, computed_checksum = self.verify_checksum(
+            result = self.verify_checksum(
                 content,
                 companion_checksum,
                 settings.checksum_algorithm,
             )
-            if not success:
-                errors.append(('checksum', error))
+            computed_checksum = result.checksum
+            if not result.is_ok:
+                errors.append(('checksum', result.error))
 
-        success, error = self.save_content(
+        result = self.save_content(
             txn_id,
             content,
             doc_type.preprocess_save,
@@ -322,11 +322,11 @@ class PreProcessor:
             extracted_attrs.get('sender', ''),
             doc_type.id,
         )
-        if not success:
-            errors.append(('save', error))
+        if not result.is_ok:
+            errors.append(('save', result.error))
 
         has_errors = len(errors) > 0
-        return not has_errors, errors, computed_checksum
+        return PreprocessResult(is_ok=not has_errors, errors=errors, checksum=computed_checksum)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -68,7 +68,7 @@ class GetSummary(Service):
         else:
             success_rate = 0.0
 
-        transactions, _ = store.search_transactions(
+        result = store.search_transactions(
             date_from=date_from,
             date_to=date_to,
             limit=1000,
@@ -79,7 +79,7 @@ class GetSummary(Service):
         sender_counts = {}
         doc_type_counts = {}
 
-        for txn in transactions:
+        for txn in result.items:
             if txn.duration_ms:
                 total_duration += txn.duration_ms
                 duration_count += 1
@@ -95,7 +95,7 @@ class GetSummary(Service):
         top_senders = sorted(sender_counts.items(), key=lambda x: x[1], reverse=True)[:10]
         top_doc_types = sorted(doc_type_counts.items(), key=lambda x: x[1], reverse=True)[:10]
 
-        failed_txns, _ = store.search_transactions(
+        failed_result = store.search_transactions(
             date_from=date_from,
             date_to=date_to,
             status=ProcessingStatus.Failed.value,
@@ -108,7 +108,7 @@ class GetSummary(Service):
                 'filename': t.filename,
                 'created': t.created,
             }
-            for t in failed_txns
+            for t in failed_result.items
         ]
 
         self.response.payload = {

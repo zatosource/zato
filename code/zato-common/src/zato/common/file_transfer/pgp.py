@@ -8,11 +8,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
-from typing import Dict, Optional, Tuple
-
 # Zato
 from zato.common.file_transfer.const import KeyType, KeyUsage
-from zato.common.file_transfer.model import PGPKey
+from zato.common.file_transfer.model import KeyPairResult, PGPKey, VerifyResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -138,7 +136,7 @@ class PGPManager:
         algorithm:'str'='RSA',
         key_size:'int'=4096,
         passphrase:'str'='',
-    ) -> 'Tuple[PGPKey, PGPKey]':
+    ) -> 'KeyPairResult':
 
         if self._pgpy:
             return self._generate_keypair_pgpy(name, email, algorithm, key_size, passphrase)
@@ -154,7 +152,7 @@ class PGPManager:
         algorithm:'str',
         key_size:'int',
         passphrase:'str',
-    ) -> 'Tuple[PGPKey, PGPKey]':
+    ) -> 'KeyPairResult':
 
         from pgpy.constants import PubKeyAlgorithm, KeyFlags, HashAlgorithm, SymmetricKeyAlgorithm, CompressionAlgorithm
 
@@ -213,7 +211,7 @@ class PGPManager:
             is_enabled=True,
         )
 
-        return public_key, private_key
+        return KeyPairResult(public_key=public_key, private_key=private_key)
 
     def _generate_keypair_gnupg(
         self,
@@ -222,7 +220,7 @@ class PGPManager:
         algorithm:'str',
         key_size:'int',
         passphrase:'str',
-    ) -> 'Tuple[PGPKey, PGPKey]':
+    ) -> 'KeyPairResult':
 
         import tempfile
         gpg = self._gnupg.GPG(gnupghome=tempfile.mkdtemp())
@@ -269,7 +267,7 @@ class PGPManager:
             is_enabled=True,
         )
 
-        return public_key, private_key
+        return KeyPairResult(public_key=public_key, private_key=private_key)
 
 # ################################################################################################################################
 
@@ -366,7 +364,7 @@ class PGPManager:
 
 # ################################################################################################################################
 
-    def verify(self, content:'bytes', public_key_data:'str') -> 'Tuple[bool, str]':
+    def verify(self, content:'bytes', public_key_data:'str') -> 'VerifyResult':
 
         if self._pgpy:
             return self._verify_pgpy(content, public_key_data)
@@ -375,7 +373,7 @@ class PGPManager:
         else:
             raise ImportError('No PGP library available')
 
-    def _verify_pgpy(self, content:'bytes', public_key_data:'str') -> 'Tuple[bool, str]':
+    def _verify_pgpy(self, content:'bytes', public_key_data:'str') -> 'VerifyResult':
 
         try:
             key, _ = self._pgpy.PGPKey.from_blob(public_key_data)
@@ -386,13 +384,13 @@ class PGPManager:
             for sig in verification:
                 if sig:
                     signer = str(sig.signer) if hasattr(sig, 'signer') else ''
-                    return True, signer
+                    return VerifyResult(signer=signer)
 
-            return False, ''
+            return VerifyResult(is_ok=False)
         except Exception:
-            return False, ''
+            return VerifyResult(is_ok=False)
 
-    def _verify_gnupg(self, content:'bytes', public_key_data:'str') -> 'Tuple[bool, str]':
+    def _verify_gnupg(self, content:'bytes', public_key_data:'str') -> 'VerifyResult':
 
         try:
             import tempfile
@@ -401,10 +399,10 @@ class PGPManager:
             verified = gpg.verify(content)
 
             if verified.valid:
-                return True, verified.fingerprint or ''
-            return False, ''
+                return VerifyResult(signer=verified.fingerprint or '')
+            return VerifyResult(is_ok=False)
         except Exception:
-            return False, ''
+            return VerifyResult(is_ok=False)
 
 # ################################################################################################################################
 

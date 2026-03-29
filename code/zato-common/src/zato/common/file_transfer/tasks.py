@@ -8,11 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import time
-from typing import Optional, Tuple
 
 # Zato
 from zato.common.file_transfer.const import TaskStatus, TaskType
-from zato.common.file_transfer.model import Task
+from zato.common.file_transfer.model import ActionResult, Task
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -94,7 +93,7 @@ class TaskManager:
 
 # ################################################################################################################################
 
-    def execute_task(self, task:'Task') -> 'Tuple[bool, Optional[str]]':
+    def execute_task(self, task:'Task') -> 'ActionResult':
 
         task.status = TaskStatus.Delivering
         task.updated = time.time()
@@ -106,61 +105,61 @@ class TaskManager:
 
         try:
             if task_type == TaskType.Delivery:
-                success, error = self._execute_delivery(task)
+                result = self._execute_delivery(task)
             elif task_type == TaskType.Service_Execution:
-                success, error = self._execute_service(task)
+                result = self._execute_service(task)
             else:
-                success, error = False, f'Unknown task type: {task_type}'
+                result = ActionResult(is_ok=False, error=f'Unknown task type: {task_type}')
 
-            if success:
+            if result.is_ok:
                 task.status = TaskStatus.Done
                 task.updated = time.time()
                 task.next_retry_at = None
                 self.store.update_task(task)
             else:
-                self.handle_task_failure(task, error)
+                self.handle_task_failure(task, result.error)
 
-            return success, error
+            return result
 
         except Exception as e:
             error = str(e)
             self.handle_task_failure(task, error)
-            return False, error
+            return ActionResult(is_ok=False, error=error)
 
 # ################################################################################################################################
 
-    def _execute_delivery(self, task:'Task') -> 'Tuple[bool, Optional[str]]':
+    def _execute_delivery(self, task:'Task') -> 'ActionResult':
 
         if self.delivery_handler:
             txn = self.store.get_transaction(task.transaction_id)
             if not txn:
-                return False, f'Transaction not found: {task.transaction_id}'
+                return ActionResult(is_ok=False, error=f'Transaction not found: {task.transaction_id}')
 
             content = self.store.get_content(task.transaction_id)
             if not content:
-                return False, f'Content not found for transaction: {task.transaction_id}'
+                return ActionResult(is_ok=False, error=f'Content not found for transaction: {task.transaction_id}')
 
             try:
-                success, error = self.delivery_handler(
+                result = self.delivery_handler(
                     content=content,
                     protocol=task.delivery_protocol,
                     detail=task.delivery_detail,
                     filename=txn.filename,
                 )
-                return success, error
+                return ActionResult(is_ok=result.is_ok, error=result.error)
             except Exception as e:
-                return False, str(e)
+                return ActionResult(is_ok=False, error=str(e))
 
-        return True, None
+        return ActionResult()
 
 # ################################################################################################################################
 
-    def _execute_service(self, task:'Task') -> 'Tuple[bool, Optional[str]]':
+    def _execute_service(self, task:'Task') -> 'ActionResult':
 
         if self.service_invoker:
             txn = self.store.get_transaction(task.transaction_id)
             if not txn:
-                return False, f'Transaction not found: {task.transaction_id}'
+                return ActionResult(is_ok=False, error=f'Transaction not found: {task.transaction_id}')
 
             content = self.store.get_content(task.transaction_id)
 
@@ -178,15 +177,15 @@ class TaskManager:
                     request_data['content'] = content
 
                 self.service_invoker(task.service_name, request_data)
-                return True, None
+                return ActionResult()
             except Exception as e:
-                return False, str(e)
+                return ActionResult(is_ok=False, error=str(e))
 
-        return True, None
+        return ActionResult()
 
 # ################################################################################################################################
 
-    def handle_task_failure(self, task:'Task', error:'Optional[str]') -> 'None':
+    def handle_task_failure(self, task:'Task', error:'str') -> 'None':
 
         task.retry_count += 1
         task.error_detail = error or ''

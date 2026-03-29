@@ -33,7 +33,7 @@ class Search(Service):
         if date_to:
             date_to = float(date_to)
 
-        entries, total = store.search_logs(
+        result = store.search_logs(
             date_from=date_from,
             date_to=date_to,
             activity_class=input.get('activity_class'),
@@ -52,7 +52,7 @@ class Search(Service):
                 'message': e.message,
                 'detail': e.detail,
             }
-            for e in entries
+            for e in result.items
         ]
 
 # ################################################################################################################################

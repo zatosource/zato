@@ -192,7 +192,7 @@ class FileTransferEngine:
             self.store.update_transaction(txn)
             return
 
-        success, errors, computed_checksum = self.preprocessor.run_all_steps(
+        preprocess_result = self.preprocessor.run_all_steps(
             txn.id,
             content,
             doc_type,
@@ -200,14 +200,14 @@ class FileTransferEngine:
             companion_checksum,
         )
 
-        if computed_checksum:
-            txn.source_checksum = computed_checksum
+        if preprocess_result.checksum:
+            txn.source_checksum = preprocess_result.checksum
 
         txn.content_saved = True
 
-        if errors:
+        if preprocess_result.errors:
             txn.has_errors = True
-            for step, error in errors:
+            for step, error in preprocess_result.errors:
                 self._log(txn, ActivityClass.Pre_Processing, Severity.Error,
                           f'{step}: {error}')
         else:
@@ -248,17 +248,17 @@ class FileTransferEngine:
             return
 
         for action in matched_rule.actions:
-            success, error = self.action_executor.execute(action, txn, content)
+            result = self.action_executor.execute(action, txn, content)
 
             action_type = action.type.value if hasattr(action.type, 'value') else str(action.type)
 
-            if success:
+            if result.is_ok:
                 self._log(txn, ActivityClass.Action, Severity.Info,
                           f'Action executed: {action_type}')
             else:
                 txn.has_errors = True
                 self._log(txn, ActivityClass.Action, Severity.Error,
-                          f'Action failed: {action_type} - {error}')
+                          f'Action failed: {action_type} - {result.error}')
 
         self.store.update_transaction(txn)
 
