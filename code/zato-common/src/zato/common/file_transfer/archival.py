@@ -10,7 +10,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 import time
 from threading import Event, Thread
-from typing import List
 
 # Zato
 from zato.common.file_transfer.const import RedisKey
