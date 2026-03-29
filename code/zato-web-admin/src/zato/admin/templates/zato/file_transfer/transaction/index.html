@@ -5,37 +5,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-    <style>
-    .ft-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        font-size: 11px;
-        font-weight: 600;
-        color: #fff;
-    }
-    .ft-badge-done { background: #067f39; }
-    .ft-badge-failed { background: #cc0000; }
-    .ft-badge-warn { background: #b45309; }
-    .ft-badge-delivering { background: var(--primary-dark); }
-    .ft-badge-queued { background: #6b21a8; }
-    .ft-badge-retrying { background: #c2410c; }
-    .ft-badge-new { background: #1d4ed8; }
-    .ft-filter-row {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-    }
-    .ft-filter-row select, .ft-filter-row input[type="text"] {
-        padding: 4px 8px;
-        font-size: 12px;
-        border: 1px solid var(--primary-dark);
-    }
-    #data-table th:nth-child(2) {
-        display: table-cell;
-    }
-    </style>
+    <link rel="stylesheet" type="text/css" href="/static/css/file_transfer.css">
 {% endblock %}
 
 {% block "extra_js" %}

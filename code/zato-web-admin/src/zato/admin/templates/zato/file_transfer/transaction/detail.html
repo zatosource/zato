@@ -1,47 +1,63 @@
-{% extends "zato/index.html" %}
+{% extends "zato/settings-base.html" %}
 {% load extras %}
 
-{% block html_title %}File transfer - Transaction {{ transaction.id }}{% endblock %}
+{% block page_title %}Transaction {{ transaction.id }}{% endblock %}
 
-{% block "extra_css" %}
+{% block extra_page_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/file_transfer.css">
 <link rel="stylesheet" type="text/css" href="/static/css/zato-tabs.css">
 {% endblock %}
 
-{% block "extra_js" %}
-<script type="text/javascript" src="/static/js/zato-tabs.js" nonce="{{ CSP_NONCE }}"></script>
-{% endblock %}
+{% block section_title %}Transaction details{% endblock %}
+{% block help_icon_id %}transaction-detail-help{% endblock %}
 
-{% block "content" %}
-<div class="ft-detail-wrap">
-
-<div class="ft-title-row">
-    <div>
-        <a href="{% url 'file-transfer-transaction' %}?{{ back_query }}" class="ft-back-link">Back</a>
-        <span class="ft-txn-id zato-copyable">{{ transaction.id }}</span>
-        {% if transaction.processing_status == 'Done' %}
-        <span class="ft-badge ft-badge-done">DONE</span>
-        {% elif transaction.processing_status == 'Failed' %}
-        <span class="ft-badge ft-badge-failed">FAILED</span>
-        {% elif transaction.processing_status == 'Done_W_Errors' %}
-        <span class="ft-badge ft-badge-warn">DONE W/ERRORS</span>
-        {% elif transaction.processing_status == 'Not_Routed' %}
-        <span class="ft-badge ft-badge-not-routed">NOT ROUTED</span>
-        {% elif transaction.processing_status == 'Queued' %}
-        <span class="ft-badge ft-badge-queued">QUEUED</span>
-        {% elif transaction.processing_status == 'Delivering' %}
-        <span class="ft-badge ft-badge-delivering">DELIVERING</span>
-        {% else %}
-        <span class="ft-badge">{{ transaction.processing_status }}</span>
-        {% endif %}
+{% block content_rows %}
+<div class="info-container ft-detail-info">
+    <div class="info-row">
+        <div class="info-label">Transaction ID</div>
+        <div class="info-value">
+            <span class="zato-copyable">{{ transaction.id }}</span>
+        </div>
     </div>
-    <div class="ft-actions">
-        <button class="action-button" onclick="resubmit('{{ transaction.id }}')">Resubmit</button>
-        <button class="secondary-button" onclick="reprocess('{{ transaction.id }}')">Reprocess</button>
-        <a href="{% url 'file-transfer-transaction-content' transaction.id %}" class="secondary-button" target="_blank">Download</a>
+    <div class="info-row">
+        <div class="info-label">Status</div>
+        <div class="info-value">
+            {% if transaction.processing_status == 'Done' %}
+            <span class="info-badge success">DONE</span>
+            {% elif transaction.processing_status == 'Failed' %}
+            <span class="info-badge error">FAILED</span>
+            {% elif transaction.processing_status == 'Done_W_Errors' %}
+            <span class="info-badge warn">DONE W/ERRORS</span>
+            {% elif transaction.processing_status == 'Not_Routed' %}
+            <span class="info-badge warn">NOT ROUTED</span>
+            {% elif transaction.processing_status == 'Queued' %}
+            <span class="info-badge queued">QUEUED</span>
+            {% elif transaction.processing_status == 'Delivering' %}
+            <span class="info-badge delivering">DELIVERING</span>
+            {% else %}
+            <span class="info-badge">{{ transaction.processing_status }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="info-row">
+        <div class="info-label">File name</div>
+        <div class="info-value">
+            <span class="zato-copyable">{{ transaction.filename }}</span>
+        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block buttons %}
+<div class="button-container">
+    <a href="{% url 'file-transfer-transaction' %}?{{ back_query }}" class="secondary-button ft-back-btn">Back</a>
+    <button class="secondary-button" onclick="reprocess('{{ transaction.id }}')">Reprocess</button>
+    <a href="{% url 'file-transfer-transaction-content' transaction.id %}" class="secondary-button" target="_blank">Download</a>
+    <button class="action-button" onclick="resubmit('{{ transaction.id }}')">Resubmit</button>
+</div>
+{% endblock %}
+
+{% block action_steps %}
 <div class="zato-tabs" id="transaction-tabs">
     <ul class="zato-tabs-nav">
         <li class="active"><a href="#tab-attrs">Attributes</a></li>
@@ -51,21 +67,21 @@
     </ul>
     <div class="zato-tabs-content">
         <div class="zato-tabs-panel active" id="tab-attrs">
-            <div class="ft-kv-row"><span class="ft-kv-key">File name</span><span class="ft-kv-val zato-copyable">{{ transaction.filename }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Transaction ID</span><span class="ft-kv-val zato-copyable">{{ transaction.id }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Doc type</span><span class="ft-kv-val zato-copyable">{{ transaction.doc_type_id|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Sender</span><span class="ft-kv-val zato-copyable">{{ transaction.sender|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Receiver</span><span class="ft-kv-val zato-copyable">{{ transaction.receiver|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Document ID</span><span class="ft-kv-val zato-copyable">{{ transaction.document_id|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Exchange ID</span><span class="ft-kv-val zato-copyable">{{ transaction.exchange_id|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Group ID</span><span class="ft-kv-val zato-copyable">{{ transaction.group_id|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Size</span><span class="ft-kv-val zato-copyable">{{ transaction.file_size|filesizeformat }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Source checksum</span><span class="ft-kv-val zato-copyable">{{ transaction.source_checksum|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Source protocol</span><span class="ft-kv-val zato-copyable">{{ transaction.source_protocol|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Source detail</span><span class="ft-kv-val zato-copyable">{{ transaction.source_detail|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Duration</span><span class="ft-kv-val zato-copyable">{{ transaction.duration_ms|default:"-" }} ms</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Content saved</span><span class="ft-kv-val zato-copyable">{{ transaction.content_saved|yesno:"Yes,No" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Has errors</span><span class="ft-kv-val zato-copyable">{{ transaction.has_errors|yesno:"Yes,No" }}</span></div>
+            <div class="info-container ft-detail-info">
+                <div class="info-row"><div class="info-label">Doc type</div><div class="info-value"><span class="zato-copyable">{{ transaction.doc_type_id|default:"-" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Sender</div><div class="info-value"><span class="zato-copyable">{{ transaction.sender|default:"-" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Receiver</div><div class="info-value"><span class="zato-copyable">{{ transaction.receiver|default:"-" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Document ID</div><div class="info-value"><span class="zato-copyable">{{ transaction.document_id|default:"-" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Exchange ID</div><div class="info-value"><span class="zato-copyable">{{ transaction.exchange_id|default:"-" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Group ID</div><div class="info-value"><span class="zato-copyable">{{ transaction.group_id|default:"-" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Size</div><div class="info-value"><span class="zato-copyable">{{ transaction.file_size|filesizeformat }}</span></div></div>
+                <div class="info-row"><div class="info-label">Source checksum</div><div class="info-value"><span class="zato-copyable">{{ transaction.source_checksum|default:"-" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Source protocol</div><div class="info-value"><span class="zato-copyable">{{ transaction.source_protocol|default:"-" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Source detail</div><div class="info-value"><span class="zato-copyable">{{ transaction.source_detail|default:"-" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Duration</div><div class="info-value"><span class="zato-copyable">{{ transaction.duration_ms|default:"-" }} ms</span></div></div>
+                <div class="info-row"><div class="info-label">Content saved</div><div class="info-value"><span class="zato-copyable">{{ transaction.content_saved|yesno:"Yes,No" }}</span></div></div>
+                <div class="info-row"><div class="info-label">Has errors</div><div class="info-value"><span class="zato-copyable">{{ transaction.has_errors|yesno:"Yes,No" }}</span></div></div>
+            </div>
         </div>
 
         <div class="zato-tabs-panel" id="tab-content">
@@ -81,8 +97,12 @@
         </div>
     </div>
 </div>
-</div>
+{% endblock %}
 
+{% block sidebar %}{% endblock %}
+
+{% block extra_page_js %}
+<script type="text/javascript" src="/static/js/zato-tabs.js" nonce="{{ CSP_NONCE }}"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(function() {
     var tabs = new ZatoTabs('#transaction-tabs');

@@ -214,7 +214,8 @@
     color: #777 !important;
 }
 
-.secondary-button {
+.secondary-button,
+a.secondary-button {
     background: #fff;
     color: var(--primary-dark);
     border: 1px solid var(--primary-dark);
@@ -227,6 +228,7 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     box-shadow: none !important;
     text-shadow: none !important;
+    text-decoration: none !important;
 }
 
 .button-wrapper {
@@ -235,11 +237,15 @@
     gap: 4px;
 }
 
-.secondary-button:hover {
-    background: #fff;
-    color: var(--primary-dark);
+.secondary-button:hover,
+a.secondary-button:hover,
+a.secondary-button:not(.menu-link):hover {
+    background: #fff !important;
+    background-color: #fff !important;
+    color: var(--primary-dark) !important;
     box-shadow: none;
     text-shadow: none;
+    text-decoration: none !important;
 }
 
 .secondary-button:disabled {

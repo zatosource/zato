@@ -5,10 +5,7 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-    <style>
-    .ft-enabled { color: #067f39; font-weight: 600; }
-    .ft-disabled { color: #cc0000; font-weight: 600; }
-    </style>
+    <link rel="stylesheet" type="text/css" href="/static/css/file_transfer.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -66,7 +63,7 @@
                         <td>{{ key.name }}</td>
                         <td>{{ key.key_type }}</td>
                         <td>{{ key.usage }}</td>
-                        <td style="font-family:monospace;font-size:11px">{{ key.fingerprint|truncatechars:20 }}</td>
+                        <td class="ft-fingerprint">{{ key.fingerprint|truncatechars:20 }}</td>
                         <td>{{ key.algorithm }} {{ key.key_size }}</td>
                         <td>
                             {% if key.is_enabled %}
