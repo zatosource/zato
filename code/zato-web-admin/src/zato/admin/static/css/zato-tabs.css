@@ -36,7 +36,8 @@
 }
 
 .zato-tabs-nav a:hover {
-    color: #333;
+    background: var(--primary-dark);
+    color: #fff;
     text-decoration: none;
 }
 
