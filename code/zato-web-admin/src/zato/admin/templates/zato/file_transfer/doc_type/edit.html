@@ -307,12 +307,15 @@ function renderRecognitionRules() {
             html += '<div class="info-row"><div class="info-label">Hex sequence</div><div class="info-value">';
             html += '<input type="text" value="' + (r.pattern || '') + '" placeholder="e.g., 25 50 44 46 for PDF" onchange="recognitionRules['+i+'].pattern=this.value;updateRecognitionJson()">';
             html += '</div></div>';
+            html += '<div class="info-row"><div class="info-label">Offset</div><div class="info-value">';
+            html += '<input type="number" value="' + (r.offset || 0) + '" placeholder="0" onchange="recognitionRules['+i+'].offset=parseInt(this.value);updateRecognitionJson()">';
+            html += '</div></div>';
         } else if (r.type === 'Edi_Segment') {
             html += '<div class="info-row"><div class="info-label">Segment tag</div><div class="info-value">';
             html += '<input type="text" value="' + (r.segment || '') + '" placeholder="e.g., UNH or ISA" onchange="recognitionRules['+i+'].segment=this.value;updateRecognitionJson()">';
             html += '</div></div>';
-            html += '<div class="info-row"><div class="info-label">Transaction set</div><div class="info-value">';
-            html += '<input type="text" value="' + (r.transaction_set || '') + '" placeholder="e.g., 856 for X12" onchange="recognitionRules['+i+'].transaction_set=this.value;updateRecognitionJson()">';
+            html += '<div class="info-row"><div class="info-label">Message type / Transaction set</div><div class="info-value">';
+            html += '<input type="text" value="' + (r.message_type || '') + '" placeholder="e.g., ORDERS for EDIFACT, 856 for X12" onchange="recognitionRules['+i+'].message_type=this.value;updateRecognitionJson()">';
             html += '</div></div>';
         }
         html += '<div class="info-row"><div class="info-label"></div><div class="info-value">';
@@ -408,6 +411,11 @@ function renderExtractionRules() {
         else if (r.query_type === 'Fixed') placeholder = 'e.g., acme_corp';
         html += '<input type="text" value="' + (r.query || '') + '" placeholder="' + placeholder + '" onchange="extractionRules['+i+'].query=this.value;updateExtractionJson()">';
         html += '</div></div>';
+        if (r.query_type === 'Column_Index') {
+            html += '<div class="info-row"><div class="info-label">Header rows to skip</div><div class="info-value">';
+            html += '<input type="number" value="' + (r.header_rows || 1) + '" onchange="extractionRules['+i+'].header_rows=parseInt(this.value);updateExtractionJson()">';
+            html += '</div></div>';
+        }
         html += '<div class="info-row"><div class="info-label">Required</div><div class="info-value">';
         html += '<label class="toggle-switch"><input type="checkbox"' + (r.required ? ' checked' : '') + ' onchange="extractionRules['+i+'].required=this.checked;updateExtractionJson()"><span class="toggle-slider"></span></label>';
         html += '</div></div>';
