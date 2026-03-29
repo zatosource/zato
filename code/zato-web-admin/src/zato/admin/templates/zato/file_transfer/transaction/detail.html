@@ -1,9 +1,9 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block page_title %}File transfer - Transaction {{ transaction.id }}{% endblock %}
+{% block html_title %}File transfer - Transaction {{ transaction.id }}{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
 <style>
 .ft-detail-header {
     background: var(--panel-bg, #1e293b);
@@ -100,7 +100,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <div class="content-wrap">
     <nav class="breadcrumb">
         <a href="{% url 'main-page' %}">Zato</a> &rsaquo;
