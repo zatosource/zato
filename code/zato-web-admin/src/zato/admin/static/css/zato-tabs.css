@@ -16,6 +16,10 @@
     padding: 0;
 }
 
+.zato-tabs-nav li:first-child {
+    margin-left: -20px;
+}
+
 .zato-tabs-nav a {
     display: block;
     padding: 8px 20px;
