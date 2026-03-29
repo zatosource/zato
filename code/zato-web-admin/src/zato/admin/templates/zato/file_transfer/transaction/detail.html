@@ -8,57 +8,47 @@
 <link rel="stylesheet" type="text/css" href="/static/css/zato-tabs.css">
 {% endblock %}
 
-{% block section_title %}Transaction details{% endblock %}
-{% block help_icon_id %}transaction-detail-help{% endblock %}
-
-{% block content_rows %}
-<div class="info-container ft-detail-info">
-    <div class="info-row">
-        <div class="info-label">Transaction ID</div>
-        <div class="info-value">
-            <span class="zato-copyable">{{ transaction.id }}</span>
-        </div>
-    </div>
-    <div class="info-row">
-        <div class="info-label">Status</div>
-        <div class="info-value">
-            {% if transaction.processing_status == 'Done' %}
-            <span class="info-badge success">DONE</span>
-            {% elif transaction.processing_status == 'Failed' %}
-            <span class="info-badge error">FAILED</span>
-            {% elif transaction.processing_status == 'Done_W_Errors' %}
-            <span class="info-badge warn">DONE W/ERRORS</span>
-            {% elif transaction.processing_status == 'Not_Routed' %}
-            <span class="info-badge warn">NOT ROUTED</span>
-            {% elif transaction.processing_status == 'Queued' %}
-            <span class="info-badge queued">QUEUED</span>
-            {% elif transaction.processing_status == 'Delivering' %}
-            <span class="info-badge delivering">DELIVERING</span>
-            {% else %}
-            <span class="info-badge">{{ transaction.processing_status }}</span>
-            {% endif %}
-        </div>
-    </div>
-    <div class="info-row">
-        <div class="info-label">File name</div>
-        <div class="info-value">
-            <span class="zato-copyable">{{ transaction.filename }}</span>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block buttons %}
-<div class="button-container">
+{% block left_content %}
+<div class="ft-header-row">
     <a href="{% url 'file-transfer-transaction' %}?{{ back_query }}" class="secondary-button ft-back-btn">Back</a>
-    <button class="secondary-button" onclick="reprocess('{{ transaction.id }}')">Reprocess</button>
-    <a href="{% url 'file-transfer-transaction-content' transaction.id %}" class="secondary-button" target="_blank">Download</a>
-    <button class="action-button" onclick="resubmit('{{ transaction.id }}')">Resubmit</button>
+    <h3>Transaction details</h3>
+    <span class="ft-header-txn-id zato-copyable">{{ transaction.id }}</span>
 </div>
-{% endblock %}
-
-{% block action_steps %}
-<div class="zato-tabs" id="transaction-tabs">
+<div class="progress-panel">
+    <div class="info-container ft-detail-info">
+        <div class="info-row">
+            <div class="info-label">File name</div>
+            <div class="info-value">
+                <span class="zato-copyable">{{ transaction.filename }}</span>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Status</div>
+            <div class="info-value">
+                {% if transaction.processing_status == 'Done' %}
+                <span class="info-badge success">DONE</span>
+                {% elif transaction.processing_status == 'Failed' %}
+                <span class="info-badge error">FAILED</span>
+                {% elif transaction.processing_status == 'Done_W_Errors' %}
+                <span class="info-badge warn">DONE W/ERRORS</span>
+                {% elif transaction.processing_status == 'Not_Routed' %}
+                <span class="info-badge warn">NOT ROUTED</span>
+                {% elif transaction.processing_status == 'Queued' %}
+                <span class="info-badge queued">QUEUED</span>
+                {% elif transaction.processing_status == 'Delivering' %}
+                <span class="info-badge delivering">DELIVERING</span>
+                {% else %}
+                <span class="info-badge">{{ transaction.processing_status }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="button-container">
+        <button class="secondary-button" onclick="reprocess('{{ transaction.id }}')">Reprocess</button>
+        <a href="{% url 'file-transfer-transaction-content' transaction.id %}" class="secondary-button" target="_blank">Download</a>
+        <button class="action-button" onclick="resubmit('{{ transaction.id }}')">Resubmit</button>
+    </div>
+    <div class="zato-tabs" id="transaction-tabs">
     <ul class="zato-tabs-nav">
         <li class="active"><a href="#tab-attrs">Attributes</a></li>
         <li><a href="#tab-content">Content</a></li>
@@ -96,6 +86,7 @@
             <div id="tasks-area">Loading...</div>
         </div>
     </div>
+</div>
 </div>
 {% endblock %}
 

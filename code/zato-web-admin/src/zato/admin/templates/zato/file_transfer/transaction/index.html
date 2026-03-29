@@ -16,10 +16,11 @@
 {% endblock %}
 
 {% block "content" %}
+<div class="ft-tx-list">
 <h2 class="zato">File transfer transactions</h2>
 
-<div style="margin-bottom: 12px;">
-    <a href="{% url 'file-transfer-submit' %}" class="btn btn-primary">Submit file</a>
+<div class='page_prompt'>
+    <a href="{% url 'file-transfer-submit' %}">Submit file</a>
 </div>
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
@@ -39,9 +40,9 @@
                 <option value="{{ dt.id }}" {% if filters.doc_type_id == dt.id %}selected{% endif %}>{{ dt.name }}</option>
                 {% endfor %}
             </select>
-            <input type="text" name="sender" placeholder="Sender..." value="{{ filters.sender }}" style="width:120px">
-            <input type="text" name="receiver" placeholder="Receiver..." value="{{ filters.receiver }}" style="width:120px">
-            <input type="text" name="query" placeholder="File name or ID..." value="{{ filters.query }}" style="width:180px">
+            <input type="text" name="sender" placeholder="Sender..." value="{{ filters.sender }}" class="ft-filter-input-sm">
+            <input type="text" name="receiver" placeholder="Receiver..." value="{{ filters.receiver }}" class="ft-filter-input-sm">
+            <input type="text" name="query" placeholder="File name or ID..." value="{{ filters.query }}" class="ft-filter-input-lg">
             <input type="submit" value="Search" />
         </form>
 
@@ -99,5 +100,5 @@
                 </tbody>
             </table>
         </div>
-
+</div>
 {% endblock %}

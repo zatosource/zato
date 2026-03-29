@@ -2,6 +2,7 @@
     'use strict';
 
     function ZatoTabs(container) {
+        this.callbacks = {};
         this.container = typeof container === 'string' ? document.querySelector(container) : container;
         if (!this.container) return;
 
@@ -11,7 +12,6 @@
 
         this.tabs = this.nav.querySelectorAll('li');
         this.panels = this.content.querySelectorAll('.zato-tabs-panel');
-        this.callbacks = {};
 
         this.init();
     }
