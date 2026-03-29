@@ -14,7 +14,7 @@
 .ft-title-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid #ddd;
@@ -23,9 +23,9 @@
 .ft-title-row > div:first-child {
     flex: 1;
     min-width: 0;
-}
-.ft-title-row h2 {
-    word-break: break-word;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 .ft-back-link {
     color: var(--primary-dark, #012845) !important;
@@ -40,7 +40,6 @@
     font-size: 14px;
     font-family: monospace;
     color: #333;
-    margin-left: 12px;
 }
 .ft-badge {
     display: inline-block;
