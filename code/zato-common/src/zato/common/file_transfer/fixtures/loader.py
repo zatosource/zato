@@ -54,8 +54,8 @@ def load_fixtures(store:'FileTransferRedisStore', include_transactions:'bool'=Tr
 
     if include_transactions:
         transactions = get_sample_transactions()
-        for txn in transactions:
-            store.create_transaction(txn)
+        for tx in transactions:
+            store.create_transaction(tx)
         logger.info('Loaded %d sample transactions', len(transactions))
 
     logger.info('File transfer fixtures loaded successfully')

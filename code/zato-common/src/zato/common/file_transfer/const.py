@@ -13,233 +13,233 @@ from enum import Enum
 # ################################################################################################################################
 
 class ProcessingStatus(str, Enum):
-    New = 'NEW'
-    Done = 'DONE'
-    Done_W_Errors = 'DONE_W_ERRORS'
-    Failed = 'FAILED'
-    Queued = 'QUEUED'
-    Not_Routed = 'NOT_ROUTED'
-    Aborted = 'ABORTED'
+    New = 'New'
+    Done = 'Done'
+    Done_W_Errors = 'Done_W_Errors'
+    Failed = 'Failed'
+    Queued = 'Queued'
+    Not_Routed = 'Not_Routed'
+    Aborted = 'Aborted'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TaskStatus(str, Enum):
-    New = 'NEW'
-    Pending = 'PENDING'
-    Delivering = 'DELIVERING'
-    Done = 'DONE'
-    Failed = 'FAILED'
-    Stopped = 'STOPPED'
+    New = 'New'
+    Pending = 'Pending'
+    Delivering = 'Delivering'
+    Done = 'Done'
+    Failed = 'Failed'
+    Stopped = 'Stopped'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ActivityClass(str, Enum):
-    Receipt = 'RECEIPT'
-    Recognition = 'RECOGNITION'
-    Extraction = 'EXTRACTION'
-    Pre_Processing = 'PRE_PROCESSING'
-    Rule_Evaluation = 'RULE_EVALUATION'
-    Action = 'ACTION'
-    Delivery = 'DELIVERY'
-    Completion = 'COMPLETION'
-    Error = 'ERROR'
+    Receipt = 'Receipt'
+    Recognition = 'Recognition'
+    Extraction = 'Extraction'
+    Pre_Processing = 'Pre_Processing'
+    Rule_Evaluation = 'Rule_Evaluation'
+    Action = 'Action'
+    Delivery = 'Delivery'
+    Completion = 'Completion'
+    Error = 'Error'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Severity(str, Enum):
-    Info = 'INFO'
-    Warning = 'WARNING'
-    Error = 'ERROR'
+    Info = 'Info'
+    Warning = 'Warning'
+    Error = 'Error'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class FileType(str, Enum):
-    Xml = 'XML'
-    Json = 'JSON'
-    Flat_File = 'FLAT_FILE'
-    Binary = 'BINARY'
-    Edi = 'EDI'
+    Xml = 'Xml'
+    Json = 'Json'
+    Flat_File = 'Flat_File'
+    Binary = 'Binary'
+    Edi = 'Edi'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ActionType(str, Enum):
-    Execute_Service = 'EXECUTE_SERVICE'
-    Deliver = 'DELIVER'
-    Notify = 'NOTIFY'
-    Change_Status = 'CHANGE_STATUS'
+    Execute_Service = 'Execute_Service'
+    Deliver = 'Deliver'
+    Notify = 'Notify'
+    Change_Status = 'Change_Status'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ExecMode(str, Enum):
-    Synchronous = 'SYNCHRONOUS'
-    Asynchronous = 'ASYNCHRONOUS'
-    Reliable = 'RELIABLE'
+    Synchronous = 'Synchronous'
+    Asynchronous = 'Asynchronous'
+    Reliable = 'Reliable'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class PreprocessSavePolicy(str, Enum):
-    All = 'ALL'
-    Unique = 'UNIQUE'
-    None_ = 'NONE'
+    All = 'All'
+    Unique = 'Unique'
+    None_ = 'None'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class CriteriaMatch(str, Enum):
-    Any = 'ANY'
-    Unknown = 'UNKNOWN'
-    Specific = 'SPECIFIC'
+    Any = 'Any'
+    Unknown = 'Unknown'
+    Specific = 'Specific'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ErrorCriteria(str, Enum):
-    Any = 'ANY'
-    No_Errors = 'NO_ERRORS'
-    Has_Errors = 'HAS_ERRORS'
+    Any = 'Any'
+    No_Errors = 'No_Errors'
+    Has_Errors = 'Has_Errors'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class RecognitionRuleType(str, Enum):
-    Filename_Glob = 'FILENAME_GLOB'
-    Content_Regex = 'CONTENT_REGEX'
-    Xml_Root_Tag = 'XML_ROOT_TAG'
-    Json_Path = 'JSON_PATH'
-    Pgp_Header = 'PGP_HEADER'
-    Edi_Segment = 'EDI_SEGMENT'
+    Filename_Glob = 'Filename_Glob'
+    Content_Regex = 'Content_Regex'
+    Xml_Root_Tag = 'Xml_Root_Tag'
+    Json_Path = 'Json_Path'
+    Pgp_Header = 'Pgp_Header'
+    Edi_Segment = 'Edi_Segment'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ExtractionQueryType(str, Enum):
-    Xpath = 'XPATH'
-    Jsonpath = 'JSONPATH'
-    Regex = 'REGEX'
-    Fixed = 'FIXED'
+    Xpath = 'Xpath'
+    Jsonpath = 'Jsonpath'
+    Regex = 'Regex'
+    Fixed = 'Fixed'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class AttributeType(str, Enum):
-    System = 'SYSTEM'
-    Custom = 'CUSTOM'
+    System = 'System'
+    Custom = 'Custom'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class DataType(str, Enum):
-    String = 'STRING'
-    Number = 'NUMBER'
-    Date = 'DATE'
+    String = 'String'
+    Number = 'Number'
+    Date = 'Date'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class DeliveryMethod(str, Enum):
-    Sftp = 'SFTP'
-    Ftp = 'FTP'
-    Ftps = 'FTPS'
-    Http = 'HTTP'
-    Https = 'HTTPS'
-    Amqp = 'AMQP'
-    Smtp = 'SMTP'
+    Sftp = 'Sftp'
+    Ftp = 'Ftp'
+    Ftps = 'Ftps'
+    Http = 'Http'
+    Https = 'Https'
+    Amqp = 'Amqp'
+    Smtp = 'Smtp'
     S3 = 'S3'
-    Azure_Blob = 'AZURE_BLOB'
-    Receiver_Preferred = 'RECEIVER_PREFERRED'
+    Azure_Blob = 'Azure_Blob'
+    Receiver_Preferred = 'Receiver_Preferred'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class NotificationChannel(str, Enum):
-    Email = 'EMAIL'
-    Webhook = 'WEBHOOK'
-    Pubsub = 'PUBSUB'
+    Email = 'Email'
+    Webhook = 'Webhook'
+    Pubsub = 'Pubsub'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class TaskType(str, Enum):
-    Delivery = 'DELIVERY'
-    Service_Execution = 'SERVICE_EXECUTION'
+    Delivery = 'Delivery'
+    Service_Execution = 'Service_Execution'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class PreprocessStep(str, Enum):
-    Validate = 'VALIDATE'
-    Dedup = 'DEDUP'
-    Pgp_Verify = 'PGP_VERIFY'
-    Checksum = 'CHECKSUM'
-    Save = 'SAVE'
+    Validate = 'Validate'
+    Dedup = 'Dedup'
+    Pgp_Verify = 'Pgp_Verify'
+    Checksum = 'Checksum'
+    Save = 'Save'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class PreprocessOverride(str, Enum):
-    Defer = 'DEFER'
-    Force_On = 'FORCE_ON'
-    Force_Off = 'FORCE_OFF'
+    Defer = 'Defer'
+    Force_On = 'Force_On'
+    Force_Off = 'Force_Off'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class ExtendedCriteriaOperator(str, Enum):
-    Equals = 'EQUALS'
-    Not_Equals = 'NOT_EQUALS'
-    Contains = 'CONTAINS'
-    Begins_With = 'BEGINS_WITH'
-    Ends_With = 'ENDS_WITH'
-    Is_Null = 'IS_NULL'
-    Is_Not_Null = 'IS_NOT_NULL'
-    Greater_Than = 'GREATER_THAN'
-    Less_Than = 'LESS_THAN'
-    Greater_Or_Equal = 'GREATER_OR_EQUAL'
-    Less_Or_Equal = 'LESS_OR_EQUAL'
-    Before = 'BEFORE'
-    After = 'AFTER'
+    Equals = 'Equals'
+    Not_Equals = 'Not_Equals'
+    Contains = 'Contains'
+    Begins_With = 'Begins_With'
+    Ends_With = 'Ends_With'
+    Is_Null = 'Is_Null'
+    Is_Not_Null = 'Is_Not_Null'
+    Greater_Than = 'Greater_Than'
+    Less_Than = 'Less_Than'
+    Greater_Or_Equal = 'Greater_Or_Equal'
+    Less_Or_Equal = 'Less_Or_Equal'
+    Before = 'Before'
+    After = 'After'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class PostProcessingAction(str, Enum):
-    Move = 'MOVE'
-    Delete = 'DELETE'
-    None_ = 'NONE'
+    Move = 'Move'
+    Delete = 'Delete'
+    None_ = 'None'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class KeyType(str, Enum):
-    Public = 'PUBLIC'
-    Private = 'PRIVATE'
+    Public = 'Public'
+    Private = 'Private'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class KeyUsage(str, Enum):
-    Encrypt = 'ENCRYPT'
-    Decrypt = 'DECRYPT'
-    Sign = 'SIGN'
-    Verify = 'VERIFY'
+    Encrypt = 'Encrypt'
+    Decrypt = 'Decrypt'
+    Sign = 'Sign'
+    Verify = 'Verify'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class PickupSourceType(str, Enum):
-    Sftp = 'SFTP'
-    Ftp = 'FTP'
+    Sftp = 'Sftp'
+    Ftp = 'Ftp'
     S3 = 'S3'
-    Azure_Blob = 'AZURE_BLOB'
-    Imap = 'IMAP'
-    Smtp = 'SMTP'
+    Azure_Blob = 'Azure_Blob'
+    Imap = 'Imap'
+    Smtp = 'Smtp'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -252,8 +252,8 @@ REDIS_KEY_PREFIX = 'zato:file-transfer'
 class RedisKey:
 
     @staticmethod
-    def txn(cluster_id, txn_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:txn:{txn_id}'
+    def tx(cluster_id, tx_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:tx:{tx_id}'
 
     @staticmethod
     def doc_type(cluster_id, dt_id):
@@ -268,32 +268,32 @@ class RedisKey:
         return f'{REDIS_KEY_PREFIX}:{cluster_id}:task:{task_id}'
 
     @staticmethod
-    def log_entry(cluster_id, txn_id, seq):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:log:{txn_id}:{seq:04d}'
+    def log_entry(cluster_id, tx_id, seq):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:log:{tx_id}:{seq:04d}'
 
     @staticmethod
     def pgp_key(cluster_id, key_id):
         return f'{REDIS_KEY_PREFIX}:{cluster_id}:pgp-key:{key_id}'
 
     @staticmethod
-    def content(cluster_id, txn_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:content:{txn_id}'
+    def content(cluster_id, tx_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:content:{tx_id}'
 
     @staticmethod
     def settings(cluster_id):
         return f'{REDIS_KEY_PREFIX}:{cluster_id}:settings'
 
     @staticmethod
-    def seq_txn(cluster_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:seq:txn'
+    def seq_tx(cluster_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:seq:tx'
 
     @staticmethod
     def seq_task(cluster_id):
         return f'{REDIS_KEY_PREFIX}:{cluster_id}:seq:task'
 
     @staticmethod
-    def seq_log(cluster_id, txn_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:seq:log:{txn_id}'
+    def seq_log(cluster_id, tx_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:seq:log:{tx_id}'
 
     @staticmethod
     def set_doc_types(cluster_id):
@@ -312,48 +312,48 @@ class RedisKey:
         return f'{REDIS_KEY_PREFIX}:{cluster_id}:set:user-statuses'
 
     @staticmethod
-    def idx_txn_by_created(cluster_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:txn:by-created'
+    def idx_tx_by_created(cluster_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-created'
 
     @staticmethod
-    def idx_txn_by_status(cluster_id, status):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:txn:by-status:{status}'
+    def idx_tx_by_status(cluster_id, status):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-status:{status}'
 
     @staticmethod
-    def idx_txn_by_sender(cluster_id, sender):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:txn:by-sender:{sender}'
+    def idx_tx_by_sender(cluster_id, sender):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-sender:{sender}'
 
     @staticmethod
-    def idx_txn_by_receiver(cluster_id, receiver):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:txn:by-receiver:{receiver}'
+    def idx_tx_by_receiver(cluster_id, receiver):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-receiver:{receiver}'
 
     @staticmethod
-    def idx_txn_by_doc_type(cluster_id, dt_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:txn:by-doc-type:{dt_id}'
+    def idx_tx_by_doc_type(cluster_id, dt_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-doc-type:{dt_id}'
 
     @staticmethod
-    def idx_txn_by_conv(cluster_id, conv_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:txn:by-conv:{conv_id}'
+    def idx_tx_by_conv(cluster_id, conv_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-conv:{conv_id}'
 
     @staticmethod
-    def idx_txn_by_group(cluster_id, group_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:txn:by-group:{group_id}'
+    def idx_tx_by_group(cluster_id, group_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:tx:by-group:{group_id}'
 
     @staticmethod
     def idx_task_by_status(cluster_id, status):
         return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:task:by-status:{status}'
 
     @staticmethod
-    def idx_task_by_txn(cluster_id, txn_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:task:by-txn:{txn_id}'
+    def idx_task_by_tx(cluster_id, tx_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:task:by-tx:{tx_id}'
 
     @staticmethod
     def idx_task_retry_schedule(cluster_id):
         return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:task:retry-schedule'
 
     @staticmethod
-    def idx_log_by_txn(cluster_id, txn_id):
-        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:log:by-txn:{txn_id}'
+    def idx_log_by_tx(cluster_id, tx_id):
+        return f'{REDIS_KEY_PREFIX}:{cluster_id}:idx:log:by-tx:{tx_id}'
 
     @staticmethod
     def idx_log_by_class(cluster_id, activity_class):

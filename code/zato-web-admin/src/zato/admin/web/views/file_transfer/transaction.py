@@ -79,9 +79,9 @@ class Index:
 # ################################################################################################################################
 
 @method_allowed('GET')
-def transaction_detail(req:'HttpRequest', txn_id:'str') -> 'HttpResponse':
+def transaction_detail(req:'HttpRequest', tx_id:'str') -> 'HttpResponse':
 
-    response = req.zato.client.invoke('file-transfer.transaction.get', {'id': txn_id})
+    response = req.zato.client.invoke('file-transfer.transaction.get', {'id': tx_id})
 
     if not response.ok:
         return HttpResponseServerError('Transaction not found')
@@ -94,9 +94,9 @@ def transaction_detail(req:'HttpRequest', txn_id:'str') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def transaction_content(req:'HttpRequest', txn_id:'str') -> 'HttpResponse':
+def transaction_content(req:'HttpRequest', tx_id:'str') -> 'HttpResponse':
 
-    response = req.zato.client.invoke('file-transfer.transaction.get-content', {'id': txn_id})
+    response = req.zato.client.invoke('file-transfer.transaction.get-content', {'id': tx_id})
 
     if not response.ok:
         return HttpResponseServerError('Content not found')
@@ -114,35 +114,35 @@ def transaction_content(req:'HttpRequest', txn_id:'str') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('GET')
-def transaction_activity(req:'HttpRequest', txn_id:'str') -> 'HttpResponse':
+def transaction_activity(req:'HttpRequest', tx_id:'str') -> 'HttpResponse':
 
-    response = req.zato.client.invoke('file-transfer.transaction.get-activity', {'id': txn_id})
+    response = req.zato.client.invoke('file-transfer.transaction.get-activity', {'id': tx_id})
 
     return TemplateResponse(req, 'zato/file_transfer/transaction/activity.html', {
         'entries': response.data if response.ok else [],
-        'txn_id': txn_id,
+        'tx_id': tx_id,
     })
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('GET')
-def transaction_tasks(req:'HttpRequest', txn_id:'str') -> 'HttpResponse':
+def transaction_tasks(req:'HttpRequest', tx_id:'str') -> 'HttpResponse':
 
-    response = req.zato.client.invoke('file-transfer.transaction.get-tasks', {'id': txn_id})
+    response = req.zato.client.invoke('file-transfer.transaction.get-tasks', {'id': tx_id})
 
     return TemplateResponse(req, 'zato/file_transfer/transaction/tasks.html', {
         'tasks': response.data if response.ok else [],
-        'txn_id': txn_id,
+        'tx_id': tx_id,
     })
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
-def transaction_resubmit(req:'HttpRequest', txn_id:'str') -> 'HttpResponse':
+def transaction_resubmit(req:'HttpRequest', tx_id:'str') -> 'HttpResponse':
 
-    response = req.zato.client.invoke('file-transfer.transaction.resubmit', {'id': txn_id})
+    response = req.zato.client.invoke('file-transfer.transaction.resubmit', {'id': tx_id})
 
     if response.ok:
         new_id = response.data.get('new_id', '')
@@ -154,9 +154,9 @@ def transaction_resubmit(req:'HttpRequest', txn_id:'str') -> 'HttpResponse':
 # ################################################################################################################################
 
 @method_allowed('POST')
-def transaction_reprocess(req:'HttpRequest', txn_id:'str') -> 'HttpResponse':
+def transaction_reprocess(req:'HttpRequest', tx_id:'str') -> 'HttpResponse':
 
-    response = req.zato.client.invoke('file-transfer.transaction.reprocess', {'id': txn_id})
+    response = req.zato.client.invoke('file-transfer.transaction.reprocess', {'id': tx_id})
 
     if response.ok:
         return HttpResponse('{"ok": true}', content_type='application/json')

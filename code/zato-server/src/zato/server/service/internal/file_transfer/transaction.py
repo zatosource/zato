@@ -6,10 +6,15 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import logging
+
 # Zato
 from zato.common.file_transfer.engine import FileTransferEngine
 from zato.common.file_transfer.redis_store import FileTransferRedisStore
 from zato.server.service import Service
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -24,9 +29,12 @@ class Search(Service):
     name = 'file-transfer.transaction.search'
 
     def handle(self):
+        logger.info('Search.handle called')
+
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         input = self.request.raw_request or {}
+        logger.info('Search input: %s', input)
 
         date_from = input.get('date_from')
         date_to = input.get('date_to')
@@ -45,6 +53,10 @@ class Search(Service):
             limit=int(input.get('limit') or 100),
             offset=int(input.get('offset') or 0),
         )
+
+        logger.info('Search result: total=%s, items_count=%s', result.total, len(result.items))
+        for t in result.items:
+            logger.info('Transaction: id=%s, status=%s', t.id, t.processing_status)
 
         self.response.payload = [
             {
@@ -68,15 +80,15 @@ class Get(Service):
 
     def handle(self):
         input = self.request.raw_request or {}
-        txn_id = input.get('id')
+        tx_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        txn = store.get_transaction(txn_id)
+        tx = store.get_transaction(tx_id)
 
-        if not txn:
+        if not tx:
             self.response.payload = {}
             return
 
-        self.response.payload = txn.to_dict()
+        self.response.payload = tx.to_dict()
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -86,9 +98,9 @@ class GetContent(Service):
 
     def handle(self):
         input = self.request.raw_request or {}
-        txn_id = input.get('id')
+        tx_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        content = store.get_content(txn_id)
+        content = store.get_content(tx_id)
 
         if content:
             self.response.payload = content
@@ -103,9 +115,9 @@ class GetActivity(Service):
 
     def handle(self):
         input = self.request.raw_request or {}
-        txn_id = input.get('id')
+        tx_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        entries = store.get_logs_for_transaction(txn_id)
+        entries = store.get_logs_for_transaction(tx_id)
 
         self.response.payload = [
             {
@@ -128,9 +140,9 @@ class GetTasks(Service):
 
     def handle(self):
         input = self.request.raw_request or {}
-        txn_id = input.get('id')
+        tx_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
-        tasks = store.get_tasks_for_transaction(txn_id)
+        tasks = store.get_tasks_for_transaction(tx_id)
 
         self.response.payload = [
             {
@@ -155,16 +167,16 @@ class Resubmit(Service):
 
     def handle(self):
         input = self.request.raw_request or {}
-        txn_id = input.get('id')
+        tx_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         engine = FileTransferEngine(store)
 
-        new_txn = engine.resubmit(txn_id)
+        new_tx = engine.resubmit(tx_id)
 
-        if new_txn:
-            self.response.payload = {'new_id': new_txn.id}
+        if new_tx:
+            self.response.payload = {'new_id': new_tx.id}
         else:
-            raise ValueError(f'Could not resubmit transaction: {txn_id}')
+            raise ValueError(f'Could not resubmit transaction: {tx_id}')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -174,16 +186,16 @@ class Reprocess(Service):
 
     def handle(self):
         input = self.request.raw_request or {}
-        txn_id = input.get('id')
+        tx_id = input.get('id')
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
         engine = FileTransferEngine(store)
 
-        txn = engine.reprocess(txn_id)
+        tx = engine.reprocess(tx_id)
 
-        if txn:
-            self.response.payload = {'id': txn.id}
+        if tx:
+            self.response.payload = {'id': tx.id}
         else:
-            raise ValueError(f'Could not reprocess transaction: {txn_id}')
+            raise ValueError(f'Could not reprocess transaction: {tx_id}')
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -42,7 +42,7 @@ class ActionExecutor:
     def execute(
         self,
         action:'RuleAction',
-        txn:'Transaction',
+        tx:'Transaction',
         content:'bytes'=None,
     ) -> 'ActionResult':
 
@@ -51,16 +51,16 @@ class ActionExecutor:
             action_type = ActionType(action_type)
 
         if action_type == ActionType.Execute_Service:
-            return self._execute_service(action, txn, content)
+            return self._execute_service(action, tx, content)
 
         elif action_type == ActionType.Deliver:
-            return self._deliver_document(action, txn, content)
+            return self._deliver_document(action, tx, content)
 
         elif action_type == ActionType.Notify:
-            return self._send_notification(action, txn)
+            return self._send_notification(action, tx)
 
         elif action_type == ActionType.Change_Status:
-            return self._change_user_status(action, txn)
+            return self._change_user_status(action, tx)
 
         return ActionResult(is_ok=False, error=f'Unknown action type: {action_type}')
 
@@ -69,7 +69,7 @@ class ActionExecutor:
     def _execute_service(
         self,
         action:'RuleAction',
-        txn:'Transaction',
+        tx:'Transaction',
         content:'bytes',
     ) -> 'ActionResult':
 
@@ -80,7 +80,7 @@ class ActionExecutor:
         if exec_mode == ExecMode.Reliable:
             task = Task(
                 id=self.store.next_task_id(),
-                transaction_id=txn.id,
+                transaction_id=tx.id,
                 task_type=TaskType.Service_Execution,
                 status=TaskStatus.New,
                 created=time.time(),
@@ -96,13 +96,13 @@ class ActionExecutor:
         if self.service_invoker:
             try:
                 request_data = {
-                    'transaction_id': txn.id,
-                    'filename': txn.filename,
-                    'sender': txn.sender,
-                    'receiver': txn.receiver,
-                    'document_id': txn.document_id,
-                    'doc_type_id': txn.doc_type_id,
-                    'custom_attrs': txn.custom_attrs,
+                    'transaction_id': tx.id,
+                    'filename': tx.filename,
+                    'sender': tx.sender,
+                    'receiver': tx.receiver,
+                    'document_id': tx.document_id,
+                    'doc_type_id': tx.doc_type_id,
+                    'custom_attrs': tx.custom_attrs,
                 }
                 if content:
                     request_data['content'] = content
@@ -124,13 +124,13 @@ class ActionExecutor:
     def _deliver_document(
         self,
         action:'RuleAction',
-        txn:'Transaction',
+        tx:'Transaction',
         content:'bytes',
     ) -> 'ActionResult':
 
         task = Task(
             id=self.store.next_task_id(),
-            transaction_id=txn.id,
+            transaction_id=tx.id,
             task_type=TaskType.Delivery,
             status=TaskStatus.New,
             created=time.time(),
@@ -150,11 +150,11 @@ class ActionExecutor:
     def _send_notification(
         self,
         action:'RuleAction',
-        txn:'Transaction',
+        tx:'Transaction',
     ) -> 'ActionResult':
 
-        subject = self._expand_template(action.subject, txn)
-        body = self._expand_template(action.body, txn)
+        subject = self._expand_template(action.subject, tx)
+        body = self._expand_template(action.body, tx)
 
         if self.notification_sender:
             try:
@@ -175,34 +175,34 @@ class ActionExecutor:
     def _change_user_status(
         self,
         action:'RuleAction',
-        txn:'Transaction',
+        tx:'Transaction',
     ) -> 'ActionResult':
 
-        txn.user_status = action.new_status
-        self.store.update_transaction(txn)
+        tx.user_status = action.new_status
+        self.store.update_transaction(tx)
         return ActionResult()
 
 # ################################################################################################################################
 
-    def _expand_template(self, template:'str', txn:'Transaction') -> 'str':
+    def _expand_template(self, template:'str', tx:'Transaction') -> 'str':
 
         if not template:
             return ''
 
         replacements = {
-            'transaction_id': txn.id,
-            'filename': txn.filename,
-            'sender': txn.sender,
-            'receiver': txn.receiver,
-            'document_id': txn.document_id,
-            'doc_type': txn.doc_type_id,
-            'processing_status': txn.processing_status.value if hasattr(txn.processing_status, 'value') else str(txn.processing_status),
-            'user_status': txn.user_status,
-            'file_size': str(txn.file_size),
-            'date': str(txn.created),
+            'transaction_id': tx.id,
+            'filename': tx.filename,
+            'sender': tx.sender,
+            'receiver': tx.receiver,
+            'document_id': tx.document_id,
+            'doc_type': tx.doc_type_id,
+            'processing_status': tx.processing_status.value if hasattr(tx.processing_status, 'value') else str(tx.processing_status),
+            'user_status': tx.user_status,
+            'file_size': str(tx.file_size),
+            'date': str(tx.created),
         }
 
-        for key, value in txn.custom_attrs.items():
+        for key, value in tx.custom_attrs.items():
             replacements[key] = str(value)
 
         result = template

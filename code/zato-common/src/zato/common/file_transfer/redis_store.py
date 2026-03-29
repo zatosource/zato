@@ -7,7 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 import time
+
+logger = logging.getLogger(__name__)
 
 # Zato
 from zato.common.file_transfer.const import (
@@ -16,6 +19,7 @@ from zato.common.file_transfer.const import (
     Severity,
     TaskStatus,
 )
+from zato.common.util.api import new_cid
 from zato.common.file_transfer.model import (
     ActivityLogEntry,
     DocumentType,
@@ -48,79 +52,83 @@ class FileTransferRedisStore:
 # ID generation
 # ################################################################################################################################
 
-    def next_txn_id(self) -> 'str':
-        seq = self.redis.incr(RedisKey.seq_txn(self.cluster_id))
-        return f'TXN-{seq:05d}'
+    def next_tx_id(self) -> 'str':
+        return new_cid()
 
     def next_task_id(self) -> 'str':
         seq = self.redis.incr(RedisKey.seq_task(self.cluster_id))
         return f'TSK-{seq:05d}'
 
-    def next_log_seq(self, txn_id:'str') -> 'int':
-        return self.redis.incr(RedisKey.seq_log(self.cluster_id, txn_id))
+    def next_log_seq(self, tx_id:'str') -> 'int':
+        return self.redis.incr(RedisKey.seq_log(self.cluster_id, tx_id))
 
 # ################################################################################################################################
 # Transaction CRUD
 # ################################################################################################################################
 
-    def create_transaction(self, txn:'Transaction') -> 'None':
-        key = RedisKey.txn(self.cluster_id, txn.id)
-        self.redis.hset(key, mapping=txn.to_dict())
-        self._add_txn_to_indexes(txn)
+    def create_transaction(self, tx:'Transaction') -> 'None':
+        logger.info('create_transaction called: cluster_id=%s, tx.id=%s, tx.created=%s', self.cluster_id, tx.id, tx.created)
+        key = RedisKey.tx(self.cluster_id, tx.id)
+        logger.info('create_transaction: key=%s', key)
+        self.redis.hset(key, mapping=tx.to_dict())
+        self._add_tx_to_indexes(tx)
 
-    def get_transaction(self, txn_id:'str') -> 'Transaction | None':
-        key = RedisKey.txn(self.cluster_id, txn_id)
+    def get_transaction(self, tx_id:'str') -> 'Transaction | None':
+        key = RedisKey.tx(self.cluster_id, tx_id)
         data = self.redis.hgetall(key)
         if not data:
             return None
         decoded = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in data.items()}
         return Transaction.from_dict(decoded)
 
-    def update_transaction(self, txn:'Transaction') -> 'None':
-        key = RedisKey.txn(self.cluster_id, txn.id)
-        old_txn = self.get_transaction(txn.id)
-        if old_txn:
-            self._remove_txn_from_indexes(old_txn)
-        self.redis.hset(key, mapping=txn.to_dict())
-        self._add_txn_to_indexes(txn)
+    def update_transaction(self, tx:'Transaction') -> 'None':
+        key = RedisKey.tx(self.cluster_id, tx.id)
+        old_tx = self.get_transaction(tx.id)
+        if old_tx:
+            self._remove_tx_from_indexes(old_tx)
+        self.redis.hset(key, mapping=tx.to_dict())
+        self._add_tx_to_indexes(tx)
 
-    def delete_transaction(self, txn_id:'str') -> 'None':
-        txn = self.get_transaction(txn_id)
-        if txn:
-            self._remove_txn_from_indexes(txn)
-            self.redis.delete(RedisKey.txn(self.cluster_id, txn_id))
-            self.redis.delete(RedisKey.content(self.cluster_id, txn_id))
+    def delete_transaction(self, tx_id:'str') -> 'None':
+        tx = self.get_transaction(tx_id)
+        if tx:
+            self._remove_tx_from_indexes(tx)
+            self.redis.delete(RedisKey.tx(self.cluster_id, tx_id))
+            self.redis.delete(RedisKey.content(self.cluster_id, tx_id))
 
-    def _add_txn_to_indexes(self, txn:'Transaction') -> 'None':
-        score = txn.created
-        self.redis.zadd(RedisKey.idx_txn_by_created(self.cluster_id), {txn.id: score})
-        status_val = txn.processing_status.value if isinstance(txn.processing_status, ProcessingStatus) else txn.processing_status
-        self.redis.zadd(RedisKey.idx_txn_by_status(self.cluster_id, status_val), {txn.id: score})
-        if txn.sender:
-            self.redis.zadd(RedisKey.idx_txn_by_sender(self.cluster_id, txn.sender), {txn.id: score})
-        if txn.receiver:
-            self.redis.zadd(RedisKey.idx_txn_by_receiver(self.cluster_id, txn.receiver), {txn.id: score})
-        if txn.doc_type_id:
-            self.redis.zadd(RedisKey.idx_txn_by_doc_type(self.cluster_id, txn.doc_type_id), {txn.id: score})
-        if txn.conversation_id:
-            self.redis.zadd(RedisKey.idx_txn_by_conv(self.cluster_id, txn.conversation_id), {txn.id: score})
-        if txn.group_id:
-            self.redis.zadd(RedisKey.idx_txn_by_group(self.cluster_id, txn.group_id), {txn.id: score})
+    def _add_tx_to_indexes(self, tx:'Transaction') -> 'None':
+        score = tx.created
+        idx_key = RedisKey.idx_tx_by_created(self.cluster_id)
+        logger.info('_add_tx_to_indexes: idx_key=%s, tx.id=%s, score=%s', idx_key, tx.id, score)
+        result = self.redis.zadd(idx_key, {tx.id: score})
+        logger.info('_add_tx_to_indexes: zadd result=%s', result)
+        status_val = tx.processing_status.value if isinstance(tx.processing_status, ProcessingStatus) else tx.processing_status
+        self.redis.zadd(RedisKey.idx_tx_by_status(self.cluster_id, status_val), {tx.id: score})
+        if tx.sender:
+            self.redis.zadd(RedisKey.idx_tx_by_sender(self.cluster_id, tx.sender), {tx.id: score})
+        if tx.receiver:
+            self.redis.zadd(RedisKey.idx_tx_by_receiver(self.cluster_id, tx.receiver), {tx.id: score})
+        if tx.doc_type_id:
+            self.redis.zadd(RedisKey.idx_tx_by_doc_type(self.cluster_id, tx.doc_type_id), {tx.id: score})
+        if tx.conversation_id:
+            self.redis.zadd(RedisKey.idx_tx_by_conv(self.cluster_id, tx.conversation_id), {tx.id: score})
+        if tx.group_id:
+            self.redis.zadd(RedisKey.idx_tx_by_group(self.cluster_id, tx.group_id), {tx.id: score})
 
-    def _remove_txn_from_indexes(self, txn:'Transaction') -> 'None':
-        self.redis.zrem(RedisKey.idx_txn_by_created(self.cluster_id), txn.id)
-        status_val = txn.processing_status.value if isinstance(txn.processing_status, ProcessingStatus) else txn.processing_status
-        self.redis.zrem(RedisKey.idx_txn_by_status(self.cluster_id, status_val), txn.id)
-        if txn.sender:
-            self.redis.zrem(RedisKey.idx_txn_by_sender(self.cluster_id, txn.sender), txn.id)
-        if txn.receiver:
-            self.redis.zrem(RedisKey.idx_txn_by_receiver(self.cluster_id, txn.receiver), txn.id)
-        if txn.doc_type_id:
-            self.redis.zrem(RedisKey.idx_txn_by_doc_type(self.cluster_id, txn.doc_type_id), txn.id)
-        if txn.conversation_id:
-            self.redis.zrem(RedisKey.idx_txn_by_conv(self.cluster_id, txn.conversation_id), txn.id)
-        if txn.group_id:
-            self.redis.zrem(RedisKey.idx_txn_by_group(self.cluster_id, txn.group_id), txn.id)
+    def _remove_tx_from_indexes(self, tx:'Transaction') -> 'None':
+        self.redis.zrem(RedisKey.idx_tx_by_created(self.cluster_id), tx.id)
+        status_val = tx.processing_status.value if isinstance(tx.processing_status, ProcessingStatus) else tx.processing_status
+        self.redis.zrem(RedisKey.idx_tx_by_status(self.cluster_id, status_val), tx.id)
+        if tx.sender:
+            self.redis.zrem(RedisKey.idx_tx_by_sender(self.cluster_id, tx.sender), tx.id)
+        if tx.receiver:
+            self.redis.zrem(RedisKey.idx_tx_by_receiver(self.cluster_id, tx.receiver), tx.id)
+        if tx.doc_type_id:
+            self.redis.zrem(RedisKey.idx_tx_by_doc_type(self.cluster_id, tx.doc_type_id), tx.id)
+        if tx.conversation_id:
+            self.redis.zrem(RedisKey.idx_tx_by_conv(self.cluster_id, tx.conversation_id), tx.id)
+        if tx.group_id:
+            self.redis.zrem(RedisKey.idx_tx_by_group(self.cluster_id, tx.group_id), tx.id)
 
 # ################################################################################################################################
 # Transaction search
@@ -138,44 +146,51 @@ class FileTransferRedisStore:
         offset:'int'=0,
     ) -> 'SearchResult':
 
-        if date_from is None:
+        logger.info('search_transactions called: cluster_id=%s, date_from=%s, date_to=%s, status=%s, sender=%s, receiver=%s, doc_type_id=%s',
+                    self.cluster_id, date_from, date_to, status, sender, receiver, doc_type_id)
+
+        if not date_from:
             date_from = 0
-        if date_to is None:
+        if not date_to:
             date_to = float('inf')
 
         candidate_sets = []
 
         if status:
-            candidate_sets.append(RedisKey.idx_txn_by_status(self.cluster_id, status))
+            candidate_sets.append(RedisKey.idx_tx_by_status(self.cluster_id, status))
         if sender:
-            candidate_sets.append(RedisKey.idx_txn_by_sender(self.cluster_id, sender))
+            candidate_sets.append(RedisKey.idx_tx_by_sender(self.cluster_id, sender))
         if receiver:
-            candidate_sets.append(RedisKey.idx_txn_by_receiver(self.cluster_id, receiver))
+            candidate_sets.append(RedisKey.idx_tx_by_receiver(self.cluster_id, receiver))
         if doc_type_id:
-            candidate_sets.append(RedisKey.idx_txn_by_doc_type(self.cluster_id, doc_type_id))
+            candidate_sets.append(RedisKey.idx_tx_by_doc_type(self.cluster_id, doc_type_id))
 
         if not candidate_sets:
-            base_key = RedisKey.idx_txn_by_created(self.cluster_id)
+            base_key = RedisKey.idx_tx_by_created(self.cluster_id)
         elif len(candidate_sets) == 1:
             base_key = candidate_sets[0]
         else:
-            temp_key = f'{RedisKey.idx_txn_by_created(self.cluster_id)}:temp:{time.time()}'
+            temp_key = f'{RedisKey.idx_tx_by_created(self.cluster_id)}:temp:{time.time()}'
             self.redis.zinterstore(temp_key, candidate_sets)
             base_key = temp_key
 
+        logger.info('search_transactions: base_key=%s', base_key)
+
         total = self.redis.zcount(base_key, date_from, date_to)
-        txn_ids = self.redis.zrevrangebyscore(base_key, date_to, date_from, start=offset, num=limit)
+        tx_ids = self.redis.zrevrangebyscore(base_key, date_to, date_from, start=offset, num=limit)
+
+        logger.info('search_transactions: total=%s, tx_ids=%s', total, tx_ids)
 
         if len(candidate_sets) > 1:
             self.redis.delete(base_key)
 
         transactions = []
-        for txn_id in txn_ids:
-            if isinstance(txn_id, bytes):
-                txn_id = txn_id.decode()
-            txn = self.get_transaction(txn_id)
-            if txn:
-                transactions.append(txn)
+        for tx_id in tx_ids:
+            if isinstance(tx_id, bytes):
+                tx_id = tx_id.decode()
+            tx = self.get_transaction(tx_id)
+            if tx:
+                transactions.append(tx)
 
         return SearchResult(items=transactions, total=total)
 
@@ -183,16 +198,16 @@ class FileTransferRedisStore:
 # Content storage
 # ################################################################################################################################
 
-    def save_content(self, txn_id:'str', content:'bytes') -> 'None':
-        key = RedisKey.content(self.cluster_id, txn_id)
+    def save_content(self, tx_id:'str', content:'bytes') -> 'None':
+        key = RedisKey.content(self.cluster_id, tx_id)
         self.redis.set(key, content)
 
-    def get_content(self, txn_id:'str') -> 'bytes | None':
-        key = RedisKey.content(self.cluster_id, txn_id)
+    def get_content(self, tx_id:'str') -> 'bytes | None':
+        key = RedisKey.content(self.cluster_id, tx_id)
         return self.redis.get(key)
 
-    def delete_content(self, txn_id:'str') -> 'None':
-        key = RedisKey.content(self.cluster_id, txn_id)
+    def delete_content(self, tx_id:'str') -> 'None':
+        key = RedisKey.content(self.cluster_id, tx_id)
         self.redis.delete(key)
 
 # ################################################################################################################################
@@ -318,18 +333,18 @@ class FileTransferRedisStore:
         score = task.created
         status_val = task.status.value if isinstance(task.status, TaskStatus) else task.status
         self.redis.zadd(RedisKey.idx_task_by_status(self.cluster_id, status_val), {task.id: score})
-        self.redis.zadd(RedisKey.idx_task_by_txn(self.cluster_id, task.transaction_id), {task.id: score})
+        self.redis.zadd(RedisKey.idx_task_by_tx(self.cluster_id, task.transaction_id), {task.id: score})
         if task.next_retry_at:
             self.redis.zadd(RedisKey.idx_task_retry_schedule(self.cluster_id), {task.id: task.next_retry_at})
 
     def _remove_task_from_indexes(self, task:'Task') -> 'None':
         status_val = task.status.value if isinstance(task.status, TaskStatus) else task.status
         self.redis.zrem(RedisKey.idx_task_by_status(self.cluster_id, status_val), task.id)
-        self.redis.zrem(RedisKey.idx_task_by_txn(self.cluster_id, task.transaction_id), task.id)
+        self.redis.zrem(RedisKey.idx_task_by_tx(self.cluster_id, task.transaction_id), task.id)
         self.redis.zrem(RedisKey.idx_task_retry_schedule(self.cluster_id), task.id)
 
-    def get_tasks_for_transaction(self, txn_id:'str') -> 'list[Task]':
-        task_ids = self.redis.zrange(RedisKey.idx_task_by_txn(self.cluster_id, txn_id), 0, -1)
+    def get_tasks_for_transaction(self, tx_id:'str') -> 'list[Task]':
+        task_ids = self.redis.zrange(RedisKey.idx_task_by_tx(self.cluster_id, tx_id), 0, -1)
         tasks = []
         for task_id in task_ids:
             if isinstance(task_id, bytes):
@@ -363,22 +378,22 @@ class FileTransferRedisStore:
     def create_log_entry(self, entry:'ActivityLogEntry') -> 'None':
         key = RedisKey.log_entry(self.cluster_id, entry.transaction_id, int(entry.id.split(':')[-1]))
         self.redis.hset(key, mapping=entry.to_dict())
-        self.redis.zadd(RedisKey.idx_log_by_txn(self.cluster_id, entry.transaction_id), {entry.id: entry.timestamp})
+        self.redis.zadd(RedisKey.idx_log_by_tx(self.cluster_id, entry.transaction_id), {entry.id: entry.timestamp})
         activity_class_val = entry.activity_class.value if hasattr(entry.activity_class, 'value') else entry.activity_class
         self.redis.zadd(RedisKey.idx_log_by_class(self.cluster_id, activity_class_val), {entry.id: entry.timestamp})
         severity_val = entry.severity.value if isinstance(entry.severity, Severity) else entry.severity
         self.redis.zadd(RedisKey.idx_log_by_severity(self.cluster_id, severity_val), {entry.id: entry.timestamp})
         self.redis.zadd(RedisKey.idx_log_global(self.cluster_id), {entry.id: entry.timestamp})
 
-    def get_logs_for_transaction(self, txn_id:'str') -> 'list[ActivityLogEntry]':
-        entry_ids = self.redis.zrange(RedisKey.idx_log_by_txn(self.cluster_id, txn_id), 0, -1)
+    def get_logs_for_transaction(self, tx_id:'str') -> 'list[ActivityLogEntry]':
+        entry_ids = self.redis.zrange(RedisKey.idx_log_by_tx(self.cluster_id, tx_id), 0, -1)
         entries = []
         for entry_id in entry_ids:
             if isinstance(entry_id, bytes):
                 entry_id = entry_id.decode()
             parts = entry_id.split(':')
             seq = int(parts[-1])
-            key = RedisKey.log_entry(self.cluster_id, txn_id, seq)
+            key = RedisKey.log_entry(self.cluster_id, tx_id, seq)
             data = self.redis.hgetall(key)
             if data:
                 decoded = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in data.items()}
@@ -415,9 +430,9 @@ class FileTransferRedisStore:
             if isinstance(entry_id, bytes):
                 entry_id = entry_id.decode()
             parts = entry_id.split(':')
-            txn_id = parts[0]
+            tx_id = parts[0]
             seq = int(parts[-1])
-            key = RedisKey.log_entry(self.cluster_id, txn_id, seq)
+            key = RedisKey.log_entry(self.cluster_id, tx_id, seq)
             data = self.redis.hgetall(key)
             if data:
                 decoded = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in data.items()}
@@ -502,9 +517,9 @@ class FileTransferRedisStore:
             return result.decode() if isinstance(result, bytes) else result
         return None
 
-    def set_dedup_key(self, doc_id:'str', sender:'str', doc_type_id:'str', txn_id:'str', ttl_seconds:'int') -> 'None':
+    def set_dedup_key(self, doc_id:'str', sender:'str', doc_type_id:'str', tx_id:'str', ttl_seconds:'int') -> 'None':
         key = RedisKey.dedup(self.cluster_id, doc_id, sender, doc_type_id)
-        self.redis.set(key, txn_id, ex=ttl_seconds)
+        self.redis.set(key, tx_id, ex=ttl_seconds)
 
 # ################################################################################################################################
 # Pickup channels

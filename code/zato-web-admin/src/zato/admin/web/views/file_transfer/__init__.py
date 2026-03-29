@@ -60,3 +60,8 @@ from zato.admin.web.views.file_transfer.pickup_channel import (
     pickup_channel_edit,
     pickup_channel_delete,
 )
+
+from zato.admin.web.views.file_transfer.submit import (
+    Index as SubmitIndex,
+    submit_file,
+)

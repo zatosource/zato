@@ -86,38 +86,38 @@ class ArchivalJob:
         cluster_id = self.store.cluster_id
 
         while True:
-            txn_ids = self.store.redis.zrangebyscore(
-                RedisKey.idx_txn_by_created(cluster_id),
+            tx_ids = self.store.redis.zrangebyscore(
+                RedisKey.idx_tx_by_created(cluster_id),
                 0,
                 cutoff_timestamp,
                 start=0,
                 num=self.batch_size,
             )
 
-            if not txn_ids:
+            if not tx_ids:
                 break
 
-            for txn_id in txn_ids:
-                if isinstance(txn_id, bytes):
-                    txn_id = txn_id.decode()
+            for tx_id in tx_ids:
+                if isinstance(tx_id, bytes):
+                    tx_id = tx_id.decode()
 
                 try:
-                    self._archive_transaction(txn_id)
+                    self._archive_transaction(tx_id)
                     total_archived += 1
                 except Exception as e:
-                    logger.warning('Failed to archive transaction %s: %s', txn_id, e)
+                    logger.warning('Failed to archive transaction %s: %s', tx_id, e)
 
         logger.info('Archived %d transactions older than %d days', total_archived, archive_after_days)
         return total_archived
 
 # ################################################################################################################################
 
-    def _archive_transaction(self, txn_id:'str') -> 'None':
+    def _archive_transaction(self, tx_id:'str') -> 'None':
 
         cluster_id = self.store.cluster_id
 
         log_entry_ids = self.store.redis.zrange(
-            RedisKey.idx_log_by_txn(cluster_id, txn_id),
+            RedisKey.idx_log_by_tx(cluster_id, tx_id),
             0,
             -1,
         )
@@ -128,13 +128,13 @@ class ArchivalJob:
 
             parts = entry_id.split(':')
             seq = int(parts[-1])
-            log_key = RedisKey.log_entry(cluster_id, txn_id, seq)
+            log_key = RedisKey.log_entry(cluster_id, tx_id, seq)
             self.store.redis.delete(log_key)
 
-        self.store.redis.delete(RedisKey.idx_log_by_txn(cluster_id, txn_id))
+        self.store.redis.delete(RedisKey.idx_log_by_tx(cluster_id, tx_id))
 
         task_ids = self.store.redis.zrange(
-            RedisKey.idx_task_by_txn(cluster_id, txn_id),
+            RedisKey.idx_task_by_tx(cluster_id, tx_id),
             0,
             -1,
         )
@@ -144,7 +144,7 @@ class ArchivalJob:
                 task_id = task_id.decode()
             self.store.delete_task(task_id)
 
-        self.store.delete_transaction(txn_id)
+        self.store.delete_transaction(tx_id)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -237,10 +237,10 @@ class LogRetentionJob:
         cluster_id = self.store.cluster_id
 
         parts = entry_id.split(':')
-        txn_id = parts[0]
+        tx_id = parts[0]
         seq = int(parts[-1])
 
-        log_key = RedisKey.log_entry(cluster_id, txn_id, seq)
+        log_key = RedisKey.log_entry(cluster_id, tx_id, seq)
         data = self.store.redis.hgetall(log_key)
 
         if data:
@@ -253,7 +253,7 @@ class LogRetentionJob:
             self.store.redis.zrem(RedisKey.idx_log_by_severity(cluster_id, severity), entry_id)
 
         self.store.redis.zrem(RedisKey.idx_log_global(cluster_id), entry_id)
-        self.store.redis.zrem(RedisKey.idx_log_by_txn(cluster_id, txn_id), entry_id)
+        self.store.redis.zrem(RedisKey.idx_log_by_tx(cluster_id, tx_id), entry_id)
         self.store.redis.delete(log_key)
 
 # ################################################################################################################################

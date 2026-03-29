@@ -960,17 +960,17 @@ urlpatterns += [
 
     url(r'^zato/file-transfer/transaction/$',
         login_required(file_transfer.TransactionIndex()), name='file-transfer-transaction'),
-    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/$',
+    url(r'^zato/file-transfer/transaction/(?P<tx_id>[^/]+)/$',
         login_required(file_transfer.transaction_detail), name='file-transfer-transaction-detail'),
-    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/content/$',
+    url(r'^zato/file-transfer/transaction/(?P<tx_id>[^/]+)/content/$',
         login_required(file_transfer.transaction_content), name='file-transfer-transaction-content'),
-    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/activity/$',
+    url(r'^zato/file-transfer/transaction/(?P<tx_id>[^/]+)/activity/$',
         login_required(file_transfer.transaction_activity), name='file-transfer-transaction-activity'),
-    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/tasks/$',
+    url(r'^zato/file-transfer/transaction/(?P<tx_id>[^/]+)/tasks/$',
         login_required(file_transfer.transaction_tasks), name='file-transfer-transaction-tasks'),
-    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/resubmit/$',
+    url(r'^zato/file-transfer/transaction/(?P<tx_id>[^/]+)/resubmit/$',
         login_required(file_transfer.transaction_resubmit), name='file-transfer-transaction-resubmit'),
-    url(r'^zato/file-transfer/transaction/(?P<txn_id>[^/]+)/reprocess/$',
+    url(r'^zato/file-transfer/transaction/(?P<tx_id>[^/]+)/reprocess/$',
         login_required(file_transfer.transaction_reprocess), name='file-transfer-transaction-reprocess'),
 
     # File transfer - Processing rules
@@ -1041,6 +1041,13 @@ urlpatterns += [
         login_required(file_transfer.pickup_channel_edit), name='file-transfer-pickup-channel-edit'),
     url(r'^zato/file-transfer/pickup-channel/(?P<channel_id>[^/]+)/delete/$',
         login_required(file_transfer.pickup_channel_delete), name='file-transfer-pickup-channel-delete'),
+
+    # File transfer - Submit
+
+    url(r'^zato/file-transfer/submit/$',
+        login_required(file_transfer.SubmitIndex()), name='file-transfer-submit'),
+    url(r'^zato/file-transfer/submit/file/$',
+        login_required(file_transfer.submit_file), name='file-transfer-submit-file'),
 ]
 
 # ################################################################################################################################

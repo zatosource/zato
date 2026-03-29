@@ -39,7 +39,7 @@ class TaskManager:
 
     def create_delivery_task(
         self,
-        txn_id:'str',
+        tx_id:'str',
         protocol:'str',
         detail:'str',
         max_retries:'int'=3,
@@ -49,7 +49,7 @@ class TaskManager:
 
         task = Task(
             id=self.store.next_task_id(),
-            transaction_id=txn_id,
+            transaction_id=tx_id,
             task_type=TaskType.Delivery,
             status=TaskStatus.New,
             created=time.time(),
@@ -68,7 +68,7 @@ class TaskManager:
 
     def create_service_task(
         self,
-        txn_id:'str',
+        tx_id:'str',
         service_name:'str',
         max_retries:'int'=3,
         retry_wait_ms:'int'=60000,
@@ -77,7 +77,7 @@ class TaskManager:
 
         task = Task(
             id=self.store.next_task_id(),
-            transaction_id=txn_id,
+            transaction_id=tx_id,
             task_type=TaskType.Service_Execution,
             status=TaskStatus.New,
             created=time.time(),
@@ -131,8 +131,8 @@ class TaskManager:
     def _execute_delivery(self, task:'Task') -> 'ActionResult':
 
         if self.delivery_handler:
-            txn = self.store.get_transaction(task.transaction_id)
-            if not txn:
+            tx = self.store.get_transaction(task.transaction_id)
+            if not tx:
                 return ActionResult(is_ok=False, error=f'Transaction not found: {task.transaction_id}')
 
             content = self.store.get_content(task.transaction_id)
@@ -144,7 +144,7 @@ class TaskManager:
                     content=content,
                     protocol=task.delivery_protocol,
                     detail=task.delivery_detail,
-                    filename=txn.filename,
+                    filename=tx.filename,
                 )
                 return ActionResult(is_ok=result.is_ok, error=result.error)
             except Exception as e:
@@ -157,21 +157,21 @@ class TaskManager:
     def _execute_service(self, task:'Task') -> 'ActionResult':
 
         if self.service_invoker:
-            txn = self.store.get_transaction(task.transaction_id)
-            if not txn:
+            tx = self.store.get_transaction(task.transaction_id)
+            if not tx:
                 return ActionResult(is_ok=False, error=f'Transaction not found: {task.transaction_id}')
 
             content = self.store.get_content(task.transaction_id)
 
             try:
                 request_data = {
-                    'transaction_id': txn.id,
-                    'filename': txn.filename,
-                    'sender': txn.sender,
-                    'receiver': txn.receiver,
-                    'document_id': txn.document_id,
-                    'doc_type_id': txn.doc_type_id,
-                    'custom_attrs': txn.custom_attrs,
+                    'transaction_id': tx.id,
+                    'filename': tx.filename,
+                    'sender': tx.sender,
+                    'receiver': tx.receiver,
+                    'document_id': tx.document_id,
+                    'doc_type_id': tx.doc_type_id,
+                    'custom_attrs': tx.custom_attrs,
                 }
                 if content:
                     request_data['content'] = content

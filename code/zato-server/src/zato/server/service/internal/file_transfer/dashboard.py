@@ -44,20 +44,20 @@ class GetSummary(Service):
 
         cluster_id = store.cluster_id
 
-        total = store.redis.zcount(RedisKey.idx_txn_by_created(cluster_id), date_from, date_to)
+        total = store.redis.zcount(RedisKey.idx_tx_by_created(cluster_id), date_from, date_to)
 
         done_count = store.redis.zcount(
-            RedisKey.idx_txn_by_status(cluster_id, ProcessingStatus.Done.value),
+            RedisKey.idx_tx_by_status(cluster_id, ProcessingStatus.Done.value),
             date_from, date_to
         )
 
         done_w_errors_count = store.redis.zcount(
-            RedisKey.idx_txn_by_status(cluster_id, ProcessingStatus.Done_W_Errors.value),
+            RedisKey.idx_tx_by_status(cluster_id, ProcessingStatus.Done_W_Errors.value),
             date_from, date_to
         )
 
         failed_count = store.redis.zcount(
-            RedisKey.idx_txn_by_status(cluster_id, ProcessingStatus.Failed.value),
+            RedisKey.idx_tx_by_status(cluster_id, ProcessingStatus.Failed.value),
             date_from, date_to
         )
 
@@ -79,16 +79,16 @@ class GetSummary(Service):
         sender_counts = {}
         doc_type_counts = {}
 
-        for txn in result.items:
-            if txn.duration_ms:
-                total_duration += txn.duration_ms
+        for tx in result.items:
+            if tx.duration_ms:
+                total_duration += tx.duration_ms
                 duration_count += 1
 
-            if txn.sender:
-                sender_counts[txn.sender] = sender_counts.get(txn.sender, 0) + 1
+            if tx.sender:
+                sender_counts[tx.sender] = sender_counts.get(tx.sender, 0) + 1
 
-            if txn.doc_type_id:
-                doc_type_counts[txn.doc_type_id] = doc_type_counts.get(txn.doc_type_id, 0) + 1
+            if tx.doc_type_id:
+                doc_type_counts[tx.doc_type_id] = doc_type_counts.get(tx.doc_type_id, 0) + 1
 
         avg_duration = round(total_duration / duration_count, 2) if duration_count > 0 else 0
 

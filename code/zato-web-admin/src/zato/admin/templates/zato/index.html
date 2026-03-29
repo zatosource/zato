@@ -456,7 +456,8 @@
                             <li class="first-level">
                                 <a class="menu-link" href="#">File transfer &darr;</a>
                                 <ul>
-                                    <li class="child"><a class="menu-link" href="{% url "file-transfer-transaction" %}?cluster={{ cluster_id|default:"1" }}">Transactions</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "file-transfer-submit" %}">Submit file</a></li>
+                                    <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="{% url "file-transfer-transaction" %}?cluster={{ cluster_id|default:"1" }}">Transactions</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "file-transfer-rule" %}?cluster={{ cluster_id|default:"1" }}">Processing rules</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "file-transfer-doc-type" %}?cluster={{ cluster_id|default:"1" }}">Document types</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "file-transfer-pickup-channel" %}?cluster={{ cluster_id|default:"1" }}">Pickup channels</a></li>

@@ -63,21 +63,21 @@ class FileTransferEngine:
 
         start_time = time.time()
 
-        txn = self._phase1_receipt(filename, content, source_protocol, source_detail)
+        tx = self._phase1_receipt(filename, content, source_protocol, source_detail)
 
-        doc_type = self._phase2_recognition(txn, filename, content)
+        doc_type = self._phase2_recognition(tx, filename, content)
 
-        extracted_attrs = self._phase3_extraction(txn, content, doc_type)
+        extracted_attrs = self._phase3_extraction(tx, content, doc_type)
 
-        self._phase4_preprocessing(txn, content, doc_type, extracted_attrs, companion_checksum)
+        self._phase4_preprocessing(tx, content, doc_type, extracted_attrs, companion_checksum)
 
-        matched_rule = self._phase5_rule_evaluation(txn)
+        matched_rule = self._phase5_rule_evaluation(tx)
 
-        self._phase6_action_execution(txn, matched_rule, content)
+        self._phase6_action_execution(tx, matched_rule, content)
 
-        self._phase7_completion(txn, start_time)
+        self._phase7_completion(tx, start_time)
 
-        return txn
+        return tx
 
 # ################################################################################################################################
 
@@ -89,12 +89,12 @@ class FileTransferEngine:
         source_detail:'str',
     ) -> 'Transaction':
 
-        txn_id = self.store.next_txn_id()
+        tx_id = self.store.next_tx_id()
         checksum = hashlib.sha256(content).hexdigest()
         now = time.time()
 
-        txn = Transaction(
-            id=txn_id,
+        tx = Transaction(
+            id=tx_id,
             created=now,
             filename=filename,
             file_size=len(content),
@@ -104,18 +104,18 @@ class FileTransferEngine:
             processing_status=ProcessingStatus.New,
         )
 
-        self.store.create_transaction(txn)
+        self.store.create_transaction(tx)
 
-        self._log(txn, ActivityClass.Receipt, Severity.Info,
+        self._log(tx, ActivityClass.Receipt, Severity.Info,
                   f'File received: {filename}, {len(content)} bytes, checksum {checksum[:16]}...')
 
-        return txn
+        return tx
 
 # ################################################################################################################################
 
     def _phase2_recognition(
         self,
-        txn:'Transaction',
+        tx:'Transaction',
         filename:'str',
         content:'bytes',
     ) -> 'any_ | None':
@@ -124,57 +124,57 @@ class FileTransferEngine:
         doc_type = self.recognition_engine.recognize(filename, content, doc_types)
 
         if doc_type:
-            txn.doc_type_id = doc_type.id
-            self._log(txn, ActivityClass.Recognition, Severity.Info,
+            tx.doc_type_id = doc_type.id
+            self._log(tx, ActivityClass.Recognition, Severity.Info,
                       f'Document recognized as: {doc_type.name}')
         else:
-            txn.has_errors = True
-            self._log(txn, ActivityClass.Recognition, Severity.Warning,
+            tx.has_errors = True
+            self._log(tx, ActivityClass.Recognition, Severity.Warning,
                       'Document type not recognized')
 
-        self.store.update_transaction(txn)
+        self.store.update_transaction(tx)
         return doc_type
 
 # ################################################################################################################################
 
     def _phase3_extraction(
         self,
-        txn:'Transaction',
+        tx:'Transaction',
         content:'bytes',
         doc_type:'any_ | None',
     ) -> 'ExtractionResult':
 
         if not doc_type:
-            self._log(txn, ActivityClass.Extraction, Severity.Info,
+            self._log(tx, ActivityClass.Extraction, Severity.Info,
                       'Skipping extraction - no document type')
             return ExtractionResult()
 
         extracted = self.extraction_engine.extract(content, doc_type)
 
-        txn.sender = extracted.sender
-        txn.receiver = extracted.receiver
-        txn.document_id = extracted.document_id
-        txn.conversation_id = extracted.conversation_id
-        txn.group_id = extracted.group_id
-        txn.user_status = extracted.user_status
-        txn.custom_attrs = extracted.custom_attrs
+        tx.sender = extracted.sender
+        tx.receiver = extracted.receiver
+        tx.document_id = extracted.document_id
+        tx.conversation_id = extracted.conversation_id
+        tx.group_id = extracted.group_id
+        tx.user_status = extracted.user_status
+        tx.custom_attrs = extracted.custom_attrs
 
         if extracted.errors:
-            txn.has_errors = True
+            tx.has_errors = True
             for err in extracted.errors:
-                self._log(txn, ActivityClass.Extraction, Severity.Warning, err)
+                self._log(tx, ActivityClass.Extraction, Severity.Warning, err)
         else:
-            self._log(txn, ActivityClass.Extraction, Severity.Info,
-                      f'Extracted: sender={txn.sender}, receiver={txn.receiver}, doc_id={txn.document_id}')
+            self._log(tx, ActivityClass.Extraction, Severity.Info,
+                      f'Extracted: sender={tx.sender}, receiver={tx.receiver}, doc_id={tx.document_id}')
 
-        self.store.update_transaction(txn)
+        self.store.update_transaction(tx)
         return extracted
 
 # ################################################################################################################################
 
     def _phase4_preprocessing(
         self,
-        txn:'Transaction',
+        tx:'Transaction',
         content:'bytes',
         doc_type:'any_ | None',
         extracted_attrs:'ExtractionResult',
@@ -183,15 +183,15 @@ class FileTransferEngine:
 
         if not doc_type:
             settings = self.store.get_settings()
-            self.store.save_content(txn.id, content)
-            txn.content_saved = True
-            self._log(txn, ActivityClass.Pre_Processing, Severity.Info,
+            self.store.save_content(tx.id, content)
+            tx.content_saved = True
+            self._log(tx, ActivityClass.Pre_Processing, Severity.Info,
                       'Content saved (no document type)')
-            self.store.update_transaction(txn)
+            self.store.update_transaction(tx)
             return
 
         preprocess_result = self.preprocessor.run_all_steps(
-            txn.id,
+            tx.id,
             content,
             doc_type,
             extracted_attrs,
@@ -199,45 +199,45 @@ class FileTransferEngine:
         )
 
         if preprocess_result.checksum:
-            txn.source_checksum = preprocess_result.checksum
+            tx.source_checksum = preprocess_result.checksum
 
-        txn.content_saved = True
+        tx.content_saved = True
 
         if preprocess_result.errors:
-            txn.has_errors = True
+            tx.has_errors = True
             for step, error in preprocess_result.errors:
-                self._log(txn, ActivityClass.Pre_Processing, Severity.Error,
+                self._log(tx, ActivityClass.Pre_Processing, Severity.Error,
                           f'{step}: {error}')
         else:
-            self._log(txn, ActivityClass.Pre_Processing, Severity.Info,
+            self._log(tx, ActivityClass.Pre_Processing, Severity.Info,
                       'Pre-processing completed successfully')
 
-        self.store.update_transaction(txn)
+        self.store.update_transaction(tx)
 
 # ################################################################################################################################
 
-    def _phase5_rule_evaluation(self, txn:'Transaction') -> 'any_ | None':
+    def _phase5_rule_evaluation(self, tx:'Transaction') -> 'any_ | None':
 
         rules = self.store.list_enabled_processing_rules()
-        matched_rule = self.rule_evaluator.evaluate(txn, rules)
+        matched_rule = self.rule_evaluator.evaluate(tx, rules)
 
         if matched_rule:
-            txn.matched_rule_id = matched_rule.id
-            self._log(txn, ActivityClass.Rule_Evaluation, Severity.Info,
+            tx.matched_rule_id = matched_rule.id
+            self._log(tx, ActivityClass.Rule_Evaluation, Severity.Info,
                       f'Matched rule: {matched_rule.name} (ordinal {matched_rule.ordinal})')
         else:
-            txn.processing_status = ProcessingStatus.Not_Routed
-            self._log(txn, ActivityClass.Rule_Evaluation, Severity.Warning,
+            tx.processing_status = ProcessingStatus.Not_Routed
+            self._log(tx, ActivityClass.Rule_Evaluation, Severity.Warning,
                       'No processing rule matched')
 
-        self.store.update_transaction(txn)
+        self.store.update_transaction(tx)
         return matched_rule
 
 # ################################################################################################################################
 
     def _phase6_action_execution(
         self,
-        txn:'Transaction',
+        tx:'Transaction',
         matched_rule:'any_ | None',
         content:'bytes',
     ) -> 'None':
@@ -246,104 +246,104 @@ class FileTransferEngine:
             return
 
         for action in matched_rule.actions:
-            result = self.action_executor.execute(action, txn, content)
+            result = self.action_executor.execute(action, tx, content)
 
             action_type = action.type.value if hasattr(action.type, 'value') else str(action.type)
 
             if result.is_ok:
-                self._log(txn, ActivityClass.Action, Severity.Info,
+                self._log(tx, ActivityClass.Action, Severity.Info,
                           f'Action executed: {action_type}')
             else:
-                txn.has_errors = True
-                self._log(txn, ActivityClass.Action, Severity.Error,
+                tx.has_errors = True
+                self._log(tx, ActivityClass.Action, Severity.Error,
                           f'Action failed: {action_type} - {result.error}')
 
-        self.store.update_transaction(txn)
+        self.store.update_transaction(tx)
 
 # ################################################################################################################################
 
-    def _phase7_completion(self, txn:'Transaction', start_time:'float') -> 'None':
+    def _phase7_completion(self, tx:'Transaction', start_time:'float') -> 'None':
 
         end_time = time.time()
-        txn.completed = end_time
-        txn.duration_ms = int((end_time - start_time) * 1000)
+        tx.completed = end_time
+        tx.duration_ms = int((end_time - start_time) * 1000)
 
-        if txn.processing_status == ProcessingStatus.Not_Routed:
+        if tx.processing_status == ProcessingStatus.Not_Routed:
             pass
-        elif txn.has_errors:
-            txn.processing_status = ProcessingStatus.Done_W_Errors
+        elif tx.has_errors:
+            tx.processing_status = ProcessingStatus.Done_W_Errors
         else:
-            txn.processing_status = ProcessingStatus.Done
+            tx.processing_status = ProcessingStatus.Done
 
-        self._log(txn, ActivityClass.Completion, Severity.Info,
-                  f'Processing complete: status={txn.processing_status.value}, duration={txn.duration_ms}ms')
+        self._log(tx, ActivityClass.Completion, Severity.Info,
+                  f'Processing complete: status={tx.processing_status.value}, duration={tx.duration_ms}ms')
 
-        self.store.update_transaction(txn)
+        self.store.update_transaction(tx)
 
 # ################################################################################################################################
 
-    def resubmit(self, txn_id:'str') -> 'Transaction | None':
+    def resubmit(self, tx_id:'str') -> 'Transaction | None':
 
-        original_txn = self.store.get_transaction(txn_id)
-        if not original_txn:
+        original_tx = self.store.get_transaction(tx_id)
+        if not original_tx:
             return None
 
-        content = self.store.get_content(txn_id)
+        content = self.store.get_content(tx_id)
         if not content:
             return None
 
-        new_txn = self.process_file(
-            original_txn.filename,
+        new_tx = self.process_file(
+            original_tx.filename,
             content,
-            original_txn.source_protocol,
-            original_txn.source_detail,
+            original_tx.source_protocol,
+            original_tx.source_detail,
         )
 
-        new_txn.resubmitted_from = txn_id
-        self.store.update_transaction(new_txn)
+        new_tx.resubmitted_from = tx_id
+        self.store.update_transaction(new_tx)
 
-        return new_txn
+        return new_tx
 
 # ################################################################################################################################
 
-    def reprocess(self, txn_id:'str') -> 'Transaction | None':
+    def reprocess(self, tx_id:'str') -> 'Transaction | None':
 
-        txn = self.store.get_transaction(txn_id)
-        if not txn:
+        tx = self.store.get_transaction(tx_id)
+        if not tx:
             return None
 
-        content = self.store.get_content(txn_id)
+        content = self.store.get_content(tx_id)
 
         start_time = time.time()
 
-        self._log(txn, ActivityClass.Receipt, Severity.Info,
-                  f'Reprocessing transaction {txn_id}')
+        self._log(tx, ActivityClass.Receipt, Severity.Info,
+                  f'Reprocessing transaction {tx_id}')
 
-        matched_rule = self._phase5_rule_evaluation(txn)
+        matched_rule = self._phase5_rule_evaluation(tx)
 
-        self._phase6_action_execution(txn, matched_rule, content)
+        self._phase6_action_execution(tx, matched_rule, content)
 
-        self._phase7_completion(txn, start_time)
+        self._phase7_completion(tx, start_time)
 
-        return txn
+        return tx
 
 # ################################################################################################################################
 
     def _log(
         self,
-        txn:'Transaction',
+        tx:'Transaction',
         activity_class:'ActivityClass',
         severity:'Severity',
         message:'str',
         detail:'str'='',
     ) -> 'None':
 
-        seq = self.store.next_log_seq(txn.id)
-        entry_id = f'{txn.id}:{seq:04d}'
+        seq = self.store.next_log_seq(tx.id)
+        entry_id = f'{tx.id}:{seq:04d}'
 
         entry = ActivityLogEntry(
             id=entry_id,
-            transaction_id=txn.id,
+            transaction_id=tx.id,
             timestamp=time.time(),
             activity_class=activity_class,
             severity=severity,

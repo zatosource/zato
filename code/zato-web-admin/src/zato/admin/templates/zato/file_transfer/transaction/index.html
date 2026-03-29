@@ -45,6 +45,10 @@
 {% block "content" %}
 <h2 class="zato">File transfer transactions</h2>
 
+<div style="margin-bottom: 12px;">
+    <a href="{% url 'file-transfer-submit' %}" class="btn btn-primary">Submit file</a>
+</div>
+
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
 <form method="get" action="" class="ft-filter-row">

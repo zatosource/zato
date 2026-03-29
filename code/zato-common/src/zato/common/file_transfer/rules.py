@@ -25,7 +25,7 @@ class RuleEvaluator:
 
     def evaluate(
         self,
-        txn:'Transaction',
+        tx:'Transaction',
         rules:'list[ProcessingRule]',
     ) -> 'ProcessingRule | None':
 
@@ -34,29 +34,29 @@ class RuleEvaluator:
         for rule in sorted_rules:
             if not rule.is_enabled:
                 continue
-            if self._matches_all_criteria(txn, rule):
+            if self._matches_all_criteria(tx, rule):
                 return rule
 
         return None
 
-    def _matches_all_criteria(self, txn:'Transaction', rule:'ProcessingRule') -> 'bool':
+    def _matches_all_criteria(self, tx:'Transaction', rule:'ProcessingRule') -> 'bool':
 
-        if not self._match_criteria(rule.criteria_sender, txn.sender):
+        if not self._match_criteria(rule.criteria_sender, tx.sender):
             return False
 
-        if not self._match_criteria(rule.criteria_receiver, txn.receiver):
+        if not self._match_criteria(rule.criteria_receiver, tx.receiver):
             return False
 
-        if not self._match_doc_type_criteria(rule.criteria_doc_type, txn.doc_type_id):
+        if not self._match_doc_type_criteria(rule.criteria_doc_type, tx.doc_type_id):
             return False
 
-        if not self._match_criteria(rule.criteria_user_status, txn.user_status):
+        if not self._match_criteria(rule.criteria_user_status, tx.user_status):
             return False
 
-        if not self._match_errors(rule.criteria_errors, txn.has_errors):
+        if not self._match_errors(rule.criteria_errors, tx.has_errors):
             return False
 
-        if not self._match_extended_criteria(rule.criteria_extended, txn.custom_attrs):
+        if not self._match_extended_criteria(rule.criteria_extended, tx.custom_attrs):
             return False
 
         return True

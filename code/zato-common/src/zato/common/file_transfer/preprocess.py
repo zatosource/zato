@@ -150,10 +150,10 @@ class PreProcessor:
         if not doc_id:
             return DedupResult()
 
-        existing_txn_id = self.store.check_duplicate(doc_id, sender, doc_type_id)
+        existing_tx_id = self.store.check_duplicate(doc_id, sender, doc_type_id)
 
-        if existing_txn_id:
-            return DedupResult(is_ok=False, error=f'Duplicate document: already processed as {existing_txn_id}', existing_txn_id=existing_txn_id)
+        if existing_tx_id:
+            return DedupResult(is_ok=False, error=f'Duplicate document: already processed as {existing_tx_id}', existing_tx_id=existing_tx_id)
 
         return DedupResult()
 
@@ -164,13 +164,13 @@ class PreProcessor:
         doc_id:'str',
         sender:'str',
         doc_type_id:'str',
-        txn_id:'str',
+        tx_id:'str',
         dedup_window_days:'int',
     ) -> 'None':
 
         if doc_id:
             ttl_seconds = dedup_window_days * 24 * 60 * 60
-            self.store.set_dedup_key(doc_id, sender, doc_type_id, txn_id, ttl_seconds)
+            self.store.set_dedup_key(doc_id, sender, doc_type_id, tx_id, ttl_seconds)
 
 # ################################################################################################################################
 
@@ -227,7 +227,7 @@ class PreProcessor:
 
     def save_content(
         self,
-        txn_id:'str',
+        tx_id:'str',
         content:'bytes',
         policy:'PreprocessSavePolicy',
         doc_id:'str'='',
@@ -247,7 +247,7 @@ class PreProcessor:
                     return ActionResult()
 
         try:
-            self.store.save_content(txn_id, content)
+            self.store.save_content(tx_id, content)
             return ActionResult()
         except Exception as e:
             return ActionResult(is_ok=False, error=f'Failed to save content: {e}')
@@ -256,7 +256,7 @@ class PreProcessor:
 
     def run_all_steps(
         self,
-        txn_id:'str',
+        tx_id:'str',
         content:'bytes',
         doc_type:'DocumentType',
         extracted_attrs:'ExtractionResult',
@@ -291,7 +291,7 @@ class PreProcessor:
                     doc_id,
                     sender,
                     doc_type.id,
-                    txn_id,
+                    tx_id,
                     doc_type.preprocess_dedup_window_days,
                 )
 
@@ -315,7 +315,7 @@ class PreProcessor:
                 errors.append(('checksum', result.error))
 
         result = self.save_content(
-            txn_id,
+            tx_id,
             content,
             doc_type.preprocess_save,
             extracted_attrs.document_id,

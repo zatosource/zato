@@ -27,10 +27,10 @@ class Search(Service):
         store = FileTransferRedisStore(self.server.broker_client.redis, self.server.cluster_id)
 
         status = self.request.input.get('status')
-        txn_id = self.request.input.get('transaction_id')
+        tx_id = self.request.input.get('transaction_id')
 
-        if txn_id:
-            tasks = store.get_tasks_for_transaction(txn_id)
+        if tx_id:
+            tasks = store.get_tasks_for_transaction(tx_id)
         elif status:
             task_ids = store.redis.zrange(
                 f'zato:file-transfer:{store.cluster_id}:idx:task:by-status:{status}',
