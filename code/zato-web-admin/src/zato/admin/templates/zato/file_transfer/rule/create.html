@@ -1,155 +1,178 @@
-{% extends "zato/index.html" %}
+{% extends "zato/settings-base.html" %}
 {% load extras %}
 
 {% block page_title %}File transfer - Create rule{% endblock %}
 
-{% block content %}
-<div class="content-wrap">
-    <nav class="breadcrumb">
-        <a href="{% url 'main-page' %}">Zato</a> &rsaquo;
-        <a href="{% url 'file-transfer-rule' %}">Processing rules</a> &rsaquo;
-        <span>Create rule</span>
-    </nav>
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/file_transfer.css">
+<link rel="stylesheet" type="text/css" href="/static/css/zato-tabs.css">
+{% endblock %}
 
-    <a href="{% url 'file-transfer-rule' %}" class="btn btn-default" style="margin-bottom:12px">&larr; Back to rules</a>
-
-    <h2>Create processing rule</h2>
-
-    <form method="post" action="">
-        {% csrf_token %}
-
-        <ul class="nav nav-tabs" style="margin-bottom:16px">
-            <li class="active"><a href="#tab-criteria" data-toggle="tab">Criteria</a></li>
-            <li><a href="#tab-preproc" data-toggle="tab">Pre-processing</a></li>
-            <li><a href="#tab-actions" data-toggle="tab">Actions</a></li>
-        </ul>
-
-        <div class="tab-content">
-            <div class="tab-pane active" id="tab-criteria">
-                <div class="form-group">
-                    <label>Rule name</label>
-                    <input type="text" name="name" class="form-control" style="max-width:500px" required>
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" class="form-control" rows="2" style="max-width:500px"></textarea>
-                </div>
-                <div class="form-group">
-                    <label><input type="checkbox" name="is_enabled" checked> Enabled</label>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Sender match</label>
-                            <select name="criteria_sender_match" class="form-control">
-                                <option value="Any">Any</option>
-                                <option value="Specific">Specific values</option>
-                                <option value="Unknown">Unknown</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Sender values (comma-separated)</label>
-                            <input type="text" name="criteria_sender_values" class="form-control" placeholder="e.g. Acme Corp, Globex Inc">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Receiver match</label>
-                            <select name="criteria_receiver_match" class="form-control">
-                                <option value="Any">Any</option>
-                                <option value="Specific">Specific values</option>
-                                <option value="Unknown">Unknown</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Receiver values (comma-separated)</label>
-                            <input type="text" name="criteria_receiver_values" class="form-control" placeholder="e.g. Enterprise">
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Document type match</label>
-                            <select name="criteria_doc_type_match" class="form-control">
-                                <option value="Any">Any</option>
-                                <option value="Specific">Specific values</option>
-                                <option value="Unknown">Unknown</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Document type IDs (comma-separated)</label>
-                            <input type="text" name="criteria_doc_type_values" class="form-control" placeholder="e.g. dt-001, dt-002">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Error criteria</label>
-                            <select name="criteria_errors" class="form-control">
-                                <option value="Any">Any</option>
-                                <option value="No_Errors">No errors</option>
-                                <option value="Has_Errors">Has errors</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-pane" id="tab-preproc">
-                <p style="color:#64748b;margin-bottom:16px">Override pre-processing steps defined in the document type.</p>
-                <div class="form-group">
-                    <label>Verify PGP signature</label>
-                    <select name="preproc_pgp_verify" class="form-control" style="max-width:300px">
-                        <option value="defer">Defer to document type</option>
-                        <option value="perform">Perform in this rule</option>
-                        <option value="skip">Do not perform</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Validate structure</label>
-                    <select name="preproc_validate" class="form-control" style="max-width:300px">
-                        <option value="defer">Defer to document type</option>
-                        <option value="perform">Perform in this rule</option>
-                        <option value="skip">Do not perform</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Check for duplicates</label>
-                    <select name="preproc_dedup" class="form-control" style="max-width:300px">
-                        <option value="defer">Defer to document type</option>
-                        <option value="perform">Perform in this rule</option>
-                        <option value="skip">Do not perform</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Save to database</label>
-                    <select name="preproc_save" class="form-control" style="max-width:300px">
-                        <option value="defer">Defer to document type</option>
-                        <option value="perform">Perform in this rule</option>
-                        <option value="skip">Do not perform</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="tab-pane" id="tab-actions">
-                <div id="actions-list"></div>
-                <button type="button" class="btn btn-default" onclick="addAction()">+ Add action</button>
-                <input type="hidden" name="actions_json" id="actions_json" value="[]">
-            </div>
-        </div>
-
-        <div style="margin-top:24px">
-            <button type="submit" class="btn btn-primary">Create rule</button>
-            <a href="{% url 'file-transfer-rule' %}" class="btn btn-default">Cancel</a>
-        </div>
-    </form>
+{% block left_content %}
+<div class="ft-header-row">
+    <a href="{% url 'file-transfer-rule' %}" class="secondary-button ft-back-btn">Processing rules</a>
+    <h3>Create processing rule</h3>
 </div>
+<form method="post" action="" class="ft-rule-form">
+    {% csrf_token %}
+    <div class="progress-panel">
+        <div class="zato-tabs" id="rule-tabs">
+            <ul class="zato-tabs-nav">
+                <li class="active"><a href="#tab-criteria">Criteria</a></li>
+                <li><a href="#tab-preproc">Pre-processing</a></li>
+                <li><a href="#tab-actions">Actions</a></li>
+            </ul>
+            <div class="zato-tabs-content">
+                <div class="zato-tabs-panel active" id="tab-criteria">
+                    <div class="info-container ft-detail-info">
+                        <div class="info-row">
+                            <div class="info-label">Rule name</div>
+                            <div class="info-value"><input type="text" name="name" required></div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Description</div>
+                            <div class="info-value"><input type="text" name="description"></div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Enabled</div>
+                            <div class="info-value">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="is_enabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="info-container ft-detail-info">
+                        <div class="info-row">
+                            <div class="info-label">Sender match</div>
+                            <div class="info-value">
+                                <select name="criteria_sender_match" class="ft-form-select">
+                                    <option value="Any">Any</option>
+                                    <option value="Specific">Specific values</option>
+                                    <option value="Unknown">Unknown</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Sender values</div>
+                            <div class="info-value"><input type="text" name="criteria_sender_values" placeholder="Comma-separated"></div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Receiver match</div>
+                            <div class="info-value">
+                                <select name="criteria_receiver_match" class="ft-form-select">
+                                    <option value="Any">Any</option>
+                                    <option value="Specific">Specific values</option>
+                                    <option value="Unknown">Unknown</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Receiver values</div>
+                            <div class="info-value"><input type="text" name="criteria_receiver_values" placeholder="Comma-separated"></div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Doc type match</div>
+                            <div class="info-value">
+                                <select name="criteria_doc_type_match" class="ft-form-select">
+                                    <option value="Any">Any</option>
+                                    <option value="Specific">Specific values</option>
+                                    <option value="Unknown">Unknown</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Doc type IDs</div>
+                            <div class="info-value"><input type="text" name="criteria_doc_type_values" placeholder="Comma-separated"></div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Error criteria</div>
+                            <div class="info-value">
+                                <select name="criteria_errors" class="ft-form-select">
+                                    <option value="Any">Any</option>
+                                    <option value="No_Errors">No errors</option>
+                                    <option value="Has_Errors">Has errors</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-<script>
+                <div class="zato-tabs-panel" id="tab-preproc">
+                    <div class="info-container ft-detail-info">
+                        <div class="info-row">
+                            <div class="info-label">Verify PGP signature</div>
+                            <div class="info-value">
+                                <select name="preproc_pgp_verify" class="ft-form-select">
+                                    <option value="defer">Defer to document type</option>
+                                    <option value="perform">Perform in this rule</option>
+                                    <option value="skip">Do not perform</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Validate structure</div>
+                            <div class="info-value">
+                                <select name="preproc_validate" class="ft-form-select">
+                                    <option value="defer">Defer to document type</option>
+                                    <option value="perform">Perform in this rule</option>
+                                    <option value="skip">Do not perform</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Check for duplicates</div>
+                            <div class="info-value">
+                                <select name="preproc_dedup" class="ft-form-select">
+                                    <option value="defer">Defer to document type</option>
+                                    <option value="perform">Perform in this rule</option>
+                                    <option value="skip">Do not perform</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Save to database</div>
+                            <div class="info-value">
+                                <select name="preproc_save" class="ft-form-select">
+                                    <option value="defer">Defer to document type</option>
+                                    <option value="perform">Perform in this rule</option>
+                                    <option value="skip">Do not perform</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="zato-tabs-panel" id="tab-actions">
+                    <div id="actions-list"></div>
+                    <div class="button-container ft-actions-add">
+                        <button type="button" class="secondary-button" onclick="addAction()">Add action</button>
+                    </div>
+                    <input type="hidden" name="actions_json" id="actions_json" value="[]">
+                </div>
+            </div>
+        </div>
+        <div class="button-container">
+            <a href="{% url 'file-transfer-rule' %}" class="secondary-button">Cancel</a>
+            <button type="submit" class="action-button">Create rule</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}
+
+{% block extra_page_js %}
+<script type="text/javascript" src="/static/js/zato-tabs.js" nonce="{{ CSP_NONCE }}"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(function() {
+    new ZatoTabs('#rule-tabs');
+});
+
 var actions = [];
 
 function addAction() {
-    var idx = actions.length;
     actions.push({type: 'Execute_Service', service_name: '', exec_mode: 'Synchronous'});
     renderActions();
 }
@@ -163,23 +186,28 @@ function renderActions() {
     var html = '';
     for (var i = 0; i < actions.length; i++) {
         var a = actions[i];
-        html += '<div class="panel panel-default" style="margin-bottom:10px">';
-        html += '<div class="panel-body">';
-        html += '<div class="row">';
-        html += '<div class="col-md-4"><label>Type</label><select class="form-control" onchange="actions['+i+'].type=this.value;updateActionsJson()">';
+        html += '<div class="ft-action-item">';
+        html += '<div class="info-container ft-detail-info">';
+        html += '<div class="info-row"><div class="info-label">Type</div><div class="info-value">';
+        html += '<select class="ft-form-select" onchange="actions['+i+'].type=this.value;updateActionsJson()">';
         html += '<option value="Execute_Service"' + (a.type === 'Execute_Service' ? ' selected' : '') + '>Execute a service</option>';
         html += '<option value="Deliver"' + (a.type === 'Deliver' ? ' selected' : '') + '>Deliver document</option>';
         html += '<option value="Notify"' + (a.type === 'Notify' ? ' selected' : '') + '>Send notification</option>';
         html += '<option value="Change_Status"' + (a.type === 'Change_Status' ? ' selected' : '') + '>Change status</option>';
-        html += '</select></div>';
-        html += '<div class="col-md-4"><label>Service / Value</label><input type="text" class="form-control" value="' + (a.service_name || a.new_status || '') + '" onchange="actions['+i+'].service_name=this.value;actions['+i+'].new_status=this.value;updateActionsJson()"></div>';
-        html += '<div class="col-md-3"><label>Mode</label><select class="form-control" onchange="actions['+i+'].exec_mode=this.value;updateActionsJson()">';
+        html += '</select></div></div>';
+        html += '<div class="info-row"><div class="info-label">Service / Value</div><div class="info-value">';
+        html += '<input type="text" value="' + (a.service_name || a.new_status || '') + '" onchange="actions['+i+'].service_name=this.value;actions['+i+'].new_status=this.value;updateActionsJson()">';
+        html += '</div></div>';
+        html += '<div class="info-row"><div class="info-label">Mode</div><div class="info-value">';
+        html += '<select class="ft-form-select" onchange="actions['+i+'].exec_mode=this.value;updateActionsJson()">';
         html += '<option value="Synchronous"' + (a.exec_mode === 'Synchronous' ? ' selected' : '') + '>Synchronous</option>';
         html += '<option value="Asynchronous"' + (a.exec_mode === 'Asynchronous' ? ' selected' : '') + '>Asynchronous</option>';
         html += '<option value="Reliable"' + (a.exec_mode === 'Reliable' ? ' selected' : '') + '>Reliable (with retry)</option>';
-        html += '</select></div>';
-        html += '<div class="col-md-1"><label>&nbsp;</label><button type="button" class="btn btn-danger btn-block" onclick="removeAction('+i+')">X</button></div>';
-        html += '</div></div></div>';
+        html += '</select></div></div>';
+        html += '<div class="info-row"><div class="info-label"></div><div class="info-value">';
+        html += '<button type="button" class="secondary-button ft-remove-btn" onclick="removeAction('+i+')">Remove</button>';
+        html += '</div></div>';
+        html += '</div></div>';
     }
     $('#actions-list').html(html);
     updateActionsJson();

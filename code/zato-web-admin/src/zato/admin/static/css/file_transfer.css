@@ -346,3 +346,57 @@ a.action-button:not(.menu-link):hover {
 .ft-submit-page .button-container {
     justify-content: flex-end;
 }
+
+.ft-back-btn::before {
+    content: "\25C0 ";
+    position: relative;
+    top: -1px;
+}
+
+.ft-form-select {
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--primary-dark);
+    background: var(--white);
+    border: 2px solid var(--primary-dark);
+    padding: 0px 3px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.ft-form-select:focus {
+    outline: none;
+    border-color: var(--primary-dark);
+    background: var(--background-light);
+}
+
+.ft-rule-form .info-value {
+    text-align: left;
+}
+
+.ft-rule-form .info-label {
+    width: 160px;
+}
+
+.ft-action-item {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.ft-action-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.ft-actions-add {
+    justify-content: flex-start;
+}
+
+.ft-remove-btn {
+    background: #fff;
+    color: #cc0000;
+    border-color: #cc0000;
+}
