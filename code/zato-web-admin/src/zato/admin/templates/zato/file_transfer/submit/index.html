@@ -1,87 +1,33 @@
 {% extends "zato/settings-base.html" %}
 
-{% block page_title %}{{ page_config.title }}{% endblock %}
+{% block page_title %}Submit a file{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/file_transfer.css">
+{% endblock %}
 
 {% block extra_page_js %}
 <script type="text/javascript" src="/static/js/file-transfer-submit.js" nonce="{{ CSP_NONCE }}"></script>
 {% endblock %}
 
-{% block section_title %}{{ page_config.section_title }}{% endblock %}
-{% block help_icon_id %}submit-help{% endblock %}
-
-{% block content_rows %}
-<div class="info-container">
-    <div class="info-row">
-        <div class="info-label">File</div>
-        <div class="info-value">
-            <input type="file" id="file-input">
+{% block left_content %}
+<div class="ft-submit-page">
+<h3>Submit a file</h3>
+<div class="progress-panel">
+    <div class="info-container">
+        <div class="info-row">
+            <div class="info-label">File</div>
+            <div class="info-value">
+                <input type="file" id="file-input">
+            </div>
         </div>
     </div>
-    <div class="info-row">
-        <div class="info-label">Filename</div>
-        <div class="info-value">
-            <input type="text" id="filename-input" placeholder="Will use uploaded file name">
-        </div>
+    <div class="button-container">
+        <button class="action-button" id="submit-button">Submit</button>
     </div>
-    <div class="info-row">
-        <div class="info-label">Source protocol</div>
-        <div class="info-value">
-            <select class="schedule-select" id="source-protocol">
-                <option value="Manual upload" selected>Manual upload</option>
-                <option value="API call">API call</option>
-                <option value="SFTP">SFTP</option>
-                <option value="FTP">FTP</option>
-                <option value="HTTP">HTTP</option>
-            </select>
-        </div>
-    </div>
-    <div class="info-row">
-        <div class="info-label">Source detail</div>
-        <div class="info-value">
-            <input type="text" id="source-detail" value="Uploaded via Dashboard">
-        </div>
-    </div>
+    <div class="ft-submit-status" id="submit-status"></div>
+</div>
 </div>
 {% endblock %}
 
-{% block buttons %}
-<div class="button-container">
-    <div class="button-wrapper">
-        <img src="/static/gfx/spinner.svg" class="button-spinner">
-    </div>
-    <button class="action-button" id="submit-button">
-        {{ page_config.action_button_label }}
-    </button>
-</div>
-{% endblock %}
-
-{% block action_steps %}
-<div class="progress-item hidden" id="progress-upload">
-    <div class="progress-icon"></div>
-    <div class="progress-content">
-        <div class="progress-platform">
-            Upload file
-            <span class="copy-icon progress-error-copy hidden" data-copy="upload-error" title="Copy to clipboard">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-            </span>
-        </div>
-        <div class="progress-text" id="upload-error">Waiting...</div>
-    </div>
-</div>
-<div class="progress-item hidden" id="progress-process">
-    <div class="progress-icon"></div>
-    <div class="progress-content">
-        <div class="progress-platform">
-            Process file
-            <span class="copy-icon progress-error-copy hidden" data-copy="process-error" title="Copy to clipboard">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-            </span>
-        </div>
-        <div class="progress-text" id="process-error">Waiting...</div>
-    </div>
-</div>
-{% endblock %}
-
-{% block completion_badge %}
-<span class="info-message status-badge with-shine" id="completion-badge"></span>
-{% endblock %}
+{% block sidebar %}{% endblock %}

@@ -322,3 +322,20 @@ a.action-button:not(.menu-link):hover {
     color: #fff !important;
     text-decoration: none !important;
 }
+
+.ft-submit-page .info-row {
+    justify-content: flex-start;
+}
+
+.ft-submit-page .info-value {
+    text-align: left;
+    min-width: 0;
+}
+
+.ft-submit-page .button-container {
+    justify-content: flex-start;
+}
+
+.ft-submit-page .settings-panel {
+    max-width: 500px;
+}
