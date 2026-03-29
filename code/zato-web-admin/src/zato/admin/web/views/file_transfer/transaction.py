@@ -73,6 +73,7 @@ class Index:
                 'doc_type_id': doc_type_id,
                 'query': query,
             },
+            'filter_query': req.GET.urlencode(),
         })
 
 # ################################################################################################################################
@@ -88,6 +89,7 @@ def transaction_detail(req:'HttpRequest', tx_id:'str') -> 'HttpResponse':
 
     return TemplateResponse(req, 'zato/file_transfer/transaction/detail.html', {
         'transaction': response.data,
+        'back_query': req.GET.urlencode(),
     })
 
 # ################################################################################################################################
