@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import time
 # Zato
 from zato.common.file_transfer.const import KeyType, KeyUsage
-from zato.common.file_transfer.model import KeyPairResult, PGPKey, VerifyResult
+from zato.common.file_transfer.model import KeyInfo, KeyPairResult, PGPKey, VerifyResult
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -421,28 +421,24 @@ class PGPManager:
 
 # ################################################################################################################################
 
-    def get_key_info(self, key_data:'str') -> 'Dict[str, any_]':
+    def get_key_info(self, key_data:'str') -> 'KeyInfo':
 
         if self._pgpy:
             key, _ = self._pgpy.PGPKey.from_blob(key_data)
-            return {
-                'fingerprint': str(key.fingerprint),
-                'algorithm': str(key.key_algorithm.name) if hasattr(key.key_algorithm, 'name') else str(key.key_algorithm),
-                'key_size': key.key_size if hasattr(key, 'key_size') else 0,
-                'created': key.created.timestamp() if hasattr(key, 'created') and key.created else None,
-                'expires': key.expires_at.timestamp() if hasattr(key, 'expires_at') and key.expires_at else None,
-            }
+            return KeyInfo(
+                fingerprint=str(key.fingerprint),
+                algorithm=str(key.key_algorithm.name) if hasattr(key.key_algorithm, 'name') else str(key.key_algorithm),
+                key_size=key.key_size if hasattr(key, 'key_size') else 0,
+                created=key.created.timestamp() if hasattr(key, 'created') and key.created else None,
+                expires=key.expires_at.timestamp() if hasattr(key, 'expires_at') and key.expires_at else None,
+            )
         elif self._gnupg:
             import tempfile
             gpg = self._gnupg.GPG(gnupghome=tempfile.mkdtemp())
             result = gpg.import_keys(key_data)
-            return {
-                'fingerprint': result.fingerprints[0] if result.fingerprints else '',
-                'algorithm': '',
-                'key_size': 0,
-                'created': None,
-                'expires': None,
-            }
+            return KeyInfo(
+                fingerprint=result.fingerprints[0] if result.fingerprints else '',
+            )
         else:
             raise ImportError('No PGP library available')
 

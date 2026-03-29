@@ -29,6 +29,7 @@ from zato.common.file_transfer.model.result import (
     DedupResult,
     DeliveryResult,
     ExtractionResult,
+    KeyInfo,
     KeyPairResult,
     PreprocessResult,
     SearchResult,
