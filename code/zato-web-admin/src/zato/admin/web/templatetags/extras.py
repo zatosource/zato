@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+from datetime import datetime
 
 # Django
 from django import template
@@ -112,5 +113,18 @@ def replace_in_string(item, config): # type: ignore
     config = [elem.strip() for elem in config]
     old_value, new_value = config
     return item.replace(old_value, new_value)
+
+# ################################################################################################################################
+
+@register.filter
+def from_timestamp(value): # type: ignore
+    if not value:
+        return ''
+    try:
+        ts = float(value)
+        dt = datetime.fromtimestamp(ts)
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
+    except (ValueError, TypeError):
+        return value
 
 # ################################################################################################################################

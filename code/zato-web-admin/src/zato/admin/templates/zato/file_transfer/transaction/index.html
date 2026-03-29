@@ -89,31 +89,33 @@
                 </thead>
                 <tbody>
                 {% if transactions %}
-                {% for txn in transactions %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ txn.id }}'>
+                {% for tx in transactions %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ tx.id }}'>
                         <td class='numbering'>&nbsp;</td>
-                        <td>{{ txn.created }}</td>
-                        <td><a href="{% url 'file-transfer-transaction-detail' txn.id %}">{{ txn.filename }}</a></td>
-                        <td>{{ txn.doc_type_id|no_value_indicator }}</td>
-                        <td>{{ txn.sender|no_value_indicator }}</td>
-                        <td>{{ txn.receiver|no_value_indicator }}</td>
+                        <td>{{ tx.created|from_timestamp }}</td>
+                        <td><a href="{% url 'file-transfer-transaction-detail' tx.id %}">{{ tx.filename }}</a></td>
+                        <td>{{ tx.doc_type_id|no_value_indicator }}</td>
+                        <td>{{ tx.sender|no_value_indicator }}</td>
+                        <td>{{ tx.receiver|no_value_indicator }}</td>
                         <td>
-                            {% if txn.processing_status == 'Done' %}
+                            {% if tx.processing_status == 'Done' %}
                             <span class="ft-badge ft-badge-done">DONE</span>
-                            {% elif txn.processing_status == 'Failed' %}
+                            {% elif tx.processing_status == 'Failed' %}
                             <span class="ft-badge ft-badge-failed">FAILED</span>
-                            {% elif txn.processing_status == 'Done_W_Errors' %}
+                            {% elif tx.processing_status == 'Done_W_Errors' %}
                             <span class="ft-badge ft-badge-warn">DONE W/ERRORS</span>
-                            {% elif txn.processing_status == 'Queued' %}
+                            {% elif tx.processing_status == 'Queued' %}
                             <span class="ft-badge ft-badge-queued">QUEUED</span>
-                            {% elif txn.processing_status == 'New' %}
+                            {% elif tx.processing_status == 'New' %}
                             <span class="ft-badge ft-badge-new">NEW</span>
+                            {% elif tx.processing_status == 'Not_Routed' %}
+                            <span class="ft-badge ft-badge-warn">NOT ROUTED</span>
                             {% else %}
-                            <span class="ft-badge">{{ txn.processing_status }}</span>
+                            <span class="ft-badge">{{ tx.processing_status }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ txn.user_status|no_value_indicator }}</td>
-                        <td><a href="{% url 'file-transfer-transaction-detail' txn.id %}">Details</a></td>
+                        <td>{{ tx.user_status|no_value_indicator }}</td>
+                        <td><a href="{% url 'file-transfer-transaction-detail' tx.id %}">Details</a></td>
                     </tr>
                 {% endfor %}
                 {% else %}
