@@ -1,0 +1,55 @@
+.zato-tabs {
+    margin-bottom: 16px;
+}
+
+.zato-tabs-nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 3px solid var(--primary-dark, #012845);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.zato-tabs-nav li {
+    margin: 0;
+    padding: 0;
+}
+
+.zato-tabs-nav a {
+    display: block;
+    padding: 8px 20px;
+    background: transparent;
+    border: none;
+    color: #666;
+    font-weight: 400;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -3px;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.zato-tabs-nav a:hover {
+    color: #333;
+    text-decoration: none;
+}
+
+.zato-tabs-nav li.active a {
+    color: var(--primary-dark, #012845);
+    font-weight: 600;
+    border-bottom-color: var(--primary-dark, #012845);
+}
+
+.zato-tabs-content {
+    padding-top: 16px;
+}
+
+.zato-tabs-panel {
+    display: none;
+}
+
+.zato-tabs-panel.active {
+    display: block;
+}

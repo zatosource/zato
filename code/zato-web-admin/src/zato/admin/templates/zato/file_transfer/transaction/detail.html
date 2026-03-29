@@ -4,155 +4,145 @@
 {% block html_title %}File transfer - Transaction {{ transaction.id }}{% endblock %}
 
 {% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/zato-tabs.css">
 <style>
-.ft-detail-header {
-    background: var(--panel-bg, #1e293b);
-    border-radius: 6px;
-    padding: 16px;
+.ft-detail-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+}
+.ft-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 16px;
-    border: 1px solid var(--border-color, #334155);
+    padding-bottom: 12px;
+    border-bottom: 1px solid #ddd;
 }
-.ft-detail-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 12px;
+.ft-back-link {
+    color: var(--primary-dark, #012845);
+    text-decoration: none;
     font-size: 13px;
-    margin-top: 12px;
 }
-.ft-detail-grid .label {
-    color: #64748b;
+.ft-back-link:hover {
+    text-decoration: underline;
+}
+.ft-txn-id {
+    display: block;
     font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 2px;
+    color: #666;
+    font-family: monospace;
+    margin-left: 32px;
 }
 .ft-badge {
     display: inline-block;
-    padding: 2px 10px;
-    border-radius: 3px;
+    padding: 2px 8px;
     font-size: 11px;
     font-weight: 600;
     color: #fff;
 }
-.ft-badge-done { background: #22c55e; }
-.ft-badge-failed { background: #ef4444; }
-.ft-badge-warn { background: #f59e0b; }
-.ft-badge-delivering { background: #6366f1; }
-.ft-badge-queued { background: #8b5cf6; }
+.ft-badge-done { background: #067f39; }
+.ft-badge-failed { background: #cc0000; }
+.ft-badge-warn { background: #b45309; }
+.ft-badge-delivering { background: var(--primary-dark, #012845); }
+.ft-badge-queued { background: #6b21a8; }
+.ft-badge-not-routed { background: #b45309; }
 .ft-kv-row {
     display: flex;
-    padding: 6px 0;
-    border-bottom: 1px solid var(--border-color, #1e293b);
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
 }
 .ft-kv-key {
-    width: 150px;
+    width: 160px;
     flex-shrink: 0;
-    color: #64748b;
+    color: #666;
     font-size: 13px;
+    font-weight: 600;
 }
 .ft-kv-val {
-    color: #cbd5e1;
+    color: #333;
     font-size: 13px;
     font-family: monospace;
 }
 .ft-content-view {
-    background: var(--input-bg, #0f172a);
-    border: 1px solid var(--border-color, #334155);
-    border-radius: 4px;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
     padding: 16px;
-    color: #94a3b8;
+    color: #333;
     font-size: 12px;
     overflow: auto;
-    max-height: 300px;
+    max-height: 400px;
     font-family: monospace;
     white-space: pre-wrap;
 }
-.ft-log-entry {
+.ft-actions {
     display: flex;
-    align-items: flex-start;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--border-color, #1e293b);
-    font-size: 13px;
+    gap: 8px;
 }
-.ft-log-time {
-    width: 70px;
-    flex-shrink: 0;
-    color: #475569;
-    font-family: monospace;
-    font-size: 12px;
+.ft-actions .action-button,
+.ft-actions .secondary-button {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
 }
-.ft-log-cls {
-    width: 100px;
-    flex-shrink: 0;
-    color: #64748b;
-    font-size: 12px;
+.ft-actions .action-button {
+    background: var(--primary-dark, #012845);
+    color: #fff;
 }
-.ft-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    margin-right: 6px;
+.ft-actions .secondary-button {
+    background: #fff;
+    color: var(--primary-dark, #012845);
+    border: 1px solid var(--primary-dark, #012845);
 }
-.ft-dot-error { background: #ef4444; }
-.ft-dot-warn { background: #f59e0b; }
-.ft-dot-info { background: #475569; }
 </style>
 {% endblock %}
 
+{% block "extra_js" %}
+<script type="text/javascript" src="/static/js/zato-tabs.js" nonce="{{ CSP_NONCE }}"></script>
+{% endblock %}
+
 {% block "content" %}
-<div class="content-wrap">
-    <nav class="breadcrumb">
-        <a href="{% url 'main-page' %}">Zato</a> &rsaquo;
-        <a href="{% url 'file-transfer-transaction' %}">File transfer</a> &rsaquo;
-        <span>{{ transaction.id }}</span>
-    </nav>
+<div class="ft-detail-wrap">
 
-    <a href="{% url 'file-transfer-transaction' %}" class="btn btn-default" style="margin-bottom:12px">&larr; Back to transactions</a>
-
-    <div class="ft-detail-header">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-                <h2 style="margin:0">{{ transaction.id }}</h2>
-                <span style="color:#64748b;font-size:13px">{{ transaction.filename }}</span>
-            </div>
-            <div>
-                <button class="btn btn-primary" onclick="resubmit('{{ transaction.id }}')">Resubmit</button>
-                <button class="btn btn-default" onclick="reprocess('{{ transaction.id }}')">Reprocess</button>
-                <a href="{% url 'file-transfer-transaction-content' transaction.id %}" class="btn btn-default" target="_blank">Download</a>
-            </div>
-        </div>
-        <div class="ft-detail-grid">
-            <div><div class="label">Doc type</div><div>{{ transaction.doc_type_id|default:"-" }}</div></div>
-            <div><div class="label">Sender</div><div>{{ transaction.sender|default:"-" }}</div></div>
-            <div><div class="label">Receiver</div><div>{{ transaction.receiver|default:"-" }}</div></div>
-            <div><div class="label">Status</div><div>
-                {% if transaction.processing_status == 'Done' %}
-                <span class="ft-badge ft-badge-done">DONE</span>
-                {% elif transaction.processing_status == 'Failed' %}
-                <span class="ft-badge ft-badge-failed">FAILED</span>
-                {% elif transaction.processing_status == 'Done_W_Errors' %}
-                <span class="ft-badge ft-badge-warn">DONE W/ERRORS</span>
-                {% else %}
-                <span class="ft-badge">{{ transaction.processing_status }}</span>
-                {% endif %}
-            </div></div>
-            <div><div class="label">User status</div><div>{{ transaction.user_status|default:"-" }}</div></div>
-            <div><div class="label">Size</div><div>{{ transaction.file_size }} bytes</div></div>
-            <div><div class="label">Matched rule</div><div>{{ transaction.matched_rule_id|default:"-" }}</div></div>
-            <div><div class="label">Date</div><div>{{ transaction.created }}</div></div>
-        </div>
+<div class="ft-title-row">
+    <div>
+        <a href="{% url 'file-transfer-transaction' %}" class="ft-back-link">&larr; Back</a>
+        <h2 class="zato" style="display:inline;margin-left:12px">{{ transaction.filename }}</h2>
+        <span class="ft-txn-id">{{ transaction.id }}</span>
+        {% if transaction.processing_status == 'Done' %}
+        <span class="ft-badge ft-badge-done">DONE</span>
+        {% elif transaction.processing_status == 'Failed' %}
+        <span class="ft-badge ft-badge-failed">FAILED</span>
+        {% elif transaction.processing_status == 'Done_W_Errors' %}
+        <span class="ft-badge ft-badge-warn">DONE W/ERRORS</span>
+        {% elif transaction.processing_status == 'Not_Routed' %}
+        <span class="ft-badge ft-badge-not-routed">NOT ROUTED</span>
+        {% elif transaction.processing_status == 'Queued' %}
+        <span class="ft-badge ft-badge-queued">QUEUED</span>
+        {% elif transaction.processing_status == 'Delivering' %}
+        <span class="ft-badge ft-badge-delivering">DELIVERING</span>
+        {% else %}
+        <span class="ft-badge">{{ transaction.processing_status }}</span>
+        {% endif %}
     </div>
+    <div class="ft-actions">
+        <button class="action-button" onclick="resubmit('{{ transaction.id }}')">Resubmit</button>
+        <button class="secondary-button" onclick="reprocess('{{ transaction.id }}')">Reprocess</button>
+        <a href="{% url 'file-transfer-transaction-content' transaction.id %}" class="secondary-button" target="_blank">Download</a>
+    </div>
+</div>
 
-    <ul class="nav nav-tabs" style="margin-bottom:16px">
-        <li class="active"><a href="#tab-attrs" data-toggle="tab">Attributes</a></li>
-        <li><a href="#tab-content" data-toggle="tab">Content</a></li>
-        <li><a href="#tab-activity" data-toggle="tab">Activity</a></li>
-        <li><a href="#tab-tasks" data-toggle="tab">Tasks</a></li>
+<div class="zato-tabs" id="transaction-tabs">
+    <ul class="zato-tabs-nav">
+        <li class="active"><a href="#tab-attrs">Attributes</a></li>
+        <li><a href="#tab-content">Content</a></li>
+        <li><a href="#tab-activity">Activity</a></li>
+        <li><a href="#tab-tasks">Tasks</a></li>
     </ul>
-
-    <div class="tab-content">
-        <div class="tab-pane active" id="tab-attrs">
+    <div class="zato-tabs-content">
+        <div class="zato-tabs-panel active" id="tab-attrs">
             <div class="ft-kv-row"><span class="ft-kv-key">Transaction ID</span><span class="ft-kv-val">{{ transaction.id }}</span></div>
             <div class="ft-kv-row"><span class="ft-kv-key">File name</span><span class="ft-kv-val">{{ transaction.filename }}</span></div>
             <div class="ft-kv-row"><span class="ft-kv-key">Doc type</span><span class="ft-kv-val">{{ transaction.doc_type_id|default:"-" }}</span></div>
@@ -161,7 +151,7 @@
             <div class="ft-kv-row"><span class="ft-kv-key">Document ID</span><span class="ft-kv-val">{{ transaction.document_id|default:"-" }}</span></div>
             <div class="ft-kv-row"><span class="ft-kv-key">Conversation ID</span><span class="ft-kv-val">{{ transaction.conversation_id|default:"-" }}</span></div>
             <div class="ft-kv-row"><span class="ft-kv-key">Group ID</span><span class="ft-kv-val">{{ transaction.group_id|default:"-" }}</span></div>
-            <div class="ft-kv-row"><span class="ft-kv-key">Size</span><span class="ft-kv-val">{{ transaction.file_size }} bytes</span></div>
+            <div class="ft-kv-row"><span class="ft-kv-key">Size</span><span class="ft-kv-val">{{ transaction.file_size|filesizeformat }}</span></div>
             <div class="ft-kv-row"><span class="ft-kv-key">Source checksum</span><span class="ft-kv-val">{{ transaction.source_checksum|default:"-" }}</span></div>
             <div class="ft-kv-row"><span class="ft-kv-key">Source protocol</span><span class="ft-kv-val">{{ transaction.source_protocol|default:"-" }}</span></div>
             <div class="ft-kv-row"><span class="ft-kv-key">Source detail</span><span class="ft-kv-val">{{ transaction.source_detail|default:"-" }}</span></div>
@@ -170,31 +160,35 @@
             <div class="ft-kv-row"><span class="ft-kv-key">Has errors</span><span class="ft-kv-val">{{ transaction.has_errors|yesno:"Yes,No" }}</span></div>
         </div>
 
-        <div class="tab-pane" id="tab-content">
+        <div class="zato-tabs-panel" id="tab-content">
             <div id="content-area" class="ft-content-view">Loading...</div>
         </div>
 
-        <div class="tab-pane" id="tab-activity">
+        <div class="zato-tabs-panel" id="tab-activity">
             <div id="activity-area">Loading...</div>
         </div>
 
-        <div class="tab-pane" id="tab-tasks">
+        <div class="zato-tabs-panel" id="tab-tasks">
             <div id="tasks-area">Loading...</div>
         </div>
     </div>
 </div>
+</div>
 
-<script>
+<script nonce="{{ CSP_NONCE }}">
 $(function() {
-    $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
-        var target = $(e.target).attr('href');
-        if (target === '#tab-content') {
-            loadContent();
-        } else if (target === '#tab-activity') {
-            loadActivity();
-        } else if (target === '#tab-tasks') {
-            loadTasks();
-        }
+    var tabs = new ZatoTabs('#transaction-tabs');
+
+    tabs.on('tab-content', function() {
+        loadContent();
+    });
+
+    tabs.on('tab-activity', function() {
+        loadActivity();
+    });
+
+    tabs.on('tab-tasks', function() {
+        loadTasks();
     });
 });
 
