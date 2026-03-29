@@ -10,7 +10,7 @@
 
 {% block left_content %}
 <div class="ft-header-row">
-    <a href="{% url 'file-transfer-transaction' %}?{{ back_query }}" class="secondary-button ft-back-btn">Back</a>
+    <a href="{% url 'file-transfer-transaction' %}?{{ filter_query }}" class="secondary-button ft-transactions-btn">Transactions</a>
     <h3>Transaction details</h3>
     <span class="ft-header-txn-id zato-copyable">{{ transaction.id }}</span>
 </div>
@@ -45,8 +45,8 @@
     </div>
     <div class="button-container">
         <button class="secondary-button" onclick="reprocess('{{ transaction.id }}')">Reprocess</button>
+        <button class="secondary-button" onclick="resubmit('{{ transaction.id }}')">Resubmit</button>
         <a href="{% url 'file-transfer-transaction-content' transaction.id %}" class="secondary-button" target="_blank">Download</a>
-        <button class="action-button" onclick="resubmit('{{ transaction.id }}')">Resubmit</button>
     </div>
     <div class="zato-tabs" id="transaction-tabs">
     <ul class="zato-tabs-nav">

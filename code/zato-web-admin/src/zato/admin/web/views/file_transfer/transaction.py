@@ -89,7 +89,7 @@ def transaction_detail(req:'HttpRequest', tx_id:'str') -> 'HttpResponse':
 
     return TemplateResponse(req, 'zato/file_transfer/transaction/detail.html', {
         'transaction': response.data,
-        'back_query': req.GET.urlencode(),
+        'filter_query': req.GET.urlencode(),
     })
 
 # ################################################################################################################################

@@ -24,6 +24,7 @@ $.fn.zato.file_transfer_submit.handleSubmit = function() {
     formData.append('source_protocol', 'Manual upload');
     formData.append('source_detail', 'Uploaded via Dashboard');
 
+    setTimeout(function() {
     $.ajax({
         url: '/zato/file-transfer/submit/file/',
         type: 'POST',
@@ -56,6 +57,7 @@ $.fn.zato.file_transfer_submit.handleSubmit = function() {
             button.prop('disabled', false);
         }
     });
+    }, 500);
 };
 
 $(document).ready(function() {

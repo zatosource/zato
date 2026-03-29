@@ -237,7 +237,7 @@
 .info-badge.queued { background: #6b21a8; color: #fff; }
 .info-badge.delivering { background: var(--primary-dark); color: #fff; }
 
-.ft-back-btn::before {
+.ft-transactions-btn::before {
     content: "◀ ";
     position: relative;
     top: -1px;
@@ -272,6 +272,7 @@
     font-size: 16px;
     font-weight: 600;
     color: var(--primary-dark);
+    line-height: 26px;
 }
 
 .ft-header-txn-id {
@@ -279,6 +280,9 @@
     font-size: 14px;
     color: var(--primary-dark);
     font-weight: 600;
+    line-height: 26px;
+    position: relative;
+    top: 2px;
 }
 
 .ft-action-bar {
