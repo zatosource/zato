@@ -4,7 +4,7 @@ MAKEFLAGS += --silent
 default: run-tests
 
 install:
-	$(CURDIR)/code/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out $@,$(MAKECMDGOALS))
+	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out $@,$(MAKECMDGOALS))
 PY_DIR=$(CURDIR)/../bin
 
 static-check:
