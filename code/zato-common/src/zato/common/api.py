@@ -294,13 +294,14 @@ class DATA_FORMAT(Attrs):
     CSV = 'csv'
     DICT = 'dict'
     FORM_DATA = 'form'
+    HL7 = 'hl7'
     JSON = 'json'
     POST = 'post'
 
     def __iter__(self):
         # Note that DICT and other attributes aren't included because they're never exposed to the external world as-is,
         # they may at most only used so that services can invoke each other directly
-        return iter((self.JSON, self.CSV, self.POST))
+        return iter((self.JSON, self.CSV, self.POST, self.HL7))
 
 Data_Format = DATA_FORMAT
 
@@ -741,11 +742,15 @@ class GENERIC:
 
     class CONNECTION:
         class TYPE:
+            CHANNEL_HL7_MLLP = 'channel-hl7-mllp'
+            CHANNEL_HL7_REST = 'channel-hl7-rest'
             CHANNEL_OPENAPI = 'channel-openapi'
             CLOUD_CONFLUENCE = 'cloud-confluence'
             CLOUD_JIRA = 'cloud-jira'
             CLOUD_MICROSOFT_365 = 'cloud-microsoft-365'
             CLOUD_SALESFORCE = 'cloud-salesforce'
+            OUTCONN_HL7_FHIR = 'outconn-hl7-fhir'
+            OUTCONN_HL7_MLLP = 'outconn-hl7-mllp'
             OUTCONN_LDAP = 'outconn-ldap'
             OUTCONN_MONGODB = 'outconn-mongodb'
 
@@ -1128,6 +1133,53 @@ class MyService(Service):
         # Reply to our caller
         self.response.payload.salutation = message
 """.lstrip()
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class HL7:
+
+    class Default:
+        address_fhir = 'http://localhost:8080/fhir'
+        channel_host = '0.0.0.0'
+        channel_port = 11223
+        data_encoding = 'utf-8'
+        end_seq = '1c 0d'
+        max_msg_size = 2_000_000
+        max_wait_time = 5
+        pool_size = 10
+        read_buffer_size = 2048
+        recv_timeout = 250
+        start_seq = '0b'
+
+    class Const:
+
+        class Version:
+            v2 = NameId('HL7 v2.x', 'hl7-v2')
+
+            def __iter__(self):
+                return iter((self.v2,))
+
+        class ImplClass:
+            hl7apy = 'hl7apy'
+            zato = 'zato'
+
+        class LoggingLevel:
+            DEBUG = NameId('DEBUG', 'DEBUG')
+            INFO = NameId('INFO', 'INFO')
+            WARNING = NameId('WARNING', 'WARNING')
+            ERROR = NameId('ERROR', 'ERROR')
+
+            def __iter__(self):
+                return iter((self.DEBUG, self.INFO, self.WARNING, self.ERROR))
+
+        class FHIR_Auth_Type:
+            No_Auth = NameId('No auth', 'no-auth')
+            Basic_Auth = NameId('Basic Auth', 'basic-auth')
+            OAuth = NameId('OAuth', 'oauth')
+
+            def __iter__(self):
+                return iter((self.No_Auth, self.Basic_Auth, self.OAuth))
 
 # ################################################################################################################################
 # ################################################################################################################################
