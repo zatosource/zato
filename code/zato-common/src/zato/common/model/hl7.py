@@ -14,11 +14,11 @@ from zato.common.typing_ import dataclass, strnone
 
 @dataclass
 class HL7MLLPConfigObject:
-    id: int
-    name: str
-    is_active: bool
-    is_internal: bool
-    address: str
+    id: int = 0
+    name: str = ''
+    is_active: bool = False
+    is_internal: bool = False
+    address: str = ''
     service: strnone = None
     security_name: strnone = None
     pool_size: int = 1
@@ -28,15 +28,13 @@ class HL7MLLPConfigObject:
 
 @dataclass
 class HL7FHIRConfigObject:
-    id: int
-    name: str
-    is_active: bool
-    is_internal: bool
-    address: str
+    id: int = 0
+    name: str = ''
+    is_active: bool = False
+    is_internal: bool = False
+    address: str = ''
     security_id: strnone = None
     security_name: strnone = None
-    sec_tls_ca_cert_id: strnone = None
-    sec_def_type_name: strnone = None
     pool_size: int = 1
 
 # ################################################################################################################################
