@@ -11,7 +11,8 @@ from zato_hl7v2.base import HL7Message
 
 def parse_message(raw: str) -> HL7Message:
     try:
-        from zato_hl7v2_rs import parse as rust_parse
+        from zato_hl7v2 import zato_hl7v2_rs
+        rust_parse = zato_hl7v2_rs.parse
         raw_msg = rust_parse(raw)
         msg_class = HL7Message._registry.get(raw_msg.structure_id)
         if msg_class is None:
