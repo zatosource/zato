@@ -139,18 +139,18 @@ class HL7SegmentAttr:
             return None
         if self.repeatable:
             result = []
-            for raw_seg in raw_message.segments:
-                if raw_seg.segment_id == self.segment_id:
+            for item in raw_message.items:
+                if hasattr(item, 'segment_id') and item.segment_id == self.segment_id:
                     seg = seg_class.__new__(seg_class)
-                    seg._raw_segment = raw_seg
+                    seg._raw_segment = item
                     result.append(seg)
             cache[self.attr_name] = result
             return result
         else:
-            for raw_seg in raw_message.segments:
-                if raw_seg.segment_id == self.segment_id:
+            for item in raw_message.items:
+                if hasattr(item, 'segment_id') and item.segment_id == self.segment_id:
                     seg = seg_class.__new__(seg_class)
-                    seg._raw_segment = raw_seg
+                    seg._raw_segment = item
                     cache[self.attr_name] = seg
                     return seg
             return None
@@ -185,18 +185,18 @@ class HL7GroupAttr:
             return None
         if self.repeatable:
             result = []
-            for raw_grp in raw_message.groups:
-                if raw_grp.name == self.name:
+            for item in raw_message.items:
+                if hasattr(item, 'name') and item.name == self.name:
                     grp = HL7Group()
-                    grp._raw_group = raw_grp
+                    grp._raw_group = item
                     result.append(grp)
             cache[self.attr_name] = result
             return result
         else:
-            for raw_grp in raw_message.groups:
-                if raw_grp.name == self.name:
+            for item in raw_message.items:
+                if hasattr(item, 'name') and item.name == self.name:
                     grp = HL7Group()
-                    grp._raw_group = raw_grp
+                    grp._raw_group = item
                     cache[self.attr_name] = grp
                     return grp
             return None
@@ -247,23 +247,33 @@ class HL7Segment:
     def from_er7(cls, raw: str) -> "HL7Segment":
         raise NotImplementedError
 
-    def to_er7(self) -> str:
-        parts = [self._segment_id]
-        field_descriptors = []
-        for name in dir(self.__class__):
-            attr = getattr(self.__class__, name)
-            if isinstance(attr, HL7Field):
-                field_descriptors.append((attr.position, name, attr))
-        field_descriptors.sort(key=lambda x: x[0])
-        for pos, name, desc in field_descriptors:
-            val = getattr(self, name, None)
-            if val is None:
-                parts.append("")
-            elif isinstance(val, list):
-                parts.append("~".join(str(v) for v in val))
-            else:
-                parts.append(str(val))
-        return "|".join(parts)
+    def serialize(self) -> str:
+        if self._raw_segment:
+            field_sep = '|'
+            comp_sep = '^'
+            rep_sep = '~'
+            esc_char = '\\'
+            subcomp_sep = '&'
+            
+            result = self._segment_id
+            for field_idx, field in enumerate(self._raw_segment.fields):
+                result += field_sep
+                if self._segment_id == "MSH" and field_idx == 0:
+                    result += f"{comp_sep}{rep_sep}{esc_char}{subcomp_sep}"
+                    continue
+                rep_strs = []
+                for rep in field:
+                    comp_strs = []
+                    for comp in rep:
+                        subcomp_strs = [s for s in comp]
+                        comp_strs.append(subcomp_sep.join(subcomp_strs))
+                    rep_strs.append(comp_sep.join(comp_strs))
+                result += rep_sep.join(rep_strs)
+            return result
+        return ""
+
+    to_hl7 = serialize
+    to_er7 = serialize
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"_segment_id": self._segment_id}
@@ -288,17 +298,27 @@ class HL7Group:
     _group_name: str = ""
     _raw_group: Any = None
 
+    def serialize(self) -> str:
+        from zato_hl7v2_rs import serialize as _rust_serialize
+        if self._raw_group:
+            return _rust_serialize(self._raw_group)
+        return ""
+
+    to_hl7 = serialize
+    to_er7 = serialize
+
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"_group_name": self._group_name}
         if self._raw_group:
             result["segments"] = []
-            for raw_seg in self._raw_group.segments:
-                from zato_hl7v2 import v2_9
-                seg_class = getattr(v2_9.segments, raw_seg.segment_id, None)
-                if seg_class:
-                    seg = seg_class.__new__(seg_class)
-                    seg._raw_segment = raw_seg
-                    result["segments"].append(seg.to_dict())
+            for item in self._raw_group.items:
+                if hasattr(item, 'segment_id'):
+                    from zato_hl7v2 import v2_9
+                    seg_class = getattr(v2_9.segments, item.segment_id, None)
+                    if seg_class:
+                        seg = seg_class.__new__(seg_class)
+                        seg._raw_segment = item
+                        result["segments"].append(seg.to_dict())
         return result
 
     def to_json(self, indent: Optional[int] = None) -> str:
@@ -320,18 +340,14 @@ class HL7Message:
         from zato_hl7v2.v2_9 import parse_message
         return parse_message(raw)
 
-    def to_er7(self) -> str:
-        parts = []
+    def serialize(self) -> str:
+        from zato_hl7v2.v2_9 import serialize as _serialize
         if self._raw_message:
-            for raw_seg in self._raw_message.segments:
-                seg_id = raw_seg.segment_id
-                from zato_hl7v2 import v2_9
-                seg_class = getattr(v2_9.segments, seg_id, None)
-                if seg_class:
-                    seg = seg_class.__new__(seg_class)
-                    seg._raw_segment = raw_seg
-                    parts.append(seg.to_er7())
-        return "\r".join(parts)
+            return _serialize(self._raw_message)
+        return ""
+
+    to_hl7 = serialize
+    to_er7 = serialize
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"_structure_id": self._structure_id}

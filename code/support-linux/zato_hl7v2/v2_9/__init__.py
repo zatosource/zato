@@ -7,7 +7,13 @@ from zato_hl7v2.v2_9.groups import *
 from zato_hl7v2.v2_9.messages import *
 
 from zato_hl7v2.base import HL7Message
-from zato_hl7v2_rs import parse as _rust_parse, validate as _rust_validate, ValidationResult, ValidationError
+from zato_hl7v2_rs import (
+    parse as _rust_parse,
+    validate as _rust_validate,
+    serialize as _rust_serialize,
+    ValidationResult,
+    ValidationError,
+)
 
 
 def parse_message(raw: str) -> HL7Message:
@@ -22,3 +28,13 @@ def parse_message(raw: str) -> HL7Message:
 
 def validate_message(raw: str) -> ValidationResult:
     return _rust_validate(raw)
+
+
+def serialize(msg) -> str:
+    if hasattr(msg, '_raw_message'):
+        return _rust_serialize(msg._raw_message)
+    return _rust_serialize(msg)
+
+
+to_hl7 = serialize
+to_er7 = serialize
