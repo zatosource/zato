@@ -67,6 +67,7 @@ vscode
 !code/bundle-ext/**/*.pyd
 *.pyo
 *.so
+!code/support-linux/zato_hl7v2/*.so
 *.swp
 *.*~
 ~
