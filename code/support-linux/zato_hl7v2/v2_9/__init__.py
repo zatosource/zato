@@ -7,7 +7,7 @@ from zato_hl7v2.v2_9.groups import *
 from zato_hl7v2.v2_9.messages import *
 
 from zato_hl7v2.base import HL7Message
-from zato_hl7v2_rs import parse as _rust_parse
+from zato_hl7v2_rs import parse as _rust_parse, validate as _rust_validate, ValidationResult, ValidationError
 
 
 def parse_message(raw: str) -> HL7Message:
@@ -18,3 +18,7 @@ def parse_message(raw: str) -> HL7Message:
     msg = msg_class.__new__(msg_class)
     msg._raw_message = raw_msg
     return msg
+
+
+def validate_message(raw: str) -> ValidationResult:
+    return _rust_validate(raw)
