@@ -116,7 +116,7 @@ class RedisConsumer:
             class _RedisMsg:
                 def ack(self):
                     pass
-                def reject(self):
+                def reject(self, requeue=False):
                     pass
 
             redis_msg = _RedisMsg()
