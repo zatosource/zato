@@ -16,8 +16,13 @@ from zato_hl7v2_rs import (
 )
 
 
-def parse_message(raw: str) -> HL7Message:
+def parse_message(raw: str, validate: bool = True) -> HL7Message:
     raw_msg = _rust_parse(raw)
+    if validate:
+        result = _rust_validate(raw)
+        if not result.is_valid:
+            errors = "; ".join(f"{e.path}: {e.message}" for e in result.errors)
+            raise ValueError(f"Validation failed: {errors}")
     msg_class = HL7Message._registry.get(raw_msg.structure_id)
     if msg_class is None:
         raise ValueError(f"Unknown structure: {raw_msg.structure_id}")

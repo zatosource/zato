@@ -13,9 +13,9 @@ from zato_hl7v2.base import (
 )
 
 
-def parse_message(raw: str) -> HL7Message:
+def parse_message(raw: str, validate: bool = True) -> HL7Message:
     from zato_hl7v2.v2_9 import parse_message as parse_v2_9
-    return parse_v2_9(raw)
+    return parse_v2_9(raw, validate=validate)
 
 
 __all__ = [
