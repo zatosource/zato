@@ -270,13 +270,19 @@ class GetMessages(PubSubRESTService):
 
     def handle(self) -> 'None':
 
+        self.logger.info('[TRACE] GetMessages.handle starting')
+
         # Local aliases
         cid = self.cid
         input = self.request.input
 
+        self.logger.info('[TRACE] cid:%s, input:%s', cid, input)
+
         # Authenticate
         username, error = self.authenticate()
+        self.logger.info('[TRACE] authenticate result -> username:%s, error:%s', username, error)
         if error:
+            self.logger.info('[TRACE] authentication error, returning early')
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.details, self.response.payload.status = error
@@ -284,8 +290,10 @@ class GetMessages(PubSubRESTService):
 
         # Get sub_key for this user
         sub_key = self._get_sub_key_for_user(username)
+        self.logger.info('[TRACE] sub_key for user %s: %s', username, sub_key)
 
         if not sub_key:
+            self.logger.info('[TRACE] no sub_key found, returning empty messages')
             self.response.payload.is_ok = True
             self.response.payload.cid = cid
             self.response.payload.messages = []
@@ -295,13 +303,16 @@ class GetMessages(PubSubRESTService):
         # Get optional parameters
         max_messages = input.max_messages if input.max_messages else _max_messages_default
         max_len = input.max_len if input.max_len else _max_len_default
+        self.logger.info('[TRACE] max_messages:%s, max_len:%s', max_messages, max_len)
 
         # Fetch messages from Redis
+        self.logger.info('[TRACE] calling pubsub_redis.fetch_messages with sub_key:%s', sub_key)
         messages = self.server.pubsub_redis.fetch_messages(
             sub_key,
             max_messages=max_messages,
             max_len=max_len
         )
+        self.logger.info('[TRACE] pubsub_redis.fetch_messages returned %d messages: %s', len(messages), messages)
 
         # Build response
         self.response.payload.is_ok = True
@@ -315,7 +326,11 @@ class GetMessages(PubSubRESTService):
         """ Get the subscription key for a user.
         """
         # Look up in the subscriptions store
-        return self.server.pubsub_subscriptions.get_sub_key_by_username(username)
+        self.logger.info('[TRACE] _get_sub_key_for_user called with username:%s', username)
+        self.logger.info('[TRACE] pubsub_subscriptions store:%s', self.server.pubsub_subscriptions)
+        sub_key = self.server.pubsub_subscriptions.get_sub_key_by_username(username)
+        self.logger.info('[TRACE] get_sub_key_by_username returned:%s', sub_key)
+        return sub_key
 
 # ################################################################################################################################
 # ################################################################################################################################

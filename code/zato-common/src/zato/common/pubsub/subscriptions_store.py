@@ -54,6 +54,7 @@ class SubscriptionsStore:
         """ Register a user with their security definition name and optionally a sub_key.
         """
         with self._lock:
+            logger.info('[TRACE] register_user called with username:%s, sec_name:%s, sub_key:%s', username, sec_name, sub_key)
 
             # Store username <-> sec_name mapping
             self._username_to_sec_name[username] = sec_name
@@ -64,6 +65,7 @@ class SubscriptionsStore:
                 self._username_to_sub_key[username] = sub_key
                 self._sub_key_to_username[sub_key] = username
 
+            logger.info('[TRACE] register_user completed, _username_to_sub_key now has keys:%s', list(self._username_to_sub_key.keys()))
             return sub_key or ''
 
 # ################################################################################################################################
@@ -72,7 +74,11 @@ class SubscriptionsStore:
         """ Get subscription key for a username.
         """
         with self._lock:
-            return self._username_to_sub_key.get(username)
+            logger.info('[TRACE] get_sub_key_by_username called with username:%s', username)
+            logger.info('[TRACE] _username_to_sub_key keys:%s', list(self._username_to_sub_key.keys()))
+            result = self._username_to_sub_key.get(username)
+            logger.info('[TRACE] get_sub_key_by_username returning:%s', result)
+            return result
 
 # ################################################################################################################################
 
