@@ -31,8 +31,7 @@ class PubSubTestClient:
         url = f'{self.base_url}/pubsub/topic/{topic_name}'
         payload = {'data': data}
         response = requests.post(url, json=payload, auth=self.auth)
-        result = response.json()
-        return result.get('response', {})
+        return response.json()
 
 # ################################################################################################################################
 
@@ -40,8 +39,7 @@ class PubSubTestClient:
         url = f'{self.base_url}/pubsub/topic/{topic_name}'
         payload = {'data': data}
         response = requests.post(url, json=payload, auth=self.auth)
-        result = response.json()
-        return result.get('response', {})
+        return response.json()
 
 # ################################################################################################################################
 
@@ -59,8 +57,7 @@ class PubSubTestClient:
             'priority': priority
         }
         response = requests.post(url, json=payload, auth=self.auth)
-        result = response.json()
-        return result.get('response', {})
+        return response.json()
 
 # ################################################################################################################################
 
@@ -71,8 +68,7 @@ class PubSubTestClient:
             'expiration': expiration
         }
         response = requests.post(url, json=payload, auth=self.auth)
-        result = response.json()
-        return result.get('response', {})
+        return response.json()
 
 # ################################################################################################################################
 
@@ -83,8 +79,7 @@ class PubSubTestClient:
             'pub_time': pub_time
         }
         response = requests.post(url, json=payload, auth=self.auth)
-        result = response.json()
-        return result.get('response', {})
+        return response.json()
 
 # ################################################################################################################################
 
@@ -105,16 +100,14 @@ class PubSubTestClient:
         if ext_client_id:
             payload['ext_client_id'] = ext_client_id
         response = requests.post(url, json=payload, auth=self.auth)
-        result = response.json()
-        return result.get('response', {})
+        return response.json()
 
 # ################################################################################################################################
 
     def subscribe(self, topic_name:'str') -> 'dict':
         url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
         response = requests.post(url, auth=self.auth)
-        response_data = response.json()
-        result = response_data.get('response', {})
+        result = response.json()
         if result.get('sub_key'):
             self.sub_key = result['sub_key']
         return result
@@ -123,31 +116,27 @@ class PubSubTestClient:
 
     def get_messages(self, sub_key:'strnone'=None) -> 'dict':
         url = f'{self.base_url}/pubsub/messages/get'
-        payload = {'sub_key': sub_key or self.sub_key}
-        response = requests.post(url, json=payload, auth=self.auth)
-        result = response.json()
-        return result.get('response', {})
+        response = requests.post(url, auth=self.auth)
+        return response.json()
 
 # ################################################################################################################################
 
     def get_messages_with_limit(self, max_messages:'intnone'=None, max_len:'intnone'=None) -> 'dict':
         url = f'{self.base_url}/pubsub/messages/get'
-        payload = {'sub_key': self.sub_key}
+        payload = {}
         if max_messages is not None:
             payload['max_messages'] = max_messages
         if max_len is not None:
             payload['max_len'] = max_len
         response = requests.post(url, json=payload, auth=self.auth)
-        result = response.json()
-        return result.get('response', {})
+        return response.json()
 
 # ################################################################################################################################
 
     def unsubscribe(self, topic_name:'str') -> 'dict':
         url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
         response = requests.post(url, auth=self.auth)
-        response_data = response.json()
-        result = response_data.get('response', {})
+        result = response.json()
         if result.get('is_ok'):
             self.sub_key = None
         return result

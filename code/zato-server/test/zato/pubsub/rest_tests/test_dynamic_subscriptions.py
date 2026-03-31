@@ -178,8 +178,8 @@ class TestConcurrentClientSubscriptions(BaseTestCase):
         """
         client1 = self.get_client()
         client2 = self.get_client2()
-        topic1 = 'demo.1'
-        topic2 = 'demo.2'
+        topic1 = 'demo.3'
+        topic2 = 'orders.processed'
 
         result = client1.subscribe(topic1)
         self.assertTrue(result.get('is_ok'), 'Client1 subscribe to topic1 should succeed')
@@ -201,11 +201,11 @@ class TestConcurrentClientSubscriptions(BaseTestCase):
         topics1 = [m.get('meta', {}).get('topic_name') for m in messages1]
         topics2 = [m.get('meta', {}).get('topic_name') for m in messages2]
 
-        self.assertIn('demo.1', topics1, 'Client1 should receive topic1 message')
-        self.assertNotIn('demo.2', topics1, 'Client1 should not receive topic2 message')
+        self.assertIn('demo.3', topics1, 'Client1 should receive topic1 message')
+        self.assertNotIn('orders.processed', topics1, 'Client1 should not receive topic2 message')
 
-        self.assertIn('demo.2', topics2, 'Client2 should receive topic2 message')
-        self.assertNotIn('demo.1', topics2, 'Client2 should not receive topic1 message')
+        self.assertIn('orders.processed', topics2, 'Client2 should receive topic2 message')
+        self.assertNotIn('demo.3', topics2, 'Client2 should not receive topic1 message')
 
         client1.unsubscribe(topic1)
         client2.unsubscribe(topic2)
