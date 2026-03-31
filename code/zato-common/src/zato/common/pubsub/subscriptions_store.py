@@ -71,7 +71,8 @@ class SubscriptionsStore:
         """ Get subscription key for a username.
         """
         with self._lock:
-            return self._username_to_sub_key.get(username)
+            sub_key = self._username_to_sub_key.get(username)
+            return sub_key
 
 # ################################################################################################################################
 
@@ -79,7 +80,8 @@ class SubscriptionsStore:
         """ Get username for a subscription key.
         """
         with self._lock:
-            return self._sub_key_to_username.get(sub_key)
+            username = self._sub_key_to_username.get(sub_key)
+            return username
 
 # ################################################################################################################################
 
@@ -87,7 +89,8 @@ class SubscriptionsStore:
         """ Get security definition name for a username.
         """
         with self._lock:
-            return self._username_to_sec_name.get(username)
+            sec_name = self._username_to_sec_name.get(username)
+            return sec_name
 
 # ################################################################################################################################
 
@@ -95,7 +98,8 @@ class SubscriptionsStore:
         """ Get username for a security definition name.
         """
         with self._lock:
-            return self._sec_name_to_username.get(sec_name)
+            username = self._sec_name_to_username.get(sec_name)
+            return username
 
 # ################################################################################################################################
 

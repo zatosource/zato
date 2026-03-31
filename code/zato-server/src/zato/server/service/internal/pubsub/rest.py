@@ -267,7 +267,8 @@ class GetMessages(PubSubRESTService):
     def _get_sub_key_for_user(self, username:'str') -> 'str':
         """ Get the subscription key for a user.
         """
-        return self.server.pubsub_subscriptions.get_sub_key_by_username(username)
+        sub_key = self.server.pubsub_subscriptions.get_sub_key_by_username(username)
+        return sub_key
 
 # ################################################################################################################################
 # ################################################################################################################################
