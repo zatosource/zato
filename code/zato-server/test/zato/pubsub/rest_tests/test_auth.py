@@ -20,7 +20,7 @@ class TestAuth(BaseTestCase):
 
         result = client.publish(topic, 'test message')
         self.assertFalse(result.get('is_ok'), 'Publish with wrong password should fail')
-        self.assertEqual(result.get('status'), 401, 'Should return 401 Unauthorized')
+        self.assertEqual(result.get('status'), '401 Unauthorized')
 
     def test_subscribe_with_wrong_password(self):
         topic = self.config.topic_allowed
@@ -28,7 +28,7 @@ class TestAuth(BaseTestCase):
 
         result = client.subscribe(topic)
         self.assertFalse(result.get('is_ok'), 'Subscribe with wrong password should fail')
-        self.assertEqual(result.get('status'), 401, 'Should return 401 Unauthorized')
+        self.assertEqual(result.get('status'), '401 Unauthorized')
 
     def test_publish_with_nonexistent_user(self):
         topic = self.config.topic_allowed
@@ -36,7 +36,7 @@ class TestAuth(BaseTestCase):
 
         result = client.publish(topic, 'test message')
         self.assertFalse(result.get('is_ok'), 'Publish with non-existent user should fail')
-        self.assertEqual(result.get('status'), 401, 'Should return 401 Unauthorized')
+        self.assertEqual(result.get('status'), '401 Unauthorized')
 
 # ################################################################################################################################
 # ################################################################################################################################
