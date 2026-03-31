@@ -44,16 +44,23 @@ _max_len_default = 5_000_000
 def extract_basic_auth_credentials(wsgi_environ:'anydict') -> 'tuple':
     """ Extracts username and password from HTTP Basic Auth header.
     """
+    logger.info('[TRACE] extract_basic_auth_credentials called')
     auth_header = wsgi_environ.get('HTTP_AUTHORIZATION', '')
+    logger.info('[TRACE] auth_header:%s', auth_header)
     if not auth_header.startswith('Basic '):
+        logger.info('[TRACE] auth_header does not start with Basic, returning None, None')
         return None, None
 
     try:
         encoded = auth_header[6:]
+        logger.info('[TRACE] encoded:%s', encoded)
         decoded = b64decode(encoded).decode('utf-8')
+        logger.info('[TRACE] decoded:%s', decoded)
         username, password = decoded.split(':', 1)
+        logger.info('[TRACE] extracted username:%s, password:%s', username, password)
         return username, password
-    except Exception:
+    except Exception as e:
+        logger.info('[TRACE] exception extracting credentials -> e:%s', e)
         return None, None
 
 # ################################################################################################################################
@@ -74,30 +81,46 @@ class PubSubRESTService(Service):
     def authenticate(self) -> 'tuple':
         """ Extract and validate credentials. Returns (username, error_response) tuple.
         """
+        self.logger.info('[TRACE] authenticate called')
         username, password = extract_basic_auth_credentials(self.wsgi_environ)
+        self.logger.info('[TRACE] extracted username:%s, password:%s', username, password)
 
         if not username:
+            self.logger.info('[TRACE] no username, returning Authentication required')
             return None, ('Authentication required', UNAUTHORIZED)
 
-        if not self._validate_credentials(username, password):
+        validate_result = self._validate_credentials(username, password)
+        self.logger.info('[TRACE] _validate_credentials returned:%s', validate_result)
+        if not validate_result:
+            self.logger.info('[TRACE] invalid credentials, returning Invalid credentials')
             return None, ('Invalid credentials', UNAUTHORIZED)
 
+        self.logger.info('[TRACE] authentication successful for username:%s', username)
         return username, None
 
     def _validate_credentials(self, username:'str', password:'str') -> 'bool':
         """ Validate username/password against all basic auth security definitions.
         """
+        self.logger.info('[TRACE] _validate_credentials called with username:%s, password:%s', username, password)
         basic_auth_config = self.server.worker_store.request_dispatcher.url_data.basic_auth_config
+        self.logger.info('[TRACE] basic_auth_config:%s', basic_auth_config)
         auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        self.logger.info('[TRACE] auth_header:%s', auth_header)
 
         for sec_def in basic_auth_config.values():
+            self.logger.info('[TRACE] checking sec_def:%s', sec_def)
             config = sec_def.get('config', {})
+            self.logger.info('[TRACE] config:%s', config)
             expected_username = config.get('username')
             expected_password = config.get('password')
+            self.logger.info('[TRACE] expected_username:%s, expected_password:%s', expected_username, expected_password)
             if expected_username and expected_password:
                 result = check_basic_auth(self.cid, auth_header, expected_username, expected_password)
+                self.logger.info('[TRACE] check_basic_auth result:%s', result)
                 if result is True:
+                    self.logger.info('[TRACE] credentials matched, returning True')
                     return True
+        self.logger.info('[TRACE] no matching credentials found, returning False')
         return False
 
 # ################################################################################################################################
