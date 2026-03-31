@@ -4,7 +4,19 @@ import json
 from enum import Enum
 from typing import Any, Optional, TypeVar, Generic
 
+from zato_hl7v2.registry import (
+    register_segment,
+    register_field,
+    register_component,
+    get_segment_class,
+    resolve_field,
+    resolve_component,
+)
+
 T = TypeVar("T")
+
+_datatype_classes: dict[str, type] = {}
+_segment_classes: dict[str, type] = {}
 
 
 class Usage(str, Enum):
@@ -58,6 +70,8 @@ class HL7Field:
 
     def __set_name__(self, owner: type, name: str) -> None:
         self.attr_name = name
+        if hasattr(owner, '_segment_id'):
+            register_field(owner._segment_id, name, self.position, self.datatype)
 
     def __get__(self, instance: Any, owner: type) -> Any:
         if instance is None:
@@ -95,9 +109,8 @@ class HL7Field:
             return None
         if len(components) == 1 and len(components[0]) == 1:
             return components[0][0] if components[0][0] else None
-        from zato_hl7v2 import v2_9
-        dt_class = getattr(v2_9.datatypes, self.datatype, None)
-        if dt_class is not None and isinstance(dt_class, type) and issubclass(dt_class, HL7DataType):
+        dt_class = _datatype_classes.get(self.datatype)
+        if dt_class is not None:
             obj = dt_class.__new__(dt_class)
             obj._raw_components = components
             return obj
@@ -133,8 +146,7 @@ class HL7SegmentAttr:
         raw_message = getattr(instance, "_raw_message", None)
         if raw_message is None:
             return None
-        from zato_hl7v2 import v2_9
-        seg_class = getattr(v2_9.segments, self.segment_id, None)
+        seg_class = _segment_classes.get(self.segment_id)
         if seg_class is None:
             return None
         if self.repeatable:
@@ -208,6 +220,14 @@ class HL7GroupAttr:
 class HL7DataType:
     _raw_components: list[list[str]]
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        _datatype_classes[cls.__name__] = cls
+        for name in dir(cls):
+            attr = getattr(cls, name, None)
+            if isinstance(attr, HL7Component):
+                register_component(cls.__name__, name, attr.position)
+
     def __init__(self, raw: Optional[str] = None, **kwargs: Any) -> None:
         if raw is not None:
             parts = raw.split("^")
@@ -240,6 +260,12 @@ class HL7Segment:
     _segment_id: str = ""
     _raw_segment: Any = None
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if cls._segment_id:
+            _segment_classes[cls._segment_id] = cls
+            register_segment(cls._segment_id, cls)
+
     def __init__(self, raw_segment: Any = None) -> None:
         self._raw_segment = raw_segment
 
@@ -254,7 +280,7 @@ class HL7Segment:
             rep_sep = '~'
             esc_char = '\\'
             subcomp_sep = '&'
-            
+
             result = self._segment_id
             for field_idx, field in enumerate(self._raw_segment.fields):
                 result += field_sep
@@ -313,8 +339,7 @@ class HL7Group:
             result["segments"] = []
             for item in self._raw_group.items:
                 if hasattr(item, 'segment_id'):
-                    from zato_hl7v2 import v2_9
-                    seg_class = getattr(v2_9.segments, item.segment_id, None)
+                    seg_class = _segment_classes.get(item.segment_id)
                     if seg_class:
                         seg = seg_class.__new__(seg_class)
                         seg._raw_segment = item
@@ -371,3 +396,176 @@ class HL7Message:
 
     def to_json(self, indent: Optional[int] = None) -> str:
         return json.dumps(self.to_dict(), indent=indent)
+
+    def get(self, path: str) -> Any:
+        return _get_by_path(self, path)
+
+    def set(self, path: str, value: str) -> None:
+        _set_by_path(self, path, value)
+
+
+def _get_by_path(msg: "HL7Message", path: str) -> Any:
+    parts = path.split(".")
+    if len(parts) < 2:
+        return None
+
+    segment_ref = parts[0]
+    field_ref = parts[1]
+
+    segment = _resolve_segment(msg, segment_ref)
+    if segment is None:
+        return None
+
+    rep_idx = None
+    if "[" in field_ref:
+        field_ref, rep_part = field_ref.split("[", 1)
+        rep_idx = int(rep_part.rstrip("]"))
+
+    field_pos, field_datatype = _resolve_field(segment, field_ref)
+    if field_pos is None:
+        return None
+
+    raw_segment = segment._raw_segment
+    if raw_segment is None:
+        return None
+
+    field_idx = field_pos - 1
+    if field_idx >= len(raw_segment.fields):
+        return None
+
+    field_data = raw_segment.fields[field_idx]
+    if not field_data:
+        return None
+
+    if rep_idx is not None:
+        if rep_idx >= len(field_data):
+            return None
+        rep_data = field_data[rep_idx]
+    else:
+        rep_data = field_data[0] if field_data else None
+
+    if rep_data is None:
+        return None
+
+    if len(parts) == 2:
+        if rep_data and rep_data[0]:
+            return rep_data[0][0] if rep_data[0][0] else None
+        return None
+
+    comp_ref = parts[2]
+    if "[" in comp_ref:
+        comp_ref, _ = comp_ref.split("[", 1)
+
+    comp_pos = _resolve_component(field_datatype, comp_ref)
+    if comp_pos is None:
+        return None
+
+    comp_idx = comp_pos - 1
+    if comp_idx >= len(rep_data):
+        return None
+
+    comp_data = rep_data[comp_idx]
+    if not comp_data:
+        return None
+
+    if len(parts) == 3:
+        return comp_data[0] if comp_data[0] else None
+
+    subcomp_ref = parts[3]
+    subcomp_pos = _resolve_subcomponent(subcomp_ref)
+    if subcomp_pos is None:
+        return None
+
+    subcomp_idx = subcomp_pos - 1
+    if subcomp_idx >= len(comp_data):
+        return None
+
+    return comp_data[subcomp_idx] if comp_data[subcomp_idx] else None
+
+
+def _resolve_segment(msg: "HL7Message", segment_ref: str) -> Any:
+    if segment_ref.isupper():
+        for item in msg._raw_message.items:
+            if hasattr(item, 'segment_id') and item.segment_id == segment_ref:
+                seg_class = _segment_classes.get(segment_ref)
+                if seg_class:
+                    seg = seg_class.__new__(seg_class)
+                    seg._raw_segment = item
+                    return seg
+        return None
+
+    for name in dir(msg.__class__):
+        attr = getattr(msg.__class__, name)
+        if isinstance(attr, HL7SegmentAttr) and name == segment_ref:
+            return getattr(msg, name)
+    return None
+
+
+def _resolve_field(segment: "HL7Segment", field_ref: str) -> tuple:
+    return resolve_field(segment._segment_id, field_ref)
+
+
+def _resolve_component(datatype: str, comp_ref: str) -> int:
+    return resolve_component(datatype, comp_ref)
+
+
+def _resolve_subcomponent(subcomp_ref: str) -> int:
+    if subcomp_ref.isdigit():
+        return int(subcomp_ref)
+    return None
+
+
+def _set_by_path(msg: "HL7Message", path: str, value: str) -> None:
+    parts = path.split(".")
+    if len(parts) < 2:
+        return
+
+    segment_ref = parts[0]
+    field_ref = parts[1]
+
+    segment_id = segment_ref.upper() if segment_ref.isupper() else None
+    if segment_id is None:
+        for name in dir(msg.__class__):
+            attr = getattr(msg.__class__, name)
+            if isinstance(attr, HL7SegmentAttr) and name == segment_ref:
+                segment_id = attr.segment_id
+                break
+    if segment_id is None:
+        return
+
+    rep_idx = 0
+    if "[" in field_ref:
+        field_ref, rep_part = field_ref.split("[", 1)
+        rep_idx = int(rep_part.rstrip("]"))
+
+    field_pos, field_datatype = resolve_field(segment_id, field_ref)
+    if field_pos is None:
+        return
+
+    field_idx = field_pos - 1
+
+    if len(parts) == 2:
+        msg._raw_message.set_segment_field(segment_id, field_idx, rep_idx, 0, 0, value)
+        return
+
+    comp_ref = parts[2]
+    if "[" in comp_ref:
+        comp_ref, _ = comp_ref.split("[", 1)
+
+    comp_pos = _resolve_component(field_datatype, comp_ref)
+    if comp_pos is None:
+        return
+
+    comp_idx = comp_pos - 1
+
+    if len(parts) == 3:
+        msg._raw_message.set_segment_field(segment_id, field_idx, rep_idx, comp_idx, 0, value)
+        return
+
+    subcomp_ref = parts[3]
+    subcomp_pos = _resolve_subcomponent(subcomp_ref)
+    if subcomp_pos is None:
+        return
+
+    subcomp_idx = subcomp_pos - 1
+    msg._raw_message.set_segment_field(segment_id, field_idx, rep_idx, comp_idx, subcomp_idx, value)
