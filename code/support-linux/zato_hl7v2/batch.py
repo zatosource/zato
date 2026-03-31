@@ -120,7 +120,7 @@ def _get_segment_id(segment: str) -> str:
     return segment[:3] if len(segment) >= 3 else segment
 
 
-def parse_batch(raw: str) -> HL7Batch:
+def parse_batch(raw: str, validate: bool = True) -> HL7Batch:
     """
     Parse an HL7 batch (BHS...BTS) into an HL7Batch object.
 
@@ -129,6 +129,7 @@ def parse_batch(raw: str) -> HL7Batch:
 
     Args:
         raw: Raw HL7 batch string
+        validate: If True, validate messages during parsing
 
     Returns:
         HL7Batch containing parsed messages
@@ -162,13 +163,13 @@ def parse_batch(raw: str) -> HL7Batch:
         if seg_id == "BTS":
             if in_message and current_message_segments:
                 msg_raw = "\r".join(current_message_segments)
-                batch.messages.append(parse_message(msg_raw))
+                batch.messages.append(parse_message(msg_raw, validate=validate))
             batch.bts_raw = segment
             break
         elif seg_id == "MSH":
             if in_message and current_message_segments:
                 msg_raw = "\r".join(current_message_segments)
-                batch.messages.append(parse_message(msg_raw))
+                batch.messages.append(parse_message(msg_raw, validate=validate))
             current_message_segments = [segment]
             in_message = True
         else:
@@ -178,7 +179,7 @@ def parse_batch(raw: str) -> HL7Batch:
     return batch
 
 
-def parse_file(raw: str) -> HL7File:
+def parse_file(raw: str, validate: bool = True) -> HL7File:
     """
     Parse an HL7 file (FHS...FTS) into an HL7File object.
 
@@ -187,6 +188,7 @@ def parse_file(raw: str) -> HL7File:
 
     Args:
         raw: Raw HL7 file string
+        validate: If True, validate messages during parsing
 
     Returns:
         HL7File containing parsed batches and messages
@@ -222,7 +224,7 @@ def parse_file(raw: str) -> HL7File:
             if current_batch is not None:
                 if in_message and current_message_segments:
                     msg_raw = "\r".join(current_message_segments)
-                    current_batch.messages.append(parse_message(msg_raw))
+                    current_batch.messages.append(parse_message(msg_raw, validate=validate))
                 hl7_file.batches.append(current_batch)
             hl7_file.fts_raw = segment
             break
@@ -230,7 +232,7 @@ def parse_file(raw: str) -> HL7File:
             if current_batch is not None:
                 if in_message and current_message_segments:
                     msg_raw = "\r".join(current_message_segments)
-                    current_batch.messages.append(parse_message(msg_raw))
+                    current_batch.messages.append(parse_message(msg_raw, validate=validate))
                 hl7_file.batches.append(current_batch)
             current_batch = HL7Batch()
             current_batch.bhs_raw = segment
@@ -240,7 +242,7 @@ def parse_file(raw: str) -> HL7File:
             if current_batch is not None:
                 if in_message and current_message_segments:
                     msg_raw = "\r".join(current_message_segments)
-                    current_batch.messages.append(parse_message(msg_raw))
+                    current_batch.messages.append(parse_message(msg_raw, validate=validate))
                 current_batch.bts_raw = segment
                 hl7_file.batches.append(current_batch)
                 current_batch = None
@@ -249,7 +251,7 @@ def parse_file(raw: str) -> HL7File:
         elif seg_id == "MSH":
             if in_message and current_message_segments and current_batch is not None:
                 msg_raw = "\r".join(current_message_segments)
-                current_batch.messages.append(parse_message(msg_raw))
+                current_batch.messages.append(parse_message(msg_raw, validate=validate))
             current_message_segments = [segment]
             in_message = True
         else:
@@ -259,12 +261,13 @@ def parse_file(raw: str) -> HL7File:
     return hl7_file
 
 
-def parse_batch_or_file(raw: str) -> HL7Batch | HL7File:
+def parse_batch_or_file(raw: str, validate: bool = True) -> HL7Batch | HL7File:
     """
     Parse raw HL7 content, automatically detecting if it's a batch or file.
 
     Args:
         raw: Raw HL7 content
+        validate: If True, validate messages during parsing
 
     Returns:
         HL7Batch or HL7File depending on content
@@ -279,9 +282,9 @@ def parse_batch_or_file(raw: str) -> HL7Batch | HL7File:
     first_seg_id = _get_segment_id(segments[0])
 
     if first_seg_id == "FHS":
-        return parse_file(raw)
+        return parse_file(raw, validate=validate)
     elif first_seg_id == "BHS":
-        return parse_batch(raw)
+        return parse_batch(raw, validate=validate)
     else:
         raise ValueError(f"Content must start with FHS or BHS, found: {first_seg_id}")
 
