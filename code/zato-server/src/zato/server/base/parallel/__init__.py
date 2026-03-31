@@ -1110,6 +1110,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.init()
         self.worker_store.init_pubsub()
 
+        # .. reload pub/sub permissions from database ..
+        self._load_pubsub_permissions()
+
         # .. notify the pub/sub server too ..
         pubsub_msg = Bunch()
         pubsub_msg.cid = new_cid_server()
