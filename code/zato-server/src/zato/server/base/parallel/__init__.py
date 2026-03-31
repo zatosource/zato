@@ -1022,7 +1022,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Zato
         from zato.common.api import PubSub
-        from zato.common.odb.model import PubSubPermission, SecurityBase
+        from zato.common.odb.model import PubSubPermission, PubSubSubscription, SecurityBase
 
         logger.info('_load_pubsub_permissions: starting, cluster_id=%s', self.cluster_id)
 
@@ -1092,6 +1092,27 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     logger.info('Registered user %s with sec_name %s', username, sec_name)
 
                 logger.info('Loaded pub/sub permissions for user: %s (%d patterns)', username, len(perms))
+
+            # Load subscriptions with sub_keys
+            logger.info('_load_pubsub_permissions: loading subscriptions with sub_keys')
+            subscriptions = session.query(
+                PubSubSubscription.sub_key,
+                SecurityBase.username,
+                SecurityBase.name
+            ).join(
+                SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id
+            ).filter(
+                PubSubSubscription.cluster_id == self.cluster_id
+            ).all()
+
+            logger.info('_load_pubsub_permissions: found %d subscriptions in DB', len(subscriptions))
+
+            for sub_key, username, sec_name in subscriptions:
+                logger.info('_load_pubsub_permissions: loading subscription sub_key=%s, username=%s, sec_name=%s',
+                    sub_key, username, sec_name)
+                # Register user with sub_key
+                self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
+                logger.info('_load_pubsub_permissions: registered user %s with sub_key %s', username, sub_key)
 
         logger.info('_load_pubsub_permissions: completed')
 
