@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from base64 import b64decode
+from http.client import BAD_REQUEST, OK, UNAUTHORIZED
 from logging import getLogger
 
 # Zato
@@ -125,6 +126,7 @@ class Publish(PubSubRESTService):
         # Authenticate
         username, error = self.authenticate()
         if error:
+            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.details, self.response.payload.status = error
@@ -137,6 +139,7 @@ class Publish(PubSubRESTService):
         try:
             validate_topic_name(topic_name)
         except Exception as e:
+            self.response.status_code = BAD_REQUEST
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = '400 Bad Request'
@@ -147,6 +150,7 @@ class Publish(PubSubRESTService):
         permission_result = self.server.pubsub_pattern_matcher.evaluate(username, topic_name, 'publish')
 
         if not permission_result.is_ok:
+            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = '401 Unauthorized'
@@ -157,6 +161,7 @@ class Publish(PubSubRESTService):
         data = input.data
 
         if data is None:
+            self.response.status_code = BAD_REQUEST
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = '400 Bad Request'
@@ -230,6 +235,7 @@ class GetMessages(PubSubRESTService):
         # Authenticate
         username, error = self.authenticate()
         if error:
+            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.details, self.response.payload.status = error
@@ -296,6 +302,7 @@ class Subscribe(PubSubRESTService):
         # Authenticate
         username, error = self.authenticate()
         if error:
+            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.details, self.response.payload.status = error
@@ -308,6 +315,7 @@ class Subscribe(PubSubRESTService):
         try:
             validate_topic_name(topic_name)
         except Exception as e:
+            self.response.status_code = BAD_REQUEST
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = '400 Bad Request'
@@ -318,6 +326,7 @@ class Subscribe(PubSubRESTService):
         permission_result = self.server.pubsub_pattern_matcher.evaluate(username, topic_name, 'subscribe')
 
         if not permission_result.is_ok:
+            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = '401 Unauthorized'
@@ -387,6 +396,7 @@ class Unsubscribe(PubSubRESTService):
         # Authenticate
         username, error = self.authenticate()
         if error:
+            self.response.status_code = UNAUTHORIZED
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.details, self.response.payload.status = error
@@ -399,6 +409,7 @@ class Unsubscribe(PubSubRESTService):
         try:
             validate_topic_name(topic_name)
         except Exception as e:
+            self.response.status_code = BAD_REQUEST
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = '400 Bad Request'

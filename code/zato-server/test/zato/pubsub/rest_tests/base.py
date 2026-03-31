@@ -31,7 +31,9 @@ class PubSubTestClient:
         url = f'{self.base_url}/pubsub/topic/{topic_name}'
         payload = {'data': data}
         response = requests.post(url, json=payload, auth=self.auth)
-        return response.json()
+        result = response.json()
+        result['http_status_code'] = response.status_code
+        return result
 
 # ################################################################################################################################
 
@@ -39,7 +41,9 @@ class PubSubTestClient:
         url = f'{self.base_url}/pubsub/topic/{topic_name}'
         payload = {'data': data}
         response = requests.post(url, json=payload, auth=self.auth)
-        return response.json()
+        result = response.json()
+        result['http_status_code'] = response.status_code
+        return result
 
 # ################################################################################################################################
 
@@ -108,6 +112,7 @@ class PubSubTestClient:
         url = f'{self.base_url}/pubsub/subscribe/topic/{topic_name}'
         response = requests.post(url, auth=self.auth)
         result = response.json()
+        result['http_status_code'] = response.status_code
         if result.get('sub_key'):
             self.sub_key = result['sub_key']
         return result
@@ -117,7 +122,9 @@ class PubSubTestClient:
     def get_messages(self, sub_key:'strnone'=None) -> 'dict':
         url = f'{self.base_url}/pubsub/messages/get'
         response = requests.post(url, auth=self.auth)
-        return response.json()
+        result = response.json()
+        result['http_status_code'] = response.status_code
+        return result
 
 # ################################################################################################################################
 
@@ -137,6 +144,7 @@ class PubSubTestClient:
         url = f'{self.base_url}/pubsub/unsubscribe/topic/{topic_name}'
         response = requests.post(url, auth=self.auth)
         result = response.json()
+        result['http_status_code'] = response.status_code
         if result.get('is_ok'):
             self.sub_key = None
         return result
