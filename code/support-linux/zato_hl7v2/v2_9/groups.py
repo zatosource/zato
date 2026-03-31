@@ -1,4 +1,3 @@
-# Generated - do not edit
 from __future__ import annotations
 
 from zato_hl7v2.base import HL7Group

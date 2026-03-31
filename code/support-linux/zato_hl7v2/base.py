@@ -35,21 +35,55 @@ class HL7Component:
     def __get__(self, instance: Any, owner: type) -> Any:
         if instance is None:
             return self
-        cache = instance.__dict__
-        if self.attr_name in cache:
-            return cache[self.attr_name]
+        parent_msg = getattr(instance, '_parent_message', None)
+        if parent_msg is not None:
+            segment_id = getattr(instance, '_parent_segment_id', '')
+            field_idx = getattr(instance, '_parent_field_idx', -1)
+            rep_idx = getattr(instance, '_parent_rep_idx', 0)
+            if segment_id and field_idx >= 0:
+                raw_message = getattr(parent_msg, '_raw_message', None)
+                if raw_message is not None:
+                    for item in raw_message.items:
+                        if hasattr(item, 'segment_id') and item.segment_id == segment_id:
+                            if field_idx < len(item.fields):
+                                field_data = item.fields[field_idx]
+                                if rep_idx < len(field_data):
+                                    rep_data = field_data[rep_idx]
+                                    comp_idx = self.position - 1
+                                    if comp_idx < len(rep_data):
+                                        comp_data = rep_data[comp_idx]
+                                        if comp_data and len(comp_data) == 1:
+                                            return comp_data[0]
+                                        return comp_data
+                            break
+                    return None
         raw = getattr(instance, "_raw_components", None)
         if raw is None:
             return None
         idx = self.position - 1
         if idx < len(raw):
             val = raw[idx]
-            cache[self.attr_name] = val
+            if val and len(val) == 1:
+                return val[0]
             return val
         return None
 
     def __set__(self, instance: Any, value: Any) -> None:
         instance.__dict__[self.attr_name] = value
+        parent_msg = getattr(instance, '_parent_message', None)
+        if parent_msg is None:
+            return
+        segment_id = getattr(instance, '_parent_segment_id', '')
+        field_idx = getattr(instance, '_parent_field_idx', -1)
+        rep_idx = getattr(instance, '_parent_rep_idx', 0)
+        if not segment_id or field_idx < 0:
+            return
+        comp_idx = self.position - 1
+        raw_message = getattr(parent_msg, '_raw_message', None)
+        if raw_message is None:
+            return
+        str_value = str(value) if value is not None else ""
+        raw_message.set_segment_field(segment_id, field_idx, rep_idx, comp_idx, 0, str_value)
 
 
 class HL7Field:
@@ -90,21 +124,21 @@ class HL7Field:
             return None
         if self.repeatable:
             result = []
-            for rep in field_data:
+            for rep_idx, rep in enumerate(field_data):
                 if rep:
-                    val = self._build_value(rep)
+                    val = self._build_value(rep, instance, rep_idx)
                     if val is not None:
                         result.append(val)
             cache[self.attr_name] = result
             return result
         else:
             if field_data and field_data[0]:
-                val = self._build_value(field_data[0])
+                val = self._build_value(field_data[0], instance, 0)
                 cache[self.attr_name] = val
                 return val
             return None
 
-    def _build_value(self, components: list[list[str]]) -> Any:
+    def _build_value(self, components: list[list[str]], instance: Any = None, rep_idx: int = 0) -> Any:
         if not components:
             return None
         if len(components) == 1 and len(components[0]) == 1:
@@ -113,6 +147,11 @@ class HL7Field:
         if dt_class is not None:
             obj = dt_class.__new__(dt_class)
             obj._raw_components = components
+            if instance is not None:
+                obj._parent_message = getattr(instance, '_parent_message', None)
+                obj._parent_segment_id = instance._segment_id
+                obj._parent_field_idx = self.position - 1
+                obj._parent_rep_idx = rep_idx
             return obj
         if components and components[0]:
             return components[0][0] if components[0][0] else None
@@ -155,6 +194,7 @@ class HL7SegmentAttr:
                 if hasattr(item, 'segment_id') and item.segment_id == self.segment_id:
                     seg = seg_class.__new__(seg_class)
                     seg._raw_segment = item
+                    seg._parent_message = instance
                     result.append(seg)
             cache[self.attr_name] = result
             return result
@@ -163,6 +203,7 @@ class HL7SegmentAttr:
                 if hasattr(item, 'segment_id') and item.segment_id == self.segment_id:
                     seg = seg_class.__new__(seg_class)
                     seg._raw_segment = item
+                    seg._parent_message = instance
                     cache[self.attr_name] = seg
                     return seg
             return None
@@ -219,6 +260,10 @@ class HL7GroupAttr:
 
 class HL7DataType:
     _raw_components: list[list[str]]
+    _parent_message: Any = None
+    _parent_segment_id: str = ""
+    _parent_field_idx: int = -1
+    _parent_rep_idx: int = 0
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -259,6 +304,7 @@ class HL7DataType:
 class HL7Segment:
     _segment_id: str = ""
     _raw_segment: Any = None
+    _parent_message: Any = None
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -484,19 +530,19 @@ def _get_by_path(msg: "HL7Message", path: str) -> Any:
 
 
 def _resolve_segment(msg: "HL7Message", segment_ref: str) -> Any:
-    if segment_ref.isupper():
-        for item in msg._raw_message.items:
-            if hasattr(item, 'segment_id') and item.segment_id == segment_ref:
-                seg_class = _segment_classes.get(segment_ref)
-                if seg_class:
-                    seg = seg_class.__new__(seg_class)
-                    seg._raw_segment = item
-                    return seg
-        return None
-
+    segment_ref_upper = segment_ref.upper()
+    for item in msg._raw_message.items:
+        if hasattr(item, 'segment_id') and item.segment_id == segment_ref_upper:
+            seg_class = _segment_classes.get(segment_ref_upper)
+            if seg_class:
+                seg = seg_class.__new__(seg_class)
+                seg._raw_segment = item
+                seg._parent_message = msg
+                return seg
+    segment_ref_lower = segment_ref.lower()
     for name in dir(msg.__class__):
         attr = getattr(msg.__class__, name)
-        if isinstance(attr, HL7SegmentAttr) and name == segment_ref:
+        if isinstance(attr, HL7SegmentAttr) and name.lower() == segment_ref_lower:
             return getattr(msg, name)
     return None
 
@@ -523,14 +569,21 @@ def _set_by_path(msg: "HL7Message", path: str, value: str) -> None:
     segment_ref = parts[0]
     field_ref = parts[1]
 
-    segment_id = segment_ref.upper() if segment_ref.isupper() else None
-    if segment_id is None:
+    segment_id = segment_ref.upper()
+    found = False
+    for item in msg._raw_message.items:
+        if hasattr(item, 'segment_id') and item.segment_id == segment_id:
+            found = True
+            break
+    if not found:
+        segment_ref_lower = segment_ref.lower()
         for name in dir(msg.__class__):
             attr = getattr(msg.__class__, name)
-            if isinstance(attr, HL7SegmentAttr) and name == segment_ref:
+            if isinstance(attr, HL7SegmentAttr) and name.lower() == segment_ref_lower:
                 segment_id = attr.segment_id
+                found = True
                 break
-    if segment_id is None:
+    if not found:
         return
 
     rep_idx = 0
