@@ -44,23 +44,16 @@ _max_len_default = 5_000_000
 def extract_basic_auth_credentials(wsgi_environ:'anydict') -> 'tuple':
     """ Extracts username and password from HTTP Basic Auth header.
     """
-    logger.info('[TRACE] extract_basic_auth_credentials called')
     auth_header = wsgi_environ.get('HTTP_AUTHORIZATION', '')
-    logger.info('[TRACE] auth_header:%s', auth_header)
     if not auth_header.startswith('Basic '):
-        logger.info('[TRACE] auth_header does not start with Basic, returning None, None')
         return None, None
 
     try:
         encoded = auth_header[6:]
-        logger.info('[TRACE] encoded:%s', encoded)
         decoded = b64decode(encoded).decode('utf-8')
-        logger.info('[TRACE] decoded:%s', decoded)
         username, password = decoded.split(':', 1)
-        logger.info('[TRACE] extracted username:%s, password:%s', username, password)
         return username, password
-    except Exception as e:
-        logger.info('[TRACE] exception extracting credentials -> e:%s', e)
+    except Exception:
         return None, None
 
 # ################################################################################################################################
@@ -81,46 +74,30 @@ class PubSubRESTService(Service):
     def authenticate(self) -> 'tuple':
         """ Extract and validate credentials. Returns (username, error_response) tuple.
         """
-        self.logger.info('[TRACE] authenticate called')
         username, password = extract_basic_auth_credentials(self.wsgi_environ)
-        self.logger.info('[TRACE] extracted username:%s, password:%s', username, password)
 
         if not username:
-            self.logger.info('[TRACE] no username, returning Authentication required')
             return None, ('Authentication required', UNAUTHORIZED)
 
-        validate_result = self._validate_credentials(username, password)
-        self.logger.info('[TRACE] _validate_credentials returned:%s', validate_result)
-        if not validate_result:
-            self.logger.info('[TRACE] invalid credentials, returning Invalid credentials')
+        if not self._validate_credentials(username, password):
             return None, ('Invalid credentials', UNAUTHORIZED)
 
-        self.logger.info('[TRACE] authentication successful for username:%s', username)
         return username, None
 
     def _validate_credentials(self, username:'str', password:'str') -> 'bool':
         """ Validate username/password against all basic auth security definitions.
         """
-        self.logger.info('[TRACE] _validate_credentials called with username:%s, password:%s', username, password)
         basic_auth_config = self.server.worker_store.request_dispatcher.url_data.basic_auth_config
-        self.logger.info('[TRACE] basic_auth_config:%s', basic_auth_config)
         auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
-        self.logger.info('[TRACE] auth_header:%s', auth_header)
 
         for sec_def in basic_auth_config.values():
-            self.logger.info('[TRACE] checking sec_def:%s', sec_def)
             config = sec_def.get('config', {})
-            self.logger.info('[TRACE] config:%s', config)
             expected_username = config.get('username')
             expected_password = config.get('password')
-            self.logger.info('[TRACE] expected_username:%s, expected_password:%s', expected_username, expected_password)
             if expected_username and expected_password:
                 result = check_basic_auth(self.cid, auth_header, expected_username, expected_password)
-                self.logger.info('[TRACE] check_basic_auth result:%s', result)
                 if result is True:
-                    self.logger.info('[TRACE] credentials matched, returning True')
                     return True
-        self.logger.info('[TRACE] no matching credentials found, returning False')
         return False
 
 # ################################################################################################################################
@@ -142,19 +119,13 @@ class Publish(PubSubRESTService):
 
     def handle(self) -> 'None':
 
-        self.logger.info('[TRACE] Publish.handle starting')
-
         # Local aliases
         cid = self.cid
         input = self.request.input
 
-        self.logger.info('[TRACE] cid:%s, input:%s', cid, input)
-
         # Authenticate
         username, error = self.authenticate()
-        self.logger.info('[TRACE] authenticate result -> username:%s, error:%s', username, error)
         if error:
-            self.logger.info('[TRACE] authentication error, returning early')
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.details, self.response.payload.status = error
@@ -162,14 +133,11 @@ class Publish(PubSubRESTService):
 
         # Get topic name
         topic_name = input.topic_name
-        self.logger.info('[TRACE] topic_name:%s', topic_name)
 
         # Validate topic name
         try:
             validate_topic_name(topic_name)
-            self.logger.info('[TRACE] topic_name validated successfully')
         except Exception as e:
-            self.logger.info('[TRACE] topic_name validation failed -> e:%s', e)
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = BAD_REQUEST
@@ -177,13 +145,9 @@ class Publish(PubSubRESTService):
             return
 
         # Check permissions
-        matcher = self.server.pubsub_pattern_matcher
-        self.logger.info('[TRACE] matcher:%s', matcher)
-        permission_result = matcher.evaluate(username, topic_name, 'publish')
-        self.logger.info('[TRACE] permission_result:%s, is_ok:%s', permission_result, permission_result.is_ok)
+        permission_result = self.server.pubsub_pattern_matcher.evaluate(username, topic_name, 'publish')
 
         if not permission_result.is_ok:
-            self.logger.info('[TRACE] permission denied, returning early')
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = UNAUTHORIZED
@@ -192,10 +156,8 @@ class Publish(PubSubRESTService):
 
         # Get message data
         data = input.data
-        self.logger.info('[TRACE] data:%s', data)
 
         if data is None:
-            self.logger.info('[TRACE] data is None, returning early')
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = BAD_REQUEST
@@ -218,9 +180,6 @@ class Publish(PubSubRESTService):
         ext_client_id = input.ext_client_id or ''
         pub_time = input.pub_time or ''
 
-        self.logger.info('[TRACE] priority:%s, expiration:%s, correl_id:%s, in_reply_to:%s, ext_client_id:%s, pub_time:%s',
-            priority, expiration, correl_id, in_reply_to, ext_client_id, pub_time)
-
         # Validate priority
         if priority < _min_priority or priority > _max_priority:
             priority = _default_priority
@@ -229,11 +188,7 @@ class Publish(PubSubRESTService):
         if expiration < 1:
             expiration = 1
 
-        self.logger.info('[TRACE] after validation -> priority:%s, expiration:%s', priority, expiration)
-
         # Publish to Redis
-        self.logger.info('[TRACE] calling pubsub_redis.publish with topic_name:%s, data:%s, priority:%s, expiration:%s, correl_id:%s, in_reply_to:%s, ext_client_id:%s, publisher:%s, pub_time:%s',
-            topic_name, data, priority, expiration, correl_id, in_reply_to, ext_client_id, username, pub_time)
         msg_id = self.server.pubsub_redis.publish(
             topic_name,
             data,
@@ -245,13 +200,11 @@ class Publish(PubSubRESTService):
             publisher=username,
             pub_time=pub_time,
         )
-        self.logger.info('[TRACE] pubsub_redis.publish returned msg_id:%s', msg_id)
 
         # Build response
         self.response.payload.is_ok = True
         self.response.payload.cid = cid
         self.response.payload.msg_id = msg_id
-        self.logger.info('[TRACE] Publish.handle completed successfully')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -270,19 +223,13 @@ class GetMessages(PubSubRESTService):
 
     def handle(self) -> 'None':
 
-        self.logger.info('[TRACE] GetMessages.handle starting')
-
         # Local aliases
         cid = self.cid
         input = self.request.input
 
-        self.logger.info('[TRACE] cid:%s, input:%s', cid, input)
-
         # Authenticate
         username, error = self.authenticate()
-        self.logger.info('[TRACE] authenticate result -> username:%s, error:%s', username, error)
         if error:
-            self.logger.info('[TRACE] authentication error, returning early')
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.details, self.response.payload.status = error
@@ -290,10 +237,8 @@ class GetMessages(PubSubRESTService):
 
         # Get sub_key for this user
         sub_key = self._get_sub_key_for_user(username)
-        self.logger.info('[TRACE] sub_key for user %s: %s', username, sub_key)
 
         if not sub_key:
-            self.logger.info('[TRACE] no sub_key found, returning empty messages')
             self.response.payload.is_ok = True
             self.response.payload.cid = cid
             self.response.payload.messages = []
@@ -303,16 +248,13 @@ class GetMessages(PubSubRESTService):
         # Get optional parameters
         max_messages = input.max_messages if input.max_messages else _max_messages_default
         max_len = input.max_len if input.max_len else _max_len_default
-        self.logger.info('[TRACE] max_messages:%s, max_len:%s', max_messages, max_len)
 
         # Fetch messages from Redis
-        self.logger.info('[TRACE] calling pubsub_redis.fetch_messages with sub_key:%s', sub_key)
         messages = self.server.pubsub_redis.fetch_messages(
             sub_key,
             max_messages=max_messages,
             max_len=max_len
         )
-        self.logger.info('[TRACE] pubsub_redis.fetch_messages returned %d messages: %s', len(messages), messages)
 
         # Build response
         self.response.payload.is_ok = True
@@ -325,12 +267,7 @@ class GetMessages(PubSubRESTService):
     def _get_sub_key_for_user(self, username:'str') -> 'str':
         """ Get the subscription key for a user.
         """
-        # Look up in the subscriptions store
-        self.logger.info('[TRACE] _get_sub_key_for_user called with username:%s', username)
-        self.logger.info('[TRACE] pubsub_subscriptions store:%s', self.server.pubsub_subscriptions)
-        sub_key = self.server.pubsub_subscriptions.get_sub_key_by_username(username)
-        self.logger.info('[TRACE] get_sub_key_by_username returned:%s', sub_key)
-        return sub_key
+        return self.server.pubsub_subscriptions.get_sub_key_by_username(username)
 
 # ################################################################################################################################
 # ################################################################################################################################
