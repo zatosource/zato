@@ -1022,7 +1022,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Zato
         from zato.common.api import PubSub
-        from zato.common.odb.model import PubSubPermission, PubSubSubscription, SecurityBase
+        from zato.common.odb.model import PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 
         logger.info('_load_pubsub_permissions: starting, cluster_id=%s', self.cluster_id)
 
@@ -1093,7 +1093,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
                 logger.info('Loaded pub/sub permissions for user: %s (%d patterns)', username, len(perms))
 
-            # Load subscriptions with sub_keys
+            # Load subscriptions with sub_keys and their topics
             logger.info('_load_pubsub_permissions: loading subscriptions with sub_keys')
             subscriptions = session.query(
                 PubSubSubscription.sub_key,
@@ -1113,6 +1113,26 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 # Register user with sub_key
                 self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
                 logger.info('_load_pubsub_permissions: registered user %s with sub_key %s', username, sub_key)
+
+            # Load subscription topics and set up Redis consumer groups
+            logger.info('_load_pubsub_permissions: loading subscription topics')
+            subscription_topics = session.query(
+                PubSubSubscription.sub_key,
+                PubSubTopic.name
+            ).join(
+                PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
+            ).join(
+                PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
+            ).filter(
+                PubSubSubscription.cluster_id == self.cluster_id
+            ).all()
+
+            logger.info('_load_pubsub_permissions: found %d subscription-topic links in DB', len(subscription_topics))
+
+            for sub_key, topic_name in subscription_topics:
+                logger.info('_load_pubsub_permissions: subscribing sub_key=%s to topic=%s in Redis', sub_key, topic_name)
+                self.pubsub_redis.subscribe(sub_key, topic_name)
+                logger.info('_load_pubsub_permissions: subscribed sub_key=%s to topic=%s', sub_key, topic_name)
 
         logger.info('_load_pubsub_permissions: completed')
 
