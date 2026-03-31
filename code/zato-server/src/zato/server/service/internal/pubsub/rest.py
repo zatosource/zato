@@ -136,6 +136,7 @@ class Publish(PubSubRESTService):
         input_optional = 'priority', 'expiration', AsIs('correl_id'), AsIs('in_reply_to'), AsIs('ext_client_id'), 'pub_time'
         output_optional = AsIs('msg_id'), 'is_ok', 'cid', Int('status'), 'details'
         skip_empty_keys = True
+        response_elem = None
 
 # ################################################################################################################################
 
@@ -263,6 +264,7 @@ class GetMessages(PubSubRESTService):
     class SimpleIO:
         input_optional = Int('max_messages'), Int('max_len')
         output_optional = AsIs('messages'), Int('message_count'), 'is_ok', 'cid', Int('status'), 'details'
+        response_elem = None
 
 # ################################################################################################################################
 
@@ -326,6 +328,7 @@ class Subscribe(PubSubRESTService):
     class SimpleIO:
         input_required = 'topic_name'
         output_optional = 'is_ok', 'cid', Int('status'), 'details', 'sub_key'
+        response_elem = None
 
 # ################################################################################################################################
 
@@ -415,6 +418,7 @@ class Unsubscribe(PubSubRESTService):
     class SimpleIO:
         input_required = 'topic_name'
         output_optional = 'is_ok', 'cid', Int('status'), 'details'
+        response_elem = None
 
 # ################################################################################################################################
 
