@@ -118,13 +118,19 @@ class Publish(PubSubRESTService):
 
     def handle(self) -> 'None':
 
+        self.logger.info('[TRACE] Publish.handle starting')
+
         # Local aliases
         cid = self.cid
         input = self.request.input
 
+        self.logger.info('[TRACE] cid:%s, input:%s', cid, input)
+
         # Authenticate
         username, error = self.authenticate()
+        self.logger.info('[TRACE] authenticate result -> username:%s, error:%s', username, error)
         if error:
+            self.logger.info('[TRACE] authentication error, returning early')
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.details, self.response.payload.status = error
@@ -132,11 +138,14 @@ class Publish(PubSubRESTService):
 
         # Get topic name
         topic_name = input.topic_name
+        self.logger.info('[TRACE] topic_name:%s', topic_name)
 
         # Validate topic name
         try:
             validate_topic_name(topic_name)
+            self.logger.info('[TRACE] topic_name validated successfully')
         except Exception as e:
+            self.logger.info('[TRACE] topic_name validation failed -> e:%s', e)
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = BAD_REQUEST
@@ -145,9 +154,12 @@ class Publish(PubSubRESTService):
 
         # Check permissions
         matcher = self.server.pubsub_pattern_matcher
+        self.logger.info('[TRACE] matcher:%s', matcher)
         permission_result = matcher.evaluate(username, topic_name, 'publish')
+        self.logger.info('[TRACE] permission_result:%s, is_ok:%s', permission_result, permission_result.is_ok)
 
         if not permission_result.is_ok:
+            self.logger.info('[TRACE] permission denied, returning early')
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = UNAUTHORIZED
@@ -156,8 +168,10 @@ class Publish(PubSubRESTService):
 
         # Get message data
         data = input.data
+        self.logger.info('[TRACE] data:%s', data)
 
         if data is None:
+            self.logger.info('[TRACE] data is None, returning early')
             self.response.payload.is_ok = False
             self.response.payload.cid = cid
             self.response.payload.status = BAD_REQUEST
@@ -180,6 +194,9 @@ class Publish(PubSubRESTService):
         ext_client_id = input.ext_client_id or ''
         pub_time = input.pub_time or ''
 
+        self.logger.info('[TRACE] priority:%s, expiration:%s, correl_id:%s, in_reply_to:%s, ext_client_id:%s, pub_time:%s',
+            priority, expiration, correl_id, in_reply_to, ext_client_id, pub_time)
+
         # Validate priority
         if priority < _min_priority or priority > _max_priority:
             priority = _default_priority
@@ -188,7 +205,11 @@ class Publish(PubSubRESTService):
         if expiration < 1:
             expiration = 1
 
+        self.logger.info('[TRACE] after validation -> priority:%s, expiration:%s', priority, expiration)
+
         # Publish to Redis
+        self.logger.info('[TRACE] calling pubsub_redis.publish with topic_name:%s, data:%s, priority:%s, expiration:%s, correl_id:%s, in_reply_to:%s, ext_client_id:%s, publisher:%s, pub_time:%s',
+            topic_name, data, priority, expiration, correl_id, in_reply_to, ext_client_id, username, pub_time)
         msg_id = self.server.pubsub_redis.publish(
             topic_name,
             data,
@@ -200,11 +221,13 @@ class Publish(PubSubRESTService):
             publisher=username,
             pub_time=pub_time,
         )
+        self.logger.info('[TRACE] pubsub_redis.publish returned msg_id:%s', msg_id)
 
         # Build response
         self.response.payload.is_ok = True
         self.response.payload.cid = cid
         self.response.payload.msg_id = msg_id
+        self.logger.info('[TRACE] Publish.handle completed successfully')
 
 # ################################################################################################################################
 # ################################################################################################################################
