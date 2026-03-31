@@ -353,14 +353,10 @@ class PatternMatcher:
     def evaluate(self, client_id:'str', topic:'str', operation:'str') -> 'EvaluationResult':
         """ Evaluate if a client can perform an operation on a topic.
         """
-        logger.info('[TRACE] PatternMatcher.evaluate called with client_id:%s, topic:%s, operation:%s', client_id, topic, operation)
-
         # Validate topic name first
         try:
             validate_topic_name(topic)
-            logger.info('[TRACE] topic validated successfully')
         except ValueError as e:
-            logger.info('[TRACE] topic validation failed -> e:%s', e)
             result = EvaluationResult()
             result.is_ok = False
             result.client_id = client_id
@@ -370,10 +366,7 @@ class PatternMatcher:
             return result
 
         client_permissions = self._clients.get(client_id)
-        logger.info('[TRACE] client_permissions:%s', client_permissions)
-        logger.info('[TRACE] all registered clients:%s', list(self._clients.keys()))
         if not client_permissions:
-            logger.info('[TRACE] client not found, returning failure')
             result = EvaluationResult()
             result.is_ok = False
             result.client_id = client_id
@@ -385,12 +378,9 @@ class PatternMatcher:
         # Get patterns based on operation
         if operation == 'publish':
             pattern_list = client_permissions.pub_patterns
-            logger.info('[TRACE] using pub_patterns:%s', [(p.pattern, p.has_wildcards) for p in pattern_list])
         elif operation == 'subscribe':
             pattern_list = client_permissions.sub_patterns
-            logger.info('[TRACE] using sub_patterns:%s', [(p.pattern, p.has_wildcards) for p in pattern_list])
         else:
-            logger.info('[TRACE] invalid operation:%s', operation)
             result = EvaluationResult()
             result.is_ok = False
             result.client_id = client_id
@@ -401,15 +391,11 @@ class PatternMatcher:
 
         # Check patterns in order
         for pattern_info in pattern_list:
-            logger.info('[TRACE] checking pattern:%s against topic:%s', pattern_info.pattern, topic)
             match_result = self._try_pattern_match(pattern_info, topic, client_id, operation)
-            logger.info('[TRACE] match_result:%s', match_result)
             if match_result:
-                logger.info('[TRACE] pattern matched, returning success')
                 return match_result
 
         # No pattern matched
-        logger.info('[TRACE] no pattern matched, returning failure')
         result = EvaluationResult()
         result.is_ok = False
         result.client_id = client_id
