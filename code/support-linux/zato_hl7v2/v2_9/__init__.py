@@ -38,3 +38,13 @@ def serialize(msg) -> str:
 
 to_hl7 = serialize
 to_er7 = serialize
+
+from zato_hl7v2.batch import (
+    HL7Batch,
+    HL7File,
+    parse_batch,
+    parse_file,
+    parse_batch_or_file,
+    create_batch,
+    create_file,
+)
