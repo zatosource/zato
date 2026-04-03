@@ -141,4 +141,6 @@ restart-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
 
 pubsub-tests:
-	cd $(CURDIR)/code/zato-server/test/zato/pubsub/rest_tests && $(CURDIR)/code/bin/py -m unittest discover -v -p 'test_*.py'
+	cd $(CURDIR)/code/zato-server/test/zato/pubsub/rest_tests && \
+		Zato_PubSub_Base_Url=http://localhost:$(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),17010) \
+		$(CURDIR)/code/bin/py -m unittest discover -v -p 'test_*.py'
