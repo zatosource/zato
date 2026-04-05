@@ -375,3 +375,40 @@ Verify `<masked>` appears instead of the message data.
 
 Configure logging level to `DEBUG`.
 Send a message, verify the debug log contains the raw received bytes and their length.
+
+## 14. Fuzz testing
+
+Uses [Hypothesis](https://hypothesis.readthedocs.io/) to generate random inputs and verify the server never crashes, regardless of what it receives.
+
+### 14.1 Random bytes inside valid framing
+
+Generate arbitrary byte sequences (1 to 64 KB), wrap them in `0x0B ... 0x1C 0x0D`, send to the server.
+The server must not crash. The callback must receive the exact bytes. An MLLP-framed response must be returned.
+
+### 14.2 Random bytes without framing
+
+Generate arbitrary byte sequences (1 to 4 KB) and send them raw (no `0x0B` prefix).
+The server must not crash. It should close the connection (with or without an AR NAK).
+A subsequent clean connection must still work.
+
+### 14.3 Truncated framing
+
+Generate a valid framed message, then truncate it at a random position (cutting off part of the payload or the end sequence).
+Close the socket after sending.
+The server must not crash. A subsequent clean connection must still work.
+
+### 14.4 Random MSH field values
+
+Generate an HL7-shaped message with random bytes in MSH fields (sending app, sending facility, control id, version, MSH-18).
+Wrap in valid framing and send.
+The server must not crash. The callback must receive the payload. A response must be returned.
+
+### 14.5 Random payload size
+
+Generate valid MLLP frames with payload sizes drawn from the full range (0 bytes to 256 KB).
+The server must handle all sizes without crashing.
+
+### 14.6 Random chunk sizes on send
+
+Take a valid framed message and send it in random-sized chunks (1 to 500 bytes each) with no delay.
+The server must reassemble correctly and return an ACK.
