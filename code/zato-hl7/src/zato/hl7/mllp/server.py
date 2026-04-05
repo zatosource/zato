@@ -28,7 +28,7 @@ if 0:
     from logging import Logger
     from socket import socket as Socket
     from bunch import Bunch
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, byteslist, bytesnone, callable_, type_
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, byteslist, bytesnone, callable_
     byteslist = byteslist
 
 # ################################################################################################################################
@@ -234,11 +234,11 @@ class HL7MLLPServer:
 
     should_log_messages: 'bool'
 
-    start_seq: 'str'
+    start_seq: 'bytes'
     start_seq_len: 'int'
     start_seq_len_eq_one: 'bool'
 
-    end_seq: 'str'
+    end_seq: 'bytes'
     end_seq_len: 'int'
 
     tcp_keepalive_idle:  'int'
@@ -271,11 +271,11 @@ class HL7MLLPServer:
         self.should_log_messages = config.should_log_messages
         self.read_buffer_size = int(cast_('str', config.read_buffer_size))
 
-        self.start_seq     = cast_('str', config.start_seq)
+        self.start_seq     = cast_('bytes', config.start_seq)
         self.start_seq_len = len(self.start_seq)
         self.start_seq_len_eq_one = self.start_seq_len == 1
 
-        self.end_seq     = cast_('str', config.end_seq)
+        self.end_seq     = cast_('bytes', config.end_seq)
         self.end_seq_len = len(self.end_seq)
 
         self.tcp_keepalive_idle  = config.tcp_keepalive_idle
@@ -486,7 +486,6 @@ class HL7MLLPServer:
 
                                 # Go through each, potentially multi-byte, element in the buffer so far ..
                                 for elem in _buffer:
-                                    elem = cast_('bytes', elem)
 
                                     # .. break if we have already all the bytes that we need ..
                                     if to_check_len >= self.start_seq_len:
@@ -718,7 +717,7 @@ class HL7MLLPServer:
         bytes_to_check:'bytes',
         meta_attr:'str',
         has_meta_attr:'str',
-        meta_seq:'str',
+        meta_seq:'bytes',
         ) -> 'boolnone':
 
         # If we already have the meta element then we do not expect another one

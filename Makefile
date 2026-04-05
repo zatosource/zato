@@ -46,8 +46,8 @@ enmasse-tests:
 openapi-tests:
 	cd $(CURDIR)/code/zato-openapi && $(CURDIR)/code/bin/py -m unittest discover -s test/zato/openapi_ -p 'test_*.py' -v
 
-hl7v2-demo:
-	PYTHONPATH=$(CURDIR)/code/support-linux $(CURDIR)/code/bin/python -m zato_hl7v2.demo
+hl7-tests:
+	cd $(CURDIR)/code/zato-hl7 && $(MAKE) hl7-test
 
 %:
 	@:
