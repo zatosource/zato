@@ -83,7 +83,7 @@ Verify the callback receives the raw bytes unchanged, MSH-2 remains `^&`.
 
 Enable `fix_truncated_msh`. Send a message where MSH has only `MSH|^~\&|SendApp|SendFac` (4 fields after split).
 Verify the callback receives a payload where MSH has been extended with empty/default fields.
-Verify an ACK is returned (not garbage).
+Verify a well-formed ACK is returned.
 
 ### 4.2 MSH missing control id and version
 
@@ -124,7 +124,7 @@ Verify the ACK's MSA-2 preserves the leading space.
 Enable `prepend_msh_if_missing`. Send a payload starting with `SH|^~\&|SendApp|...`.
 Verify the callback receives a payload starting with `MSH|^~\&|SendApp|...`.
 
-### 6.2 Garbage prefix before MSH
+### 6.2 Extra prefix before MSH
 
 Enable the quirk. Send `ORU_R01|MSH|^~\&|Lab|...` (structure name prepended before MSH).
 Verify the callback receives a payload starting with `MSH|^~\&|Lab|...`.
