@@ -241,6 +241,20 @@ class BaseServiceGateway:
         }
 
     def _invoke_service(self, service, request):
+        if isinstance(request, bytes):
+            request = request.decode('utf-8')
+        if isinstance(request, str):
+            import json as json_lib
+            try:
+                request = json_lib.loads(request)
+            except (ValueError, TypeError):
+                pass
+        if isinstance(request, dict):
+            for key in list(request):
+                if isinstance(request[key], dict):
+                    request = request[key]
+                    break
+            request['cluster_id'] = 1
         return self.invoke(service, request, wsgi_environ=self.wsgi_environ)
 
 # ################################################################################################################################
