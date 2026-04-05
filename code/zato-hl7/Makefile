@@ -30,6 +30,7 @@ pyright:
 
 hl7-tests:
 	$(Zato_Python_Dir)/py -m pytest $(CURDIR)/test/zato/hl7/test_*.py -s -W ignore::DeprecationWarning
+	cd $(CURDIR)/test/zato/hl7/mllp && $(Zato_Python_Dir)/py -m pytest test_*.py -s -W ignore::DeprecationWarning -p no:anyio
 
 hl7-test:
 	$(MAKE) ruff

@@ -805,6 +805,9 @@ class HL7MLLPServer:
                 data_format = _hl7_v2,
                 zato_ctx = {
                     'zato.channel_item': {
+                    'conn_id': conn_id,
+                    'msg_id': msg_id,
+                    'msg_size': msg_size,
                     'data_encoding': encoding,
                     'hl7_version': _hl7_v2,
                     'json_path': None,
