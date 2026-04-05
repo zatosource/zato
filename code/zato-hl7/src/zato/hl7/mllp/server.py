@@ -7,9 +7,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import socket as socket_mod
 from logging import DEBUG, getLevelName, getLogger
 from socket import timeout as SocketTimeoutException
-from time import sleep
 from traceback import format_exc
 
 # hl7apy
@@ -19,7 +19,7 @@ from hl7apy.core import Message
 from zato.common.api import GENERIC, HL7
 from zato.common.typing_ import cast_
 from zato.common.util.api import new_cid
-from zato.common.util.tcp import get_fqdn_by_ip, ZatoStreamServer
+from zato.common.util.tcp import ZatoStreamServer
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -63,9 +63,17 @@ class HandleCompleteMessageArgs:
     conn_ctx:    'ConnCtx'
     request_ctx: 'RequestCtx'
 
-    _socket_send:       'callable_'
+    _socket_sendall:    'callable_'
     _run_callback:      'callable_'
     _request_ctx_reset: 'callable_'
+
+    _start_seq:    'bytes'
+    _end_seq:      'bytes'
+    _start_seq_len:'int'
+    _end_seq_len:  'int'
+
+    _needs_header_check_setter: 'callable_'
+    _buffer_reset:              'callable_'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,9 +99,12 @@ class ConnCtx:
 
     def __init__(
         self,
-        conn_name,    # type: str
-        socket,       # type: Socket
-        peer_address, # type: anytuple
+        conn_name,          # type: str
+        socket,             # type: Socket
+        peer_address,       # type: anytuple
+        tcp_keepalive_idle, # type: int
+        tcp_keepalive_intvl,# type: int
+        tcp_keepalive_cnt,  # type: int
         _new_conn_id=new_conn_id # type: callable_
     ) -> 'None':
 
@@ -112,8 +123,29 @@ class ConnCtx:
         # Total full messages received, no matter their type
         self.total_messages_received = 0
 
-        self.peer_fqdn = get_fqdn_by_ip(self.peer_ip, 'peer', server_type)
-        self.local_ip, self.local_port, self.local_fqdn = self._get_local_conn_info('local')
+        # Log IP directly rather than calling a blocking DNS reverse lookup
+        # which can freeze the entire gevent event loop for up to 30 seconds.
+        self.peer_fqdn = self.peer_ip
+
+        local_ip, local_port = self.socket.getsockname()
+        self.local_ip   = local_ip
+        self.local_port = local_port
+        self.local_fqdn = local_ip
+
+        # Enable TCP keepalive to detect zombie connections behind firewalls ..
+        self.socket.setsockopt(socket_mod.SOL_SOCKET, socket_mod.SO_KEEPALIVE, 1)
+
+        # .. idle time before first probe ..
+        if hasattr(socket_mod, 'TCP_KEEPIDLE'):
+            self.socket.setsockopt(socket_mod.IPPROTO_TCP, socket_mod.TCP_KEEPIDLE, tcp_keepalive_idle)
+
+        # .. interval between probes ..
+        if hasattr(socket_mod, 'TCP_KEEPINTVL'):
+            self.socket.setsockopt(socket_mod.IPPROTO_TCP, socket_mod.TCP_KEEPINTVL, tcp_keepalive_intvl)
+
+        # .. failed probes before declaring connection dead.
+        if hasattr(socket_mod, 'TCP_KEEPCNT'):
+            self.socket.setsockopt(socket_mod.IPPROTO_TCP, socket_mod.TCP_KEEPCNT, tcp_keepalive_cnt)
 
 # ################################################################################################################################
 
@@ -122,14 +154,6 @@ class ConnCtx:
             self.conn_id, self.peer_ip, self.peer_port, self.peer_fqdn,
             self.local_ip, self.local_port, self.local_fqdn, self.conn_name,
         )
-
-# ################################################################################################################################
-
-    def _get_local_conn_info(self, default_local_fqdn:'str') -> 'anytuple':
-        local_ip, local_port = self.socket.getsockname()
-        local_fqdn = get_fqdn_by_ip(local_ip, default_local_fqdn, server_type)
-
-        return local_ip, local_port, local_fqdn
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -211,6 +235,10 @@ class HL7MLLPServer:
     end_seq: 'str'
     end_seq_len: 'int'
 
+    tcp_keepalive_idle:  'int'
+    tcp_keepalive_intvl: 'int'
+    tcp_keepalive_cnt:   'int'
+
     keep_running: 'bool'
     impl: 'ZatoStreamServer'
 
@@ -243,6 +271,10 @@ class HL7MLLPServer:
 
         self.end_seq     = cast_('str', config.end_seq)
         self.end_seq_len = len(self.end_seq)
+
+        self.tcp_keepalive_idle  = config.tcp_keepalive_idle
+        self.tcp_keepalive_intvl = config.tcp_keepalive_intvl
+        self.tcp_keepalive_cnt   = config.tcp_keepalive_cnt
 
         self.keep_running = True
 
@@ -281,13 +313,15 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def stop(self):
+    def stop(self) -> 'None':
 
         # Log info that we are stopping ..
         self._log_start_stop(False)
 
-        # .. and actually stop.
+        # .. signal the main loops to stop accepting new data ..
         self.keep_running = False
+
+        # .. and stop the underlying server.
         self.impl.stop()
 
 # ################################################################################################################################
@@ -304,12 +338,15 @@ class HL7MLLPServer:
     def _handle(self, socket:'Socket', peer_address:'anytuple') -> 'None':
 
         # Wraps all the metadata about the connection
-        conn_ctx = ConnCtx(self.name, socket, peer_address)
+        conn_ctx = ConnCtx(
+            self.name, socket, peer_address,
+            self.tcp_keepalive_idle, self.tcp_keepalive_intvl, self.tcp_keepalive_cnt,
+        )
 
         self._logger_info('Waiting for HL7 MLLP data from %s', conn_ctx.get_conn_pretty_info())
 
         # Current message whose contents we are accumulating
-        _buffer = []
+        _buffer:'byteslist' = []
 
         # Details of the current message
         request_ctx = RequestCtx()
@@ -337,17 +374,32 @@ class HL7MLLPServer:
         _buffer_join_func = b''.join
 
         _socket_recv = conn_ctx.socket.recv
-        _socket_send = conn_ctx.socket.send
+        _socket_sendall = conn_ctx.socket.sendall
         _socket_settimeout = conn_ctx.socket.settimeout
+
+        # Closures to reset per-message state from inside _handle_complete_message ..
+        def _set_needs_header_check(value:'bool') -> 'None':
+            nonlocal _needs_header_check
+            _needs_header_check = value
+
+        def _buffer_reset(residual:'byteslist') -> 'None':
+            _buffer.clear()
+            _buffer.extend(residual)
 
         _handle_complete_message_args = HandleCompleteMessageArgs()
         _handle_complete_message_args._buffer = _buffer
         _handle_complete_message_args._buffer_join_func = _buffer_join_func
         _handle_complete_message_args.conn_ctx = conn_ctx
         _handle_complete_message_args.request_ctx = request_ctx
-        _handle_complete_message_args._socket_send = _socket_send
+        _handle_complete_message_args._socket_sendall = _socket_sendall
         _handle_complete_message_args._run_callback = _run_callback
         _handle_complete_message_args._request_ctx_reset = _request_ctx_reset
+        _handle_complete_message_args._start_seq = self.start_seq
+        _handle_complete_message_args._end_seq = self.end_seq
+        _handle_complete_message_args._start_seq_len = self.start_seq_len
+        _handle_complete_message_args._end_seq_len = self.end_seq_len
+        _handle_complete_message_args._needs_header_check_setter = _set_needs_header_check
+        _handle_complete_message_args._buffer_reset = _buffer_reset
 
         # Run the main loop
         while self.keep_running:
@@ -355,13 +407,6 @@ class HL7MLLPServer:
             try:
                 # In each iteration, assume that no data was received
                 data = None
-
-                # Check whether reading the data would not exceed our message size limit
-                new_size = request_ctx.msg_size + _read_buffer_size
-                if new_size > _max_msg_size:
-                    reason = 'message would exceed max. size allowed `{}` > `{}`'.format(new_size, _max_msg_size)
-                    _close_connection(conn_ctx, reason)
-                    return
 
                 # Receive data from the other end
                 _socket_settimeout(_recv_timeout)
@@ -391,7 +436,14 @@ class HL7MLLPServer:
 
                         # If we are here, it means that the recv call succeeded so we can increase the message size
                         # by how many bytes were actually read from the socket.
-                        request_ctx.msg_size += len(data)
+                        data_len = len(data)
+                        request_ctx.msg_size += data_len
+
+                        # Check whether receiving this data exceeded our message size limit
+                        if request_ctx.msg_size > _max_msg_size:
+                            reason = f'message exceeds max. size allowed `{request_ctx.msg_size}` > `{_max_msg_size}`'
+                            _close_connection(conn_ctx, reason)
+                            return
 
                         # At this point we either do not have all the bytes required to check the header
                         # or the header is already checked, so we can just append data to our current buffer ..
@@ -507,16 +559,15 @@ class HL7MLLPServer:
                         _close_connection(conn_ctx, reason)
                         return
 
-            # This covers the whole body of the 'while' block,
-            # catching everything that was raised in a given loop's iteration.
+            # This covers the whole body of the 'while' block ..
+            except SocketTimeoutException:
+                pass
+
             except Exception:
-
-                # Log the exception ..
-                exc = format_exc()
-                self.logger_hl7.warning(exc)
-
-                # .. and sleep for a while in case we cannot re-enter the loop immediately.
-                sleep(2)
+                self.logger_hl7.warning('Exception in MLLP recv loop for `%s`; e:`%s`',
+                    conn_ctx.get_conn_pretty_info(), format_exc())
+                _close_connection(conn_ctx, 'unrecoverable error in recv loop')
+                return
 
 # ################################################################################################################################
 
@@ -536,10 +587,18 @@ class HL7MLLPServer:
         # Produce the message to invoke the callback with ..
         _buffer_data = args._buffer_join_func(args._buffer)
 
-        # .. remove the header and trailer ..
-        _buffer_data = _buffer_data[self.start_seq_len:-self.end_seq_len]
+        # Find the end of the first complete message (SB + payload + EB + CR) ..
+        end_idx = _buffer_data.find(args._end_seq)
+        message_end = end_idx + args._end_seq_len
 
-        # .. asign the actual business data to message ..
+        # .. retain any bytes after the complete message, these may be the start of the next message ..
+        residual = _buffer_data[message_end:]
+        residual_list:'byteslist' = [residual] if residual else []
+
+        # .. extract just the payload, stripping the SB header and EB+CR trailer ..
+        _buffer_data = _buffer_data[args._start_seq_len:end_idx]
+
+        # .. assign the actual business data to message ..
         args.request_ctx.data = _buffer_data
 
         # .. update counters ..
@@ -548,15 +607,24 @@ class HL7MLLPServer:
         # .. invoke the callback ..
         response = args._run_callback(args.conn_ctx, args.request_ctx) or b''
 
+        # .. wrap the response in MLLP framing (SB + payload + EB + CR) ..
+        response = args._start_seq + response + args._end_seq
+
         # .. optionally, log what we are about to send ..
         if self.should_log_messages:
-            self._logger_info('Sending HL7 MLLP response to `%s` -> `%s` (c:%s; s=%d)',
+            self._logger_info('Sending HL7 MLLP response to `%s` -> `%s` (c:%s, s=%d)',
                 args.request_ctx.msg_id, response, args.conn_ctx.conn_id, len(response))
 
-        # .. write the response back ..
-        args._socket_send(response)
+        # .. write the response back, using sendall to guarantee complete delivery ..
+        args._socket_sendall(response)
 
-        # .. and reset the message to make it possible to handle a new one.
+        # .. reset the buffer, retaining any residual bytes from the next message ..
+        args._buffer_reset(residual_list)
+
+        # .. re-enable header validation for the next message ..
+        args._needs_header_check_setter(True)
+
+        # .. and reset the request context to make it possible to handle a new one.
         args._request_ctx_reset()
 
 # ################################################################################################################################
@@ -700,13 +768,17 @@ def main():
 
         'max_msg_size': 1_000_000,
         'read_buffer_size': 2048,
-        'recv_timeout': 0.25,
+        'recv_timeout': 30,
 
         'logging_level': 'DEBUG',
         'should_log_messages': True,
 
         'start_seq': b'\x0b',
         'end_seq': b'\x1c\x0d',
+
+        'tcp_keepalive_idle': 60,
+        'tcp_keepalive_intvl': 10,
+        'tcp_keepalive_cnt': 6,
     })
 
     server = HL7MLLPServer(config, on_message)
