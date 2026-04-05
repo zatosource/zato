@@ -24,7 +24,7 @@ from gevent import sleep as gsleep
 from bunch import bunchify
 
 # Zato
-from zato.hl7.mllp.server import HL7MLLPServer
+from zato.hl7.mllp.server import HL7MLLPServer, ServerQuirks
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,6 +132,19 @@ def load_server_config(ini_path:'str') -> 'Bunch':
     cp.read(str(ini_path))
     s = cp['server']
 
+    quirks = ServerQuirks()
+
+    if cp.has_section('quirks'):
+        q = cp['quirks']
+        quirks.normalize_lf_to_cr                = q.getboolean('normalize_lf_to_cr', quirks.normalize_lf_to_cr)
+        quirks.normalize_crlf_to_cr              = q.getboolean('normalize_crlf_to_cr', quirks.normalize_crlf_to_cr)
+        quirks.pad_msh2_encoding_chars           = q.getboolean('pad_msh2_encoding_chars', quirks.pad_msh2_encoding_chars)
+        quirks.fix_truncated_msh                 = q.getboolean('fix_truncated_msh', quirks.fix_truncated_msh)
+        quirks.strip_leading_whitespace_from_fields = q.getboolean('strip_leading_whitespace_from_fields', quirks.strip_leading_whitespace_from_fields)
+        quirks.prepend_msh_if_missing            = q.getboolean('prepend_msh_if_missing', quirks.prepend_msh_if_missing)
+        quirks.normalize_concatenated_messages   = q.getboolean('normalize_concatenated_messages', quirks.normalize_concatenated_messages)
+        quirks.max_ack_field_len                 = q.getint('max_ack_field_len', quirks.max_ack_field_len)
+
     config = bunchify({
         'id': s.get('id', 'test-1'),
         'name': s.get('name', 'test-hl7'),
@@ -153,6 +166,9 @@ def load_server_config(ini_path:'str') -> 'Bunch':
         'tcp_keepalive_interval': s.getint('tcp_keepalive_interval', 10),
         'tcp_keepalive_count': s.getint('tcp_keepalive_count', 6),
     })
+
+    # Assign quirks after bunchify so it stays as a ServerQuirks instance ..
+    config.quirks = quirks
 
     return config
 

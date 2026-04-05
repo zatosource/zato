@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import socket as socket_mod
+from dataclasses import dataclass
 from logging import DEBUG, getLevelName, getLogger
 from socket import timeout as SocketTimeoutException
 from time import monotonic
@@ -63,6 +64,113 @@ _msh18_to_codec = {
 _default_codec = 'iso-8859-1'
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@dataclass(init=False)
+class ServerQuirks:
+    """ Per-connection toggles that normalize common real-world HL7 encoding and framing issues
+    before the payload reaches the callback or the ACK builder.
+    """
+    normalize_lf_to_cr:                'bool' = True
+    normalize_crlf_to_cr:              'bool' = True
+    pad_msh2_encoding_chars:           'bool' = True
+    fix_truncated_msh:                 'bool' = True
+    strip_leading_whitespace_from_fields: 'bool' = True
+    prepend_msh_if_missing:            'bool' = False
+    normalize_concatenated_messages:   'bool' = False
+    max_ack_field_len:                 'int'  = 200
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _apply_quirks(raw_payload:'bytes', quirks:'ServerQuirks') -> 'bytes':
+    """ Applies all enabled quirks to the raw payload before it reaches the callback or ACK builder.
+    Returns the (possibly modified) payload.
+    """
+    out = raw_payload
+
+    # CRLF must be collapsed before bare-LF replacement, otherwise CRLF becomes CR+CR ..
+    if quirks.normalize_crlf_to_cr:
+        out = out.replace(b'\x0d\x0a', b'\x0d')
+
+    # .. now replace any remaining bare LF with CR ..
+    if quirks.normalize_lf_to_cr:
+        out = out.replace(b'\x0a', b'\x0d')
+
+    # .. attempt to locate MSH if it does not start at position 0 ..
+    if quirks.prepend_msh_if_missing:
+        if not out.startswith(b'MSH'):
+            if out.startswith(b'SH') and len(out) > 2 and out[2:3] in (b'|', b':', b'^', b'\\', b'~', b'&'):
+                out = b'M' + out
+            else:
+                msh_idx = out.find(b'MSH')
+                if msh_idx > 0:
+                    out = out[msh_idx:]
+
+    # .. pad MSH-2 encoding characters to the standard 4 ..
+    if quirks.pad_msh2_encoding_chars and len(out) > 3:
+        field_sep = out[3:4]
+        cr_idx = out.find(b'\x0d')
+        msh_segment = out[:cr_idx] if cr_idx != -1 else out
+        fields = msh_segment.split(field_sep)
+        len_fields = len(fields)
+
+        if len_fields > 1:
+            enc_chars = fields[1]
+            len_enc = len(enc_chars)
+            if len_enc < 4:
+                standard = b'^~\\&'
+                # .. HL7 senders sometimes transmit only ^ and & (component + subcomponent); treat as the
+                #    usual default encoding characters with repetition and escape filled in ..
+                if enc_chars == b'^&':
+                    padded = standard
+                else:
+                    padded = enc_chars + standard[len_enc:]
+                # Rebuild MSH-2 in the payload ..
+                first_sep = out.find(field_sep)
+                second_sep = out.find(field_sep, first_sep + 1)
+                if second_sep != -1:
+                    out = out[:first_sep + 1] + padded + out[second_sep:]
+                elif cr_idx != -1:
+                    out = out[:first_sep + 1] + padded + out[cr_idx:]
+
+    # .. fill missing MSH fields so ACK building does not produce empty values ..
+    if quirks.fix_truncated_msh and len(out) > 3:
+        field_sep = out[3:4]
+        cr_idx = out.find(b'\x0d')
+        msh_segment = out[:cr_idx] if cr_idx != -1 else out
+        fields = msh_segment.split(field_sep)
+        len_fields = len(fields)
+
+        _msh_defaults = {
+            8: b'ACK',   # MSH-9 (message type)
+            9: b'0',     # MSH-10 (control id)
+            10: b'P',    # MSH-11 (processing id)
+            11: b'2.5',  # MSH-12 (version)
+        }
+
+        changed = False
+        for idx, default_val in _msh_defaults.items():
+            if len_fields <= idx:
+                fields.extend([b''] * (idx + 1 - len_fields))
+                len_fields = len(fields)
+                changed = True
+            if not fields[idx]:
+                fields[idx] = default_val
+                changed = True
+
+        if changed:
+            new_msh = field_sep.join(fields)
+            rest = out[cr_idx:] if cr_idx != -1 else b''
+            out = new_msh + rest
+
+    # .. split concatenated messages if requested ..
+    # This is handled separately in _handle_complete_message, not here,
+    # because it changes the delivery contract (one frame -> multiple callbacks).
+
+    return out
+
+# ################################################################################################################################
 
 def _detect_encoding_from_msh18(raw_payload:'bytes') -> 'str':
     """ Reads MSH-18 (Character Set) from the raw HL7 payload bytes to determine the message encoding.
@@ -106,7 +214,13 @@ def _detect_encoding_from_msh18(raw_payload:'bytes') -> 'str':
 
 # ################################################################################################################################
 
-def _build_ack(raw_payload:'bytes', ack_code:'bytes', err_text:'bytes'=b'') -> 'bytes':
+def _build_ack(
+    raw_payload:'bytes',
+    ack_code:'bytes',
+    err_text:'bytes'=b'',
+    *,
+    quirks:'ServerQuirks',
+    ) -> 'bytes':
     """ Builds a minimal HL7 v2 ACK message from the inbound raw payload.
     Swaps sender/receiver fields from the inbound MSH and sets MSA-1 to ack_code (AA, AE, or AR).
     """
@@ -139,6 +253,26 @@ def _build_ack(raw_payload:'bytes', ack_code:'bytes', err_text:'bytes'=b'') -> '
     msg_control_id = fields[9] if len_fields > 9 else b'0'
     version        = fields[11] if len_fields > 11 else b'2.5'
 
+    # .. strip leading whitespace from fields used in ACK construction ..
+    if quirks.strip_leading_whitespace_from_fields:
+        sending_app    = sending_app.lstrip()
+        sending_fac    = sending_fac.lstrip()
+        receiving_app  = receiving_app.lstrip()
+        receiving_fac  = receiving_fac.lstrip()
+        msg_control_id = msg_control_id.lstrip()
+        version        = version.lstrip()
+
+    # .. truncate fields to max_ack_field_len if configured ..
+    _max_len = quirks.max_ack_field_len
+    if _max_len > 0:
+        encoding_chars = encoding_chars[:_max_len]
+        sending_app    = sending_app[:_max_len]
+        sending_fac    = sending_fac[:_max_len]
+        receiving_app  = receiving_app[:_max_len]
+        receiving_fac  = receiving_fac[:_max_len]
+        msg_control_id = msg_control_id[:_max_len]
+        version        = version[:_max_len]
+
     # Build the ACK MSH with sender/receiver swapped ..
     ack_msh = field_sep.join([
         b'MSH', encoding_chars,
@@ -156,6 +290,8 @@ def _build_ack(raw_payload:'bytes', ack_code:'bytes', err_text:'bytes'=b'') -> '
 
     # .. optionally add an ERR segment with the error text ..
     if err_text:
+        if _max_len > 0:
+            err_text = err_text[:_max_len]
         ack_err = field_sep.join([b'ERR', err_text])
         parts.append(ack_err)
 
@@ -372,6 +508,8 @@ class HL7MLLPServer:
 
     idle_timeout: 'float'
 
+    quirks: 'ServerQuirks'
+
     keep_running: 'bool'
     impl: 'ZatoStreamServer'
 
@@ -410,6 +548,8 @@ class HL7MLLPServer:
         self.tcp_keepalive_count   = config.tcp_keepalive_count
 
         self.idle_timeout = float(config.idle_timeout)
+
+        self.quirks = config.quirks
 
         self.keep_running = True
 
@@ -746,34 +886,51 @@ class HL7MLLPServer:
         # .. extract just the payload, stripping the SB header and EB+CR trailer ..
         _buffer_data = _buffer_data[args._start_seq_len:end_idx]
 
-        # .. assign the actual business data to message ..
-        args.request_ctx.data = _buffer_data
+        # .. apply quirks to the raw payload before any further processing ..
+        _quirks = self.quirks
+        _buffer_data = _apply_quirks(_buffer_data, _quirks)
 
-        # .. update counters ..
-        args.conn_ctx.total_messages_received += 1
+        # .. if concatenated message splitting is enabled, split on MSH boundaries
+        # and deliver each sub-message separately ..
+        if _quirks.normalize_concatenated_messages:
+            sub_messages = self._split_concatenated(_buffer_data)
+        else:
+            sub_messages = [_buffer_data]
 
-        # .. invoke the callback, which always returns bytes (AA ACK if callback returned nothing, AE NAK on error) ..
-        response = args._run_callback(args.conn_ctx, args.request_ctx)
+        for sub_msg in sub_messages:
 
-        # .. wrap the response in MLLP framing (SB + payload + EB + CR) ..
-        response = args._start_seq + response + args._end_seq
+            # .. assign the actual business data to message ..
+            args.request_ctx.data = sub_msg
 
-        # .. optionally, log what we are about to send ..
-        if self.should_log_messages:
-            msg_id = args.request_ctx.msg_id
-            conn_id = args.conn_ctx.conn_id
-            response_len = len(response)
-            msg = f'Sending HL7 MLLP response to `{msg_id}` -> `{response}` (c:{conn_id}, s={response_len})'
-            self._logger_info(msg)
+            # .. update counters ..
+            args.conn_ctx.total_messages_received += 1
 
-        # .. write the response back, using sendall to guarantee complete delivery ..
-        try:
-            args._socket_sendall(response)
-        except ConnectionError:
-            conn_info = args.conn_ctx.get_conn_pretty_info()
-            msg = f'Connection lost while sending response to `{conn_info}`'
-            self._logger_warn(msg)
-            return
+            # .. invoke the callback ..
+            response = args._run_callback(args.conn_ctx, args.request_ctx)
+
+            # .. wrap the response in MLLP framing (SB + payload + EB + CR) ..
+            response = args._start_seq + response + args._end_seq
+
+            # .. optionally, log what we are about to send ..
+            if self.should_log_messages:
+                msg_id = args.request_ctx.msg_id
+                conn_id = args.conn_ctx.conn_id
+                response_len = len(response)
+                msg = f'Sending HL7 MLLP response to `{msg_id}` -> `{response}` (c:{conn_id}, s={response_len})'
+                self._logger_info(msg)
+
+            # .. write the response back, using sendall to guarantee complete delivery ..
+            try:
+                args._socket_sendall(response)
+            except ConnectionError:
+                conn_info = args.conn_ctx.get_conn_pretty_info()
+                msg = f'Connection lost while sending response to `{conn_info}`'
+                self._logger_warn(msg)
+                return
+
+            # .. reset the request context between sub-messages so each gets its own msg_id ..
+            if len(sub_messages) > 1:
+                args._request_ctx_reset()
 
         # .. reset the buffer, retaining any residual bytes from the next message ..
         args._buffer_reset(residual_list)
@@ -783,6 +940,34 @@ class HL7MLLPServer:
 
         # .. and reset the request context to make it possible to handle a new one.
         args._request_ctx_reset()
+
+# ################################################################################################################################
+
+    def _split_concatenated(self, payload:'bytes') -> 'byteslist':
+        """ Splits a payload that contains multiple concatenated MSH segments into separate messages.
+        """
+        cr = b'\x0d'
+        marker = b'MSH'
+
+        # Find all MSH boundaries ..
+        parts:'byteslist' = []
+        segments = payload.split(cr)
+        current:'byteslist' = []
+
+        for seg in segments:
+            if seg.startswith(marker) and current:
+                parts.append(cr.join(current) + cr)
+                current = [seg]
+            else:
+                current.append(seg)
+
+        if current:
+            combined = cr.join(current)
+            if not combined.endswith(cr):
+                combined = combined + cr
+            parts.append(combined)
+
+        return parts if parts else [payload]
 
 # ################################################################################################################################
 
@@ -801,6 +986,7 @@ class HL7MLLPServer:
         self._logger_info(msg)
 
         raw_payload = request_ctx.data
+        _quirks = self.quirks
         encoding = _detect_encoding_from_msh18(raw_payload)
 
         try:
@@ -819,6 +1005,7 @@ class HL7MLLPServer:
                     'should_parse_on_input': True,
                     'should_validate': True,
                     'hl7_mllp_conn_ctx': conn_ctx,
+                    'server_quirks': _quirks,
                     }
                 }
             )
@@ -832,13 +1019,13 @@ class HL7MLLPServer:
 
             # Return an AE (Application Error) NAK so the sender knows the message was not processed ..
             err_text = f'Callback error for msg_id {msg_id}'.encode(encoding)
-            return _build_ack(raw_payload, b'AE', err_text)
+            return _build_ack(raw_payload, b'AE', err_text, quirks=_quirks)
 
         else:
 
             # If the callback returned nothing, auto-generate an AA (Application Accept) ACK ..
             if not response:
-                return _build_ack(raw_payload, b'AA')
+                return _build_ack(raw_payload, b'AA', quirks=_quirks)
 
             # Convert high-level objects to bytes ..
             if hasattr(response, 'serialize'):
@@ -863,7 +1050,7 @@ class HL7MLLPServer:
         if raw_payload:
             try:
                 err_text = reason.encode('utf-8')
-                nak = _build_ack(raw_payload, b'AR', err_text)
+                nak = _build_ack(raw_payload, b'AR', err_text, quirks=self.quirks)
                 framed = self.start_seq + nak + self.end_seq
                 conn_ctx.socket.sendall(framed)
             except Exception:
@@ -969,6 +1156,8 @@ def main():
         'tcp_keepalive_idle': 60,
         'tcp_keepalive_interval': 10,
         'tcp_keepalive_count': 6,
+
+        'quirks': ServerQuirks(),
     })
 
     server = HL7MLLPServer(config, on_message)
