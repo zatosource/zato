@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import socket as socket_mod
 from logging import DEBUG, getLevelName, getLogger
 from socket import timeout as SocketTimeoutException
+from time import monotonic
 from traceback import format_exc
 
 # hl7apy
@@ -28,7 +29,7 @@ if 0:
     from logging import Logger
     from socket import socket as Socket
     from bunch import Bunch
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, byteslist, bytesnone, callable_
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, boolnone, byteslist, callable_
     byteslist = byteslist
 
 # ################################################################################################################################
@@ -36,6 +37,133 @@ if 0:
 
 conn_type   = GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP
 server_type = 'HL7 MLLP'
+
+# HL7 Table 0211 character set names mapped to Python codec names.
+# Single-byte encodings and UTF-8 are safe over MLLP.
+# UTF-16 and UTF-32 are prohibited because their byte values conflict with MLLP framing bytes (0x0B, 0x1C, 0x0D).
+_msh18_to_codec = {
+    b'':               'iso-8859-1',
+    b'ASCII':          'ascii',
+    b'8859/1':         'iso-8859-1',
+    b'8859/2':         'iso-8859-2',
+    b'8859/3':         'iso-8859-3',
+    b'8859/4':         'iso-8859-4',
+    b'8859/5':         'iso-8859-5',
+    b'8859/6':         'iso-8859-6',
+    b'8859/7':         'iso-8859-7',
+    b'8859/8':         'iso-8859-8',
+    b'8859/9':         'iso-8859-9',
+    b'8859/15':        'iso-8859-15',
+    b'UNICODE UTF-8':  'utf-8',
+    b'UNICODE':        'utf-8',
+    b'ISO IR87':       'iso2022_jp',
+    b'ISO IR159':      'iso2022_jp',
+    b'GB 18030-2000':  'gb18030',
+    b'KS X 1001':      'euc_kr',
+    b'CNS 11643-1992': 'big5',
+}
+
+_default_codec = 'iso-8859-1'
+
+# ################################################################################################################################
+
+def _detect_encoding_from_msh18(raw_payload:'bytes') -> 'str':
+    """ Reads MSH-18 (Character Set) from the raw HL7 payload bytes to determine the message encoding.
+    The field separator and segment positions are always single-byte ASCII regardless of encoding,
+    so this is safe to do on raw bytes before any character decoding.
+    """
+    # The first segment is MSH, terminated by 0x0D ..
+    cr_idx = raw_payload.find(b'\x0d')
+    if cr_idx == -1:
+        return _default_codec
+
+    msh_segment = raw_payload[:cr_idx]
+
+    # MSH-1 (field separator) is always the 4th byte (index 3) ..
+    if len(msh_segment) < 4:
+        return _default_codec
+
+    field_sep = msh_segment[3:4]
+
+    # .. split MSH on the field separator and read field index 17 (zero-indexed,
+    # because MSH-1 is the field separator itself, so MSH-2 is index 0 after the first split) ..
+    fields = msh_segment.split(field_sep)
+    len_fields = len(fields)
+
+    # fields[0] is 'MSH', fields[1] is encoding chars, ... fields[17] is MSH-18
+    if len_fields <= 17:
+        return _default_codec
+
+    msh18 = fields[17].strip()
+
+    # MSH-18 may contain multiple character sets separated by the repetition separator (e.g. ASCII~ISO IR87),
+    # in which case we use the first one that we recognize ..
+    rep_sep = msh_segment[5:6] if len(msh_segment) > 5 else b'~'
+    for charset in msh18.split(rep_sep):
+        charset = charset.strip()
+        codec = _msh18_to_codec.get(charset)
+        if codec:
+            return codec
+
+    return _default_codec
+
+# ################################################################################################################################
+
+def _build_ack(raw_payload:'bytes', ack_code:'bytes', err_text:'bytes'=b'') -> 'bytes':
+    """ Builds a minimal HL7 v2 ACK message from the inbound raw payload.
+    Swaps sender/receiver fields from the inbound MSH and sets MSA-1 to ack_code (AA, AE, or AR).
+    """
+    cr = b'\x0d'
+
+    # Extract MSH fields from the raw payload ..
+    cr_idx = raw_payload.find(cr)
+    if cr_idx == -1:
+        msh_segment = raw_payload
+    else:
+        msh_segment = raw_payload[:cr_idx]
+
+    if len(msh_segment) < 4:
+        field_sep = b'|'
+    else:
+        field_sep = msh_segment[3:4]
+
+    fields = msh_segment.split(field_sep)
+    len_fields = len(fields)
+
+    # fields layout: [0]=MSH, [1]=encoding chars, [2]=sending app, [3]=sending facility,
+    # [4]=receiving app, [5]=receiving facility, [6]=datetime, [7]=security,
+    # [8]=message type, [9]=message control id, ...
+
+    encoding_chars = fields[1] if len_fields > 1 else b'^~\\&'
+    sending_app    = fields[2] if len_fields > 2 else b''
+    sending_fac    = fields[3] if len_fields > 3 else b''
+    receiving_app  = fields[4] if len_fields > 4 else b''
+    receiving_fac  = fields[5] if len_fields > 5 else b''
+    msg_control_id = fields[9] if len_fields > 9 else b'0'
+    version        = fields[11] if len_fields > 11 else b'2.5'
+
+    # Build the ACK MSH with sender/receiver swapped ..
+    ack_msh = field_sep.join([
+        b'MSH', encoding_chars,
+        receiving_app, receiving_fac,
+        sending_app, sending_fac,
+        b'', b'',
+        b'ACK', msg_control_id,
+        b'P', version,
+    ])
+
+    # .. build the MSA segment ..
+    ack_msa = field_sep.join([b'MSA', ack_code, msg_control_id])
+
+    parts = [ack_msh, ack_msa]
+
+    # .. optionally add an ERR segment with the error text ..
+    if err_text:
+        ack_err = field_sep.join([b'ERR', err_text])
+        parts.append(ack_err)
+
+    out = cr.join(parts) + cr
+    return out
 
 # ################################################################################################################################
 
@@ -245,6 +373,8 @@ class HL7MLLPServer:
     tcp_keepalive_interval: 'int'
     tcp_keepalive_count:   'int'
 
+    idle_timeout: 'float'
+
     keep_running: 'bool'
     impl: 'ZatoStreamServer'
 
@@ -281,6 +411,8 @@ class HL7MLLPServer:
         self.tcp_keepalive_idle  = config.tcp_keepalive_idle
         self.tcp_keepalive_interval = config.tcp_keepalive_interval
         self.tcp_keepalive_count   = config.tcp_keepalive_count
+
+        self.idle_timeout = float(config.idle_timeout)
 
         self.keep_running = True
 
@@ -367,8 +499,9 @@ class HL7MLLPServer:
         _needs_header_check = True
 
         # To make fewer namespace lookups
-        _max_msg_size = int(cast_('str', self.config.max_msg_size))
         _recv_timeout:'float' = self.config.recv_timeout
+        _idle_timeout:'float' = self.idle_timeout
+        _last_activity:'float' = monotonic()
 
         # We do not want for this to be too small
         _read_buffer_size = max(self.read_buffer_size, self.min_read_buffer_size)
@@ -453,12 +586,6 @@ class HL7MLLPServer:
                         data_len = len(data)
                         request_ctx.msg_size += data_len
 
-                        # Check whether receiving this data exceeded our message size limit
-                        if request_ctx.msg_size > _max_msg_size:
-                            reason = f'message exceeds max. size allowed `{request_ctx.msg_size}` > `{_max_msg_size}`'
-                            _close_connection(conn_ctx, reason)
-                            return
-
                         # At this point we either do not have all the bytes required to check the header
                         # or the header is already checked, so we can just append data to our current buffer ..
                         _buffer_append(data)
@@ -527,46 +654,36 @@ class HL7MLLPServer:
                         # which is not something to be expected).
 
                         # First, try to check if data currently received ends in end_seq ..
-                        if self._points_to_full_message(data):
+                        _has_complete = self._points_to_full_message(data)
 
-                            # .. even if it does, make sure we have a header already and reject the message otherwise ..
+                        # .. if not, try combining with previous segment to catch end_seq split across recv boundaries ..
+                        if not _has_complete and _buffer_len() > 1:
+                            last_data:'bytes' = _buffer[-2]
+                            concatenated = last_data + data
+                            _has_complete = self._points_to_full_message(concatenated)
+
+                        if _has_complete:
+
+                            # .. make sure we have a header already and reject the message otherwise ..
                             if _needs_header_check:
                                 end_seq = self.end_seq
                                 start_seq = self.start_seq
-                                reason = f'end bytes `{end_seq}` received without a preceeding header `{start_seq}` (#1)'
-                                self._close_connection(conn_ctx, reason)
+                                reason = f'end bytes `{end_seq}` received without a preceeding header `{start_seq}`'
+                                self._close_connection(conn_ctx, reason, raw_payload=data)
                                 return
 
-                            # .. it is a match so it means that data was the last part of a message that we can already process ..
+                            # .. process the complete message and then drain any further complete messages
+                            # that may already be sitting in the residual buffer from pipelining ..
                             self._handle_complete_message(_handle_complete_message_args)
 
-                        # .. otherwise, try to check if in combination with the previous segment,
-                        # the data received now points to a full message. However, for this to work
-                        # we require that there be at least one previous segment - otherwise we are the first one
-                        # and if we were the ending one we would have been caught in the if above ..
-                        else:
+                            while _buffer:
+                                combined = _buffer_join_func(_buffer)
+                                if combined.find(self.end_seq) == -1:
+                                    break
+                                self._handle_complete_message(_handle_complete_message_args)
 
-                            if _buffer_len() > 1:
-
-                                # Index -1 is our own segment (data) previously appended,
-                                # which is why we use -2 to get the segment preceeding it.
-                                last_data:'bytes' = _buffer[-2]
-                                concatenated = last_data + data
-
-                                # .. now that we have it concatenated, check if that indicates that a full message
-                                # is already received.
-                                if self._points_to_full_message(concatenated):
-
-                                    # Again, even if it does but have not received the header yet,
-                                    # we need to reject the whole message.
-                                    if _needs_header_check:
-                                        end_seq = self.end_seq
-                                        start_seq = self.start_seq
-                                        reason = f'end bytes `{end_seq}` received without a preceeding header `{start_seq}` (#2)'
-                                        self._close_connection(conn_ctx, reason)
-                                        return
-
-                                    self._handle_complete_message(_handle_complete_message_args)
+                            # .. reset idle timer after successfully processing messages ..
+                            _last_activity = monotonic()
 
                     # No data received = remote end is no longer connected.
                     else:
@@ -576,7 +693,13 @@ class HL7MLLPServer:
 
             # This covers the whole body of the 'while' block ..
             except SocketTimeoutException:
-                pass
+                # Check application-level idle timeout, 0 means no timeout ..
+                if _idle_timeout > 0:
+                    idle_elapsed = monotonic() - _last_activity
+                    if idle_elapsed > _idle_timeout:
+                        reason = f'idle timeout ({idle_elapsed:.1f}s > {_idle_timeout:.1f}s)'
+                        _close_connection(conn_ctx, reason)
+                        return
 
             except Exception:
                 conn_info = conn_ctx.get_conn_pretty_info()
@@ -591,6 +714,12 @@ class HL7MLLPServer:
     def _points_to_full_message(self, data:'bytes') -> 'bool':
         """ Returns True if input bytes indicate that we have a full message from the socket.
         """
+        # A bare 0x1C inside the HL7 payload is not a concern here because the MLLP end sequence
+        # is 0x1C followed by 0x0D, and 0x0D is the HL7 segment terminator. An isolated 0x1C byte
+        # inside payload data will never be immediately followed by 0x0D in a position that could be
+        # mistaken for end-of-message framing, because 0x0D always starts a new segment in valid HL7.
+        # In other words, the two-byte end_seq (0x1C 0x0D) is unambiguous within well-formed HL7 content.
+
         # Get as many bytes from data as we expected for our end_seq to be the length of ..
         data_last_bytes = data[-self.end_seq_len:]
 
@@ -621,8 +750,8 @@ class HL7MLLPServer:
         # .. update counters ..
         args.conn_ctx.total_messages_received += 1
 
-        # .. invoke the callback ..
-        response = args._run_callback(args.conn_ctx, args.request_ctx) or b''
+        # .. invoke the callback, which always returns bytes (AA ACK if callback returned nothing, AE NAK on error) ..
+        response = args._run_callback(args.conn_ctx, args.request_ctx)
 
         # .. wrap the response in MLLP framing (SB + payload + EB + CR) ..
         response = args._start_seq + response + args._end_seq
@@ -636,7 +765,13 @@ class HL7MLLPServer:
             self._logger_info(msg)
 
         # .. write the response back, using sendall to guarantee complete delivery ..
-        args._socket_sendall(response)
+        try:
+            args._socket_sendall(response)
+        except ConnectionError:
+            conn_info = args.conn_ctx.get_conn_pretty_info()
+            msg = f'Connection lost while sending response to `{conn_info}`'
+            self._logger_warn(msg)
+            return
 
         # .. reset the buffer, retaining any residual bytes from the next message ..
         args._buffer_reset(residual_list)
@@ -649,7 +784,7 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def _run_callback(self, conn_ctx:'ConnCtx', request_ctx:'RequestCtx', _hl7_v2:'str'=HL7.Const.Version.v2.id) -> 'bytesnone':
+    def _run_callback(self, conn_ctx:'ConnCtx', request_ctx:'RequestCtx', _hl7_v2:'str'=HL7.Const.Version.v2.id) -> 'bytes':
 
         conn_id = conn_ctx.conn_id
         msg_id = request_ctx.msg_id
@@ -663,6 +798,9 @@ class HL7MLLPServer:
               f' c:{total_messages}, p:{total_packets}; {service_name}); `{log_request!r}`'
         self._logger_info(msg)
 
+        raw_payload = request_ctx.data
+        encoding = _detect_encoding_from_msh18(raw_payload)
+
         try:
             response = self.callback_func(
                 self.config.service_name,
@@ -670,7 +808,7 @@ class HL7MLLPServer:
                 data_format = _hl7_v2,
                 zato_ctx = {
                     'zato.channel_item': {
-                    'data_encoding': 'utf8',
+                    'data_encoding': encoding,
                     'hl7_version': _hl7_v2,
                     'json_path': None,
                     'should_parse_on_input': True,
@@ -686,7 +824,16 @@ class HL7MLLPServer:
             exc = format_exc()
             msg = f'Error while invoking `{service_name}` with msg_id `{msg_id}`; e:`{exc}`'
             self._logger_warn(msg)
+
+            # Return an AE (Application Error) NAK so the sender knows the message was not processed ..
+            err_text = f'Callback error for msg_id {msg_id}'.encode(encoding)
+            return _build_ack(raw_payload, b'AE', err_text)
+
         else:
+
+            # If the callback returned nothing, auto-generate an AA (Application Accept) ACK ..
+            if not response:
+                return _build_ack(raw_payload, b'AA')
 
             # Convert high-level objects to bytes ..
             if isinstance(response, Message):
@@ -694,17 +841,29 @@ class HL7MLLPServer:
 
             # .. and make sure we actually do use bytes objects ..
             if not isinstance(response, bytes):
-                response = response.encode('utf8')
+                response = response.encode(encoding)
 
             # .. and return the response to our caller.
             return response
 
 # ################################################################################################################################
 
-    def _close_connection(self, conn_ctx:'ConnCtx', reason:'str') -> 'None':
+    def _close_connection(self, conn_ctx:'ConnCtx', reason:'str', raw_payload:'bytes'=b'') -> 'None':
         conn_info = conn_ctx.get_conn_pretty_info()
         msg = f'Closing connection; {reason}; {conn_info}'
         self._logger_info(msg)
+
+        # Best-effort attempt to send an AR (Application Reject) NAK before closing,
+        # so the remote end knows we are rejecting the conversation rather than silently dropping it ..
+        if raw_payload:
+            try:
+                err_text = reason.encode('utf-8')
+                nak = _build_ack(raw_payload, b'AR', err_text)
+                framed = self.start_seq + nak + self.end_seq
+                conn_ctx.socket.sendall(framed)
+            except Exception:
+                pass
+
         conn_ctx.socket.close()
 
 # ################################################################################################################################
@@ -725,7 +884,7 @@ class HL7MLLPServer:
         if request_ctx.meta[has_meta_attr]:
             if bytes_to_check == meta_seq:
                 reason = f'unexpected {meta_attr} found `{bytes_to_check!r}` == `{meta_seq!r}` in data `{data!r}`'
-                self._close_connection(conn_ctx, reason)
+                self._close_connection(conn_ctx, reason, raw_payload=data)
                 return
 
         # If we do not have the element, it must be a new message that we are receiving.
@@ -733,7 +892,7 @@ class HL7MLLPServer:
         else:
             if bytes_to_check != meta_seq:
                 reason = f'{meta_attr} mismatch `{bytes_to_check!r}` != `{meta_seq!r}` in data `{data!r}`'
-                self._close_connection(conn_ctx, reason)
+                self._close_connection(conn_ctx, reason, raw_payload=data)
                 return
 
         # If we are here, it means that the meta attribute is correct
@@ -792,9 +951,9 @@ def main():
 
         'service_name': 'pub.zato.ping',
 
-        'max_msg_size': 1_000_000,
         'read_buffer_size': 2048,
         'recv_timeout': 30,
+        'idle_timeout': 300,
 
         'logging_level': 'DEBUG',
         'should_log_messages': True,

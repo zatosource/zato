@@ -47,6 +47,7 @@ reportMissingModuleSource  = "none"
 # This is level 3
 #
 reportMissingParameterType = "none"
+reportInvalidTypeForm      = "none"
 
 #
 # This is level 4, needed before reportUnknownMemberType
