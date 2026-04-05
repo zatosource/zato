@@ -569,8 +569,13 @@ class HL7MLLPServer:
 
                 # .. catch timeouts here but no other exception type ..
                 except SocketTimeoutException:
-                    # That is fine, we simply did not get any data in this iteration
-                    pass
+                    # Check application-level idle timeout on each recv timeout, 0 means no timeout ..
+                    if _idle_timeout > 0:
+                        idle_elapsed = monotonic() - _last_activity
+                        if idle_elapsed > _idle_timeout:
+                            reason = f'idle timeout ({idle_elapsed:.1f}s > {_idle_timeout:.1f}s)'
+                            _close_connection(conn_ctx, reason)
+                            return
 
                 # .. no timeout = we may have received some data from the socket ..
                 else:

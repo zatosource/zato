@@ -146,8 +146,8 @@ def load_server_config(ini_path:'str') -> 'Bunch':
         'logging_level': s.get('logging_level', 'INFO'),
         'should_log_messages': s.getboolean('should_log_messages', True),
 
-        'start_seq': SB,
-        'end_seq': EB_CR,
+        'start_seq': bytes.fromhex(s.get('start_seq_hex', '0b')) if s.get('start_seq_hex') else SB,
+        'end_seq': bytes.fromhex(s.get('end_seq_hex', '1c0d')) if s.get('end_seq_hex') else EB_CR,
 
         'tcp_keepalive_idle': s.getint('tcp_keepalive_idle', 60),
         'tcp_keepalive_interval': s.getint('tcp_keepalive_interval', 10),
