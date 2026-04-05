@@ -325,8 +325,8 @@ Verify the server handles it without crashing (callback receives empty bytes, au
 ### 11.5 Binary payload (non-HL7) inside valid framing
 
 Send `0x0B` + 256 random bytes + `0x1C 0x0D`.
-Verify the server delivers the bytes to the callback and returns the callback's response.
-The server is a transport layer, not a parser.
+Verify the callback receives those exact 256 random bytes unmodified (byte-for-byte comparison).
+The server is a transport layer, not a parser - it never validates whether the payload is actual HL7.
 
 ### 11.6 Back-to-back connections
 
