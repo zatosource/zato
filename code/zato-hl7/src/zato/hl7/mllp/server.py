@@ -13,9 +13,6 @@ from socket import timeout as SocketTimeoutException
 from time import monotonic
 from traceback import format_exc
 
-# hl7apy
-from hl7apy.core import Message
-
 # Zato
 from zato.common.api import GENERIC, HL7
 from zato.common.typing_ import cast_
@@ -836,8 +833,8 @@ class HL7MLLPServer:
                 return _build_ack(raw_payload, b'AA')
 
             # Convert high-level objects to bytes ..
-            if isinstance(response, Message):
-                response = response.to_er7()
+            if hasattr(response, 'serialize'):
+                response = response.serialize()
 
             # .. and make sure we actually do use bytes objects ..
             if not isinstance(response, bytes):
