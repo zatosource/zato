@@ -40,19 +40,19 @@ server_type = 'HL7 MLLP'
 # ################################################################################################################################
 
 def new_conn_id(
-    pattern='zhc{}', # type: str
-    id_len=5,        # type: int
-    _new_cid=new_cid # type: callable_
-) -> 'str':
+    pattern:'str'='zhc{}',
+    id_len:'int'=5,
+    _new_cid:'callable_'=new_cid,
+    ) -> 'str':
     return pattern.format(_new_cid(id_len))
 
 # ################################################################################################################################
 
 def new_msg_id(
-    pattern='zhl7{}', # type: str
-    id_len=6,         # type: int
-    _new_cid=new_cid  # type: callable_
-) -> 'str':
+    pattern:'str'='zhl7{}',
+    id_len:'int'=6,
+    _new_cid:'callable_'=new_cid,
+    ) -> 'str':
     return pattern.format(_new_cid(id_len))
 
 class HandleCompleteMessageArgs:
@@ -99,14 +99,14 @@ class ConnCtx:
 
     def __init__(
         self,
-        conn_name,          # type: str
-        socket,             # type: Socket
-        peer_address,       # type: anytuple
-        tcp_keepalive_idle, # type: int
-        tcp_keepalive_intvl,# type: int
-        tcp_keepalive_cnt,  # type: int
-        _new_conn_id=new_conn_id # type: callable_
-    ) -> 'None':
+        conn_name:'str',
+        socket:'Socket',
+        peer_address:'anytuple',
+        tcp_keepalive_idle:'int',
+        tcp_keepalive_interval:'int',
+        tcp_keepalive_count:'int',
+        _new_conn_id:'callable_'=new_conn_id,
+        ) -> 'None':
 
         self.conn_id = _new_conn_id()
         self.conn_name = conn_name
@@ -141,15 +141,15 @@ class ConnCtx:
 
         # .. interval between probes ..
         if hasattr(socket_mod, 'TCP_KEEPINTVL'):
-            self.socket.setsockopt(socket_mod.IPPROTO_TCP, socket_mod.TCP_KEEPINTVL, tcp_keepalive_intvl)
+            self.socket.setsockopt(socket_mod.IPPROTO_TCP, socket_mod.TCP_KEEPINTVL, tcp_keepalive_interval)
 
         # .. failed probes before declaring connection dead.
         if hasattr(socket_mod, 'TCP_KEEPCNT'):
-            self.socket.setsockopt(socket_mod.IPPROTO_TCP, socket_mod.TCP_KEEPCNT, tcp_keepalive_cnt)
+            self.socket.setsockopt(socket_mod.IPPROTO_TCP, socket_mod.TCP_KEEPCNT, tcp_keepalive_count)
 
 # ################################################################################################################################
 
-    def get_conn_pretty_info(self):
+    def get_conn_pretty_info(self) -> 'str':
         return '{}; `{}:{}` ({}) to `{}:{}` ({}) ({})'.format(
             self.conn_id, self.peer_ip, self.peer_port, self.peer_fqdn,
             self.local_ip, self.local_port, self.local_fqdn, self.conn_name,
@@ -172,7 +172,7 @@ class RequestCtx:
 
 # ################################################################################################################################
 
-    def __init__(self):
+    def __init__(self) -> 'None':
         self.conn_id = '<conn-id-not-given>'
         self.data = b''
         self.meta = {}
@@ -182,8 +182,8 @@ class RequestCtx:
 
     def reset(
         self,
-        _new_msg_id=new_msg_id # type: callable_
-    ) -> 'None':
+        _new_msg_id:'callable_'=new_msg_id,
+        ) -> 'None':
         self.msg_id = _new_msg_id()
         self.msg_size = 0
         self.data = b''
@@ -192,7 +192,7 @@ class RequestCtx:
 
 # ################################################################################################################################
 
-    def to_dict(self):
+    def to_dict(self) -> 'anydict':
         return {
             'conn_id': self.conn_id,
             'msg_id': self.msg_id,
@@ -236,8 +236,8 @@ class HL7MLLPServer:
     end_seq_len: 'int'
 
     tcp_keepalive_idle:  'int'
-    tcp_keepalive_intvl: 'int'
-    tcp_keepalive_cnt:   'int'
+    tcp_keepalive_interval: 'int'
+    tcp_keepalive_count:   'int'
 
     keep_running: 'bool'
     impl: 'ZatoStreamServer'
@@ -252,9 +252,9 @@ class HL7MLLPServer:
 
     def __init__(
         self,
-        config,        # type: Bunch
-        callback_func, # type: callable_
-    ) -> 'None':
+        config:'Bunch',
+        callback_func:'callable_',
+        ) -> 'None':
 
         self.config = config
         self.callback_func = callback_func
@@ -273,8 +273,8 @@ class HL7MLLPServer:
         self.end_seq_len = len(self.end_seq)
 
         self.tcp_keepalive_idle  = config.tcp_keepalive_idle
-        self.tcp_keepalive_intvl = config.tcp_keepalive_intvl
-        self.tcp_keepalive_cnt   = config.tcp_keepalive_cnt
+        self.tcp_keepalive_interval = config.tcp_keepalive_interval
+        self.tcp_keepalive_count   = config.tcp_keepalive_count
 
         self.keep_running = True
 
@@ -300,7 +300,7 @@ class HL7MLLPServer:
 
 # ################################################################################################################################
 
-    def start(self):
+    def start(self) -> 'None':
 
         # Create a new server connection ..
         self.impl = ZatoStreamServer(self.address, self.handle)
@@ -340,7 +340,7 @@ class HL7MLLPServer:
         # Wraps all the metadata about the connection
         conn_ctx = ConnCtx(
             self.name, socket, peer_address,
-            self.tcp_keepalive_idle, self.tcp_keepalive_intvl, self.tcp_keepalive_cnt,
+            self.tcp_keepalive_idle, self.tcp_keepalive_interval, self.tcp_keepalive_count,
         )
 
         self._logger_info('Waiting for HL7 MLLP data from %s', conn_ctx.get_conn_pretty_info())
@@ -357,7 +357,7 @@ class HL7MLLPServer:
 
         # To make fewer namespace lookups
         _max_msg_size = int(cast_('str', self.config.max_msg_size))
-        _recv_timeout = self.config.recv_timeout # type: float
+        _recv_timeout:'float' = self.config.recv_timeout
 
         # We do not want for this to be too small
         _read_buffer_size = max(self.read_buffer_size, self.min_read_buffer_size)
@@ -467,7 +467,7 @@ class HL7MLLPServer:
                             # over the buffer of bytes received so far and concatenating them until we have
                             # at least as many bytes as there are in the header to check.
                             else:
-                                to_check_buffer = [] # type: byteslist
+                                to_check_buffer:'byteslist' = []
                                 to_check_len = 0
 
                                 # Go through each, potentially multi-byte, element in the buffer so far ..
@@ -536,7 +536,7 @@ class HL7MLLPServer:
 
                                 # Index -1 is our own segment (data) previously appended,
                                 # which is why we use -2 to get the segment preceeding it.
-                                last_data = _buffer[-2] # type: bytes
+                                last_data:'bytes' = _buffer[-2]
                                 concatenated = last_data + data
 
                                 # .. now that we have it concatenated, check if that indicates that a full message
@@ -688,14 +688,14 @@ class HL7MLLPServer:
 
     def _check_meta(
         self,
-        conn_ctx,       # type: ConnCtx
-        request_ctx,    # type: RequestCtx
-        data,           # type: bytes
-        bytes_to_check, # type: bytes
-        meta_attr,      # type: str
-        has_meta_attr,  # type: str
-        meta_seq        # type: str
-    ) -> 'boolnone':
+        conn_ctx:'ConnCtx',
+        request_ctx:'RequestCtx',
+        data:'bytes',
+        bytes_to_check:'bytes',
+        meta_attr:'str',
+        has_meta_attr:'str',
+        meta_seq:'str',
+        ) -> 'boolnone':
 
         # If we already have the meta element then we do not expect another one
         # while we are still processing the same message and if one is found, we close the connection.
@@ -777,8 +777,8 @@ def main():
         'end_seq': b'\x1c\x0d',
 
         'tcp_keepalive_idle': 60,
-        'tcp_keepalive_intvl': 10,
-        'tcp_keepalive_cnt': 6,
+        'tcp_keepalive_interval': 10,
+        'tcp_keepalive_count': 6,
     })
 
     server = HL7MLLPServer(config, on_message)
