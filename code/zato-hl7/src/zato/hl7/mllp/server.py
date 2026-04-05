@@ -150,10 +150,16 @@ class ConnCtx:
 # ################################################################################################################################
 
     def get_conn_pretty_info(self) -> 'str':
-        return '{}; `{}:{}` ({}) to `{}:{}` ({}) ({})'.format(
-            self.conn_id, self.peer_ip, self.peer_port, self.peer_fqdn,
-            self.local_ip, self.local_port, self.local_fqdn, self.conn_name,
-        )
+        conn_id   = self.conn_id
+        peer_ip   = self.peer_ip
+        peer_port = self.peer_port
+        peer_fqdn = self.peer_fqdn
+        local_ip   = self.local_ip
+        local_port = self.local_port
+        local_fqdn = self.local_fqdn
+        conn_name  = self.conn_name
+        out = f'{conn_id}; `{peer_ip}:{peer_port}` ({peer_fqdn}) to `{local_ip}:{local_port}` ({local_fqdn}) ({conn_name})'
+        return out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -291,12 +297,13 @@ class HL7MLLPServer:
 
     def _log_start_stop(self, is_start:'bool') -> 'None':
 
-        msg = 'Starting' if is_start else 'Stopping'
-        pattern = '%s %s connection `%s` (%s)'
-        args = (msg, server_type, self.name, self.address)
+        action = 'Starting' if is_start else 'Stopping'
+        name = self.name
+        address = self.address
+        msg = f'{action} {server_type} connection `{name}` ({address})'
 
-        self._logger_info(pattern, *args)
-        self.logger_zato.info(pattern, *args)
+        self._logger_info(msg)
+        self.logger_zato.info(msg)
 
 # ################################################################################################################################
 
@@ -330,7 +337,9 @@ class HL7MLLPServer:
         try:
             self._handle(socket, peer_address)
         except Exception:
-            self.logger_hl7.warning('Exception in %s (%s %s); e:`%s`', self._handle, socket, peer_address, format_exc())
+            exc = format_exc()
+            msg = f'Exception in {self._handle} ({socket} {peer_address}); e:`{exc}`'
+            self.logger_hl7.warning(msg)
             raise
 
 # ################################################################################################################################
@@ -343,7 +352,9 @@ class HL7MLLPServer:
             self.tcp_keepalive_idle, self.tcp_keepalive_interval, self.tcp_keepalive_count,
         )
 
-        self._logger_info('Waiting for HL7 MLLP data from %s', conn_ctx.get_conn_pretty_info())
+        conn_info = conn_ctx.get_conn_pretty_info()
+        msg = f'Waiting for HL7 MLLP data from {conn_info}'
+        self._logger_info(msg)
 
         # Current message whose contents we are accumulating
         _buffer:'byteslist' = []
@@ -421,7 +432,10 @@ class HL7MLLPServer:
                     conn_ctx.total_message_packets_received += 1
 
                     if _has_debug_log:
-                        _log_debug('HL7 MLLP data received by `%s` (%d) -> `%s`', conn_ctx.conn_id, len(data), data)
+                        conn_id = conn_ctx.conn_id
+                        data_len_debug = len(data)
+                        msg = f'HL7 MLLP data received by `{conn_id}` ({data_len_debug}) -> `{data}`'
+                        _log_debug(msg)
 
                 # .. catch timeouts here but no other exception type ..
                 except SocketTimeoutException:
@@ -518,8 +532,9 @@ class HL7MLLPServer:
 
                             # .. even if it does, make sure we have a header already and reject the message otherwise ..
                             if _needs_header_check:
-                                reason = 'end bytes `{}` received without a preceeding header `{}` (#1)'.format(
-                                    self.end_seq, self.start_seq)
+                                end_seq = self.end_seq
+                                start_seq = self.start_seq
+                                reason = f'end bytes `{end_seq}` received without a preceeding header `{start_seq}` (#1)'
                                 self._close_connection(conn_ctx, reason)
                                 return
 
@@ -546,8 +561,9 @@ class HL7MLLPServer:
                                     # Again, even if it does but have not received the header yet,
                                     # we need to reject the whole message.
                                     if _needs_header_check:
-                                        reason = 'end bytes `{}` received without a preceeding header `{}` (#2)'.format(
-                                            self.end_seq, self.start_seq)
+                                        end_seq = self.end_seq
+                                        start_seq = self.start_seq
+                                        reason = f'end bytes `{end_seq}` received without a preceeding header `{start_seq}` (#2)'
                                         self._close_connection(conn_ctx, reason)
                                         return
 
@@ -555,7 +571,7 @@ class HL7MLLPServer:
 
                     # No data received = remote end is no longer connected.
                     else:
-                        reason = 'remote end disconnected; `{}`'.format(data)
+                        reason = f'remote end disconnected; `{data}`'
                         _close_connection(conn_ctx, reason)
                         return
 
@@ -564,8 +580,10 @@ class HL7MLLPServer:
                 pass
 
             except Exception:
-                self.logger_hl7.warning('Exception in MLLP recv loop for `%s`; e:`%s`',
-                    conn_ctx.get_conn_pretty_info(), format_exc())
+                conn_info = conn_ctx.get_conn_pretty_info()
+                exc = format_exc()
+                msg = f'Exception in MLLP recv loop for `{conn_info}`; e:`{exc}`'
+                self.logger_hl7.warning(msg)
                 _close_connection(conn_ctx, 'unrecoverable error in recv loop')
                 return
 
@@ -612,8 +630,11 @@ class HL7MLLPServer:
 
         # .. optionally, log what we are about to send ..
         if self.should_log_messages:
-            self._logger_info('Sending HL7 MLLP response to `%s` -> `%s` (c:%s, s=%d)',
-                args.request_ctx.msg_id, response, args.conn_ctx.conn_id, len(response))
+            msg_id = args.request_ctx.msg_id
+            conn_id = args.conn_ctx.conn_id
+            response_len = len(response)
+            msg = f'Sending HL7 MLLP response to `{msg_id}` -> `{response}` (c:{conn_id}, s={response_len})'
+            self._logger_info(msg)
 
         # .. write the response back, using sendall to guarantee complete delivery ..
         args._socket_sendall(response)
@@ -631,19 +652,17 @@ class HL7MLLPServer:
 
     def _run_callback(self, conn_ctx:'ConnCtx', request_ctx:'RequestCtx', _hl7_v2:'str'=HL7.Const.Version.v2.id) -> 'bytesnone':
 
-        pattern = 'Handling new HL7 MLLP message (%s; m:%s (s=%s), c:%s, p:%s; %s); `%r`'
+        conn_id = conn_ctx.conn_id
+        msg_id = request_ctx.msg_id
+        msg_size = request_ctx.msg_size
+        total_messages = conn_ctx.total_messages_received
+        total_packets = conn_ctx.total_message_packets_received
+        service_name = self.service_name
         log_request = request_ctx.to_dict() if self.should_log_messages else '<masked>'
 
-        self._logger_info(
-            pattern,
-            conn_ctx.conn_id,
-            request_ctx.msg_id,
-            request_ctx.msg_size,
-            conn_ctx.total_messages_received,
-            conn_ctx.total_message_packets_received,
-            self.service_name,
-            log_request
-        )
+        msg = f'Handling new HL7 MLLP message ({conn_id}; m:{msg_id} (s={msg_size}),' + \
+              f' c:{total_messages}, p:{total_packets}; {service_name}); `{log_request!r}`'
+        self._logger_info(msg)
 
         try:
             response = self.callback_func(
@@ -663,8 +682,11 @@ class HL7MLLPServer:
             )
 
         except Exception:
-            self._logger_warn('Error while invoking `%s` with msg_id `%s`; e:`%s`',
-                self.service_name, request_ctx.msg_id, format_exc())
+            service_name = self.service_name
+            msg_id = request_ctx.msg_id
+            exc = format_exc()
+            msg = f'Error while invoking `{service_name}` with msg_id `{msg_id}`; e:`{exc}`'
+            self._logger_warn(msg)
         else:
 
             # Convert high-level objects to bytes ..
@@ -681,7 +703,9 @@ class HL7MLLPServer:
 # ################################################################################################################################
 
     def _close_connection(self, conn_ctx:'ConnCtx', reason:'str') -> 'None':
-        self._logger_info('Closing connection; %s; %s', reason, conn_ctx.get_conn_pretty_info())
+        conn_info = conn_ctx.get_conn_pretty_info()
+        msg = f'Closing connection; {reason}; {conn_info}'
+        self._logger_info(msg)
         conn_ctx.socket.close()
 
 # ################################################################################################################################
@@ -701,7 +725,7 @@ class HL7MLLPServer:
         # while we are still processing the same message and if one is found, we close the connection.
         if request_ctx.meta[has_meta_attr]:
             if bytes_to_check == meta_seq:
-                reason = 'unexpected {} found `{!r}` == `{!r}` in data `{!r}`'.format(meta_attr, bytes_to_check, meta_seq, data)
+                reason = f'unexpected {meta_attr} found `{bytes_to_check!r}` == `{meta_seq!r}` in data `{data!r}`'
                 self._close_connection(conn_ctx, reason)
                 return
 
@@ -709,7 +733,7 @@ class HL7MLLPServer:
         # In such a case, we expect for it to begin with a header. Otherwise, we reject the entire connection.
         else:
             if bytes_to_check != meta_seq:
-                reason = '{} mismatch `{!r}` != `{!r}` in data `{!r}`'.format(meta_attr, bytes_to_check, meta_seq, data)
+                reason = f'{meta_attr} mismatch `{bytes_to_check!r}` != `{meta_seq!r}` in data `{data!r}`'
                 self._close_connection(conn_ctx, reason)
                 return
 
@@ -751,8 +775,11 @@ def main():
 
     def on_message(*args:'any_', **kwargs:'any_') -> 'str':
 
-        logger.info('Args: %s',   args)
-        logger.info('Kwargs: %s', kwargs)
+        msg = f'Args: {args}'
+        logger.info(msg)
+
+        msg = f'Kwargs: {kwargs}'
+        logger.info(msg)
 
         return 'Hello from HL7v2'
 
