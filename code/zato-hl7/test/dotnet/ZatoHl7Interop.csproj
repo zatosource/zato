@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Zato.Hl7.Interop</RootNamespace>
+    <AssemblyName>zato-hl7-interop</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="nHapi" Version="3.2.4" />
+    <PackageReference Include="NHapiTools" Version="2.0.6" />
+  </ItemGroup>
+
+</Project>

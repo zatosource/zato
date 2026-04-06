@@ -6,12 +6,13 @@ import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.model.v25.message.*;
 import ca.uhn.hl7v2.model.v25.segment.*;
 import ca.uhn.hl7v2.parser.PipeParser;
+import ca.uhn.hl7v2.validation.impl.NoValidation;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Builds the 30 most common HL7 v2 messages with realistic field values.
+ * Builds the 30 most common HL7 v2 messages using HAPI's typed API.
  * Each entry is a (label, encoded-message) pair.
  */
 public class MessageFactory {
@@ -22,6 +23,7 @@ public class MessageFactory {
 
     public MessageFactory() {
         ctx = new DefaultHapiContext();
+        ctx.setValidationContext(new NoValidation());
         parser = ctx.getPipeParser();
     }
 
@@ -132,7 +134,6 @@ public class MessageFactory {
         return new MessageEntry("ADT_A03", parser.encode(msg));
     }
 
-    // HAPI reuses ADT_A01 for A04, A08, A11, A13, A28, A31 triggers
     private MessageEntry buildAdtA04() throws Exception {
         ADT_A01 msg = new ADT_A01();
         String cid = nextControlId();
@@ -151,7 +152,7 @@ public class MessageFactory {
         msg.getEVN().getEventTypeCode().setValue("A08");
         msg.getEVN().getRecordedDateTime().getTime().setValue("20250401160000");
         fillPid(msg.getPID(), "100005", "Bernard", "Pierre", "19550912", "M");
-        fillPv1(msg.getPV1(), "I", "ICU-2");
+        fillPv1(msg.getPV1(), "I", "WELL-2");
         return new MessageEntry("ADT_A08", parser.encode(msg));
     }
 
@@ -244,8 +245,7 @@ public class MessageFactory {
         obx.getObservationIdentifier().getText().setValue("Glucose");
         obx.getUnits().getIdentifier().setValue("mg/dL");
         obx.getObservationResultStatus().setValue("F");
-        var ed = obx.getObservationValue(0);
-        ed.getData().parse("95");
+        obx.getObservationValue(0).getData().parse("95");
         return new MessageEntry("ORU_R01", parser.encode(msg));
     }
 
@@ -265,12 +265,26 @@ public class MessageFactory {
     }
 
     private MessageEntry buildOulR22() throws Exception {
+        OUL_R22 msg = new OUL_R22();
         String cid = nextControlId();
-        String raw = "MSH|^~\\&|JavaInterop|TestLab|ZatoApp|ZatoFac|20250402120000||OUL^R22|" + cid + "|P|2.5\r"
-                + "PID|||500001^^^Hospital^PI||Weber^Thomas||19720818|M\r"
-                + "OBR|1||LAB-200|CMP^Comprehensive Metabolic Panel\r"
-                + "OBX|1|NM|NA^Sodium||140|mmol/L|136-145|N|||F\r";
-        return new MessageEntry("OUL_R22", raw);
+        fillMsh(msg.getMSH(), "OUL", "R22", cid);
+        msh_ts(msg.getMSH(), "20250402120000");
+        fillPid(msg.getPATIENT().getPID(), "500001", "Weber", "Thomas", "19720818", "M");
+        OBR obr = msg.getSPECIMEN().getORDER().getOBR();
+        obr.getSetIDOBR().setValue("1");
+        obr.getUniversalServiceIdentifier().getIdentifier().setValue("CMP");
+        obr.getUniversalServiceIdentifier().getText().setValue("Comprehensive Metabolic Panel");
+        OBX obx = msg.getSPECIMEN().getORDER().getRESULT().getOBX();
+        obx.getSetIDOBX().setValue("1");
+        obx.getValueType().setValue("NM");
+        obx.getObservationIdentifier().getIdentifier().setValue("NA");
+        obx.getObservationIdentifier().getText().setValue("Sodium");
+        obx.getObservationValue(0).getData().parse("140");
+        obx.getUnits().getIdentifier().setValue("mmol/L");
+        obx.getReferencesRange().setValue("136-145");
+        obx.getAbnormalFlags(0).setValue("N");
+        obx.getObservationResultStatus().setValue("F");
+        return new MessageEntry("OUL_R22", parser.encode(msg));
     }
 
     private MessageEntry buildSiuS12() throws Exception {
@@ -294,10 +308,10 @@ public class MessageFactory {
         orc.getOrderControl().setValue("NW");
         orc.getPlacerOrderNumber().getEntityIdentifier().setValue("RX-001");
         msg.getORDER().getRXE().getQuantityTiming().getQuantity().getQuantity().setValue("1");
-        msg.getORDER().getRXE().getGiveCode().getIdentifier().setValue("AMOX");
-        msg.getORDER().getRXE().getGiveCode().getText().setValue("Amoxicillin 500mg");
-        msg.getORDER().getRXE().getGiveAmountMinimum().setValue("500");
-        msg.getORDER().getRXE().getGiveUnits().getIdentifier().setValue("mg");
+        msg.getORDER().getRXE().getGiveCode().getIdentifier().setValue("MULTIVIT");
+        msg.getORDER().getRXE().getGiveCode().getText().setValue("Daily Multivitamin");
+        msg.getORDER().getRXE().getGiveAmountMinimum().setValue("1");
+        msg.getORDER().getRXE().getGiveUnits().getIdentifier().setValue("TAB");
         return new MessageEntry("RDE_O11", parser.encode(msg));
     }
 
@@ -310,9 +324,9 @@ public class MessageFactory {
         ORC orc = msg.getORDER().getORC();
         orc.getOrderControl().setValue("RE");
         orc.getPlacerOrderNumber().getEntityIdentifier().setValue("RX-002");
-        msg.getORDER().getRXD().getDispenseGiveCode().getIdentifier().setValue("IBU");
-        msg.getORDER().getRXD().getDispenseGiveCode().getText().setValue("Ibuprofen 400mg");
-        msg.getORDER().getRXD().getActualDispenseAmount().setValue("30");
+        msg.getORDER().getRXD().getDispenseGiveCode().getIdentifier().setValue("VITD");
+        msg.getORDER().getRXD().getDispenseGiveCode().getText().setValue("Vitamin D3 1000 IU");
+        msg.getORDER().getRXD().getActualDispenseAmount().setValue("90");
         msg.getORDER().getRXD().getActualDispenseUnits().getIdentifier().setValue("TAB");
         return new MessageEntry("RDS_O13", parser.encode(msg));
     }
@@ -334,14 +348,28 @@ public class MessageFactory {
     }
 
     private MessageEntry buildMdmT02() throws Exception {
+        MDM_T02 msg = new MDM_T02();
         String cid = nextControlId();
-        String raw = "MSH|^~\\&|JavaInterop|TestLab|ZatoApp|ZatoFac|20250402140000||MDM^T02|" + cid + "|P|2.5\r"
-                + "EVN|T02|20250402140000\r"
-                + "PID|||700002^^^Hospital^PI||Moreau^Isabelle||19920506|F\r"
-                + "PV1||O|DOC-1^^^Hospital\r"
-                + "TXA|1|HP|FT|20250402140000||||||||DOC-12345||||AU\r"
-                + "OBX|1|TX|DOCTEXT^Document Text||Patient presents with mild headache|||||||F\r";
-        return new MessageEntry("MDM_T02", raw);
+        fillMsh(msg.getMSH(), "MDM", "T02", cid);
+        msh_ts(msg.getMSH(), "20250402140000");
+        msg.getEVN().getEventTypeCode().setValue("T02");
+        msg.getEVN().getRecordedDateTime().getTime().setValue("20250402140000");
+        fillPid(msg.getPID(), "700002", "Moreau", "Isabelle", "19920506", "F");
+        fillPv1(msg.getPV1(), "O", "DOC-1");
+        msg.getTXA().getSetIDTXA().setValue("1");
+        msg.getTXA().getDocumentType().setValue("HP");
+        msg.getTXA().getDocumentContentPresentation().setValue("FT");
+        msg.getTXA().getActivityDateTime().getTime().setValue("20250402140000");
+        msg.getTXA().getUniqueDocumentNumber().getEntityIdentifier().setValue("DOC-12345");
+        msg.getTXA().getDocumentCompletionStatus().setValue("AU");
+        OBX obx = msg.getOBXNTE().getOBX();
+        obx.getSetIDOBX().setValue("1");
+        obx.getValueType().setValue("TX");
+        obx.getObservationIdentifier().getIdentifier().setValue("DOCTEXT");
+        obx.getObservationIdentifier().getText().setValue("Document Text");
+        obx.getObservationValue(0).getData().parse("Annual wellness visit completed with all results within normal range");
+        obx.getObservationResultStatus().setValue("F");
+        return new MessageEntry("MDM_T02", parser.encode(msg));
     }
 
     private MessageEntry buildBarP01() throws Exception {
@@ -372,48 +400,95 @@ public class MessageFactory {
     }
 
     private MessageEntry buildMfnM02() throws Exception {
+        MFN_M02 msg = new MFN_M02();
         String cid = nextControlId();
-        String raw = "MSH|^~\\&|JavaInterop|TestLab|ZatoApp|ZatoFac|20250402155000||MFN^M02|" + cid + "|P|2.5\r"
-                + "MFI|PRA^Practitioner Master File|UPD|||NE\r"
-                + "MFE|MAD|20250402|20250402|DR-001\r"
-                + "STF|DR-001|DR-001||Martin^Robert||MD\r"
-                + "PRA||^^^Hospital|MD|I|DR-001\r";
-        return new MessageEntry("MFN_M02", raw);
+        fillMsh(msg.getMSH(), "MFN", "M02", cid);
+        msh_ts(msg.getMSH(), "20250402155000");
+        msg.getMFI().getMasterFileIdentifier().getIdentifier().setValue("PRA");
+        msg.getMFI().getMasterFileIdentifier().getText().setValue("Practitioner Master File");
+        msg.getMFI().getFileLevelEventCode().setValue("UPD");
+        MFE mfe = msg.getMF_STAFF().getMFE();
+        mfe.getRecordLevelEventCode().setValue("MAD");
+        mfe.getMfe3_EffectiveDateTime().getTime().setValue("20250402");
+        mfe.getMfe4_PrimaryKeyValueMFE(0).getData().parse("DR-001");
+        mfe.getMfe5_PrimaryKeyValueType(0).setValue("CE");
+        msg.getMF_STAFF().getSTF().getPrimaryKeyValueSTF().getIdentifier().setValue("DR-001");
+        msg.getMF_STAFF().getSTF().getStaffIdentifierList(0).getIDNumber().setValue("DR-001");
+        msg.getMF_STAFF().getSTF().getStaffName(0).getFamilyName().getSurname().setValue("Martin");
+        msg.getMF_STAFF().getSTF().getStaffName(0).getGivenName().setValue("Robert");
+        msg.getMF_STAFF().getSTF().getStaffType(0).setValue("MD");
+        return new MessageEntry("MFN_M02", parser.encode(msg));
     }
 
     private MessageEntry buildQbpQ11() throws Exception {
+        QBP_Q11 msg = new QBP_Q11();
         String cid = nextControlId();
-        String raw = "MSH|^~\\&|JavaInterop|TestLab|ZatoApp|ZatoFac|20250402160000||QBP^Q11|" + cid + "|P|2.5\r"
-                + "QPD|Q11^Query by parameter|QRY-001|100001^^^Hospital^PI\r"
-                + "RCP|I|10^RD\r";
-        return new MessageEntry("QBP_Q11", raw);
+        fillMsh(msg.getMSH(), "QBP", "Q11", cid);
+        msh_ts(msg.getMSH(), "20250402160000");
+        msg.getQPD().getMessageQueryName().getIdentifier().setValue("Q11");
+        msg.getQPD().getMessageQueryName().getText().setValue("Query by parameter");
+        msg.getQPD().getQueryTag().setValue("QRY-001");
+        msg.getQPD().getUserParametersInsuccessivefields().getData().parse("100001^^^Hospital^PI");
+        msg.getRCP().getQueryPriority().setValue("I");
+        msg.getRCP().getQuantityLimitedRequest().getQuantity().setValue("10");
+        msg.getRCP().getQuantityLimitedRequest().getUnits().getIdentifier().setValue("RD");
+        return new MessageEntry("QBP_Q11", parser.encode(msg));
     }
 
     private MessageEntry buildRspK11() throws Exception {
+        RSP_K11 msg = new RSP_K11();
         String cid = nextControlId();
-        String raw = "MSH|^~\\&|JavaInterop|TestLab|ZatoApp|ZatoFac|20250402161000||RSP^K11|" + cid + "|P|2.5\r"
-                + "MSA|AA|QRY-001\r"
-                + "QAK|QRY-001|OK|Q11^Query by parameter\r"
-                + "QPD|Q11^Query by parameter|QRY-001|100001^^^Hospital^PI\r"
-                + "PID|||100001^^^Hospital^PI||Mueller^Hans||19750315|M\r";
-        return new MessageEntry("RSP_K11", raw);
+        fillMsh(msg.getMSH(), "RSP", "K11", cid);
+        msh_ts(msg.getMSH(), "20250402161000");
+        msg.getMSA().getAcknowledgmentCode().setValue("AA");
+        msg.getMSA().getMessageControlID().setValue("QRY-001");
+        msg.getQAK().getQueryTag().setValue("QRY-001");
+        msg.getQAK().getQueryResponseStatus().setValue("OK");
+        msg.getQAK().getMessageQueryName().getIdentifier().setValue("Q11");
+        msg.getQAK().getMessageQueryName().getText().setValue("Query by parameter");
+        msg.getQPD().getMessageQueryName().getIdentifier().setValue("Q11");
+        msg.getQPD().getMessageQueryName().getText().setValue("Query by parameter");
+        msg.getQPD().getQueryTag().setValue("QRY-001");
+        msg.getQPD().getUserParametersInsuccessivefields().getData().parse("100001^^^Hospital^PI");
+        msg.addNonstandardSegment("PID");
+        PID pid = (PID) msg.get("PID");
+        fillPid(pid, "100001", "Mueller", "Hans", "19750315", "M");
+        return new MessageEntry("RSP_K11", parser.encode(msg));
     }
 
     private MessageEntry buildPprPc1() throws Exception {
+        PPR_PC1 msg = new PPR_PC1();
         String cid = nextControlId();
-        String raw = "MSH|^~\\&|JavaInterop|TestLab|ZatoApp|ZatoFac|20250402170000||PPR^PC1|" + cid + "|P|2.5\r"
-                + "PID|||900001^^^Hospital^PI||Kim^Soo-Jin||19880401|F\r"
-                + "PRB|AD|20250402|HYPERTENSION^Essential hypertension^ICD10|PRB-001\r";
-        return new MessageEntry("PPR_PC1", raw);
+        fillMsh(msg.getMSH(), "PPR", "PC1", cid);
+        msh_ts(msg.getMSH(), "20250402170000");
+        fillPid(msg.getPID(), "900001", "Kim", "Soo-Jin", "19880401", "F");
+        PRB prb = msg.getPROBLEM().getPRB();
+        prb.getActionCode().setValue("AD");
+        prb.getActionDateTime().getTime().setValue("20250402");
+        prb.getProblemID().getIdentifier().setValue("Z00.00");
+        prb.getProblemID().getText().setValue("Routine general health checkup");
+        prb.getProblemID().getNameOfCodingSystem().setValue("ICD10");
+        prb.getProblemInstanceID().getEntityIdentifier().setValue("PRB-001");
+        return new MessageEntry("PPR_PC1", parser.encode(msg));
     }
 
     private MessageEntry buildRasO17() throws Exception {
+        RAS_O17 msg = new RAS_O17();
         String cid = nextControlId();
-        String raw = "MSH|^~\\&|JavaInterop|TestLab|ZatoApp|ZatoFac|20250402180000||RAS^O17|" + cid + "|P|2.5\r"
-                + "PID|||900002^^^Hospital^PI||Yamamoto^Kenji||19650715|M\r"
-                + "ORC|RE|RX-100|||\r"
-                + "RXA|0|1|20250402||METFORMIN^Metformin 500mg|1|TAB|||DR-001\r";
-        return new MessageEntry("RAS_O17", raw);
+        fillMsh(msg.getMSH(), "RAS", "O17", cid);
+        msh_ts(msg.getMSH(), "20250402180000");
+        fillPid(msg.getPATIENT().getPID(), "900002", "Yamamoto", "Kenji", "19650715", "M");
+        msg.getORDER().getORC().getOrderControl().setValue("RE");
+        msg.getORDER().getORC().getPlacerOrderNumber().getEntityIdentifier().setValue("RX-100");
+        RXA rxa = msg.getORDER().getADMINISTRATION().getRXA();
+        rxa.getGiveSubIDCounter().setValue("0");
+        rxa.getAdministrationSubIDCounter().setValue("1");
+        rxa.getDateTimeStartOfAdministration().getTime().setValue("20250402");
+        rxa.getAdministeredCode().getIdentifier().setValue("VITB12");
+        rxa.getAdministeredCode().getText().setValue("Vitamin B12 1000mcg");
+        rxa.getAdministeredAmount().setValue("1");
+        rxa.getAdministeredUnits().getIdentifier().setValue("TAB");
+        return new MessageEntry("RAS_O17", parser.encode(msg));
     }
 
     private MessageEntry buildAck() throws Exception {
@@ -457,12 +532,27 @@ public class MessageFactory {
     }
 
     private MessageEntry buildAdtA01WithObx() throws Exception {
+        ADT_A01 msg = new ADT_A01();
         String cid = nextControlId();
-        String raw = "MSH|^~\\&|JavaInterop|TestLab|ZatoApp|ZatoFac|20250403090000||ADT^A01|" + cid + "|P|2.5\r"
-                + "EVN|A01|20250403090000\r"
-                + "PID|||999001^^^Hospital^PI||Schneider^Lisa||19780112|F\r"
-                + "PV1||E|ER-1^^^Hospital\r"
-                + "OBX|1|NM|8310-5^Body Temperature||38.7|Cel|||||F\r";
-        return new MessageEntry("ADT_A01_OBX", raw);
+        fillMsh(msg.getMSH(), "ADT", "A01", cid);
+        msh_ts(msg.getMSH(), "20250403090000");
+        msg.getEVN().getEventTypeCode().setValue("A01");
+        msg.getEVN().getRecordedDateTime().getTime().setValue("20250403090000");
+        fillPid(msg.getPID(), "999001", "Schneider", "Lisa", "19780112", "F");
+        fillPv1(msg.getPV1(), "E", "WELL-1");
+        msg.addNonstandardSegment("OBX");
+        OBX obx = (OBX) msg.get("OBX");
+        obx.getSetIDOBX().setValue("1");
+        obx.getValueType().setValue("NM");
+        obx.getObservationIdentifier().getIdentifier().setValue("8867-4");
+        obx.getObservationIdentifier().getText().setValue("Heart Rate");
+        obx.getObservationValue(0).getData().parse("72");
+        obx.getUnits().getIdentifier().setValue("bpm");
+        obx.getObservationResultStatus().setValue("F");
+        return new MessageEntry("ADT_A01_OBX", parser.encode(msg));
+    }
+
+    private void msh_ts(MSH msh, String ts) throws Exception {
+        msh.getDateTimeOfMessage().getTime().setValue(ts);
     }
 }

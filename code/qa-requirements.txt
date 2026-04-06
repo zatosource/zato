@@ -4,6 +4,7 @@ flake8-bugbear
 flake8-coding
 flake8-comprehensions
 flake8-quotes
+hl7apy==1.3.5
 hypothesis==6.151.9
 mock==5.2.0
 mypy

@@ -78,3 +78,7 @@ code/zato-hl7/test/java_/.gradle/
 code/zato-hl7/test/java_/gradlew
 code/zato-hl7/test/java_/gradlew.bat
 code/zato-hl7/test/java_/gradle/
+
+# .NET build artifacts
+code/zato-hl7/test/dotnet/bin/
+code/zato-hl7/test/dotnet/obj/
