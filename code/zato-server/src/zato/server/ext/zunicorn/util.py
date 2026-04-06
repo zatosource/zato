@@ -41,7 +41,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 import email.utils
 import io
 import os
-import pkg_resources
 import random
 import socket
 import sys
@@ -147,7 +146,12 @@ def load_class(uri, default="zato.server.ext.zunicorn.workers.sync.SyncWorker", 
             name = default
 
         try:
-            return pkg_resources.load_entry_point(dist, section, name)
+            import importlib.metadata as _im
+            eps = _im.entry_points(group=section, name=name)
+            ep = next(iter(eps), None)
+            if ep is None:
+                raise ImportError(f"entry point {name!r} not found in group {section!r}")
+            return ep.load()
         except:
             exc = traceback.format_exc()
             msg = "class uri %r invalid or not found: \n\n[%s]"
@@ -164,7 +168,12 @@ def load_class(uri, default="zato.server.ext.zunicorn.workers.sync.SyncWorker", 
                     break
 
                 try:
-                    return pkg_resources.load_entry_point("gunicorn", section, uri)
+                    import importlib.metadata as _im
+                    eps = _im.entry_points(group=section, name=uri)
+                    ep = next(iter(eps), None)
+                    if ep is None:
+                        raise ImportError(f"entry point {uri!r} not found in group {section!r}")
+                    return ep.load()
                 except:
                     exc = traceback.format_exc()
                     msg = "class uri %r invalid or not found: \n\n[%s]"
