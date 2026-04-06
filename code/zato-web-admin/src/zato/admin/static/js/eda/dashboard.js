@@ -49,9 +49,23 @@ $.fn.zato.eda.dashboard.render = function(data) {
         var row = '<tr>';
         row += '<td><a href="/zato/eda/topic/' + encodeURIComponent(t.name) + '/?cluster=1">' + t.name + '</a></td>';
         row += '<td>' + $.fn.zato.eda.depth_html(t.depth || 0) + '</td>';
-        row += '<td>' + $.fn.zato.eda.format_number(t.total_published || 0) + '</td>';
-        row += '<td title="' + (t.last_pub_ts ? new Date(t.last_pub_ts * 1000).toISOString() : '') + '">' + rel + '</td>';
-        row += '<td>' + (t.subscriber_count || 0) + '</td>';
+        var pub_count = t.total_published || 0;
+        if (pub_count > 0) {
+            row += '<td><a href="/zato/eda/messages/?cluster=1&topic_name=' + encodeURIComponent(t.name) + '">' + $.fn.zato.eda.format_number(pub_count) + '</a></td>';
+        } else {
+            row += '<td>' + $.fn.zato.eda.format_number(pub_count) + '</td>';
+        }
+        if (t.last_pub_ts && t.last_pub_ts > 0) {
+            row += '<td><a href="/zato/eda/messages/?cluster=1&topic_name=' + encodeURIComponent(t.name) + '" title="' + new Date(t.last_pub_ts * 1000).toISOString() + '">' + rel + '</a></td>';
+        } else {
+            row += '<td>-</td>';
+        }
+        var sub_count = t.subscriber_count || 0;
+        if (sub_count > 0) {
+            row += '<td><a href="/zato/eda/topic/' + encodeURIComponent(t.name) + '/?cluster=1">' + sub_count + '</a></td>';
+        } else {
+            row += '<td>0</td>';
+        }
         row += '</tr>';
         $tbody.append(row);
     }

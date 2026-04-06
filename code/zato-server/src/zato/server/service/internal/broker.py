@@ -277,7 +277,7 @@ class MessageGetDetail(Service):
         input = self.request.input
         client = self.server.broker_client
 
-        self.response.payload = fs_message_detail(client._cfg, input.topic_name, input.msg_id)
+        self.response.payload = fs_message_detail(client._cfg, input.topic_name, str(input.msg_id))
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
