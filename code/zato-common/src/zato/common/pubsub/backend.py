@@ -47,9 +47,9 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class ModuleCtx:
-    Stream_Prefix = 'zato:pubsub:stream:'
-    Subs_Prefix = 'zato:pubsub:subs:'
-    Topic_Subs_Prefix = 'zato:pubsub:topic_subs:'
+    Stream_Prefix = ''
+    Subs_Prefix = 'subs.'
+    Topic_Subs_Prefix = 'topic_subs.'
     Default_Max_Len = 100_000
 
 # ################################################################################################################################
