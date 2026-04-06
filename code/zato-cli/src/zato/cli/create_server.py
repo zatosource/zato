@@ -147,6 +147,11 @@ redis_sentinels_master=
 shadow_password_in_logs=True
 log_connection_info_sleep_time=5 # In seconds
 
+[broker]
+dir=/var/zato/broker
+poll_interval=0.05
+reply_poll_interval=0.01
+
 [startup_services]
 zato.updates.check-updates=
 demo.input-logger=Sample payload for a startup service

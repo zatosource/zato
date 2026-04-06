@@ -34,7 +34,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 
 # Zato
 from zato.broker import BrokerMessageReceiver
-from zato.broker.redis_client import RedisBrokerClient as BrokerClient
+from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
@@ -48,9 +48,9 @@ from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
-from zato.common.pubsub.redis_consumer import start_internal_redis_consumer as start_internal_consumer
+from zato.common.pubsub.consumer import start_internal_consumer
 from zato.common.pubsub.matcher import PatternMatcher
-from zato.common.pubsub.redis_backend import RedisPubSubBackend
+from zato.common.pubsub.backend import PubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
@@ -109,7 +109,7 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-kvdb_logger = logging.getLogger('zato_kvdb')
+kvdb_logger = logging.getLogger('zato_broker')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -158,7 +158,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
-    pubsub_redis: 'RedisPubSubBackend'
+    pubsub_backend: 'PubSubBackend'
     pubsub_pattern_matcher: 'PatternMatcher'
     pubsub_subscriptions: 'SubscriptionsStore'
 
@@ -938,8 +938,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.on_pubsub_message
         )
 
-        # Initialize Redis pub/sub backend using broker client's Redis connection
-        self.pubsub_redis = RedisPubSubBackend(self.broker_client.redis)
+        # Initialize the pub/sub backend using the broker client
+        self.pubsub_backend = PubSubBackend(self.broker_client)
         self.pubsub_pattern_matcher = PatternMatcher()
         self.pubsub_subscriptions = SubscriptionsStore()
 
@@ -1094,7 +1094,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             ).all()
 
             for sub_key, topic_name in subscription_topics:
-                self.pubsub_redis.subscribe(sub_key, topic_name)
+                self.pubsub_backend.subscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 
