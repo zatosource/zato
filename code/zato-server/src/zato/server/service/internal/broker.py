@@ -28,7 +28,7 @@ from zato_broker_core import (
 )
 
 # Zato
-from zato.server.service import Service
+from zato.server.service import AsIs, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -271,13 +271,13 @@ class MessageGetList(Service):
 class MessageGetDetail(Service):
 
     name = 'zato.broker.message.get-detail'
-    input = 'topic_name', 'msg_id'
+    input = 'topic_name', AsIs('msg_id')
 
     def handle(self) -> 'None':
         input = self.request.input
         client = self.server.broker_client
 
-        self.response.payload = fs_message_detail(client._cfg, input.topic_name, str(input.msg_id))
+        self.response.payload = fs_message_detail(client._cfg, input.topic_name, input.msg_id)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
