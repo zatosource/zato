@@ -13,8 +13,17 @@ from json import loads
 # zato-broker-core (Rust extension)
 from zato_broker_core import (
     fs_backup,
+    fs_eda_overview,
+    fs_message_detail,
+    fs_message_list,
+    fs_queue_detail,
+    fs_queue_purge,
     fs_restore_item,
     fs_status,
+    fs_stream_xadd,
+    fs_topic_detail,
+    fs_topic_purge,
+    fs_topic_stats,
     fs_validate,
 )
 
@@ -192,6 +201,163 @@ class Restore(Service):
 
         self.response.payload.is_ok = True
         self.response.payload.details = f'Restored {len(items)} item(s) from {backup_path}'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Dashboard(Service):
+
+    output = 'topic_count', 'total_messages', 'total_depth', 'total_groups', 'topics', 'queues'
+
+    def handle(self) -> 'None':
+        client = self.server.broker_client
+        data = loads(fs_eda_overview(client._cfg))
+
+        self.response.payload.topic_count = data['topic_count']
+        self.response.payload.total_messages = data['total_messages']
+        self.response.payload.total_depth = data['total_depth']
+        self.response.payload.total_groups = data['total_groups']
+        self.response.payload.topics = data['topics']
+        self.response.payload.queues = data['queues']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TopicGetDetail(Service):
+
+    input = 'topic_name', '-last_n'
+    output = 'name', 'total_published', 'depth', 'last_pub_ts', 'messages', 'queues'
+
+    def handle(self) -> 'None':
+        input = self.request.input
+        client = self.server.broker_client
+        last_n = int(input.get('last_n') or 25)
+
+        data = loads(fs_topic_detail(client._cfg, input.topic_name, last_n))
+
+        self.response.payload.name = data['name']
+        self.response.payload.total_published = data['total_published']
+        self.response.payload.depth = data['depth']
+        self.response.payload.last_pub_ts = data['last_pub_ts']
+        self.response.payload.messages = data['messages']
+        self.response.payload.queues = data['queues']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class QueueGetDetail(Service):
+
+    input = 'stream_name', 'group_name', '-last_n'
+    output = 'group_name', 'stream_name', 'depth', 'messages'
+
+    def handle(self) -> 'None':
+        input = self.request.input
+        client = self.server.broker_client
+        last_n = int(input.get('last_n') or 25)
+
+        data = loads(fs_queue_detail(client._cfg, input.stream_name, input.group_name, last_n))
+
+        self.response.payload.group_name = data['group_name']
+        self.response.payload.stream_name = data['stream_name']
+        self.response.payload.depth = data['depth']
+        self.response.payload.messages = data['messages']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MessageGetList(Service):
+
+    input = '-stream_name', '-offset', '-limit'
+    output = 'messages', 'total'
+
+    def handle(self) -> 'None':
+        input = self.request.input
+        client = self.server.broker_client
+
+        stream_name = input.get('stream_name') or None
+        offset = int(input.get('offset') or 0)
+        limit = int(input.get('limit') or 50)
+
+        data = loads(fs_message_list(client._cfg, stream_name, offset, limit))
+
+        self.response.payload.messages = data['messages']
+        self.response.payload.total = data['total']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class MessageGetDetail(Service):
+
+    input = 'stream_name', 'msg_id'
+    output = 'msg_id', 'stream_name', 'data', 'size', 'pub_time_ts', 'delivery_status'
+
+    def handle(self) -> 'None':
+        input = self.request.input
+        client = self.server.broker_client
+
+        data = loads(fs_message_detail(client._cfg, input.stream_name, input.msg_id))
+
+        self.response.payload.msg_id = data['msg_id']
+        self.response.payload.stream_name = data['stream_name']
+        self.response.payload.data = data['data']
+        self.response.payload.size = data['size']
+        self.response.payload.pub_time_ts = data['pub_time_ts']
+        self.response.payload.delivery_status = data['delivery_status']
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TopicPurge(Service):
+
+    input = 'topic_name'
+    output = 'is_ok', 'messages_removed'
+
+    def handle(self) -> 'None':
+        client = self.server.broker_client
+        count = fs_topic_purge(client._cfg, self.request.input.topic_name)
+
+        self.response.payload.is_ok = True
+        self.response.payload.messages_removed = count
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class QueuePurge(Service):
+
+    input = 'stream_name', 'group_name'
+    output = 'is_ok', 'messages_removed'
+
+    def handle(self) -> 'None':
+        input = self.request.input
+        client = self.server.broker_client
+        count = fs_queue_purge(client._cfg, input.stream_name, input.group_name)
+
+        self.response.payload.is_ok = True
+        self.response.payload.messages_removed = count
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TopicPublish(Service):
+
+    input = 'topic_name', 'data', '-priority', '-expiration'
+    output = 'is_ok', 'msg_id'
+
+    def handle(self) -> 'None':
+        input = self.request.input
+        client = self.server.broker_client
+
+        from json import dumps
+        fields = {
+            'data': input.data,
+            'priority': int(input.get('priority') or 5),
+            'expiration': int(input.get('expiration') or 86400),
+        }
+
+        msg_id = fs_stream_xadd(client._cfg, input.topic_name, dumps(fields))
+
+        self.response.payload.is_ok = True
+        self.response.payload.msg_id = msg_id
 
 # ################################################################################################################################
 # ################################################################################################################################

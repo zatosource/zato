@@ -1,0 +1,81 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Message browser{% endblock %}
+
+{% block "extra_css" %}
+<style type="text/css">
+    :root { --navy: #012845; --navy-mid: #063c65; }
+    .eda-container { padding: 20px 0; }
+    .eda-title { font-size: 28px; font-weight: 900; color: var(--navy); margin-bottom: 16px; }
+    .filter-bar { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+    .filter-bar label { font-size: 12px; font-family: monospace; color: var(--navy-mid); font-weight: 600; text-transform: uppercase; }
+    .filter-bar input, .filter-bar select { padding: 6px 10px; border: 1px solid #ccc; font-size: 13px; }
+    .filter-bar button { background: var(--navy); color: #fff; border: none; padding: 7px 16px; cursor: pointer; font-weight: 700; }
+    .eda-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .eda-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--navy); font-weight: 700; color: var(--navy); font-size: 12px; text-transform: uppercase; font-family: monospace; }
+    .eda-table td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; }
+    .eda-table tr:hover { background: #f8f9fa; }
+    .eda-table a { color: #0936d5; text-decoration: none; }
+    .eda-table a:hover { text-decoration: underline; }
+    .data-preview { font-family: monospace; font-size: 12px; color: #555; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pagination-bar { margin-top: 16px; text-align: center; font-size: 13px; }
+    .pagination-bar a { color: #0936d5; text-decoration: none; margin: 0 8px; }
+    .pagination-bar .current-page { font-weight: 700; color: var(--navy); }
+    .total-info { font-size: 13px; font-family: monospace; color: #999; margin-bottom: 12px; }
+</style>
+{% endblock %}
+
+{% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/messages.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.eda.messages.init({{ messages|safe }}, {{ total }}, {{ page }}, {{ total_pages }});
+});
+</script>
+{% endblock %}
+
+{% block "content" %}
+<div class="eda-container">
+
+    <h2 class="eda-title">Message browser</h2>
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    <form class="filter-bar" method="get" action="{% url 'eda-messages' %}">
+        <input type="hidden" name="cluster" value="{{ cluster_id }}" />
+        <div>
+            <label>Topic/stream</label><br/>
+            <input type="text" name="stream_name" value="{{ stream_name_filter }}" placeholder="All" style="width:200px" />
+        </div>
+        <div style="align-self:flex-end">
+            <button type="submit">Filter</button>
+        </div>
+    </form>
+
+    <div class="total-info">Total: <strong id="msg-total">{{ total }}</strong> messages</div>
+
+    <table class="eda-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Stream</th>
+                <th>Data</th>
+                <th>Size</th>
+                <th>Published</th>
+            </tr>
+        </thead>
+        <tbody id="messages-body">
+        </tbody>
+    </table>
+
+    <div class="pagination-bar">
+        {% if page > 1 %}
+            <a href="?cluster={{ cluster_id }}&stream_name={{ stream_name_filter }}&page={{ page|add:"-1" }}">Previous</a>
+        {% endif %}
+        <span class="current-page">Page {{ page }} of {{ total_pages }}</span>
+        {% if page < total_pages %}
+            <a href="?cluster={{ cluster_id }}&stream_name={{ stream_name_filter }}&page={{ page|add:"1" }}">Next</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

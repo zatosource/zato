@@ -50,6 +50,11 @@ from zato.admin.web.views.pubsub import topic
 from zato.admin.web.views.pubsub import client
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
+from zato.admin.web.views.eda import dashboard as eda_dashboard
+from zato.admin.web.views.eda import topic_detail as eda_topic_detail
+from zato.admin.web.views.eda import queue_detail as eda_queue_detail
+from zato.admin.web.views.eda import messages as eda_messages
+from zato.admin.web.views.eda import publish as eda_publish
 
 urlpatterns = [
 
@@ -897,6 +902,43 @@ urlpatterns += [
     path('zato/pubsub/subscription/sec-def-topic-sub-list/<int:sec_base_id>/cluster/<int:cluster_id>/',
         login_required(subscription.sec_def_topic_sub_list),
         name='pubsub-subscription-sec-def-topic-sub-list'),
+]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# EDA dashboard, topic detail, queue detail, message browser, publish
+
+urlpatterns += [
+
+    url(r'^zato/eda/dashboard/$',
+        login_required(eda_dashboard.index), name='eda-dashboard'),
+    url(r'^zato/eda/dashboard/poll/$',
+        login_required(eda_dashboard.poll), name='eda-dashboard-poll'),
+
+    path('zato/eda/topic/<str:topic_name>/',
+        login_required(eda_topic_detail.index), name='eda-topic-detail'),
+    url(r'^zato/eda/topic/poll/$',
+        login_required(eda_topic_detail.poll), name='eda-topic-detail-poll'),
+    url(r'^zato/eda/topic/purge/$',
+        login_required(eda_topic_detail.purge), name='eda-topic-purge'),
+
+    path('zato/eda/queue/<str:stream_name>/<str:group_name>/',
+        login_required(eda_queue_detail.index), name='eda-queue-detail'),
+    url(r'^zato/eda/queue/poll/$',
+        login_required(eda_queue_detail.poll), name='eda-queue-detail-poll'),
+    url(r'^zato/eda/queue/purge/$',
+        login_required(eda_queue_detail.purge), name='eda-queue-purge'),
+
+    url(r'^zato/eda/messages/$',
+        login_required(eda_messages.index), name='eda-messages'),
+    path('zato/eda/messages/<str:stream_name>/<str:msg_id>/',
+        login_required(eda_messages.detail), name='eda-message-detail'),
+
+    url(r'^zato/eda/publish/$',
+        login_required(eda_publish.index), name='eda-publish'),
+    url(r'^zato/eda/publish/submit/$',
+        login_required(eda_publish.submit), name='eda-publish-submit'),
 ]
 
 # ################################################################################################################################

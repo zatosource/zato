@@ -1,0 +1,100 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Topic: {{ topic_name }}{% endblock %}
+
+{% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+<style type="text/css">
+    :root { --navy: #012845; --navy-mid: #063c65; --ocean-blue-3: #82ccff; --depth-green: #2ecc71; --depth-amber: #f39c12; --depth-red: #e74c3c; }
+    .eda-container { padding: 20px 0; }
+    .eda-refresh-indicator { float: right; font-size: 12px; font-family: monospace; color: #999; margin-top: 8px; }
+    .topic-header { background: #fff; border: 2px solid var(--navy); padding: 20px 24px; box-shadow: 4px 4px 0px var(--navy-mid); margin-bottom: 24px; }
+    .topic-name { font-size: 24px; font-weight: 900; color: var(--navy); margin-bottom: 12px; }
+    .topic-stats { display: flex; gap: 32px; font-family: monospace; font-size: 14px; color: var(--navy-mid); }
+    .topic-stats strong { color: var(--navy); }
+    .stat-cards { display: flex; gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #fff; border: 2px solid var(--navy); padding: 12px 16px; box-shadow: 3px 3px 0px var(--navy-mid); min-width: 150px; flex: 1; display: flex; align-items: center; justify-content: space-between; }
+    .stat-card-label { font-size: 11px; font-family: monospace; color: var(--navy-mid); font-weight: 600; text-transform: uppercase; }
+    .stat-card-value { font-size: 24px; font-weight: 900; color: var(--navy); }
+    .section-title { font-size: 16px; font-weight: 900; color: var(--navy); margin: 20px 0 10px 0; }
+    .eda-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .eda-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--navy); font-weight: 700; color: var(--navy); font-size: 12px; text-transform: uppercase; font-family: monospace; }
+    .eda-table td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; }
+    .eda-table tr:hover { background: #f8f9fa; }
+    .eda-table a { color: #0936d5; text-decoration: none; }
+    .eda-table a:hover { text-decoration: underline; }
+    .depth-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-weight: 700; font-size: 12px; min-width: 30px; text-align: center; }
+    .depth-0 { background: var(--depth-green); color: #fff; }
+    .depth-low { background: var(--depth-amber); color: #fff; }
+    .depth-high { background: var(--depth-red); color: #fff; }
+    .priority-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 700; color: #fff; }
+    .prio-low { background: #95a5a6; }
+    .prio-mid { background: #3498db; }
+    .prio-high { background: #e67e22; }
+    .data-preview { font-family: monospace; font-size: 12px; color: #555; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .action-buttons { margin: 16px 0; }
+    .action-buttons button { background: var(--navy); color: #fff; border: none; padding: 8px 16px; cursor: pointer; font-weight: 700; margin-right: 8px; }
+    .action-buttons button:hover { background: var(--ocean-blue-3); color: var(--navy); }
+    .action-buttons button.danger { background: var(--depth-red); }
+    .action-buttons button.danger:hover { background: #c0392b; color: #fff; }
+</style>
+{% endblock %}
+
+{% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/topic-detail.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.eda.topic_detail.init('{{ topic_name }}', {{ topic_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block "content" %}
+<div class="eda-container">
+
+    <span class="eda-refresh-indicator" id="eda-last-refresh"></span>
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    <div class="topic-header">
+        <div class="topic-name" id="topic-name">{{ topic_name }}</div>
+        <div class="topic-stats">
+            <span>Total published: <strong id="topic-total-published">-</strong></span>
+            <span>Depth: <strong id="topic-depth">-</strong></span>
+            <span>Last publish: <strong id="topic-last-pub">-</strong></span>
+        </div>
+    </div>
+
+    <div class="stat-cards">
+        <div class="stat-card"><div><div class="stat-card-label">Published</div><div class="stat-card-value" id="stat-published">-</div></div><div id="spark-published"></div></div>
+        <div class="stat-card"><div><div class="stat-card-label">Depth</div><div class="stat-card-value" id="stat-depth">-</div></div><div id="spark-depth"></div></div>
+    </div>
+
+    <div class="action-buttons">
+        <button onclick="$.fn.zato.eda.topic_detail.show_publish_dialog()">Publish message</button>
+        <button class="danger" onclick="$.fn.zato.eda.topic_detail.purge()">Purge topic</button>
+    </div>
+
+    <h3 class="section-title">Subscriber queues</h3>
+    <table class="eda-table">
+        <thead><tr><th>Group</th><th>Pending</th></tr></thead>
+        <tbody id="queues-body"></tbody>
+    </table>
+
+    <h3 class="section-title">Recent messages</h3>
+    <table class="eda-table">
+        <thead><tr><th>ID</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
+        <tbody id="messages-body"></tbody>
+    </table>
+
+</div>
+
+<div id="publish-dialog" style="display:none" title="Publish message">
+    <table class="form-data">
+        <tr><td><label>Topic</label></td><td><input type="text" id="publish-topic" value="{{ topic_name }}" readonly style="width:100%" /></td></tr>
+        <tr><td><label>Data</label></td><td><textarea id="publish-data" style="width:100%;height:150px;font-family:monospace"></textarea></td></tr>
+        <tr><td><label>Priority</label></td><td><select id="publish-priority">{% for i in "123456789" %}<option value="{{ i }}" {% if i == "5" %}selected{% endif %}>{{ i }}</option>{% endfor %}</select></td></tr>
+    </table>
+</div>
+{% endblock %}

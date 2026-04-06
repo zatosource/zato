@@ -464,6 +464,9 @@
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:"1" }}">Subscriptions</a></li>
                                     <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="javascript:$.fn.zato.pubsub.import_test_config()">Import test config</a></li>
                                     <li class="child"><a class="menu-link" href="javascript:$.fn.zato.pubsub.download_openapi()">Download OpenAPI</a></li>
+                                    <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="{% url "eda-dashboard" %}?cluster={{ cluster_id|default:"1" }}">Dashboard</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "eda-messages" %}?cluster={{ cluster_id|default:"1" }}">Message browser</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "eda-publish" %}?cluster={{ cluster_id|default:"1" }}">Publish</a></li>
                                 </ul>
                             </li>
 
