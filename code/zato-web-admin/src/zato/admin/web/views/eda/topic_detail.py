@@ -22,6 +22,12 @@ from zato.admin.web.views import method_allowed
 
 logger = logging.getLogger(__name__)
 
+def _raw_json(response):
+    if response.ok:
+        raw = response.data
+        return raw if isinstance(raw, str) else json.dumps(raw)
+    return '{}'
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -34,15 +40,15 @@ def index(req, topic_name):
         response = req.zato.client.invoke('zato.broker.topic.get-detail', {
             'topic_name': topic_name,
         })
-        data = response.data if response.ok else {}
+        data_json = _raw_json(response)
     except Exception as e:
         logger.error('EDA topic detail error: %s', e)
-        data = {}
+        data_json = '{}'
 
     return TemplateResponse(req, 'zato/eda/topic-detail.html', {
         'cluster_id': cluster_id,
         'topic_name': topic_name,
-        'topic_data': json.dumps(data) if data else '{}',
+        'topic_data': data_json,
         'zato_clusters': True,
         'zato_template_name': 'zato/eda/topic-detail.html',
     })
@@ -60,7 +66,10 @@ def poll(req):
             'topic_name': topic_name,
         })
         if response.ok:
-            return HttpResponse(json.dumps(response.data), content_type='application/json')
+            raw = response.data
+            if isinstance(raw, str):
+                return HttpResponse(raw, content_type='application/json')
+            return HttpResponse(json.dumps(raw), content_type='application/json')
         else:
             return HttpResponse(
                 json.dumps({'error': response.details or 'Error'}),
@@ -84,7 +93,10 @@ def purge(req):
             'topic_name': topic_name,
         })
         if response.ok:
-            return HttpResponse(json.dumps(response.data), content_type='application/json')
+            raw = response.data
+            if isinstance(raw, str):
+                return HttpResponse(raw, content_type='application/json')
+            return HttpResponse(json.dumps(raw), content_type='application/json')
         else:
             return HttpResponse(
                 json.dumps({'error': response.details or 'Error'}),

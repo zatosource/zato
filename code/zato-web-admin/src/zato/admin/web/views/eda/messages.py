@@ -22,6 +22,15 @@ from zato.admin.web.views import method_allowed
 
 logger = logging.getLogger(__name__)
 
+def _parse_response(response):
+    if response.ok:
+        raw = response.data
+        if isinstance(raw, str):
+            return json.loads(raw)
+        elif isinstance(raw, dict):
+            return raw
+    return {'messages': [], 'total': 0}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -43,13 +52,13 @@ def index(req):
             invoke_input['stream_name'] = stream_name
 
         response = req.zato.client.invoke('zato.broker.message.get-list', invoke_input)
-        data = response.data if response.ok else {'messages': [], 'total': 0}
+        data = _parse_response(response)
     except Exception as e:
         logger.error('EDA messages error: %s', e)
         data = {'messages': [], 'total': 0}
 
-    messages = data.get('messages', []) if isinstance(data, dict) else []
-    total = data.get('total', 0) if isinstance(data, dict) else 0
+    messages = data.get('messages', [])
+    total = data.get('total', 0)
     total_pages = max(1, (total + page_size - 1) // page_size)
 
     return TemplateResponse(req, 'zato/eda/messages.html', {
@@ -76,16 +85,20 @@ def detail(req, stream_name, msg_id):
             'stream_name': stream_name,
             'msg_id': msg_id,
         })
-        data = response.data if response.ok else {}
+        if response.ok:
+            raw = response.data
+            data_json = raw if isinstance(raw, str) else json.dumps(raw)
+        else:
+            data_json = '{}'
     except Exception as e:
         logger.error('EDA message detail error: %s', e)
-        data = {}
+        data_json = '{}'
 
     return TemplateResponse(req, 'zato/eda/message-detail.html', {
         'cluster_id': cluster_id,
         'stream_name': stream_name,
         'msg_id': msg_id,
-        'message_data': json.dumps(data) if data else '{}',
+        'message_data': data_json,
         'zato_clusters': True,
         'zato_template_name': 'zato/eda/message-detail.html',
     })

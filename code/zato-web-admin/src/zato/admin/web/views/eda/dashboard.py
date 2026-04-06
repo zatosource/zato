@@ -32,14 +32,21 @@ def index(req):
 
     try:
         response = req.zato.client.invoke('zato.broker.dashboard', {})
-        data = response.data if response.ok else {}
+        if response.ok:
+            raw = response.data
+            if isinstance(raw, str):
+                data_json = raw
+            else:
+                data_json = json.dumps(raw)
+        else:
+            data_json = '{}'
     except Exception as e:
         logger.error('EDA dashboard error: %s', e)
-        data = {}
+        data_json = '{}'
 
     return TemplateResponse(req, 'zato/eda/dashboard.html', {
         'cluster_id': cluster_id,
-        'dashboard_data': json.dumps(data) if data else '{}',
+        'dashboard_data': data_json,
         'zato_clusters': True,
         'zato_template_name': 'zato/eda/dashboard.html',
     })
@@ -53,7 +60,11 @@ def poll(req):
     try:
         response = req.zato.client.invoke('zato.broker.dashboard', {})
         if response.ok:
-            return HttpResponse(json.dumps(response.data), content_type='application/json')
+            raw = response.data
+            if isinstance(raw, str):
+                return HttpResponse(raw, content_type='application/json')
+            else:
+                return HttpResponse(json.dumps(raw), content_type='application/json')
         else:
             return HttpResponse(
                 json.dumps({'error': response.details or 'Error fetching dashboard data'}),

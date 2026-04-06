@@ -67,7 +67,10 @@ def submit(req):
             'expiration': expiration,
         })
         if response.ok:
-            return HttpResponse(json.dumps(response.data), content_type='application/json')
+            raw = response.data
+            if isinstance(raw, str):
+                return HttpResponse(raw, content_type='application/json')
+            return HttpResponse(json.dumps(raw), content_type='application/json')
         else:
             return HttpResponse(
                 json.dumps({'error': response.details or 'Error publishing message'}),
