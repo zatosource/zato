@@ -35,6 +35,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
+from zato_broker_core import log_admin_info
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
@@ -928,6 +929,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # and then create it all again so we have a fresh start.
         self.broker_client.delete_queue(self.process_cid, 'server')
         self.broker_client.create_internal_queue('server')
+        self.broker_client.start_consumer()
 
         # Configure internal pub/sub
         _ = spawn_greenlet(
@@ -1060,6 +1062,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                             'access_type': PubSub.API_Client.Subscriber
                         })
 
+            log_admin_info(f'Loading pub/sub config -> {len(client_permissions)} permission(s)')
+
             for username, perms in client_permissions.items():
                 self.pubsub_pattern_matcher.add_client(username, perms)
 
@@ -1067,7 +1071,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 if sec_name:
                     self.pubsub_subscriptions.register_user(username, sec_name)
 
-            # Load subscriptions with sub_keys and their topics
+                log_admin_info(f'Loaded permission -> user:{username}, rules:{len(perms)}')
+
             subscriptions = session.query(
                 PubSubSubscription.sub_key,
                 SecurityBase.username,
@@ -1078,10 +1083,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 PubSubSubscription.cluster_id == self.cluster_id
             ).all()
 
+            log_admin_info(f'Loading pub/sub subscriptions -> {len(subscriptions)} subscription(s)')
+
             for sub_key, username, sec_name in subscriptions:
                 self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
+                log_admin_info(f'Loaded subscription -> sub_key:{sub_key}, user:{username}')
 
-            # Load subscription topics and set up Redis consumer groups
             subscription_topics = session.query(
                 PubSubSubscription.sub_key,
                 PubSubTopic.name
@@ -1093,8 +1100,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 PubSubSubscription.cluster_id == self.cluster_id
             ).all()
 
+            log_admin_info(f'Loading pub/sub topic bindings -> {len(subscription_topics)} binding(s)')
+
             for sub_key, topic_name in subscription_topics:
                 self.pubsub_backend.subscribe(sub_key, topic_name)
+                log_admin_info(f'Subscribed -> sub_key:{sub_key}, topic:{topic_name}')
 
 # ################################################################################################################################
 

@@ -67,9 +67,8 @@ class Consumer:
         self.keep_running = True
         self._greenlet = None
 
-        broker_dir = os.environ.get('Zato_Broker_Dir') or os.path.expanduser('~/env/qs-1/broker')
-
-        log_dir = os.path.join(broker_dir, 'logs')
+        broker_dir = os.environ.get('Zato_Broker_Dir') or os.path.expanduser('~/env/qs-1/data/broker')
+        log_dir = os.environ.get('Zato_Broker_Log_Dir') or os.path.expanduser('~/env/qs-1/server1/logs')
 
         os.makedirs(log_dir, exist_ok=True)
 
