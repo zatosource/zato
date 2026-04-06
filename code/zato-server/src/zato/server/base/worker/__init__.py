@@ -1727,13 +1727,13 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
-        old_name = msg.get('old_name')
-        new_name = msg.get('name')
+        old_name = msg.get('old_topic_name')
+        new_name = msg.get('new_topic_name')
         if old_name and new_name and old_name != new_name:
             self.server.pubsub_backend.rename_topic(old_name, new_name)
 
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
-        topic_name = msg.get('name')
+        topic_name = msg.get('topic_name')
         if topic_name:
             self.server.pubsub_backend.delete_topic(topic_name)
 
