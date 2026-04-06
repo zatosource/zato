@@ -52,7 +52,7 @@ hl7-tests:
 broker-build:
 	cd $(CURDIR)/code/zato-broker && $(MAKE) build
 
-broker-test:
+broker-tests:
 	cd $(CURDIR)/code/zato-broker && $(MAKE) test
 
 %:
