@@ -574,6 +574,70 @@ def pre_process_sys_argv(sys_argv):
 
 # ################################################################################################################################
 
+def _run_broker_cli():
+    """ Fast path for `zato broker <subcommand>`. Dispatches directly to Rust. """
+
+    # stdlib
+    import json
+    import os
+    import sys
+
+    argv = sys.argv[2:]
+
+    if not argv or argv[0] in ('-h', '--help'):
+        sys.stdout.write(
+            'Usage: zato broker <command> [options]\n\n'
+            'Commands:\n'
+            '  status       Show broker status and statistics\n'
+            '  validate     Validate the broker directory structure\n'
+            '  init         Create the broker directory tree\n'
+            '  backup       Back up the broker directory\n'
+            '  backup-list  List existing backups\n'
+            '  cleanup      Remove expired keys, consumed messages, and old stream entries\n'
+            '  restore      Restore items from a backup\n\n'
+            'Options:\n'
+            '  --path       Broker directory path (default: ~/env/qs-1/data/broker)\n'
+        )
+        return
+
+    command = argv[0]
+    broker_dir = os.path.expanduser('~/env/qs-1/data/broker')
+    args_dict = {}
+
+    i = 1
+    while i < len(argv):
+        arg = argv[i]
+        if arg == '--path' and i + 1 < len(argv):
+            broker_dir = os.path.expanduser(argv[i + 1])
+            i += 2
+        elif arg == '--to' and i + 1 < len(argv):
+            args_dict['to'] = argv[i + 1]
+            i += 2
+        elif arg == '--from' and i + 1 < len(argv):
+            args_dict['from'] = argv[i + 1]
+            i += 2
+        elif arg == '--dir' and i + 1 < len(argv):
+            args_dict['dir'] = argv[i + 1]
+            i += 2
+        elif arg == '--items' and i + 1 < len(argv):
+            args_dict['items'] = argv[i + 1].split(',')
+            i += 2
+        elif arg == '--compress':
+            args_dict['compress'] = True
+            i += 1
+        else:
+            sys.stderr.write(f'Unknown option: {arg}\n')
+            sys.exit(1)
+
+    # zato-broker-core (Rust extension)
+    from zato_broker_core import broker_cli
+
+    args_json = json.dumps(args_dict) if args_dict else None
+    output = broker_cli(command, broker_dir, args_json)
+    sys.stdout.write(output)
+
+# ################################################################################################################################
+
 def main() -> 'any_':
 
     # stdlib
@@ -602,6 +666,11 @@ def main() -> 'any_':
     # Now, zato start ...
     elif has_args and sys.argv[1] == 'start':
         parser = command_store.load_start_parser()
+
+    # Fast path for `zato broker <subcommand>` - dispatches directly to Rust
+    elif has_args and sys.argv[1] == 'broker':
+        _run_broker_cli()
+        sys.exit(0)
 
     # All the other commands
     else:
