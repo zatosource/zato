@@ -49,6 +49,12 @@ openapi-tests:
 hl7-tests:
 	cd $(CURDIR)/code/zato-hl7 && $(MAKE) hl7-test
 
+broker-build:
+	cd $(CURDIR)/code/zato-broker && $(MAKE) build
+
+broker-test:
+	cd $(CURDIR)/code/zato-broker && $(MAKE) test
+
 %:
 	@:
 
