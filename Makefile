@@ -54,7 +54,7 @@ hl7-tests:
 
 qa-reqs-install:
 	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python -r $(CURDIR)/code/qa-requirements.txt
-	npx --yes playwright install
+	npx --yes playwright install chromium
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 	sudo snap install k6
