@@ -236,14 +236,14 @@ class TopicGetDetail(Service):
 class QueueGetDetail(Service):
 
     name = 'zato.broker.queue.get-detail'
-    input = 'stream_name', 'group_name', '-last_n'
+    input = 'topic_name', 'sub_key', '-last_n'
 
     def handle(self) -> 'None':
         input = self.request.input
         client = self.server.broker_client
         last_n = int(input.get('last_n') or 25)
 
-        self.response.payload = fs_queue_detail(client._cfg, input.stream_name, input.group_name, last_n)
+        self.response.payload = fs_queue_detail(client._cfg, input.topic_name, input.sub_key, last_n)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
@@ -252,17 +252,17 @@ class QueueGetDetail(Service):
 class MessageGetList(Service):
 
     name = 'zato.broker.message.get-list'
-    input = '-stream_name', '-offset', '-limit'
+    input = '-topic_name', '-offset', '-limit'
 
     def handle(self) -> 'None':
         input = self.request.input
         client = self.server.broker_client
 
-        stream_name = input.get('stream_name') or None
+        topic_name = input.get('topic_name') or None
         offset = int(input.get('offset') or 0)
         limit = int(input.get('limit') or 50)
 
-        self.response.payload = fs_message_list(client._cfg, stream_name, offset, limit)
+        self.response.payload = fs_message_list(client._cfg, topic_name, offset, limit)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
@@ -271,13 +271,13 @@ class MessageGetList(Service):
 class MessageGetDetail(Service):
 
     name = 'zato.broker.message.get-detail'
-    input = 'stream_name', 'msg_id'
+    input = 'topic_name', 'msg_id'
 
     def handle(self) -> 'None':
         input = self.request.input
         client = self.server.broker_client
 
-        self.response.payload = fs_message_detail(client._cfg, input.stream_name, input.msg_id)
+        self.response.payload = fs_message_detail(client._cfg, input.topic_name, input.msg_id)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
@@ -302,13 +302,13 @@ class TopicPurge(Service):
 class QueuePurge(Service):
 
     name = 'zato.broker.queue.purge'
-    input = 'stream_name', 'group_name'
+    input = 'topic_name', 'sub_key'
 
     def handle(self) -> 'None':
         from json import dumps as json_dumps
         input = self.request.input
         client = self.server.broker_client
-        count = fs_queue_purge(client._cfg, input.stream_name, input.group_name)
+        count = fs_queue_purge(client._cfg, input.topic_name, input.sub_key)
 
         self.response.payload = json_dumps({'is_ok': True, 'messages_removed': count})
         self.response.content_type = 'application/json'

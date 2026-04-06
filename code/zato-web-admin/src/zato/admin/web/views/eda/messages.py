@@ -38,7 +38,7 @@ def _parse_response(response):
 def index(req):
 
     cluster_id = req.GET.get('cluster', req.GET.get('cluster_id', ''))
-    stream_name = req.GET.get('stream_name', '')
+    topic_name = req.GET.get('topic_name', '')
     page = int(req.GET.get('page', 1))
     page_size = 50
     offset = (page - 1) * page_size
@@ -48,8 +48,8 @@ def index(req):
             'offset': offset,
             'limit': page_size,
         }
-        if stream_name:
-            invoke_input['stream_name'] = stream_name
+        if topic_name:
+            invoke_input['topic_name'] = topic_name
 
         response = req.zato.client.invoke('zato.broker.message.get-list', invoke_input)
         data = _parse_response(response)
@@ -67,7 +67,7 @@ def index(req):
         'total': total,
         'page': page,
         'total_pages': total_pages,
-        'stream_name_filter': stream_name,
+        'topic_name_filter': topic_name,
         'zato_clusters': True,
         'zato_template_name': 'zato/eda/messages.html',
     })
@@ -76,13 +76,13 @@ def index(req):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def detail(req, stream_name, msg_id):
+def detail(req, topic_name, msg_id):
 
     cluster_id = req.GET.get('cluster', req.GET.get('cluster_id', ''))
 
     try:
         response = req.zato.client.invoke('zato.broker.message.get-detail', {
-            'stream_name': stream_name,
+            'topic_name': topic_name,
             'msg_id': msg_id,
         })
         if response.ok:
@@ -96,7 +96,7 @@ def detail(req, stream_name, msg_id):
 
     return TemplateResponse(req, 'zato/eda/message-detail.html', {
         'cluster_id': cluster_id,
-        'stream_name': stream_name,
+        'topic_name': topic_name,
         'msg_id': msg_id,
         'message_data': data_json,
         'zato_clusters': True,

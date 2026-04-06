@@ -923,7 +923,7 @@ urlpatterns += [
     url(r'^zato/eda/topic/purge/$',
         login_required(eda_topic_detail.purge), name='eda-topic-purge'),
 
-    path('zato/eda/queue/<str:stream_name>/<str:group_name>/',
+    path('zato/eda/queue/<str:topic_name>/<str:sub_key>/',
         login_required(eda_queue_detail.index), name='eda-queue-detail'),
     url(r'^zato/eda/queue/poll/$',
         login_required(eda_queue_detail.poll), name='eda-queue-detail-poll'),
@@ -932,7 +932,7 @@ urlpatterns += [
 
     url(r'^zato/eda/messages/$',
         login_required(eda_messages.index), name='eda-messages'),
-    path('zato/eda/messages/<str:stream_name>/<str:msg_id>/',
+    path('zato/eda/messages/<str:topic_name>/<str:msg_id>/',
         login_required(eda_messages.detail), name='eda-message-detail'),
 
     url(r'^zato/eda/publish/$',

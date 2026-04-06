@@ -1,78 +1,72 @@
-{% extends "zato/index.html" %}
+{% extends "zato/settings-base.html" %}
 
-{% block html_title %}Message: {{ msg_id }}{% endblock %}
+{% block page_title %}Message: {{ msg_id }}{% endblock %}
 
-{% block "extra_css" %}
+{% block extra_page_css %}
 <style type="text/css">
-    :root { --navy: #012845; --navy-mid: #063c65; --depth-green: #2ecc71; --depth-amber: #f39c12; --depth-red: #e74c3c; }
-    .eda-container { padding: 20px 0; }
-    .msg-header { background: #fff; border: 2px solid var(--navy); padding: 20px 24px; box-shadow: 4px 4px 0px var(--navy-mid); margin-bottom: 24px; }
-    .msg-title { font-size: 20px; font-weight: 900; color: var(--navy); margin-bottom: 12px; word-break: break-all; }
-    .msg-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 32px; font-family: monospace; font-size: 13px; color: var(--navy-mid); }
-    .msg-meta strong { color: var(--navy); }
-    .section-title { font-size: 16px; font-weight: 900; color: var(--navy); margin: 20px 0 10px 0; }
-    .msg-data-block { background: #f8f9fa; border: 1px solid #e0e0e0; padding: 16px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; }
+    :root { --depth-green: #2ecc71; --depth-amber: #f39c12; --depth-red: #e74c3c; }
+    .msg-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 32px; font-size: 13px; color: var(--primary-dark); margin-bottom: 20px; }
+    .msg-meta strong { font-weight: 700; }
+    .msg-meta a { color: #0936d5; text-decoration: none; }
+    .msg-meta a:hover { text-decoration: underline; }
+    .section-title { font-size: 16px; font-weight: 600; color: var(--primary-dark); margin: 20px 0 10px 0; letter-spacing: 0.5px; }
+    .msg-data-block { background: var(--background-light); border: 3px solid var(--primary-dark); padding: 16px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; }
     .eda-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .eda-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--navy); font-weight: 700; color: var(--navy); font-size: 12px; text-transform: uppercase; font-family: monospace; }
-    .eda-table td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; }
+    .eda-table th { text-align: left; padding: 8px 12px; border-bottom: 3px solid var(--primary-dark); font-weight: 600; color: var(--primary-dark); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .eda-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); }
     .status-delivered { color: var(--depth-green); font-weight: 700; }
     .status-pending { color: var(--depth-amber); font-weight: 700; }
-    .status-not_reached { color: #999; }
+    .status-not_reached { color: var(--text-muted); }
 </style>
 {% endblock %}
 
-{% block "extra_js" %}
+{% block section_title %}Message detail{% endblock %}
+{% block help_icon_id %}eda-message-help{% endblock %}
+
+{% block extra_page_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
     var data = {{ message_data|safe }};
     if (!data || !data.msg_id) return;
 
     var ts = data.pub_time_ts ? new Date(data.pub_time_ts * 1000).toISOString().replace('T', ' ').replace(/\.\d+Z/, ' UTC') : '-';
-    $('#msg-stream').text(data.stream_name || '-');
+    $('#msg-id').text(data.msg_id);
+    $('#msg-topic').html('<a href="/zato/eda/topic/' + encodeURIComponent(data.topic_name) + '/?cluster=1">' + (data.topic_name || '-') + '</a>');
     $('#msg-size').text((data.size || 0) + ' bytes');
     $('#msg-pub-time').text(ts);
 
     var raw = data.data || '';
-    try {
-        var parsed = JSON.parse(raw);
-        raw = JSON.stringify(parsed, null, 4);
-    } catch(e) {}
+    try { raw = JSON.stringify(JSON.parse(raw), null, 4); } catch(e) {}
     $('#msg-data-content').text(raw);
 
     var $tbody = $('#delivery-body');
     var statuses = data.delivery_status || [];
     for (var i = 0; i < statuses.length; i++) {
         var s = statuses[i];
-        var cls = 'status-' + s.status;
-        $tbody.append('<tr><td>' + s.group_name + '</td><td class="' + cls + '">' + s.status + '</td></tr>');
+        $tbody.append('<tr><td>' + s.sub_key + '</td><td class="status-' + s.status + '">' + s.status + '</td></tr>');
     }
     if (statuses.length === 0) {
-        $tbody.append('<tr><td colspan="2">No subscriber groups</td></tr>');
+        $tbody.append('<tr><td colspan="2">No subscribers</td></tr>');
     }
 });
 </script>
 {% endblock %}
 
-{% block "content" %}
-<div class="eda-container">
-
-    <div class="msg-header">
-        <div class="msg-title">{{ msg_id }}</div>
-        <div class="msg-meta">
-            <span>Stream: <strong id="msg-stream">-</strong></span>
-            <span>Size: <strong id="msg-size">-</strong></span>
-            <span>Published: <strong id="msg-pub-time">-</strong></span>
-        </div>
-    </div>
-
-    <h3 class="section-title">Message data</h3>
-    <div class="msg-data-block" id="msg-data-content"></div>
-
-    <h3 class="section-title">Delivery status</h3>
-    <table class="eda-table">
-        <thead><tr><th>Group</th><th>Status</th></tr></thead>
-        <tbody id="delivery-body"></tbody>
-    </table>
-
+{% block content_rows %}
+<div class="msg-meta">
+    <span>Message ID: <strong id="msg-id">{{ msg_id }}</strong></span>
+    <span>Topic: <strong id="msg-topic">-</strong></span>
+    <span>Size: <strong id="msg-size">-</strong></span>
+    <span>Published: <strong id="msg-pub-time">-</strong></span>
 </div>
+
+<h3 class="section-title">Message data</h3>
+<div class="msg-data-block" id="msg-data-content"></div>
+
+<h3 class="section-title">Delivery status</h3>
+<table class="eda-table">
+    <thead><tr><th>Subscriber</th><th>Status</th></tr></thead>
+    <tbody id="delivery-body"></tbody>
+</table>
 {% endblock %}

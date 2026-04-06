@@ -14,9 +14,7 @@ $.fn.zato.eda.topic_detail.render = function(data) {
     $('#topic-depth').text($.fn.zato.eda.format_number(data.depth || 0));
     $('#stat-published').text($.fn.zato.eda.format_number(data.total_published || 0));
     $('#stat-depth').text($.fn.zato.eda.format_number(data.depth || 0));
-
-    var rel = $.fn.zato.eda.relative_time(data.last_pub_ts);
-    $('#topic-last-pub').text(rel);
+    $('#topic-last-pub').text($.fn.zato.eda.relative_time(data.last_pub_ts));
 
     var sp = $.fn.zato.eda.topic_detail._spark_published;
     sp.push(data.total_published || 0);
@@ -34,7 +32,7 @@ $.fn.zato.eda.topic_detail.render = function(data) {
     for (var i = 0; i < queues.length; i++) {
         var q = queues[i];
         var row = '<tr>';
-        row += '<td><a href="/zato/eda/queue/' + encodeURIComponent(data.name) + '/' + encodeURIComponent(q.group_name) + '/?cluster=1">' + q.group_name + '</a></td>';
+        row += '<td><a href="/zato/eda/queue/' + encodeURIComponent(data.name) + '/' + encodeURIComponent(q.sub_key) + '/?cluster=1">' + q.sub_key + '</a></td>';
         row += '<td>' + $.fn.zato.eda.depth_html(q.pending_count || 0) + '</td>';
         row += '</tr>';
         $qbody.append(row);
@@ -71,39 +69,10 @@ $.fn.zato.eda.topic_detail.poll = function() {
         data: {topic_name: $.fn.zato.eda.topic_detail._topic_name},
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         success: function(data) {
+            if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
             $.fn.zato.eda.topic_detail.render(data);
         },
         error: function() {}
-    });
-};
-
-$.fn.zato.eda.topic_detail.show_publish_dialog = function() {
-    $('#publish-dialog').dialog({
-        modal: true,
-        width: 500,
-        buttons: {
-            'Publish': function() {
-                var topic = $('#publish-topic').val();
-                var data = $('#publish-data').val();
-                var priority = $('#publish-priority').val();
-                $.ajax({
-                    url: '/zato/eda/publish/submit/',
-                    type: 'POST',
-                    data: {topic_name: topic, data: data, priority: priority, expiration: 86400},
-                    headers: {'X-CSRFToken': $.cookie('csrftoken')},
-                    success: function() {
-                        $('#publish-dialog').dialog('close');
-                        $.fn.zato.eda.topic_detail.poll();
-                    },
-                    error: function(xhr) {
-                        alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error'));
-                    }
-                });
-            },
-            'Cancel': function() {
-                $(this).dialog('close');
-            }
-        }
     });
 };
 
@@ -114,17 +83,14 @@ $.fn.zato.eda.topic_detail.purge = function() {
         type: 'POST',
         data: {topic_name: $.fn.zato.eda.topic_detail._topic_name},
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        success: function(data) {
-            $.fn.zato.eda.topic_detail.poll();
-        },
-        error: function(xhr) {
-            alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error'));
-        }
+        success: function() { $.fn.zato.eda.topic_detail.poll(); },
+        error: function(xhr) { alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error')); }
     });
 };
 
 $.fn.zato.eda.topic_detail.init = function(topic_name, initial_data) {
     $.fn.zato.eda.topic_detail._topic_name = topic_name;
+    if (typeof initial_data === 'string') { try { initial_data = JSON.parse(initial_data); } catch(e) { initial_data = {}; } }
     $.fn.zato.eda.topic_detail.render(initial_data);
     setInterval($.fn.zato.eda.topic_detail.poll, 10000);
 };

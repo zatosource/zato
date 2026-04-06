@@ -15,9 +15,10 @@ $.fn.zato.eda.messages.render = function(messages) {
     for (var i = 0; i < messages.length; i++) {
         var m = messages[i];
         var rel = $.fn.zato.eda.relative_time(m.pub_time_ts);
+        var topic = m.topic_name || '';
         var row = '<tr>';
-        row += '<td><a href="/zato/eda/messages/' + encodeURIComponent(m.stream_name) + '/' + encodeURIComponent(m.msg_id) + '/?cluster=1">' + m.msg_id.substring(0, 15) + '...</a></td>';
-        row += '<td><a href="/zato/eda/topic/' + encodeURIComponent(m.stream_name) + '/?cluster=1">' + m.stream_name + '</a></td>';
+        row += '<td><a href="/zato/eda/messages/' + encodeURIComponent(topic) + '/' + encodeURIComponent(m.msg_id) + '/?cluster=1">' + m.msg_id.substring(0, 15) + '...</a></td>';
+        row += '<td><a href="/zato/eda/topic/' + encodeURIComponent(topic) + '/?cluster=1">' + topic + '</a></td>';
         row += '<td class="data-preview">' + $('<span>').text(m.data_preview || '').html() + '</td>';
         row += '<td>' + (m.size || 0) + ' B</td>';
         row += '<td title="' + (m.pub_time_ts ? new Date(m.pub_time_ts * 1000).toISOString() : '') + '">' + rel + '</td>';
@@ -27,6 +28,7 @@ $.fn.zato.eda.messages.render = function(messages) {
 };
 
 $.fn.zato.eda.messages.init = function(messages, total, page, total_pages) {
+    if (typeof messages === 'string') { try { messages = JSON.parse(messages); } catch(e) { messages = []; } }
     $.fn.zato.eda.messages.render(messages);
     $('#msg-total').text($.fn.zato.eda.format_number(total));
 };

@@ -32,14 +32,14 @@ def _raw_json(response):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def index(req, stream_name, group_name):
+def index(req, topic_name, sub_key):
 
     cluster_id = req.GET.get('cluster', req.GET.get('cluster_id', ''))
 
     try:
         response = req.zato.client.invoke('zato.broker.queue.get-detail', {
-            'stream_name': stream_name,
-            'group_name': group_name,
+            'topic_name': topic_name,
+            'sub_key': sub_key,
         })
         data_json = _raw_json(response)
     except Exception as e:
@@ -48,8 +48,8 @@ def index(req, stream_name, group_name):
 
     return TemplateResponse(req, 'zato/eda/queue-detail.html', {
         'cluster_id': cluster_id,
-        'stream_name': stream_name,
-        'group_name': group_name,
+        'topic_name': topic_name,
+        'sub_key': sub_key,
         'queue_data': data_json,
         'zato_clusters': True,
         'zato_template_name': 'zato/eda/queue-detail.html',
@@ -61,13 +61,13 @@ def index(req, stream_name, group_name):
 @method_allowed('POST')
 def poll(req):
 
-    stream_name = req.POST.get('stream_name', '')
-    group_name = req.POST.get('group_name', '')
+    topic_name = req.POST.get('topic_name', '')
+    sub_key = req.POST.get('sub_key', '')
 
     try:
         response = req.zato.client.invoke('zato.broker.queue.get-detail', {
-            'stream_name': stream_name,
-            'group_name': group_name,
+            'topic_name': topic_name,
+            'sub_key': sub_key,
         })
         if response.ok:
             raw = response.data
@@ -90,13 +90,13 @@ def poll(req):
 @method_allowed('POST')
 def purge(req):
 
-    stream_name = req.POST.get('stream_name', '')
-    group_name = req.POST.get('group_name', '')
+    topic_name = req.POST.get('topic_name', '')
+    sub_key = req.POST.get('sub_key', '')
 
     try:
         response = req.zato.client.invoke('zato.broker.queue.purge', {
-            'stream_name': stream_name,
-            'group_name': group_name,
+            'topic_name': topic_name,
+            'sub_key': sub_key,
         })
         if response.ok:
             raw = response.data
