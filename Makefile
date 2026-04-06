@@ -55,6 +55,16 @@ broker-build:
 broker-tests:
 	cd $(CURDIR)/code/zato-broker && $(MAKE) test
 
+broker-perf-tests:
+ifeq ($(filter json,$(MAKECMDGOALS)),json)
+	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="--json"
+else
+	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test
+endif
+
+json:
+	@:
+
 %:
 	@:
 
