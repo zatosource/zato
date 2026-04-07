@@ -58,11 +58,13 @@ broker-run:
 broker-tests:
 	cd $(CURDIR)/code/zato-broker && $(MAKE) test
 
+PERF_NUMS := $(filter-out broker-perf-tests json,$(MAKECMDGOALS))
+
 broker-perf-tests:
 ifeq ($(filter json,$(MAKECMDGOALS)),json)
-	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="--json $(PERF_TIER)"
+	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="--json $(PERF_NUMS)"
 else
-	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="$(PERF_TIER)"
+	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="$(PERF_NUMS)"
 endif
 
 json:
