@@ -587,7 +587,7 @@ def _run_broker_cli():
     if not argv or argv[0] in ('-h', '--help'):
         sys.stdout.write(
             'Usage: zato broker <command> [options]\n\n'
-            'Commands:\n'
+            'Admin commands:\n'
             '  status       Show broker status and statistics\n'
             '  validate     Validate the broker directory structure\n'
             '  init         Create the broker directory tree\n'
@@ -595,8 +595,20 @@ def _run_broker_cli():
             '  backup-list  List existing backups\n'
             '  cleanup      Remove expired keys, consumed messages, and old stream entries\n'
             '  restore      Restore items from a backup\n\n'
+            'Convenience commands:\n'
+            '  current      Overview of topics, queues, keys with counts and depths\n'
+            '  top          Live-updating terminal dashboard\n'
+            '  tail         Live-stream messages from a topic\n'
+            '  watch        Live counters for one topic\n'
+            '  publish      Publish a message to a topic\n'
+            '  inspect      Full detail for a single message\n'
+            '  tree         Colored directory tree with counts and sizes\n'
+            '  drain        Consume and print pending messages from a queue\n'
+            '  perf         Throughput benchmark\n'
+            '  diff         Compare current state against a backup\n\n'
             'Options:\n'
             '  --path       Broker directory path (default: ~/env/qs-1/data/broker)\n'
+            '  --no-color   Disable colored output\n'
         )
         return
 
@@ -604,7 +616,20 @@ def _run_broker_cli():
     broker_dir = os.path.expanduser('~/env/qs-1/data/broker')
     args_dict = {}
 
+    # ..  for commands that take a positional argument after the command name,
+    # ..  capture it before option parsing starts.
+    positional_commands = {
+        'tail': 'topic',
+        'watch': 'topic',
+        'inspect': 'msg_id',
+        'publish': 'topic',
+    }
+
     i = 1
+    if command in positional_commands and i < len(argv) and not argv[i].startswith('-'):
+        args_dict[positional_commands[command]] = argv[i]
+        i += 1
+
     while i < len(argv):
         arg = argv[i]
         if arg == '--path' and i + 1 < len(argv):
@@ -616,18 +641,66 @@ def _run_broker_cli():
         elif arg == '--from' and i + 1 < len(argv):
             args_dict['from'] = argv[i + 1]
             i += 2
+        elif arg == '--backup' and i + 1 < len(argv):
+            args_dict['backup'] = argv[i + 1]
+            i += 2
         elif arg == '--dir' and i + 1 < len(argv):
             args_dict['dir'] = argv[i + 1]
             i += 2
         elif arg == '--items' and i + 1 < len(argv):
             args_dict['items'] = argv[i + 1].split(',')
             i += 2
+        elif arg == '--filter' and i + 1 < len(argv):
+            args_dict['filter'] = argv[i + 1]
+            i += 2
+        elif arg == '--topic' and i + 1 < len(argv):
+            args_dict['topic'] = argv[i + 1]
+            i += 2
+        elif arg == '--sub-key' and i + 1 < len(argv):
+            args_dict['sub_key'] = argv[i + 1]
+            i += 2
+        elif arg == '--limit' and i + 1 < len(argv):
+            args_dict['limit'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--messages' and i + 1 < len(argv):
+            args_dict['messages'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--topics' and i + 1 < len(argv):
+            args_dict['topics'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--size' and i + 1 < len(argv):
+            args_dict['size'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--priority' and i + 1 < len(argv):
+            args_dict['priority'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--expiration' and i + 1 < len(argv):
+            args_dict['expiration'] = int(argv[i + 1])
+            i += 2
         elif arg == '--compress':
             args_dict['compress'] = True
             i += 1
+        elif arg == '--no-color':
+            args_dict['no_color'] = True
+            i += 1
+        elif arg == '--no-ack':
+            args_dict['no_ack'] = True
+            i += 1
+        elif arg == '--full':
+            args_dict['full'] = True
+            i += 1
         else:
-            sys.stderr.write(f'Unknown option: {arg}\n')
-            sys.exit(1)
+            # ..  for publish, the last non-flag arg is data
+            if command == 'publish' and not arg.startswith('-'):
+                args_dict['data'] = arg
+                i += 1
+            else:
+                sys.stderr.write(f'Unknown option: {arg}\n')
+                sys.exit(1)
+
+    # ..  for publish, read stdin if no data was provided
+    if command == 'publish' and 'data' not in args_dict and not sys.stdin.isatty():
+        args_dict['data'] = sys.stdin.read()
 
     # zato-broker-core (Rust extension)
     from zato_broker_core import broker_cli
