@@ -5,7 +5,7 @@
 {% block extra_page_css %}
 <style type="text/css">
     :root {
-        --depth-green: #2ecc71;
+        --depth-green: #2e68d4;
         --depth-amber: #f39c12;
         --depth-red: #e74c3c;
     }
@@ -37,11 +37,15 @@
     .view-all-link { display: block; text-align: right; margin-top: 8px; font-size: 13px; }
     .view-all-link a { color: #0936d5; text-decoration: none; }
     .view-all-link a:hover { text-decoration: underline; }
-    .eda-refresh-indicator { float: right; font-size: 12px; font-family: monospace; color: var(--text-muted); }
+    .eda-refresh-indicator { float: right; font-size: 0.7rem; font-family: monospace; font-weight: 500; color: #333; padding-top: 5px;}
 </style>
 {% endblock %}
 
-{% block section_title %}EDA dashboard{% endblock %}
+{% block section_title %}Pub/sub activity
+
+<span class="eda-refresh-indicator" id="eda-last-refresh"></span>
+
+{% endblock %}
 {% block help_icon_id %}eda-dashboard-help{% endblock %}
 
 {% block extra_page_js %}
@@ -55,7 +59,6 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block content_rows %}
-<span class="eda-refresh-indicator" id="eda-last-refresh"></span>
 
 <div class="stat-cards">
     <div class="stat-card">
