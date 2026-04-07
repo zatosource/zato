@@ -1,15 +1,24 @@
 {% extends "zato/settings-base.html" %}
 
-{% block page_title %}EDA dashboard{% endblock %}
+{% block page_title %}Pub/sub activity{% endblock %}
 
 {% block extra_page_css %}
 <style type="text/css">
+
     :root {
-        --depth-green: #2e68d4;
-        --depth-amber: #f39c12;
-        --depth-red: #e74c3c;
+    --depth-green: #063c65;
+    --depth-amber: #f39c12;
+    --depth-red: #e74c3c;
+    --link-color: #037ac7;
     }
-    .stat-cards { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+
+    .stat-cards {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 28px;
+        flex-wrap: wrap;
+    }
+
     .stat-card {
         background: var(--white);
         border: 3px solid var(--primary-dark);
@@ -21,23 +30,115 @@
         align-items: center;
         justify-content: space-between;
     }
-    .stat-card-label { font-size: 12px; font-weight: 600; color: var(--primary-dark); text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-card-value { font-size: 28px; font-weight: 900; color: var(--primary-dark); line-height: 1.1; }
-    .section-title { font-size: 16px; font-weight: 600; color: var(--primary-dark); margin: 24px 0 10px 0; letter-spacing: 0.5px; }
-    .eda-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .eda-table th { text-align: left; padding: 8px 12px; border-bottom: 3px solid var(--primary-dark); font-weight: 600; color: var(--primary-dark); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .eda-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); }
-    .eda-table tr:hover { background: var(--background-light); }
-    .eda-table a { color: #0936d5; text-decoration: none; }
-    .eda-table a:hover { text-decoration: underline; }
-    .depth-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-weight: 700; font-size: 12px; min-width: 30px; text-align: center; }
-    .depth-0 { background: var(--depth-green); color: #fff; }
-    .depth-low { background: var(--depth-amber); color: #fff; }
-    .depth-high { background: var(--depth-red); color: #fff; }
-    .view-all-link { display: block; text-align: right; margin-top: 8px; font-size: 13px; }
-    .view-all-link a { color: #0936d5; text-decoration: none; }
-    .view-all-link a:hover { text-decoration: underline; }
-    .eda-refresh-indicator { float: right; font-size: 0.7rem; font-family: monospace; font-weight: 500; color: #333; padding-top: 5px;}
+
+    .stat-card-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--primary-dark);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-card-value {
+        font-size: 28px;
+        font-weight: 900;
+        color: var(--primary-dark);
+        line-height: 1.1;
+    }
+
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--primary-dark);
+        margin: 24px 0 10px 0;
+        letter-spacing: 0.5px;
+    }
+
+    .eda-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .eda-table th {
+        text-align: left;
+        padding: 8px 12px;
+        border-bottom: 3px solid var(--primary-dark);
+        font-weight: 600;
+        color: var(--primary-dark);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .eda-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .eda-table tr:hover {
+        background: var(--background-light);
+    }
+
+    .eda-table a {
+        color: var(--link-color);
+        text-decoration: none;
+    }
+
+    .eda-table a:hover {
+        text-decoration: none;
+    }
+
+    .depth-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-weight: 700;
+        font-size: 12px;
+        min-width: 30px;
+        text-align: center;
+    }
+
+    .depth-0 {
+        background: var(--depth-green);
+        color: #fff;
+    }
+
+    .depth-low {
+        background: var(--depth-amber);
+        color: #fff;
+    }
+
+    .depth-high {
+        background: var(--depth-red);
+        color: #fff;
+    }
+
+    .view-all-link {
+        display: block;
+        text-align: right;
+        margin-top: 8px;
+        font-size: 13px;
+    }
+
+    .view-all-link a {
+        color: var(--link-color);
+        text-decoration: none;
+
+    }
+        .view-all-link a:hover {
+        text-decoration: underline;
+    }
+
+    .eda-refresh-indicator {
+        float: right;
+        font-size: 0.7rem;
+        font-family: monospace;
+        font-weight: 500;
+        color: #333;
+        padding-top: 5px;
+    }
+
 </style>
 {% endblock %}
 
