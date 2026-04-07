@@ -122,8 +122,8 @@ class ActivityDefinition(FHIRResource):
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -149,16 +149,16 @@ class ActivityDefinition(FHIRResource):
     intent: Optional[Code] = None
     priority: Optional[Code] = None
     doNotPerform: Optional[Boolean] = None
-    timingTiming: Optional[Timing] = None
+    timingTiming: Optional[Timing]
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age] = None
-    timingPeriod: Optional[Period] = None
-    timingRange: Optional[Range] = None
-    timingDuration: Optional[Duration] = None
+    timingAge: Optional[Age]
+    timingPeriod: Optional[Period]
+    timingRange: Optional[Range]
+    timingDuration: Optional[Duration]
     location: Optional[Reference]
     participant: ActivityDefinitionParticipant | FHIRList[ActivityDefinitionParticipant]
-    productReference: Optional[Reference] = None
-    productCodeableConcept: Optional[CodeableConcept] = None
+    productReference: Optional[Reference]
+    productCodeableConcept: Optional[CodeableConcept]
     quantity: Optional[Quantity]
     dosage: Dosage | FHIRList[Dosage]
     bodySite: CodeableConcept | FHIRList[CodeableConcept]
@@ -268,9 +268,9 @@ class AllergyIntolerance(FHIRResource):
     patient: Optional[Reference]
     encounter: Optional[Reference]
     onsetDateTime: Optional[DateTime] = None
-    onsetAge: Optional[Age] = None
-    onsetPeriod: Optional[Period] = None
-    onsetRange: Optional[Range] = None
+    onsetAge: Optional[Age]
+    onsetPeriod: Optional[Period]
+    onsetRange: Optional[Range]
     onsetString: Optional[String] = None
     recordedDate: Optional[DateTime] = None
     recorder: Optional[Reference]
@@ -498,7 +498,7 @@ class BiologicallyDerivedProductCollection(FHIRElement):
     collector: Optional[Reference]
     source: Optional[Reference]
     collectedDateTime: Optional[DateTime] = None
-    collectedPeriod: Optional[Period] = None
+    collectedPeriod: Optional[Period]
 
 
 class BiologicallyDerivedProductProcessing(FHIRElement):
@@ -513,7 +513,7 @@ class BiologicallyDerivedProductProcessing(FHIRElement):
     procedure: Optional[CodeableConcept]
     additive: Optional[Reference]
     timeDateTime: Optional[DateTime] = None
-    timePeriod: Optional[Period] = None
+    timePeriod: Optional[Period]
 
 
 class BiologicallyDerivedProductManipulation(FHIRElement):
@@ -526,7 +526,7 @@ class BiologicallyDerivedProductManipulation(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     description: Optional[String] = None
     timeDateTime: Optional[DateTime] = None
-    timePeriod: Optional[Period] = None
+    timePeriod: Optional[Period]
 
 
 class BiologicallyDerivedProductStorage(FHIRElement):
@@ -921,13 +921,13 @@ class CarePlanActivityDetail(FHIRElement):
     status: Optional[Code] = None
     statusReason: Optional[CodeableConcept]
     doNotPerform: Optional[Boolean] = None
-    scheduledTiming: Optional[Timing] = None
-    scheduledPeriod: Optional[Period] = None
+    scheduledTiming: Optional[Timing]
+    scheduledPeriod: Optional[Period]
     scheduledString: Optional[String] = None
     location: Optional[Reference]
     performer: Reference | FHIRList[Reference]
-    productCodeableConcept: Optional[CodeableConcept] = None
-    productReference: Optional[Reference] = None
+    productCodeableConcept: Optional[CodeableConcept]
+    productReference: Optional[Reference]
     dailyAmount: Optional[Quantity]
     quantity: Optional[Quantity]
     description: Optional[String] = None
@@ -1085,8 +1085,8 @@ class ChargeItem(FHIRResource):
     subject: Optional[Reference]
     context: Optional[Reference]
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period] = None
-    occurrenceTiming: Optional[Timing] = None
+    occurrencePeriod: Optional[Period]
+    occurrenceTiming: Optional[Timing]
     performer: ChargeItemPerformer | FHIRList[ChargeItemPerformer]
     performingOrganization: Optional[Reference]
     requestingOrganization: Optional[Reference]
@@ -1100,8 +1100,8 @@ class ChargeItem(FHIRResource):
     enteredDate: Optional[DateTime] = None
     reason: CodeableConcept | FHIRList[CodeableConcept]
     service: Reference | FHIRList[Reference]
-    productReference: Optional[Reference] = None
-    productCodeableConcept: Optional[CodeableConcept] = None
+    productReference: Optional[Reference]
+    productCodeableConcept: Optional[CodeableConcept]
     account: Reference | FHIRList[Reference]
     note: Annotation | FHIRList[Annotation]
     supportingInformation: Reference | FHIRList[Reference]
@@ -1230,12 +1230,12 @@ class ClaimSupportingInfo(FHIRElement):
     category: Optional[CodeableConcept]
     code: Optional[CodeableConcept]
     timingDate: Optional[Date] = None
-    timingPeriod: Optional[Period] = None
+    timingPeriod: Optional[Period]
     valueBoolean: Optional[Boolean] = None
     valueString: Optional[String] = None
-    valueQuantity: Optional[Quantity] = None
-    valueAttachment: Optional[Attachment] = None
-    valueReference: Optional[Reference] = None
+    valueQuantity: Optional[Quantity]
+    valueAttachment: Optional[Attachment]
+    valueReference: Optional[Reference]
     reason: Optional[CodeableConcept]
 
 
@@ -1248,8 +1248,8 @@ class ClaimDiagnosis(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     sequence: Optional[PositiveInt] = None
-    diagnosisCodeableConcept: Optional[CodeableConcept] = None
-    diagnosisReference: Optional[Reference] = None
+    diagnosisCodeableConcept: Optional[CodeableConcept]
+    diagnosisReference: Optional[Reference]
     type_: CodeableConcept | FHIRList[CodeableConcept]
     onAdmission: Optional[CodeableConcept]
     packageCode: Optional[CodeableConcept]
@@ -1266,8 +1266,8 @@ class ClaimProcedure(FHIRElement):
     sequence: Optional[PositiveInt] = None
     type_: CodeableConcept | FHIRList[CodeableConcept]
     date: Optional[DateTime] = None
-    procedureCodeableConcept: Optional[CodeableConcept] = None
-    procedureReference: Optional[Reference] = None
+    procedureCodeableConcept: Optional[CodeableConcept]
+    procedureReference: Optional[Reference]
     udi: Reference | FHIRList[Reference]
 
 
@@ -1297,8 +1297,8 @@ class ClaimAccident(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     date: Optional[Date] = None
     type_: Optional[CodeableConcept]
-    locationAddress: Optional[Address] = None
-    locationReference: Optional[Reference] = None
+    locationAddress: Optional[Address]
+    locationReference: Optional[Reference]
 
 
 class ClaimItem(FHIRElement):
@@ -1320,10 +1320,10 @@ class ClaimItem(FHIRElement):
     modifier: CodeableConcept | FHIRList[CodeableConcept]
     programCode: CodeableConcept | FHIRList[CodeableConcept]
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period] = None
-    locationCodeableConcept: Optional[CodeableConcept] = None
-    locationAddress: Optional[Address] = None
-    locationReference: Optional[Reference] = None
+    servicedPeriod: Optional[Period]
+    locationCodeableConcept: Optional[CodeableConcept]
+    locationAddress: Optional[Address]
+    locationReference: Optional[Reference]
     quantity: Optional[Quantity]
     unitPrice: Optional[Money]
     factor: Optional[Decimal] = None
@@ -1485,10 +1485,10 @@ class ClaimResponseAddItem(FHIRElement):
     modifier: CodeableConcept | FHIRList[CodeableConcept]
     programCode: CodeableConcept | FHIRList[CodeableConcept]
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period] = None
-    locationCodeableConcept: Optional[CodeableConcept] = None
-    locationAddress: Optional[Address] = None
-    locationReference: Optional[Reference] = None
+    servicedPeriod: Optional[Period]
+    locationCodeableConcept: Optional[CodeableConcept]
+    locationAddress: Optional[Address]
+    locationReference: Optional[Reference]
     quantity: Optional[Quantity]
     unitPrice: Optional[Money]
     factor: Optional[Decimal] = None
@@ -1688,7 +1688,7 @@ class ClinicalImpression(FHIRResource):
     subject: Optional[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     date: Optional[DateTime] = None
     assessor: Optional[Reference]
     previous: Optional[Reference]
@@ -1766,7 +1766,7 @@ class CodeSystemConceptProperty(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[Code] = None
     valueCode: Optional[Code] = None
-    valueCoding: Optional[Coding] = None
+    valueCoding: Optional[Coding]
     valueString: Optional[String] = None
     valueInteger: Optional[Integer] = None
     valueBoolean: Optional[Boolean] = None
@@ -1824,8 +1824,8 @@ class CommunicationPayload(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     contentString: Optional[String] = None
-    contentAttachment: Optional[Attachment] = None
-    contentReference: Optional[Reference] = None
+    contentAttachment: Optional[Attachment]
+    contentReference: Optional[Reference]
 
 
 class Communication(FHIRResource):
@@ -1875,8 +1875,8 @@ class CommunicationRequestPayload(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     contentString: Optional[String] = None
-    contentAttachment: Optional[Attachment] = None
-    contentReference: Optional[Reference] = None
+    contentAttachment: Optional[Attachment]
+    contentReference: Optional[Reference]
 
 
 class CommunicationRequest(FHIRResource):
@@ -1908,7 +1908,7 @@ class CommunicationRequest(FHIRResource):
     encounter: Optional[Reference]
     payload: CommunicationRequestPayload | FHIRList[CommunicationRequestPayload]
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period] = None
+    occurrencePeriod: Optional[Period]
     authoredOn: Optional[DateTime] = None
     requester: Optional[Reference]
     recipient: Reference | FHIRList[Reference]
@@ -1980,8 +1980,8 @@ class CompositionRelatesTo(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[Code] = None
-    targetIdentifier: Optional[Identifier] = None
-    targetReference: Optional[Reference] = None
+    targetIdentifier: Optional[Identifier]
+    targetReference: Optional[Reference]
 
 
 class CompositionEvent(FHIRElement):
@@ -2196,14 +2196,14 @@ class Condition(FHIRResource):
     subject: Optional[Reference]
     encounter: Optional[Reference]
     onsetDateTime: Optional[DateTime] = None
-    onsetAge: Optional[Age] = None
-    onsetPeriod: Optional[Period] = None
-    onsetRange: Optional[Range] = None
+    onsetAge: Optional[Age]
+    onsetPeriod: Optional[Period]
+    onsetRange: Optional[Range]
     onsetString: Optional[String] = None
     abatementDateTime: Optional[DateTime] = None
-    abatementAge: Optional[Age] = None
-    abatementPeriod: Optional[Period] = None
-    abatementRange: Optional[Range] = None
+    abatementAge: Optional[Age]
+    abatementPeriod: Optional[Period]
+    abatementRange: Optional[Range]
     abatementString: Optional[String] = None
     recordedDate: Optional[DateTime] = None
     recorder: Optional[Reference]
@@ -2300,8 +2300,8 @@ class Consent(FHIRResource):
     dateTime: Optional[DateTime] = None
     performer: Reference | FHIRList[Reference]
     organization: Reference | FHIRList[Reference]
-    sourceAttachment: Optional[Attachment] = None
-    sourceReference: Optional[Reference] = None
+    sourceAttachment: Optional[Attachment]
+    sourceReference: Optional[Reference]
     policy: ConsentPolicy | FHIRList[ConsentPolicy]
     policyRule: Optional[CodeableConcept]
     verification: ConsentVerification | FHIRList[ConsentVerification]
@@ -2334,8 +2334,8 @@ class ContractTerm(FHIRElement):
     identifier: Optional[Identifier]
     issued: Optional[DateTime] = None
     applies: Optional[Period]
-    topicCodeableConcept: Optional[CodeableConcept] = None
-    topicReference: Optional[Reference] = None
+    topicCodeableConcept: Optional[CodeableConcept]
+    topicReference: Optional[Reference]
     type_: Optional[CodeableConcept]
     subType: Optional[CodeableConcept]
     text: Optional[String] = None
@@ -2405,10 +2405,10 @@ class ContractTermOfferAnswer(FHIRElement):
     valueTime: Optional[Time] = None
     valueString: Optional[String] = None
     valueUri: Optional[Uri] = None
-    valueAttachment: Optional[Attachment] = None
-    valueCoding: Optional[Coding] = None
-    valueQuantity: Optional[Quantity] = None
-    valueReference: Optional[Reference] = None
+    valueAttachment: Optional[Attachment]
+    valueCoding: Optional[Coding]
+    valueQuantity: Optional[Quantity]
+    valueReference: Optional[Reference]
 
 
 class ContractTermAsset(FHIRElement):
@@ -2455,8 +2455,8 @@ class ContractTermAssetValuedItem(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    entityCodeableConcept: Optional[CodeableConcept] = None
-    entityReference: Optional[Reference] = None
+    entityCodeableConcept: Optional[CodeableConcept]
+    entityReference: Optional[Reference]
     identifier: Optional[Identifier]
     effectiveTime: Optional[DateTime] = None
     quantity: Optional[Quantity]
@@ -2489,8 +2489,8 @@ class ContractTermAction(FHIRElement):
     context: Optional[Reference]
     contextLinkId: String | FHIRList[String] = None
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period] = None
-    occurrenceTiming: Optional[Timing] = None
+    occurrencePeriod: Optional[Period]
+    occurrenceTiming: Optional[Timing]
     requester: Reference | FHIRList[Reference]
     requesterLinkId: String | FHIRList[String] = None
     performerType: CodeableConcept | FHIRList[CodeableConcept]
@@ -2536,8 +2536,8 @@ class ContractFriendly(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    contentAttachment: Optional[Attachment] = None
-    contentReference: Optional[Reference] = None
+    contentAttachment: Optional[Attachment]
+    contentReference: Optional[Reference]
 
 
 class ContractLegal(FHIRElement):
@@ -2548,8 +2548,8 @@ class ContractLegal(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    contentAttachment: Optional[Attachment] = None
-    contentReference: Optional[Reference] = None
+    contentAttachment: Optional[Attachment]
+    contentReference: Optional[Reference]
 
 
 class ContractRule(FHIRElement):
@@ -2560,8 +2560,8 @@ class ContractRule(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    contentAttachment: Optional[Attachment] = None
-    contentReference: Optional[Reference] = None
+    contentAttachment: Optional[Attachment]
+    contentReference: Optional[Reference]
 
 
 class Contract(FHIRResource):
@@ -2599,8 +2599,8 @@ class Contract(FHIRResource):
     alias: String | FHIRList[String] = None
     author: Optional[Reference]
     scope: Optional[CodeableConcept]
-    topicCodeableConcept: Optional[CodeableConcept] = None
-    topicReference: Optional[Reference] = None
+    topicCodeableConcept: Optional[CodeableConcept]
+    topicReference: Optional[Reference]
     type_: Optional[CodeableConcept]
     subType: CodeableConcept | FHIRList[CodeableConcept]
     contentDefinition: Optional[ContractContentDefinition]
@@ -2611,8 +2611,8 @@ class Contract(FHIRResource):
     friendly: ContractFriendly | FHIRList[ContractFriendly]
     legal: ContractLegal | FHIRList[ContractLegal]
     rule: ContractRule | FHIRList[ContractRule]
-    legallyBindingAttachment: Optional[Attachment] = None
-    legallyBindingReference: Optional[Reference] = None
+    legallyBindingAttachment: Optional[Attachment]
+    legallyBindingReference: Optional[Reference]
 
 
 class CoverageClass(FHIRElement):
@@ -2636,8 +2636,8 @@ class CoverageCostToBeneficiary(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     type_: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueMoney: Optional[Money] = None
+    valueQuantity: Optional[Quantity]
+    valueMoney: Optional[Money]
     exception: CoverageCostToBeneficiaryException | FHIRList[CoverageCostToBeneficiaryException]
 
 
@@ -2735,8 +2735,8 @@ class CoverageEligibilityRequestItemDiagnosis(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    diagnosisCodeableConcept: Optional[CodeableConcept] = None
-    diagnosisReference: Optional[Reference] = None
+    diagnosisCodeableConcept: Optional[CodeableConcept]
+    diagnosisReference: Optional[Reference]
 
 
 class CoverageEligibilityRequest(FHIRResource):
@@ -2759,7 +2759,7 @@ class CoverageEligibilityRequest(FHIRResource):
     purpose: Code | FHIRList[Code] = None
     patient: Optional[Reference]
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period] = None
+    servicedPeriod: Optional[Period]
     created: Optional[DateTime] = None
     enterer: Optional[Reference]
     provider: Optional[Reference]
@@ -2817,10 +2817,10 @@ class CoverageEligibilityResponseInsuranceItemBenefit(FHIRElement):
     type_: Optional[CodeableConcept]
     allowedUnsignedInt: Optional[UnsignedInt] = None
     allowedString: Optional[String] = None
-    allowedMoney: Optional[Money] = None
+    allowedMoney: Optional[Money]
     usedUnsignedInt: Optional[UnsignedInt] = None
     usedString: Optional[String] = None
-    usedMoney: Optional[Money] = None
+    usedMoney: Optional[Money]
 
 
 class CoverageEligibilityResponseError(FHIRElement):
@@ -2852,7 +2852,7 @@ class CoverageEligibilityResponse(FHIRResource):
     purpose: Code | FHIRList[Code] = None
     patient: Optional[Reference]
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period] = None
+    servicedPeriod: Optional[Period]
     created: Optional[DateTime] = None
     requestor: Optional[Reference]
     request: Optional[Reference]
@@ -2908,7 +2908,7 @@ class DetectedIssue(FHIRResource):
     severity: Optional[Code] = None
     patient: Optional[Reference]
     identifiedDateTime: Optional[DateTime] = None
-    identifiedPeriod: Optional[Period] = None
+    identifiedPeriod: Optional[Period]
     author: Optional[Reference]
     implicated: Reference | FHIRList[Reference]
     evidence: DetectedIssueEvidence | FHIRList[DetectedIssueEvidence]
@@ -3105,7 +3105,7 @@ class DeviceDefinition(FHIRResource):
     identifier: Identifier | FHIRList[Identifier]
     udiDeviceIdentifier: DeviceDefinitionUdiDeviceIdentifier | FHIRList[DeviceDefinitionUdiDeviceIdentifier]
     manufacturerString: Optional[String] = None
-    manufacturerReference: Optional[Reference] = None
+    manufacturerReference: Optional[Reference]
     deviceName: DeviceDefinitionDeviceName | FHIRList[DeviceDefinitionDeviceName]
     modelNumber: Optional[String] = None
     type_: Optional[CodeableConcept]
@@ -3173,9 +3173,9 @@ class DeviceRequestParameter(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
+    valueCodeableConcept: Optional[CodeableConcept]
+    valueQuantity: Optional[Quantity]
+    valueRange: Optional[Range]
     valueBoolean: Optional[Boolean] = None
 
 
@@ -3202,14 +3202,14 @@ class DeviceRequest(FHIRResource):
     status: Optional[Code] = None
     intent: Optional[Code] = None
     priority: Optional[Code] = None
-    codeReference: Optional[Reference] = None
-    codeCodeableConcept: Optional[CodeableConcept] = None
+    codeReference: Optional[Reference]
+    codeCodeableConcept: Optional[CodeableConcept]
     parameter: DeviceRequestParameter | FHIRList[DeviceRequestParameter]
     subject: Optional[Reference]
     encounter: Optional[Reference]
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period] = None
-    occurrenceTiming: Optional[Timing] = None
+    occurrencePeriod: Optional[Period]
+    occurrenceTiming: Optional[Timing]
     authoredOn: Optional[DateTime] = None
     requester: Optional[Reference]
     performerType: Optional[CodeableConcept]
@@ -3241,8 +3241,8 @@ class DeviceUseStatement(FHIRResource):
     status: Optional[Code] = None
     subject: Optional[Reference]
     derivedFrom: Reference | FHIRList[Reference]
-    timingTiming: Optional[Timing] = None
-    timingPeriod: Optional[Period] = None
+    timingTiming: Optional[Timing]
+    timingPeriod: Optional[Period]
     timingDateTime: Optional[DateTime] = None
     recordedOn: Optional[DateTime] = None
     source: Optional[Reference]
@@ -3286,7 +3286,7 @@ class DiagnosticReport(FHIRResource):
     subject: Optional[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
     resultsInterpreter: Reference | FHIRList[Reference]
@@ -3789,8 +3789,8 @@ class EventDefinition(FHIRResource):
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -3864,18 +3864,18 @@ class EvidenceVariableCharacteristic(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     description: Optional[String] = None
-    definitionReference: Optional[Reference] = None
+    definitionReference: Optional[Reference]
     definitionCanonical: Optional[Canonical] = None
-    definitionCodeableConcept: Optional[CodeableConcept] = None
-    definitionExpression: Optional[Expression] = None
-    definitionDataRequirement: Optional[DataRequirement] = None
-    definitionTriggerDefinition: Optional[TriggerDefinition] = None
+    definitionCodeableConcept: Optional[CodeableConcept]
+    definitionExpression: Optional[Expression]
+    definitionDataRequirement: Optional[DataRequirement]
+    definitionTriggerDefinition: Optional[TriggerDefinition]
     usageContext: UsageContext | FHIRList[UsageContext]
     exclude: Optional[Boolean] = None
     participantEffectiveDateTime: Optional[DateTime] = None
-    participantEffectivePeriod: Optional[Period] = None
-    participantEffectiveDuration: Optional[Duration] = None
-    participantEffectiveTiming: Optional[Timing] = None
+    participantEffectivePeriod: Optional[Period]
+    participantEffectiveDuration: Optional[Duration]
+    participantEffectiveTiming: Optional[Timing]
     timeFromStart: Optional[Duration]
     groupMeasure: Optional[Code] = None
 
@@ -4111,12 +4111,12 @@ class ExplanationOfBenefitSupportingInfo(FHIRElement):
     category: Optional[CodeableConcept]
     code: Optional[CodeableConcept]
     timingDate: Optional[Date] = None
-    timingPeriod: Optional[Period] = None
+    timingPeriod: Optional[Period]
     valueBoolean: Optional[Boolean] = None
     valueString: Optional[String] = None
-    valueQuantity: Optional[Quantity] = None
-    valueAttachment: Optional[Attachment] = None
-    valueReference: Optional[Reference] = None
+    valueQuantity: Optional[Quantity]
+    valueAttachment: Optional[Attachment]
+    valueReference: Optional[Reference]
     reason: Optional[Coding]
 
 
@@ -4129,8 +4129,8 @@ class ExplanationOfBenefitDiagnosis(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     sequence: Optional[PositiveInt] = None
-    diagnosisCodeableConcept: Optional[CodeableConcept] = None
-    diagnosisReference: Optional[Reference] = None
+    diagnosisCodeableConcept: Optional[CodeableConcept]
+    diagnosisReference: Optional[Reference]
     type_: CodeableConcept | FHIRList[CodeableConcept]
     onAdmission: Optional[CodeableConcept]
     packageCode: Optional[CodeableConcept]
@@ -4147,8 +4147,8 @@ class ExplanationOfBenefitProcedure(FHIRElement):
     sequence: Optional[PositiveInt] = None
     type_: CodeableConcept | FHIRList[CodeableConcept]
     date: Optional[DateTime] = None
-    procedureCodeableConcept: Optional[CodeableConcept] = None
-    procedureReference: Optional[Reference] = None
+    procedureCodeableConcept: Optional[CodeableConcept]
+    procedureReference: Optional[Reference]
     udi: Reference | FHIRList[Reference]
 
 
@@ -4174,8 +4174,8 @@ class ExplanationOfBenefitAccident(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     date: Optional[Date] = None
     type_: Optional[CodeableConcept]
-    locationAddress: Optional[Address] = None
-    locationReference: Optional[Reference] = None
+    locationAddress: Optional[Address]
+    locationReference: Optional[Reference]
 
 
 class ExplanationOfBenefitItem(FHIRElement):
@@ -4197,10 +4197,10 @@ class ExplanationOfBenefitItem(FHIRElement):
     modifier: CodeableConcept | FHIRList[CodeableConcept]
     programCode: CodeableConcept | FHIRList[CodeableConcept]
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period] = None
-    locationCodeableConcept: Optional[CodeableConcept] = None
-    locationAddress: Optional[Address] = None
-    locationReference: Optional[Reference] = None
+    servicedPeriod: Optional[Period]
+    locationCodeableConcept: Optional[CodeableConcept]
+    locationAddress: Optional[Address]
+    locationReference: Optional[Reference]
     quantity: Optional[Quantity]
     unitPrice: Optional[Money]
     factor: Optional[Decimal] = None
@@ -4288,10 +4288,10 @@ class ExplanationOfBenefitAddItem(FHIRElement):
     modifier: CodeableConcept | FHIRList[CodeableConcept]
     programCode: CodeableConcept | FHIRList[CodeableConcept]
     servicedDate: Optional[Date] = None
-    servicedPeriod: Optional[Period] = None
-    locationCodeableConcept: Optional[CodeableConcept] = None
-    locationAddress: Optional[Address] = None
-    locationReference: Optional[Reference] = None
+    servicedPeriod: Optional[Period]
+    locationCodeableConcept: Optional[CodeableConcept]
+    locationAddress: Optional[Address]
+    locationReference: Optional[Reference]
     quantity: Optional[Quantity]
     unitPrice: Optional[Money]
     factor: Optional[Decimal] = None
@@ -4405,9 +4405,9 @@ class ExplanationOfBenefitBenefitBalanceFinancial(FHIRElement):
     type_: Optional[CodeableConcept]
     allowedUnsignedInt: Optional[UnsignedInt] = None
     allowedString: Optional[String] = None
-    allowedMoney: Optional[Money] = None
+    allowedMoney: Optional[Money]
     usedUnsignedInt: Optional[UnsignedInt] = None
-    usedMoney: Optional[Money] = None
+    usedMoney: Optional[Money]
 
 
 class ExplanationOfBenefit(FHIRResource):
@@ -4479,9 +4479,9 @@ class FamilyMemberHistoryCondition(FHIRElement):
     code: Optional[CodeableConcept]
     outcome: Optional[CodeableConcept]
     contributedToDeath: Optional[Boolean] = None
-    onsetAge: Optional[Age] = None
-    onsetRange: Optional[Range] = None
-    onsetPeriod: Optional[Period] = None
+    onsetAge: Optional[Age]
+    onsetRange: Optional[Range]
+    onsetPeriod: Optional[Period]
     onsetString: Optional[String] = None
     note: Annotation | FHIRList[Annotation]
 
@@ -4510,16 +4510,16 @@ class FamilyMemberHistory(FHIRResource):
     name: Optional[String] = None
     relationship: Optional[CodeableConcept]
     sex: Optional[CodeableConcept]
-    bornPeriod: Optional[Period] = None
+    bornPeriod: Optional[Period]
     bornDate: Optional[Date] = None
     bornString: Optional[String] = None
-    ageAge: Optional[Age] = None
-    ageRange: Optional[Range] = None
+    ageAge: Optional[Age]
+    ageRange: Optional[Range]
     ageString: Optional[String] = None
     estimatedAge: Optional[Boolean] = None
     deceasedBoolean: Optional[Boolean] = None
-    deceasedAge: Optional[Age] = None
-    deceasedRange: Optional[Range] = None
+    deceasedAge: Optional[Age]
+    deceasedRange: Optional[Range]
     deceasedDate: Optional[Date] = None
     deceasedString: Optional[String] = None
     reasonCode: CodeableConcept | FHIRList[CodeableConcept]
@@ -4560,15 +4560,15 @@ class GoalTarget(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity] = None
-    detailRange: Optional[Range] = None
-    detailCodeableConcept: Optional[CodeableConcept] = None
+    detailQuantity: Optional[Quantity]
+    detailRange: Optional[Range]
+    detailCodeableConcept: Optional[CodeableConcept]
     detailString: Optional[String] = None
     detailBoolean: Optional[Boolean] = None
     detailInteger: Optional[Integer] = None
-    detailRatio: Optional[Ratio] = None
+    detailRatio: Optional[Ratio]
     dueDate: Optional[Date] = None
-    dueDuration: Optional[Duration] = None
+    dueDuration: Optional[Duration]
 
 
 class Goal(FHIRResource):
@@ -4593,7 +4593,7 @@ class Goal(FHIRResource):
     description: Optional[CodeableConcept]
     subject: Optional[Reference]
     startDate: Optional[Date] = None
-    startCodeableConcept: Optional[CodeableConcept] = None
+    startCodeableConcept: Optional[CodeableConcept]
     target: GoalTarget | FHIRList[GoalTarget]
     statusDate: Optional[Date] = None
     statusReason: Optional[String] = None
@@ -4686,11 +4686,11 @@ class GroupCharacteristic(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueCodeableConcept: Optional[CodeableConcept]
     valueBoolean: Optional[Boolean] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueReference: Optional[Reference] = None
+    valueQuantity: Optional[Quantity]
+    valueRange: Optional[Range]
+    valueReference: Optional[Reference]
     exclude: Optional[Boolean] = None
     period: Optional[Period]
 
@@ -4750,7 +4750,7 @@ class GuidanceResponse(FHIRResource):
     identifier: Identifier | FHIRList[Identifier]
     moduleUri: Optional[Uri] = None
     moduleCanonical: Optional[Canonical] = None
-    moduleCodeableConcept: Optional[CodeableConcept] = None
+    moduleCodeableConcept: Optional[CodeableConcept]
     status: Optional[Code] = None
     subject: Optional[Reference]
     encounter: Optional[Reference]
@@ -5177,7 +5177,7 @@ class ImplementationGuideDefinitionPage(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     nameUrl: Optional[Url] = None
-    nameReference: Optional[Reference] = None
+    nameReference: Optional[Reference]
     title: Optional[String] = None
     generation: Optional[Code] = None
     page: Any = None
@@ -5441,8 +5441,8 @@ class InvoiceLineItem(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     sequence: Optional[PositiveInt] = None
-    chargeItemReference: Optional[Reference] = None
-    chargeItemCodeableConcept: Optional[CodeableConcept] = None
+    chargeItemReference: Optional[Reference]
+    chargeItemCodeableConcept: Optional[CodeableConcept]
     priceComponent: InvoiceLineItemPriceComponent | FHIRList[InvoiceLineItemPriceComponent]
 
 
@@ -5513,8 +5513,8 @@ class Library(FHIRResource):
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
     type_: Optional[CodeableConcept]
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -5750,8 +5750,8 @@ class Measure(FHIRResource):
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -5908,7 +5908,7 @@ class Media(FHIRResource):
     subject: Optional[Reference]
     encounter: Optional[Reference]
     createdDateTime: Optional[DateTime] = None
-    createdPeriod: Optional[Period] = None
+    createdPeriod: Optional[Period]
     issued: Optional[Instant] = None
     operator: Optional[Reference]
     reasonCode: CodeableConcept | FHIRList[CodeableConcept]
@@ -5931,8 +5931,8 @@ class MedicationIngredient(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    itemCodeableConcept: Optional[CodeableConcept] = None
-    itemReference: Optional[Reference] = None
+    itemCodeableConcept: Optional[CodeableConcept]
+    itemReference: Optional[Reference]
     isActive: Optional[Boolean] = None
     strength: Optional[Ratio]
 
@@ -5995,8 +5995,8 @@ class MedicationAdministrationDosage(FHIRElement):
     route: Optional[CodeableConcept]
     method: Optional[CodeableConcept]
     dose: Optional[Quantity]
-    rateRatio: Optional[Ratio] = None
-    rateQuantity: Optional[Quantity] = None
+    rateRatio: Optional[Ratio]
+    rateQuantity: Optional[Quantity]
 
 
 class MedicationAdministration(FHIRResource):
@@ -6019,13 +6019,13 @@ class MedicationAdministration(FHIRResource):
     status: Optional[Code] = None
     statusReason: CodeableConcept | FHIRList[CodeableConcept]
     category: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept] = None
-    medicationReference: Optional[Reference] = None
+    medicationCodeableConcept: Optional[CodeableConcept]
+    medicationReference: Optional[Reference]
     subject: Optional[Reference]
     context: Optional[Reference]
     supportingInformation: Reference | FHIRList[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     performer: MedicationAdministrationPerformer | FHIRList[MedicationAdministrationPerformer]
     reasonCode: CodeableConcept | FHIRList[CodeableConcept]
     reasonReference: Reference | FHIRList[Reference]
@@ -6077,11 +6077,11 @@ class MedicationDispense(FHIRResource):
     identifier: Identifier | FHIRList[Identifier]
     partOf: Reference | FHIRList[Reference]
     status: Optional[Code] = None
-    statusReasonCodeableConcept: Optional[CodeableConcept] = None
-    statusReasonReference: Optional[Reference] = None
+    statusReasonCodeableConcept: Optional[CodeableConcept]
+    statusReasonReference: Optional[Reference]
     category: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept] = None
-    medicationReference: Optional[Reference] = None
+    medicationCodeableConcept: Optional[CodeableConcept]
+    medicationReference: Optional[Reference]
     subject: Optional[Reference]
     context: Optional[Reference]
     supportingInformation: Reference | FHIRList[Reference]
@@ -6132,8 +6132,8 @@ class MedicationKnowledgeIngredient(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    itemCodeableConcept: Optional[CodeableConcept] = None
-    itemReference: Optional[Reference] = None
+    itemCodeableConcept: Optional[CodeableConcept]
+    itemReference: Optional[Reference]
     isActive: Optional[Boolean] = None
     strength: Optional[Ratio]
 
@@ -6170,8 +6170,8 @@ class MedicationKnowledgeAdministrationGuidelines(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     dosage: MedicationKnowledgeAdministrationGuidelinesDosage | FHIRList[MedicationKnowledgeAdministrationGuidelinesDosage]
-    indicationCodeableConcept: Optional[CodeableConcept] = None
-    indicationReference: Optional[Reference] = None
+    indicationCodeableConcept: Optional[CodeableConcept]
+    indicationReference: Optional[Reference]
     patientCharacteristics: MedicationKnowledgeAdministrationGuidelinesPatientCharacteristics | FHIRList[MedicationKnowledgeAdministrationGuidelinesPatientCharacteristics]
 
 
@@ -6194,8 +6194,8 @@ class MedicationKnowledgeAdministrationGuidelinesPatientCharacteristics(FHIRElem
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    characteristicCodeableConcept: Optional[CodeableConcept] = None
-    characteristicQuantity: Optional[Quantity] = None
+    characteristicCodeableConcept: Optional[CodeableConcept]
+    characteristicQuantity: Optional[Quantity]
     value: String | FHIRList[String] = None
 
 
@@ -6230,9 +6230,9 @@ class MedicationKnowledgeDrugCharacteristic(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     type_: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     valueBase64Binary: Optional[Base64Binary] = None
 
 
@@ -6366,7 +6366,7 @@ class MedicationRequestSubstitution(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     allowedBoolean: Optional[Boolean] = None
-    allowedCodeableConcept: Optional[CodeableConcept] = None
+    allowedCodeableConcept: Optional[CodeableConcept]
     reason: Optional[CodeableConcept]
 
 
@@ -6392,9 +6392,9 @@ class MedicationRequest(FHIRResource):
     priority: Optional[Code] = None
     doNotPerform: Optional[Boolean] = None
     reportedBoolean: Optional[Boolean] = None
-    reportedReference: Optional[Reference] = None
-    medicationCodeableConcept: Optional[CodeableConcept] = None
-    medicationReference: Optional[Reference] = None
+    reportedReference: Optional[Reference]
+    medicationCodeableConcept: Optional[CodeableConcept]
+    medicationReference: Optional[Reference]
     subject: Optional[Reference]
     encounter: Optional[Reference]
     supportingInformation: Reference | FHIRList[Reference]
@@ -6440,12 +6440,12 @@ class MedicationStatement(FHIRResource):
     status: Optional[Code] = None
     statusReason: CodeableConcept | FHIRList[CodeableConcept]
     category: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept] = None
-    medicationReference: Optional[Reference] = None
+    medicationCodeableConcept: Optional[CodeableConcept]
+    medicationReference: Optional[Reference]
     subject: Optional[Reference]
     context: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     dateAsserted: Optional[DateTime] = None
     informationSource: Optional[Reference]
     derivedFrom: Reference | FHIRList[Reference]
@@ -6516,8 +6516,8 @@ class MedicinalProductSpecialDesignation(FHIRElement):
     identifier: Identifier | FHIRList[Identifier]
     type_: Optional[CodeableConcept]
     intendedUse: Optional[CodeableConcept]
-    indicationCodeableConcept: Optional[CodeableConcept] = None
-    indicationReference: Optional[Reference] = None
+    indicationCodeableConcept: Optional[CodeableConcept]
+    indicationReference: Optional[Reference]
     status: Optional[CodeableConcept]
     date: Optional[DateTime] = None
     species: Optional[CodeableConcept]
@@ -6582,7 +6582,7 @@ class MedicinalProductAuthorizationProcedure(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     identifier: Optional[Identifier]
     type_: Optional[CodeableConcept]
-    datePeriod: Optional[Period] = None
+    datePeriod: Optional[Period]
     dateDateTime: Optional[DateTime] = None
     application: Any = None
 
@@ -6627,8 +6627,8 @@ class MedicinalProductContraindicationOtherTherapy(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     therapyRelationshipType: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept] = None
-    medicationReference: Optional[Reference] = None
+    medicationCodeableConcept: Optional[CodeableConcept]
+    medicationReference: Optional[Reference]
 
 
 class MedicinalProductContraindication(FHIRResource):
@@ -6662,8 +6662,8 @@ class MedicinalProductIndicationOtherTherapy(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     therapyRelationshipType: Optional[CodeableConcept]
-    medicationCodeableConcept: Optional[CodeableConcept] = None
-    medicationReference: Optional[Reference] = None
+    medicationCodeableConcept: Optional[CodeableConcept]
+    medicationReference: Optional[Reference]
 
 
 class MedicinalProductIndication(FHIRResource):
@@ -6773,8 +6773,8 @@ class MedicinalProductInteractionInteractant(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    itemReference: Optional[Reference] = None
-    itemCodeableConcept: Optional[CodeableConcept] = None
+    itemReference: Optional[Reference]
+    itemCodeableConcept: Optional[CodeableConcept]
 
 
 class MedicinalProductInteraction(FHIRResource):
@@ -7025,7 +7025,7 @@ class MessageDefinition(FHIRResource):
     copyright: Optional[Markdown] = None
     base: Optional[Canonical] = None
     parent: Canonical | FHIRList[Canonical] = None
-    eventCoding: Optional[Coding] = None
+    eventCoding: Optional[Coding]
     eventUri: Optional[Uri] = None
     category: Optional[Code] = None
     focus: MessageDefinitionFocus | FHIRList[MessageDefinitionFocus]
@@ -7087,7 +7087,7 @@ class MessageHeader(FHIRResource):
     contained: Resource | FHIRList[Resource]
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    eventCoding: Optional[Coding] = None
+    eventCoding: Optional[Coding]
     eventUri: Optional[Uri] = None
     destination: MessageHeaderDestination | FHIRList[MessageHeaderDestination]
     sender: Optional[Reference]
@@ -7377,8 +7377,8 @@ class NutritionOrderEnteralFormulaAdministration(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     schedule: Optional[Timing]
     quantity: Optional[Quantity]
-    rateQuantity: Optional[Quantity] = None
-    rateRatio: Optional[Ratio] = None
+    rateQuantity: Optional[Quantity]
+    rateRatio: Optional[Ratio]
 
 
 class NutritionOrder(FHIRResource):
@@ -7437,17 +7437,17 @@ class ObservationComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -7477,22 +7477,22 @@ class Observation(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
-    effectiveTiming: Optional[Timing] = None
+    effectivePeriod: Optional[Period]
+    effectiveTiming: Optional[Timing]
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -7782,37 +7782,37 @@ class ParametersParameter(FHIRElement):
     valueUri: Optional[Uri] = None
     valueUrl: Optional[Url] = None
     valueUuid: Optional[Uuid] = None
-    valueAddress: Optional[Address] = None
-    valueAge: Optional[Age] = None
-    valueAnnotation: Optional[Annotation] = None
-    valueAttachment: Optional[Attachment] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
-    valueCoding: Optional[Coding] = None
-    valueContactPoint: Optional[ContactPoint] = None
-    valueCount: Optional[Count] = None
-    valueDistance: Optional[Distance] = None
-    valueDuration: Optional[Duration] = None
-    valueHumanName: Optional[HumanName] = None
-    valueIdentifier: Optional[Identifier] = None
-    valueMoney: Optional[Money] = None
-    valuePeriod: Optional[Period] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueReference: Optional[Reference] = None
-    valueSampledData: Optional[SampledData] = None
-    valueSignature: Optional[Signature] = None
-    valueTiming: Optional[Timing] = None
-    valueContactDetail: Optional[ContactDetail] = None
-    valueContributor: Optional[Contributor] = None
-    valueDataRequirement: Optional[DataRequirement] = None
-    valueExpression: Optional[Expression] = None
-    valueParameterDefinition: Optional[ParameterDefinition] = None
-    valueRelatedArtifact: Optional[RelatedArtifact] = None
-    valueTriggerDefinition: Optional[TriggerDefinition] = None
-    valueUsageContext: Optional[UsageContext] = None
-    valueDosage: Optional[Dosage] = None
-    valueMeta: Optional[Meta] = None
+    valueAddress: Optional[Address]
+    valueAge: Optional[Age]
+    valueAnnotation: Optional[Annotation]
+    valueAttachment: Optional[Attachment]
+    valueCodeableConcept: Optional[CodeableConcept]
+    valueCoding: Optional[Coding]
+    valueContactPoint: Optional[ContactPoint]
+    valueCount: Optional[Count]
+    valueDistance: Optional[Distance]
+    valueDuration: Optional[Duration]
+    valueHumanName: Optional[HumanName]
+    valueIdentifier: Optional[Identifier]
+    valueMoney: Optional[Money]
+    valuePeriod: Optional[Period]
+    valueQuantity: Optional[Quantity]
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueReference: Optional[Reference]
+    valueSampledData: Optional[SampledData]
+    valueSignature: Optional[Signature]
+    valueTiming: Optional[Timing]
+    valueContactDetail: Optional[ContactDetail]
+    valueContributor: Optional[Contributor]
+    valueDataRequirement: Optional[DataRequirement]
+    valueExpression: Optional[Expression]
+    valueParameterDefinition: Optional[ParameterDefinition]
+    valueRelatedArtifact: Optional[RelatedArtifact]
+    valueTriggerDefinition: Optional[TriggerDefinition]
+    valueUsageContext: Optional[UsageContext]
+    valueDosage: Optional[Dosage]
+    valueMeta: Optional[Meta]
     resource: Optional[Resource]
     part: Any = None
 
@@ -8049,9 +8049,9 @@ class PlanDefinitionGoalTarget(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity] = None
-    detailRange: Optional[Range] = None
-    detailCodeableConcept: Optional[CodeableConcept] = None
+    detailQuantity: Optional[Quantity]
+    detailRange: Optional[Range]
+    detailCodeableConcept: Optional[CodeableConcept]
     due: Optional[Duration]
 
 
@@ -8072,19 +8072,19 @@ class PlanDefinitionAction(FHIRElement):
     reason: CodeableConcept | FHIRList[CodeableConcept]
     documentation: RelatedArtifact | FHIRList[RelatedArtifact]
     goalId: Id | FHIRList[Id] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     trigger: TriggerDefinition | FHIRList[TriggerDefinition]
     condition: PlanDefinitionActionCondition | FHIRList[PlanDefinitionActionCondition]
     input: DataRequirement | FHIRList[DataRequirement]
     output: DataRequirement | FHIRList[DataRequirement]
     relatedAction: PlanDefinitionActionRelatedAction | FHIRList[PlanDefinitionActionRelatedAction]
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age] = None
-    timingPeriod: Optional[Period] = None
-    timingDuration: Optional[Duration] = None
-    timingRange: Optional[Range] = None
-    timingTiming: Optional[Timing] = None
+    timingAge: Optional[Age]
+    timingPeriod: Optional[Period]
+    timingDuration: Optional[Duration]
+    timingRange: Optional[Range]
+    timingTiming: Optional[Timing]
     participant: PlanDefinitionActionParticipant | FHIRList[PlanDefinitionActionParticipant]
     type_: Optional[CodeableConcept]
     groupingBehavior: Optional[Code] = None
@@ -8120,8 +8120,8 @@ class PlanDefinitionActionRelatedAction(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration] = None
-    offsetRange: Optional[Range] = None
+    offsetDuration: Optional[Duration]
+    offsetRange: Optional[Range]
 
 
 class PlanDefinitionActionParticipant(FHIRElement):
@@ -8169,8 +8169,8 @@ class PlanDefinition(FHIRResource):
     type_: Optional[CodeableConcept]
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -8334,10 +8334,10 @@ class Procedure(FHIRResource):
     subject: Optional[Reference]
     encounter: Optional[Reference]
     performedDateTime: Optional[DateTime] = None
-    performedPeriod: Optional[Period] = None
+    performedPeriod: Optional[Period]
     performedString: Optional[String] = None
-    performedAge: Optional[Age] = None
-    performedRange: Optional[Range] = None
+    performedAge: Optional[Age]
+    performedRange: Optional[Range]
     recorder: Optional[Reference]
     asserter: Optional[Reference]
     performer: ProcedurePerformer | FHIRList[ProcedurePerformer]
@@ -8396,7 +8396,7 @@ class Provenance(FHIRResource):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     target: Reference | FHIRList[Reference]
-    occurredPeriod: Optional[Period] = None
+    occurredPeriod: Optional[Period]
     occurredDateTime: Optional[DateTime] = None
     recorded: Optional[Instant] = None
     policy: Uri | FHIRList[Uri] = None
@@ -8450,9 +8450,9 @@ class QuestionnaireItemEnableWhen(FHIRElement):
     answerDateTime: Optional[DateTime] = None
     answerTime: Optional[Time] = None
     answerString: Optional[String] = None
-    answerCoding: Optional[Coding] = None
-    answerQuantity: Optional[Quantity] = None
-    answerReference: Optional[Reference] = None
+    answerCoding: Optional[Coding]
+    answerQuantity: Optional[Quantity]
+    answerReference: Optional[Reference]
 
 
 class QuestionnaireItemAnswerOption(FHIRElement):
@@ -8467,8 +8467,8 @@ class QuestionnaireItemAnswerOption(FHIRElement):
     valueDate: Optional[Date] = None
     valueTime: Optional[Time] = None
     valueString: Optional[String] = None
-    valueCoding: Optional[Coding] = None
-    valueReference: Optional[Reference] = None
+    valueCoding: Optional[Coding]
+    valueReference: Optional[Reference]
     initialSelected: Optional[Boolean] = None
 
 
@@ -8488,10 +8488,10 @@ class QuestionnaireItemInitial(FHIRElement):
     valueTime: Optional[Time] = None
     valueString: Optional[String] = None
     valueUri: Optional[Uri] = None
-    valueAttachment: Optional[Attachment] = None
-    valueCoding: Optional[Coding] = None
-    valueQuantity: Optional[Quantity] = None
-    valueReference: Optional[Reference] = None
+    valueAttachment: Optional[Attachment]
+    valueCoding: Optional[Coding]
+    valueQuantity: Optional[Quantity]
+    valueReference: Optional[Reference]
 
 
 class Questionnaire(FHIRResource):
@@ -8561,10 +8561,10 @@ class QuestionnaireResponseItemAnswer(FHIRElement):
     valueTime: Optional[Time] = None
     valueString: Optional[String] = None
     valueUri: Optional[Uri] = None
-    valueAttachment: Optional[Attachment] = None
-    valueCoding: Optional[Coding] = None
-    valueQuantity: Optional[Quantity] = None
-    valueReference: Optional[Reference] = None
+    valueAttachment: Optional[Attachment]
+    valueCoding: Optional[Coding]
+    valueQuantity: Optional[Quantity]
+    valueReference: Optional[Reference]
     item: Any = None
 
 
@@ -8650,11 +8650,11 @@ class RequestGroupAction(FHIRElement):
     condition: RequestGroupActionCondition | FHIRList[RequestGroupActionCondition]
     relatedAction: RequestGroupActionRelatedAction | FHIRList[RequestGroupActionRelatedAction]
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age] = None
-    timingPeriod: Optional[Period] = None
-    timingDuration: Optional[Duration] = None
-    timingRange: Optional[Range] = None
-    timingTiming: Optional[Timing] = None
+    timingAge: Optional[Age]
+    timingPeriod: Optional[Period]
+    timingDuration: Optional[Duration]
+    timingRange: Optional[Range]
+    timingTiming: Optional[Timing]
     participant: Reference | FHIRList[Reference]
     type_: Optional[CodeableConcept]
     groupingBehavior: Optional[Code] = None
@@ -8687,8 +8687,8 @@ class RequestGroupActionRelatedAction(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration] = None
-    offsetRange: Optional[Range] = None
+    offsetDuration: Optional[Duration]
+    offsetRange: Optional[Range]
 
 
 class RequestGroup(FHIRResource):
@@ -8747,8 +8747,8 @@ class ResearchDefinition(FHIRResource):
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -8783,25 +8783,25 @@ class ResearchElementDefinitionCharacteristic(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    definitionCodeableConcept: Optional[CodeableConcept] = None
+    definitionCodeableConcept: Optional[CodeableConcept]
     definitionCanonical: Optional[Canonical] = None
-    definitionExpression: Optional[Expression] = None
-    definitionDataRequirement: Optional[DataRequirement] = None
+    definitionExpression: Optional[Expression]
+    definitionDataRequirement: Optional[DataRequirement]
     usageContext: UsageContext | FHIRList[UsageContext]
     exclude: Optional[Boolean] = None
     unitOfMeasure: Optional[CodeableConcept]
     studyEffectiveDescription: Optional[String] = None
     studyEffectiveDateTime: Optional[DateTime] = None
-    studyEffectivePeriod: Optional[Period] = None
-    studyEffectiveDuration: Optional[Duration] = None
-    studyEffectiveTiming: Optional[Timing] = None
+    studyEffectivePeriod: Optional[Period]
+    studyEffectiveDuration: Optional[Duration]
+    studyEffectiveTiming: Optional[Timing]
     studyEffectiveTimeFromStart: Optional[Duration]
     studyEffectiveGroupMeasure: Optional[Code] = None
     participantEffectiveDescription: Optional[String] = None
     participantEffectiveDateTime: Optional[DateTime] = None
-    participantEffectivePeriod: Optional[Period] = None
-    participantEffectiveDuration: Optional[Duration] = None
-    participantEffectiveTiming: Optional[Timing] = None
+    participantEffectivePeriod: Optional[Period]
+    participantEffectiveDuration: Optional[Duration]
+    participantEffectiveTiming: Optional[Timing]
     participantEffectiveTimeFromStart: Optional[Duration]
     participantEffectiveGroupMeasure: Optional[Code] = None
 
@@ -8829,8 +8829,8 @@ class ResearchElementDefinition(FHIRResource):
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -8951,11 +8951,11 @@ class RiskAssessmentPrediction(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     outcome: Optional[CodeableConcept]
     probabilityDecimal: Optional[Decimal] = None
-    probabilityRange: Optional[Range] = None
+    probabilityRange: Optional[Range]
     qualitativeRisk: Optional[CodeableConcept]
     relativeRisk: Optional[Decimal] = None
-    whenPeriod: Optional[Period] = None
-    whenRange: Optional[Range] = None
+    whenPeriod: Optional[Period]
+    whenRange: Optional[Range]
     rationale: Optional[String] = None
 
 
@@ -8982,7 +8982,7 @@ class RiskAssessment(FHIRResource):
     subject: Optional[Reference]
     encounter: Optional[Reference]
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period] = None
+    occurrencePeriod: Optional[Period]
     condition: Optional[Reference]
     performer: Optional[Reference]
     reasonCode: CodeableConcept | FHIRList[CodeableConcept]
@@ -9206,16 +9206,16 @@ class ServiceRequest(FHIRResource):
     doNotPerform: Optional[Boolean] = None
     code: Optional[CodeableConcept]
     orderDetail: CodeableConcept | FHIRList[CodeableConcept]
-    quantityQuantity: Optional[Quantity] = None
-    quantityRatio: Optional[Ratio] = None
-    quantityRange: Optional[Range] = None
+    quantityQuantity: Optional[Quantity]
+    quantityRatio: Optional[Ratio]
+    quantityRange: Optional[Range]
     subject: Optional[Reference]
     encounter: Optional[Reference]
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period] = None
-    occurrenceTiming: Optional[Timing] = None
+    occurrencePeriod: Optional[Period]
+    occurrenceTiming: Optional[Timing]
     asNeededBoolean: Optional[Boolean] = None
-    asNeededCodeableConcept: Optional[CodeableConcept] = None
+    asNeededCodeableConcept: Optional[CodeableConcept]
     authoredOn: Optional[DateTime] = None
     requester: Optional[Reference]
     performerType: Optional[CodeableConcept]
@@ -9269,13 +9269,13 @@ class SpecimenCollection(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     collector: Optional[Reference]
     collectedDateTime: Optional[DateTime] = None
-    collectedPeriod: Optional[Period] = None
+    collectedPeriod: Optional[Period]
     duration: Optional[Duration]
     quantity: Optional[Quantity]
     method: Optional[CodeableConcept]
     bodySite: Optional[CodeableConcept]
-    fastingStatusCodeableConcept: Optional[CodeableConcept] = None
-    fastingStatusDuration: Optional[Duration] = None
+    fastingStatusCodeableConcept: Optional[CodeableConcept]
+    fastingStatusDuration: Optional[Duration]
 
 
 class SpecimenProcessing(FHIRElement):
@@ -9290,7 +9290,7 @@ class SpecimenProcessing(FHIRElement):
     procedure: Optional[CodeableConcept]
     additive: Reference | FHIRList[Reference]
     timeDateTime: Optional[DateTime] = None
-    timePeriod: Optional[Period] = None
+    timePeriod: Optional[Period]
 
 
 class SpecimenContainer(FHIRElement):
@@ -9306,8 +9306,8 @@ class SpecimenContainer(FHIRElement):
     type_: Optional[CodeableConcept]
     capacity: Optional[Quantity]
     specimenQuantity: Optional[Quantity]
-    additiveCodeableConcept: Optional[CodeableConcept] = None
-    additiveReference: Optional[Reference] = None
+    additiveCodeableConcept: Optional[CodeableConcept]
+    additiveReference: Optional[Reference]
 
 
 class Specimen(FHIRResource):
@@ -9368,7 +9368,7 @@ class SpecimenDefinitionTypeTestedContainer(FHIRElement):
     cap: Optional[CodeableConcept]
     description: Optional[String] = None
     capacity: Optional[Quantity]
-    minimumVolumeQuantity: Optional[Quantity] = None
+    minimumVolumeQuantity: Optional[Quantity]
     minimumVolumeString: Optional[String] = None
     additive: SpecimenDefinitionTypeTestedContainerAdditive | FHIRList[SpecimenDefinitionTypeTestedContainerAdditive]
     preparation: Optional[String] = None
@@ -9382,8 +9382,8 @@ class SpecimenDefinitionTypeTestedContainerAdditive(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    additiveCodeableConcept: Optional[CodeableConcept] = None
-    additiveReference: Optional[Reference] = None
+    additiveCodeableConcept: Optional[CodeableConcept]
+    additiveReference: Optional[Reference]
 
 
 class SpecimenDefinitionTypeTestedHandling(FHIRElement):
@@ -9593,37 +9593,37 @@ class StructureMapGroupRuleSource(FHIRElement):
     defaultValueUri: Optional[Uri] = None
     defaultValueUrl: Optional[Url] = None
     defaultValueUuid: Optional[Uuid] = None
-    defaultValueAddress: Optional[Address] = None
-    defaultValueAge: Optional[Age] = None
-    defaultValueAnnotation: Optional[Annotation] = None
-    defaultValueAttachment: Optional[Attachment] = None
-    defaultValueCodeableConcept: Optional[CodeableConcept] = None
-    defaultValueCoding: Optional[Coding] = None
-    defaultValueContactPoint: Optional[ContactPoint] = None
-    defaultValueCount: Optional[Count] = None
-    defaultValueDistance: Optional[Distance] = None
-    defaultValueDuration: Optional[Duration] = None
-    defaultValueHumanName: Optional[HumanName] = None
-    defaultValueIdentifier: Optional[Identifier] = None
-    defaultValueMoney: Optional[Money] = None
-    defaultValuePeriod: Optional[Period] = None
-    defaultValueQuantity: Optional[Quantity] = None
-    defaultValueRange: Optional[Range] = None
-    defaultValueRatio: Optional[Ratio] = None
-    defaultValueReference: Optional[Reference] = None
-    defaultValueSampledData: Optional[SampledData] = None
-    defaultValueSignature: Optional[Signature] = None
-    defaultValueTiming: Optional[Timing] = None
-    defaultValueContactDetail: Optional[ContactDetail] = None
-    defaultValueContributor: Optional[Contributor] = None
-    defaultValueDataRequirement: Optional[DataRequirement] = None
-    defaultValueExpression: Optional[Expression] = None
-    defaultValueParameterDefinition: Optional[ParameterDefinition] = None
-    defaultValueRelatedArtifact: Optional[RelatedArtifact] = None
-    defaultValueTriggerDefinition: Optional[TriggerDefinition] = None
-    defaultValueUsageContext: Optional[UsageContext] = None
-    defaultValueDosage: Optional[Dosage] = None
-    defaultValueMeta: Optional[Meta] = None
+    defaultValueAddress: Optional[Address]
+    defaultValueAge: Optional[Age]
+    defaultValueAnnotation: Optional[Annotation]
+    defaultValueAttachment: Optional[Attachment]
+    defaultValueCodeableConcept: Optional[CodeableConcept]
+    defaultValueCoding: Optional[Coding]
+    defaultValueContactPoint: Optional[ContactPoint]
+    defaultValueCount: Optional[Count]
+    defaultValueDistance: Optional[Distance]
+    defaultValueDuration: Optional[Duration]
+    defaultValueHumanName: Optional[HumanName]
+    defaultValueIdentifier: Optional[Identifier]
+    defaultValueMoney: Optional[Money]
+    defaultValuePeriod: Optional[Period]
+    defaultValueQuantity: Optional[Quantity]
+    defaultValueRange: Optional[Range]
+    defaultValueRatio: Optional[Ratio]
+    defaultValueReference: Optional[Reference]
+    defaultValueSampledData: Optional[SampledData]
+    defaultValueSignature: Optional[Signature]
+    defaultValueTiming: Optional[Timing]
+    defaultValueContactDetail: Optional[ContactDetail]
+    defaultValueContributor: Optional[Contributor]
+    defaultValueDataRequirement: Optional[DataRequirement]
+    defaultValueExpression: Optional[Expression]
+    defaultValueParameterDefinition: Optional[ParameterDefinition]
+    defaultValueRelatedArtifact: Optional[RelatedArtifact]
+    defaultValueTriggerDefinition: Optional[TriggerDefinition]
+    defaultValueUsageContext: Optional[UsageContext]
+    defaultValueDosage: Optional[Dosage]
+    defaultValueMeta: Optional[Meta]
     element: Optional[String] = None
     listMode: Optional[Code] = None
     variable: Optional[Id] = None
@@ -9764,8 +9764,8 @@ class SubstanceIngredient(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     quantity: Optional[Ratio]
-    substanceCodeableConcept: Optional[CodeableConcept] = None
-    substanceReference: Optional[Reference] = None
+    substanceCodeableConcept: Optional[CodeableConcept]
+    substanceReference: Optional[Reference]
 
 
 class Substance(FHIRResource):
@@ -10033,8 +10033,8 @@ class SubstanceReferenceInformationTarget(FHIRElement):
     interaction: Optional[CodeableConcept]
     organism: Optional[CodeableConcept]
     organismType: Optional[CodeableConcept]
-    amountQuantity: Optional[Quantity] = None
-    amountRange: Optional[Range] = None
+    amountQuantity: Optional[Quantity]
+    amountRange: Optional[Range]
     amountString: Optional[String] = None
     amountType: Optional[CodeableConcept]
     source: Reference | FHIRList[Reference]
@@ -10179,7 +10179,7 @@ class SubstanceSpecificationMoiety(FHIRElement):
     stereochemistry: Optional[CodeableConcept]
     opticalActivity: Optional[CodeableConcept]
     molecularFormula: Optional[String] = None
-    amountQuantity: Optional[Quantity] = None
+    amountQuantity: Optional[Quantity]
     amountString: Optional[String] = None
 
 
@@ -10194,9 +10194,9 @@ class SubstanceSpecificationProperty(FHIRElement):
     category: Optional[CodeableConcept]
     code: Optional[CodeableConcept]
     parameters: Optional[String] = None
-    definingSubstanceReference: Optional[Reference] = None
-    definingSubstanceCodeableConcept: Optional[CodeableConcept] = None
-    amountQuantity: Optional[Quantity] = None
+    definingSubstanceReference: Optional[Reference]
+    definingSubstanceCodeableConcept: Optional[CodeableConcept]
+    amountQuantity: Optional[Quantity]
     amountString: Optional[String] = None
 
 
@@ -10309,13 +10309,13 @@ class SubstanceSpecificationRelationship(FHIRElement):
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
-    substanceReference: Optional[Reference] = None
-    substanceCodeableConcept: Optional[CodeableConcept] = None
+    substanceReference: Optional[Reference]
+    substanceCodeableConcept: Optional[CodeableConcept]
     relationship: Optional[CodeableConcept]
     isDefining: Optional[Boolean] = None
-    amountQuantity: Optional[Quantity] = None
-    amountRange: Optional[Range] = None
-    amountRatio: Optional[Ratio] = None
+    amountQuantity: Optional[Quantity]
+    amountRange: Optional[Range]
+    amountRatio: Optional[Ratio]
     amountString: Optional[String] = None
     amountRatioLowLimit: Optional[Ratio]
     amountType: Optional[CodeableConcept]
@@ -10365,8 +10365,8 @@ class SupplyDeliverySuppliedItem(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     quantity: Optional[Quantity]
-    itemCodeableConcept: Optional[CodeableConcept] = None
-    itemReference: Optional[Reference] = None
+    itemCodeableConcept: Optional[CodeableConcept]
+    itemReference: Optional[Reference]
 
 
 class SupplyDelivery(FHIRResource):
@@ -10391,8 +10391,8 @@ class SupplyDelivery(FHIRResource):
     type_: Optional[CodeableConcept]
     suppliedItem: Optional[SupplyDeliverySuppliedItem]
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period] = None
-    occurrenceTiming: Optional[Timing] = None
+    occurrencePeriod: Optional[Period]
+    occurrenceTiming: Optional[Timing]
     supplier: Optional[Reference]
     destination: Optional[Reference]
     receiver: Reference | FHIRList[Reference]
@@ -10407,9 +10407,9 @@ class SupplyRequestParameter(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
+    valueCodeableConcept: Optional[CodeableConcept]
+    valueQuantity: Optional[Quantity]
+    valueRange: Optional[Range]
     valueBoolean: Optional[Boolean] = None
 
 
@@ -10431,13 +10431,13 @@ class SupplyRequest(FHIRResource):
     status: Optional[Code] = None
     category: Optional[CodeableConcept]
     priority: Optional[Code] = None
-    itemCodeableConcept: Optional[CodeableConcept] = None
-    itemReference: Optional[Reference] = None
+    itemCodeableConcept: Optional[CodeableConcept]
+    itemReference: Optional[Reference]
     quantity: Optional[Quantity]
     parameter: SupplyRequestParameter | FHIRList[SupplyRequestParameter]
     occurrenceDateTime: Optional[DateTime] = None
-    occurrencePeriod: Optional[Period] = None
-    occurrenceTiming: Optional[Timing] = None
+    occurrencePeriod: Optional[Period]
+    occurrenceTiming: Optional[Timing]
     authoredOn: Optional[DateTime] = None
     requester: Optional[Reference]
     supplier: Reference | FHIRList[Reference]
@@ -10487,37 +10487,37 @@ class TaskInput(FHIRElement):
     valueUri: Optional[Uri] = None
     valueUrl: Optional[Url] = None
     valueUuid: Optional[Uuid] = None
-    valueAddress: Optional[Address] = None
-    valueAge: Optional[Age] = None
-    valueAnnotation: Optional[Annotation] = None
-    valueAttachment: Optional[Attachment] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
-    valueCoding: Optional[Coding] = None
-    valueContactPoint: Optional[ContactPoint] = None
-    valueCount: Optional[Count] = None
-    valueDistance: Optional[Distance] = None
-    valueDuration: Optional[Duration] = None
-    valueHumanName: Optional[HumanName] = None
-    valueIdentifier: Optional[Identifier] = None
-    valueMoney: Optional[Money] = None
-    valuePeriod: Optional[Period] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueReference: Optional[Reference] = None
-    valueSampledData: Optional[SampledData] = None
-    valueSignature: Optional[Signature] = None
-    valueTiming: Optional[Timing] = None
-    valueContactDetail: Optional[ContactDetail] = None
-    valueContributor: Optional[Contributor] = None
-    valueDataRequirement: Optional[DataRequirement] = None
-    valueExpression: Optional[Expression] = None
-    valueParameterDefinition: Optional[ParameterDefinition] = None
-    valueRelatedArtifact: Optional[RelatedArtifact] = None
-    valueTriggerDefinition: Optional[TriggerDefinition] = None
-    valueUsageContext: Optional[UsageContext] = None
-    valueDosage: Optional[Dosage] = None
-    valueMeta: Optional[Meta] = None
+    valueAddress: Optional[Address]
+    valueAge: Optional[Age]
+    valueAnnotation: Optional[Annotation]
+    valueAttachment: Optional[Attachment]
+    valueCodeableConcept: Optional[CodeableConcept]
+    valueCoding: Optional[Coding]
+    valueContactPoint: Optional[ContactPoint]
+    valueCount: Optional[Count]
+    valueDistance: Optional[Distance]
+    valueDuration: Optional[Duration]
+    valueHumanName: Optional[HumanName]
+    valueIdentifier: Optional[Identifier]
+    valueMoney: Optional[Money]
+    valuePeriod: Optional[Period]
+    valueQuantity: Optional[Quantity]
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueReference: Optional[Reference]
+    valueSampledData: Optional[SampledData]
+    valueSignature: Optional[Signature]
+    valueTiming: Optional[Timing]
+    valueContactDetail: Optional[ContactDetail]
+    valueContributor: Optional[Contributor]
+    valueDataRequirement: Optional[DataRequirement]
+    valueExpression: Optional[Expression]
+    valueParameterDefinition: Optional[ParameterDefinition]
+    valueRelatedArtifact: Optional[RelatedArtifact]
+    valueTriggerDefinition: Optional[TriggerDefinition]
+    valueUsageContext: Optional[UsageContext]
+    valueDosage: Optional[Dosage]
+    valueMeta: Optional[Meta]
 
 
 class TaskOutput(FHIRElement):
@@ -10548,37 +10548,37 @@ class TaskOutput(FHIRElement):
     valueUri: Optional[Uri] = None
     valueUrl: Optional[Url] = None
     valueUuid: Optional[Uuid] = None
-    valueAddress: Optional[Address] = None
-    valueAge: Optional[Age] = None
-    valueAnnotation: Optional[Annotation] = None
-    valueAttachment: Optional[Attachment] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
-    valueCoding: Optional[Coding] = None
-    valueContactPoint: Optional[ContactPoint] = None
-    valueCount: Optional[Count] = None
-    valueDistance: Optional[Distance] = None
-    valueDuration: Optional[Duration] = None
-    valueHumanName: Optional[HumanName] = None
-    valueIdentifier: Optional[Identifier] = None
-    valueMoney: Optional[Money] = None
-    valuePeriod: Optional[Period] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueReference: Optional[Reference] = None
-    valueSampledData: Optional[SampledData] = None
-    valueSignature: Optional[Signature] = None
-    valueTiming: Optional[Timing] = None
-    valueContactDetail: Optional[ContactDetail] = None
-    valueContributor: Optional[Contributor] = None
-    valueDataRequirement: Optional[DataRequirement] = None
-    valueExpression: Optional[Expression] = None
-    valueParameterDefinition: Optional[ParameterDefinition] = None
-    valueRelatedArtifact: Optional[RelatedArtifact] = None
-    valueTriggerDefinition: Optional[TriggerDefinition] = None
-    valueUsageContext: Optional[UsageContext] = None
-    valueDosage: Optional[Dosage] = None
-    valueMeta: Optional[Meta] = None
+    valueAddress: Optional[Address]
+    valueAge: Optional[Age]
+    valueAnnotation: Optional[Annotation]
+    valueAttachment: Optional[Attachment]
+    valueCodeableConcept: Optional[CodeableConcept]
+    valueCoding: Optional[Coding]
+    valueContactPoint: Optional[ContactPoint]
+    valueCount: Optional[Count]
+    valueDistance: Optional[Distance]
+    valueDuration: Optional[Duration]
+    valueHumanName: Optional[HumanName]
+    valueIdentifier: Optional[Identifier]
+    valueMoney: Optional[Money]
+    valuePeriod: Optional[Period]
+    valueQuantity: Optional[Quantity]
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueReference: Optional[Reference]
+    valueSampledData: Optional[SampledData]
+    valueSignature: Optional[Signature]
+    valueTiming: Optional[Timing]
+    valueContactDetail: Optional[ContactDetail]
+    valueContributor: Optional[Contributor]
+    valueDataRequirement: Optional[DataRequirement]
+    valueExpression: Optional[Expression]
+    valueParameterDefinition: Optional[ParameterDefinition]
+    valueRelatedArtifact: Optional[RelatedArtifact]
+    valueTriggerDefinition: Optional[TriggerDefinition]
+    valueUsageContext: Optional[UsageContext]
+    valueDosage: Optional[Dosage]
+    valueMeta: Optional[Meta]
 
 
 class Task(FHIRResource):
@@ -11454,11 +11454,11 @@ class actualgroupCharacteristic(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueCodeableConcept: Optional[CodeableConcept]
     valueBoolean: Optional[Boolean] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueReference: Optional[Reference] = None
+    valueQuantity: Optional[Quantity]
+    valueRange: Optional[Range]
+    valueReference: Optional[Reference]
     exclude: Optional[Boolean] = None
     period: Optional[Period]
 
@@ -11583,17 +11583,17 @@ class bmiComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -11623,10 +11623,10 @@ class bmi(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -11723,17 +11723,17 @@ class bodyheightComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -11763,10 +11763,10 @@ class bodyheight(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -11863,17 +11863,17 @@ class bodytempComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -11903,10 +11903,10 @@ class bodytemp(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -12003,17 +12003,17 @@ class bodyweightComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -12043,10 +12043,10 @@ class bodyweight(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -12130,17 +12130,17 @@ class bpComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -12206,10 +12206,10 @@ class bp(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -12244,8 +12244,8 @@ class catalogRelatesTo(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[Code] = None
-    targetIdentifier: Optional[Identifier] = None
-    targetReference: Optional[Reference] = None
+    targetIdentifier: Optional[Identifier]
+    targetReference: Optional[Reference]
 
 
 class catalogEvent(FHIRElement):
@@ -12358,11 +12358,11 @@ class cdshooksrequestgroupAction(FHIRElement):
     condition: cdshooksrequestgroupActionCondition | FHIRList[cdshooksrequestgroupActionCondition]
     relatedAction: cdshooksrequestgroupActionRelatedAction | FHIRList[cdshooksrequestgroupActionRelatedAction]
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age] = None
-    timingPeriod: Optional[Period] = None
-    timingDuration: Optional[Duration] = None
-    timingRange: Optional[Range] = None
-    timingTiming: Optional[Timing] = None
+    timingAge: Optional[Age]
+    timingPeriod: Optional[Period]
+    timingDuration: Optional[Duration]
+    timingRange: Optional[Range]
+    timingTiming: Optional[Timing]
     participant: Reference | FHIRList[Reference]
     type_: Optional[CodeableConcept]
     groupingBehavior: Optional[Code] = None
@@ -12395,8 +12395,8 @@ class cdshooksrequestgroupActionRelatedAction(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration] = None
-    offsetRange: Optional[Range] = None
+    offsetDuration: Optional[Duration]
+    offsetRange: Optional[Range]
 
 
 class cdshooksrequestgroup(FHIRResource):
@@ -12457,9 +12457,9 @@ class cdshooksserviceplandefinitionGoalTarget(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity] = None
-    detailRange: Optional[Range] = None
-    detailCodeableConcept: Optional[CodeableConcept] = None
+    detailQuantity: Optional[Quantity]
+    detailRange: Optional[Range]
+    detailCodeableConcept: Optional[CodeableConcept]
     due: Optional[Duration]
 
 
@@ -12480,19 +12480,19 @@ class cdshooksserviceplandefinitionAction(FHIRElement):
     reason: CodeableConcept | FHIRList[CodeableConcept]
     documentation: RelatedArtifact | FHIRList[RelatedArtifact]
     goalId: Id | FHIRList[Id] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     trigger: TriggerDefinition | FHIRList[TriggerDefinition]
     condition: cdshooksserviceplandefinitionActionCondition | FHIRList[cdshooksserviceplandefinitionActionCondition]
     input: DataRequirement | FHIRList[DataRequirement]
     output: DataRequirement | FHIRList[DataRequirement]
     relatedAction: cdshooksserviceplandefinitionActionRelatedAction | FHIRList[cdshooksserviceplandefinitionActionRelatedAction]
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age] = None
-    timingPeriod: Optional[Period] = None
-    timingDuration: Optional[Duration] = None
-    timingRange: Optional[Range] = None
-    timingTiming: Optional[Timing] = None
+    timingAge: Optional[Age]
+    timingPeriod: Optional[Period]
+    timingDuration: Optional[Duration]
+    timingRange: Optional[Range]
+    timingTiming: Optional[Timing]
     participant: cdshooksserviceplandefinitionActionParticipant | FHIRList[cdshooksserviceplandefinitionActionParticipant]
     type_: Optional[CodeableConcept]
     groupingBehavior: Optional[Code] = None
@@ -12528,8 +12528,8 @@ class cdshooksserviceplandefinitionActionRelatedAction(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration] = None
-    offsetRange: Optional[Range] = None
+    offsetDuration: Optional[Duration]
+    offsetRange: Optional[Range]
 
 
 class cdshooksserviceplandefinitionActionParticipant(FHIRElement):
@@ -12577,8 +12577,8 @@ class cdshooksserviceplandefinition(FHIRResource):
     type_: Optional[CodeableConcept]
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -12639,17 +12639,17 @@ class cholesterolComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -12679,12 +12679,12 @@ class cholesterol(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
-    effectiveTiming: Optional[Timing] = None
+    effectivePeriod: Optional[Period]
+    effectiveTiming: Optional[Timing]
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: Optional[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -12719,8 +12719,8 @@ class clinicaldocumentRelatesTo(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[Code] = None
-    targetIdentifier: Optional[Identifier] = None
-    targetReference: Optional[Reference] = None
+    targetIdentifier: Optional[Identifier]
+    targetReference: Optional[Reference]
 
 
 class clinicaldocumentEvent(FHIRElement):
@@ -12809,9 +12809,9 @@ class computableplandefinitionGoalTarget(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity] = None
-    detailRange: Optional[Range] = None
-    detailCodeableConcept: Optional[CodeableConcept] = None
+    detailQuantity: Optional[Quantity]
+    detailRange: Optional[Range]
+    detailCodeableConcept: Optional[CodeableConcept]
     due: Optional[Duration]
 
 
@@ -12832,19 +12832,19 @@ class computableplandefinitionAction(FHIRElement):
     reason: CodeableConcept | FHIRList[CodeableConcept]
     documentation: RelatedArtifact | FHIRList[RelatedArtifact]
     goalId: Id | FHIRList[Id] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     trigger: TriggerDefinition | FHIRList[TriggerDefinition]
     condition: computableplandefinitionActionCondition | FHIRList[computableplandefinitionActionCondition]
     input: DataRequirement | FHIRList[DataRequirement]
     output: DataRequirement | FHIRList[DataRequirement]
     relatedAction: computableplandefinitionActionRelatedAction | FHIRList[computableplandefinitionActionRelatedAction]
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age] = None
-    timingPeriod: Optional[Period] = None
-    timingDuration: Optional[Duration] = None
-    timingRange: Optional[Range] = None
-    timingTiming: Optional[Timing] = None
+    timingAge: Optional[Age]
+    timingPeriod: Optional[Period]
+    timingDuration: Optional[Duration]
+    timingRange: Optional[Range]
+    timingTiming: Optional[Timing]
     participant: computableplandefinitionActionParticipant | FHIRList[computableplandefinitionActionParticipant]
     type_: Optional[CodeableConcept]
     groupingBehavior: Optional[Code] = None
@@ -12880,8 +12880,8 @@ class computableplandefinitionActionRelatedAction(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration] = None
-    offsetRange: Optional[Range] = None
+    offsetDuration: Optional[Duration]
+    offsetRange: Optional[Range]
 
 
 class computableplandefinitionActionParticipant(FHIRElement):
@@ -12929,8 +12929,8 @@ class computableplandefinition(FHIRResource):
     type_: Optional[CodeableConcept]
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -12977,8 +12977,8 @@ class cqllibrary(FHIRResource):
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
     type_: Optional[CodeableConcept]
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -13026,17 +13026,17 @@ class devicemetricobservationComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -13068,15 +13068,15 @@ class devicemetricobservation(FHIRResource):
     effectiveDateTime: Optional[DateTime] = None
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: Optional[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -13099,11 +13099,11 @@ class groupdefinitionCharacteristic(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueCodeableConcept: Optional[CodeableConcept]
     valueBoolean: Optional[Boolean] = None
-    valueQuantity: Optional[Quantity] = None
-    valueRange: Optional[Range] = None
-    valueReference: Optional[Reference] = None
+    valueQuantity: Optional[Quantity]
+    valueRange: Optional[Range]
+    valueReference: Optional[Reference]
     exclude: Optional[Boolean] = None
     period: Optional[Period]
 
@@ -13169,17 +13169,17 @@ class hdlcholesterolComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -13209,12 +13209,12 @@ class hdlcholesterol(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
-    effectiveTiming: Optional[Timing] = None
+    effectivePeriod: Optional[Period]
+    effectiveTiming: Optional[Timing]
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: Optional[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -13311,17 +13311,17 @@ class headcircumComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -13351,10 +13351,10 @@ class headcircum(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -13451,17 +13451,17 @@ class heartrateComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -13491,10 +13491,10 @@ class heartrate(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -13541,7 +13541,7 @@ class hlaresult(FHIRResource):
     subject: Optional[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
     resultsInterpreter: Reference | FHIRList[Reference]
@@ -13578,17 +13578,17 @@ class ldlcholesterolComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -13618,12 +13618,12 @@ class ldlcholesterol(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
-    effectiveTiming: Optional[Timing] = None
+    effectivePeriod: Optional[Period]
+    effectiveTiming: Optional[Timing]
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: Optional[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -13670,7 +13670,7 @@ class lipidprofile(FHIRResource):
     subject: Optional[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
     resultsInterpreter: Reference | FHIRList[Reference]
@@ -13766,17 +13766,17 @@ class oxygensatComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -13806,10 +13806,10 @@ class oxygensat(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -13832,18 +13832,18 @@ class picoelementCharacteristic(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     description: Optional[String] = None
-    definitionReference: Optional[Reference] = None
+    definitionReference: Optional[Reference]
     definitionCanonical: Optional[Canonical] = None
-    definitionCodeableConcept: Optional[CodeableConcept] = None
-    definitionExpression: Optional[Expression] = None
-    definitionDataRequirement: Optional[DataRequirement] = None
-    definitionTriggerDefinition: Optional[TriggerDefinition] = None
+    definitionCodeableConcept: Optional[CodeableConcept]
+    definitionExpression: Optional[Expression]
+    definitionDataRequirement: Optional[DataRequirement]
+    definitionTriggerDefinition: Optional[TriggerDefinition]
     usageContext: UsageContext | FHIRList[UsageContext]
     exclude: Optional[Boolean] = None
     participantEffectiveDateTime: Optional[DateTime] = None
-    participantEffectivePeriod: Optional[Period] = None
-    participantEffectiveDuration: Optional[Duration] = None
-    participantEffectiveTiming: Optional[Timing] = None
+    participantEffectivePeriod: Optional[Period]
+    participantEffectiveDuration: Optional[Duration]
+    participantEffectiveTiming: Optional[Timing]
     timeFromStart: Optional[Duration]
     groupMeasure: Optional[Code] = None
 
@@ -13973,17 +13973,17 @@ class resprateComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -14013,10 +14013,10 @@ class resprate(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -14074,8 +14074,8 @@ class shareableactivitydefinition(FHIRResource):
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -14101,16 +14101,16 @@ class shareableactivitydefinition(FHIRResource):
     intent: Optional[Code] = None
     priority: Optional[Code] = None
     doNotPerform: Optional[Boolean] = None
-    timingTiming: Optional[Timing] = None
+    timingTiming: Optional[Timing]
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age] = None
-    timingPeriod: Optional[Period] = None
-    timingRange: Optional[Range] = None
-    timingDuration: Optional[Duration] = None
+    timingAge: Optional[Age]
+    timingPeriod: Optional[Period]
+    timingRange: Optional[Range]
+    timingDuration: Optional[Duration]
     location: Optional[Reference]
     participant: shareableactivitydefinitionParticipant | FHIRList[shareableactivitydefinitionParticipant]
-    productReference: Optional[Reference] = None
-    productCodeableConcept: Optional[CodeableConcept] = None
+    productReference: Optional[Reference]
+    productCodeableConcept: Optional[CodeableConcept]
     quantity: Optional[Quantity]
     dosage: Dosage | FHIRList[Dosage]
     bodySite: CodeableConcept | FHIRList[CodeableConcept]
@@ -14184,7 +14184,7 @@ class shareablecodesystemConceptProperty(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[Code] = None
     valueCode: Optional[Code] = None
-    valueCoding: Optional[Coding] = None
+    valueCoding: Optional[Coding]
     valueString: Optional[String] = None
     valueInteger: Optional[Integer] = None
     valueBoolean: Optional[Boolean] = None
@@ -14256,8 +14256,8 @@ class shareablelibrary(FHIRResource):
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
     type_: Optional[CodeableConcept]
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -14366,8 +14366,8 @@ class shareablemeasure(FHIRResource):
     subtitle: Optional[String] = None
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -14427,9 +14427,9 @@ class shareableplandefinitionGoalTarget(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     measure: Optional[CodeableConcept]
-    detailQuantity: Optional[Quantity] = None
-    detailRange: Optional[Range] = None
-    detailCodeableConcept: Optional[CodeableConcept] = None
+    detailQuantity: Optional[Quantity]
+    detailRange: Optional[Range]
+    detailCodeableConcept: Optional[CodeableConcept]
     due: Optional[Duration]
 
 
@@ -14450,19 +14450,19 @@ class shareableplandefinitionAction(FHIRElement):
     reason: CodeableConcept | FHIRList[CodeableConcept]
     documentation: RelatedArtifact | FHIRList[RelatedArtifact]
     goalId: Id | FHIRList[Id] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     trigger: TriggerDefinition | FHIRList[TriggerDefinition]
     condition: shareableplandefinitionActionCondition | FHIRList[shareableplandefinitionActionCondition]
     input: DataRequirement | FHIRList[DataRequirement]
     output: DataRequirement | FHIRList[DataRequirement]
     relatedAction: shareableplandefinitionActionRelatedAction | FHIRList[shareableplandefinitionActionRelatedAction]
     timingDateTime: Optional[DateTime] = None
-    timingAge: Optional[Age] = None
-    timingPeriod: Optional[Period] = None
-    timingDuration: Optional[Duration] = None
-    timingRange: Optional[Range] = None
-    timingTiming: Optional[Timing] = None
+    timingAge: Optional[Age]
+    timingPeriod: Optional[Period]
+    timingDuration: Optional[Duration]
+    timingRange: Optional[Range]
+    timingTiming: Optional[Timing]
     participant: shareableplandefinitionActionParticipant | FHIRList[shareableplandefinitionActionParticipant]
     type_: Optional[CodeableConcept]
     groupingBehavior: Optional[Code] = None
@@ -14498,8 +14498,8 @@ class shareableplandefinitionActionRelatedAction(FHIRElement):
     modifierExtension: Extension | FHIRList[Extension]
     actionId: Optional[Id] = None
     relationship: Optional[Code] = None
-    offsetDuration: Optional[Duration] = None
-    offsetRange: Optional[Range] = None
+    offsetDuration: Optional[Duration]
+    offsetRange: Optional[Range]
 
 
 class shareableplandefinitionActionParticipant(FHIRElement):
@@ -14547,8 +14547,8 @@ class shareableplandefinition(FHIRResource):
     type_: Optional[CodeableConcept]
     status: Optional[Code] = None
     experimental: Optional[Boolean] = None
-    subjectCodeableConcept: Optional[CodeableConcept] = None
-    subjectReference: Optional[Reference] = None
+    subjectCodeableConcept: Optional[CodeableConcept]
+    subjectReference: Optional[Reference]
     date: Optional[DateTime] = None
     publisher: Optional[String] = None
     contact: ContactDetail | FHIRList[ContactDetail]
@@ -14785,17 +14785,17 @@ class triglycerideComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -14825,12 +14825,12 @@ class triglyceride(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
-    effectiveTiming: Optional[Timing] = None
+    effectivePeriod: Optional[Period]
+    effectiveTiming: Optional[Timing]
     effectiveInstant: Optional[Instant] = None
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
+    valueQuantity: Optional[Quantity]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: Optional[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -14891,17 +14891,17 @@ class vitalsignsComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -14931,20 +14931,20 @@ class vitalsigns(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
@@ -15028,17 +15028,17 @@ class vitalspanelComponent(FHIRElement):
     extension: Extension | FHIRList[Extension]
     modifierExtension: Extension | FHIRList[Extension]
     code: Optional[CodeableConcept]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     referenceRange: Any = None
@@ -15068,20 +15068,20 @@ class vitalspanel(FHIRResource):
     focus: Reference | FHIRList[Reference]
     encounter: Optional[Reference]
     effectiveDateTime: Optional[DateTime] = None
-    effectivePeriod: Optional[Period] = None
+    effectivePeriod: Optional[Period]
     issued: Optional[Instant] = None
     performer: Reference | FHIRList[Reference]
-    valueQuantity: Optional[Quantity] = None
-    valueCodeableConcept: Optional[CodeableConcept] = None
+    valueQuantity: Optional[Quantity]
+    valueCodeableConcept: Optional[CodeableConcept]
     valueString: Optional[String] = None
     valueBoolean: Optional[Boolean] = None
     valueInteger: Optional[Integer] = None
-    valueRange: Optional[Range] = None
-    valueRatio: Optional[Ratio] = None
-    valueSampledData: Optional[SampledData] = None
+    valueRange: Optional[Range]
+    valueRatio: Optional[Ratio]
+    valueSampledData: Optional[SampledData]
     valueTime: Optional[Time] = None
     valueDateTime: Optional[DateTime] = None
-    valuePeriod: Optional[Period] = None
+    valuePeriod: Optional[Period]
     dataAbsentReason: Optional[CodeableConcept]
     interpretation: CodeableConcept | FHIRList[CodeableConcept]
     note: Annotation | FHIRList[Annotation]
