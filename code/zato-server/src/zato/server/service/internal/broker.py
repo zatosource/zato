@@ -326,15 +326,16 @@ class TopicPublish(Service):
         input = self.request.input
         client = self.server.broker_client
 
-        user_data = input.data or ''
-        fields = {
-            'data': user_data,
-            'data_size': len(user_data.encode('utf-8')),
+        user_data = (input.data or '').encode('utf-8')
+
+        meta = {
             'priority': int(input.get('priority') or 5),
             'expiration': int(input.get('expiration') or 86400),
+            'data_size': len(user_data),
+            'mime_type': input.get('mime_type') or 'text/plain',
         }
 
-        msg_id = fs_stream_xadd(client._cfg, input.topic_name, json_dumps(fields))
+        msg_id = fs_stream_xadd(client._cfg, input.topic_name, json_dumps(meta), payload=user_data)
 
         self.response.payload = json_dumps({'is_ok': True, 'msg_id': msg_id})
         self.response.content_type = 'application/json'

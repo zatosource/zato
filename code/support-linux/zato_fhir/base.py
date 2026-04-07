@@ -79,6 +79,12 @@ class FHIRResource:
             raise AttributeError(name)
 
         if name in self._field_types:
+            choice_fields = getattr(type(self), '_choice_fields', None)
+            if choice_fields:
+                for variants in choice_fields.values():
+                    if name in variants:
+                        return None
+
             type_name = self._field_types[name]
             field_type = _resolve_type(type_name)
             if field_type:
@@ -155,6 +161,12 @@ class FHIRElement:
             raise AttributeError(name)
 
         if name in self._field_types:
+            choice_fields = getattr(type(self), '_choice_fields', None)
+            if choice_fields:
+                for variants in choice_fields.values():
+                    if name in variants:
+                        return None
+
             type_name = self._field_types[name]
             field_type = _resolve_type(type_name)
             if field_type:

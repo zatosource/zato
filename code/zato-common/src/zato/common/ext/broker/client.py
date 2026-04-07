@@ -252,9 +252,9 @@ class BrokerClient:
     # Streams
     # ############################################################################################################################
 
-    def xadd(self, key:'str', fields:'Dict', maxlen:'Optional[int]'=None) -> 'str':
+    def xadd(self, key:'str', fields:'Dict', maxlen:'Optional[int]'=None, payload:'bytes | None'=None) -> 'str':
         fields_json = dumps(fields)
-        return fs_stream_xadd(self._cfg, key, fields_json, maxlen=maxlen)
+        return fs_stream_xadd(self._cfg, key, fields_json, maxlen=maxlen, payload=payload)
 
     def xreadgroup(
         self,
