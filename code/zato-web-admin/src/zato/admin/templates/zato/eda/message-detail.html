@@ -6,7 +6,7 @@
 <link rel="stylesheet" type="text/css" href="/static/css/eda.css">
 {% endblock %}
 
-{% block section_title %}Message detail{% endblock %}
+{% block section_title %}Message details: <span class="eda-copy-target" data-copy-value="{{ msg_id }}" style="font-family:monospace; cursor:pointer; border-bottom:1px dashed #999">{{ msg_id }}</span>{% endblock %}
 {% block help_icon_id %}eda-message-help{% endblock %}
 
 {% block extra_page_js %}

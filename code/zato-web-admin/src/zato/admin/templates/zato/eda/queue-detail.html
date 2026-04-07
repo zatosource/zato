@@ -27,7 +27,7 @@ $(document).ready(function() {
 
 <div class="stat-cards">
     <div class="stat-card">
-        <div><div class="stat-card-label">Topic</div><div class="stat-card-value-sm"><a href="{% url 'eda-topic-detail' topic_name=topic_name %}?cluster={{ cluster_id|default:'1' }}">{{ topic_name }}</a></div></div>
+        <div><div class="stat-card-label">Topic</div><div class="stat-card-value" style="font-size:18px"><a href="{% url 'eda-topic-detail' topic_name=topic_name %}?cluster={{ cluster_id|default:'1' }}" style="color:var(--eda-link-color)">{{ topic_name }}</a></div></div>
         <div></div>
     </div>
     <div class="stat-card">

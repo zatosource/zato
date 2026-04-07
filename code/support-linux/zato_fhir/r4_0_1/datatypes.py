@@ -88,11 +88,23 @@ class Attachment(FHIRElement):
 class CodeableConcept(FHIRElement):
     _list_fields = {'extension', 'coding'}
     _field_types = {'extension': 'Extension', 'coding': 'Coding'}
+    _coding_fields = frozenset({'system', 'version', 'code', 'display', 'userSelected'})
 
     id: Optional[str] = None
     extension: Extension | FHIRList[Extension]
     coding: Coding | FHIRList[Coding]
     text: Optional[String] = None
+
+    def __getattr__(self, name: 'str'):
+        if name in self._coding_fields:
+            return getattr(self.coding, name)
+        return super().__getattr__(name)
+
+    def __setattr__(self, name: 'str', value):
+        if name in self._coding_fields:
+            setattr(self.coding, name, value)
+        else:
+            super().__setattr__(name, value)
 
 
 class Coding(FHIRElement):

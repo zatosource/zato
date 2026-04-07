@@ -326,8 +326,10 @@ class TopicPublish(Service):
         input = self.request.input
         client = self.server.broker_client
 
+        user_data = input.data or ''
         fields = {
-            'data': input.data,
+            'data': user_data,
+            'data_size': len(user_data.encode('utf-8')),
             'priority': int(input.get('priority') or 5),
             'expiration': int(input.get('expiration') or 86400),
         }

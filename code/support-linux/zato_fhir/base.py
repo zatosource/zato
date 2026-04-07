@@ -9,12 +9,29 @@ T = TypeVar('T')
 
 class FHIRList(list, Generic[T]):
 
+    _element_type_name: str = ''
+
     def __getattr__(self, name: str) -> Any:
+        if name.startswith('_'):
+            raise AttributeError(name)
+        if not self:
+            if self._element_type_name:
+                elem_type = _resolve_type(self._element_type_name)
+                if elem_type:
+                    self.append(elem_type())
         if not self:
             raise AttributeError(f'Empty list has no attribute {name}')
         return getattr(self[0], name)
 
     def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith('_'):
+            list.__setattr__(self, name, value)
+            return
+        if not self:
+            if self._element_type_name:
+                elem_type = _resolve_type(self._element_type_name)
+                if elem_type:
+                    self.append(elem_type())
         if not self:
             raise AttributeError(f'Empty list, cannot set {name}')
         setattr(self[0], name, value)
@@ -76,15 +93,26 @@ class FHIRResource:
             object.__setattr__(self, name, value)
             return
 
+        if isinstance(value, str) and self._field_types.get(name) == 'Reference':
+            ref_type = _resolve_type('Reference')
+            if ref_type:
+                ref = ref_type()
+                ref.reference = value
+                value = ref
+
         if name in self._list_fields:
+            type_name = self._field_types.get(name, '')
             if isinstance(value, list):
                 wrapped = ListWrapper(value)
+                wrapped._element_type_name = type_name
                 object.__setattr__(self, name, wrapped)
             elif isinstance(value, (FHIRElement, FHIRResource)):
                 wrapped = ListWrapper([value])
+                wrapped._element_type_name = type_name
                 object.__setattr__(self, name, wrapped)
             elif isinstance(value, str):
                 wrapped = ListWrapper([value])
+                wrapped._element_type_name = type_name
                 object.__setattr__(self, name, wrapped)
             else:
                 object.__setattr__(self, name, value)
@@ -141,15 +169,26 @@ class FHIRElement:
             object.__setattr__(self, name, value)
             return
 
+        if isinstance(value, str) and self._field_types.get(name) == 'Reference':
+            ref_type = _resolve_type('Reference')
+            if ref_type:
+                ref = ref_type()
+                ref.reference = value
+                value = ref
+
         if name in self._list_fields:
+            type_name = self._field_types.get(name, '')
             if isinstance(value, list):
                 wrapped = ListWrapper(value)
+                wrapped._element_type_name = type_name
                 object.__setattr__(self, name, wrapped)
             elif isinstance(value, (FHIRElement, FHIRResource)):
                 wrapped = ListWrapper([value])
+                wrapped._element_type_name = type_name
                 object.__setattr__(self, name, wrapped)
             elif isinstance(value, str):
                 wrapped = ListWrapper([value])
+                wrapped._element_type_name = type_name
                 object.__setattr__(self, name, wrapped)
             else:
                 object.__setattr__(self, name, value)

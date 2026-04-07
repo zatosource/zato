@@ -16,29 +16,33 @@ $.fn.zato.eda.sparkline = function(container, data_points, options) {
         return;
     }
 
+    var svg = '<svg width="' + w + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg">';
+
     if (data_points.length === 1) {
-        var svg_single = '<svg width="' + w + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg">';
-        svg_single += '<circle cx="' + (w / 2) + '" cy="' + (h / 2) + '" r="' + dot_r + '" fill="' + dot_color + '" />';
-        svg_single += '</svg>';
-        $(container).html(svg_single);
+        svg += '<circle cx="' + (w / 2) + '" cy="' + (h / 2) + '" r="' + dot_r + '" fill="' + dot_color + '" />';
+        svg += '</svg>';
+        $(container).html(svg);
         return;
     }
 
     var min_val = Math.min.apply(null, data_points);
     var max_val = Math.max.apply(null, data_points);
-    var range = max_val - min_val || 1;
+    var range = max_val - min_val;
 
     var points = [];
     for (var idx = 0; idx < data_points.length; idx++) {
         var x = pad + (idx / (data_points.length - 1)) * (w - 2 * pad);
-        var y = h - pad - ((data_points[idx] - min_val) / range) * (h - 2 * pad);
+        var y = range === 0
+            ? h / 2
+            : h - pad - ((data_points[idx] - min_val) / range) * (h - 2 * pad);
         points.push(x.toFixed(1) + ',' + y.toFixed(1));
     }
 
-    var last_x = pad + ((data_points.length - 1) / (data_points.length - 1)) * (w - 2 * pad);
-    var last_y = h - pad - ((data_points[data_points.length - 1] - min_val) / range) * (h - 2 * pad);
+    var last_x = (w - pad);
+    var last_y = range === 0
+        ? h / 2
+        : h - pad - ((data_points[data_points.length - 1] - min_val) / range) * (h - 2 * pad);
 
-    var svg = '<svg width="' + w + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg">';
     svg += '<polyline fill="none" stroke="' + color + '" stroke-width="1.5" points="' + points.join(' ') + '" />';
     svg += '<circle cx="' + last_x.toFixed(1) + '" cy="' + last_y.toFixed(1) + '" r="' + dot_r + '" fill="' + dot_color + '" />';
     svg += '</svg>';
