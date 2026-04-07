@@ -60,9 +60,9 @@ broker-tests:
 
 broker-perf-tests:
 ifeq ($(filter json,$(MAKECMDGOALS)),json)
-	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="--json"
+	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="--json $(PERF_TIER)"
 else
-	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test
+	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="$(PERF_TIER)"
 endif
 
 json:
