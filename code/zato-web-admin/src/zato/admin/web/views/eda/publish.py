@@ -26,11 +26,13 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 @method_allowed('GET')
-def index(req):
+def index(req:'object') -> 'TemplateResponse':
 
     cluster_id = req.GET.get('cluster', req.GET.get('cluster_id', ''))
+    initial_topic_name = req.GET.get('topic_name', '')
 
-    topics = []
+    topics = [] # type: list
+
     try:
         response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
             'cluster_id': cluster_id,
@@ -44,6 +46,7 @@ def index(req):
     return TemplateResponse(req, 'zato/eda/publish.html', {
         'cluster_id': cluster_id,
         'topics': json.dumps(topics),
+        'initial_topic_name': initial_topic_name,
         'zato_clusters': True,
         'zato_template_name': 'zato/eda/publish.html',
     })
@@ -52,7 +55,7 @@ def index(req):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def submit(req):
+def submit(req:'object') -> 'HttpResponse':
 
     topic_name = req.POST.get('topic_name', '')
     data = req.POST.get('data', '')

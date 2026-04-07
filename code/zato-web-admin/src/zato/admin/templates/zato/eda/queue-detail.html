@@ -3,29 +3,14 @@
 {% block page_title %}Queue: {{ sub_key }}{% endblock %}
 
 {% block extra_page_css %}
-<style type="text/css">
-    :root { --depth-green: #2ecc71; --depth-amber: #f39c12; --depth-red: #e74c3c; }
-    .eda-refresh-indicator { float: right; font-size: 12px; font-family: monospace; color: var(--text-muted); }
-    .queue-stats { display: flex; gap: 32px; font-size: 14px; color: var(--primary-dark); margin-bottom: 20px; }
-    .queue-stats strong { font-weight: 700; }
-    .queue-stats a { color: #0936d5; text-decoration: none; }
-    .queue-stats a:hover { text-decoration: underline; }
-    .stat-cards { display: flex; gap: 16px; margin-bottom: 20px; }
-    .stat-card { background: var(--white); border: 3px solid var(--primary-dark); padding: 12px 16px; box-shadow: 3px 3px 0px var(--shadow-dark); min-width: 140px; flex: 1; display: flex; align-items: center; justify-content: space-between; }
-    .stat-card-label { font-size: 11px; font-weight: 600; color: var(--primary-dark); text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-card-value { font-size: 22px; font-weight: 900; color: var(--primary-dark); }
-    .section-title { font-size: 16px; font-weight: 600; color: var(--primary-dark); margin: 20px 0 10px 0; letter-spacing: 0.5px; }
-    .eda-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .eda-table th { text-align: left; padding: 8px 12px; border-bottom: 3px solid var(--primary-dark); font-weight: 600; color: var(--primary-dark); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .eda-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); }
-    .eda-table tr:hover { background: var(--background-light); }
-    .eda-table a { color: #0936d5; text-decoration: none; }
-    .data-preview { font-family: monospace; font-size: 12px; color: #555; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .button-container { margin: 16px 0; display: flex; gap: 8px; }
-</style>
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
 {% endblock %}
 
-{% block section_title %}Queue: {{ sub_key }}{% endblock %}
+{% block section_title %}Queue: {{ sub_key }}
+
+<span class="eda-refresh-indicator" id="eda-last-refresh"></span>
+
+{% endblock %}
 {% block help_icon_id %}eda-queue-help{% endblock %}
 
 {% block extra_page_js %}
@@ -39,15 +24,16 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block content_rows %}
-<span class="eda-refresh-indicator" id="eda-last-refresh"></span>
-
-<div class="queue-stats">
-    <span>Topic: <a href="{% url 'eda-topic-detail' topic_name=topic_name %}?cluster={{ cluster_id|default:'1' }}"><strong>{{ topic_name }}</strong></a></span>
-    <span>Depth: <strong id="queue-depth">-</strong></span>
-</div>
 
 <div class="stat-cards">
-    <div class="stat-card"><div><div class="stat-card-label">Depth</div><div class="stat-card-value" id="stat-depth">-</div></div><div id="spark-depth"></div></div>
+    <div class="stat-card">
+        <div><div class="stat-card-label">Topic</div><div class="stat-card-value-sm"><a href="{% url 'eda-topic-detail' topic_name=topic_name %}?cluster={{ cluster_id|default:'1' }}">{{ topic_name }}</a></div></div>
+        <div></div>
+    </div>
+    <div class="stat-card">
+        <div><div class="stat-card-label">Depth</div><div class="stat-card-value" id="stat-depth">-</div></div>
+        <div id="spark-depth"></div>
+    </div>
 </div>
 
 <div class="button-container">
@@ -56,7 +42,7 @@ $(document).ready(function() {
 
 <h3 class="section-title">Pending messages</h3>
 <table class="eda-table">
-    <thead><tr><th>ID</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
+    <thead><tr><th>Message ID</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
     <tbody id="messages-body"></tbody>
 </table>
 {% endblock %}

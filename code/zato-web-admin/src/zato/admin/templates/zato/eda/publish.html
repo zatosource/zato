@@ -3,60 +3,41 @@
 {% block page_title %}Publish message{% endblock %}
 
 {% block extra_page_css %}
-<style type="text/css">
-    :root { --depth-green: #2ecc71; }
-    .publish-form { background: var(--white); border: 3px solid var(--primary-dark); padding: 24px; box-shadow: 4px 4px 0px var(--shadow-dark); }
-    .form-row { margin-bottom: 16px; }
-    .form-row label { display: block; font-size: 12px; font-weight: 600; color: var(--primary-dark); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .form-row input, .form-row select, .form-row textarea { width: 100%; padding: 8px 10px; border: 2px solid var(--primary-dark); font-size: 13px; box-sizing: border-box; font-family: monospace; }
-    .form-row textarea { height: 200px; }
-    .form-row select { width: auto; min-width: 100px; }
-    .form-actions { margin-top: 20px; }
-    .success-msg { background: var(--depth-green); color: #fff; padding: 10px 16px; margin-bottom: 16px; font-weight: 700; display: none; }
-    .success-msg a { color: #fff; text-decoration: underline; }
-</style>
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
 {% endblock %}
 
 {% block section_title %}Publish message{% endblock %}
 {% block help_icon_id %}eda-publish-help{% endblock %}
 
 {% block extra_page_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/publish.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
-    $.fn.zato.eda.publish.init({{ topics|safe }});
+    $.fn.zato.eda.publish.init({{ topics|safe }}, '{{ initial_topic_name }}');
 });
 </script>
 {% endblock %}
 
 {% block content_rows %}
-<div class="success-msg" id="publish-success"></div>
 
 <div class="publish-form">
     <div class="form-row">
         <label>Topic</label>
-        <select id="publish-topic"></select>
+        <select id="publish-topic" data-placeholder="Select a topic..."></select>
     </div>
     <div class="form-row">
         <label>Data</label>
-        <textarea id="publish-data" placeholder='{"key": "value"}'></textarea>
-    </div>
-    <div class="form-row" style="display:flex; gap:24px;">
-        <div>
-            <label>Priority (1-9)</label>
-            <select id="publish-priority">
-                {% for i in "123456789" %}
-                <option value="{{ i }}" {% if i == "5" %}selected{% endif %}>{{ i }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label>Expiration (sec)</label>
-            <input type="number" id="publish-expiration" value="86400" style="width:120px" />
+        <textarea id="publish-data" placeholder="Enter any data - plain text, JSON, XML or any other format"></textarea>
+        <div class="eda-file-upload-area" id="publish-file-drop">
+            Or drag and drop a file here, or <a href="#" id="publish-file-browse">browse</a>
+            <input type="file" id="publish-file-input" style="display:none" />
         </div>
     </div>
-    <div class="form-actions">
-        <button class="action-button" onclick="$.fn.zato.eda.publish.submit()">Publish</button>
+    <div class="form-actions" style="display:flex; align-items:center; justify-content:flex-end; gap:12px;">
+        <span class="status-message" id="publish-status"></span>
+        <img src="/static/gfx/spinner.svg" class="button-spinner" id="publish-spinner">
+        <button class="action-button" id="publish-button" onclick="$.fn.zato.eda.publish.submit()">Publish</button>
     </div>
 </div>
 {% endblock %}

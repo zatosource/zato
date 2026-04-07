@@ -3,160 +3,7 @@
 {% block page_title %}Pub/sub activity{% endblock %}
 
 {% block extra_page_css %}
-<style type="text/css">
-
-    :root {
-    --depth-green: #063c65;
-    --depth-amber: #f39c12;
-    --depth-red: #e74c3c;
-    --link-color: #037ac7;
-    }
-
-    a {
-        text-decoration: none !important;
-    }
-
-    .stat-cards {
-        display: flex;
-        gap: 16px;
-        margin-bottom: 28px;
-        flex-wrap: wrap;
-    }
-
-    .stat-card {
-        background: var(--white);
-        border: 3px solid var(--primary-dark);
-        padding: 16px 20px;
-        box-shadow: 4px 4px 0px var(--shadow-dark);
-        min-width: 160px;
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-sizing: border-box;
-        height: 80px;
-    }
-
-    .stat-card > div:last-child {
-        width: 60px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .stat-card-label {
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--primary-dark);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .stat-card-value {
-        font-size: 28px;
-        font-weight: 900;
-        color: var(--primary-dark);
-        line-height: 1.1;
-    }
-
-    .section-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--primary-dark);
-        margin: 24px 0 10px 0;
-        letter-spacing: 0.5px;
-    }
-
-    .eda-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-    }
-
-    .eda-table th {
-        text-align: left;
-        padding: 8px 12px;
-        border-bottom: 3px solid var(--primary-dark);
-        font-weight: 600;
-        color: var(--primary-dark);
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .eda-table td {
-        padding: 8px 12px;
-        border-bottom: 1px solid var(--border-light);
-    }
-
-    .eda-table tbody tr:first-child td {
-        padding-top: 0.9rem;
-    }
-
-    .eda-table tr:hover {
-        background: var(--background-light);
-    }
-
-    .eda-table a {
-        color: var(--link-color);
-    }
-
-
-    .depth-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 3px;
-        font-weight: 700;
-        font-size: 12px;
-        min-width: 30px;
-        text-align: center;
-    }
-
-    .depth-0 {
-        background: var(--depth-green);
-        color: #fff;
-    }
-
-    .depth-low {
-        background: var(--depth-amber);
-        color: #fff;
-    }
-
-    .depth-high {
-        background: var(--depth-red);
-        color: #fff;
-    }
-
-    .view-all-link {
-        display: block;
-        text-align: right;
-        margin-top: 8px;
-        font-size: 13px;
-        padding-top: 0.4rem;
-    }
-
-    .view-all-link:last-of-type {
-        padding-top: 0.6rem;
-        padding-bottom: 1rem;
-    }
-
-    .view-all-link a {
-        color: var(--link-color);
-
-    }
-
-    .eda-refresh-indicator {
-        float: right;
-        font-size: 0.7rem;
-        font-family: monospace;
-        font-weight: 500;
-        color: #333;
-        padding-top: 5px;
-    }
-
-</style>
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
 {% endblock %}
 
 {% block section_title %}Pub/sub activity
@@ -186,12 +33,12 @@ $(document).ready(function() {
     </div>
 
     <div class="stat-card">
-        <div><div class="stat-card-label">Messages</div><div class="stat-card-value" id="stat-messages">-</div></div>
+        <div><div class="stat-card-label">Total published</div><div class="stat-card-value" id="stat-messages">-</div></div>
         <div id="spark-messages"></div>
     </div>
 
     <div class="stat-card">
-        <div><div class="stat-card-label">Total depth</div><div class="stat-card-value" id="stat-depth">-</div></div>
+        <div><div class="stat-card-label">Current depth</div><div class="stat-card-value" id="stat-depth">-</div></div>
         <div id="spark-depth"></div>
     </div>
 

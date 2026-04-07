@@ -3,22 +3,7 @@
 {% block page_title %}Message browser{% endblock %}
 
 {% block extra_page_css %}
-<style type="text/css">
-    .filter-bar { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-end; flex-wrap: wrap; }
-    .filter-bar label { font-size: 12px; font-weight: 600; color: var(--primary-dark); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
-    .filter-bar input, .filter-bar select { padding: 6px 10px; border: 2px solid var(--primary-dark); font-size: 13px; font-family: monospace; }
-    .eda-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .eda-table th { text-align: left; padding: 8px 12px; border-bottom: 3px solid var(--primary-dark); font-weight: 600; color: var(--primary-dark); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .eda-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-light); }
-    .eda-table tr:hover { background: var(--background-light); }
-    .eda-table a { color: #0936d5; text-decoration: none; }
-    .eda-table a:hover { text-decoration: underline; }
-    .data-preview { font-family: monospace; font-size: 12px; color: #555; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .pagination-bar { margin-top: 16px; text-align: center; font-size: 13px; }
-    .pagination-bar a { color: #0936d5; text-decoration: none; margin: 0 8px; }
-    .pagination-bar .current-page { font-weight: 700; color: var(--primary-dark); }
-    .total-info { font-size: 13px; font-family: monospace; color: var(--text-muted); margin-bottom: 12px; }
-</style>
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
 {% endblock %}
 
 {% block section_title %}Message browser{% endblock %}
@@ -29,27 +14,33 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/messages.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
-    $.fn.zato.eda.messages.init({{ messages|safe }}, {{ total }}, {{ page }}, {{ total_pages }});
+    $.fn.zato.eda.messages.init(
+        {{ messages|safe }},
+        {{ total }},
+        {{ page }},
+        {{ total_pages }},
+        {{ topics_json|safe }},
+        '{{ topic_name_filter }}'
+    );
 });
 </script>
 {% endblock %}
 
 {% block content_rows %}
-<form class="filter-bar" method="get" action="{% url 'eda-messages' %}">
+<form class="filter-bar" method="get" action="{% url 'eda-messages' %}" id="messages-filter-form">
     <input type="hidden" name="cluster" value="{{ cluster_id }}" />
     <div>
         <label>Topic</label>
-        <input type="text" name="topic_name" value="{{ topic_name_filter }}" placeholder="All topics" style="width:200px" />
-    </div>
-    <div>
-        <button class="action-button" type="submit">Filter</button>
+        <select id="messages-topic-select" name="topic_name" data-placeholder="All topics" style="width:300px">
+            <option value=""></option>
+        </select>
     </div>
 </form>
 
-<div class="total-info">Total: <strong id="msg-total">{{ total }}</strong> messages</div>
+<div class="total-info">Total: <strong id="msg-total">{{ total }}</strong> <span id="msg-total-label">{% if total == 1 %}message{% else %}messages{% endif %}</span></div>
 
 <table class="eda-table">
-    <thead><tr><th>ID</th><th>Topic</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
+    <thead><tr><th>Message ID</th><th>Topic</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
     <tbody id="messages-body"></tbody>
 </table>
 

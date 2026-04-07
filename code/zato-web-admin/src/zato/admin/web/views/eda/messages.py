@@ -22,7 +22,10 @@ from zato.admin.web.views import method_allowed
 
 logger = logging.getLogger(__name__)
 
-def _parse_response(response):
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _parse_response(response:'object') -> 'dict':
     if response.ok:
         raw = response.data
         if isinstance(raw, str):
@@ -35,7 +38,7 @@ def _parse_response(response):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def index(req):
+def index(req:'object') -> 'TemplateResponse':
 
     cluster_id = req.GET.get('cluster', req.GET.get('cluster_id', ''))
     topic_name = req.GET.get('topic_name', '')
@@ -47,7 +50,7 @@ def index(req):
         invoke_input = {
             'offset': offset,
             'limit': page_size,
-        }
+        } # type: dict
         if topic_name:
             invoke_input['topic_name'] = topic_name
 
@@ -61,6 +64,19 @@ def index(req):
     total = data.get('total', 0)
     total_pages = max(1, (total + page_size - 1) // page_size)
 
+    #  ..  load topics for the filter select
+    topics = [] # type: list
+
+    try:
+        topic_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {
+            'cluster_id': cluster_id,
+        })
+        if topic_response.ok:
+            for item in topic_response.data:
+                topics.append({'name': item.name})
+    except Exception as e:
+        logger.error('EDA messages - error loading topics for filter: %s', e)
+
     return TemplateResponse(req, 'zato/eda/messages.html', {
         'cluster_id': cluster_id,
         'messages': json.dumps(messages),
@@ -68,6 +84,7 @@ def index(req):
         'page': page,
         'total_pages': total_pages,
         'topic_name_filter': topic_name,
+        'topics_json': json.dumps(topics),
         'zato_clusters': True,
         'zato_template_name': 'zato/eda/messages.html',
     })
@@ -76,7 +93,7 @@ def index(req):
 # ################################################################################################################################
 
 @method_allowed('GET')
-def detail(req, topic_name, msg_id):
+def detail(req:'object', topic_name:'str', msg_id:'str') -> 'TemplateResponse':
 
     cluster_id = req.GET.get('cluster', req.GET.get('cluster_id', ''))
 

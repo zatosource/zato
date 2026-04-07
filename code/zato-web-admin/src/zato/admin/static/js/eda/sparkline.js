@@ -11,8 +11,16 @@ $.fn.zato.eda.sparkline = function(container, data_points, options) {
     var dot_r = options.dot_radius || 2.5;
     var pad = dot_r + 1;
 
-    if (!data_points || data_points.length < 2) {
+    if (!data_points || data_points.length === 0) {
         $(container).html('');
+        return;
+    }
+
+    if (data_points.length === 1) {
+        var svg_single = '<svg width="' + w + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg">';
+        svg_single += '<circle cx="' + (w / 2) + '" cy="' + (h / 2) + '" r="' + dot_r + '" fill="' + dot_color + '" />';
+        svg_single += '</svg>';
+        $(container).html(svg_single);
         return;
     }
 
@@ -21,9 +29,9 @@ $.fn.zato.eda.sparkline = function(container, data_points, options) {
     var range = max_val - min_val || 1;
 
     var points = [];
-    for (var i = 0; i < data_points.length; i++) {
-        var x = pad + (i / (data_points.length - 1)) * (w - 2 * pad);
-        var y = h - pad - ((data_points[i] - min_val) / range) * (h - 2 * pad);
+    for (var idx = 0; idx < data_points.length; idx++) {
+        var x = pad + (idx / (data_points.length - 1)) * (w - 2 * pad);
+        var y = h - pad - ((data_points[idx] - min_val) / range) * (h - 2 * pad);
         points.push(x.toFixed(1) + ',' + y.toFixed(1));
     }
 
@@ -54,14 +62,8 @@ $.fn.zato.eda.format_number = function(n) {
     return n.toLocaleString();
 };
 
-$.fn.zato.eda.depth_class = function(d) {
-    if (d === 0) return 'depth-0';
-    if (d < 100) return 'depth-low';
-    return 'depth-high';
-};
-
 $.fn.zato.eda.depth_html = function(d) {
-    return '<span class="depth-badge ' + $.fn.zato.eda.depth_class(d) + '">' + d + '</span>';
+    return '<span class="eda-badge">' + d + '</span>';
 };
 
 $.fn.zato.eda.update_refresh_indicator = function() {
@@ -70,4 +72,58 @@ $.fn.zato.eda.update_refresh_indicator = function() {
     var mm = ('0' + now.getMinutes()).slice(-2);
     var ss = ('0' + now.getSeconds()).slice(-2);
     $('#eda-last-refresh').text('Last refreshed: ' + hh + ':' + mm + ':' + ss);
+};
+
+$.fn.zato.eda.pluralize = function(count, singular, plural) {
+    if (!plural) {
+        plural = singular + 's';
+    }
+    return count === 1 ? singular : plural;
+};
+
+$.fn.zato.eda.format_local_time = function(ts) {
+    if (!ts || ts <= 0) return '-';
+    var d = new Date(ts * 1000);
+    var year = d.getFullYear();
+    var month = ('0' + (d.getMonth() + 1)).slice(-2);
+    var day = ('0' + d.getDate()).slice(-2);
+    var hh = ('0' + d.getHours()).slice(-2);
+    var mm = ('0' + d.getMinutes()).slice(-2);
+    var ss = ('0' + d.getSeconds()).slice(-2);
+    return year + '-' + month + '-' + day + ' ' + hh + ':' + mm + ':' + ss;
+};
+
+$.fn.zato.eda.bind_copy_targets = function() {
+    $('.eda-copy-target').off('click.edacopy').on('click.edacopy', function() {
+        var value = $(this).data('copy-value');
+        var elem = this;
+        navigator.clipboard.writeText(value).then(function() {
+            var tip = tippy(elem, {
+                content: 'Copied to clipboard',
+                trigger: 'manual',
+                placement: 'top',
+                duration: [200, 200]
+            });
+            tip.show();
+            setTimeout(function() {
+                tip.hide();
+                setTimeout(function() { tip.destroy(); }, 300);
+            }, 600);
+        });
+    });
+};
+
+$.fn.zato.eda.humanize_duration = function(seconds) {
+    if (seconds < 0) return 'expired';
+    if (seconds < 60) return Math.floor(seconds) + ' ' + $.fn.zato.eda.pluralize(Math.floor(seconds), 'second') + ' from now';
+    if (seconds < 3600) {
+        var mins = Math.floor(seconds / 60);
+        return mins + ' ' + $.fn.zato.eda.pluralize(mins, 'minute') + ' from now';
+    }
+    if (seconds < 86400) {
+        var hours = Math.floor(seconds / 3600);
+        return hours + ' ' + $.fn.zato.eda.pluralize(hours, 'hour') + ' from now';
+    }
+    var days = Math.floor(seconds / 86400);
+    return days + ' ' + $.fn.zato.eda.pluralize(days, 'day') + ' from now';
 };

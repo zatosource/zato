@@ -10,11 +10,11 @@ $.fn.zato.eda.topic_detail._spark_depth = [];
 $.fn.zato.eda.topic_detail.render = function(data) {
     if (!data || !data.name) return;
 
-    $('#topic-total-published').text($.fn.zato.eda.format_number(data.total_published || 0));
-    $('#topic-depth').text($.fn.zato.eda.format_number(data.depth || 0));
     $('#stat-published').text($.fn.zato.eda.format_number(data.total_published || 0));
     $('#stat-depth').text($.fn.zato.eda.format_number(data.depth || 0));
-    $('#topic-last-pub').text($.fn.zato.eda.relative_time(data.last_pub_ts));
+
+    var last_pub_text = $.fn.zato.eda.format_local_time(data.last_pub_ts);
+    $('#stat-last-pub').text(last_pub_text);
 
     var sp = $.fn.zato.eda.topic_detail._spark_published;
     sp.push(data.total_published || 0);
@@ -29,11 +29,11 @@ $.fn.zato.eda.topic_detail.render = function(data) {
     var $qbody = $('#queues-body');
     $qbody.empty();
     var queues = data.queues || [];
-    for (var i = 0; i < queues.length; i++) {
-        var q = queues[i];
+    for (var queue_idx = 0; queue_idx < queues.length; queue_idx++) {
+        var queue = queues[queue_idx];
         var row = '<tr>';
-        row += '<td><a href="/zato/eda/queue/' + encodeURIComponent(data.name) + '/' + encodeURIComponent(q.sub_key) + '/?cluster=1">' + q.sub_key + '</a></td>';
-        row += '<td>' + $.fn.zato.eda.depth_html(q.pending_count || 0) + '</td>';
+        row += '<td><a href="/zato/eda/queue/' + encodeURIComponent(data.name) + '/' + encodeURIComponent(queue.sub_key) + '/?cluster=1">' + queue.sub_key + '</a></td>';
+        row += '<td>' + $.fn.zato.eda.depth_html(queue.pending_count || 0) + '</td>';
         row += '</tr>';
         $qbody.append(row);
     }
@@ -44,14 +44,14 @@ $.fn.zato.eda.topic_detail.render = function(data) {
     var $mbody = $('#messages-body');
     $mbody.empty();
     var messages = data.messages || [];
-    for (var j = 0; j < messages.length; j++) {
-        var m = messages[j];
-        var mrel = $.fn.zato.eda.relative_time(m.pub_time_ts);
+    for (var msg_idx = 0; msg_idx < messages.length; msg_idx++) {
+        var msg = messages[msg_idx];
+        var mrel = $.fn.zato.eda.relative_time(msg.pub_time_ts);
         var mrow = '<tr>';
-        mrow += '<td><a href="/zato/eda/messages/' + encodeURIComponent(data.name) + '/' + encodeURIComponent(m.msg_id) + '/?cluster=1">' + m.msg_id.substring(0, 15) + '...</a></td>';
-        mrow += '<td class="data-preview">' + $('<span>').text(m.data_preview || '').html() + '</td>';
-        mrow += '<td>' + (m.size || 0) + ' B</td>';
-        mrow += '<td title="' + (m.pub_time_ts ? new Date(m.pub_time_ts * 1000).toISOString() : '') + '">' + mrel + '</td>';
+        mrow += '<td style="font-family:monospace; font-size:12px"><a href="/zato/eda/messages/' + encodeURIComponent(data.name) + '/' + encodeURIComponent(msg.msg_id) + '/?cluster=1">' + msg.msg_id + '</a></td>';
+        mrow += '<td class="data-preview">' + $('<span>').text(msg.data_preview || '').html() + '</td>';
+        mrow += '<td>' + (msg.size || 0) + ' B</td>';
+        mrow += '<td title="' + $.fn.zato.eda.format_local_time(msg.pub_time_ts) + '">' + mrel + '</td>';
         mrow += '</tr>';
         $mbody.append(mrow);
     }

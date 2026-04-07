@@ -11,7 +11,6 @@ $.fn.zato.eda.queue_detail.render = function(data) {
     if (!data) return;
 
     var depth = data.depth || 0;
-    $('#queue-depth').text($.fn.zato.eda.format_number(depth));
     $('#stat-depth').text($.fn.zato.eda.format_number(depth));
 
     var sd = $.fn.zato.eda.queue_detail._spark_depth;
@@ -22,19 +21,20 @@ $.fn.zato.eda.queue_detail.render = function(data) {
     var $mbody = $('#messages-body');
     $mbody.empty();
     var messages = data.messages || [];
-    for (var i = 0; i < messages.length; i++) {
-        var m = messages[i];
-        var rel = $.fn.zato.eda.relative_time(m.pub_time_ts);
+    for (var msg_idx = 0; msg_idx < messages.length; msg_idx++) {
+        var msg = messages[msg_idx];
+        var rel = $.fn.zato.eda.relative_time(msg.pub_time_ts);
         var row = '<tr>';
-        row += '<td><a href="/zato/eda/messages/' + encodeURIComponent($.fn.zato.eda.queue_detail._topic_name) + '/' + encodeURIComponent(m.msg_id) + '/?cluster=1">' + m.msg_id.substring(0, 15) + '...</a></td>';
-        row += '<td class="data-preview">' + $('<span>').text(m.data_preview || '').html() + '</td>';
-        row += '<td>' + (m.size || 0) + ' B</td>';
-        row += '<td title="' + (m.pub_time_ts ? new Date(m.pub_time_ts * 1000).toISOString() : '') + '">' + rel + '</td>';
+        row += '<td style="font-family:monospace; font-size:12px"><a href="/zato/eda/messages/' + encodeURIComponent($.fn.zato.eda.queue_detail._topic_name) + '/' + encodeURIComponent(msg.msg_id) + '/?cluster=1">' + msg.msg_id + '</a></td>';
+        row += '<td class="data-preview">' + $('<span>').text(msg.data_preview || '').html() + '</td>';
+        row += '<td>' + (msg.size || 0) + ' B</td>';
+        row += '<td title="' + $.fn.zato.eda.format_local_time(msg.pub_time_ts) + '">' + rel + '</td>';
         row += '</tr>';
         $mbody.append(row);
     }
     if (messages.length === 0) {
-        $mbody.append('<tr><td colspan="4">No pending messages</td></tr>');
+        var label = $.fn.zato.eda.pluralize(0, 'message');
+        $mbody.append('<tr><td colspan="4">No pending ' + label + '</td></tr>');
     }
 
     $.fn.zato.eda.update_refresh_indicator();
