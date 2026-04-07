@@ -12,6 +12,10 @@
     --link-color: #037ac7;
     }
 
+    a {
+        text-decoration: none !important;
+    }
+
     .stat-cards {
         display: flex;
         gap: 16px;
@@ -29,6 +33,17 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        box-sizing: border-box;
+        height: 80px;
+    }
+
+    .stat-card > div:last-child {
+        width: 60px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
     }
 
     .stat-card-label {
@@ -76,18 +91,18 @@
         border-bottom: 1px solid var(--border-light);
     }
 
+    .eda-table tbody tr:first-child td {
+        padding-top: 0.9rem;
+    }
+
     .eda-table tr:hover {
         background: var(--background-light);
     }
 
     .eda-table a {
         color: var(--link-color);
-        text-decoration: none;
     }
 
-    .eda-table a:hover {
-        text-decoration: none;
-    }
 
     .depth-badge {
         display: inline-block;
@@ -119,15 +134,17 @@
         text-align: right;
         margin-top: 8px;
         font-size: 13px;
+        padding-top: 0.4rem;
+    }
+
+    .view-all-link:last-of-type {
+        padding-top: 0.6rem;
+        padding-bottom: 1rem;
     }
 
     .view-all-link a {
         color: var(--link-color);
-        text-decoration: none;
 
-    }
-        .view-all-link a:hover {
-        text-decoration: underline;
     }
 
     .eda-refresh-indicator {
@@ -162,22 +179,27 @@ $(document).ready(function() {
 {% block content_rows %}
 
 <div class="stat-cards">
+
     <div class="stat-card">
         <div><div class="stat-card-label">Topics</div><div class="stat-card-value" id="stat-topics">-</div></div>
         <div id="spark-topics"></div>
     </div>
+
     <div class="stat-card">
         <div><div class="stat-card-label">Messages</div><div class="stat-card-value" id="stat-messages">-</div></div>
         <div id="spark-messages"></div>
     </div>
+
     <div class="stat-card">
-        <div><div class="stat-card-label">Queue depth</div><div class="stat-card-value" id="stat-depth">-</div></div>
+        <div><div class="stat-card-label">Total depth</div><div class="stat-card-value" id="stat-depth">-</div></div>
         <div id="spark-depth"></div>
     </div>
+
     <div class="stat-card">
         <div><div class="stat-card-label">Subscribers</div><div class="stat-card-value" id="stat-subscribers">-</div></div>
         <div id="spark-subscribers"></div>
     </div>
+
 </div>
 
 <h3 class="section-title">Topic activity</h3>
