@@ -955,6 +955,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self._check_broker_permission,
         )
 
+        # Pre-load all Basic Auth credentials into Rust for GIL-free checking.
+        self._push_broker_credentials()
+
         # Let the worker know the broker client is ready
         self.worker_store.set_broker_client(self.broker_client)
         self.worker_store.after_broker_client_set()
@@ -1610,6 +1613,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             return False
         except Exception:
             return False
+
+# ################################################################################################################################
+
+    def _push_broker_credentials(self) -> 'None':
+        """ Push all known Basic Auth credentials into the Rust-side store
+        so that check_credentials can run without acquiring the GIL. """
+        try:
+            ba_config = self.worker_store.request_dispatcher.url_data.basic_auth_config
+            for name in ba_config:
+                entry = ba_config[name]
+                password = entry.config.password
+                self.broker_client.set_credentials(name, password)
+        except Exception:
+            logger.warning('Could not push broker credentials to Rust store')
 
 # ################################################################################################################################
 
