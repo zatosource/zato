@@ -91,8 +91,8 @@ class Consumer:
         while self.keep_running:
             try:
                 messages = fs_poll(self._cfg, self.channel_name, cursor)
-                for seq, data in messages:
-                    self._process_message(data)
+                for seq, meta_str, data_bytes in messages:
+                    self._process_message(meta_str)
                     cursor = seq
                     try:
                         fs_update_cursor(self._cfg, self.channel_name, self.config.queue_name, cursor)
