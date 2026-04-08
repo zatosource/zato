@@ -136,11 +136,12 @@ class BrokerPubSub:
                     except Exception:
                         continue
 
-                    for seq, data in messages:
+                    for seq, meta_str, data_bytes in messages:
                         msg = {
                             'type': 'message',
                             'channel': channel,
-                            'data': data,
+                            'data': meta_str,
+                            'data_bytes': data_bytes,
                             'pattern': None,
                         }
                         with self._lock:
@@ -197,8 +198,8 @@ class BrokerClient:
     # Pub/sub
     # ############################################################################################################################
 
-    def publish(self, channel:'str', message:'str') -> 'int':
-        return fs_publish(self._cfg, channel, message)
+    def publish(self, channel:'str', message:'str', data:'bytes'=b'') -> 'int':
+        return fs_publish(self._cfg, channel, message, data)
 
     def pubsub(self) -> 'BrokerPubSub':
         return BrokerPubSub(self, poll_interval=self._poll_interval)

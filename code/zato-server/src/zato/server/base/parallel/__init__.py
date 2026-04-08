@@ -34,7 +34,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 
 # Zato
 from zato.broker import BrokerMessageReceiver
-from zato.broker.broker import BrokerCoreAPI
+from zato.broker.api import BrokerCoreAPI
 from zato_broker_core import log_admin_info
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
@@ -948,6 +948,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Load pub/sub permissions from database into pattern matcher
         self._load_pubsub_permissions()
 
+        # Register auth callbacks so the broker's Rust HTTP server
+        # can validate credentials and permissions through the Zato security layer.
+        self.broker_client.set_auth_callbacks(
+            self._check_broker_credentials,
+            self._check_broker_permission,
+        )
+
         # Let the worker know the broker client is ready
         self.worker_store.set_broker_client(self.broker_client)
         self.worker_store.after_broker_client_set()
@@ -1594,9 +1601,34 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def _check_broker_credentials(self, username:'str', password:'str') -> 'bool':
+        """ Auth callback invoked by the Rust HTTP server for each request with Basic Auth. """
+        try:
+            result = self.worker_store.basic_auth_get(username)
+            if result:
+                return result.config.password
+            return False
+        except Exception:
+            return False
+
+# ################################################################################################################################
+
+    def _check_broker_permission(self, username:'str', topic_name:'str', action:'str') -> 'bool':
+        """ Permission callback invoked by the Rust HTTP server on pub/sub endpoints. """
+        try:
+            return self.pubsub_pattern_matcher.is_allowed(username, topic_name, action)
+        except Exception:
+            return False
+
+# ################################################################################################################################
+
     def cleanup_on_stop(self) -> 'None':
         """ A shutdown cleanup procedure.
         """
+
+        # Stop the broker (including its Rust HTTP server and OS thread)
+        if hasattr(self, 'broker_client') and self.broker_client:
+            self.broker_client.stop_consumer()
 
         # Tell the ODB we've gone through a clean shutdown but only if this is
         # the main process going down (Arbiter) not one of Gunicorn workers.
