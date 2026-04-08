@@ -34,7 +34,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 
 # Zato
 from zato.broker import BrokerMessageReceiver
-from zato.broker.client import BrokerClient
+from zato.broker.broker import BrokerCoreAPI
 from zato_broker_core import log_admin_info
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
@@ -139,7 +139,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     service_store: 'ServiceStore'
 
     rpc: 'ServerRPC'
-    broker_client: 'BrokerClient'
+    broker_client: 'BrokerCoreAPI'
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
     bearer_token_manager: 'BearerTokenManager'
@@ -922,7 +922,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
         # Set up the broker client
-        self.broker_client = BrokerClient(server=self)
+        self.broker_client = BrokerCoreAPI(server=self)
         self.broker_client.ping_connection()
 
         # Delete the queue to remove any message we don't want to read since they were published when we were not running,

@@ -22,7 +22,7 @@ from watchdog.observers.polling import PollingObserver
 from watchdog.observers.inotify import InotifyObserver
 
 # Zato
-from zato.broker.client import BrokerClient
+from zato.broker.broker import BrokerCoreAPI
 from zato.common.util.api import new_cid, publish_file, publish_enmasse, publish_user_conf
 
 # ################################################################################################################################
@@ -254,7 +254,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         self.modified_files = set()
 
         # Initialize broker client for publishing events
-        self.broker_client = BrokerClient()
+        self.broker_client = BrokerCoreAPI()
         self.broker_client.ping_connection()
         super().__init__()
 

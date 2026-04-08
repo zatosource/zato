@@ -78,7 +78,7 @@ logger = logging.getLogger(__name__)
 if 0:
     from bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
-    from zato.broker.client import BrokerClient
+    from zato.broker.broker import BrokerCoreAPI
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
@@ -157,7 +157,7 @@ _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
-    broker_client: 'BrokerClient | None' = None
+    broker_client: 'BrokerCoreAPI | None' = None
 
     def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -349,7 +349,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def set_broker_client(self, broker_client:'BrokerClient') -> 'None':
+    def set_broker_client(self, broker_client:'BrokerCoreAPI') -> 'None':
         self.broker_client = broker_client
 
 # ################################################################################################################################

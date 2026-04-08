@@ -91,7 +91,7 @@ UUID = UUID # type: ignore
 if 0:
     from ddtrace._trace.context import Context as DatadogContext
     from logging import Logger
-    from zato.broker.client import BrokerClient
+    from zato.broker.broker import BrokerCoreAPI
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
@@ -112,7 +112,7 @@ if 0:
     modelnone = modelnone
     strdictnone = strdictnone
     AuditPII = AuditPII
-    BrokerClient = BrokerClient
+    BrokerCoreAPI = BrokerCoreAPI
     callable_ = callable_
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
@@ -360,7 +360,7 @@ class Service:
     keysight: 'KeysightContainer'
 
     server: 'ParallelServer'
-    broker_client: 'BrokerClient'
+    broker_client: 'BrokerCoreAPI'
     time: 'TimeUtil'
 
     # These two are the same
@@ -630,7 +630,7 @@ class Service:
         data_format,   # type: str
         transport,     # type: str
         server,        # type: ParallelServer
-        broker_client, # type: BrokerClient | None
+        broker_client, # type: BrokerCoreAPI | None
         worker_store,  # type: WorkerStore
         cid,           # type: str
         simple_io_config, # type: anydict
@@ -1169,7 +1169,7 @@ class Service:
         service,               # type: Service
         channel_type,          # type: str
         server,                # type: ParallelServer
-        broker_client,         # type: BrokerClient
+        broker_client,         # type: BrokerCoreAPI
         _ignored,              # type: any_
         cid,                   # type: str
         payload,               # type: any_

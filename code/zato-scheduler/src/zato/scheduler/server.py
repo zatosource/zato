@@ -11,7 +11,7 @@ import os
 from logging import captureWarnings, getLogger
 
 # Zato
-from zato.broker.client import BrokerClient
+from zato.broker.broker import BrokerCoreAPI
 from zato.common.api import SCHEDULER
 from zato.common.aux_server.base import AuxServer, AuxServerConfig
 from zato.common.crypto.api import SchedulerCryptoManager
@@ -81,7 +81,7 @@ class SchedulerServer(AuxServer):
 
         # SchedulerAPI
         self.scheduler_api = SchedulerAPI(self.config) # type: ignore
-        self.scheduler_api.broker_client = BrokerClient(queue_name='scheduler', context=self.scheduler_api)
+        self.scheduler_api.broker_client = BrokerCoreAPI(queue_name='scheduler', context=self.scheduler_api)
         self.scheduler_api.broker_client.ping_connection()
         self.scheduler_api.broker_client.create_internal_queue('scheduler')
         self.scheduler_api.broker_client.start_consumer()
