@@ -459,6 +459,10 @@ class ServiceStore:
             else:
                 _ = SIOProcessor.attach_sio(service_store.server, None, class_)
 
+            class_.has_sio = True
+        else:
+            class_.has_sio = False
+
         # May be None during unit-tests - not every test provides it.
         if service_store:
 

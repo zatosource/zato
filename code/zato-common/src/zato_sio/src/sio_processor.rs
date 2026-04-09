@@ -121,13 +121,8 @@ impl SIOProcessor {
 
     #[staticmethod]
     fn attach_sio(py: Python<'_>, _server: &Bound<'_, PyAny>, _server_config: &Bound<'_, PyAny>, class: &Bound<'_, PyAny>) -> PyResult<()> {
-        let user_sio = match class.getattr("SimpleIO") {
-            Ok(sio) => sio,
-            Err(_) => return Ok(()),
-        };
-
-        let sio_input = user_sio.getattr("input").ok();
-        let sio_output = user_sio.getattr("output").ok();
+        let sio_input = class.getattr("input").ok();
+        let sio_output = class.getattr("output").ok();
 
         let has_input = sio_input.as_ref().is_some_and(|v| !v.is_none());
         let has_output = sio_output.as_ref().is_some_and(|v| !v.is_none());
