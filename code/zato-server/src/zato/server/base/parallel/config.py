@@ -216,7 +216,13 @@ class ConfigLoader:
         """ Loads default objects and enmasse YAML into the Rust ConfigStore.
         """
 
-        # Always load default objects first -- shipped with the codebase
+        # Load local secrets first (security definitions with encrypted passwords)
+        secrets_yaml_path = os.path.join(self.repo_location, 'secrets.yaml')
+        if os.path.exists(secrets_yaml_path):
+            logger.info('Loading secrets from %s', secrets_yaml_path)
+            self.rust_config_store.load_yaml(secrets_yaml_path)
+
+        # Then load default objects -- shipped with the codebase (channels referencing security by name)
         from zato.common.data import default_objects_yaml_path
         if os.path.exists(default_objects_yaml_path):
             logger.info('Loading default objects from %s', default_objects_yaml_path)

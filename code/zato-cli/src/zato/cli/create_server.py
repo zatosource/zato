@@ -616,6 +616,27 @@ class Create(ZatoCommand):
             ))
             secrets_conf.close()
 
+            admin_invoke_password = getattr(args, 'admin_invoke_password', '') or \
+                                   getattr(args, 'server_password', '') or ''
+
+            if admin_invoke_password:
+                encrypted_password = fernet1.encrypt(admin_invoke_password.encode('utf8')).decode('utf8')
+            else:
+                encrypted_password = ''
+
+            secrets_yaml_loc = os.path.join(self.target_dir, 'config/repo/secrets.yaml')
+            secrets_yaml = open_w(secrets_yaml_loc)
+            _ = secrets_yaml.write(
+                'security:\n'
+                '  - name: admin.invoke\n'
+                '    username: admin.invoke\n'
+                '    password: "{}"\n'
+                '    type: basic_auth\n'
+                '    realm: zato\n'
+                '    is_active: true\n'.format(encrypted_password)
+            )
+            secrets_yaml.close()
+
             bytes_to_str_encoding = 'utf8' if PY3 else ''
 
             simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')

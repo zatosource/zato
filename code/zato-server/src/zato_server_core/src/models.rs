@@ -120,8 +120,8 @@ pub struct ChannelRest {
     pub service: String,
     #[serde(default)]
     pub url_path: String,
-    #[serde(default)]
-    pub security: Option<String>,
+    #[serde(default, rename = "security_name", alias = "security")]
+    pub security_name: Option<String>,
     #[serde(default)]
     pub data_format: Option<String>,
     #[serde(default)]
@@ -163,8 +163,8 @@ pub struct ChannelSoap {
     pub service: String,
     #[serde(default)]
     pub url_path: String,
-    #[serde(default)]
-    pub security: Option<String>,
+    #[serde(default, rename = "security_name", alias = "security")]
+    pub security_name: Option<String>,
     #[serde(default)]
     pub soap_action: String,
     #[serde(default)]
@@ -188,8 +188,8 @@ pub struct OutgoingRest {
     pub host: String,
     #[serde(default)]
     pub url_path: String,
-    #[serde(default)]
-    pub security: Option<String>,
+    #[serde(default, rename = "security_name", alias = "security")]
+    pub security_name: Option<String>,
     #[serde(default)]
     pub data_format: Option<String>,
     #[serde(default = "default_timeout")]
@@ -229,8 +229,8 @@ pub struct OutgoingSoap {
     pub host: String,
     #[serde(default)]
     pub url_path: String,
-    #[serde(default)]
-    pub security: Option<String>,
+    #[serde(default, rename = "security_name", alias = "security")]
+    pub security_name: Option<String>,
     #[serde(default)]
     pub soap_action: String,
     #[serde(default)]
@@ -523,8 +523,8 @@ pub struct GenericConnection {
     pub secret: Option<String>,
     #[serde(default)]
     pub cache_expiry: Option<u32>,
-    #[serde(default)]
-    pub security: Option<String>,
+    #[serde(default, rename = "security_name", alias = "security")]
+    pub security_name: Option<String>,
     #[serde(default)]
     pub opaque: HashMap<String, serde_yaml::Value>,
 }

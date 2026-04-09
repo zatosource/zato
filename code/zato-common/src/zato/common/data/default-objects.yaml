@@ -12,9 +12,11 @@ channel_rest:
     service: zato.service.invoke
     is_active: true
     is_internal: true
+    security_name: admin.invoke
 
   - name: zato.api.invoke
     url_path: /zato/api/invoke/{service_name}
     service: zato.server.invoker
     is_active: true
     is_internal: true
+    security_name: admin.invoke
