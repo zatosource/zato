@@ -45,20 +45,17 @@ def _item_by_id(items, id_):
 class _SchedulerAdmin(AdminService):
 
     def _service_by_name(self, service_name):
-        for s in self.server.config_store.get_list('service'):
-            if s.get('name') == service_name:
-                return s
-        return None
+        return service_name in self.server.service_store.name_to_impl_name
 
     def _enrich_job(self, item):
         out = dict(item)
-        svc = self._service_by_name(item.get('service'))
-        if svc:
-            out['service_id'] = svc.get('id')
-            out['service_name'] = svc.get('name')
+        service_name = item.get('service')
+        if self._service_by_name(service_name):
+            out['service_id'] = self.server.service_store.get_service_id_by_name(service_name)
+            out['service_name'] = service_name
         else:
             out['service_id'] = None
-            out['service_name'] = item.get('service')
+            out['service_name'] = service_name
         return out
 
 # ################################################################################################################################
@@ -100,7 +97,7 @@ def _create_edit(self, action):
         raise ZatoException(cid, 'Job `{}` already exists on this cluster'.format(name))
 
     if not self._service_by_name(service_name):
-        msg = 'ODBService `{}` does not exist in this cluster'.format(service_name)
+        msg = 'Service `{}` does not exist in this cluster'.format(service_name)
         logger.info(msg)
         raise ServiceMissingException(cid, msg)
 
