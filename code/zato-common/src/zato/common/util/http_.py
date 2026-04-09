@@ -45,13 +45,13 @@ def get_proxy_config(config):
 
 # ################################################################################################################################
 
-def get_form_data(wsgi_environ:'stranydict', as_dict:'bool'=True) -> 'stranydict':
+def get_form_data(http_environ:'stranydict', as_dict:'bool'=True) -> 'stranydict':
 
     # Response to produce
     out = {}
 
     # This is the form data uploaded to a channel or service
-    data = wsgi_environ['zato.http.raw_request'] # type: any_
+    data = http_environ['zato.http.raw_request'] # type: any_
 
     # Create a buffer to hold the form data and write the form to it
     buff = BytesIO()
@@ -60,7 +60,7 @@ def get_form_data(wsgi_environ:'stranydict', as_dict:'bool'=True) -> 'stranydict
 
     # Parse form data using modern multipart parser
     _, form_dict = parse_form_data({
-        'CONTENT_TYPE': wsgi_environ.get('CONTENT_TYPE', ''),
+        'CONTENT_TYPE': http_environ.get('CONTENT_TYPE', ''),
         'CONTENT_LENGTH': str(len(data))
     }, buff)
 

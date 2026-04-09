@@ -150,7 +150,7 @@ _async_callback = CHANNEL.INVOKE_ASYNC_CALLBACK
 
 # ################################################################################################################################
 
-_wsgi_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
+_http_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 
 # ################################################################################################################################
 
@@ -405,7 +405,7 @@ class Service:
         self.in_reply_to = ''
         self.data_format = ''
         self.transport = ''
-        self.wsgi_environ = {} # type: anydict
+        self.http_environ = {} # type: anydict
         self.job_type = ''     # type: str
         self.environ = Bunch()
         self.request = Request(self) # type: Request
@@ -510,7 +510,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def _init(self, may_have_wsgi_environ:'bool'=False) -> 'None':
+    def _init(self, may_have_http_environ:'bool'=False) -> 'None':
         """ Actually initializes the service.
         """
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
@@ -528,12 +528,12 @@ class Service:
             if not Service.search:
                 Service.search = SearchAPI(self._worker_store.search_es_api)
 
-        if may_have_wsgi_environ:
-            self.request.http.init(self.wsgi_environ)
+        if may_have_http_environ:
+            self.request.http.init(self.http_environ)
 
         # self.has_sio attribute is set by ServiceStore during deployment
         if self.has_sio:
-            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
+            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.http_environ, self.server.encrypt)
             self.response.init(self.cid, self._sio, self.data_format)
 
         # Cache is always enabled
@@ -651,9 +651,9 @@ class Service:
         # .. now we can assign the logger to our request object.
         service.request.logger = service.logger
 
-        wsgi_environ = kwargs.get('wsgi_environ', {})
-        payload = wsgi_environ.get('zato.request.payload')
-        channel_item = wsgi_environ.get('zato.channel_item', {})
+        http_environ = kwargs.get('http_environ', {})
+        payload = http_environ.get('zato.request.payload')
+        channel_item = http_environ.get('zato.channel_item', {})
 
         zato_response_headers_container = kwargs.get('zato_response_headers_container')
 
@@ -669,10 +669,10 @@ class Service:
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
         service.update(service, channel, server, broker_client, # type: ignore
-            worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
+            worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, http_environ,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
-            in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
+            in_reply_to=http_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
@@ -720,8 +720,8 @@ class Service:
             # .. if this is a REST channel, create a span for it ..
             if channel == CHANNEL.HTTP_SOAP and channel_item:
                 channel_name = channel_item.get('name', '')
-                request_method = wsgi_environ.get('REQUEST_METHOD', '')
-                raw_uri = wsgi_environ.get('RAW_URI', '')
+                request_method = http_environ.get('REQUEST_METHOD', '')
+                raw_uri = http_environ.get('RAW_URI', '')
                 _datadog_channel_span = self.server.datadog_tracer.start_span(
                     name='zato.http.channel',
                     service=_dd_service_name,
@@ -1177,7 +1177,7 @@ class Service:
         transport='',          # type: str
         simple_io_config=None, # type: anydictnone
         data_format='',        # type: str
-        wsgi_environ=None,     # type: dictnone
+        http_environ=None,     # type: dictnone
         job_type='',           # type: str
         channel_params=None,   # type: dictnone
         merge_channel_params=True, # type: bool
@@ -1191,7 +1191,7 @@ class Service:
     ) -> 'None':
         """ Takes a service instance and updates it with the current request's context data.
         """
-        wsgi_environ = wsgi_environ or {}
+        http_environ = http_environ or {}
 
         service.server = server
         service.broker_client = broker_client
@@ -1200,7 +1200,7 @@ class Service:
         service.request.raw_request = raw_request
         service.transport = transport
         service.data_format = data_format
-        service.wsgi_environ = wsgi_environ or {}
+        service.http_environ = http_environ or {}
         service.job_type = job_type
         service.config = server.user_config
         service.user_config = server.user_config
@@ -1216,9 +1216,9 @@ class Service:
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 
-        channel_item = wsgi_environ.get('zato.channel_item') or {}
+        channel_item = http_environ.get('zato.channel_item') or {}
         channel_item = cast_('strdict', channel_item)
-        sec_def_info = wsgi_environ.get('zato.sec_def', {})
+        sec_def_info = http_environ.get('zato.sec_def', {})
 
         if channel_type == _AMQP:
             service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
@@ -1243,7 +1243,7 @@ class Service:
         )
 
         if init:
-            service._init(channel_type in _wsgi_channels)
+            service._init(channel_type in _http_channels)
 
 # ################################################################################################################################
 
@@ -1255,7 +1255,7 @@ class Service:
             self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
         _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
-            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
+            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, http_environ=self.http_environ)
 
         return service
 

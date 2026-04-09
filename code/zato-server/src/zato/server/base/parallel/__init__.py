@@ -130,7 +130,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
-    on_wsgi_request: 'any_'
+    on_http_request: 'any_'
 
     cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
@@ -232,7 +232,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.enforce_service_invokes = False
         self.json_parser = BasicParser()
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
-        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
+        self.api_key_header_http = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
 
         # Our arbiter may potentially call the cleanup procedure multiple times
@@ -1315,7 +1315,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. now, we can set it for later use.
         self.api_key_header = api_key_header
-        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
+        self.api_key_header_http = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
 
 # ################################################################################################################################
 

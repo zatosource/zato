@@ -808,7 +808,7 @@ class ServiceInvoker(AdminService):
             response = self.invoke(
                 service_name,
                 payload,
-                wsgi_environ={'HTTP_METHOD':self.request.http.method},
+                http_environ={'HTTP_METHOD':self.request.http.method},
                 zato_response_headers_container=zato_response_headers_container
                 )
 

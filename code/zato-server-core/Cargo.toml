@@ -1,0 +1,12 @@
+[package]
+name = "zato_server_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "zato_server_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.24", features = ["extension-module"] }
+httparse = "1"

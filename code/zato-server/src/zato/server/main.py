@@ -109,7 +109,7 @@ import yaml
 
 # gevent
 from gevent import signal_handler as gevent_signal_handler
-from gevent.pywsgi import WSGIServer
+from gevent.server import StreamServer
 
 # Zato
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
@@ -172,19 +172,6 @@ class ModuleCtx:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ZatoWSGIServer(WSGIServer):
-    """ The main HTTP server. Currently a gevent WSGIServer,
-    can be replaced with a StreamServer + Rust handler in the future.
-    """
-    _server_software:'str' = 'Apache'
-
-    @property
-    def server_info(self) -> 'str':
-        return self._server_software
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 def _get_config_value(config_main:'Bunch', config_key:'str') -> 'strintnone':
     """ Reads a config value from environment variables first, then from the config file.
     """
@@ -217,17 +204,18 @@ def _parse_bind_config(config_main:'Bunch') -> 'tuple':
 
 # ################################################################################################################################
 
-def _create_wsgi_server(
+def _create_http_server(
     host:'str',
     port:'int',
-    wsgi_app:'any_',
+    request_handler:'any_',
     server_software:'str'
-    ) -> 'ZatoWSGIServer':
-    """ Creates the WSGI server. This function is the extension point
-    for replacing the transport with a StreamServer + Rust handler.
+    ) -> 'StreamServer':
+    """ Creates a gevent StreamServer backed by the Rust HTTP handler.
     """
-    out = ZatoWSGIServer((host, port), wsgi_app, log=None)
-    out._server_software = server_software
+    from zato_server_core import ConnectionHandler
+
+    conn_handler = ConnectionHandler(request_handler, server_software)
+    out = StreamServer((host, int(port)), conn_handler.handle)
     return out
 
 # ################################################################################################################################
@@ -522,22 +510,20 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     # Initialize the server - this sets up ODB, services, broker, etc.
     ParallelServer.start_server(server, deployment_key)
 
-    # Create the WSGI server
-    wsgi_server = _create_wsgi_server(zato_host, int(zato_port), server.on_wsgi_request, server_software)
-
-    logger.info('Starting gevent WSGIServer on %s:%s', zato_host, zato_port)
+    http_server = _create_http_server(zato_host, int(zato_port), server.on_http_request, server_software)
+    logger.info('Starting Zato HTTP server on %s:%s', zato_host, zato_port)
 
     # Graceful shutdown handler
     def _on_shutdown() -> 'None':
         logger.info('Shutting down server')
-        wsgi_server.stop()
+        http_server.stop()
         _ = server.cleanup_on_stop()
 
     gevent_signal_handler(signal.SIGTERM, _on_shutdown)
     gevent_signal_handler(signal.SIGINT, _on_shutdown)
 
     # Start serving - this blocks until the server is stopped
-    wsgi_server.serve_forever()
+    http_server.serve_forever()
 
     return None
 

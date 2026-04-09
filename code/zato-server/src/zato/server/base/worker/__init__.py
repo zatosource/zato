@@ -631,7 +631,7 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def update_apikeys(self) -> 'None':
-        """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
+        """ API keys need to be upper-cased and in the format that the HTTP environment will have them in.
         """
         for config_dict in self.worker_config.apikey.values():
             config_dict.config.orig_header = config_dict.config.get('header') or API_Key.Default_Header
@@ -1163,7 +1163,7 @@ class WorkerStore(_WorkerStoreBase):
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
-            'wsgi_environ': kwargs.get('wsgi_environ'),
+            'http_environ': kwargs.get('http_environ'),
             'channel_item': kwargs.get('channel_item'),
         }, channel, '', needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
 
@@ -1175,8 +1175,7 @@ class WorkerStore(_WorkerStoreBase):
         zato_ctx = msg.get('zato_ctx') or {}
         cid = msg['cid']
 
-        # The default WSGI environment that always exists ..
-        wsgi_environ = {
+        http_environ = {
             'zato.request_ctx.async_msg':msg,
             'zato.request_ctx.in_reply_to':msg.get('in_reply_to'),
             'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
@@ -1184,7 +1183,7 @@ class WorkerStore(_WorkerStoreBase):
         }
 
         if zato_ctx:
-            wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
+            http_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
 
         data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')
@@ -1205,7 +1204,7 @@ class WorkerStore(_WorkerStoreBase):
 
         response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
-            self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
+            self.worker_config.simple_io, job_type=msg.get('job_type'), http_environ=http_environ,
             environ=msg.get('environ'))
 
         if skip_response_elem:

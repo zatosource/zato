@@ -41,10 +41,10 @@ _max_len_default = 5_000_000
 # ################################################################################################################################
 # ################################################################################################################################
 
-def extract_basic_auth_credentials(wsgi_environ:'anydict') -> 'tuple':
+def extract_basic_auth_credentials(http_environ:'anydict') -> 'tuple':
     """ Extracts username and password from HTTP Basic Auth header.
     """
-    auth_header = wsgi_environ.get('HTTP_AUTHORIZATION', '')
+    auth_header = http_environ.get('HTTP_AUTHORIZATION', '')
     if not auth_header.startswith('Basic '):
         return None, None
 
@@ -74,7 +74,7 @@ class PubSubRESTService(Service):
     def authenticate(self) -> 'tuple':
         """ Extract and validate credentials. Returns (username, error_response) tuple.
         """
-        username, password = extract_basic_auth_credentials(self.wsgi_environ)
+        username, password = extract_basic_auth_credentials(self.http_environ)
 
         if not username:
             return None, ('Authentication required', '401 Unauthorized')
@@ -88,7 +88,7 @@ class PubSubRESTService(Service):
         """ Validate username/password against all basic auth security definitions.
         """
         basic_auth_config = self.server.worker_store.request_dispatcher.url_data.basic_auth_config
-        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        auth_header = self.http_environ.get('HTTP_AUTHORIZATION', '')
 
         for sec_def in basic_auth_config.values():
             config = sec_def.get('config', {})
