@@ -425,7 +425,7 @@ class GetList(AdminService):
 # ################################################################################################################################
 
     def handle(self) -> 'None':
-        out = {'_meta':{}, 'response':[]}
+        out = {'_meta':{}, 'data':[]}
         _meta = cast_('anydict', out['_meta'])
 
         type_ = self.request.input.type_
@@ -465,9 +465,8 @@ class GetList(AdminService):
             conn = GenericConnection.from_dict(flat)
             conn_dict = conn.to_dict()
             self._enrich_conn_dict(conn_dict)
-            cast_('anylist', out['response']).append(conn_dict)
+            cast_('anylist', out['data']).append(conn_dict)
 
-        # Results are already included in the list of out['response'] elements
         _ = _meta.pop('result', None)
 
         self.response.payload = dumps(out)

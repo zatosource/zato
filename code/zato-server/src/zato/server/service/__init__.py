@@ -823,44 +823,7 @@ class Service:
             response.payload = ''
             response.status_code = BAD_REQUEST
 
-        # If we are told always to skip response elements, this is where we make use of it.
-        _zato_needs_response_wrapper = getattr(service.__class__, '_zato_needs_response_wrapper', None)
-        if _zato_needs_response_wrapper is False:
-            kwargs['skip_response_elem'] = True
-
-        if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
-
-            # If if has .keys, it means it is a dict.
-            response = cast_('dict', response) # type: ignore
-
-            keys = list(response)
-            try:
-                keys.remove('_meta')
-            except ValueError:
-                # This is fine, there was only the actual response element here,
-                # without the '_meta' pagination
-                pass
-
-            # It is possible that the dictionary is empty
-            response_elem = keys[0] if keys else None
-
-            # This covers responses that have only one top-level element
-            # and that element's name is 'response' or, e.g. 'zato_amqp_...'
-            if len(keys) == 1:
-                if response_elem == 'response' or (isinstance(response_elem, str) and response_elem.startswith('zato')):
-                    return response[response_elem]
-
-                # This may be a dict response from a service, in which case we return it as is
-                elif isinstance(response, dict): # type: ignore
-                    return response
-
-            # .. otherwise, this could be a dictionary of elements other than the above
-            # so we just return the dict as it is.
-            else:
-                return response
-
-        else:
-            return response
+        return response
 
 # ################################################################################################################################
 

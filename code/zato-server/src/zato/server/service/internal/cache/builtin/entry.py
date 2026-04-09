@@ -21,7 +21,6 @@ from zato.common.py23_.past.builtins import basestring, long
 # Zato
 from zato.common.api import CACHE
 from zato.common.exception import BadRequest
-from zato.common.util.search import SearchResults
 from zato.server.service import AsIs, Bool, Float, Int
 from zato.server.service.internal import AdminService
 
@@ -65,30 +64,29 @@ class GetList(_Base):
 
 # ################################################################################################################################
 
-    def _get_data_from_sliceable(self, sliceable, query_ctx, _time_keys=time_keys):
+    def _enrich_items(self, raw_items, _time_keys=time_keys) -> 'list':
 
         max_chars = self.request.input.get('max_chars') or 30
+        now = self.time.utcnow(needs_format=False)
         out = []
 
-        now = self.time.utcnow(needs_format=False)
+        for item in raw_items:
 
-        start = query_ctx.cur_page * query_ctx.page_size
-        stop = start + query_ctx.page_size
+            if isinstance(item, dict):
+                pass
+            elif hasattr(item, 'to_dict'):
+                item = item.to_dict()
+            else:
+                continue
 
-        for _idx, item in enumerate(sliceable[start:stop]):
-
-            # Internally, time is kept as doubles so we need to convert it to a datetime object or null it out.
             for name in _time_keys:
-                _value = item[name]
+                _value = item.get(name)
                 if _value:
                     item[name] = arrow_get(_value)
                 else:
                     item[name] = None
 
-            del _value
-
-            # Compute expiry since the last operation + the time left to expiry
-            expiry = item.pop('expiry')
+            expiry = item.pop('expiry', None)
             if expiry:
                 item['expiry_op'] = int(expiry)
                 item['expiry_left'] = int((item['expires_at'] - now).total_seconds())
@@ -96,13 +94,11 @@ class GetList(_Base):
                 item['expiry_op'] = None
                 item['expiry_left'] = None
 
-            # Now that we have worked with all the time keys needed, we can serialize them to the ISO-8601 format.
             for name in _time_keys:
                 if item[name]:
                     item[name] = item[name].isoformat()
 
-            # Shorten the value if it's possible, if it's not something else than a string/unicode
-            value = item['value']
+            value = item.get('value', '')
             if isinstance(value, basestring):
                 len_value = len(value)
                 chars_omitted = len_value - max_chars
@@ -118,7 +114,7 @@ class GetList(_Base):
             item['server'] = '{} ({})'.format(self.server.name, self.server.pid)
             out.append(item)
 
-        return SearchResults(None, out, None, len(sliceable))
+        return out
 
 # ################################################################################################################################
 
@@ -164,26 +160,16 @@ class GetList(_Base):
 
 # ################################################################################################################################
 
-    def _get_data(self, _ignored_session, _ignored_cluster_id, *args, **kwargs):
-
-        # Get the cache object first
-        cache = self._get_cache_by_input()
-
-        query_ctx = bunchify(kwargs)
-        query = query_ctx.get('query', None)
-
-        # Without any query, simply return a slice of the underlying list from the cache object
-        if not query:
-            sliceable = cache
-        else:
-            sliceable = self._filter_cache(query, cache)
-
-        return self._get_data_from_sliceable(sliceable, query_ctx)
-
-# ################################################################################################################################
-
     def handle(self):
-        self.response.payload[:] = self._search(self._get_data)
+        cache = self._get_cache_by_input()
+        query = self.request.input.get('query')
+        if query:
+            raw_items = self._filter_cache(query, cache)
+        else:
+            raw_items = cache
+
+        items = self._enrich_items(raw_items)
+        self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
 

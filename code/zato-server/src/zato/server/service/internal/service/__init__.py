@@ -108,7 +108,7 @@ class GetList(AdminService):
         return out
 
     def handle(self):
-        self.response.payload[:] = self._paginate_list(self.get_data())
+        self.response.payload = self._paginate_list(self.get_data())
 
 # ################################################################################################################################
 # ################################################################################################################################

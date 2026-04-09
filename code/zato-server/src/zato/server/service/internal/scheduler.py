@@ -198,7 +198,7 @@ class GetList(_Get):
         items = [self._enrich_job(dict(x)) for x in self.server.config_store.get_list(_entity_type)]
         if input.get('service_name'):
             items = [x for x in items if x.get('service_name') == input.service_name or x.get('service') == input.service_name]
-        self.response.payload[:] = self._paginate_list(items)
+        self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
 # ################################################################################################################################

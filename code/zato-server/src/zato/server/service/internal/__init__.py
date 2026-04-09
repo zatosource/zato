@@ -18,7 +18,6 @@ from zato.common.py23_.past.builtins import basestring
 # Zato
 from zato.common.api import SECRET_SHADOW, ZATO_NONE
 from zato.common.util.api import get_response_value, make_cid_public
-from zato.common.util.sql import search as sql_search
 from zato.server.service import AsIs, Bool, Int, Service
 
 # ################################################################################################################################
@@ -34,24 +33,6 @@ logger = logging.getLogger('zato_admin')
 
 success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)
-
-# ################################################################################################################################
-
-class SearchTool:
-    """ Optionally attached to each internal service returning a list of results responsible for extraction
-    and serialization of search criteria.
-    """
-    _search_attrs = 'num_pages', 'cur_page', 'prev_page', 'next_page', 'has_prev_page', 'has_next_page', 'page_size', 'total'
-
-    def __init__(self, *criteria):
-        self.criteria = criteria
-        self.output_meta = {'search':{}}
-
-    def __nonzero__(self):
-        return self.output_meta['search'].get('num_pages')
-
-    def set_output_meta(self, result):
-        self.output_meta['search'].update(result.to_dict())
 
 # ################################################################################################################################
 
@@ -72,13 +53,6 @@ class AdminService(Service):
 
     def __init__(self):
         super(AdminService, self).__init__()
-
-# ################################################################################################################################
-
-    def _init(self, is_http):
-        if self._filter_by:
-            self._search_tool = SearchTool(self._filter_by)
-        super(AdminService, self)._init(is_http)
 
 # ################################################################################################################################
 
@@ -142,23 +116,12 @@ class AdminService(Service):
 
     def after_handle(self):
 
-        # Do not log BASE64-encoded messages
         if self.name == 'zato.service.invoke':
             return
 
         if self.server.is_admin_enabled_for_info:
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
                 self.name, get_response_value(self.response), self.cid)
-
-        payload = self.response.payload
-        is_text = isinstance(payload, basestring)
-        _input = self.request.input
-        needs_meta = _input.get('needs_meta', True) if _input else True
-
-        if needs_meta and hasattr(self, '_search_tool'):
-            if not is_text:
-                if hasattr(payload, 'zato_meta'):
-                    payload.zato_meta = self._search_tool.output_meta
 
 # ################################################################################################################################
 
@@ -167,47 +130,28 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _search(self, search_func, session=None, cluster_id=None, *args, **kwargs) -> 'anylist':
-        """ Adds search criteria to an SQLAlchemy query based on the service's (self) search configuration.
-        """
-
-        # Should we break the results into individual pages
-        needs_pagination = self.request.input.get('paginate')
-
-        if needs_pagination:
-            result = sql_search(search_func, self.request.input, self._filter_by, session, cluster_id, *args, **kwargs)
-            self._search_tool.set_output_meta(result)
-        else:
-            # No pagination requested at all
-            result = search_func(session, cluster_id, *args)
-
-        return result
-
-# ################################################################################################################################
-
-    def _paginate_list(self, items):
-        """ Paginates an in-memory list based on request params and sets _meta for the response.
+    def _paginate_list(self, items:'anylist') -> 'anydict':
+        """ Paginates an in-memory list and returns {"data": [...], "_meta": {...}}.
         """
         from zato.common.util.search import SearchResults
-
-        needs_pagination = self.request.input.get('paginate')
-        if not needs_pagination:
-            return items
-
-        cur_page = int(self.request.input.get('cur_page') or 1)
-        page_size = int(self.request.input.get('page_size') or 50)
 
         query = self.request.input.get('query') or ''
         if query:
             items = [item for item in items if query.lower() in str(item.get('name', '')).lower()]
 
-        result = SearchResults.from_list(items, cur_page, page_size, needs_sort=False, needs_reverse=False)
+        needs_pagination = self.request.input.get('paginate')
+        if needs_pagination:
+            cur_page = int(self.request.input.get('cur_page') or 1)
+            page_size = int(self.request.input.get('page_size') or 50)
+            result = SearchResults.from_list(items, cur_page, page_size, needs_sort=False, needs_reverse=False)
+            meta = result.to_dict()
+            _ = meta.pop('result', None)
+            data = list(result)
+        else:
+            meta = {}
+            data = items
 
-        if not hasattr(self, '_search_tool'):
-            self._search_tool = SearchTool()
-        self._search_tool.set_output_meta(result)
-
-        return list(result)
+        return {'data': data, '_meta': meta}
 
 # ################################################################################################################################
 

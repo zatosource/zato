@@ -21,7 +21,6 @@ from regex import compile as regex_compile
 # Zato
 from zato.common.api import CHANNEL, CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP, MISC, SEC_DEF_TYPE, SIMPLE_IO, \
     TRACE1, URL_PARAMS_PRIORITY, ZATO_NONE
-from zato.common.const import ServiceConst
 from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, ServiceMissingException
 from zato.common.json_ import dumps
 from zato.common.json_internal import loads
@@ -35,7 +34,6 @@ from zato_sio import Payload as CySimpleIOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.groups.ctx import SecurityGroupsCtx
-from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
@@ -380,13 +378,11 @@ class RequestDispatcher:
 
                     http_environ['zato.http.response.headers']['Content-Encoding'] = 'gzip'
 
-                # Finally, return payload to the client, potentially deserializing it from CySimpleIO first.
+                # Return payload to the client, deserializing from the Rust Payload if needed.
                 if isinstance(response.payload, CySimpleIOPayload):
                     payload = response.payload.getvalue()
                     if isinstance(payload, dict):
-                        if 'response' in payload:
-                            payload = payload['response']
-                            payload = dumps(payload)
+                        payload = dumps(payload)
                 else:
                     payload = response.payload
 
@@ -742,19 +738,6 @@ class RequestHandler:
 
 # ################################################################################################################################
 
-    def _needs_admin_response(
-        self,
-        service_instance:'Service',
-        service_invoker_name:'str'=ServiceConst.ServiceInvokerName
-        ) -> 'bool':
-
-        is_admin_service = isinstance(service_instance, AdminService)
-        is_admin_ignored = service_instance.name not in {service_invoker_name, 'zato.ping'}
-
-        return is_admin_service and not (is_admin_ignored)
-
-# ################################################################################################################################
-
     def set_payload(
         self,
         response:'any_',
@@ -763,48 +746,29 @@ class RequestHandler:
         service_instance:'Service'
     ) -> 'None':
         """ Sets the actual payload to represent the service's response out of what the service produced.
-        This includes converting dictionaries into JSON or adding Zato metadata.
         """
-
-        if self._needs_admin_response(service_instance):
-            if data_format in {ModuleCtx.SIO_JSON, ModuleCtx.SIO_FORM_DATA}:
-                zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
-                is_not_str = not isinstance(response.payload, str)
-                if is_not_str and response.payload:
-                    payload = response.payload.getvalue(False)
-                    payload.update(zato_env)
-                else:
-                    payload = zato_env
-
-                response.payload = dumps(payload)
-        else:
-            if not isinstance(response.payload, str):
-                if isinstance(response.payload, dict) and data_format in ModuleCtx.Dict_Like:
-                    response.payload = dumps(response.payload)
-                else:
-                    if response.payload:
-                        if isinstance(response.payload, Model):
-                            value = response.payload.to_json()
-                        else:
-                            if hasattr(response.payload, 'getvalue'):
-                                value = response.payload.getvalue() # type: ignore
-                            else:
-                                # Check if it's a list of models ..
-                                is_model_list = isinstance(response.payload, list) and isinstance(response.payload[0], Model)
-
-                                # .. if it is one, we need to turn each of the models into a dict ..
-                                if is_model_list:
-                                    value = []
-                                    for item in response.payload:
-                                        value.append(item.to_dict())
-                                    value = dumps(value)
-
-                                # .. it's not a list of models.
-                                else:
-                                    value = dumps(response.payload)
+        if not isinstance(response.payload, str):
+            if isinstance(response.payload, dict) and data_format in ModuleCtx.Dict_Like:
+                response.payload = dumps(response.payload)
+            else:
+                if response.payload:
+                    if isinstance(response.payload, Model):
+                        value = response.payload.to_json()
                     else:
-                        value = ''
-                    response.payload = value
+                        if hasattr(response.payload, 'getvalue'):
+                            value = response.payload.getvalue() # type: ignore
+                        else:
+                            is_model_list = isinstance(response.payload, list) and isinstance(response.payload[0], Model)
+                            if is_model_list:
+                                value = []
+                                for item in response.payload:
+                                    value.append(item.to_dict())
+                                value = dumps(value)
+                            else:
+                                value = dumps(response.payload)
+                else:
+                    value = ''
+                response.payload = value
 
 # ################################################################################################################################
 

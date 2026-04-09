@@ -41,7 +41,7 @@ class GetList(AdminService):
                 item['extra'] = extra.decode('utf8')
             item['engine_display_name'] = get_sql_engine_display_name(
                 item.get('engine', ''), self.server.fs_sql_config)
-        self.response.payload[:] = self._paginate_list(items)
+        self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -118,15 +118,18 @@ impl Payload {
 
             if !search.is_none() {
                 let output = self.build_output_value(py)?;
-                if let Ok(dict) = output.cast::<PyDict>() {
-                    dict.set_item("_meta", &search)?;
-                    if do_serialize {
-                        let json_mod = py.import("zato.common.json_internal")?;
-                        let result = json_mod.call_method1("dumps", (dict,))?;
-                        return Ok(result.unbind());
-                    }
-                    return Ok(dict.clone().into_any().unbind());
+
+                // Build a {"data": ..., "_meta": ...} envelope
+                let envelope = PyDict::new(py);
+                envelope.set_item("data", &output)?;
+                envelope.set_item("_meta", &search)?;
+
+                if do_serialize {
+                    let json_mod = py.import("zato.common.json_internal")?;
+                    let result = json_mod.call_method1("dumps", (envelope,))?;
+                    return Ok(result.unbind());
                 }
+                return Ok(envelope.into_any().unbind());
             }
         }
 
