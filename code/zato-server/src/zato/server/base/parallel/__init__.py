@@ -91,8 +91,6 @@ if 0:
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.connection.cache import Cache, CacheAPI
-    from zato.server.ext.zunicorn.arbiter import Arbiter
-    from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
     from zato.server.service.store import ServiceStore
     from zato.simpleio import SIOServerConfig
     from zato.server.startup_callable import StartupCallableTool
@@ -1280,7 +1278,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # If a pid has any of these names in its name or command line,
         # we consider it a process that will be stopped.
-        to_include = ['zato', 'gunicorn']
+        to_include = ['zato']
 
         for proc in list(psutil.process_iter(['pid', 'name'])):
             proc_name = proc.name()
@@ -1558,52 +1556,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    @staticmethod
-    def post_fork(arbiter:'Arbiter', worker:'any_') -> 'None':
-        """ A Gunicorn hook which initializes the worker.
-        """
-
-        # Each subprocess needs to have the random number generator re-seeded.
-        random_seed()
-
-        # This is our parallel server
-        server = worker.app.zato_wsgi_app # type: ParallelServer
-
-        server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
-            'arbiter': arbiter,
-            'worker': worker,
-        })
-
-        worker.app.zato_wsgi_app.worker_pid = worker.pid
-        ParallelServer.start_server(server, arbiter.zato_deployment_key)
-
-# ################################################################################################################################
-
-    @staticmethod
-    def on_starting(arbiter:'Arbiter') -> 'None':
-        """ A Gunicorn hook for setting the deployment key for this particular
-        set of server processes. It needs to be added to the arbiter because
-        we want for each worker to be (re-)started to see the same key.
-        """
-        arbiter.zato_deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
-
-# ################################################################################################################################
-
-    @staticmethod
-    def worker_exit(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
-
-        # Invoke cleanup procedures
-        app:'ParallelServer' = worker.app.zato_wsgi_app
-        _ = app.cleanup_on_stop()
-
-# ################################################################################################################################
-
-    @staticmethod
-    def before_pid_kill(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
-        pass
-
-# ################################################################################################################################
-
     def _check_broker_credentials(self, username:'str', password:'str') -> 'bool':
         """ Auth callback invoked by the Rust HTTP server for each request with Basic Auth. """
         try:
@@ -1643,41 +1595,34 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ A shutdown cleanup procedure.
         """
 
+        # Only run cleanup once
+        if self._is_process_closing:
+            return
+        else:
+            self._is_process_closing = True
+
         # Stop the broker (including its Rust HTTP server and OS thread)
         if hasattr(self, 'broker_client') and self.broker_client:
             self.broker_client.stop_consumer()
 
-        # Tell the ODB we've gone through a clean shutdown but only if this is
-        # the main process going down (Arbiter) not one of Gunicorn workers.
-        # We know it's the main process because its ODB's session has never
-        # been initialized.
-        if not self.odb.session_initialized:
+        # Close SQL pools
+        self.sql_pool_store.cleanup_on_stop()
 
-            self.config.odb_data = self.get_config_odb_data(self)
-            self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-            self.set_up_odb()
-
-            self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
-
+        # Tell the ODB we've gone through a clean shutdown ..
+        if self.odb.session_initialized:
             self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
 
-        # Cleanup
+        # .. otherwise, initialize a session just for the shutdown notification.
         else:
+            self.config.odb_data = self.get_config_odb_data(self)
+            self.config.odb_data['fs_sql_config'] = self.fs_sql_config
+            self.set_up_odb()
+            self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
+            self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
+            self.odb.close()
 
-            # Set the flag to True only the first time we are called, otherwise simply return
-            if self._is_process_closing:
-                return
-            else:
-                self._is_process_closing = True
-
-            # Close SQL pools
-            self.sql_pool_store.cleanup_on_stop()
-
-            logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
-
-            import sys
-            sys.exit(3) # Same as arbiter's WORKER_BOOT_ERROR
+        logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 
 # ################################################################################################################################
 

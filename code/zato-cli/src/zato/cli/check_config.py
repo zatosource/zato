@@ -188,8 +188,9 @@ class CheckConfig(ManageCommand):
 
     def on_server_check_port_available(self, server_conf):
 
-        address = server_conf['main']['gunicorn_bind']
-        _, port = address.split(':')
+        host = server_conf['main'].get('host', '0.0.0.0')
+        port = server_conf['main']['port']
+        address = f'{host}:{port}'
         self.ensure_port_free('Server', int(port), address)
 
 # ################################################################################################################################

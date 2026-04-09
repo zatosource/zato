@@ -121,7 +121,7 @@ class Client:
         return Client.from_dict({
             'username': CACHE.API_USERNAME,
             'password': password,
-            'address': config.main.gunicorn_bind,
+            'address': f'{config.main.host}:{config.main.port}',
             'cache_name': cache_name,
             'is_https': is_https,
         })

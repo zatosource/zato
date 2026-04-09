@@ -563,7 +563,7 @@ def get_client_from_server_conf(
     )
 
     # Note that we cannot use 0.0.0.0 under Windows but, since it implies localhost, we can just replace it as below.
-    server_url = server_url if server_url else config.main.gunicorn_bind # type: str
+    server_url = server_url if server_url else f'{config.main.host}:{config.main.port}' # type: str
     server_url = server_url.replace('0.0.0.0', '127.0.0.1')
 
     client_auth = client_auth_func(config, repo_location, crypto_manager, False, url_path=url_path)

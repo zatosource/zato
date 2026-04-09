@@ -55,7 +55,6 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
-from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
@@ -118,14 +117,6 @@ class _generic_msg:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GeventWorker(GunicornGeventWorker):
-
-    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
-        self.deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
-        super(GunicornGeventWorker, self).__init__(*args, **kwargs)
-
-# ################################################################################################################################
-
 def _get_base_classes() -> 'anytuple':
     ignore = ('__init__.py', 'common.py')
     out = []
@@ -155,7 +146,7 @@ _base_type = '_WorkerStoreBase'
 _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 
 class WorkerStore(_WorkerStoreBase):
-    """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
+    """ Dispatches work between different pieces of configuration of an individual server worker.
     """
     broker_client: 'BrokerCoreAPI | None' = None
 

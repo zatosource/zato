@@ -10,20 +10,12 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from json import dumps, loads
 from logging import getLogger
-from threading import RLock
-
-# gevent
-from gevent import sleep, spawn
 
 # zato-broker-core (Rust extension)
 from zato_broker_core import (
     BrokerConfig,
     fs_init,
     fs_ping,
-    fs_publish,
-    fs_poll,
-    fs_update_cursor,
-    fs_read_cursor,
     fs_kv_get,
     fs_kv_set,
     fs_kv_delete,
@@ -59,116 +51,27 @@ logger = getLogger('zato')
 # ################################################################################################################################
 
 class BrokerPubSub:
-    """ Pub/sub subscription object compatible with the Redis pubsub interface.
-    Polls broker channels in a background greenlet.
-    """
 
     def __init__(self, client:'BrokerClient', poll_interval:'float'=0.05) -> 'None':
-        self._client = client
-        self._poll_interval = poll_interval
-        self._channels:'Dict[str, int]' = {} # channel -> cursor
-        self._running = False
-        self._greenlet = None
-        self._lock = RLock()
-        self._messages:'list' = []
+        logger.warning('BrokerPubSub needs to be ported to streams')
 
     def subscribe(self, *channels:'str', **kwargs:'Any') -> 'None':
-        with self._lock:
-            for ch in channels:
-                if ch not in self._channels:
-                    try:
-                        cursor = fs_read_cursor(self._client._cfg, ch, self._client._subscriber_id)
-                    except Exception:
-                        cursor = 0
-                    self._channels[ch] = cursor
-
-            if not self._running:
-                self._running = True
-                self._greenlet = spawn(self._poll_loop)
+        logger.warning('BrokerPubSub.subscribe needs to be ported to streams')
 
     def unsubscribe(self, *channels:'str') -> 'None':
-        with self._lock:
-            if channels:
-                for ch in channels:
-                    self._channels.pop(ch, None)
-            else:
-                self._channels.clear()
-
-            if not self._channels:
-                self._running = False
+        logger.warning('BrokerPubSub.unsubscribe needs to be ported to streams')
 
     def get_message(self, timeout:'float'=1.0) -> 'Optional[Dict]':
-        elapsed = 0.0
-        step = min(self._poll_interval, timeout) if timeout > 0 else self._poll_interval
-
-        while elapsed < timeout:
-            with self._lock:
-                if self._messages:
-                    return self._messages.pop(0)
-            sleep(step)
-            elapsed += step
-
-        with self._lock:
-            if self._messages:
-                return self._messages.pop(0)
-
+        logger.warning('BrokerPubSub.get_message needs to be ported to streams')
         return None
 
     def close(self) -> 'None':
-        self._running = False
-        with self._lock:
-            self._channels.clear()
-            self._messages.clear()
-
-        if self._greenlet:
-            self._greenlet.kill()
-            self._greenlet = None
-
-    def _poll_loop(self) -> 'None':
-        while self._running:
-            try:
-                with self._lock:
-                    channels_snapshot = dict(self._channels)
-
-                for channel, cursor in channels_snapshot.items():
-                    try:
-                        messages = fs_poll(self._client._cfg, channel, cursor)
-                    except Exception:
-                        continue
-
-                    for seq, meta_str, data_bytes in messages:
-                        msg = {
-                            'type': 'message',
-                            'channel': channel,
-                            'data': meta_str,
-                            'data_bytes': data_bytes,
-                            'pattern': None,
-                        }
-                        with self._lock:
-                            self._messages.append(msg)
-                            self._channels[channel] = seq
-
-                        try:
-                            fs_update_cursor(
-                                self._client._cfg, channel,
-                                self._client._subscriber_id, seq,
-                            )
-                        except Exception:
-                            pass
-
-            except Exception as e:
-                logger.warning('BrokerPubSub poll error: %s', e)
-
-            sleep(self._poll_interval)
+        logger.warning('BrokerPubSub.close needs to be ported to streams')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class BrokerClient:
-    """ Broker client wrapping all Rust functions.
-    Provides the same method signatures as a Redis client for pub/sub,
-    key-value, lists, sets, and streams.
-    """
 
     def __init__(
         self,
@@ -199,10 +102,12 @@ class BrokerClient:
     # ############################################################################################################################
 
     def publish(self, channel:'str', message:'str', data:'bytes'=b'') -> 'int':
-        return fs_publish(self._cfg, channel, message, data)
+        logger.warning('BrokerClient.publish needs to be ported to streams')
+        return 0
 
     def pubsub(self) -> 'BrokerPubSub':
-        return BrokerPubSub(self, poll_interval=self._poll_interval)
+        logger.warning('BrokerClient.pubsub needs to be ported to streams')
+        return BrokerPubSub(self)
 
     # ############################################################################################################################
     # Key-value

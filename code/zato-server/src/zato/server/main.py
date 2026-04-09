@@ -93,8 +93,11 @@ is_grafana_cloud_enabled = False
 
 # stdlib
 import locale
+import signal
 import sys
 from logging.config import dictConfig
+from random import seed as random_seed
+from uuid import uuid4
 
 # Update logging.Logger._log to make it a bit faster
 from zato.common.microopt import logging_Logger_log
@@ -103,6 +106,10 @@ Logger._log = logging_Logger_log # type: ignore
 
 # YAML
 import yaml
+
+# gevent
+from gevent import signal_handler as gevent_signal_handler
+from gevent.pywsgi import WSGIServer
 
 # Zato
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
@@ -113,13 +120,11 @@ from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.simpleio_ import get_sio_server_config
 from zato.common.util.api import asbool, get_config, is_encrypted, parse_cmd_line_options, \
-     register_diag_handlers, store_pidfile
+     register_diag_handlers, store_pidfile, utcnow
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.platform_ import is_linux, is_mac, is_windows
 from zato.common.util.open_ import open_r
 from zato.server.base.parallel import ParallelServer
-from zato.server.ext import zunicorn
-from zato.server.ext.zunicorn.app.base import Application
 from zato.server.service.store import ServiceStore
 from zato.server.startup_callable import StartupCallableTool
 
@@ -129,7 +134,6 @@ from zato.server.startup_callable import StartupCallableTool
 if 0:
     from bunch import Bunch
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
-    from zato.server.ext.zunicorn.config import Config as ZunicornConfig
     callable_ = callable_
 
 # ################################################################################################################################
@@ -154,120 +158,77 @@ sys.modules['cx_Oracle'] = oracledb
 
 class ModuleCtx:
 
-    num_threads     = 'num_threads'
-    bind_host       = 'bind_host'
-    bind_port       = 'bind_port'
+    host = 'host'
+    port = 'port'
 
-    Env_Num_Threads = 'Zato_Config_Num_Threads'
-    Env_Bind_Host   = 'Zato_Config_Bind_Host'
-    Env_Bind_Port   = 'Zato_Config_Bind_Port'
+    Env_Bind_Host = 'Zato_Config_Bind_Host'
+    Env_Bind_Port = 'Zato_Config_Bind_Port'
 
     Env_Map = {
-        num_threads: Env_Num_Threads,
-        bind_host:   Env_Bind_Host,
-        bind_port:   Env_Bind_Port,
+        host: Env_Bind_Host,
+        port: Env_Bind_Port,
     }
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ZatoGunicornApplication(Application):
+class ZatoWSGIServer(WSGIServer):
+    """ The main HTTP server. Currently a gevent WSGIServer,
+    can be replaced with a StreamServer + Rust handler in the future.
+    """
+    _server_software:'str' = 'Apache'
 
-    cfg: 'ZunicornConfig'
+    @property
+    def server_info(self) -> 'str':
+        return self._server_software
 
-    def __init__(
-        self,
-        zato_wsgi_app:'ParallelServer',
-        repo_location:'str',
-        config_main:'Bunch',
-        crypto_config:'Bunch',
-        *args:'any_',
-        **kwargs:'any_'
-    ) -> 'None':
-        self.zato_wsgi_app = zato_wsgi_app
-        self.repo_location = repo_location
-        self.config_main = config_main
-        self.crypto_config = crypto_config
-        self.zato_host = ''
-        self.zato_port = -1
-        self.zato_config = {}
-        super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _get_config_value(config_main:'Bunch', config_key:'str') -> 'strintnone':
+    """ Reads a config value from environment variables first, then from the config file.
+    """
+    env_key = ModuleCtx.Env_Map[config_key]
+
+    if value := os.environ.get(env_key):
+        return value
+
+    if value := config_main.get(config_key): # type: ignore
+        return value # type: ignore
+
+    return None
 
 # ################################################################################################################################
 
-    def get_config_value(self, config_key:'str') -> 'strintnone':
+def _parse_bind_config(config_main:'Bunch') -> 'tuple':
+    """ Extracts bind host and port from configuration.
+    """
+    host = ''
+    port = ''
 
-        # First, map the config key to its corresponding environment variable
-        env_key = ModuleCtx.Env_Map[config_key]
+    # Check environment variables first, then config keys
+    if _host := _get_config_value(config_main, 'host'):
+        host = str(_host)
 
-        # First, check if we have such a value among environment variables ..
-        if value := os.environ.get(env_key):
+    if _port := _get_config_value(config_main, 'port'):
+        port = str(_port)
 
-            # .. if yes, we can return it now ..
-            return value
-
-        # .. we are here if there was no such environment variable ..
-        # .. but maybe there is a config key on its own ..
-        if value := self.config_main.get(config_key): # type: ignore
-
-            # ..if yes, we can return it ..
-            return value # type: ignore
-
-        # .. we are here if we have nothing to return, so let's do it explicitly.
-        return None
+    return host, port
 
 # ################################################################################################################################
 
-    def init(self, *ignored_args:'any_', **ignored_kwargs:'any_') -> 'None':
-
-        self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
-        self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
-        self.cfg.set('before_pid_kill', self.zato_wsgi_app.before_pid_kill) # Cleans up before the worker exits
-        self.cfg.set('worker_exit', self.zato_wsgi_app.worker_exit) # Cleans up after the worker exits
-
-        for k, v in self.config_main.items():
-            if k.startswith('gunicorn') and v:
-                k = k.replace('gunicorn_', '')
-                if k == 'bind':
-                    if not ':' in v:
-                        raise ValueError('No port found in main.gunicorn_bind')
-                    else:
-                        host, port = v.split(':')
-                        self.zato_host = host
-                        self.zato_port = port
-                self.cfg.set(k, v)
-            else:
-                if 'deployment_lock' in k:
-                    v = int(v)
-
-                self.zato_config[k] = v
-
-        # Override pre-3.2 names with non-gunicorn specific ones ..
-
-        # .. number of processes / threads ..
-        if num_threads := self.get_config_value('num_threads'):
-            self.cfg.set('workers', num_threads)
-
-        # .. what interface to bind to ..
-        if bind_host := self.get_config_value('bind_host'): # type: ignore
-            self.zato_host = bind_host
-
-        # .. what is our main TCP port ..
-        if bind_port := self.get_config_value('bind_port'): # type: ignore
-            self.zato_port = bind_port
-
-        # .. now, set the bind config value once more in self.cfg  ..
-        # .. because it could have been overwritten via bind_host or bind_port ..
-        bind = f'{self.zato_host}:{self.zato_port}'
-        self.cfg.set('bind', bind)
-
-        for name in('deployment_lock_expires', 'deployment_lock_timeout'):
-            setattr(self.zato_wsgi_app, name, self.zato_config[name])
-
-        self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
-
-    def load(self):
-        return self.zato_wsgi_app.on_wsgi_request
+def _create_wsgi_server(
+    host:'str',
+    port:'int',
+    wsgi_app:'any_',
+    server_software:'str'
+    ) -> 'ZatoWSGIServer':
+    """ Creates the WSGI server. This function is the extension point
+    for replacing the transport with a StreamServer + Rust handler.
+    """
+    out = ZatoWSGIServer((host, port), wsgi_app)
+    out._server_software = server_software
+    return out
 
 # ################################################################################################################################
 
@@ -310,7 +271,7 @@ def get_env_manager_base_dir(code_dir:'str') -> 'str':
 
 # ################################################################################################################################
 
-def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
+def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
 
     # Zato
     from zato.common.util.cli import read_stdin_data
@@ -417,7 +378,9 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     preferred_address = server_config.preferred_address.get('address') or ''
 
     if not preferred_address:
-        preferred_address = get_preferred_ip(server_config.main.gunicorn_bind, server_config.preferred_address)
+        _host = server_config.main.get('host') or '0.0.0.0'
+        _port = server_config.main.get('port') or ''
+        preferred_address = get_preferred_ip(f'{_host}:{_port}', server_config.preferred_address)
 
     if not preferred_address and not server_config.server_to_server.boot_if_preferred_not_found:
         msg = 'Unable to start the server. Could not obtain a preferred address, please configure [bind_options] in server.conf'
@@ -435,7 +398,8 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
         'base_dir': base_dir,
     })
 
-    zunicorn.SERVER_SOFTWARE = server_config.misc.get('http_server_header', 'Apache')
+    # Server software header for HTTP responses
+    server_software = server_config.misc.get('http_server_header', 'Apache')
 
     user_locale = server_config.misc.get('locale', None)
     if user_locale:
@@ -446,6 +410,9 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
 
     if server_config.misc.http_proxy:
         os.environ['http_proxy'] = server_config.misc.http_proxy
+
+    # Parse bind configuration
+    zato_host, zato_port = _parse_bind_config(server_config.main)
 
     # Basic components needed for the server to boot up
     odb_manager = ODBManager()
@@ -475,7 +442,9 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     if stop_after:
         stop_after = int(stop_after)
 
-    zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, server_config.main, server_config.crypto)
+    # Set deployment lock timeouts from config
+    server.deployment_lock_expires = int(server_config.main.deployment_lock_expires)
+    server.deployment_lock_timeout = int(server_config.main.deployment_lock_timeout)
 
     server.has_fg = options.get('fg') or False
     server.env_file = env_file
@@ -483,8 +452,8 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
     server.odb_data = server_config.odb
-    server.host = zato_gunicorn_app.zato_host
-    server.port = zato_gunicorn_app.zato_port
+    server.host = zato_host
+    server.port = zato_port
     server.use_tls = server_config.crypto.use_tls
     server.repo_location = repo_location
     server.pickup_config = pickup_config
@@ -524,22 +493,53 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     for key, value in os_environ.items():
         os.environ[key] = value
 
-    # Run the hook right before the Gunicorn-level server actually starts
+    # Run the hook right before the server actually starts
     startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IMPL_BEFORE_RUN, kwargs={
-        'zato_gunicorn_app': zato_gunicorn_app,
+        'server': server,
     })
 
-    # .. no memory profiler here.
-    start_wsgi_app(zato_gunicorn_app, start_gunicorn_app)
+    # If we are not starting the server, return the ParallelServer instance for the caller
+    if not start_server:
+        return server
 
-# ################################################################################################################################
+    # Set the worker index for this process - single-process model, always worker 0
+    os.environ['ZATO_SERVER_WORKER_IDX'] = '0'
 
-def start_wsgi_app(zato_gunicorn_app:'any_', start_gunicorn_app:'bool') -> 'None':
+    # Re-seed the random number generator
+    random_seed()
 
-    if start_gunicorn_app:
-        zato_gunicorn_app.run()
-    else:
-        return zato_gunicorn_app.zato_wsgi_app
+    # Set the PID of the worker process
+    server.worker_pid = os.getpid()
+
+    # Generate a deployment key for this server run
+    deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
+
+    # Invoke the pre-server-start hook
+    server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
+        'server': server,
+    })
+
+    # Initialize the server - this sets up ODB, services, broker, etc.
+    ParallelServer.start_server(server, deployment_key)
+
+    # Create the WSGI server
+    wsgi_server = _create_wsgi_server(zato_host, int(zato_port), server.on_wsgi_request, server_software)
+
+    logger.info('Starting gevent WSGIServer on %s:%s', zato_host, zato_port)
+
+    # Graceful shutdown handler
+    def _on_shutdown() -> 'None':
+        logger.info('Shutting down server')
+        wsgi_server.stop()
+        _ = server.cleanup_on_stop()
+
+    gevent_signal_handler(signal.SIGTERM, _on_shutdown)
+    gevent_signal_handler(signal.SIGINT, _on_shutdown)
+
+    # Start serving - this blocks until the server is stopped
+    wsgi_server.serve_forever()
+
+    return None
 
 # ################################################################################################################################
 
