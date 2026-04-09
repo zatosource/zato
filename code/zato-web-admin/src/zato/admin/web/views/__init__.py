@@ -44,7 +44,7 @@ slugify = slugify
 # ################################################################################################################################
 
 if 0:
-    from zato.client import ServiceInvokeResponse
+    from zato.client import _APIResponse
     from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
@@ -143,35 +143,6 @@ def method_allowed(*methods_allowed):
 
 # ################################################################################################################################
 
-def set_servers_state(cluster, client):
-    """ Assignes 3 flags to the cluster indicating whether load-balancer believes the servers are UP, DOWN or in the MAINT mode.
-    """
-    servers_state = client.get_servers_state()
-
-    up = []
-    down = []
-    maint = []
-
-    cluster.some_down = False
-    cluster.some_maint = False
-    cluster.all_down = False
-
-    # Note: currently we support only the 'http_plain' access_type.
-    for access_type in('http_plain',):
-        up.extend(servers_state['UP'][access_type])
-        down.extend(servers_state['DOWN'][access_type])
-        maint.extend(servers_state['MAINT'][access_type])
-
-    # Do we have any servers at all?
-    if any((up, down, maint)):
-        if not(up or maint) and down:
-            cluster.all_down = True
-        else:
-            if down:
-                cluster.some_down = True
-            if maint:
-                cluster.some_maint = True
-
 # ################################################################################################################################
 
 def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated', data=None):
@@ -267,7 +238,6 @@ def build_sec_def_link_by_input(req, cluster_id, input_data):
 class BaseView:
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
-    async_invoke = False
     form_prefix = ''
 
     def __init__(self):
@@ -418,9 +388,8 @@ class Index(BaseView):
     def should_extract_top_level(self, _keys):
         return True
 
-    def invoke_admin_service(self) -> 'ServiceInvokeResponse':
+    def invoke_admin_service(self) -> '_APIResponse':
         if self.req.zato.get('cluster'):
-            func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
             service_name = self.service_name if self.service_name else self.get_service_name(self.req)
             request = self.get_initial_input()
 
@@ -429,11 +398,10 @@ class Index(BaseView):
             else:
                 logger.info('Not updating request with self.input')
 
-            # Auto-populate the field if it exists
             if self.wrapper_type:
                 request['wrapper_type'] = self.wrapper_type
 
-            return func(service_name, request)
+            return self.req.zato.client.invoke(service_name, request)
 
     def should_include(self, item) -> 'bool':
         return True

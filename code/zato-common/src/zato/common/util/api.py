@@ -120,7 +120,7 @@ from zato.common.util.time_ import utcnow
 
 if 0:
     from typing import Iterable as iterable
-    from zato.client import ZatoClient
+    from zato.client import APIClient
     from zato.common.typing_ import any_, anydict, callable_, dictlist, intlist, listnone, strlist, strlistnone, strnone, strset
     iterable = iterable
     strlistnone = strlistnone
@@ -1341,7 +1341,7 @@ def get_client_from_server_conf(
     *,
     url_path=None,       # type: strnone
     initial_wait_time=60 # type: int
-) -> 'ZatoClient':
+) -> 'APIClient':
 
     # Imports go here to avoid circular dependencies
     from zato.client import get_client_from_server_conf as client_get_client_from_server_conf

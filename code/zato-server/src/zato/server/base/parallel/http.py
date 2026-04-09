@@ -165,7 +165,7 @@ class HTTPHandler:
         _ = zato_http_request_duration_seconds.labels(channel_name=channel_name).observe(response_time)
 
         if _has_log_info:
-            if not http_environ['PATH_INFO'] in self.rest_log_ignore:
+            if not any(http_environ['PATH_INFO'].startswith(p) for p in self.rest_log_ignore):
                 msg = f'REST cha ← cid={cid}; {status_code} time={delta}; len={response_size}'
                 logger.info(msg)
 

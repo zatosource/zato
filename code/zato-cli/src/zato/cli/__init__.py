@@ -17,7 +17,7 @@ from zato.common.util.open_ import open_r, open_w
 # ################################################################################################################################
 
 if 0:
-    from zato.client import ZatoClient
+    from zato.client import APIClient
     from zato.common.typing_ import any_, anydict, callnone, stranydict
 
 # ################################################################################################################################
@@ -1029,7 +1029,7 @@ def is_arg_given(args, *arg_names):
 class ServerAwareCommand(ZatoCommand):
     """ A subclass that knows how to assign a Zato client object based on command line arguments.
     """
-    zato_client: 'ZatoClient'
+    zato_client: 'APIClient'
 
     def before_execute(self, args):
 
@@ -1057,13 +1057,10 @@ class ServerAwareCommand(ZatoCommand):
     ) -> 'stranydict':
 
         # Pass all the data to the underlying service and get its response ..
-        response = self.zato_client.invoke(**{
-            'name':    service,
-            'payload': request
-        })
+        response = self.zato_client.invoke(service, request)
 
         # We enter here if there is genuine business data to process
-        if response.data:
+        if response.ok and response.data:
 
             # .. let's extract it ..
             data = response.data

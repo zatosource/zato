@@ -164,7 +164,7 @@ allow_loopback=False
 
 [logging]
 http_access_log_ignore=
-rest_log_ignore=/zato/admin/invoke, /metrics, /zato/ping
+rest_log_ignore=/zato/api/invoke/, /metrics, /zato/ping
 
 [os_environ]
 sample_key=sample_value

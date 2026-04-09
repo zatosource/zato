@@ -10,14 +10,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # ################################################################################################################################
 
 if 0:
-    from zato.client import AnyServiceInvoker, ZatoClient
+    from zato.client import APIClient
     from zato.common.typing_ import anydict
-    AnyServiceInvoker = AnyServiceInvoker
+    APIClient = APIClient
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _set_up_zato_client_by_server_path(server_path:'str') -> 'AnyServiceInvoker':
+def _set_up_zato_client_by_server_path(server_path:'str') -> 'APIClient':
 
     # Zato
     from zato.common.util.api import get_client_from_server_conf
@@ -31,7 +31,7 @@ def _set_up_zato_client_by_remote_details(
     server_port:     'int',
     server_username: 'str',
     server_password: 'str'
-    ) -> 'ZatoClient':
+    ) -> 'APIClient':
 
     # Zato
     from zato.client import get_client_from_credentials
@@ -43,7 +43,7 @@ def _set_up_zato_client_by_remote_details(
 
 # ################################################################################################################################
 
-def set_up_zato_client(config:'anydict') -> 'AnyServiceInvoker':
+def set_up_zato_client(config:'anydict') -> 'APIClient':
 
     # New in 3.2, hence optional
     server_config = config.get('server')

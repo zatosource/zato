@@ -7,7 +7,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from http.client import OK
 from logging import getLogger
 
 # Bunch
@@ -17,13 +16,12 @@ from bunch import Bunch
 from django.urls import resolve
 
 # Zato
-from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
 from zato.client import APIClient
 from zato.common.json_internal import loads
-from zato.common.odb.model import Cluster
 from zato.common.version import get_version
 
 # ################################################################################################################################
@@ -40,7 +38,6 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Zato version
 version = get_version()
 
 # ################################################################################################################################
@@ -81,6 +78,11 @@ version = get_version()
 # ################################################################################################################################
 # ################################################################################################################################
 
+_default_cluster = Bunch(id=1, name='default')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class HeadersEnrichedException(Exception):
     headers: 'anydict'
 
@@ -93,7 +95,7 @@ class _InvokeResponse:
     def __init__(self, api_response):
         self.inner = api_response.inner
         self.ok = api_response.ok
-        self.has_data = bool(api_response.data)
+        self.has_data = api_response.has_data
         self._raw_data = api_response.data
 
         if self.ok and self._raw_data:
@@ -174,56 +176,33 @@ class ZatoMiddleware:
 
     def process_request(self, req):
 
-        # Makes each Django view have an access to 'zato.odb' and 'zato.setttings_db' attributes
-        # of the request object. The attributes are SQLAlchemy sessions tied databases defined in app's settings.py
         req.zato = Bunch()
-        req.zato.odb = SASession()
-        req.zato.settings_db = settings_db
-        req.zato.args = Bunch() # Arguments read from URL
+        req.zato.args = Bunch()
 
         # Whether this request to web-admin was served over TLS
         req.zato.is_tls = req.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https'
 
-        try:
-            resolved_kwargs = resolve(req.path).kwargs
-            req.zato.id = resolved_kwargs.get('id')
-            req.zato.cluster_id = req.GET.get('cluster') \
-                or req.POST.get('cluster_id') \
-                or resolved_kwargs.get('cluster_id') \
-                or resolved_kwargs.get('cluster') \
-                or 1 # By default, this will be the very first cluster so we can just assume it here as the last option.
+        resolved_kwargs = resolve(req.path).kwargs
+        req.zato.id = resolved_kwargs.get('id')
+        req.zato.cluster_id = req.GET.get('cluster') \
+            or req.POST.get('cluster_id') \
+            or resolved_kwargs.get('cluster_id') \
+            or resolved_kwargs.get('cluster') \
+            or 1
 
-            if req.zato.cluster_id:
+        req.zato.cluster = _default_cluster
+        req.zato.clusters = [_default_cluster]
+        req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
 
-                # Get the cluster we are running under ..
-                req.zato.cluster = req.zato.odb.query(Cluster).\
-                    filter_by(id=req.zato.cluster_id).\
-                    one()
+        url = 'http://127.0.0.1:17010'
+        auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
+        req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth)
 
-                url = 'http://127.0.0.1:17010'
-
-                auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
-                req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth)
-
-            req.zato.clusters = req.zato.odb.query(Cluster).order_by(Cluster.name).all()
-            req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
-
-            if not req.user.is_anonymous:
-                needs_logging = not req.get_full_path().endswith(('.js', '.css', '.png'))
-                req.zato.user_profile = get_user_profile(req.user, needs_logging)
-            else:
-                req.zato.user_profile = None
-        except Exception:
-            req.zato.odb.rollback()
-            raise
-
-# ################################################################################################################################
-
-    def process_response(self, req, resp):
-        if getattr(req, 'zato', None):
-            req.zato.odb.close()
-
-        return resp
+        if not req.user.is_anonymous:
+            needs_logging = not req.get_full_path().endswith(('.js', '.css', '.png'))
+            req.zato.user_profile = get_user_profile(req.user, needs_logging)
+        else:
+            req.zato.user_profile = None
 
 # ################################################################################################################################
 

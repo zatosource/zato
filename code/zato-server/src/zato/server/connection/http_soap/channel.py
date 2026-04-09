@@ -268,7 +268,7 @@ class RequestDispatcher:
         # .. before proceeding, log what we have learned so far about the request ..
         # .. but do not do it for paths that are explicitly configured to be ignored ..
         if _has_log_info:
-            if not path_info in self.server.rest_log_ignore:
+            if not any(path_info.startswith(p) for p in self.server.rest_log_ignore):
                 service_name = channel_item['service_name'] if channel_item else '<no-channel>'
                 msg  = f'REST cha → cid={cid}; {http_method} {raw_uri} name={channel_name}; service={service_name}; len={len(payload)}; '
                 msg += f'agent={user_agent}; remote-addr={remote_addr}:{remote_port}'

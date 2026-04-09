@@ -13,7 +13,6 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.const import ServiceConst
 from zato.common.util.config import resolve_name
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
@@ -200,7 +199,7 @@ class ConfigLoader:
         _has_rest_log_ignore = 'rest_log_ignore' in _logging_stanza
 
         if not _has_rest_log_ignore:
-            rest_log_ignore = [ServiceConst.API_Admin_Invoke_Url_Path, '/metrics', '/zato/ping']
+            rest_log_ignore = ['/zato/api/invoke/', '/metrics', '/zato/ping']
         else:
             rest_log_ignore = _logging_stanza['rest_log_ignore']
             rest_log_ignore = rest_log_ignore if isinstance(rest_log_ignore, list) else [rest_log_ignore]
