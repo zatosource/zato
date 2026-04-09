@@ -20,7 +20,6 @@ class GetList(AdminService):
     input = 'cluster_id',
     output = 'id', 'cluster_id', 'name', 'host', '-bind_host', '-bind_port', '-last_join_status', \
         '-last_join_mod_date', '-last_join_mod_by', '-up_status', '-up_mod_date'
-    output_repeated = True
 
     def handle(self):
         self.response.payload = self._paginate_list([self._get_server_data()])

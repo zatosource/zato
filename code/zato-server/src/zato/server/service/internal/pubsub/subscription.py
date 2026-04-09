@@ -169,7 +169,6 @@ class GetList(AdminService):
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
         'sec_name', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
         '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password'
-    output_repeated = True
 
     def handle(self):
         items = self.server.config_store.get_list('pubsub_subscription')

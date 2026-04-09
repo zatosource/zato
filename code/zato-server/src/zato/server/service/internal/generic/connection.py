@@ -451,8 +451,6 @@ class GetList(AdminService):
             except (ValueError, TypeError):
                 page_size = 50
             search_result = SearchResults.from_list(list(items), cur_page, page_size, needs_sort=False)
-            if hasattr(self, '_search_tool'):
-                self._search_tool.set_output_meta(search_result)
             iter_items = list(search_result)
         else:
             search_result = SearchResults(None, items, None, len(items))

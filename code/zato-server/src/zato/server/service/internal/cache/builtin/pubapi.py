@@ -133,7 +133,6 @@ class _Multi(_BaseService):
 
     input = 'key', Bool('-return_prev'), '-expiry', '-value'
     output = '-key', '-prev_value'
-    output_repeated = True
 
     def handle(self):
         input = self.request.input

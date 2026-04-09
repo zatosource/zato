@@ -10,7 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from zato.common.api import CACHE as _COMMON_CACHE
 from zato.common.exception import BadRequest
 from zato.server.service import Bool, Int
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################

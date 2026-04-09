@@ -13,7 +13,7 @@ import json
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.json_internal import dumps
 from zato.server.service import AsIs, Boolean, Integer
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,10 +108,9 @@ class Get(_BaseGet):
 class GetList(_BaseGet):
     """ Returns a list of HTTP/SOAP connections.
     """
-    input = '-connection', '-transport', *['-' + f if isinstance(f, str) else f for f in GetListAdminSIO.input_optional], \
+    input = '-connection', '-transport', Integer('-cur_page'), Boolean('-paginate'), '-query', \
         *['-' + f if isinstance(f, str) else f for f in _GetList_Optional]
     output = _BaseGet.output + ('-connection', '-transport')
-    output_repeated = True
 
     def _build_sec_lookup(self):
         out = {}

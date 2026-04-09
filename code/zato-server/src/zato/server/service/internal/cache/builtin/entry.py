@@ -60,7 +60,6 @@ class GetList(_Base):
     input = AsIs('id'), Int('-cur_page'), Bool('-paginate'), '-query', Int('-max_chars')
     output = AsIs('id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at', \
         'last_read', 'prev_read', 'last_write', 'prev_write', 'server', '-value', '-chars_omitted'
-    output_repeated = True
 
 # ################################################################################################################################
 

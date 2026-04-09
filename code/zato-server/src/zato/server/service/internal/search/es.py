@@ -36,7 +36,6 @@ class GetList(AdminService):
     """
     input = 'cluster_id'
     output = ('id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as', '-opaque1')
-    output_repeated = True
 
     def handle(self):
         items = self.server.config_store.get_list(_entity_type)

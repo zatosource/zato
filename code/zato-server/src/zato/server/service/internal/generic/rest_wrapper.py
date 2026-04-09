@@ -132,7 +132,7 @@ class _WrapperBase(Service):
             request['name'] = name
 
         # .. and send it to the service.
-        response = self.invoke(service_name, request, skip_response_elem=True)
+        response = self.invoke(service_name, request)
 
         # This is used by Create and Edit actions
         if self._uses_name:

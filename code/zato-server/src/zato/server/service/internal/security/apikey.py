@@ -11,7 +11,7 @@ from uuid import uuid4
 
 # Zato
 from zato.server.service import Int, Bool
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################

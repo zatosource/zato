@@ -29,7 +29,6 @@ class GetList(AdminService):
     input = 'cluster_id'
     output = 'id', 'name', 'is_active', 'host', Integer('port'), 'user', 'database', 'protocol', \
         Integer('pool_size'), '-client_type'
-    output_repeated = True
 
     def handle(self):
         items = self.server.config_store.get_list(_entity_type)

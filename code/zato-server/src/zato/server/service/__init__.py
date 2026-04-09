@@ -981,15 +981,12 @@ class Service:
         _async_callback=_async_callback, # type: Service | str
     ) -> 'None':
 
-        # Invoke our target service ..
-        response = self.invoke(ctx.service_name, ctx.data, data_format=ctx.data_format, channel=channel, skip_response_elem=True)
+        response = self.invoke(ctx.service_name, ctx.data, data_format=ctx.data_format, channel=channel)
 
-        # .. and report back the response to our callback(s), if there are any.
         if ctx.callback:
             for callback_service in ctx.callback: # type: str
                 _ = self.invoke(callback_service, payload=response, channel=_async_callback, cid=new_cid,
-                    data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ,
-                    skip_response_elem=True)
+                    data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ)
 
 # ################################################################################################################################
 

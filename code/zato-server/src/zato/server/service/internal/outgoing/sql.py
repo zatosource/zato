@@ -237,7 +237,6 @@ class GetEngineList(AdminService):
     """ Returns a list of all engines defined in sql.conf.
     """
     output = AsIs('id'), 'name'
-    output_repeated = True
 
     def get_data(self):
         out = []

@@ -438,10 +438,7 @@ class ServiceStore:
 
     def set_up_class_attributes(self, class_:'type[Service]', service_store:'ServiceStore') -> 'None':
 
-        # Local aliases
         service_name = class_.get_name()
-        _Class_SimpleIO = None # type: ignore
-        _Class_SimpleIO = _Class_SimpleIO # type: ignore
 
         # Set up enforcement of what other services a given service can invoke
         try:
@@ -449,110 +446,16 @@ class ServiceStore:
         except AttributeError:
             class_.invokes = []
 
-        # If the class does not have a SimpleIO attribute
-        # but it does have input or output declared
-        # then we add a SimpleIO wrapper ourselves.
-        if not hasattr(class_, 'SimpleIO'):
+        _sio_input  = getattr(class_, 'input', None)
+        _sio_output = getattr(class_, 'output', None)
 
-            _direct_sio_input  = getattr(class_, 'input', None)
-            _direct_sio_output = getattr(class_, 'output', None)
+        if _sio_input or _sio_output:
 
-            if _direct_sio_input or _direct_sio_output:
-
-                # If I/O is declared directly, it means that we do not need response wrappers
-                class_._zato_needs_response_wrapper = False # type: ignore
-
-                class _Class_SimpleIO:
-                    pass
-
-                if _direct_sio_input:
-                    _Class_SimpleIO.input = _direct_sio_input # type: ignore
-
-                if _direct_sio_output:
-                    _Class_SimpleIO.output = _direct_sio_output # type: ignore
-
-                for _sio_attr in ('output_repeated', 'default_value', 'skip_empty_keys',
-                    'force_empty_keys', 'allow_empty_required'):
-                    _sio_val = getattr(class_, _sio_attr, None)
-                    if _sio_val is not None:
-                        setattr(_Class_SimpleIO, _sio_attr, _sio_val)
-
-                class_.SimpleIO = _Class_SimpleIO # type: ignore
-
-        try:
-            class_.SimpleIO # type: ignore
-            class_.has_sio = True
-        except AttributeError:
-            class_.has_sio = False
-
-        if class_.has_sio:
-
-            sio_input  = getattr(
-                class_.SimpleIO, # type: ignore
-                'input',
-                 None
-                )
-
-            sio_output = getattr(
-                class_.SimpleIO, # type: ignore
-                'output',
-                None
-            )
-
-            has_input_data_class  = self._has_io_data_class(class_, sio_input,  'Input')
-            has_output_data_class = self._has_io_data_class(class_, sio_output, 'Output')
-
-            # If either input or output is a dataclass but the other one is not,
-            # we need to turn the latter into a dataclass as well.
-
-            # We are here if output is a dataclass ..
-            if has_output_data_class:
-
-                # .. but input is not and it should be ..
-                if (not has_input_data_class) and sio_input:
-
-                    # .. create a name for the dynamically-generated input model class ..
-                    name = class_.__module__ + '_' + class_.__name__
-                    name = name.replace('.', '_')
-                    name += '_AutoInput'
-
-                    # .. generate the input model class now ..
-                    model_input = DataClassModel.build_model_from_flat_input(
-                        service_store.server,
-                        SIOProcessor,
-                        name,
-                        sio_input
-                    )
-
-                    # .. and assign it as input.
-                    if _Class_SimpleIO:
-                        _Class_SimpleIO.input = model_input # type: ignore
-
-            # We are here if input is a dataclass ..
-            if has_input_data_class:
-
-                # .. but output is not and it should be.
-                if (not has_output_data_class) and sio_output:
-
-                    # .. create a name for the dynamically-generated output model class ..
-                    name = class_.__module__ + '_' + class_.__name__
-                    name = name.replace('.', '_')
-                    name += '_AutoOutput'
-
-                    # .. generate the output model class now ..
-                    model_output = DataClassModel.build_model_from_flat_input(
-                        service_store.server,
-                        SIOProcessor,
-                        name,
-                        sio_output
-                    )
-
-                    if _Class_SimpleIO:
-                        _Class_SimpleIO.output = model_output # type: ignore
+            has_input_data_class  = self._has_io_data_class(class_, _sio_input,  'Input')
+            has_output_data_class = self._has_io_data_class(class_, _sio_output, 'Output')
 
             if has_input_data_class or has_output_data_class:
-                SIOClass = DataClassSimpleIO
-                _ = SIOClass.attach_sio(service_store.server, None, class_) # type: ignore
+                _ = DataClassSimpleIO.attach_sio(service_store.server, None, class_) # type: ignore
             else:
                 _ = SIOProcessor.attach_sio(service_store.server, None, class_)
 

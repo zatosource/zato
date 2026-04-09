@@ -10,39 +10,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from copy import deepcopy
 from json import loads
-from traceback import format_exc
-
-# Python 2/3 compatibility
-from zato.common.py23_.past.builtins import basestring
 
 # Zato
-from zato.common.api import SECRET_SHADOW, ZATO_NONE
+from zato.common.api import SECRET_SHADOW
 from zato.common.util.api import get_response_value, make_cid_public
-from zato.server.service import AsIs, Bool, Int, Service
+from zato.server.service import AsIs, Int, Service
 
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from zato.common.typing_ import anydict, anylist
 
 # ################################################################################################################################
 
 logger = logging.getLogger('zato_admin')
-
-# ################################################################################################################################
-
-success_code = 0
-success = '<error_code>{}</error_code>'.format(success_code)
-
-# ################################################################################################################################
-
-class AdminSIO:
-    pass
-
-# ################################################################################################################################
-
-class GetListAdminSIO:
-    input_optional = (Int('cur_page'), Bool('paginate'), 'query')
 
 # ################################################################################################################################
 
@@ -98,22 +79,6 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _new_zato_instance_with_cluster(self, instance_class, cluster_id=None, **kwargs):
-
-        from zato.bunch import Bunch
-
-        if not cluster_id:
-            cluster_id = self.request.input.get('cluster_id')
-            cluster_id = cluster_id or self.server.cluster_id
-
-        cluster = Bunch()
-        cluster.id = cluster_id
-        cluster.name = self.server.cluster_name
-
-        return instance_class(cluster=cluster, **kwargs)
-
-# ################################################################################################################################
-
     def after_handle(self):
 
         if self.name == 'zato.service.invoke':
@@ -122,11 +87,6 @@ class AdminService(Service):
         if self.server.is_admin_enabled_for_info:
             logger.info('Response; service:`%s`, data:`%s` cid:`%s`, ',
                 self.name, get_response_value(self.response), self.cid)
-
-# ################################################################################################################################
-
-    def get_data(self, *args, **kwargs):
-        raise NotImplementedError('Should be overridden by subclasses (AdminService.get_data)')
 
 # ################################################################################################################################
 

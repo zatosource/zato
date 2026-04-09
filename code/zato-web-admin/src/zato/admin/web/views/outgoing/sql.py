@@ -15,7 +15,7 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.views import change_password as _change_password, parse_response_data
+from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, method_allowed
@@ -71,9 +71,9 @@ def index(req):
             'cur_page': req.GET.get('cur_page', 1)
         }
 
-        data, meta = parse_response_data(req.zato.client.invoke('zato.outgoing.sql.get-list', request))
+        response = req.zato.client.invoke('zato.outgoing.sql.get-list', request)
 
-        for item in data:
+        for item in response.data:
 
             _item = SQLConnectionPool()
             for name in('id', 'name', 'is_active', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size', 'engine'):

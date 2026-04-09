@@ -1228,7 +1228,7 @@ class WorkerStore(_WorkerStoreBase):
             'zato_ctx': kwargs.get('zato_ctx'),
             'http_environ': kwargs.get('http_environ'),
             'channel_item': kwargs.get('channel_item'),
-        }, channel, '', needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
+        }, channel, '', needs_response=True, serialize=serialize)
 
 # ################################################################################################################################
 
@@ -1263,24 +1263,17 @@ class WorkerStore(_WorkerStoreBase):
             logger.warning(msg)
             raise Exception(msg)
 
-        skip_response_elem=kwargs.get('skip_response_elem')
-
         response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), http_environ=http_environ,
             environ=msg.get('environ'))
 
-        if skip_response_elem:
-            response = dumps(response)
-            response = response.decode('utf8')
-
-        # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('callback'):
 
             cb_msg = {}
             cb_msg['action'] = SERVICE.PUBLISH.value
             cb_msg['service'] = msg['callback']
-            cb_msg['payload'] = response if skip_response_elem else service.response.payload
+            cb_msg['payload'] = service.response.payload
             cb_msg['cid'] = new_cid_server()
             cb_msg['channel'] = CHANNEL.INVOKE_ASYNC_CALLBACK
             cb_msg['data_format'] = data_format
@@ -1291,18 +1284,15 @@ class WorkerStore(_WorkerStoreBase):
             self.broker_client.invoke_async(cb_msg) # type: ignore
 
         if kwargs.get('needs_response'):
-            if skip_response_elem:
+            if isinstance(response, dict):
                 return response
-            else:
-                if isinstance(response, dict):
-                    return response
 
-                response = service.response.payload
+            response = service.response.payload
 
-                if hasattr(response, 'getvalue'):
-                    response = response.getvalue(serialize=kwargs.get('serialize'))
+            if hasattr(response, 'getvalue'):
+                response = response.getvalue(serialize=kwargs.get('serialize'))
 
-                return response
+            return response
 
 # ################################################################################################################################
 

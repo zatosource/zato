@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.const import ServiceConst
 from zato.server.service import Boolean, Int, Integer, List
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -54,7 +54,6 @@ class GetList(AdminService):
     input = '-cluster_id', Int('-cur_page'), Boolean('-paginate'), '-query', \
         List('-sec_type'), Boolean('-needs_internal')
     output = _output_required + _output_optional
-    output_repeated = True
 
     @staticmethod
     def _name_matches_query(name, query_criteria):

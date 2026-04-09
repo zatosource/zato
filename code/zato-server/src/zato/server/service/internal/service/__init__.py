@@ -33,7 +33,7 @@ from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, parse_extra_into_dict, payload_from_request
 from zato.common.util.file_system import get_tmp_path
 from zato.server.service import Boolean, Int, Integer, Service
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,7 +56,6 @@ class GetList(AdminService):
     """
     input = 'cluster_id', '-should_include_scheduler', Int('-cur_page'), Boolean('-paginate'), '-query'
     output = 'id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted')
-    output_repeated = True
 
 # ################################################################################################################################
 
@@ -287,7 +286,7 @@ class Invoke(AdminService):
     """ Invokes the service directly, as though it was exposed through a channel defined in web-admin.
     """
     input = '-id', '-name', '-payload', '-channel', '-data_format', '-transport', Boolean('-is_async'), \
-        Integer('-expiration'), Integer('-pid'), Boolean('-all_pids'), Integer('-timeout'), Boolean('-skip_response_elem'), \
+        Integer('-expiration'), Integer('-pid'), Boolean('-all_pids'), Integer('-timeout'), \
         '-needs_response_time'
     output = '-response',
 
@@ -321,15 +320,13 @@ class Invoke(AdminService):
         payload:'any_',
         pid:'int',
         data_format:'str',
-        skip_response_elem:'bool',
     ) -> 'any_':
 
         response = self.server.invoke(
             name,
             payload, # type: ignore
             pid=pid,
-            data_format=data_format,
-            skip_response_elem=skip_response_elem)
+            data_format=data_format)
 
         response = {
             pid: {
@@ -353,7 +350,6 @@ class Invoke(AdminService):
         data_format:'str',
         transport:'str',
         zato_response_headers_container:'anydict',
-        skip_response_elem:'bool',
     ) -> 'any_':
 
         func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
@@ -365,7 +361,6 @@ class Invoke(AdminService):
             data_format,
             transport,
             zato_response_headers_container=zato_response_headers_container,
-            skip_response_elem=skip_response_elem,
             serialize=True)
 
         if all_pids:
@@ -430,12 +425,11 @@ class Invoke(AdminService):
         data_format:'str',
         transport:'str',
         zato_response_headers_container:'anydict',
-        skip_response_elem:'bool',
     ) -> 'any_':
 
         response = self._invoke_current_server_pid(
             id, name, all_pids, payload, channel, data_format, transport,
-            zato_response_headers_container, skip_response_elem)
+            zato_response_headers_container)
 
         return response
 
@@ -501,7 +495,6 @@ class Invoke(AdminService):
         pid = self.request.input.get('pid') or 0
         all_pids = self.request.input.get('all_pids')
         timeout = self.request.input.get('timeout') or None
-        skip_response_elem = self.request.input.get('skip_response_elem') or False
         channel = self.request.input.get('channel')
         data_format = self.request.input.get('data_format')
         transport = self.request.input.get('transport')
@@ -519,7 +512,7 @@ class Invoke(AdminService):
             else:
                 response = self._run_sync_invoke(
                     pid, timeout, id, name, all_pids, payload, channel,
-                    data_format, transport, zato_response_headers_container, skip_response_elem
+                    data_format, transport, zato_response_headers_container
                 )
 
             if response is not None:

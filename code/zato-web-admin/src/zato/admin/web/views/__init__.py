@@ -57,15 +57,6 @@ SKIP_VALUE = 'zato.skip.value'
 
 # ################################################################################################################################
 
-def parse_response_data(response):
-    """ Parses out data and metadata out an internal API call response.
-    """
-    data = response.data if isinstance(response.data, list) else [response.data] if response.data else []
-    meta = response.meta or None
-    return data, meta
-
-# ################################################################################################################################
-
 def invoke_list_service(client, cluster, service, extra=None):
 
     out = {}

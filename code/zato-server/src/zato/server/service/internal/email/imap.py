@@ -60,7 +60,6 @@ class GetList(AdminService):
     output = ('id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Int('debug_level'), 'mode',
         'get_criteria', '-username', '-opaque1', '-server_type', '-server_type_human', AsIs('-tenant_id'),
         AsIs('-client_id'), '-filter_criteria')
-    output_repeated = True
 
     def handle(self):
         items = [_enrich_imap_list_item(dict(x)) for x in self.server.config_store.get_list(_entity_type)]
