@@ -34,13 +34,22 @@ time_keys = ('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')
 class _Base(AdminService):
     """ Base class for services that access the contents of a given cache.
     """
-    def _get_cache_by_input(self, needs_odb=False):
-        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.id)
+    def _get_cache_by_input(self, needs_config=False):
+        cache_id = int(self.request.input.id)
+        cache_list = self.server.rust_config_store.get_list('cache_builtin')
+        cache_item = None
+        for item in cache_list:
+            if item.get('id') == cache_id:
+                cache_item = item
+                break
 
-        if needs_odb:
-            return odb_cache
+        if not cache_item:
+            raise BadRequest(self.cid, 'Could not find cache with id `{}`'.format(cache_id))
+
+        if needs_config:
+            return bunchify(cache_item)
         else:
-            return self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
+            return self.cache.get_cache(CACHE.TYPE.BUILTIN, cache_item['name'])
 
 # ################################################################################################################################
 

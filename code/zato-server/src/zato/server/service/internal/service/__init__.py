@@ -11,13 +11,15 @@ import os
 import subprocess
 from base64 import b64decode, b64encode
 from hashlib import sha256
-from operator import itemgetter
 from traceback import format_exc
 from uuid import uuid4
 
 # Python 2/3 compatibility
 from builtins import bytes
 from zato.common.ext.future.utils import iterkeys
+
+# Bunch
+from bunch import Bunch
 
 # Zato
 from zato.common.api import BROKER, CONNECTION, SCHEDULER
@@ -46,15 +48,6 @@ if 0:
 
 # For pyflakes
 Service = Service
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class _ServiceItem:
-    """ A lightweight container mimicking the interface expected by SimpleIO responses. """
-    def __init__(self, **kwargs):
-        for k, v in kwargs.items():
-            setattr(self, k, v)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -106,7 +99,7 @@ class GetList(AdminService):
 
             service_id = store.impl_name_to_id.get(impl_name, 0)
 
-            item = _ServiceItem(
+            item = Bunch(
                 id=service_id,
                 name=name,
                 is_active=svc_data.get('is_active', True),
@@ -306,7 +299,7 @@ class GetChannelList(AdminService):
                         continue
                     if channel_type == 'plain_http' and item.get('soap_version'):
                         continue
-                    out.append(_ServiceItem(id=item['id'], name=item['name']))
+                    out.append(Bunch(id=item['id'], name=item['name']))
 
         self.response.payload[:] = out
 

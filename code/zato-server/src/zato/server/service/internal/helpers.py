@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from contextlib import closing
 from dataclasses import dataclass
 from io import StringIO
 from json import loads
@@ -793,71 +792,51 @@ class OpenAPIHandler(Service):
     def handle(self):
         """ Main entry point - validates credentials and returns OpenAPI spec.
         """
-        from zato.common.odb.model import GenericConn, HTTPSOAP
         from zato.common.util.openapi_.exporter import build_openapi_spec
         from zato.server.connection.http_soap import BadRequest
 
-        # Credentials are required - reject immediately if missing
         auth_header = self.http_environ.get('HTTP_AUTHORIZATION', '')
         if not auth_header:
             raise Forbidden(self.cid)
 
-        # Channel name from URL is required
         channel_name = self.request.http.params.get('name')
         if not channel_name:
             raise Forbidden(self.cid)
 
         try:
-            with closing(self.odb.session()) as session:
+            channel = self.server.rust_config_store.get('generic_connection', channel_name)
+            if not channel:
+                raise Forbidden(self.cid)
 
-                # Look up the OpenAPI channel by name
-                channel = session.query(GenericConn).filter(
-                    GenericConn.type_ == GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI,
-                    GenericConn.name == channel_name,
-                    GenericConn.cluster_id == self.server.cluster_id,
-                ).first()
+            active_rest_channel_ids = self._get_active_rest_channel_ids(channel)
 
-                # Reject if channel not found
-                if not channel:
-                    raise Forbidden(self.cid)
+            rest_channels = []
+            if active_rest_channel_ids:
+                channel_data = self.server.worker_store.request_dispatcher.url_data.channel_data
+                for item in channel_data:
+                    if item.get('connection') == CONNECTION.CHANNEL and \
+                       item.get('transport') == URL_TYPE.PLAIN_HTTP and \
+                       item.get('id') in active_rest_channel_ids:
+                        rest_channels.append(item)
 
-                # Get IDs of active REST channels
-                active_rest_channel_ids = self._get_active_rest_channel_ids(channel)
+            basic_auth_security_ids = self._get_basic_auth_security_ids(rest_channels)
 
-                # Fetch the actual REST channel objects
-                rest_channels = []
-                if active_rest_channel_ids:
-                    rest_channels = list(session.query(HTTPSOAP).filter(
-                        HTTPSOAP.id.in_(active_rest_channel_ids),
-                        HTTPSOAP.cluster_id == self.server.cluster_id,
-                        HTTPSOAP.connection == CONNECTION.CHANNEL,
-                        HTTPSOAP.transport == URL_TYPE.PLAIN_HTTP,
-                    ))
+            if not self._check_credentials(auth_header, basic_auth_security_ids):
+                raise Forbidden(self.cid)
 
-                # Get basic auth security IDs from the REST channels
-                basic_auth_security_ids = self._get_basic_auth_security_ids(session, rest_channels)
+            services_info = self._collect_services_info(rest_channels)
 
-                # Validate credentials against any of the basic auth definitions
-                if not self._check_credentials(auth_header, basic_auth_security_ids):
-                    raise Forbidden(self.cid)
+            file_paths = []
+            for item in services_info:
+                if item['source_path']:
+                    file_paths.append(item['source_path'])
 
-                # Collect service metadata from REST channels
-                services_info = self._collect_services_info(rest_channels)
+            yaml_output = build_openapi_spec(channel_name, services_info, file_paths)
 
-                # Collect source file paths for scanning
-                file_paths = []
-                for item in services_info:
-                    if item['source_path']:
-                        file_paths.append(item['source_path'])
+            logger.info('Generated OpenAPI for channel %s', channel_name)
 
-                # Use shared OpenAPI generation
-                yaml_output = build_openapi_spec(channel_name, services_info, file_paths)
-
-                logger.info('Generated OpenAPI for channel %s', channel_name)
-
-                # Return YAML response
-                self.response.payload = yaml_output
-                self.response.content_type = 'application/x-yaml'
+            self.response.payload = yaml_output
+            self.response.content_type = 'application/x-yaml'
 
         except Forbidden:
             raise
