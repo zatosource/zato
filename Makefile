@@ -52,11 +52,15 @@ hl7-tests:
 build:
 	$(MAKE) server-build
 	$(MAKE) broker-build
+	$(MAKE) sio-build
 
 server-build:
 	. $(HOME)/.cargo/env && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-server/src/zato_server_core/Cargo.toml
+
+sio-build:
+	cd $(CURDIR)/code/zato-common && $(MAKE) build
 
 broker-build:
 	cd $(CURDIR)/code/zato-broker && $(MAKE) build
