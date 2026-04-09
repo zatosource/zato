@@ -196,7 +196,7 @@ impl SIOProcessor {
             }
 
             if value.is_none() {
-                if let Ok(dict) = parsed.downcast::<PyDict>() {
+                if let Ok(dict) = parsed.cast::<PyDict>() {
                     if let Some(v) = dict.get_item(&elem.name)? {
                         value = Some(v);
                     }
@@ -233,7 +233,7 @@ impl SIOProcessor {
             return Ok(value.clone().unbind());
         }
 
-        if value.is_instance_of::<PyList>() || value.downcast::<PyTuple>().is_ok() {
+        if value.is_instance_of::<PyList>() || value.cast::<PyTuple>().is_ok() {
             let out = PyList::empty(py);
             for item in value.try_iter()? {
                 let item = item?;
@@ -291,7 +291,7 @@ impl SIOProcessor {
 
     fn filter_dict_to_output(&self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<PyObject> {
         let out = PyDict::new(py);
-        if let Ok(dict) = value.downcast::<PyDict>() {
+        if let Ok(dict) = value.cast::<PyDict>() {
             for elem in &self.output_elems {
                 if let Some(v) = dict.get_item(&elem.name)? {
                     out.set_item(&elem.name, v)?;

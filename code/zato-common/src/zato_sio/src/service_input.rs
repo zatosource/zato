@@ -68,7 +68,7 @@ impl ServiceInput {
     }
 
     fn update(&mut self, other: &Bound<'_, PyAny>) -> PyResult<()> {
-        if let Ok(dict) = other.downcast::<PyDict>() {
+        if let Ok(dict) = other.cast::<PyDict>() {
             for (key, value) in dict.iter() {
                 let k: String = key.extract()?;
                 self.data.insert(k, value.unbind());

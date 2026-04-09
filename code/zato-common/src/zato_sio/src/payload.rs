@@ -65,14 +65,14 @@ impl Payload {
         self.is_list_output = false;
 
         if value.is_instance_of::<PyDict>() {
-            let dict: &Bound<'_, PyDict> = value.downcast()?;
+            let dict: &Bound<'_, PyDict> = value.cast()?;
             self.extract_from_dict(py, dict)?;
         } else if value.is_instance_of::<PyList>() {
             self.is_list_output = true;
             for item in value.try_iter()? {
                 let item = item?;
                 if item.is_instance_of::<PyDict>() {
-                    let dict: &Bound<'_, PyDict> = item.downcast()?;
+                    let dict: &Bound<'_, PyDict> = item.cast()?;
                     let extracted = self.extract_dict_attrs(py, dict)?;
                     let py_dict = PyDict::new(py);
                     for (k, v) in &extracted {
@@ -118,7 +118,7 @@ impl Payload {
 
             if !search.is_none() {
                 let output = self.build_output_value(py)?;
-                if let Ok(dict) = output.downcast::<PyDict>() {
+                if let Ok(dict) = output.cast::<PyDict>() {
                     dict.set_item("_meta", &search)?;
                     if do_serialize {
                         let json_mod = py.import("zato.common.json_internal")?;
@@ -168,7 +168,7 @@ impl Payload {
 
     fn __setitem__(&mut self, py: Python<'_>, key: &Bound<'_, PyAny>, value: PyObject) -> PyResult<()> {
         if key.is_instance_of::<pyo3::types::PySlice>() {
-            let slice: &Bound<'_, pyo3::types::PySlice> = key.downcast()?;
+            let slice: &Bound<'_, pyo3::types::PySlice> = key.cast()?;
             let indices = slice.indices(self.user_attrs_list.len() as isize)?;
             let start = indices.start as usize;
             let stop = indices.stop as usize;
