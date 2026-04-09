@@ -65,21 +65,11 @@ class DataClassSimpleIO:
 
     @staticmethod
     def attach_sio(server, server_config, class_):
-        """ Given a service class, the method extracts its user-defined SimpleIO definition
-        and attaches the Cython-based one to the class's _sio attribute.
+        """ Given a service class, the method attaches a DataClassSimpleIO
+        instance to the class's _sio attribute.
         """
         try:
-            # pylint: disable=attribute-defined-outside-init
-
-            # Get the user-defined SimpleIO definition
-            user_sio = getattr(class_, 'SimpleIO', None)
-
-            # This class does not use SIO so we can just return immediately
-            if not user_sio:
-                return
-
-            # Attach the Cython object representing the parsed user definition
-            sio = DataClassSimpleIO(server, server_config, user_sio)
+            sio = DataClassSimpleIO(server, server_config, class_)
             sio.service_class = class_
             class_._sio = sio
 

@@ -257,7 +257,7 @@ pub struct OutgoingAmqp {
     #[serde(default)]
     pub password: String,
     #[serde(default = "default_delivery_mode")]
-    pub delivery_mode: u16,
+    pub delivery_mode: String,
     #[serde(default = "default_amqp_priority")]
     pub priority: u16,
     #[serde(default)]
@@ -751,7 +751,7 @@ fn default_true() -> bool { true }
 fn default_timeout() -> u32 { 10 }
 fn default_pool_size() -> u16 { 20 }
 fn default_pool_size_u32() -> u32 { 20 }
-fn default_delivery_mode() -> u16 { 2 }
+fn default_delivery_mode() -> String { "persistent".to_string() }
 fn default_amqp_priority() -> u16 { 5 }
 fn default_ftp_port() -> u16 { 21 }
 fn default_odoo_port() -> u16 { 8069 }

@@ -48,25 +48,17 @@ class Create(AdminService):
 
         input = self.request.input
 
-        delivery_mode = int(input.delivery_mode)
-        priority = int(input.priority)
-        expiration = int(input.expiration) if input.expiration else None
-
-        if not(priority >= 0 and priority <= 9):
-            msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(priority))
-            raise ValueError(msg)
-
         data = {
             'name': input.name,
             'is_active': input.is_active,
             'address': input.address,
             'username': input.username,
             'password': input.password,
-            'delivery_mode': delivery_mode,
-            'priority': priority,
+            'delivery_mode': input.delivery_mode,
+            'priority': input.priority,
             'content_type': input.content_type,
             'content_encoding': input.content_encoding,
-            'expiration': expiration,
+            'expiration': input.expiration,
             'pool_size': input.pool_size,
             'user_id': input.user_id,
             'app_id': input.app_id,

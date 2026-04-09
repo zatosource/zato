@@ -148,7 +148,15 @@ fn py_to_value(_py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<serde_yaml::
     } else if let Ok(f) = obj.extract::<f64>() {
         Ok(serde_yaml::Value::Number(serde_yaml::Number::from(f)))
     } else if let Ok(s) = obj.extract::<String>() {
-        Ok(serde_yaml::Value::String(s))
+        if let Ok(i) = s.parse::<i64>() {
+            Ok(serde_yaml::Value::Number(i.into()))
+        } else if s == "true" || s == "True" {
+            Ok(serde_yaml::Value::Bool(true))
+        } else if s == "false" || s == "False" {
+            Ok(serde_yaml::Value::Bool(false))
+        } else {
+            Ok(serde_yaml::Value::String(s))
+        }
     } else if let Ok(list) = obj.cast::<PyList>() {
         let mut seq = Vec::new();
         for item in list.iter() {
