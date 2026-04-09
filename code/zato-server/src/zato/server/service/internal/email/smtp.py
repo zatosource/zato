@@ -1,4 +1,4 @@
-# -# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 Copyright (C) 2019, Zato Source s.r.o. https://zato.io
@@ -9,65 +9,180 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from contextlib import closing
 from time import time
-
-# Python 2/3 compatibility
-from six import add_metaclass
+from traceback import format_exc
 
 # Zato
 from zato.common.api import SMTPMessage
-from zato.common.broker_message import EMAIL
-from zato.common.odb.model import SMTP
+from zato.common.exception import BadRequest
 from zato.common.version import get_version
-from zato.common.odb.query import email_smtp_list
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
-from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+from zato.server.service import Bool, Int
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
+# ################################################################################################################################
 
+_entity_type = 'email_smtp'
 version = get_version()
 
 # ################################################################################################################################
-
-elem = 'email_smtp'
-model = SMTP
-label = 'an SMTP connection'
-get_list_docs = 'SMTP connections'
-broker_message = EMAIL
-broker_message_prefix = 'SMTP_'
-list_func = email_smtp_list
-
 # ################################################################################################################################
 
-def instance_hook(service, input, instance, attrs):
-    if attrs.is_create_edit:
-        instance.username = input.username or '' # So it's not stored as None/NULL
+def _item_by_id(items, id_):
+    sid = str(id_)
+    for item in items:
+        if str(item.get('id')) == sid:
+            return item
+    return None
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-@add_metaclass(GetListMeta)
 class GetList(AdminService):
-    _filter_by = SMTP.name,
+    """ Returns a list of SMTP connections.
+    """
+    class SimpleIO(GetListAdminSIO):
+        request_elem = 'zato_email_smtp_get_list_request'
+        response_elem = 'zato_email_smtp_get_list_response'
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Bool('is_debug'), 'mode',
+            'ping_address')
+        output_optional = ('username', 'opaque1')
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    pass
+    """ Creates an SMTP connection.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_email_smtp_create_request'
+        response_elem = 'zato_email_smtp_create_response'
+        input_required = ('cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Bool('is_debug'),
+            'mode', 'ping_address')
+        input_optional = ('username', 'password', 'opaque1')
+        output_required = ('id', 'name')
+
+    def handle(self):
+        input = self.request.input
+        input.cluster_id = input.get('cluster_id') or self.server.cluster_id
+        store = self.server.rust_config_store
+
+        if store.get(_entity_type, input.name):
+            raise BadRequest(self.cid, 'An SMTP connection `{}` already exists in this cluster'.format(input.name))
+
+        data = {
+            'name': input.name,
+            'is_active': input.is_active,
+            'host': input.host,
+            'port': int(input.port),
+            'timeout': int(input.timeout),
+            'is_debug': input.is_debug,
+            'username': input.username or '',
+            'password': input.password,
+            'mode': input.mode,
+            'ping_address': input.ping_address,
+        }
+        if input.get('opaque1') is not None:
+            data['opaque1'] = input.opaque1
+
+        store.set(_entity_type, input.name, data)
+        saved = store.get(_entity_type, input.name) or data
+        self.response.payload.id = saved.get('id', input.name)
+        self.response.payload.name = input.name
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    pass
+    """ Updates an SMTP connection.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_email_smtp_edit_request'
+        response_elem = 'zato_email_smtp_edit_response'
+        input_required = ('id', 'cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'),
+            Bool('is_debug'), 'mode', 'ping_address')
+        input_optional = ('username', 'password', 'opaque1')
+        output_required = ('id', 'name')
+
+    def handle(self):
+        input = self.request.input
+        input.cluster_id = input.get('cluster_id') or self.server.cluster_id
+        store = self.server.rust_config_store
+
+        old = _item_by_id(store.get_list(_entity_type), input.id)
+        if not old:
+            raise BadRequest(self.cid, 'No such an SMTP connection `{}` in this cluster'.format(input.name))
+
+        old_name = old.get('name')
+        if old_name != input.name:
+            other = store.get(_entity_type, input.name)
+            if other and str(other.get('id')) != str(input.id):
+                raise BadRequest(self.cid, 'An SMTP connection `{}` already exists in this cluster'.format(input.name))
+
+        data = dict(old)
+        data.update({
+            'id': old.get('id', input.id),
+            'name': input.name,
+            'is_active': input.is_active,
+            'host': input.host,
+            'port': int(input.port),
+            'timeout': int(input.timeout),
+            'is_debug': input.is_debug,
+            'username': input.username or '',
+            'mode': input.mode,
+            'ping_address': input.ping_address,
+        })
+        if input.get('password') is not None:
+            data['password'] = input.password
+        if input.get('opaque1') is not None:
+            data['opaque1'] = input.opaque1
+
+        if old_name != input.name:
+            store.delete(_entity_type, old_name)
+        store.set(_entity_type, input.name, data)
+
+        saved = store.get(_entity_type, input.name) or data
+        self.response.payload.id = saved.get('id', input.id)
+        self.response.payload.name = input.name
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    pass
+    """ Deletes an SMTP connection.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_email_smtp_delete_request'
+        response_elem = 'zato_email_smtp_delete_response'
+        input_optional = ('id', 'name', 'should_raise_if_missing')
 
+    def handle(self):
+        input = self.request.input
+        store = self.server.rust_config_store
+        input_id = input.get('id')
+        input_name = input.get('name')
+
+        if not (input_id or input_name):
+            raise BadRequest(self.cid, 'Either id or name is required on input')
+
+        item = None
+        if input_id:
+            item = _item_by_id(store.get_list(_entity_type), input_id)
+        if not item and input_name:
+            item = store.get(_entity_type, input_name)
+
+        if not item:
+            if input.get('should_raise_if_missing', True):
+                attr_name = 'id' if input_id else 'name'
+                attr_value = input_id if input_id else input_name
+                raise BadRequest(self.cid, 'Could not find an SMTP connection instance with {} `{}`'.format(
+                    attr_name, attr_value))
+            return
+
+        store.delete(_entity_type, item['name'])
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class ChangePassword(ChangePasswordBase):
@@ -80,11 +195,48 @@ class ChangePassword(ChangePasswordBase):
         response_elem = 'zato_email_smtp_change_password_response'
 
     def handle(self):
-        def _auth(instance, password):
-            instance.password = password
+        password1 = self.request.input.get('password1', '')
+        password2 = self.request.input.get('password2', '')
 
-        return self._handle(SMTP, _auth, EMAIL.SMTP_CHANGE_PASSWORD.value)
+        password1_decrypted = self.server.decrypt(password1) if password1 else password1
+        password2_decrypted = self.server.decrypt(password2) if password2 else password2
 
+        try:
+            if self.password_required:
+                if not password1_decrypted:
+                    raise Exception('Password must not be empty')
+                if not password2_decrypted:
+                    raise Exception('Password must be repeated')
+
+            if password1_decrypted != password2_decrypted:
+                raise Exception('Passwords need to be the same')
+
+            instance_id = self.request.input.get('id')
+            instance_name = self.request.input.name
+            store = self.server.rust_config_store
+
+            item = None
+            if instance_id:
+                item = _item_by_id(store.get_list(_entity_type), instance_id)
+            elif instance_name:
+                item = store.get(_entity_type, instance_name)
+            else:
+                raise Exception('Either ID or name are required on input')
+
+            if not item:
+                raise Exception('Could not find instance with id:`{}` and name:`{}`'.format(instance_id, instance_name))
+
+            name = item['name']
+            data = dict(item)
+            data['password'] = password1_decrypted
+            store.set(_entity_type, name, data)
+
+            self.response.payload.id = item.get('id', instance_id)
+        except Exception:
+            self.logger.error('Could not update password, e:`%s`', format_exc())
+            raise
+
+# ################################################################################################################################
 # ################################################################################################################################
 
 class Ping(AdminService):
@@ -97,15 +249,15 @@ class Ping(AdminService):
         output_required = ('info',)
 
     def handle(self):
-
-        with closing(self.odb.session()) as session:
-            item = session.query(SMTP).filter_by(id=self.request.input.id).one()
+        item = _item_by_id(self.server.rust_config_store.get_list(_entity_type), self.request.input.id)
+        if not item:
+            raise BadRequest(self.cid, 'Could not find SMTP connection with id `{}`'.format(self.request.input.id))
 
         msg = SMTPMessage()
-        msg.from_ = item.ping_address
-        msg.to = item.ping_address
-        msg.cc = item.ping_address
-        msg.bcc = item.ping_address
+        msg.from_ = item['ping_address']
+        msg.to = item['ping_address']
+        msg.cc = item['ping_address']
+        msg.bcc = item['ping_address']
         msg.subject = 'Zato SMTP ping (Α Β Γ Δ Ε Ζ Η)'
         msg.headers['Charset'] = 'utf-8'
 
@@ -115,7 +267,7 @@ class Ping(AdminService):
         msg.attach('ascii.txt', 'A B C D E F G H I J K L M N O P Q R S T U V W X Y Z')
 
         start_time = time()
-        self.email.smtp.get(item.name, True).conn.send(msg)
+        self.email.smtp.get(item['name'], True).conn.send(msg)
         response_time = time() - start_time
 
         self.response.payload.info = 'Ping submitted, took:`{0:03.4f} s`, check server logs for details.'.format(response_time)

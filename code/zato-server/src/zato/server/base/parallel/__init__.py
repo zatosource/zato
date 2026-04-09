@@ -37,8 +37,8 @@ from zato.broker import BrokerMessageReceiver
 from zato.broker.api import BrokerCoreAPI
 from zato_broker_core import log_admin_info
 from zato.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
-    SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SERVER_STARTUP, \
+    SEC_DEF_TYPE, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB
@@ -48,7 +48,6 @@ from zato.common.json_internal import loads
 from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
-from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub.consumer import start_internal_consumer
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.backend import PubSubBackend
@@ -71,9 +70,9 @@ from zato.server.base.parallel.http import HTTPHandler
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
 from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
-from zato.server.connection.server.rpc.config import ODBConfigSource
 from zato.server.groups.base import GroupsManager
 from zato.server.groups.ctx import SecurityGroupsCtxBuilder
+from zato_server_core import ConfigStore as RustConfigStore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -87,7 +86,6 @@ if 0:
     from opentelemetry.trace import Tracer as OTLPTracer
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
-    from zato.common.odb.model import Cluster as ClusterModel
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.connection.cache import Cache, CacheAPI
@@ -97,7 +95,6 @@ if 0:
 
     bunch_ = bunch_
     KombuMessage = KombuMessage
-    ODBManager = ODBManager
     random_seed = random_seed
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -126,13 +123,13 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
-    odb: 'ODBManager'
+    odb: 'ODBManager'  # ServiceStore dependency -- removed in Phase 6
+    rust_config_store: 'RustConfigStore'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
     on_http_request: 'any_'
 
-    cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
     service_store: 'ServiceStore'
 
@@ -169,7 +166,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.port = -1
         self.use_tls = False
         self.is_starting_first = '<not-set>'
-        self.odb_data = Bunch()
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -273,7 +269,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Rule engine
         self.rules = RulesManager()
 
-        # The main config store
+        # The Rust-backed config store
+        self.rust_config_store = RustConfigStore()
+
+        # The main config store (Python side, populated from Rust store)
         self.config = ConfigStore()
 
         # Log streaming manager
@@ -331,10 +330,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             return set(locally_deployed)
 
-        # Remove all the deployed services from the DB ..
-        self.odb.drop_deployed_services(server.id)
-
-        # .. deploy them back including any missing ones found on other servers.
+        # Deploy services
         locally_deployed = import_initial_services_jobs()
 
         return locally_deployed
@@ -683,23 +679,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def set_up_odb(self) -> 'None':
-        # This is the call that creates an SQLAlchemy connection
-        self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        self.odb.token = self.config.odb_data.token.decode('utf8')
-        self.odb.decrypt_func = self.decrypt
-
-# ################################################################################################################################
-
     def build_server_rpc(self) -> 'ServerRPC':
 
-        # What our configuration backend is
-        config_source = ODBConfigSource(self.odb, self.cluster_name, self.name, self.decrypt)
-
-        # A combination of backend and runtime configuration
-        config_ctx = _ServerRPC_ConfigCtx(config_source, self)
+        # A combination of runtime configuration (no ODB needed)
+        config_ctx = _ServerRPC_ConfigCtx(None, self)
 
         # A publicly available RPC client
         return ServerRPC(config_ctx)
@@ -708,24 +691,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def handle_enmasse_auto_from(self) -> 'None':
 
-        # Zato
-        from zato.server.commands import CommandsFacade
+        enmasse_dir = os.path.join(self.deploy_auto_from, 'enmasse')
 
-        # Local aliases
-        commands = CommandsFacade()
-        commands.init(self)
+        if not os.path.isdir(enmasse_dir):
+            return
 
-        # Full path to a directory with enmasse files ..
-        path = os.path.join(self.deploy_auto_from, 'enmasse')
-        path = Path(path)
+        for file_name in sorted(os.listdir(enmasse_dir)):
+            if file_name.endswith(('.yaml', '.yml')):
+                file_path = os.path.join(enmasse_dir, file_name)
+                logger.info('Loading enmasse auto-deploy YAML: %s', file_path)
+                self.rust_config_store.load_yaml(file_path)
 
-        # enmasse --import --input ./zato-export.yml /path/to/server/
-
-        # .. find all the enmasse files in this directory ..
-        for file_path in sorted(path.iterdir()):
-
-            # .. and run enmasse with each of them.
-            _ = commands.run_enmasse_async_import(file_path)
+        self.reload_config()
 
 # ################################################################################################################################
 
@@ -796,44 +773,56 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if is_posix:
             register_diag_handlers()
 
-        # Store the ODB configuration, create an ODB connection pool and have self.odb use it
-        self.config.odb_data = self.get_config_odb_data(self)
-        self.set_up_odb()
+        # Server identity from server.conf [misc] section
+        self.name = self.fs_server_config.misc.initial_server_name
+        self.cluster_name = self.fs_server_config.misc.initial_cluster_name
+        self.id = 1
+        self.cluster_id = 1
+        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, self.process_cid)
 
-        # Now try grabbing the basic server's data from the ODB. No point
-        # in doing anything else if we can't get past this point.
-        server:'any_' = self.odb.fetch_server(self.config.odb_data)
+        # File-based lock manager (no ODB needed)
+        self.zato_lock_manager = LockManager('fcntl', 'zato', None)
 
-        if not server:
-            raise Exception('Server does not exist in the ODB')
-
-        # Set up the server-wide default lock manager
-        odb_data:'bunch_' = self.config.odb_data
-
-        if is_posix:
-            backend_type:'str' = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
-        else:
-            backend_type = 'zato-pass-through'
-
-        self.zato_lock_manager = LockManager(backend_type, 'zato', self.odb.session)
-
-        # Just to make sure distributed locking is configured correctly
         with self.zato_lock_manager(uuid4().hex):
             pass
 
-        # Basic metadata
-        self.id = server.id
-        self.name = server.name
-        self.cluster = self.odb.cluster
-        self.cluster_id = self.cluster.id
-        self.cluster_name = self.cluster.name
-        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, self.process_cid)
+        # ODB pool -- still needed by ServiceStore for service deployment tracking (Phase 6 removes this).
+        # Feed odb_data from server.conf into the Python ConfigStore so WorkerStore.init_sql can connect.
+        odb_data = Bunch()
+        odb_data.db_name = self.fs_server_config.odb.db_name
+        odb_data.extra = self.fs_server_config.odb.extra
+        odb_data.engine = self.fs_server_config.odb.engine
+        odb_data.token = self.fs_server_config.main.token
+        odb_data.is_odb = True
+        odb_data.is_active = True
 
-        # SQL post-processing
-        ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
+        if odb_data.engine != 'sqlite':
+            odb_data.password = self.fs_server_config.odb.password
+            odb_data.host = self.fs_server_config.odb.host
+            odb_data.port = self.fs_server_config.odb.port
+            odb_data.pool_size = self.fs_server_config.odb.pool_size
+            odb_data.username = self.fs_server_config.odb.username
 
-        # Things like initializing SQL data on demand
-        self._pre_initialize()
+        self.config.odb_data = odb_data
+        self.config.odb_data['fs_sql_config'] = self.fs_sql_config
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
+        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
+        self.odb.token = self.config.odb_data.token if isinstance(self.config.odb_data.token, str) \
+            else self.config.odb_data.token.decode('utf8')
+        self.odb.decrypt_func = self.decrypt
+
+        # Load enmasse YAML into the Rust ConfigStore
+        self.load_enmasse_yaml()
+
+        # Create a server-like object for compatibility
+        server = Bunch()
+        server.id = self.id
+        server.name = self.name
+        server.token = self.fs_server_config.main.token
+        server.cluster = Bunch()
+        server.cluster.id = self.cluster_id
+        server.cluster.name = self.cluster_name
+        server.cluster_id = self.cluster_id
 
         logger.info(
             'Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`',
@@ -848,7 +837,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         http_methods_allowed_re = '|'.join(self.http_methods_allowed)
         self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
 
-        # Reads in all configuration from ODB
+        # Reads in all configuration from the Rust ConfigStore
         self.worker_store = WorkerStore(self.config, self)
         self.set_up_config(server) # type: ignore
 
@@ -961,7 +950,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.worker_store.after_broker_client_set()
 
         self._after_init_accepted(locally_deployed)
-        self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
             'server': self,
@@ -1005,112 +993,63 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _pre_initialize(self) -> 'None':
-
-        from contextlib import closing
-        from zato.common.util.channel import ensure_django_channel_exists, ensure_openapi_channel_exists
-
-        with closing(self.odb.session()) as session:
-            openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
-            django_created = ensure_django_channel_exists(session, self.cluster_id)
-
-            if openapi_created or django_created:
-                session.commit()
-
-            if openapi_created:
-                logger.info('Created OpenAPI handler channel')
-
-            if django_created:
-                logger.info('Created Django handler channel')
+        pass
 
 # ################################################################################################################################
 
     def _load_pubsub_permissions(self) -> 'None':
-        """ Load pub/sub permissions from database into the pattern matcher.
+        """ Load pub/sub permissions from the Rust ConfigStore into the pattern matcher.
         """
-        # stdlib
-        from contextlib import closing
-
         # Zato
         from zato.common.api import PubSub
-        from zato.common.odb.model import PubSubPermission, PubSubSubscription, PubSubSubscriptionTopic, PubSubTopic, SecurityBase
 
-        with closing(self.odb.session()) as session:
+        # Load permissions
+        permissions = self.rust_config_store.get_list('pubsub_permission')
 
-            permissions = session.query(
-                PubSubPermission.pattern,
-                PubSubPermission.access_type,
-                SecurityBase.username,
-                SecurityBase.name
-            ).join(
-                SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
-            ).filter(
-                PubSubPermission.cluster_id == self.cluster_id
-            ).all()
+        client_permissions = {}
+        username_to_sec_name = {}
 
-            client_permissions = {}
-            username_to_sec_name = {}
+        for perm in permissions:
+            security = perm.get('security', '')
 
-            for pattern_str, access_type, username, sec_name in permissions:
+            if security not in client_permissions:
+                client_permissions[security] = []
+                username_to_sec_name[security] = security
 
-                if username not in client_permissions:
-                    client_permissions[username] = []
-                    username_to_sec_name[username] = sec_name
+            for topic in perm.get('pub_topics', []):
+                client_permissions[security].append({
+                    'pattern': topic,
+                    'access_type': PubSub.API_Client.Publisher
+                })
+            for topic in perm.get('sub_topics', []):
+                client_permissions[security].append({
+                    'pattern': topic,
+                    'access_type': PubSub.API_Client.Subscriber
+                })
 
-                # Parse the combined pattern string (e.g. "pub=demo.*\nsub=orders.*")
-                for line in pattern_str.split('\n'):
-                    line = line.strip()
-                    if line.startswith('pub='):
-                        client_permissions[username].append({
-                            'pattern': line[4:],
-                            'access_type': PubSub.API_Client.Publisher
-                        })
-                    elif line.startswith('sub='):
-                        client_permissions[username].append({
-                            'pattern': line[4:],
-                            'access_type': PubSub.API_Client.Subscriber
-                        })
+        log_admin_info(f'Loading pub/sub config -> {len(client_permissions)} permission(s)')
 
-            log_admin_info(f'Loading pub/sub config -> {len(client_permissions)} permission(s)')
+        for username, perms in client_permissions.items():
+            self.pubsub_pattern_matcher.add_client(username, perms)
 
-            for username, perms in client_permissions.items():
-                self.pubsub_pattern_matcher.add_client(username, perms)
+            sec_name = username_to_sec_name.get(username)
+            if sec_name:
+                self.pubsub_subscriptions.register_user(username, sec_name)
 
-                sec_name = username_to_sec_name.get(username)
-                if sec_name:
-                    self.pubsub_subscriptions.register_user(username, sec_name)
+            log_admin_info(f'Loaded permission -> user:{username}, rules:{len(perms)}')
 
-                log_admin_info(f'Loaded permission -> user:{username}, rules:{len(perms)}')
+        # Load subscriptions
+        subscriptions = self.rust_config_store.get_list('pubsub_subscription')
+        log_admin_info(f'Loading pub/sub subscriptions -> {len(subscriptions)} subscription(s)')
 
-            subscriptions = session.query(
-                PubSubSubscription.sub_key,
-                SecurityBase.username,
-                SecurityBase.name
-            ).join(
-                SecurityBase, PubSubSubscription.sec_base_id == SecurityBase.id
-            ).filter(
-                PubSubSubscription.cluster_id == self.cluster_id
-            ).all()
+        for sub in subscriptions:
+            security = sub.get('security', '')
+            delivery_type = sub.get('delivery_type', '')
+            sub_key = f'{security}:{delivery_type}'
+            self.pubsub_subscriptions.register_user(security, security, sub_key)
+            log_admin_info(f'Loaded subscription -> sub_key:{sub_key}, user:{security}')
 
-            log_admin_info(f'Loading pub/sub subscriptions -> {len(subscriptions)} subscription(s)')
-
-            for sub_key, username, sec_name in subscriptions:
-                self.pubsub_subscriptions.register_user(username, sec_name, sub_key)
-                log_admin_info(f'Loaded subscription -> sub_key:{sub_key}, user:{username}')
-
-            subscription_topics = session.query(
-                PubSubSubscription.sub_key,
-                PubSubTopic.name
-            ).join(
-                PubSubSubscriptionTopic, PubSubSubscription.id == PubSubSubscriptionTopic.subscription_id
-            ).join(
-                PubSubTopic, PubSubSubscriptionTopic.topic_id == PubSubTopic.id
-            ).filter(
-                PubSubSubscription.cluster_id == self.cluster_id
-            ).all()
-
-            log_admin_info(f'Loading pub/sub topic bindings -> {len(subscription_topics)} binding(s)')
-
-            for sub_key, topic_name in subscription_topics:
+            for topic_name in sub.get('topic_list', []):
                 self.pubsub_backend.subscribe(sub_key, topic_name)
                 log_admin_info(f'Subscribed -> sub_key:{sub_key}, topic:{topic_name}')
 
@@ -1118,66 +1057,48 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def reload_config(self):
 
-        # Optionally, log what we're doing ..
         if _needs_details:
             logger.debug('Config reloading')
 
-        # .. actually set up the configuration ..
+        # Rebuild Python-side config from the Rust ConfigStore
         self.set_up_config(self) # type: ignore
 
-        # .. now reload it ..
+        # Reinitialize workers and pub/sub
         self.worker_store.init()
         self.worker_store.init_pubsub()
 
-        # .. reload pub/sub permissions from database ..
+        # Reload pub/sub permissions from ConfigStore
         self._load_pubsub_permissions()
 
-        # .. notify the pub/sub server too ..
+        # Notify pub/sub
         pubsub_msg = Bunch()
         pubsub_msg.cid = new_cid_server()
         pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
-
-        # .. publish the message for pub/sub ..
         self.broker_client.publish_to_pubsub(pubsub_msg)
 
-        # .. finally, log what happened.
-        logger.info('⭐ Config loaded OK')
+        logger.info('Config loaded OK')
 
 # ################################################################################################################################
 
     def import_enmasse(self, file_content:'str', file_name:'str') -> 'str':
 
-        # stdlib
         import json
-        import tempfile
-
-        # Zato
-        from zato.server.commands import CommandsFacade
-
-        # Local aliases
-        commands = CommandsFacade()
-        commands.init(self)
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
-            _ = temp_file.write(file_content)
-            temp_file_path = temp_file.name
 
         try:
-            result = commands.run_enmasse_sync_import(temp_file_path)
+            self.rust_config_store.load_yaml_string(file_content)
+            self.reload_config()
 
-            response = {
-                'is_ok': result.is_ok,
-                'exit_code': result.exit_code,
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'is_timeout': result.is_timeout,
-                'timeout_msg': result.timeout_msg if result.is_timeout else '',
-                'total_time': result.total_time,
-                'len_stdout_human': result.len_stdout_human,
-                'len_stderr_human': result.len_stderr_human,
-            }
-
-            return json.dumps(response)
+            return json.dumps({
+                'is_ok': True,
+                'exit_code': 0,
+                'stdout': 'Loaded into ConfigStore',
+                'stderr': '',
+                'is_timeout': False,
+                'timeout_msg': '',
+                'total_time': '',
+                'len_stdout_human': '',
+                'len_stderr_human': '',
+            })
 
         except Exception:
             exc = format_exc()
@@ -1193,43 +1114,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'len_stdout_human': '',
                 'len_stderr_human': '',
             })
-        finally:
-            os.unlink(temp_file_path)
 
 # ################################################################################################################################
 
     def export_enmasse(self):
 
-        # Zato
-        from zato.server.commands import CommandsFacade
-
-        facade = CommandsFacade()
-        facade.init(self)
-
-        result = facade.run_enmasse_sync_export()
-
-        if result.is_ok:
-            with open('/tmp/enmasse-export.yaml') as f:
-                data = f.read()
-            return data
-        else:
-            return result.stderr
+        import yaml
+        data = self.rust_config_store.export_to_dict()
+        return yaml.dump(data, default_flow_style=False, sort_keys=True)
 
 # ################################################################################################################################
 
     def import_test_pubsub_enmasse(self):
 
-        # Zato
-        from zato.server.commands import CommandsFacade
         import zato.server.service.internal.pubsub
 
         config_path = os.path.join(os.path.dirname(zato.server.service.internal.pubsub.__file__), 'enmasse.yaml')
-
-        facade = CommandsFacade()
-        facade.init(self)
-
-        result = facade.run_enmasse_sync_import(config_path)
-        return result.is_ok
+        self.rust_config_store.load_yaml(config_path)
+        self.reload_config()
+        return True
 
 # ################################################################################################################################
 
@@ -1605,22 +1508,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if hasattr(self, 'broker_client') and self.broker_client:
             self.broker_client.stop_consumer()
 
-        # Close SQL pools
-        self.sql_pool_store.cleanup_on_stop()
-
-        # Tell the ODB we've gone through a clean shutdown ..
-        if self.odb.session_initialized:
-            self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
-            self.odb.close()
-
-        # .. otherwise, initialize a session just for the shutdown notification.
-        else:
-            self.config.odb_data = self.get_config_odb_data(self)
-            self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-            self.set_up_odb()
-            self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
-            self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
-            self.odb.close()
+        # Close SQL pools (user-defined outgoing connections only)
+        if hasattr(self, 'sql_pool_store') and self.sql_pool_store:
+            self.sql_pool_store.cleanup_on_stop()
 
         logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 

@@ -1,3 +1,6 @@
+mod models;
+mod config_store;
+
 use pyo3::prelude::*;
 use pyo3::types::{PyCFunction, PyBytes, PyDict, PyTuple};
 use pyo3::intern;
@@ -524,5 +527,6 @@ fn push_usize(buf: &mut Vec<u8>, n: usize) {
 #[pymodule]
 fn zato_server_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<HTTPServer>()?;
+    m.add_class::<config_store::ConfigStore>()?;
     Ok(())
 }

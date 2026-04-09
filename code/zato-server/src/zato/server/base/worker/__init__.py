@@ -261,6 +261,21 @@ class WorkerStore(_WorkerStoreBase):
         # API keys
         self.update_apikeys()
 
+        # Resolve service_name -> service_impl_name for each channel
+        for channel_item in self.worker_config.http_soap:
+            svc_name = channel_item.get('service_name', '')
+            if svc_name and 'service_impl_name' not in channel_item:
+                impl_name = self.server.service_store.name_to_impl_name.get(svc_name, '')
+                channel_item['service_impl_name'] = impl_name
+                if impl_name:
+                    channel_item['service_id'] = self.server.service_store.impl_name_to_id.get(impl_name, None)
+            channel_item.setdefault('service_impl_name', '')
+            channel_item.setdefault('cache_type', None)
+            channel_item.setdefault('cache_id', None)
+            channel_item.setdefault('cache_expiry', None)
+            channel_item.setdefault('cache_name', None)
+            channel_item.setdefault('security_groups', None)
+
         request_handler = RequestHandler(self.server)
         url_data = URLData(
             self,
@@ -318,8 +333,62 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def _get_channel_url_sec(self) -> 'any_':
-        out:'any_' = self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0]
-        return out
+        from zato.common.api import HTTP_SOAP, MISC, ZATO_NONE
+        from zato.common.util.url_dispatcher import get_match_target
+
+        result = {}
+        sec_def_cache = {}
+
+        security_list = self.server.rust_config_store.get_list('security')
+        sec_by_name = {}
+        for sec_item in security_list:
+            sec_by_name[sec_item.get('name', '')] = sec_item
+
+        for entity_type in ('channel_rest', 'channel_soap'):
+            channels = self.server.rust_config_store.get_list(entity_type)
+            for item in channels:
+
+                transport = 'soap' if entity_type == 'channel_soap' else 'plain_http'
+                soap_action = item.get('soap_action', '')
+
+                target = get_match_target({
+                    'http_accept': item.get('http_accept', ''),
+                    'http_method': item.get('method', ''),
+                    'soap_action': soap_action,
+                    'url_path': item.get('url_path', ''),
+                }, http_methods_allowed_re=self.server.http_methods_allowed_re)
+
+                result[target] = Bunch()
+                result[target].is_active = item.get('is_active', True)
+                result[target].transport = transport
+                result[target].data_format = item.get('data_format', '')
+
+                security_name = item.get('security_name') or item.get('sec_def') or ''
+                sec_type = item.get('sec_type', '')
+
+                if security_name and security_name != ZATO_NONE:
+                    sec_def = sec_by_name.get(security_name)
+                    if sec_def:
+                        result[target].sec_def = Bunch()
+                        result[target].sec_def.id = sec_def.get('id', 0)
+                        result[target].sec_def.name = sec_def['name']
+                        result[target].sec_def.password = self.server.decrypt(sec_def.get('password') or '')
+                        result[target].sec_def.sec_type = sec_def.get('sec_type') or sec_def.get('type', '')
+
+                        if result[target].sec_def.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+                            result[target].sec_def.username = sec_def.get('username', '')
+                            result[target].sec_def.realm = sec_def.get('realm', '')
+                        elif result[target].sec_def.sec_type == SEC_DEF_TYPE.APIKEY:
+                            header = sec_def.get('header', 'X-API-Key')
+                            result[target].sec_def.header = 'HTTP_{}'.format(header.upper().replace('-', '_'))
+                        elif result[target].sec_def.sec_type == SEC_DEF_TYPE.NTLM:
+                            result[target].sec_def.username = sec_def.get('username', '')
+                    else:
+                        result[target].sec_def = ZATO_NONE
+                else:
+                    result[target].sec_def = ZATO_NONE
+
+        return result
 
 # ################################################################################################################################
 
@@ -468,17 +537,10 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def init_sql(self) -> 'None':
-        """ Initializes SQL connections, first to ODB and then any user-defined ones.
+        """ Initializes SQL connections for user-defined outgoing pools.
         """
-        # We need a store first
         self.sql_pool_store = PoolStore()
 
-        # Connect to ODB
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
-        self.odb = SessionWrapper()
-        self.odb.init_session(ZATO_ODB_POOL_NAME, self.worker_config.odb_data, self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
-
-        # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:
             config = self.worker_config.out_sql[pool_name]['config']
             config['fs_sql_config'] = self.server.fs_sql_config

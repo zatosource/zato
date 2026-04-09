@@ -6,14 +6,8 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from contextlib import closing
-
 # Zato
-from zato.common.api import SEC_DEF_TYPE
 from zato.common.const import ServiceConst
-from zato.common.odb import query
-from zato.common.odb.model import SecurityBase
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, GetListAdminSIO
 
@@ -44,8 +38,15 @@ class GetByID(AdminService):
         output_optional = output_optional
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            self.response.payload = query.sec_base(session, self.request.input.cluster_id, self.request.input.id)
+        for item in self.server.rust_config_store.get_list('security'):
+            if str(item.get('id')) == str(self.request.input.id):
+                out = dict(item)
+                if 'sec_type' not in out and out.get('type'):
+                    out['sec_type'] = out['type']
+                self.response.payload = out
+                return
+
+        raise Exception('Security definition with id `{}` not found'.format(self.request.input.id))
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,9 +63,22 @@ class GetList(AdminService):
         output_optional = output_optional
         output_repeated = True
 
+    @staticmethod
+    def _name_matches_query(name, query_criteria):
+        """ Mirrors SQL name.contains per criterion (see zato.common.odb.query._SearchWrapper). """
+        name_lower = name.lower()
+        for criterion in query_criteria:
+            crit = str(criterion)
+            if crit.startswith('-'):
+                if crit[1:].lower() in name_lower:
+                    return False
+            else:
+                if crit.lower() not in name_lower:
+                    return False
+        return True
+
     def handle(self):
 
-        _cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
         _needs_internal = self.request.input.get('needs_internal') != ''
         _internal = {ServiceConst.API_Admin_Invoke_Username}
 
@@ -73,40 +87,36 @@ class GetList(AdminService):
         else:
             needs_internal = True
 
-        with closing(self.odb.session()) as session:
-            pairs:'any_' = (
-                (SEC_DEF_TYPE.APIKEY, query.apikey_security_list),
-                (SEC_DEF_TYPE.BASIC_AUTH, query.basic_auth_list),
-                (SEC_DEF_TYPE.NTLM, query.ntlm_list),
-                (SEC_DEF_TYPE.OAUTH, query.oauth_list),
-            )
+        filter_by = self.request.input.get('sec_type', [])
+        if filter_by and not isinstance(filter_by, (list, tuple)):
+            filter_by = [filter_by]
 
-            for def_type, func in pairs:
+        query_criteria = self.request.input.get('query')
+        if query_criteria:
+            query_criteria = query_criteria if isinstance(query_criteria, (list, tuple)) else [query_criteria]
+        else:
+            query_criteria = []
 
-                filter_by = self.request.input.get('sec_type', [])
-                if filter_by and def_type not in filter_by:
+        items = self.server.rust_config_store.get_list('security')
+
+        for raw in items:
+            row = dict(raw)
+            st = row.get('sec_type') or row.get('type')
+            if st:
+                row['sec_type'] = st
+
+            if filter_by and st not in filter_by:
+                continue
+
+            name = row.get('name', '') or ''
+            if query_criteria and not self._name_matches_query(name, query_criteria):
+                continue
+
+            if name.startswith('zato') or name in _internal:
+                if not needs_internal:
                     continue
 
-                if func is query.basic_auth_list:
-                    args = session, _cluster_id, None, False
-                else:
-                    args = session, _cluster_id, False
-
-                # By default, we have nothing to filter by ..
-                kwargs = {}
-
-                # .. unless there is a query on input ..
-                if query_criteria := self.request.input.get('query'):
-                    kwargs['filter_by'] = SecurityBase.name
-                    kwargs['query'] = query_criteria
-
-                for definition in func(*args, **kwargs):
-
-                    if definition.name.startswith('zato') or definition.name in _internal:
-                        if not needs_internal:
-                            continue
-
-                    self.response.payload.append(definition)
+            self.response.payload.append(row)
 
 # ################################################################################################################################
 # ################################################################################################################################

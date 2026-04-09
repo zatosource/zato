@@ -7,135 +7,74 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from contextlib import closing
-from traceback import format_exc
 from uuid import uuid4
 
-# Bunch
-from bunch import Bunch
-
 # Zato
-from zato.common.api import SEC_DEF_TYPE
-from zato.common.broker_message import SECURITY
-from zato.common.odb.model import Cluster, HTTPBasicAuth
-from zato.common.odb.query import basic_auth_list
-from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-if 0:
-    from zato.common.typing_ import any_
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class GetList(AdminService):
-    """ Returns a list of HTTP Basic Auth definitions available.
-    """
-    _filter_by = HTTPBasicAuth.name,
+    _filter_by = 'name',
 
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_security_basic_auth_get_list_request'
         response_elem = 'zato_security_basic_auth_get_list_response'
-        input_required = 'cluster_id',
-        input_optional = GetListAdminSIO.input_optional + ('needs_password',)
+        input_optional = GetListAdminSIO.input_optional + ('cluster_id', 'needs_password',)
         output_required = 'id', 'name', 'is_active', 'username', 'realm',
         output_optional = 'password',
 
-    def get_data(self, session): # type: ignore
-
-        data = elems_with_opaque(self._search(basic_auth_list, session, self.request.input.cluster_id, None, False))
-
-        if self.request.input.needs_password:
-            for item in data:
-                password = item['password']
-                password = self.crypto.decrypt(password)
-                item['password'] = password
-
-        return data
-
     def handle(self):
-        with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+        items = self.server.rust_config_store.get_list('security')
+        out = []
+        for item in items:
+            if item.get('sec_type') == 'basic_auth' or item.get('type') == 'basic_auth':
+                if self.request.input.get('needs_password') and item.get('password'):
+                    item['password'] = self.crypto.decrypt(item['password'])
+                out.append(item)
+        self.response.payload[:] = out
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Create(AdminService):
-    """ Creates a new HTTP Basic Auth definition.
-    """
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_basic_auth_create_request'
         response_elem = 'zato_security_basic_auth_create_response'
         input_required = 'name', 'is_active', 'username', 'realm'
-        input_optional = 'cluster_id'
+        input_optional = 'cluster_id',
         output_required = 'id', 'name'
 
     def handle(self):
-
         input = self.request.input
-        input.password = uuid4().hex
 
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
+        existing = self.server.rust_config_store.get('security', input.name)
+        if existing:
+            raise Exception('HTTP Basic Auth definition `{}` already exists'.format(input.name))
 
-        with closing(self.odb.session()) as session:
-            try:
-                cluster = session.query(Cluster).filter_by(id=cluster_id).first()
+        password = uuid4().hex
 
-                # Let's see if we already have a definition of that name before committing
-                # any stuff into the database.
-                existing_one = session.query(HTTPBasicAuth).\
-                    filter(Cluster.id==cluster_id).\
-                    filter(HTTPBasicAuth.name==input.name).first()
+        self.server.rust_config_store.set('security', input.name, {
+            'type': 'basic_auth',
+            'name': input.name,
+            'is_active': input.is_active,
+            'username': input.username,
+            'realm': input.realm or '',
+            'password': password,
+        })
 
-                if existing_one:
-                    raise Exception('HTTP Basic Auth definition `{}` already exists in this cluster'.format(input.name))
+        item = self.server.rust_config_store.get('security', input.name)
 
-                auth = HTTPBasicAuth(None, input.name, input.is_active, input.username,
-                    input.realm or None, input.password, cluster)
-                set_instance_opaque_attrs(auth, input)
-
-                session.add(auth)
-                session.commit()
-
-            except Exception:
-                self.logger.error('Could not create an HTTP Basic Auth definition, e:`%s`', format_exc())
-                session.rollback()
-
-                raise
-            else:
-
-                # Enrich the message for the server ..
-                input.id = auth.id
-                input.action = SECURITY.BASIC_AUTH_CREATE.value
-                input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
-
-                # .. build a message for pub/sub too ..
-                pubsub_msg = Bunch()
-                pubsub_msg.cid = self.cid
-                pubsub_msg.action = SECURITY.BASIC_AUTH_CREATE.value
-                pubsub_msg.sec_name = input.name
-                pubsub_msg.username = input.username
-                pubsub_msg.password = input.password
-
-                # .. and publish both ..
-                self.broker_client.publish(input)
-                self.broker_client.publish_to_pubsub(pubsub_msg)
-
-            self.response.payload.id = auth.id
-            self.response.payload.name = auth.name
-
-        # Make sure the object has been created
-        _:'any_' = self.server.worker_store.wait_for_basic_auth(input.name)
+        self.response.payload.id = item['id']
+        self.response.payload.name = item['name']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(AdminService):
-    """ Updates an HTTP Basic Auth definition.
-    """
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_basic_auth_edit_request'
         response_elem = 'zato_security_basic_auth_edit_response'
@@ -144,142 +83,85 @@ class Edit(AdminService):
         output_required = 'id', 'name'
 
     def handle(self):
-
-        # Local aliases
         input = self.request.input
-        input_id = input.get('id')
-        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
-        with closing(self.odb.session()) as session: # type: ignore
-            try:
-                existing_one = session.query(HTTPBasicAuth).\
-                    filter(Cluster.id==cluster_id).\
-                    filter(HTTPBasicAuth.name==input.name)
+        old_name = input.get('old_name') or input.name
 
-                if input_id:
-                    existing_one = existing_one.filter(HTTPBasicAuth.id!=input.id)
-                    existing_one = existing_one.first()
+        existing = self.server.rust_config_store.get('security', old_name)
+        if not existing:
+            raise Exception('HTTP Basic Auth definition `{}` not found'.format(old_name))
 
-                if existing_one:
-                    raise Exception('HTTP Basic Auth definition `{}` already exists on this cluster'.format(input.name))
+        existing['name'] = input.name
+        existing['is_active'] = input.is_active
+        existing['username'] = input.username
+        existing['realm'] = input.realm or ''
+        existing['type'] = 'basic_auth'
 
-                definition = session.query(HTTPBasicAuth)
+        if old_name != input.name:
+            self.server.rust_config_store.delete('security', old_name)
 
-                if input_id:
-                    definition = definition.filter_by(id=input.id)
-                else:
-                    definition = definition.filter_by(name=input.name)
-                definition = definition.one()
+        self.server.rust_config_store.set('security', input.name, existing)
 
-                old_name = definition.name
-                old_username = definition.username
+        item = self.server.rust_config_store.get('security', input.name)
 
-                set_instance_opaque_attrs(definition, input)
-
-                definition.name = input.name
-                definition.is_active = input.is_active
-                definition.username = input.username
-                definition.realm = input.realm or None
-
-                session.add(definition)
-                session.commit()
-
-            except Exception:
-                self.logger.error('Could not update HTTP Basic Auth definition, e:`%s`', format_exc())
-                session.rollback()
-
-                raise
-            else:
-
-                # Enrich the message for the server ..
-                input.action = SECURITY.BASIC_AUTH_EDIT.value
-                input.old_name = old_name
-                input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
-
-                # .. publish it ..
-                self.broker_client.publish(input)
-
-                # .. build a message for pub/sub only if something has actually changed ..
-                has_sec_name_changed = input.name != old_name
-                has_username_changed = input.username != old_username
-
-                if has_sec_name_changed or has_username_changed:
-
-                    pubsub_msg = Bunch()
-
-                    pubsub_msg.cid = self.cid
-                    pubsub_msg.action = SECURITY.BASIC_AUTH_EDIT.value
-
-                    pubsub_msg.has_sec_name_changed = has_sec_name_changed
-                    pubsub_msg.has_username_changed = has_username_changed
-
-                    pubsub_msg.old_sec_name = old_name
-                    pubsub_msg.new_sec_name = input.name
-
-                    pubsub_msg.old_username = old_username
-                    pubsub_msg.new_username = input.username
-
-                    self.broker_client.publish_to_pubsub(pubsub_msg)
-
-                self.response.payload.id = definition.id
-                self.response.payload.name = definition.name
+        self.response.payload.id = item['id']
+        self.response.payload.name = item['name']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChangePassword(ChangePasswordBase):
-    """ Changes the password of an HTTP Basic Auth definition.
-    """
+class ChangePassword(AdminService):
+
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
+    class SimpleIO(AdminSIO):
         request_elem = 'zato_security_basic_auth_change_password_request'
         response_elem = 'zato_security_basic_auth_change_password_response'
+        input_required = 'password1', 'password2'
+        input_optional = 'id', 'name'
+        output_required = 'id',
 
     def handle(self):
-        def _auth(instance, password): # type: ignore
-            instance.password = password
+        input = self.request.input
+        name = input.get('name', '')
 
-        return self._handle(HTTPBasicAuth, _auth, SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value)
+        password1 = self.server.decrypt(input.password1) if input.password1 else ''
+        password2 = self.server.decrypt(input.password2) if input.password2 else ''
+
+        if password1 != password2:
+            raise Exception('Passwords need to be the same')
+
+        existing = self.server.rust_config_store.get('security', name)
+        if not existing:
+            raise Exception('HTTP Basic Auth definition `{}` not found'.format(name))
+
+        existing['password'] = password1
+        self.server.rust_config_store.set('security', name, existing)
+
+        self.response.payload.id = existing['id']
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes an HTTP Basic Auth definition.
-    """
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_basic_auth_delete_request'
         response_elem = 'zato_security_basic_auth_delete_response'
         input_required = 'id',
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            try:
-                auth = session.query(HTTPBasicAuth).\
-                    filter(HTTPBasicAuth.id==self.request.input.id).\
-                    one()
+        items = self.server.rust_config_store.get_list('security')
+        target_name = None
+        for item in items:
+            if item.get('id') == self.request.input.id:
+                target_name = item['name']
+                break
 
-                session.delete(auth)
-                session.commit()
-            except Exception:
-                self.logger.error('Could not delete HTTP Basic Auth definition, e:`%s`', format_exc())
-                session.rollback()
+        if not target_name:
+            raise Exception('HTTP Basic Auth definition with id `{}` not found'.format(self.request.input.id))
 
-                raise
-            else:
-
-                self.request.input.cid = self.cid
-                self.request.input.action = SECURITY.BASIC_AUTH_DELETE.value
-
-                # Note that we need both name and sec_name.
-                self.request.input.name = auth.name
-                self.request.input.sec_name = auth.name
-
-                self.request.input.username = auth.username
-
-                self.broker_client.publish(self.request.input)
-                self.broker_client.publish_to_pubsub(self.request.input)
+        self.server.rust_config_store.delete('security', target_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

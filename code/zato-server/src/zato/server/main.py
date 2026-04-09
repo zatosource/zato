@@ -408,7 +408,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
 
     service_store = ServiceStore(
         services={},
-        odb=odb_manager,
         server=server,
         is_testing=False
     )

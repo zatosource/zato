@@ -249,7 +249,6 @@ class ServiceStore:
     """ A store of Zato services.
     """
     services: 'stranydict'
-    odb: 'ODBManager'
     server: 'ParallelServer'
     is_testing:'bool'
 
@@ -257,7 +256,7 @@ class ServiceStore:
         self,
         *,
         services,   # type: strdictdict
-        odb,        # type: ODBManager
+        odb=None,   # type: ODBManager
         server,     # type: ParallelServer
         is_testing, # type: bool
     ) -> 'None':
@@ -273,6 +272,7 @@ class ServiceStore:
         self.deployment_info = {}   # type: stranydict
         self.update_lock = RLock()
         self.needs_post_deploy_attr = 'needs_post_deploy'
+        self._service_id_counter = 0
 
         self.action_internal_doing = 'Deploying'
         self.action_internal_done  = 'Deployed'
@@ -280,6 +280,10 @@ class ServiceStore:
         if self.is_testing:
             self._testing_worker_store = cast_('WorkerStore', _TestingWorkerStore())
             self._testing_worker_store.worker_config = cast_('ConfigStore', _TestingWorkerConfig())
+
+    def _next_service_id(self) -> 'int':
+        self._service_id_counter += 1
+        return self._service_id_counter
 
 # ################################################################################################################################
 
@@ -716,17 +720,6 @@ class ServiceStore:
     ) -> 'anylist':
         """ Imports and optionally caches locally internal services.
         """
-
-        sql_services = {}
-
-        for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
-            sql_services[item.impl_name] = { # type: ignore
-                'id': item.id,               # type: ignore
-                'impl_name': item.impl_name, # type: ignore
-                'is_active': item.is_active, # type: ignore
-                'slow_threshold': item.slow_threshold, # type: ignore
-            }
-
         service_info = []
 
         logger.info('{} internal services (%s)'.format(self.action_internal_doing), self.server.name)
@@ -757,33 +750,14 @@ class ServiceStore:
 
     def _store_in_ram(self, session:'SASession | None', to_process:'inramlist') -> 'None':
 
-        if self.is_testing:
-            services = {}
-
-            for in_ram_service in to_process: # type: InRAMService
-                service_info = {}
-                service_info['id'] = randint(0, 1000000)
-                services[in_ram_service.name] = service_info
-
-        else:
-
-            # We need to look up all the services in ODB to be able to find their IDs
-            if session:
-                needs_new_session = False
-            else:
-                needs_new_session = True
-                session = self.odb.session()
-            try:
-                services = self.get_basic_data_services(session)
-            finally:
-                if needs_new_session and session:
-                    session.close()
-
         with self.update_lock:
             for item in to_process: # type: InRAMService
 
-                service_dict = services[item.name]
-                service_id = service_dict['id']
+                if item.name in self.name_to_impl_name:
+                    old_impl = self.name_to_impl_name[item.name]
+                    service_id = self.impl_name_to_id.get(old_impl, self._next_service_id())
+                else:
+                    service_id = self._next_service_id()
 
                 item_name = item.name
                 item_deployment_info = item.deployment_info
@@ -808,195 +782,18 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _store_services_in_odb(
-        self,
-        session,       # type: any_
-        batch_indexes, # type: anylist
-        to_process     # type: anylist
-    ) -> 'bool':
-        """ Looks up all Service objects in ODB and if any of our local ones is not in the databaset yet, it is added.
+    def _store_deployment_info(self, to_process:'inramlist') -> 'None':
+        """ Stores deployment metadata in memory for each service.
         """
-        # Will be set to True if any of the batches added at list one new service to ODB
-        any_added = False
-
-        # Get all services already deployed in ODB for comparisons (Service)
-        services = self.get_basic_data_services(session)
-
-        # Add any missing Service objects from each batch delineated by indexes found
-        for start_idx, end_idx in batch_indexes:
-
-            to_add = []
-            batch_services = to_process[start_idx:end_idx]
-
-            for service in batch_services: # type: InRAMService
-
-                # No such Service object in ODB so we need to store it
-                if service.name not in services:
-                    to_add.append(service)
-
-            # Add to ODB all the Service objects from this batch found not to be in ODB already
-            if to_add:
-                elems = [elem.to_dict() for elem in to_add]
-
-                # This saves services in ODB
-                self.odb.add_services(session, elems)
-
-                # Now that we have them, we can look up their IDs ..
-                service_id_list = self.odb.get_service_id_list(session, self.server.cluster_id,
-                    [elem['name'] for elem in elems]) # type: anydict
-
-                # .. and add them for later use.
-                for item in service_id_list: # type: dict
-                    self.impl_name_to_id[item.impl_name] = item.id
-
-                any_added = True
-
-        return any_added
-
-# ################################################################################################################################
-
-    def _should_delete_deployed_service(self, service:'InRAMService', already_deployed:'stranydict') -> 'bool':
-        """ Returns True if a given service has been already deployed but its current source code,
-        one that is about to be deployed, is changed in comparison to what is stored in ODB.
-        """
-
-        # Already deployed ..
-        if service.name in already_deployed:
-
-            # .. thus, return True if current source code is different to what we have already
-            if service.source_code_info.source != already_deployed[service.name]:
-                return True
-
-        # If we are here, it means that we should not delete this service
-        return False
-
-# ################################################################################################################################
-
-    def _store_deployed_services_in_odb(
-        self,
-        session,       # type: any_
-        batch_indexes, # type: anylist
-        to_process,    # type: anylist
-    ) -> 'None':
-        """ Looks up all Service objects in ODB, checks if any is not deployed locally and deploys it if it is not.
-        """
-        # Local objects
         now = _utcnow()
         now_iso = now.isoformat()
 
-        # Get all services already deployed in ODB for comparisons (Service) - it is needed to do it again,
-        # in addition to _store_deployed_services_in_odb, because that other method may have added
-        # DB-level IDs that we need with our own objects.
-        services = self.get_basic_data_services(session)
-
-        # Same goes for deployed services objects (DeployedService)
-        already_deployed = self.get_basic_data_deployed_services()
-
-        # Modules visited may return a service that has been already visited via another module,
-        # in which case we need to skip such a duplicate service.
-        already_visited = set()
-
-        # Add any missing DeployedService objects from each batch delineated by indexes found
-        for start_idx, end_idx in batch_indexes:
-
-            # Deployed services that need to be deleted before they can be re-added,
-            # which will happen if a service's name does not change but its source code does
-            to_delete = []
-
-            # DeployedService objects to be added
-            to_add = []
-
-            # InRAMService objects to process in this iteration
-            batch_services = to_process[start_idx:end_idx]
-
-            for service in batch_services: # type: InRAMService
-
-                # Ignore service we have already processed
-                if service.name in already_visited:
-                    continue
-                else:
-                    already_visited.add(service.name)
-
-                # Make sure to re-deploy services that have changed their source code
-                if self._should_delete_deployed_service(service, already_deployed):
-                    to_delete.append(self.get_service_id_by_name(service.name))
-                    del already_deployed[service.name]
-
-                # At this point we wil always have IDs for all Service objects
-                service_id = services[service.name]['id']
-
-                # Metadata about this deployment as a JSON object
-                class_ = service.service_class
-                path = service.source_code_info.path
-                deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
-                deployment_info_dict['line_number'] = service.source_code_info.line_number
-                self.deployment_info[service.impl_name] = deployment_info_dict
-                deployment_details = dumps(deployment_info_dict)
-
-                # No such Service object in ODB so we need to store it
-                if service.name not in already_deployed:
-                    to_add.append({
-                        'server_id': self.server.id,
-                        'service_id': service_id,
-                        'deployment_time': now,
-                        'details': deployment_details,
-                        'source': service.source_code_info.source,
-                        'source_path': service.source_code_info.path,
-                        'source_hash': service.source_code_info.hash,
-                        'source_hash_method': service.source_code_info.hash_method,
-                    })
-
-            # If any services are to be redeployed, delete them first now
-            if to_delete:
-                self.odb.drop_deployed_services_by_name(session, to_delete)
-
-            # If any services are to be deployed, do it now.
-            if to_add:
-                self.odb.add_deployed_services(session, to_add)
-
-# ################################################################################################################################
-
-    def _store_in_odb(self, session:'SASession | None', to_process:'inramlist') -> 'None':
-
-        # Indicates boundaries of deployment batches
-        batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
-
-        # Store Service objects first
-        needs_commit = self._store_services_in_odb(session, batch_indexes, to_process)
-
-        # This flag will be True if there were any services to be added,
-        # in which case we need to commit the sesssion here to make it possible
-        # for the next method to have access to these newly added Service objects.
-        if needs_commit:
-            if session:
-                session.commit()
-
-        # Now DeployedService can be added - they assume that all Service objects all are in ODB already
-        self._store_deployed_services_in_odb(session, batch_indexes, to_process)
-
-# ################################################################################################################################
-
-    def get_basic_data_services(self, session:'SASession') -> 'anydict':
-
-        # We will return service keyed by their names
-        out = {}
-
-        # This is a list of services to turn into a dict
-        service_list = self.odb.get_basic_data_service_list(session)
-
-        for service_id, name, impl_name in service_list: # type: name, name
-            out[name] = {'id': service_id, 'impl_name': impl_name}
-
-        return out
-
-# ################################################################################################################################
-
-    def get_basic_data_deployed_services(self) -> 'anydict':
-
-        # This is a list of services to turn into a set
-        deployed_service_list = self.odb.get_basic_data_deployed_service_list()
-
-        return {elem[0]:elem[1] for elem in deployed_service_list}
+        for service in to_process: # type: InRAMService
+            class_ = service.service_class
+            path = service.source_code_info.path
+            deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
+            deployment_info_dict['line_number'] = service.source_code_info.line_number
+            self.deployment_info[service.impl_name] = deployment_info_dict
 
 # ################################################################################################################################
 
@@ -1091,51 +888,31 @@ class ServiceStore:
         info.total_size = total_size
         info.total_size_human = naturalsize(info.total_size)
 
-        if self.is_testing:
-            session = None
-        else:
-            session = self.odb.session()
+        self._store_in_ram(None, info.to_process)
+        self._store_deployment_info(info.to_process)
+        self._after_import_to_config(info)
 
-        try:
-            # Save data to both ODB and RAM if we are not testing,
-            # otherwise, in RAM only.
-            if not self.is_testing:
-                self._store_in_odb(session, info.to_process)
-            self._store_in_ram(session, info.to_process)
-
-            # Postprocessing, like rate limiting which needs access to information that becomes
-            # available only after a service is saved to ODB.
-            if not self.is_testing:
-                self.after_import(session, info)
-
-        # Done with everything, we can commit it now, assuming we are not in a unittest
-        finally:
-            if session:
-                session.commit() # type: ignore
-
-        # Done deploying, we can return
         return info
 
 # ################################################################################################################################
 
-    def after_import(self, session:'SASession | None', info:'DeploymentInfo') -> 'None':
-
-        # Names of all services that have been just deployed ..
-        deployed_service_name_list = [item.name for item in info.to_process]
-
-        # .. out of which we need to substract the ones that the server is already aware of
-        # because they were added to SQL ODB prior to current deployment ..
-        for name in deployed_service_name_list[:]:
-            if name in self.server.config.service:
-                deployed_service_name_list.remove(name)
-
-        # .. and now we know for which services to create ConfigDict objects.
-
-        query = self.odb.get_service_list_with_include(
-            session, self.server.cluster_id, deployed_service_name_list, True) # type: anylist
-
-        service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
-        self.server.config.service.update(service_list._impl)
+    def _after_import_to_config(self, info:'DeploymentInfo') -> 'None':
+        """ Registers newly deployed services in server.config.service so they are invocable.
+        """
+        for item in info.to_process: # type: InRAMService
+            name = item.name
+            if name not in self.server.config.service:
+                impl_name = item.impl_name
+                service_id = self.impl_name_to_id.get(impl_name, 0)
+                self.server.config.service[name] = {
+                    'config': {
+                        'id': service_id,
+                        'name': name,
+                        'impl_name': impl_name,
+                        'is_active': item.is_active,
+                        'slow_threshold': item.slow_threshold,
+                    }
+                }
 
 # ################################################################################################################################
 

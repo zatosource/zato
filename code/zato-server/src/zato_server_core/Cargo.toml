@@ -11,3 +11,5 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.28.3", features = ["extension-module"] }
 httparse = "1"
 libc = "0.2.184"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"

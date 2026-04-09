@@ -8,46 +8,161 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Python 2/3 compatibility
-from six import add_metaclass
-
 # Zato
-from zato.common.broker_message import SEARCH
-from zato.common.odb.model import ElasticSearch
-from zato.common.odb.query import search_es_list
-from zato.server.service.internal import AdminService
-from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
-
-elem = 'search_es'
-model = ElasticSearch
-label = 'an ElasticSearch connection'
-get_list_docs = 'ElasticSearch connections'
-broker_message = SEARCH
-broker_message_prefix = 'ES_'
-list_func = search_es_list
+from zato.common.exception import BadRequest
+from zato.server.service import Bool, Int
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-@add_metaclass(GetListMeta)
+_entity_type = 'elastic_search'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _item_by_id(items, id_):
+    sid = str(id_)
+    for item in items:
+        if str(item.get('id')) == sid:
+            return item
+    return None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
-    _filter_by = ElasticSearch.name,
+    """ Returns a list of ElasticSearch connections.
+    """
+    class SimpleIO(GetListAdminSIO):
+        request_elem = 'zato_search_es_get_list_request'
+        response_elem = 'zato_search_es_get_list_response'
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as')
+        output_optional = ('opaque1',)
+
+    def handle(self):
+        items = self.server.rust_config_store.get_list(_entity_type)
+        self.response.payload[:] = items
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    pass
+    """ Creates an ElasticSearch connection.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_search_es_create_request'
+        response_elem = 'zato_search_es_create_response'
+        input_required = ('cluster_id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as')
+        input_optional = ('opaque1',)
+        output_required = ('id', 'name')
+
+    def handle(self):
+        input = self.request.input
+        input.cluster_id = input.get('cluster_id') or self.server.cluster_id
+        store = self.server.rust_config_store
+
+        if store.get(_entity_type, input.name):
+            raise BadRequest(self.cid, 'An ElasticSearch connection `{}` already exists in this cluster'.format(input.name))
+
+        data = {
+            'name': input.name,
+            'is_active': input.is_active,
+            'hosts': input.hosts,
+            'timeout': int(input.timeout),
+            'body_as': input.body_as,
+        }
+        if input.get('opaque1') is not None:
+            data['opaque1'] = input.opaque1
+
+        store.set(_entity_type, input.name, data)
+        saved = store.get(_entity_type, input.name) or data
+        self.response.payload.id = saved.get('id', input.name)
+        self.response.payload.name = input.name
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    pass
+    """ Updates an ElasticSearch connection.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_search_es_edit_request'
+        response_elem = 'zato_search_es_edit_response'
+        input_required = ('id', 'cluster_id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as')
+        input_optional = ('opaque1',)
+        output_required = ('id', 'name')
+
+    def handle(self):
+        input = self.request.input
+        input.cluster_id = input.get('cluster_id') or self.server.cluster_id
+        store = self.server.rust_config_store
+
+        old = _item_by_id(store.get_list(_entity_type), input.id)
+        if not old:
+            raise BadRequest(self.cid, 'No such an ElasticSearch connection `{}` in this cluster'.format(input.name))
+
+        old_name = old.get('name')
+        if old_name != input.name:
+            other = store.get(_entity_type, input.name)
+            if other and str(other.get('id')) != str(input.id):
+                raise BadRequest(self.cid, 'An ElasticSearch connection `{}` already exists in this cluster'.format(input.name))
+
+        data = dict(old)
+        data.update({
+            'id': old.get('id', input.id),
+            'name': input.name,
+            'is_active': input.is_active,
+            'hosts': input.hosts,
+            'timeout': int(input.timeout),
+            'body_as': input.body_as,
+        })
+        if input.get('opaque1') is not None:
+            data['opaque1'] = input.opaque1
+
+        if old_name != input.name:
+            store.delete(_entity_type, old_name)
+        store.set(_entity_type, input.name, data)
+
+        saved = store.get(_entity_type, input.name) or data
+        self.response.payload.id = saved.get('id', input.id)
+        self.response.payload.name = input.name
 
 # ################################################################################################################################
+# ################################################################################################################################
 
-@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    pass
+    """ Deletes an ElasticSearch connection.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_search_es_delete_request'
+        response_elem = 'zato_search_es_delete_response'
+        input_optional = ('id', 'name', 'should_raise_if_missing')
+
+    def handle(self):
+        input = self.request.input
+        store = self.server.rust_config_store
+        input_id = input.get('id')
+        input_name = input.get('name')
+
+        if not (input_id or input_name):
+            raise BadRequest(self.cid, 'Either id or name is required on input')
+
+        item = None
+        if input_id:
+            item = _item_by_id(store.get_list(_entity_type), input_id)
+        if not item and input_name:
+            item = store.get(_entity_type, input_name)
+
+        if not item:
+            if input.get('should_raise_if_missing', True):
+                attr_name = 'id' if input_id else 'name'
+                attr_value = input_id if input_id else input_name
+                raise BadRequest(self.cid, 'Could not find an ElasticSearch connection instance with {} `{}`'.format(
+                    attr_name, attr_value))
+            return
+
+        store.delete(_entity_type, item['name'])
 
 # ################################################################################################################################
