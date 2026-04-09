@@ -284,7 +284,12 @@ class _CreateEdit(AdminService):
         if self.is_edit and old_name and old_name != new_name:
             self.server.config_store.delete('generic_connection', old_name)
 
+        self.logger.info('create/edit: storing type_=%r, rust_payload keys=%r', rust_payload.get('type_'), list(rust_payload.keys()))
         self.server.config_store.set('generic_connection', new_name, rust_payload)
+
+        # Verify it was stored
+        verify = self.server.config_store.get('generic_connection', new_name)
+        self.logger.info('create/edit: verify after store: %r', verify is not None)
 
         self.response.payload.id = rust_payload['id']
         self.response.payload.name = new_name
@@ -430,9 +435,13 @@ class GetList(AdminService):
 
         type_ = self.request.input.type_
 
-        items = self.server.config_store.get_list('generic_connection')
+        all_items = self.server.config_store.get_list('generic_connection')
+        self.logger.info('get-list: type_=%r, store has %d items, types=%r', type_, len(all_items), [x.get('type_') for x in all_items])
+
+        items = all_items
         if type_:
             items = [x for x in items if x.get('type_') == type_]
+        self.logger.info('get-list: after filter %d items', len(items))
         items.sort(key=lambda x: (x.get('name') or ''))
 
         query = self.request.input.get('query')
@@ -467,7 +476,7 @@ class GetList(AdminService):
 
         _ = _meta.pop('result', None)
 
-        self.response.payload = dumps(out)
+        self.response.payload = out
 
 # ################################################################################################################################
 # ################################################################################################################################
