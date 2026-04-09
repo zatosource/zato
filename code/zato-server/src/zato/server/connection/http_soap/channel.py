@@ -31,7 +31,7 @@ from zato.common.util.api import as_bool, utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
-from zato.cy.reqresp.payload import SimpleIOPayload as CySimpleIOPayload
+from zato_sio import Payload as CySimpleIOPayload
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.groups.ctx import SecurityGroupsCtx

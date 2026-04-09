@@ -117,7 +117,6 @@ from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
-from zato.common.simpleio_ import get_sio_server_config
 from zato.common.util.api import asbool, get_config, is_encrypted, parse_cmd_line_options, \
      register_diag_handlers, store_pidfile, utcnow
 from zato.common.util.env import populate_environment_from_file
@@ -353,8 +352,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
 
-    sio_config = get_config(repo_location, 'simple-io.conf', needs_user_config=False)
-    sio_config = get_sio_server_config(sio_config)
+    sio_config = None
 
     server_config.main.token = server_config.main.token.encode('utf8')
 

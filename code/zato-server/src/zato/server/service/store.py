@@ -52,8 +52,8 @@ from zato.server.config import ConfigDict
 from zato.server.service import PubSubHook, SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
-# Zato - Cython
-from zato.simpleio import CySimpleIO
+# Zato - Rust SIO
+from zato_sio import SIOProcessor
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -520,7 +520,7 @@ class ServiceStore:
                     model_input = DataClassModel.build_model_from_flat_input(
                         service_store.server,
                         service_store.server.sio_config,
-                        CySimpleIO,
+                        SIOProcessor,
                         name,
                         sio_input
                     )
@@ -540,11 +540,11 @@ class ServiceStore:
                     name = name.replace('.', '_')
                     name += '_AutoOutput'
 
-                    # .. generate the input model class now ..
+                    # .. generate the output model class now ..
                     model_output = DataClassModel.build_model_from_flat_input(
                         service_store.server,
                         service_store.server.sio_config,
-                        CySimpleIO,
+                        SIOProcessor,
                         name,
                         sio_output
                     )
@@ -554,10 +554,9 @@ class ServiceStore:
 
             if has_input_data_class or has_output_data_class:
                 SIOClass = DataClassSimpleIO
+                _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_) # type: ignore
             else:
-                SIOClass = CySimpleIO # type: ignore
-
-            _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_) # type: ignore
+                _ = SIOProcessor.attach_sio(service_store.server, service_store.server.sio_config, class_)
 
         # May be None during unit-tests - not every test provides it.
         if service_store:

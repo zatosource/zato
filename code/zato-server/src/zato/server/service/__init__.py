@@ -54,15 +54,15 @@ from zato.server.pattern.api import InvokeRetry
 from zato.server.pattern.api import ParallelExec
 from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
 
-# Zato - Cython
-from zato.cy.reqresp.payload import SimpleIOPayload
-from zato.cy.reqresp.response import Response
+# Zato - Rust SIO
+from zato_sio import Payload as SimpleIOPayload
+from zato_sio import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.common.ext.dataclasses import dataclass
 from zato.common.marshal_.api import Model, ModelCtx
 from zato.server.connection.cloud.microsoft_dataverse import DataverseClient
-from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
+from zato_sio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
      Opaque, Text, UTC, UUID
 
 # For pyflakes
@@ -105,7 +105,7 @@ if 0:
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato.simpleio import CySimpleIO
+    from zato_sio import SIOProcessor
     anydictnone = anydictnone
     callnone = callnone
     dictnone = dictnone
@@ -116,7 +116,7 @@ if 0:
     callable_ = callable_
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    CySimpleIO = CySimpleIO # type: ignore
+    SIOProcessor = SIOProcessor # type: ignore
     FTPStore = FTPStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer

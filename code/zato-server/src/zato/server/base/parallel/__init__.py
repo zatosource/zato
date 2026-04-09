@@ -90,7 +90,7 @@ if 0:
         strlist, strorlistnone, strnone, strorlist, strset
     from zato.server.connection.cache import Cache, CacheAPI
     from zato.server.service.store import ServiceStore
-    from zato.simpleio import SIOServerConfig
+    pass # SIOServerConfig removed - inference is now hardcoded in Rust
     from zato.server.startup_callable import StartupCallableTool
 
     bunch_ = bunch_
@@ -185,7 +185,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pickup_config = Bunch()
         self.logging_config = Bunch()
         self.logging_conf_path = 'server-'
-        self.sio_config = cast_('SIOServerConfig', None)
+        self.sio_config = None # type: ignore
         self.connector_server_grace_time = None
         self.id = -1
         self.name = ''

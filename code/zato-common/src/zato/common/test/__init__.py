@@ -33,14 +33,14 @@ from zato.common.odb import model
 from zato.common.odb.model import Cluster, ElasticSearch
 from zato.common.odb.api import SessionWrapper, SQLConnectionPool
 from zato.common.odb.query import search_es_list
-from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
+from zato.common.simpleio_ import get_bytes_to_str_encoding
 from zato.common.py23_ import maxint
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
 from zato.server.service import Service
 
-# Zato - Cython
-from zato.simpleio import CySimpleIO
+# Zato - Rust SIO
+from zato_sio import SIOProcessor
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import basestring, cmp, unicode, xrange
@@ -671,36 +671,13 @@ class BaseSIOTestCase(TestCase):
         self.maxDiff = maxint
 
     def get_server_config(self, needs_response_elem=False):
-
-        with NamedTemporaryFile(delete=False) as f:
-            contents = simple_io_conf_contents.format(bytes_to_str_encoding=get_bytes_to_str_encoding())
-            if isinstance(contents, unicode):
-                contents = contents.encode('utf8')
-            f.write(contents)
-            f.flush()
-            temporary_file_name=f.name
-
-        sio_fs_config = ConfigObj(temporary_file_name)
-        sio_fs_config = bunchify(sio_fs_config)
-
-        import os
-        os.remove(temporary_file_name)
-
-        sio_server_config = get_sio_server_config(sio_fs_config)
-
-        if not needs_response_elem:
-            sio_server_config.response_elem = None
-
-        return sio_server_config
+        return None
 
 # ################################################################################################################################
 
     def get_sio(self, declaration, class_):
-
-        sio = CySimpleIO(None, self.get_server_config(), declaration)
-        sio.build(class_)
-
-        return sio
+        SIOProcessor.attach_sio(None, None, class_)
+        return getattr(class_, '_sio', None)
 
 # ################################################################################################################################
 # ################################################################################################################################

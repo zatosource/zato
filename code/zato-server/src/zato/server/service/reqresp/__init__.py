@@ -25,8 +25,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
 
-# Zato - Cython
-from zato.simpleio import ServiceInput
+# Zato - Rust SIO
+from zato_sio import ServiceInput
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,8 +51,8 @@ if 0:
     from zato.server.connection.search import SearchAPI
     from zato.server.service import AMQPFacade, Service
 
-    # Zato - Cython
-    from zato.simpleio import CySimpleIO
+    # Zato - Rust SIO
+    from zato_sio import SIOProcessor
 
     callable_ = callable_
     strnone = strnone
@@ -60,7 +60,7 @@ if 0:
     Arrow = Arrow
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    CySimpleIO = CySimpleIO
+    SIOProcessor = SIOProcessor
     EMailAPI = EMailAPI
     FTPStore = FTPStore
     KombuAMQPMessage = KombuAMQPMessage
@@ -184,7 +184,7 @@ class Request:
         self,
         is_sio,       # type: bool
         cid,          # type: str
-        sio,          # type: CySimpleIO
+        sio,          # type: SIOProcessor
         data_format,  # type: str
         transport,    # type: str
         http_environ, # type: stranydict
