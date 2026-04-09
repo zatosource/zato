@@ -56,7 +56,7 @@ build:
 server-build:
 	. $(HOME)/.cargo/env && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
-	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-server-core/Cargo.toml
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-server/src/zato_server_core/Cargo.toml
 
 broker-build:
 	cd $(CURDIR)/code/zato-broker && $(MAKE) build

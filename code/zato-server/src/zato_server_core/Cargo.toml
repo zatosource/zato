@@ -8,5 +8,6 @@ name = "zato_server_core"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.24", features = ["extension-module"] }
+pyo3 = { version = "0.28.3", features = ["extension-module"] }
 httparse = "1"
+libc = "0.2.184"

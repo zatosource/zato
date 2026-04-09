@@ -109,7 +109,6 @@ import yaml
 
 # gevent
 from gevent import signal_handler as gevent_signal_handler
-from gevent.server import StreamServer
 
 # Zato
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
@@ -209,14 +208,11 @@ def _create_http_server(
     port:'int',
     request_handler:'any_',
     server_software:'str'
-    ) -> 'StreamServer':
-    """ Creates a gevent StreamServer backed by the Rust HTTP handler.
+    ) -> 'any_':
+    """ Creates a Rust-based HTTP server using libc I/O + gevent hub for scheduling.
     """
-    from zato_server_core import ConnectionHandler
-
-    conn_handler = ConnectionHandler(request_handler, server_software)
-    out = StreamServer((host, int(port)), conn_handler.handle, backlog=2048)
-    return out
+    from zato_server_core import HTTPServer
+    return HTTPServer(host, int(port), request_handler, server_software)
 
 # ################################################################################################################################
 
