@@ -215,7 +215,7 @@ def _create_http_server(
     from zato_server_core import ConnectionHandler
 
     conn_handler = ConnectionHandler(request_handler, server_software)
-    out = StreamServer((host, int(port)), conn_handler.handle)
+    out = StreamServer((host, int(port)), conn_handler.handle, backlog=2048)
     return out
 
 # ################################################################################################################################

@@ -49,6 +49,15 @@ openapi-tests:
 hl7-tests:
 	cd $(CURDIR)/code/zato-hl7 && $(MAKE) hl7-test
 
+build:
+	$(MAKE) server-build
+	$(MAKE) broker-build
+
+server-build:
+	. $(HOME)/.cargo/env && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-server-core/Cargo.toml
+
 broker-build:
 	cd $(CURDIR)/code/zato-broker && $(MAKE) build
 

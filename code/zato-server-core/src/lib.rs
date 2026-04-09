@@ -1,10 +1,10 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
-use std::fmt::Write as FmtWrite;
+use pyo3::intern;
 
-const MAX_HEADERS: usize = 128;
-const INITIAL_BUF_SIZE: usize = 8192;
-const MAX_REQUEST_SIZE: usize = 1_048_576; // 1 MB header limit
+const MAX_HEADERS: usize = 96;
+const RECV_SIZE: usize = 16384;
+const MAX_REQUEST_SIZE: usize = 1_048_576;
 
 #[pyclass]
 pub struct ConnectionHandler {
@@ -16,303 +16,326 @@ pub struct ConnectionHandler {
 impl ConnectionHandler {
     #[new]
     fn new(callback: PyObject, server_software: String) -> Self {
-        ConnectionHandler {
-            callback,
-            server_software,
-        }
+        Self { callback, server_software }
     }
 
-    /// Called by gevent StreamServer for each accepted connection.
-    /// `socket` is a gevent socket object, `address` is (host, port).
-    fn handle(&self, py: Python<'_>, socket: &Bound<'_, PyAny>, address: &Bound<'_, PyAny>) -> PyResult<()> {
+    fn handle(
+        &self,
+        py: Python<'_>,
+        socket: &Bound<'_, PyAny>,
+        address: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let remote_addr: String = address.get_item(0)?.extract()?;
-        let remote_port: u16 = address.get_item(1)?.extract()?;
+        let remote_port = address.get_item(1)?.extract::<u16>()?.to_string();
 
-        let result = self.handle_connection(py, socket, &remote_addr, remote_port);
+        let r = self.serve(py, socket, &remote_addr, &remote_port);
+        let _ = socket.call_method0(intern!(py, "close"));
 
-        // Always close the socket, regardless of outcome
-        let _ = socket.call_method0("close");
+        r.or_else(|e| if is_conn_err(&e) { Ok(()) } else { Err(e) })
+    }
+}
 
-        match result {
-            Ok(()) => Ok(()),
-            Err(e) => {
-                // Connection errors (client disconnect, broken pipe) are expected — don't propagate
-                let msg = format!("{}", e);
-                if msg.contains("Connection reset")
-                    || msg.contains("Broken pipe")
-                    || msg.contains("timed out")
-                    || msg.contains("empty request")
-                {
-                    Ok(())
-                } else {
-                    Err(e)
+#[inline]
+fn is_conn_err(e: &PyErr) -> bool {
+    let s = e.to_string();
+    s.contains("onnection") || s.contains("roken pipe")
+        || s.contains("imed out") || s.contains("losed")
+}
+
+impl ConnectionHandler {
+    fn serve(
+        &self,
+        py: Python<'_>,
+        sock: &Bound<'_, PyAny>,
+        remote_addr: &str,
+        remote_port: &str,
+    ) -> PyResult<()> {
+        let mut buf: Vec<u8> = Vec::with_capacity(4096);
+        let mut resp: Vec<u8> = Vec::with_capacity(512);
+
+        loop {
+            // ── recv ──
+            if buf.is_empty() {
+                let chunk: Vec<u8> = sock
+                    .call_method1(intern!(py, "recv"), (RECV_SIZE,))?
+                    .extract()?;
+                if chunk.is_empty() {
+                    return Ok(());
                 }
+                buf = chunk;
+            }
+
+            // ── parse headers + build environ in a single pass ──
+            let (header_len, content_length, keep_alive, version, dict) = loop {
+                let mut hdr = [httparse::EMPTY_HEADER; MAX_HEADERS];
+                let mut req = httparse::Request::new(&mut hdr);
+
+                match req.parse(&buf) {
+                    Ok(httparse::Status::Complete(hlen)) => {
+                        let method = req.method.unwrap_or("GET");
+                        let path = req.path.unwrap_or("/");
+                        let ver = req.version.unwrap_or(1);
+
+                        let dict = PyDict::new(py);
+
+                        dict.set_item(intern!(py, "REQUEST_METHOD"), method)?;
+
+                        if let Some(q) = path.find('?') {
+                            dict.set_item(intern!(py, "PATH_INFO"), &path[..q])?;
+                            dict.set_item(intern!(py, "QUERY_STRING"), &path[q + 1..])?;
+                        } else {
+                            dict.set_item(intern!(py, "PATH_INFO"), path)?;
+                            dict.set_item(intern!(py, "QUERY_STRING"), "")?;
+                        }
+
+                        dict.set_item(intern!(py, "RAW_URI"), path)?;
+                        dict.set_item(
+                            intern!(py, "SERVER_PROTOCOL"),
+                            if ver == 0 { "HTTP/1.0" } else { "HTTP/1.1" },
+                        )?;
+                        dict.set_item(intern!(py, "SERVER_SOFTWARE"), &self.server_software)?;
+                        dict.set_item(intern!(py, "REMOTE_ADDR"), remote_addr)?;
+                        dict.set_item(intern!(py, "REMOTE_PORT"), remote_port)?;
+
+                        let mut cl: usize = 0;
+                        let mut ka = ver >= 1;
+
+                        for h in req.headers.iter() {
+                            set_header(py, &dict, h.name, h.value)?;
+
+                            if h.name.eq_ignore_ascii_case("content-length") {
+                                cl = parse_cl(h.value);
+                            } else if h.name.eq_ignore_ascii_case("connection") {
+                                ka = val_eq_ci(h.value, b"keep-alive");
+                            }
+                        }
+
+                        break (hlen, cl, ka, ver, dict);
+                    }
+                    Ok(httparse::Status::Partial) => {
+                        if buf.len() >= MAX_REQUEST_SIZE {
+                            return Err(pyo3::exceptions::PyValueError::new_err(
+                                "request too large",
+                            ));
+                        }
+                        let more: Vec<u8> = sock
+                            .call_method1(intern!(py, "recv"), (RECV_SIZE,))?
+                            .extract()?;
+                        if more.is_empty() {
+                            return Err(pyo3::exceptions::PyConnectionError::new_err("closed"));
+                        }
+                        buf.extend(more);
+                    }
+                    Err(_) => {
+                        return Err(pyo3::exceptions::PyValueError::new_err("bad request"));
+                    }
+                }
+            };
+
+            // ── read remaining body ──
+            let end = header_len + content_length;
+            while buf.len() < end {
+                let more: Vec<u8> = sock
+                    .call_method1(intern!(py, "recv"), (RECV_SIZE,))?
+                    .extract()?;
+                if more.is_empty() {
+                    return Err(pyo3::exceptions::PyConnectionError::new_err("closed"));
+                }
+                buf.extend(more);
+            }
+
+            dict.set_item(
+                intern!(py, "zato.http.raw_request"),
+                PyBytes::new(py, &buf[header_len..end]),
+            )?;
+
+            // ── dispatch ──
+            let result = self.callback.call1(py, (&dict,))?;
+
+            // ── format + send response ──
+            {
+                let tup = result.bind(py);
+                let status_obj = tup.get_item(0)?;
+                let status: &str = status_obj.extract()?;
+                let hdrs = tup.get_item(1)?;
+                let body_obj = tup.get_item(2)?;
+                let body: &[u8] = body_obj.extract()?;
+
+                resp.clear();
+
+                // Status line
+                resp.extend_from_slice(if version == 0 {
+                    b"HTTP/1.0 "
+                } else {
+                    b"HTTP/1.1 "
+                });
+                resp.extend_from_slice(status.as_bytes());
+                resp.extend_from_slice(b"\r\n");
+
+                // Response headers from Python
+                let mut has_cl = false;
+                let mut has_conn = false;
+
+                if let Ok(d) = hdrs.downcast::<PyDict>() {
+                    for (k, v) in d.iter() {
+                        let kk: &str = k.extract()?;
+                        let vv: &str = v.extract()?;
+                        resp.extend_from_slice(kk.as_bytes());
+                        resp.extend_from_slice(b": ");
+                        resp.extend_from_slice(vv.as_bytes());
+                        resp.extend_from_slice(b"\r\n");
+                        if !has_cl && kk.eq_ignore_ascii_case("content-length") {
+                            has_cl = true;
+                        }
+                        if !has_conn && kk.eq_ignore_ascii_case("connection") {
+                            has_conn = true;
+                        }
+                    }
+                }
+
+                if !has_cl {
+                    resp.extend_from_slice(b"Content-Length: ");
+                    push_usize(&mut resp, body.len());
+                    resp.extend_from_slice(b"\r\n");
+                }
+                if !has_conn {
+                    resp.extend_from_slice(if keep_alive {
+                        b"Connection: keep-alive\r\n" as &[u8]
+                    } else {
+                        b"Connection: close\r\n"
+                    });
+                }
+
+                resp.extend_from_slice(b"\r\n");
+                resp.extend_from_slice(body);
+
+                sock.call_method1(intern!(py, "sendall"), (PyBytes::new(py, &resp),))?;
+            }
+
+            if !keep_alive {
+                return Ok(());
+            }
+
+            // Shift remaining bytes (pipelined request)
+            if end < buf.len() {
+                buf.drain(..end);
+            } else {
+                buf.clear();
             }
         }
     }
 }
 
-impl ConnectionHandler {
-    fn handle_connection(
-        &self,
-        py: Python<'_>,
-        socket: &Bound<'_, PyAny>,
-        remote_addr: &str,
-        remote_port: u16,
-    ) -> PyResult<()> {
-        let mut buf = Vec::with_capacity(INITIAL_BUF_SIZE);
-        let mut keep_alive = true;
+// ── header → environ key mapping ──
 
-        while keep_alive {
-            let (method, path, version, headers, body, consumed) =
-                self.read_request(py, socket, &mut buf)?;
+#[inline]
+fn set_header(
+    py: Python<'_>,
+    dict: &Bound<'_, PyDict>,
+    name: &str,
+    value: &[u8],
+) -> PyResult<()> {
+    let val = String::from_utf8_lossy(value);
 
-            keep_alive = self.should_keep_alive(version, &headers);
-
-            let http_environ =
-                self.build_environ(py, &method, &path, version, &headers, &body, remote_addr, remote_port)?;
-
-            let response = self.callback.call1(py, (http_environ,))?;
-
-            let (status, resp_headers, resp_body) = self.unpack_response(py, &response)?;
-
-            self.write_response(py, socket, version, keep_alive, &status, &resp_headers, &resp_body)?;
-
-            // Shift any trailing bytes (pipelined request) to the front
-            buf.drain(..consumed);
+    if name.eq_ignore_ascii_case("Host") {
+        dict.set_item(intern!(py, "HTTP_HOST"), &*val)
+    } else if name.eq_ignore_ascii_case("User-Agent") {
+        dict.set_item(intern!(py, "HTTP_USER_AGENT"), &*val)
+    } else if name.eq_ignore_ascii_case("Accept") {
+        dict.set_item(intern!(py, "HTTP_ACCEPT"), &*val)
+    } else if name.eq_ignore_ascii_case("Accept-Encoding") {
+        dict.set_item(intern!(py, "HTTP_ACCEPT_ENCODING"), &*val)
+    } else if name.eq_ignore_ascii_case("Accept-Language") {
+        dict.set_item(intern!(py, "HTTP_ACCEPT_LANGUAGE"), &*val)
+    } else if name.eq_ignore_ascii_case("Connection") {
+        dict.set_item(intern!(py, "HTTP_CONNECTION"), &*val)
+    } else if name.eq_ignore_ascii_case("Content-Type") {
+        dict.set_item(intern!(py, "CONTENT_TYPE"), &*val)
+    } else if name.eq_ignore_ascii_case("Content-Length") {
+        dict.set_item(intern!(py, "CONTENT_LENGTH"), &*val)
+    } else if name.eq_ignore_ascii_case("Authorization") {
+        dict.set_item(intern!(py, "HTTP_AUTHORIZATION"), &*val)
+    } else if name.eq_ignore_ascii_case("Cookie") {
+        dict.set_item(intern!(py, "HTTP_COOKIE"), &*val)
+    } else if name.eq_ignore_ascii_case("X-Forwarded-For") {
+        dict.set_item(intern!(py, "HTTP_X_FORWARDED_FOR"), &*val)
+    } else if name.eq_ignore_ascii_case("X-Forwarded-Proto") {
+        dict.set_item(intern!(py, "HTTP_X_FORWARDED_PROTO"), &*val)
+    } else if name.eq_ignore_ascii_case("X-Real-IP") {
+        dict.set_item(intern!(py, "HTTP_X_REAL_IP"), &*val)
+    } else if name.eq_ignore_ascii_case("Cache-Control") {
+        dict.set_item(intern!(py, "HTTP_CACHE_CONTROL"), &*val)
+    } else if name.eq_ignore_ascii_case("Origin") {
+        dict.set_item(intern!(py, "HTTP_ORIGIN"), &*val)
+    } else if name.eq_ignore_ascii_case("Referer") {
+        dict.set_item(intern!(py, "HTTP_REFERER"), &*val)
+    } else if name.eq_ignore_ascii_case("If-None-Match") {
+        dict.set_item(intern!(py, "HTTP_IF_NONE_MATCH"), &*val)
+    } else if name.eq_ignore_ascii_case("If-Modified-Since") {
+        dict.set_item(intern!(py, "HTTP_IF_MODIFIED_SINCE"), &*val)
+    } else if name.eq_ignore_ascii_case("Upgrade") {
+        dict.set_item(intern!(py, "HTTP_UPGRADE"), &*val)
+    } else if name.eq_ignore_ascii_case("X-Zato-CID") {
+        dict.set_item(intern!(py, "HTTP_X_ZATO_CID"), &*val)
+    } else {
+        let mut key = String::with_capacity(5 + name.len());
+        key.push_str("HTTP_");
+        for b in name.bytes() {
+            key.push(if b == b'-' { '_' } else { (b as char).to_ascii_uppercase() });
         }
-
-        Ok(())
+        dict.set_item(key, &*val)
     }
+}
 
-    /// Reads bytes from the socket until we have a complete HTTP request
-    /// (headers + body per Content-Length). Returns parsed components and
-    /// total byte count consumed from `buf`.
-    fn read_request(
-        &self,
-        py: Python<'_>,
-        socket: &Bound<'_, PyAny>,
-        buf: &mut Vec<u8>,
-    ) -> PyResult<(String, String, u8, Vec<(String, String)>, Vec<u8>, usize)> {
-        loop {
-            // Try to parse what we have
-            let mut parsed_headers = [httparse::EMPTY_HEADER; MAX_HEADERS];
-            let mut req = httparse::Request::new(&mut parsed_headers);
+// ── helpers ──
 
-            match req.parse(buf) {
-                Ok(httparse::Status::Complete(header_len)) => {
-                    let method = req.method.unwrap_or("GET").to_string();
-                    let path = req.path.unwrap_or("/").to_string();
-                    let version = req.version.unwrap_or(1);
-
-                    let mut headers: Vec<(String, String)> = Vec::with_capacity(req.headers.len());
-                    let mut content_length: usize = 0;
-
-                    for h in req.headers.iter() {
-                        let name = h.name.to_string();
-                        let val = String::from_utf8_lossy(h.value).to_string();
-                        if h.name.eq_ignore_ascii_case("content-length") {
-                            content_length = val.trim().parse().unwrap_or(0);
-                        }
-                        headers.push((name, val));
-                    }
-
-                    let total_needed = header_len + content_length;
-
-                    // Do we have the full body yet?
-                    if buf.len() < total_needed {
-                        // Need more data for the body
-                        self.recv_into(py, socket, buf, total_needed - buf.len())?;
-                    }
-
-                    let body = buf[header_len..header_len + content_length].to_vec();
-                    return Ok((method, path, version, headers, body, total_needed));
-                }
-                Ok(httparse::Status::Partial) => {
-                    if buf.len() >= MAX_REQUEST_SIZE {
-                        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-                            "Request headers too large",
-                        ));
-                    }
-                    // Need more data
-                    self.recv_into(py, socket, buf, 0)?;
-                }
-                Err(e) => {
-                    return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
-                        "HTTP parse error: {}",
-                        e
-                    )));
-                }
-            }
+#[inline]
+fn parse_cl(b: &[u8]) -> usize {
+    let mut n: usize = 0;
+    for &c in b {
+        match c {
+            b'0'..=b'9' => n = n * 10 + (c - b'0') as usize,
+            b' ' | b'\t' => {}
+            _ => break,
         }
     }
+    n
+}
 
-    /// Receive data from the gevent socket into `buf`.
-    /// If `min_bytes` > 0, keeps reading until we have at least that many additional bytes.
-    fn recv_into(
-        &self,
-        py: Python<'_>,
-        socket: &Bound<'_, PyAny>,
-        buf: &mut Vec<u8>,
-        min_bytes: usize,
-    ) -> PyResult<()> {
-        let target = if min_bytes > 0 {
-            buf.len() + min_bytes
-        } else {
-            buf.len() + 1 // at least one byte
-        };
-
-        while buf.len() < target {
-            let chunk: Vec<u8> = socket
-                .call_method1("recv", (INITIAL_BUF_SIZE,))?
-                .extract()?;
-            if chunk.is_empty() {
-                return Err(PyErr::new::<pyo3::exceptions::PyConnectionError, _>(
-                    "empty request",
-                ));
-            }
-            buf.extend_from_slice(&chunk);
-
-            // Allow gevent to schedule other greenlets
-            py.check_signals()?;
-        }
-
-        Ok(())
+#[inline]
+fn val_eq_ci(raw: &[u8], target: &[u8]) -> bool {
+    let trimmed = trim_ows(raw);
+    if trimmed.len() != target.len() {
+        return false;
     }
+    trimmed
+        .iter()
+        .zip(target)
+        .all(|(a, b)| a.to_ascii_lowercase() == *b)
+}
 
-    fn should_keep_alive(&self, version: u8, headers: &[(String, String)]) -> bool {
-        for (name, val) in headers {
-            if name.eq_ignore_ascii_case("connection") {
-                return val.trim().eq_ignore_ascii_case("keep-alive");
-            }
-        }
-        // HTTP/1.1 defaults to keep-alive, HTTP/1.0 does not
-        version >= 1
+#[inline]
+fn trim_ows(b: &[u8]) -> &[u8] {
+    let s = b.iter().position(|&c| c != b' ' && c != b'\t').unwrap_or(b.len());
+    let e = b.iter().rposition(|&c| c != b' ' && c != b'\t').map_or(s, |p| p + 1);
+    &b[s..e]
+}
+
+#[inline]
+fn push_usize(buf: &mut Vec<u8>, n: usize) {
+    if n == 0 {
+        buf.push(b'0');
+        return;
     }
-
-    fn build_environ(
-        &self,
-        py: Python<'_>,
-        method: &str,
-        path: &str,
-        version: u8,
-        headers: &[(String, String)],
-        body: &[u8],
-        remote_addr: &str,
-        remote_port: u16,
-    ) -> PyResult<Py<PyDict>> {
-        let dict = PyDict::new(py);
-
-        dict.set_item("REQUEST_METHOD", method)?;
-
-        // Split path and query string
-        if let Some(qpos) = path.find('?') {
-            dict.set_item("PATH_INFO", &path[..qpos])?;
-            dict.set_item("QUERY_STRING", &path[qpos + 1..])?;
-        } else {
-            dict.set_item("PATH_INFO", path)?;
-            dict.set_item("QUERY_STRING", "")?;
-        }
-
-        dict.set_item("RAW_URI", path)?;
-
-        let proto = if version == 0 {
-            "HTTP/1.0"
-        } else {
-            "HTTP/1.1"
-        };
-        dict.set_item("SERVER_PROTOCOL", proto)?;
-        dict.set_item("SERVER_SOFTWARE", &self.server_software)?;
-
-        dict.set_item("REMOTE_ADDR", remote_addr)?;
-        dict.set_item("REMOTE_PORT", remote_port.to_string())?;
-
-        for (name, val) in headers {
-            let upper = name.to_uppercase().replace('-', "_");
-            if upper == "CONTENT_TYPE" {
-                dict.set_item("CONTENT_TYPE", val)?;
-            } else if upper == "CONTENT_LENGTH" {
-                dict.set_item("CONTENT_LENGTH", val)?;
-            } else {
-                let key = format!("HTTP_{}", upper);
-                dict.set_item(key, val)?;
-            }
-        }
-
-        dict.set_item("zato.http.raw_request", PyBytes::new(py, body))?;
-
-        Ok(dict.into())
+    let mut tmp = [0u8; 20];
+    let mut pos = tmp.len();
+    let mut v = n;
+    while v > 0 {
+        pos -= 1;
+        tmp[pos] = b'0' + (v % 10) as u8;
+        v /= 10;
     }
-
-    fn unpack_response(
-        &self,
-        py: Python<'_>,
-        response: &Py<PyAny>,
-    ) -> PyResult<(String, Vec<(String, String)>, Vec<u8>)> {
-        let tuple = response.bind(py);
-        let status: String = tuple.get_item(0)?.extract()?;
-        let headers_dict = tuple.get_item(1)?;
-        let body: Vec<u8> = tuple.get_item(2)?.extract()?;
-
-        let mut headers = Vec::new();
-        if let Ok(dict) = headers_dict.downcast::<PyDict>() {
-            for (k, v) in dict.iter() {
-                let key: String = k.extract()?;
-                let val: String = v.extract()?;
-                headers.push((key, val));
-            }
-        }
-
-        Ok((status, headers, body))
-    }
-
-    fn write_response(
-        &self,
-        py: Python<'_>,
-        socket: &Bound<'_, PyAny>,
-        version: u8,
-        keep_alive: bool,
-        status: &str,
-        headers: &[(String, String)],
-        body: &[u8],
-    ) -> PyResult<()> {
-        let proto = if version == 0 { "HTTP/1.0" } else { "HTTP/1.1" };
-
-        let mut resp = String::with_capacity(256 + body.len());
-        let _ = write!(resp, "{} {}\r\n", proto, status);
-
-        let mut has_content_length = false;
-        let mut has_connection = false;
-
-        for (k, v) in headers {
-            let _ = write!(resp, "{}: {}\r\n", k, v);
-            if k.eq_ignore_ascii_case("content-length") {
-                has_content_length = true;
-            }
-            if k.eq_ignore_ascii_case("connection") {
-                has_connection = true;
-            }
-        }
-
-        if !has_content_length {
-            let _ = write!(resp, "Content-Length: {}\r\n", body.len());
-        }
-        if !has_connection {
-            let conn_val = if keep_alive { "keep-alive" } else { "close" };
-            let _ = write!(resp, "Connection: {}\r\n", conn_val);
-        }
-
-        resp.push_str("\r\n");
-
-        // Build the full response bytes: header string + body
-        let mut out = resp.into_bytes();
-        out.extend_from_slice(body);
-
-        let py_bytes = PyBytes::new(py, &out);
-        socket.call_method1("sendall", (py_bytes,))?;
-
-        Ok(())
-    }
+    buf.extend_from_slice(&tmp[pos..]);
 }
 
 #[pymodule]
