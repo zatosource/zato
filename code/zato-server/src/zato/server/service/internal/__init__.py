@@ -102,11 +102,12 @@ class AdminService(Service):
                 if not isinstance(data, dict):
                     data = loads(data)
             except Exception:
-                data = self.request.input
+                data = self.request.input or {}
             finally:
                 to_copy = {}
-                for k, v in data.items():
-                    to_copy[k] = v
+                if isinstance(data, dict):
+                    for k, v in data.items():
+                        to_copy[k] = v
 
                 data = deepcopy(to_copy)
 
@@ -151,7 +152,8 @@ class AdminService(Service):
 
         payload = self.response.payload
         is_text = isinstance(payload, basestring)
-        needs_meta = self.request.input.get('needs_meta', True)
+        _input = self.request.input
+        needs_meta = _input.get('needs_meta', True) if _input else True
 
         if needs_meta and hasattr(self, '_search_tool'):
             if not is_text:

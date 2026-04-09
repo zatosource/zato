@@ -471,6 +471,12 @@ class ServiceStore:
                 if _direct_sio_output:
                     _Class_SimpleIO.output = _direct_sio_output # type: ignore
 
+                for _sio_attr in ('output_repeated', 'default_value', 'skip_empty_keys',
+                    'force_empty_keys', 'allow_empty_required'):
+                    _sio_val = getattr(class_, _sio_attr, None)
+                    if _sio_val is not None:
+                        setattr(_Class_SimpleIO, _sio_attr, _sio_val)
+
                 class_.SimpleIO = _Class_SimpleIO # type: ignore
 
         try:
