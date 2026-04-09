@@ -68,12 +68,7 @@ class GetListAdminSIO:
 class AdminService(Service):
     """ A Zato admin service, part of the Zato public API.
     """
-    output_optional = ('_meta',)
     skip_before_handle = False
-
-    class SimpleIO(AdminSIO):
-        """ This empty definition is needed in case the service should be invoked through REST.
-        """
 
     def __init__(self):
         super(AdminService, self).__init__()
@@ -248,14 +243,10 @@ class ChangePasswordBase(AdminService):
     """ A base class for changing passwords via the Rust ConfigStore.
     """
     password_required = True
+    config_store_entity_type = ''
 
-    # Subclasses must set these
-    config_store_entity_type = ''  # e.g. 'security', 'generic_connection'
-
-    class SimpleIO(AdminSIO):
-        input_required = 'password1', 'password2'
-        input_optional = Int('id'), 'name', 'type_'
-        output_required = AsIs('id')
+    input = 'password1', 'password2', Int('-id'), '-name', '-type_'
+    output = AsIs('id')
 
     def _handle(self, _class=None, _auth_func=None, _action=None, **kwargs):
 

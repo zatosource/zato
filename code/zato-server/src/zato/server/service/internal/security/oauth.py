@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from uuid import uuid4
 
 # Zato
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service import Bool, Int
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -32,13 +33,9 @@ def _is_oauth(item):
 class GetList(AdminService):
     """ Returns a list of Bearer token definitions available.
     """
-
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_oauth_get_list_request'
-        response_elem = 'zato_security_oauth_get_list_response'
-        input_required = 'cluster_id'
-        output_required = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type'
-        output_optional = 'auth_server_url', 'scopes', 'extra_fields', 'data_format'
+    input = 'cluster_id', Int('-cur_page'), Bool('-paginate'), '-query'
+    output = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type', \
+        '-auth_server_url', '-scopes', '-extra_fields', '-data_format'
 
     def handle(self):
         items = self.server.config_store.get_list('security')
@@ -51,13 +48,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Bearer token definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_oauth_create_request'
-        response_elem = 'zato_security_oauth_create_response'
-        input_required = 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
-            'client_secret_field', 'grant_type', 'data_format'
-        input_optional = 'auth_server_url', 'scopes', 'extra_fields'
-        output_required = 'id', 'name'
+    input = 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
+        'client_secret_field', 'grant_type', 'data_format', '-auth_server_url', '-scopes', '-extra_fields'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -92,13 +85,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a Bearer token definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_oauth_edit_request'
-        response_elem = 'zato_security_oauth_edit_response'
-        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
-            'client_secret_field', 'grant_type', 'data_format'
-        input_optional = 'auth_server_url', 'scopes', 'extra_fields'
-        output_required = 'id', 'name'
+    input = 'id', 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
+        'client_secret_field', 'grant_type', 'data_format', '-auth_server_url', '-scopes', '-extra_fields'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -149,12 +138,8 @@ class ChangePassword(AdminService):
     """
     password_required = False
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_oauth_change_password_request'
-        response_elem = 'zato_security_oauth_change_password_response'
-        input_required = 'password1', 'password2'
-        input_optional = 'id', 'name'
-        output_required = 'id',
+    input = 'password1', 'password2', '-id', '-name'
+    output = 'id',
 
     def handle(self):
         input = self.request.input
@@ -197,10 +182,7 @@ class ChangePassword(AdminService):
 class Delete(AdminService):
     """ Deletes a Bearer token definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_oauth_delete_request'
-        response_elem = 'zato_security_oauth_delete_response'
-        input_required = 'id'
+    input = 'id'
 
     def handle(self):
         items = self.server.config_store.get_list('security')

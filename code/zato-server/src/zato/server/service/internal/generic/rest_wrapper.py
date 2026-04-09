@@ -150,7 +150,6 @@ class _WrapperBase(Service):
 
 class Create(_WrapperBase):
     name = 'zato.generic.rest-wrapper.create'
-    response_elem = None
     _wrapper_impl_suffix = 'create'
     _uses_name = True
 
@@ -159,7 +158,6 @@ class Create(_WrapperBase):
 
 class Edit(_WrapperBase):
     name = 'zato.generic.rest-wrapper.edit'
-    response_elem = None
     _wrapper_impl_suffix = 'edit'
     _uses_name = True
 

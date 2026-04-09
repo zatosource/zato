@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.common.exception import BadRequest
 from zato.server.service import Bool, Int
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,12 +34,9 @@ def _item_by_id(items, id_):
 class GetList(AdminService):
     """ Returns a list of ElasticSearch connections.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_search_es_get_list_request'
-        response_elem = 'zato_search_es_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as')
-        output_optional = ('opaque1',)
+    input = 'cluster_id'
+    output = ('id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as', '-opaque1')
+    output_repeated = True
 
     def handle(self):
         items = self.server.config_store.get_list(_entity_type)
@@ -51,12 +48,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates an ElasticSearch connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_search_es_create_request'
-        response_elem = 'zato_search_es_create_response'
-        input_required = ('cluster_id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as')
-        input_optional = ('opaque1',)
-        output_required = ('id', 'name')
+    input = ('cluster_id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as', '-opaque1')
+    output = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -87,12 +80,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an ElasticSearch connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_search_es_edit_request'
-        response_elem = 'zato_search_es_edit_response'
-        input_required = ('id', 'cluster_id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as')
-        input_optional = ('opaque1',)
-        output_required = ('id', 'name')
+    input = ('id', 'cluster_id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as', '-opaque1')
+    output = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -135,10 +124,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an ElasticSearch connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_search_es_delete_request'
-        response_elem = 'zato_search_es_delete_response'
-        input_optional = ('id', 'name', 'should_raise_if_missing')
+    input = ('-id', '-name', '-should_raise_if_missing')
 
     def handle(self):
         input = self.request.input

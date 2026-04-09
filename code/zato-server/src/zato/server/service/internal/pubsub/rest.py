@@ -108,12 +108,10 @@ class Publish(PubSubRESTService):
     """
     name = 'pubsub.rest.publish'
 
-    class SimpleIO:
-        input_required = 'topic_name', AsIs('data')
-        input_optional = 'priority', 'expiration', AsIs('correl_id'), AsIs('in_reply_to'), AsIs('ext_client_id'), 'pub_time'
-        output_optional = AsIs('msg_id'), 'is_ok', 'cid', 'status', 'details'
-        skip_empty_keys = True
-        response_elem = None
+    input = 'topic_name', AsIs('data'), '-priority', '-expiration', AsIs('-correl_id'), AsIs('-in_reply_to'), \
+        AsIs('-ext_client_id'), '-pub_time'
+    output = AsIs('-msg_id'), '-is_ok', '-cid', '-status', '-details'
+    skip_empty_keys = True
 
 # ################################################################################################################################
 
@@ -219,10 +217,8 @@ class GetMessages(PubSubRESTService):
     """
     name = 'pubsub.rest.get-messages'
 
-    class SimpleIO:
-        input_optional = Int('max_messages'), Int('max_len')
-        output_optional = AsIs('messages'), Int('message_count'), 'is_ok', 'cid', 'status', 'details'
-        response_elem = None
+    input = Int('-max_messages'), Int('-max_len')
+    output = AsIs('-messages'), Int('-message_count'), '-is_ok', '-cid', '-status', '-details'
 
 # ################################################################################################################################
 
@@ -286,10 +282,8 @@ class Subscribe(PubSubRESTService):
     """
     name = 'pubsub.rest.subscribe'
 
-    class SimpleIO:
-        input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', 'status', 'details', 'sub_key'
-        response_elem = None
+    input = 'topic_name',
+    output = '-is_ok', '-cid', '-status', '-details', '-sub_key'
 
 # ################################################################################################################################
 
@@ -380,10 +374,8 @@ class Unsubscribe(PubSubRESTService):
     """
     name = 'pubsub.rest.unsubscribe'
 
-    class SimpleIO:
-        input_required = 'topic_name'
-        output_optional = 'is_ok', 'cid', 'status', 'details'
-        response_elem = None
+    input = 'topic_name',
+    output = '-is_ok', '-cid', '-status', '-details'
 
 # ################################################################################################################################
 

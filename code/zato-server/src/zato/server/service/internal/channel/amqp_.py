@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -22,13 +22,10 @@ class GetList(AdminService):
     """
     name = 'zato.channel.amqp.get-list'
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_channel_amqp_get_list_request'
-        response_elem = 'zato_channel_amqp_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'address', 'username', 'password', 'is_active', 'queue', 'consumer_tag_prefix',
-            'service_name', 'pool_size', 'ack_mode','prefetch_count')
-        output_optional = ('data_format',)
+    input = 'cluster_id'
+    output = ('id', 'name', 'address', 'username', 'password', 'is_active', 'queue', 'consumer_tag_prefix',
+        'service_name', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format')
+    output_repeated = True
 
     def handle(self):
         items = self.server.config_store.get_list(_entity_type)
@@ -42,13 +39,9 @@ class Create(AdminService):
     """
     name = 'zato.channel.amqp.create'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_amqp_create_request'
-        response_elem = 'zato_channel_amqp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix', 'service', 'pool_size',
-            'ack_mode','prefetch_count')
-        input_optional = 'data_format'
-        output_required = 'id', 'name'
+    input = ('cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix',
+        'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format')
+    output = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -84,13 +77,9 @@ class Edit(AdminService):
     """
     name = 'zato.channel.amqp.edit'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_amqp_edit_request'
-        response_elem = 'zato_channel_amqp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue',
-            'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode','prefetch_count')
-        input_optional = 'data_format'
-        output_required = ('id', 'name')
+    input = ('id', 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue',
+        'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format')
+    output = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -125,10 +114,7 @@ class Delete(AdminService):
     """
     name = 'zato.channel.amqp.delete'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_amqp_delete_request'
-        response_elem = 'zato_channel_amqp_delete_response'
-        input_required = ('id',)
+    input = 'id'
 
     def handle(self):
         name = str(self.request.input.id)

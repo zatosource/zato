@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.util import validate_topic_name
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -17,12 +17,8 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 class GetList(AdminService):
     """ Returns a list of pub/sub topics available.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_pubsub_topic_get_list_request'
-        response_elem = 'zato_pubsub_topic_get_list_response'
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active'
-        output_optional = 'description', 'publisher_count', 'subscriber_count'
+    input = 'cluster_id',
+    output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count'
 
     def handle(self):
         items = self.server.config_store.get_list('pubsub_topic')
@@ -34,12 +30,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub topic.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_topic_create_request'
-        response_elem = 'zato_pubsub_topic_create_response'
-        input_required = 'name', 'is_active'
-        input_optional = 'cluster_id', 'description'
-        output_required = 'id', 'name'
+    input = 'name', 'is_active', '-cluster_id', '-description'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -63,12 +55,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub topic.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_topic_edit_request'
-        response_elem = 'zato_pubsub_topic_edit_response'
-        input_required = 'name', 'is_active'
-        input_optional = 'id', 'cluster_id', 'description'
-        output_required = 'id', 'name'
+    input = 'name', 'is_active', '-id', '-cluster_id', '-description'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -92,10 +80,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a pub/sub topic.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_topic_delete_request'
-        response_elem = 'zato_pubsub_topic_delete_response'
-        input_required = 'id',
+    input = 'id',
 
     def handle(self):
         input_id = self.request.input.id
@@ -113,11 +98,8 @@ class Delete(AdminService):
 class GetMatches(AdminService):
     """ Returns a list of pub/sub topics matching a given pattern.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_topic_get_matches_request'
-        response_elem = 'zato_pubsub_topic_get_matches_response'
-        input_required = 'cluster_id', 'pattern'
-        output_optional = 'id', 'name', 'description'
+    input = 'cluster_id', 'pattern'
+    output = '-id', '-name', '-description'
 
     def handle(self):
 

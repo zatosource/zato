@@ -23,7 +23,7 @@ from zato.common.api import CACHE
 from zato.common.exception import BadRequest
 from zato.common.util.search import SearchResults
 from zato.server.service import AsIs, Bool, Float, Int
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
@@ -58,13 +58,10 @@ class GetList(_Base):
     """
     _filter_by = ('name',)
 
-    class SimpleIO(GetListAdminSIO):
-        input_required = (AsIs('id'),)
-        input_optional = GetListAdminSIO.input_optional + (Int('max_chars'),)
-        output_required = (AsIs('id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
-            'last_read', 'prev_read', 'last_write', 'prev_write', 'server')
-        output_optional = ('value', 'chars_omitted')
-        output_repeated = True
+    input = AsIs('id'), Int('-cur_page'), Bool('-paginate'), '-query', Int('-max_chars')
+    output = AsIs('id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at', \
+        'last_read', 'prev_read', 'last_write', 'prev_write', 'server', '-value', '-chars_omitted'
+    output_repeated = True
 
 # ################################################################################################################################
 
@@ -195,9 +192,7 @@ class _CreateEdit(_Base):
     old_key_elem = '<invalid>'
     new_key_elem = 'key'
 
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'id', 'key', 'value', Bool('replace_existing'))
-        input_optional = ('key_data_type', 'value_data_type', Float('expiry'))
+    input = 'cluster_id', 'id', 'key', 'value', Bool('replace_existing'), '-key_data_type', '-value_data_type', Float('-expiry')
 
     def handle(self):
 
@@ -241,8 +236,8 @@ class Update(_CreateEdit):
     """
     old_key_elem = 'old_key'
 
-    class SimpleIO(_CreateEdit.SimpleIO):
-        input_optional = _CreateEdit.SimpleIO.input_optional + ('old_key',)
+    input = 'cluster_id', 'id', 'key', 'value', Bool('replace_existing'), '-key_data_type', '-value_data_type', \
+        Float('-expiry'), '-old_key'
 
     def handle(self):
 
@@ -258,10 +253,8 @@ class Update(_CreateEdit):
 class Get(_Base):
     """ Returns an individual entry from the cache given on input.
     """
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'id', 'key')
-        output_required = (Bool('key_found'),)
-        output_optional = ('key', 'value', 'is_key_integer', 'is_value_integer', Float('expiry'))
+    input = 'cluster_id', 'id', 'key'
+    output = Bool('key_found'), '-key', '-value', '-is_key_integer', '-is_value_integer', Float('-expiry')
 
     def handle(self):
 
@@ -285,9 +278,8 @@ class Get(_Base):
 class Delete(_Base):
     """ Deletes an entry from the cache given on input.
     """
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'id', 'key')
-        output_required = (Bool('key_found'),)
+    input = 'cluster_id', 'id', 'key'
+    output = Bool('key_found'),
 
     def handle(self):
 

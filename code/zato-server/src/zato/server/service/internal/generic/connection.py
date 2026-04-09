@@ -21,8 +21,8 @@ from zato.common.util.search import SearchResults
 from zato.common.util.time_ import utcnow
 from zato.server.connection.http_soap import BadRequest
 from zato.server.generic.connection import GenericConnection
-from zato.server.service import AsIs, Int
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service import AsIs, Bool, Int
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 
@@ -149,26 +149,19 @@ def _next_generic_connection_id(server) -> 'int':
 
 # ################################################################################################################################
 
-class _CreateEditSIO(AdminSIO):
-    input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'))
-    input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('tenant_id'),
-        AsIs('client_id'), AsIs('security_id')) + extra_secret_keys + generic_attrs
-    force_empty_keys = True
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class _CreateEdit(AdminService):
     """ Creates a new or updates an existing generic connection in the Rust config store.
     """
     is_create: 'bool'
     is_edit:   'bool'
 
-    class SimpleIO(_CreateEditSIO):
-        output_required = ('id', 'name')
-        default_value = None
-        response_elem = None
+    input = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
+        '-cluster_id', '-id', Int('-cache_expiry'), '-address', Int('-port'), Int('-timeout'), '-data_format', '-version',
+        '-extra', '-username', '-username_type', '-secret', '-secret_type', '-conn_def_id', '-cache_id', AsIs('-tenant_id'),
+        AsIs('-client_id'), AsIs('-security_id')) + tuple('-' + k for k in extra_secret_keys) + tuple('-' + k for k in generic_attrs)
+    output = 'id', 'name'
+    force_empty_keys = True
+    default_value = None
 
 # ################################################################################################################################
 
@@ -320,11 +313,7 @@ class Edit(_CreateEdit):
 class Delete(AdminService):
     """ Deletes a generic connection.
     """
-
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_generic_connection_delete_request'
-        response_elem = 'zato_generic_connection_delete_response'
-        input_optional = 'id', 'name', 'should_raise_if_missing', 'cluster_id', 'type_'
+    input = '-id', '-name', '-should_raise_if_missing', '-cluster_id', '-type_'
 
 # ################################################################################################################################
 
@@ -357,9 +346,7 @@ class GetList(AdminService):
     """
     _filter_by = 'name',
 
-    class SimpleIO(GetListAdminSIO):
-        input_required = ('cluster_id',)
-        input_optional = GetListAdminSIO.input_optional + ('type_', Int('page_size'))
+    input = 'cluster_id', Int('-cur_page'), Bool('-paginate'), '-query', '-type_', Int('-page_size')
 
 # ################################################################################################################################
 
@@ -493,9 +480,6 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        response_elem = None
-
 # ################################################################################################################################
 
     def _run_pre_handle_tasks_CLOUD_MICROSOFT_365(self, session:'any_', instance:'any_') -> 'None':
@@ -595,11 +579,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings a generic connection.
     """
-    class SimpleIO(AdminSIO):
-        input_required = 'id'
-        output_required = 'info'
-        output_optional = 'is_success'
-        response_elem = None
+    input = 'id'
+    output = 'info', '-is_success'
 
     def handle(self) -> 'None':
 
@@ -632,11 +613,8 @@ class Ping(AdminService):
 class Invoke(AdminService):
     """ Invokes a generic connection by its name.
     """
-    class SimpleIO:
-        input_required = 'conn_type', 'conn_name'
-        input_optional = 'request_data'
-        output_optional = 'response_data'
-        response_elem = None
+    input = 'conn_type', 'conn_name', '-request_data'
+    output = '-response_data'
 
     def handle(self) -> 'None':
 

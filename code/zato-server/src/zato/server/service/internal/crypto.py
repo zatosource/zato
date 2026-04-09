@@ -16,9 +16,8 @@ from zato.server.service import Integer, Service
 class Encrypt(Service):
     """ Encrypts data given on input using the server's default key.
     """
-    class SimpleIO:
-        input_required = ('clear_text',)
-        output_required = ('encrypted',)
+    input = 'clear_text'
+    output = 'encrypted'
 
     def handle(self):
         self.response.payload.encrypted = self.crypto.encrypt(self.request.input.clear_text.encode('utf8'))
@@ -28,9 +27,8 @@ class Encrypt(Service):
 class Decrypt(Service):
     """ Decrypts data previously encrypted using the server's default key.
     """
-    class SimpleIO:
-        input_required = ('encrypted',)
-        output_required = ('clear_text',)
+    input = 'encrypted'
+    output = 'clear_text'
 
     def handle(self):
         self.response.payload.clear_text = self.crypto.decrypt(self.request.input.encrypted)
@@ -40,35 +38,31 @@ class Decrypt(Service):
 class HashSecret(Service):
     """ Hashes a secret using the server's default key
     """
-    class SimpleIO:
-        input_required = ('clear_text',)
-        output_required = ('hashed',)
+    input = 'clear_text'
+    output = 'hashed'
 
 # ################################################################################################################################
 
 class VerifyHash(Service):
     """ Returns a boolean flag indicating if given input matches the expected hash.
     """
-    class SimpleIO:
-        input_required = ('given', 'expected')
-        output_required = ('is_valid',)
+    input = 'given', 'expected'
+    output = 'is_valid'
 
 # ################################################################################################################################
 
 class GenerateSecret(Service):
     """ Generates a new secret of input bits strength.
     """
-    class SimpleIO:
-        input_required = (Integer('bits'),)
-        output_required = ('secret',)
+    input = Integer('bits')
+    output = 'secret'
 
 # ################################################################################################################################
 
 class GeneratePassword(Service):
     """ Generates a new password of input bits strength.
     """
-    class SimpleIO:
-        input_required = (Integer('bits'),)
-        output_required = ('password',)
+    input = Integer('bits')
+    output = 'password'
 
 # ################################################################################################################################

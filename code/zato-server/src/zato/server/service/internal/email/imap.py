@@ -16,7 +16,7 @@ from traceback import format_exc
 from zato.common.api import EMAIL as EMail_Common, Zato_None
 from zato.common.exception import BadRequest
 from zato.server.service import AsIs, Bool, Int
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,14 +56,11 @@ def _enrich_imap_list_item(item):
 class GetList(AdminService):
     """ Returns a list of IMAP connections.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_email_imap_get_list_request'
-        response_elem = 'zato_email_imap_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Int('debug_level'), 'mode',
-            'get_criteria')
-        output_optional = ('username', 'opaque1', 'server_type', 'server_type_human', AsIs('tenant_id'), AsIs('client_id'),
-            'filter_criteria')
+    input = 'cluster_id'
+    output = ('id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Int('debug_level'), 'mode',
+        'get_criteria', '-username', '-opaque1', '-server_type', '-server_type_human', AsIs('-tenant_id'),
+        AsIs('-client_id'), '-filter_criteria')
+    output_repeated = True
 
     def handle(self):
         items = [_enrich_imap_list_item(dict(x)) for x in self.server.config_store.get_list(_entity_type)]
@@ -75,14 +72,10 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates an IMAP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_imap_create_request'
-        response_elem = 'zato_email_imap_create_response'
-        input_required = ('cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Int('debug_level'),
-            'mode', 'get_criteria')
-        input_optional = ('username', 'password', 'opaque1', 'server_type', AsIs('tenant_id'), AsIs('client_id'),
-            'filter_criteria')
-        output_required = ('id', 'name')
+    input = ('cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Int('debug_level'),
+        'mode', 'get_criteria', '-username', '-password', '-opaque1', '-server_type', AsIs('-tenant_id'),
+        AsIs('-client_id'), '-filter_criteria')
+    output = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -127,14 +120,10 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an IMAP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_imap_edit_request'
-        response_elem = 'zato_email_imap_edit_response'
-        input_required = ('id', 'cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'),
-            Int('debug_level'), 'mode', 'get_criteria')
-        input_optional = ('username', 'password', 'opaque1', 'server_type', AsIs('tenant_id'), AsIs('client_id'),
-            'filter_criteria')
-        output_required = ('id', 'name')
+    input = ('id', 'cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'),
+        Int('debug_level'), 'mode', 'get_criteria', '-username', '-password', '-opaque1', '-server_type',
+        AsIs('-tenant_id'), AsIs('-client_id'), '-filter_criteria')
+    output = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -192,10 +181,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an IMAP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_imap_delete_request'
-        response_elem = 'zato_email_imap_delete_response'
-        input_optional = ('id', 'name', 'should_raise_if_missing')
+    input = ('-id', '-name', '-should_raise_if_missing')
 
     def handle(self):
         input = self.request.input
@@ -229,10 +215,6 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of an IMAP connection.
     """
     password_required = False
-
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_email_imap_change_password_request'
-        response_elem = 'zato_email_imap_change_password_response'
 
     def handle(self):
         password1 = self.request.input.get('password1', '')
@@ -282,11 +264,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an IMAP connection to check its configuration.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_imap_ping_request'
-        response_elem = 'zato_email_imap_ping_response'
-        input_required = 'id'
-        output_optional = 'info'
+    input = 'id'
+    output = '-info'
 
     def handle(self):
         item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)

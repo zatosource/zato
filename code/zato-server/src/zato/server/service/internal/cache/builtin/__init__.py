@@ -6,13 +6,11 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 # Zato
 from zato.common.api import CACHE as _COMMON_CACHE
 from zato.common.exception import BadRequest
 from zato.server.service import Bool, Int
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -49,11 +47,10 @@ def _clear_other_defaults(server, current_name):
 class Get(AdminService):
     """ Returns configuration of a cache definition.
     """
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'id')
-        output_required = ('name', Bool('is_active'), Bool('is_default'), 'cache_type', Int('max_size'), Int('max_item_size'),
-            Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method', 'persistent_storage',
-            Int('current_size'))
+    input = 'cluster_id', 'id'
+    output = 'name', Bool('is_active'), Bool('is_default'), 'cache_type', Int('max_size'), Int('max_item_size'), \
+        Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method', 'persistent_storage', \
+        Int('current_size')
 
     def handle(self):
         item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
@@ -75,14 +72,10 @@ class Get(AdminService):
 class GetList(AdminService):
     """ Returns a list of built-in cache definitions.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_cache_builtin_get_list_request'
-        response_elem = 'zato_cache_builtin_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', Bool('is_active'), Bool('is_default'), 'cache_type', Int('max_size'),
-            Int('max_item_size'), Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method',
-            'persistent_storage', Int('current_size'))
-        output_optional = ('opaque1',)
+    input = 'cluster_id', Int('-cur_page'), Bool('-paginate'), '-query'
+    output = 'id', 'name', Bool('is_active'), Bool('is_default'), 'cache_type', Int('max_size'), \
+        Int('max_item_size'), Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method', \
+        'persistent_storage', Int('current_size'), '-opaque1'
 
     def handle(self):
         items = []
@@ -103,14 +96,10 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a built-in cache definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_cache_builtin_create_request'
-        response_elem = 'zato_cache_builtin_create_response'
-        input_required = ('cluster_id', 'name', Bool('is_active'), Bool('is_default'), 'cache_type', Int('max_size'),
-            Int('max_item_size'), Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method',
-            'persistent_storage')
-        input_optional = ('opaque1',)
-        output_required = ('id', 'name')
+    input = 'cluster_id', 'name', Bool('is_active'), Bool('is_default'), 'cache_type', Int('max_size'), \
+        Int('max_item_size'), Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method', \
+        'persistent_storage', '-opaque1'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -154,14 +143,10 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a built-in cache definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_cache_builtin_edit_request'
-        response_elem = 'zato_cache_builtin_edit_response'
-        input_required = ('id', 'cluster_id', 'name', Bool('is_active'), Bool('is_default'), 'cache_type', Int('max_size'),
-            Int('max_item_size'), Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method',
-            'persistent_storage')
-        input_optional = ('opaque1',)
-        output_required = ('id', 'name')
+    input = 'id', 'cluster_id', 'name', Bool('is_active'), Bool('is_default'), 'cache_type', Int('max_size'), \
+        Int('max_item_size'), Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method', \
+        'persistent_storage', '-opaque1'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -211,10 +196,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a built-in cache definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_cache_builtin_delete_request'
-        response_elem = 'zato_cache_builtin_delete_response'
-        input_optional = ('id', 'name', 'should_raise_if_missing')
+    input = '-id', '-name', '-should_raise_if_missing'
 
     def handle(self):
         input = self.request.input
@@ -247,8 +229,7 @@ class Delete(AdminService):
 class Clear(AdminService):
     """ Clears out a cache by its ID - deletes all keys and values.
     """
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'id')
+    input = 'cluster_id', 'id'
 
     def handle(self):
         item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)

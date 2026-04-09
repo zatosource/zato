@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from uuid import uuid4
 
 # Zato
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service import Int, Bool
+from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -18,12 +19,8 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 class GetList(AdminService):
     _filter_by = 'name',
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_basic_auth_get_list_request'
-        response_elem = 'zato_security_basic_auth_get_list_response'
-        input_optional = GetListAdminSIO.input_optional + ('cluster_id', 'needs_password',)
-        output_required = 'id', 'name', 'is_active', 'username', 'realm',
-        output_optional = 'password',
+    input = Int('-cur_page'), Bool('-paginate'), '-query', '-cluster_id', '-needs_password'
+    output = 'id', 'name', 'is_active', 'username', 'realm', '-password'
 
     def handle(self):
         items = self.server.config_store.get_list('security')
@@ -40,12 +37,8 @@ class GetList(AdminService):
 
 class Create(AdminService):
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_basic_auth_create_request'
-        response_elem = 'zato_security_basic_auth_create_response'
-        input_required = 'name', 'is_active', 'username', 'realm'
-        input_optional = 'cluster_id',
-        output_required = 'id', 'name'
+    input = 'name', 'is_active', 'username', 'realm', '-cluster_id'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -75,12 +68,8 @@ class Create(AdminService):
 
 class Edit(AdminService):
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_basic_auth_edit_request'
-        response_elem = 'zato_security_basic_auth_edit_response'
-        input_required = 'name', 'is_active', 'username', 'realm'
-        input_optional = 'id', 'cluster_id'
-        output_required = 'id', 'name'
+    input = 'name', 'is_active', 'username', 'realm', '-id', '-cluster_id'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -114,12 +103,8 @@ class ChangePassword(AdminService):
 
     password_required = False
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_basic_auth_change_password_request'
-        response_elem = 'zato_security_basic_auth_change_password_response'
-        input_required = 'password1', 'password2'
-        input_optional = 'id', 'name'
-        output_required = 'id',
+    input = 'password1', 'password2', '-id', '-name'
+    output = 'id',
 
     def handle(self):
         input = self.request.input
@@ -145,10 +130,7 @@ class ChangePassword(AdminService):
 
 class Delete(AdminService):
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_basic_auth_delete_request'
-        response_elem = 'zato_security_basic_auth_delete_response'
-        input_required = 'id',
+    input = 'id',
 
     def handle(self):
         items = self.server.config_store.get_list('security')

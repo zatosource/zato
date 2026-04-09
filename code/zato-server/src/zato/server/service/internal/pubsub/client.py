@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,12 +26,8 @@ def _get_sec_name_by_id(server, sec_base_id):
 class GetList(AdminService):
     """ Returns a list of pub/sub permissions (client assignments).
     """
-
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_permission_get_list_request'
-        response_elem = 'zato_pubsub_permission_get_list_response'
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
+    input = 'cluster_id',
+    output = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
 
     def handle(self):
         items = self.server.config_store.get_list('pubsub_permission')
@@ -43,12 +39,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub permission (client assignment).
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_permission_create_request'
-        response_elem = 'zato_pubsub_permission_create_response'
-        input_required = 'sec_base_id', 'pattern', 'access_type'
-        input_optional = 'cluster_id'
-        output_required = 'id', 'name'
+    input = 'sec_base_id', 'pattern', 'access_type', '-cluster_id'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -81,12 +73,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing pub/sub permission (client assignment).
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_permission_edit_request'
-        response_elem = 'zato_pubsub_permission_edit_response'
-        input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
-        input_optional = 'cluster_id'
-        output_required = 'id', 'name'
+    input = 'id', 'sec_base_id', 'pattern', 'access_type', '-cluster_id'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -120,10 +108,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a pub/sub permission (client assignment).
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_permission_delete_request'
-        response_elem = 'zato_pubsub_permission_delete_response'
-        input_required = 'id',
+    input = 'id',
 
     def handle(self):
         input_id = self.request.input.id

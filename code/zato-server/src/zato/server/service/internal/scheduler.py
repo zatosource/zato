@@ -19,7 +19,8 @@ except ImportError:
 from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service import Int, Bool
+from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -165,12 +166,10 @@ def _create_edit(self, action):
 class _CreateEdit(_SchedulerAdmin):
     """ A base class for both creating and editing scheduler jobs.
     """
-    class SimpleIO(AdminSIO):
-        input_required = 'cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date'
-        input_optional = 'id', 'extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', \
-            'cron_definition', 'should_ignore_existing'
-        output_optional = 'id', 'name', 'cron_definition'
-        default_value = ''
+    input = 'cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', \
+        '-id', '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
+        '-cron_definition', '-should_ignore_existing'
+    output = '-id', '-name', '-cron_definition'
 
     def handle(self):
         _create_edit(self, self.__class__.__name__.lower())
@@ -179,13 +178,9 @@ class _CreateEdit(_SchedulerAdmin):
 # ################################################################################################################################
 
 class _Get(_SchedulerAdmin):
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id',)
-        output_required = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name'
-        output_optional = 'extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition'
-        output_repeated = True
-        default_value = ''
-        date_time_format = scheduler_date_time_format
+    output = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name', \
+        '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition'
+    output_repeated = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -195,8 +190,7 @@ class GetList(_Get):
     """
     name = _service_name_prefix + 'get-list'
 
-    class SimpleIO(_Get.SimpleIO):
-        input_optional = GetListAdminSIO.input_optional + ('service_name',)
+    input = '-cluster_id', Int('-cur_page'), Bool('-paginate'), '-query', '-service_name'
 
     def handle(self):
         input = self.request.input
@@ -214,11 +208,8 @@ class GetByID(_Get):
     """
     name = _service_name_prefix + 'get-by-id'
 
-    class SimpleIO(_Get.SimpleIO):
-        request_elem = 'zato_scheduler_job_get_by_id_request'
-        response_elem = None
-        input_required = _Get.SimpleIO.input_required + ('id',)
-        output_repeated = False
+    input = 'cluster_id', 'id'
+    output_repeated = False
 
     def handle(self):
         item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
@@ -234,11 +225,8 @@ class GetByName(_Get):
     """
     name = _service_name_prefix + 'get-by-name'
 
-    class SimpleIO(_Get.SimpleIO):
-        request_elem = 'zato_scheduler_job_get_by_name_request'
-        response_elem = None
-        input_required = _Get.SimpleIO.input_required + ('name',)
-        output_repeated = False
+    input = 'cluster_id', 'name'
+    output_repeated = False
 
     def handle(self):
         item = self.server.config_store.get(_entity_type, self.request.input.name)
@@ -254,10 +242,6 @@ class Create(_CreateEdit):
     """
     name = _service_name_prefix + 'create'
 
-    class SimpleIO(_CreateEdit.SimpleIO):
-        request_elem = 'zato_scheduler_job_create_request'
-        response_elem = 'zato_scheduler_job_create_response'
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -265,10 +249,6 @@ class Edit(_CreateEdit):
     """ Updates a scheduler's job.
     """
     name = _service_name_prefix + 'edit'
-
-    class SimpleIO(_CreateEdit.SimpleIO):
-        request_elem = 'zato_scheduler_job_edit_request'
-        response_elem = 'zato_scheduler_job_edit_response'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -278,10 +258,7 @@ class Delete(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'delete'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_scheduler_job_delete_request'
-        response_elem = 'zato_scheduler_job_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         store = self.server.config_store
@@ -302,10 +279,7 @@ class Execute(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'execute'
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_scheduler_job_execute_request'
-        response_elem = 'zato_scheduler_job_execute_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         try:

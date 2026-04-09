@@ -311,9 +311,8 @@ class APISpecHelperUser(Service):
     """
     name = 'helpers.api-spec.user'
 
-    class SimpleIO:
-        input  = GetUserRequest
-        output = GetUserResponse
+    input  = GetUserRequest
+    output = GetUserResponse
 
 # ################################################################################################################################
 
@@ -420,9 +419,8 @@ class MyDataclassService(Service):
     """
     name = 'helpers.dataclass-service'
 
-    class SimpleIO:
-        input  = MyRequest
-        output = MyResponse
+    input  = MyRequest
+    output = MyResponse
 
     def handle(self):
         pass
@@ -434,8 +432,7 @@ class CommandsService(Service):
 
     name = 'helpers.commands-service'
 
-    class SimpleIO:
-        output = CommandResult
+    output = CommandResult
 
     class _CommandsServiceTestCase(TestCase):
 

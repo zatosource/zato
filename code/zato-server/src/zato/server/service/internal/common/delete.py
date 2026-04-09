@@ -67,9 +67,8 @@ class DeleteObjectsResponse(BaseDeleteObjectsResponse):
 
 class DeleteObjectsImpl(Service):
 
-    class SimpleIO:
-        input = DeleteObjectsImplRequest
-        output = DeleteObjectsImplResponse
+    input = DeleteObjectsImplRequest
+    output = DeleteObjectsImplResponse
 
     def _delete_object_list(self, object_id_list:'anylist') -> 'anylist':
 
@@ -119,9 +118,8 @@ class DeleteObjects(Service):
 
     name = 'zato.common.delete-objects'
 
-    class SimpleIO:
-        input = DeleteObjectsRequest
-        output = DeleteObjectsResponse
+    input = DeleteObjectsRequest
+    output = DeleteObjectsResponse
 
     def handle(self) -> 'None':
         pass

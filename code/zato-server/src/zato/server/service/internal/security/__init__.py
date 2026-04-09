@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.const import ServiceConst
-from zato.server.service import Boolean, Integer, List
+from zato.server.service import Boolean, Int, Integer, List
 from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################
@@ -20,10 +20,10 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-output_required = 'id', 'name', 'is_active', 'sec_type'
-output_optional:'any_' = 'username', 'realm', 'password_type', Boolean('reject_empty_nonce_creat'), \
-    Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'),  Integer('nonce_freshness_time'), 'proto_version', \
-        'sig_method', Integer('max_nonce_log')
+_output_required = 'id', 'name', 'is_active', 'sec_type'
+_output_optional:'any_' = '-username', '-realm', '-password_type', Boolean('-reject_empty_nonce_creat'), \
+    Boolean('-reject_stale_tokens'), Integer('-reject_expiry_limit'), Integer('-nonce_freshness_time'), '-proto_version', \
+        '-sig_method', Integer('-max_nonce_log')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,11 +31,8 @@ output_optional:'any_' = 'username', 'realm', 'password_type', Boolean('reject_e
 class GetByID(AdminService):
     """ Returns a single security definition by its ID.
     """
-    class SimpleIO(GetListAdminSIO):
-        response_elem = None
-        input_required = 'cluster_id', 'id'
-        output_required = output_required
-        output_optional = output_optional
+    input = 'cluster_id', 'id'
+    output = _output_required + _output_optional
 
     def handle(self):
         for item in self.server.config_store.get_list('security'):
@@ -54,18 +51,13 @@ class GetByID(AdminService):
 class GetList(AdminService):
     """ Returns a list of all security definitions available.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_get_list_request'
-        response_elem = 'zato_security_get_list_response'
-        input_optional = 'cluster_id'
-        input_optional:'any_' = GetListAdminSIO.input_optional + (List('sec_type'), Boolean('needs_internal', default=True))
-        output_required = output_required
-        output_optional = output_optional
-        output_repeated = True
+    input = '-cluster_id', Int('-cur_page'), Boolean('-paginate'), '-query', \
+        List('-sec_type'), Boolean('-needs_internal')
+    output = _output_required + _output_optional
+    output_repeated = True
 
     @staticmethod
     def _name_matches_query(name, query_criteria):
-        """ Mirrors SQL name.contains per criterion (see zato.common.odb.query._SearchWrapper). """
         name_lower = name.lower()
         for criterion in query_criteria:
             crit = str(criterion)

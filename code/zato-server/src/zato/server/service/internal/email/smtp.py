@@ -17,7 +17,7 @@ from zato.common.api import SMTPMessage
 from zato.common.exception import BadRequest
 from zato.common.version import get_version
 from zato.server.service import Bool, Int
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,13 +41,10 @@ def _item_by_id(items, id_):
 class GetList(AdminService):
     """ Returns a list of SMTP connections.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_email_smtp_get_list_request'
-        response_elem = 'zato_email_smtp_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Bool('is_debug'), 'mode',
-            'ping_address')
-        output_optional = ('username', 'opaque1')
+    input = 'cluster_id'
+    output = ('id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Bool('is_debug'), 'mode',
+        'ping_address', '-username', '-opaque1')
+    output_repeated = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -55,13 +52,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates an SMTP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_smtp_create_request'
-        response_elem = 'zato_email_smtp_create_response'
-        input_required = ('cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Bool('is_debug'),
-            'mode', 'ping_address')
-        input_optional = ('username', 'password', 'opaque1')
-        output_required = ('id', 'name')
+    input = ('cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Bool('is_debug'),
+        'mode', 'ping_address', '-username', '-password', '-opaque1')
+    output = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -97,13 +90,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an SMTP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_smtp_edit_request'
-        response_elem = 'zato_email_smtp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'),
-            Bool('is_debug'), 'mode', 'ping_address')
-        input_optional = ('username', 'password', 'opaque1')
-        output_required = ('id', 'name')
+    input = ('id', 'cluster_id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'),
+        Bool('is_debug'), 'mode', 'ping_address', '-username', '-password', '-opaque1')
+    output = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -152,10 +141,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an SMTP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_smtp_delete_request'
-        response_elem = 'zato_email_smtp_delete_response'
-        input_optional = ('id', 'name', 'should_raise_if_missing')
+    input = ('-id', '-name', '-should_raise_if_missing')
 
     def handle(self):
         input = self.request.input
@@ -189,10 +175,6 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of an SMTP connection.
     """
     password_required = False
-
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_email_smtp_change_password_request'
-        response_elem = 'zato_email_smtp_change_password_response'
 
     def handle(self):
         password1 = self.request.input.get('password1', '')
@@ -242,11 +224,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an SMTP connection to check its configuration.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_email_smtp_ping_request'
-        response_elem = 'zato_email_smtp_ping_response'
-        input_required = ('id',)
-        output_required = ('info',)
+    input = 'id'
+    output = 'info'
 
     def handle(self):
         item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)

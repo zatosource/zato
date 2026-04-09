@@ -10,22 +10,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.common.exception import ZatoException
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns the list of servers (this server only in the new architecture).
     """
-
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_server_get_list_request'
-        response_elem = 'zato_server_get_list_response'
-        input_required = 'cluster_id',
-        output_required = 'id', 'cluster_id', 'name', 'host'
-        output_optional = 'bind_host', 'bind_port', 'last_join_status', \
-            'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date'
-        output_repeated = True
+    input = 'cluster_id',
+    output = 'id', 'cluster_id', 'name', 'host', '-bind_host', '-bind_port', '-last_join_status', \
+        '-last_join_mod_date', '-last_join_mod_by', '-up_status', '-up_mod_date'
+    output_repeated = True
 
     def handle(self):
         self.response.payload[:] = [self._get_server_data()]
@@ -50,13 +45,9 @@ class GetList(AdminService):
 class Edit(AdminService):
     """ Updates a server.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_server_edit_request'
-        response_elem = 'zato_server_edit_response'
-        input_required = ('id', 'name')
-        output_required = ('id', 'cluster_id', 'name', 'host')
-        output_optional = ('bind_host', 'bind_port', 'last_join_status',
-            'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
+    input = 'id', 'name'
+    output = 'id', 'cluster_id', 'name', 'host', '-bind_host', '-bind_port', '-last_join_status', \
+        '-last_join_mod_date', '-last_join_mod_by', '-up_status', '-up_mod_date'
 
     def handle(self):
         self.server.name = self.request.input.name
@@ -71,13 +62,9 @@ class Edit(AdminService):
 class GetByID(AdminService):
     """ Returns a particular server.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_server_get_by_id_request'
-        response_elem = 'zato_server_get_by_id_response'
-        input_required = ('id',)
-        output_required = ('id', 'cluster_id', 'name', 'host')
-        output_optional = ('bind_host', 'bind_port', 'last_join_status',
-            'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
+    input = 'id',
+    output = 'id', 'cluster_id', 'name', 'host', '-bind_host', '-bind_port', '-last_join_status', \
+        '-last_join_mod_date', '-last_join_mod_by', '-up_status', '-up_mod_date'
 
     def handle(self):
         self.response.payload.id = self.server.id
@@ -90,10 +77,7 @@ class GetByID(AdminService):
 class Delete(AdminService):
     """ A server cannot delete itself.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_server_delete_request'
-        response_elem = 'zato_server_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
         msg = 'A server cannot delete itself, id:`{}`, name:`{}`'.format(self.server.id, self.server.name)

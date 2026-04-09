@@ -13,7 +13,7 @@ from uuid import uuid4
 # Zato
 from zato.common.util.api import ping_sap
 from zato.server.service import Integer
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,13 +26,9 @@ _entity_type = 'outgoing_sap'
 class GetList(AdminService):
     """ Returns a list of SAP RFC connections.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_outgoing_sap_get_list_request'
-        response_elem = 'zato_outgoing_sap_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Integer('pool_size'))
-        output_optional = ('sysnr', 'router')
-        output_repeated = True
+    input = 'cluster_id'
+    output = 'id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Integer('pool_size'), '-sysnr', '-router'
+    output_repeated = True
 
     def handle(self):
         items = self.server.config_store.get_list(_entity_type)
@@ -44,12 +40,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new SAP RFC connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sap_create_request'
-        response_elem = 'zato_outgoing_sap_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Integer('pool_size'))
-        input_optional = ('sysnr', 'router')
-        output_required = ('id', 'name')
+    input = 'cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Integer('pool_size'), '-sysnr', '-router'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -80,12 +72,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a SAP RFC connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sap_edit_request'
-        response_elem = 'zato_outgoing_sap_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Integer('pool_size'))
-        input_optional = ('sysnr', 'router')
-        output_required = ('id', 'name')
+    input = 'id', 'cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Integer('pool_size'), \
+        '-sysnr', '-router'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
@@ -131,10 +120,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a SAP RFC connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sap_delete_request'
-        response_elem = 'zato_outgoing_sap_delete_response'
-        input_required = ('id',)
+    input = 'id'
 
     def handle(self):
         target_id = str(self.request.input.id)
@@ -152,10 +138,7 @@ class ChangePassword(AdminService):
     """
     password_required = False
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sap_change_password_request'
-        response_elem = 'zato_outgoing_sap_change_password_response'
-        input_required = 'id', 'password1', 'password2'
+    input = 'id', 'password1', 'password2'
 
     def handle(self):
         input = self.request.input
@@ -173,11 +156,8 @@ class ChangePassword(AdminService):
 class Ping(AdminService):
     """ Pings a SAP connection to check its configuration.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sap_ping_request'
-        response_elem = 'zato_outgoing_sap_ping_response'
-        input_required = ('id',)
-        output_required = ('info',)
+    input = 'id'
+    output = 'info'
 
     def handle(self):
         target_id = str(self.request.input.id)

@@ -16,7 +16,7 @@ from zato.common.api import ZATO_ODB_POOL_NAME
 from zato.common.exception import ZatoException
 from zato.common.util.api import get_sql_engine_display_name
 from zato.server.service import AsIs, Integer
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,13 +29,9 @@ _entity_type = 'outgoing_sql'
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_outgoing_sql_get_list_request'
-        response_elem = 'zato_outgoing_sql_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
-            Integer('pool_size'))
-        output_optional = ('extra', 'engine_display_name')
+    input = 'cluster_id'
+    output = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
+        Integer('pool_size'), '-extra', '-engine_display_name'
 
     def handle(self):
         items = self.server.config_store.get_list(_entity_type)
@@ -53,13 +49,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing SQL connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_create_request'
-        response_elem = 'zato_outgoing_sql_create_response'
-        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
-            Integer('pool_size'))
-        input_optional = ('extra',)
-        output_required = ('id', 'name', 'display_name')
+    input = 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
+        Integer('pool_size'), '-extra'
+    output = 'id', 'name', 'display_name'
 
     def handle(self):
         input = self.request.input
@@ -95,13 +87,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing SQL connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_edit_request'
-        response_elem = 'zato_outgoing_sql_edit_response'
-        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
-            Integer('pool_size'))
-        input_optional = ('extra',)
-        output_required = ('id', 'name', 'display_name')
+    input = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
+        Integer('pool_size'), '-extra'
+    output = 'id', 'name', 'display_name'
 
     def handle(self):
         input = self.request.input
@@ -152,10 +140,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing SQL connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_delete_request'
-        response_elem = 'zato_outgoing_sql_delete_response'
-        input_required = ('id',)
+    input = 'id'
 
     def handle(self):
         target_id = str(self.request.input.id)
@@ -171,10 +156,7 @@ class Delete(AdminService):
 class ChangePassword(AdminService):
     """ Changes the password of an outgoing SQL connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_change_password_request'
-        response_elem = 'zato_outgoing_sql_change_password_response'
-        input_required = 'id', 'password1', 'password2'
+    input = 'id', 'password1', 'password2'
 
     def handle(self):
         input = self.request.input
@@ -192,11 +174,8 @@ class ChangePassword(AdminService):
 class Ping(AdminService):
     """ Pings an SQL database
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_ping_request'
-        response_elem = 'zato_outgoing_sql_ping_response'
-        input_required = 'id', 'should_raise_on_error'
-        output_optional = 'id', 'response_time'
+    input = 'id', 'should_raise_on_error'
+    output = '-id', '-response_time'
 
     def handle(self):
         target_id = str(self.request.input.id)
@@ -257,11 +236,8 @@ class AutoPing(AdminService):
 class GetEngineList(AdminService):
     """ Returns a list of all engines defined in sql.conf.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_outgoing_sql_get_engine_list_request'
-        response_elem = 'zato_outgoing_sql_get_engine_list_response'
-        output_required = (AsIs('id'), 'name')
-        output_repeated = True
+    output = AsIs('id'), 'name'
+    output_repeated = True
 
     def get_data(self):
         out = []

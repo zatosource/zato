@@ -10,7 +10,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from uuid import uuid4
 
 # Zato
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service import Int, Bool
+from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,13 +31,8 @@ def _is_apikey(item):
 class GetList(AdminService):
     """ Returns a list of API keys available.
     """
-
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_apikey_get_list_request'
-        response_elem = 'zato_security_apikey_get_list_response'
-        input_required = 'cluster_id',
-        output_required = 'id', 'name', 'is_active', 'username'
-        output_optional:'any_' = 'header'
+    input = 'cluster_id', Int('-cur_page'), Bool('-paginate'), '-query'
+    output = 'id', 'name', 'is_active', 'username', '-header'
 
     def handle(self) -> 'None':
         items = self.server.config_store.get_list('security')
@@ -49,12 +45,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new API key.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_apikey_create_request'
-        response_elem = 'zato_security_apikey_create_response'
-        input_required = 'name', 'is_active'
-        input_optional:'any_' = 'cluster_id', 'header'
-        output_required = 'id', 'name', 'header'
+    input = 'name', 'is_active', '-cluster_id', '-header'
+    output = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
         input = self.request.input
@@ -85,12 +77,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an API key.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_apikey_edit_request'
-        response_elem = 'zato_security_apikey_edit_response'
-        input_required = 'id', 'name', 'is_active'
-        input_optional:'any_' = 'cluster_id', 'header'
-        output_required = 'id', 'name', 'header'
+    input = 'id', 'name', 'is_active', '-cluster_id', '-header'
+    output = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
         input = self.request.input
@@ -137,12 +125,8 @@ class ChangePassword(AdminService):
     """
     password_required = False
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_apikey_change_password_request'
-        response_elem = 'zato_security_apikey_change_password_response'
-        input_required = 'password1', 'password2'
-        input_optional = 'id', 'name'
-        output_required = 'id',
+    input = 'password1', 'password2', '-id', '-name'
+    output = 'id',
 
     def handle(self) -> 'None':
         input = self.request.input
@@ -185,10 +169,7 @@ class ChangePassword(AdminService):
 class Delete(AdminService):
     """ Deletes an API key.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_apikey_delete_request'
-        response_elem = 'zato_security_apikey_delete_response'
-        input_required = 'id'
+    input = 'id',
 
     def handle(self) -> 'None':
         items = self.server.config_store.get_list('security')

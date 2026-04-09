@@ -90,36 +90,35 @@ class HeadersEnrichedException(Exception):
 # ################################################################################################################################
 
 class _InvokeResponse:
-    """ Wraps an APIClient response to provide the interface that web-admin views expect.
+    """ Wraps an APIClient response so that web-admin views can access .data / .meta directly.
+    No response_elem unwrapping - services return plain JSON.
     """
     def __init__(self, api_response):
         self.inner = api_response.inner
         self.ok = api_response.ok
         self.has_data = api_response.has_data
-        self._raw_data = api_response.data
         self.meta = {}
         self.inner_service_response = ''
 
-        if self.ok and self._raw_data:
-            if isinstance(self._raw_data, dict):
-                self.meta = self._raw_data.pop('_meta', None) or {}
-                keys = list(self._raw_data.keys())
-                if keys:
-                    inner = self._raw_data[keys[0]]
-                    if isinstance(inner, list):
-                        self.data = [Bunch(item) if isinstance(item, dict) else item for item in inner]
-                    elif isinstance(inner, dict):
-                        self.data = Bunch(inner)
-                    else:
-                        self.data = inner
-                else:
-                    self.data = Bunch(self._raw_data) if self._raw_data else []
-            elif isinstance(self._raw_data, list):
-                self.data = [Bunch(item) if isinstance(item, dict) else item for item in self._raw_data]
-            else:
-                self.data = self._raw_data
+        raw = api_response.data
+
+        if not (self.ok and raw):
+            self.data = raw
+            return
+
+        if isinstance(raw, str):
+            try:
+                raw = loads(raw)
+            except Exception:
+                pass
+
+        if isinstance(raw, dict):
+            self.meta = raw.pop('_meta', None) or {}
+            self.data = Bunch(raw)
+        elif isinstance(raw, list):
+            self.data = [Bunch(item) if isinstance(item, dict) else item for item in raw]
         else:
-            self.data = self._raw_data
+            self.data = raw
 
     def __iter__(self):
         if isinstance(self.data, list):

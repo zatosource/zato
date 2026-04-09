@@ -6,11 +6,14 @@ Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import json
+
 # Zato
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.json_internal import dumps
 from zato.server.service import AsIs, Boolean, Integer
-from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,6 +28,15 @@ _GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport',
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+def _fixup_list_fields(data):
+    for key in ('gateway_service_list', 'security_groups'):
+        value = data.get(key)
+        if isinstance(value, str):
+            try:
+                data[key] = json.loads(value)
+            except (json.JSONDecodeError, ValueError):
+                data[key] = []
 
 def _get_entity_type(connection, transport):
     """ Map connection + transport to Rust ConfigStore entity type. """
@@ -43,18 +55,16 @@ def _get_entity_type(connection, transport):
 # ################################################################################################################################
 
 class _BaseGet(AdminService):
-    """ Base class for services returning information about HTTP/SOAP objects.
-    """
-    class SimpleIO:
-        output_required = 'id', 'name', 'is_active', 'is_internal', 'url_path'
-        output_optional = 'service_id', 'service_name', 'security_id', 'security_name', 'sec_type', \
-            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req', \
-            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', \
-            'content_type', 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
-            'content_encoding', Boolean('match_slash'), 'http_accept', \
-                'should_parse_on_input', 'should_validate', 'should_return_errors', \
-                'data_encoding', 'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
-                'security_group_member_count', 'needs_security_group_names', Boolean('validate_tls'), 'gateway_service_list'
+
+    output = 'id', 'name', 'is_active', 'is_internal', 'url_path', \
+        '-service_id', '-service_name', '-security_id', '-security_name', '-sec_type', \
+        '-method', '-soap_action', '-soap_version', '-data_format', '-host', '-ping_method', '-pool_size', \
+        '-merge_url_params_req', '-url_params_pri', '-params_pri', '-serialization_type', '-timeout', \
+        '-content_type', '-cache_id', '-cache_name', Integer('-cache_expiry'), '-cache_type', \
+        '-content_encoding', Boolean('-match_slash'), '-http_accept', \
+        '-should_parse_on_input', '-should_validate', '-should_return_errors', \
+        '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
+        '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list'
 
 # ################################################################################################################################
 
@@ -78,10 +88,7 @@ class _BaseGet(AdminService):
 class Get(_BaseGet):
     """ Returns information about an individual HTTP/SOAP object by its name.
     """
-    class SimpleIO(_BaseGet.SimpleIO):
-        request_elem = 'zato_http_soap_get_request'
-        response_elem = 'zato_http_soap_get_response'
-        input_optional = 'cluster_id', 'id', 'name', 'connection', 'transport'
+    input = '-cluster_id', '-id', '-name', '-connection', '-transport'
 
     def handle(self):
         input = self.request.input
@@ -101,12 +108,10 @@ class Get(_BaseGet):
 class GetList(_BaseGet):
     """ Returns a list of HTTP/SOAP connections.
     """
-    class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
-        request_elem = 'zato_http_soap_get_list_request'
-        response_elem = 'zato_http_soap_get_list_response'
-        input_optional = GetListAdminSIO.input_optional + _GetList_Optional
-        output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
-        output_repeated = True
+    input = '-connection', '-transport', *['-' + f if isinstance(f, str) else f for f in GetListAdminSIO.input_optional], \
+        *['-' + f if isinstance(f, str) else f for f in _GetList_Optional]
+    output = _BaseGet.output + ('-connection', '-transport')
+    output_repeated = True
 
     def _build_sec_lookup(self):
         out = {}
@@ -195,20 +200,16 @@ class GetList(_BaseGet):
 class Create(AdminService):
     """ Creates a new HTTP/SOAP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_http_soap_create_request'
-        response_elem = 'zato_http_soap_create_response'
-        input_required = 'name', 'url_path', 'connection'
-        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
-            'serialization_type', 'timeout', 'content_type', \
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
-            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
-            'is_active', 'transport', 'is_internal', 'cluster_id', \
-            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls'), \
-            'gateway_service_list'
-        output_required = 'id', 'name'
-        output_optional = 'url_path'
+    input = 'name', 'url_path', 'connection', \
+        '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', '-data_format', \
+        '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', '-params_pri', \
+        '-serialization_type', '-timeout', '-content_type', \
+        '-cache_id', Integer('-cache_expiry'), '-content_encoding', Boolean('-match_slash'), '-http_accept', \
+        '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
+        '-is_active', '-transport', '-is_internal', '-cluster_id', \
+        '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
+        '-gateway_service_list'
+    output = 'id', 'name', '-url_path'
 
     def handle(self):
 
@@ -235,6 +236,8 @@ class Create(AdminService):
         data.setdefault('is_internal', False)
         data.setdefault('transport', URL_TYPE.PLAIN_HTTP)
 
+        _fixup_list_fields(data)
+
         name = input.name
         self.server.config_store.set(entity_type, name, data)
 
@@ -247,19 +250,16 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an HTTP/SOAP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_http_soap_edit_request'
-        response_elem = 'zato_http_soap_edit_response'
-        input_required = 'id', 'name', 'url_path', 'connection'
-        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', \
-            'data_format', 'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', \
-            'params_pri', 'serialization_type', 'timeout', 'content_type', \
-            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
-            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
-            'cluster_id', 'is_active', 'transport', \
-            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls'), \
-            'gateway_service_list'
-        output_optional = 'id', 'name'
+    input = 'id', 'name', 'url_path', 'connection', \
+        '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', \
+        '-data_format', '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', \
+        '-params_pri', '-serialization_type', '-timeout', '-content_type', \
+        '-cache_id', Integer('-cache_expiry'), '-content_encoding', Boolean('-match_slash'), '-http_accept', \
+        '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
+        '-cluster_id', '-is_active', '-transport', \
+        '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
+        '-gateway_service_list'
+    output = '-id', '-name'
 
     def handle(self):
 
@@ -285,6 +285,8 @@ class Edit(AdminService):
         data.setdefault('is_active', True)
         data.setdefault('transport', URL_TYPE.PLAIN_HTTP)
 
+        _fixup_list_fields(data)
+
         name = input.name
         old_name = None
         for item in self.server.config_store.get_list(entity_type):
@@ -304,11 +306,8 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an HTTP/SOAP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_http_soap_delete_request'
-        response_elem = 'zato_http_soap_delete_response'
-        input_optional = 'id', 'name', 'connection', 'should_raise_if_missing', 'transport'
-        output_optional = 'details'
+    input = '-id', '-name', '-connection', '-should_raise_if_missing', '-transport'
+    output = '-details'
 
     def handle(self):
 
@@ -340,13 +339,8 @@ class Delete(AdminService):
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_http_soap_ping_request'
-        response_elem = 'zato_http_soap_ping_response'
-        input_required = 'id'
-        input_optional = 'ping_path'
-        output_required = 'id', 'is_success'
-        output_optional = 'info'
+    input = 'id', '-ping_path'
+    output = 'id', 'is_success', '-info'
 
     def handle(self):
 
