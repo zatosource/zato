@@ -339,13 +339,13 @@ class WorkerStore(_WorkerStoreBase):
         result = {}
         sec_def_cache = {}
 
-        security_list = self.server.rust_config_store.get_list('security')
+        security_list = self.server.config_store.get_list('security')
         sec_by_name = {}
         for sec_item in security_list:
             sec_by_name[sec_item.get('name', '')] = sec_item
 
         for entity_type in ('channel_rest', 'channel_soap'):
-            channels = self.server.rust_config_store.get_list(entity_type)
+            channels = self.server.config_store.get_list(entity_type)
             for item in channels:
 
                 transport = 'soap' if entity_type == 'channel_soap' else 'plain_http'

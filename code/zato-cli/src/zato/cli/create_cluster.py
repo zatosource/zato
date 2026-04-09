@@ -319,8 +319,29 @@ class Create(ZatoCommand):
             basic_auth_id, 'Rule engine default user', True, 'rules', 'Rule engine', basic_auth_password, cluster)
         session.add(basic_auth)
 
+        class _FakeConfigStore:
+            def __init__(self):
+                self._data = {}
+                self._counter = 0
+
+            def set(self, config_type, name, value):
+                self._counter += 1
+                value = dict(value)
+                value['id'] = value.get('id', self._counter)
+                self._data.setdefault(config_type, {})[name] = value
+
+            def get(self, config_type, name):
+                return self._data.get(config_type, {}).get(name)
+
+            def get_list(self, config_type):
+                return list(self._data.get(config_type, {}).values())
+
+            def delete(self, config_type, name):
+                self._data.get(config_type, {}).pop(name, None)
+
         class FakeServer:
             cluster_id = 1
+            config_store = _FakeConfigStore()
 
         def fake_server_session():
             return session

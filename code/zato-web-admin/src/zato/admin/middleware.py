@@ -128,6 +128,9 @@ class Client:
     def invoke(self, service_name, request=None, **kwargs):
         needs_exception = kwargs.pop('needs_exception', True)
 
+        logger.info('web-admin -> server: service=%s, auth=(%s, %s)',
+            service_name, self.api_client.username, self.api_client.password[:8] + '...')
+
         api_response = self.api_client.invoke(service_name, request or {})
         response = _InvokeResponse(api_response)
 

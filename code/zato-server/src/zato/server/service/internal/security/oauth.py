@@ -41,7 +41,7 @@ class GetList(AdminService):
         output_optional = 'auth_server_url', 'scopes', 'extra_fields', 'data_format'
 
     def handle(self):
-        items = self.server.rust_config_store.get_list('security')
+        items = self.server.config_store.get_list('security')
         out = [item for item in items if _is_oauth(item)]
         self.response.payload[:] = out
 
@@ -63,10 +63,10 @@ class Create(AdminService):
         input = self.request.input
         name = input.name
 
-        if self.server.rust_config_store.get('security', name):
+        if self.server.config_store.get('security', name):
             raise Exception('Bearer token definition `{}` already exists'.format(name))
 
-        self.server.rust_config_store.set('security', name, {
+        self.server.config_store.set('security', name, {
             'type': 'oauth',
             'name': name,
             'is_active': input.is_active,
@@ -81,7 +81,7 @@ class Create(AdminService):
             'extra_fields': input.get('extra_fields', ''),
         })
 
-        item = self.server.rust_config_store.get('security', name)
+        item = self.server.config_store.get('security', name)
 
         self.response.payload.id = item['id']
         self.response.payload.name = name
@@ -104,7 +104,7 @@ class Edit(AdminService):
         input = self.request.input
         name = input.name
 
-        items = self.server.rust_config_store.get_list('security')
+        items = self.server.config_store.get_list('security')
         old_name = None
         for item in items:
             if _is_oauth(item) and str(item['id']) == str(input.id):
@@ -114,14 +114,14 @@ class Edit(AdminService):
         if not old_name:
             raise Exception('Bearer token definition not found')
 
-        existing = self.server.rust_config_store.get('security', old_name)
+        existing = self.server.config_store.get('security', old_name)
         if not existing:
             raise Exception('Bearer token definition not found')
 
         if name != old_name:
-            if self.server.rust_config_store.get('security', name):
+            if self.server.config_store.get('security', name):
                 raise Exception('Bearer token definition `{}` already exists'.format(name))
-            self.server.rust_config_store.delete('security', old_name)
+            self.server.config_store.delete('security', old_name)
 
         existing['name'] = name
         existing['is_active'] = input.is_active
@@ -136,7 +136,7 @@ class Edit(AdminService):
         existing['extra_fields'] = input.get('extra_fields', '')
         existing['type'] = 'oauth'
 
-        self.server.rust_config_store.set('security', name, existing)
+        self.server.config_store.set('security', name, existing)
 
         self.response.payload.id = existing['id']
         self.response.payload.name = name
@@ -173,7 +173,7 @@ class ChangePassword(AdminService):
             raise Exception('Passwords need to be the same')
 
         if not name and input.get('id'):
-            for item in self.server.rust_config_store.get_list('security'):
+            for item in self.server.config_store.get_list('security'):
                 if _is_oauth(item) and str(item.get('id')) == str(input.id):
                     name = item['name']
                     break
@@ -181,13 +181,13 @@ class ChangePassword(AdminService):
         if not name:
             raise Exception('Either ID or name are required on input')
 
-        existing = self.server.rust_config_store.get('security', name)
+        existing = self.server.config_store.get('security', name)
         if not existing:
             raise Exception('Bearer token definition not found')
 
         existing['password'] = password1
         existing['type'] = 'oauth'
-        self.server.rust_config_store.set('security', name, existing)
+        self.server.config_store.set('security', name, existing)
 
         self.response.payload.id = existing['id']
 
@@ -203,7 +203,7 @@ class Delete(AdminService):
         input_required = 'id'
 
     def handle(self):
-        items = self.server.rust_config_store.get_list('security')
+        items = self.server.config_store.get_list('security')
         target_name = None
         for item in items:
             if _is_oauth(item) and str(item.get('id')) == str(self.request.input.id):
@@ -213,7 +213,7 @@ class Delete(AdminService):
         if not target_name:
             raise Exception('Bearer token definition not found')
 
-        self.server.rust_config_store.delete('security', target_name)
+        self.server.config_store.delete('security', target_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

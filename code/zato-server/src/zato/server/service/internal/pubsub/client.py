@@ -15,7 +15,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 def _get_sec_name_by_id(server, sec_base_id):
     """ Look up security definition name from its ID via the config store.
     """
-    for item in server.rust_config_store.get_list('security'):
+    for item in server.config_store.get_list('security'):
         if item.get('id') == sec_base_id:
             return item['name']
     raise Exception('Security definition with id `{}` not found'.format(sec_base_id))
@@ -34,7 +34,7 @@ class GetList(AdminService):
         output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
 
     def handle(self):
-        items = self.server.rust_config_store.get_list('pubsub_permission')
+        items = self.server.config_store.get_list('pubsub_permission')
         self.response.payload[:] = items
 
 # ################################################################################################################################
@@ -70,7 +70,7 @@ class Create(AdminService):
             'pattern': '\n'.join(patterns),
         }
 
-        self.server.rust_config_store.set('pubsub_permission', sec_name, data)
+        self.server.config_store.set('pubsub_permission', sec_name, data)
 
         self.response.payload.id = sec_name
         self.response.payload.name = sec_name
@@ -109,7 +109,7 @@ class Edit(AdminService):
             'pattern': '\n'.join(patterns),
         }
 
-        self.server.rust_config_store.set('pubsub_permission', sec_name, data)
+        self.server.config_store.set('pubsub_permission', sec_name, data)
 
         self.response.payload.id = input.id
         self.response.payload.name = sec_name
@@ -128,10 +128,10 @@ class Delete(AdminService):
     def handle(self):
         input_id = self.request.input.id
 
-        for item in self.server.rust_config_store.get_list('pubsub_permission'):
+        for item in self.server.config_store.get_list('pubsub_permission'):
             if item.get('id') == input_id or item.get('security') == input_id:
                 sec_name = item.get('security') or item.get('name')
-                self.server.rust_config_store.delete('pubsub_permission', sec_name)
+                self.server.config_store.delete('pubsub_permission', sec_name)
                 return
 
         raise Exception('Pub/sub permission with id `{}` not found'.format(input_id))

@@ -26,7 +26,7 @@ class GetList(AdminService):
         output_optional = 'password',
 
     def handle(self):
-        items = self.server.rust_config_store.get_list('security')
+        items = self.server.config_store.get_list('security')
         out = []
         for item in items:
             if item.get('sec_type') == 'basic_auth' or item.get('type') == 'basic_auth':
@@ -50,13 +50,13 @@ class Create(AdminService):
     def handle(self):
         input = self.request.input
 
-        existing = self.server.rust_config_store.get('security', input.name)
+        existing = self.server.config_store.get('security', input.name)
         if existing:
             raise Exception('HTTP Basic Auth definition `{}` already exists'.format(input.name))
 
         password = uuid4().hex
 
-        self.server.rust_config_store.set('security', input.name, {
+        self.server.config_store.set('security', input.name, {
             'type': 'basic_auth',
             'name': input.name,
             'is_active': input.is_active,
@@ -65,7 +65,7 @@ class Create(AdminService):
             'password': password,
         })
 
-        item = self.server.rust_config_store.get('security', input.name)
+        item = self.server.config_store.get('security', input.name)
 
         self.response.payload.id = item['id']
         self.response.payload.name = item['name']
@@ -87,7 +87,7 @@ class Edit(AdminService):
 
         old_name = input.get('old_name') or input.name
 
-        existing = self.server.rust_config_store.get('security', old_name)
+        existing = self.server.config_store.get('security', old_name)
         if not existing:
             raise Exception('HTTP Basic Auth definition `{}` not found'.format(old_name))
 
@@ -98,11 +98,11 @@ class Edit(AdminService):
         existing['type'] = 'basic_auth'
 
         if old_name != input.name:
-            self.server.rust_config_store.delete('security', old_name)
+            self.server.config_store.delete('security', old_name)
 
-        self.server.rust_config_store.set('security', input.name, existing)
+        self.server.config_store.set('security', input.name, existing)
 
-        item = self.server.rust_config_store.get('security', input.name)
+        item = self.server.config_store.get('security', input.name)
 
         self.response.payload.id = item['id']
         self.response.payload.name = item['name']
@@ -131,12 +131,12 @@ class ChangePassword(AdminService):
         if password1 != password2:
             raise Exception('Passwords need to be the same')
 
-        existing = self.server.rust_config_store.get('security', name)
+        existing = self.server.config_store.get('security', name)
         if not existing:
             raise Exception('HTTP Basic Auth definition `{}` not found'.format(name))
 
         existing['password'] = password1
-        self.server.rust_config_store.set('security', name, existing)
+        self.server.config_store.set('security', name, existing)
 
         self.response.payload.id = existing['id']
 
@@ -151,7 +151,7 @@ class Delete(AdminService):
         input_required = 'id',
 
     def handle(self):
-        items = self.server.rust_config_store.get_list('security')
+        items = self.server.config_store.get_list('security')
         target_name = None
         for item in items:
             if item.get('id') == self.request.input.id:
@@ -161,7 +161,7 @@ class Delete(AdminService):
         if not target_name:
             raise Exception('HTTP Basic Auth definition with id `{}` not found'.format(self.request.input.id))
 
-        self.server.rust_config_store.delete('security', target_name)
+        self.server.config_store.delete('security', target_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

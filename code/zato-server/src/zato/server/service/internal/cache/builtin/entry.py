@@ -36,7 +36,7 @@ class _Base(AdminService):
     """
     def _get_cache_by_input(self, needs_config=False):
         cache_id = int(self.request.input.id)
-        cache_list = self.server.rust_config_store.get_list('cache_builtin')
+        cache_list = self.server.config_store.get_list('cache_builtin')
         cache_item = None
         for item in cache_list:
             if item.get('id') == cache_id:

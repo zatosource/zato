@@ -29,41 +29,41 @@ class GroupsManager:
 # ################################################################################################################################
 
     def create_group(self, group_type:'str', group_name:'str') -> 'str':
-        self.server.rust_config_store.set('groups', group_name, {
+        self.server.config_store.set('groups', group_name, {
             'name': group_name,
             'group_type': group_type,
             'members': [],
         })
-        item = self.server.rust_config_store.get('groups', group_name)
+        item = self.server.config_store.get('groups', group_name)
         return item['id']
 
 # ################################################################################################################################
 
     def edit_group(self, group_id:'int', group_type:'str', group_name:'str') -> 'None':
-        for item in self.server.rust_config_store.get_list('groups'):
+        for item in self.server.config_store.get_list('groups'):
             if item.get('id') == group_id:
                 old_name = item['name']
                 item['name'] = group_name
                 item['group_type'] = group_type
                 if old_name != group_name:
-                    self.server.rust_config_store.delete('groups', old_name)
-                self.server.rust_config_store.set('groups', group_name, item)
+                    self.server.config_store.delete('groups', old_name)
+                self.server.config_store.set('groups', group_name, item)
                 return
         raise Exception('Group with id `{}` not found'.format(group_id))
 
 # ################################################################################################################################
 
     def delete_group(self, group_id:'int') -> 'None':
-        for item in self.server.rust_config_store.get_list('groups'):
+        for item in self.server.config_store.get_list('groups'):
             if item.get('id') == group_id:
-                self.server.rust_config_store.delete('groups', item['name'])
+                self.server.config_store.delete('groups', item['name'])
                 return
 
 # ################################################################################################################################
 
     def get_group_list(self, group_type:'str') -> 'anylist':
         out:'anylist' = []
-        for item in self.server.rust_config_store.get_list('groups'):
+        for item in self.server.config_store.get_list('groups'):
             if not group_type or item.get('group_type', '') == group_type:
                 out.append(item)
         return out
@@ -74,7 +74,7 @@ class GroupsManager:
 
         out:'list_[Member]' = []
 
-        groups = self.server.rust_config_store.get_list('groups')
+        groups = self.server.config_store.get_list('groups')
         for group in groups:
             if group_type and group.get('group_type', '') != group_type:
                 continue
@@ -127,7 +127,7 @@ class GroupsManager:
 
     def add_members_to_group(self, group_id:'int', member_id_list:'strlist') -> 'None':
 
-        for group in self.server.rust_config_store.get_list('groups'):
+        for group in self.server.config_store.get_list('groups'):
             if group.get('id') == group_id:
                 members = list(group.get('members', []))
                 for member_id in member_id_list:
@@ -135,14 +135,14 @@ class GroupsManager:
                     if composite not in members:
                         members.append(composite)
                 group['members'] = members
-                self.server.rust_config_store.set('groups', group['name'], group)
+                self.server.config_store.set('groups', group['name'], group)
                 return
 
 # ################################################################################################################################
 
     def remove_members_from_group(self, group_id:'str', member_id_list:'strlist') -> 'None':
 
-        for group in self.server.rust_config_store.get_list('groups'):
+        for group in self.server.config_store.get_list('groups'):
             if group.get('id') == int(group_id):
                 members = list(group.get('members', []))
                 for member_id in member_id_list:
@@ -150,7 +150,7 @@ class GroupsManager:
                     if composite in members:
                         members.remove(composite)
                 group['members'] = members
-                self.server.rust_config_store.set('groups', group['name'], group)
+                self.server.config_store.set('groups', group['name'], group)
                 return
 
 # ################################################################################################################################

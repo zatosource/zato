@@ -801,8 +801,11 @@ class ServiceInvoker(AdminService):
 
             # All internal services wrap their responses in top-level elements that we need to shed here ..
             if is_internal and response:
+                meta = response.pop('_meta', None)
                 top_level = list(iterkeys(response))[0]
                 response = response[top_level]
+                if meta:
+                    response = {'response': response, '_meta': meta}
 
             # Take dataclass-based models into account
             response = response.to_dict() if isinstance(response, Model) else response

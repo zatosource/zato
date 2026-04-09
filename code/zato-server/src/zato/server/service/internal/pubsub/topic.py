@@ -25,7 +25,7 @@ class GetList(AdminService):
         output_optional = 'description', 'publisher_count', 'subscriber_count'
 
     def handle(self):
-        items = self.server.rust_config_store.get_list('pubsub_topic')
+        items = self.server.config_store.get_list('pubsub_topic')
         self.response.payload[:] = items
 
 # ################################################################################################################################
@@ -52,7 +52,7 @@ class Create(AdminService):
             'description': input.get('description') or '',
         }
 
-        self.server.rust_config_store.set('pubsub_topic', input.name, data)
+        self.server.config_store.set('pubsub_topic', input.name, data)
 
         self.response.payload.id = input.name
         self.response.payload.name = input.name
@@ -81,7 +81,7 @@ class Edit(AdminService):
             'description': input.get('description') or '',
         }
 
-        self.server.rust_config_store.set('pubsub_topic', input.name, data)
+        self.server.config_store.set('pubsub_topic', input.name, data)
 
         self.response.payload.id = input.get('id') or input.name
         self.response.payload.name = input.name
@@ -100,9 +100,9 @@ class Delete(AdminService):
     def handle(self):
         input_id = self.request.input.id
 
-        for item in self.server.rust_config_store.get_list('pubsub_topic'):
+        for item in self.server.config_store.get_list('pubsub_topic'):
             if item.get('id') == input_id or item.get('name') == input_id:
-                self.server.rust_config_store.delete('pubsub_topic', item['name'])
+                self.server.config_store.delete('pubsub_topic', item['name'])
                 return
 
         raise Exception('Pub/sub topic with id `{}` not found'.format(input_id))
@@ -128,7 +128,7 @@ class GetMatches(AdminService):
         else:
             topic_pattern = input_pattern
 
-        topics = self.server.rust_config_store.get_list('pubsub_topic')
+        topics = self.server.config_store.get_list('pubsub_topic')
 
         matcher = PatternMatcher()
         client_id = 'temp_client'

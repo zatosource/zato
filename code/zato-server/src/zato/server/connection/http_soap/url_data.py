@@ -124,6 +124,11 @@ class URLData(PyURLData):
         """
         env = {'HTTP_AUTHORIZATION':http_environ.get('HTTP_AUTHORIZATION')}
         url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
+
+        logger.info('server auth check: path=%s, received=%s, expected_user=%s, expected_pass=%s...',
+            path_info, env.get('HTTP_AUTHORIZATION', '(none)')[:40],
+            sec_def.username, sec_def.password[:8] + '...' if sec_def.password else '(none)')
+
         result = on_basic_auth(cid, env, url_config, False)
 
         if not result:

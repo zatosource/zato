@@ -60,9 +60,17 @@ SKIP_VALUE = 'zato.skip.value'
 def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
+    if isinstance(response.data, list):
+        return response.data, None
+
     meta = response.data.pop('_meta', None)
+
     keys = list(response.data.keys())
-    data = response.data[keys[0]]
+    if keys:
+        data = response.data[keys[0]]
+    else:
+        data = []
+
     return data, meta
 
 # ################################################################################################################################

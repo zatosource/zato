@@ -124,7 +124,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
     odb: 'ODBManager'  # ServiceStore dependency -- removed in Phase 6
-    rust_config_store: 'RustConfigStore'
+    config_store: 'RustConfigStore'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
@@ -270,7 +270,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.rules = RulesManager()
 
         # The Rust-backed config store
-        self.rust_config_store = RustConfigStore()
+        self.config_store = RustConfigStore()
 
         # The main config store (Python side, populated from Rust store)
         self.config = ConfigStore()
@@ -700,7 +700,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if file_name.endswith(('.yaml', '.yml')):
                 file_path = os.path.join(enmasse_dir, file_name)
                 logger.info('Loading enmasse auto-deploy YAML: %s', file_path)
-                self.rust_config_store.load_yaml(file_path)
+                self.config_store.load_yaml(file_path)
 
         self.reload_config()
 
@@ -1004,7 +1004,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         from zato.common.api import PubSub
 
         # Load permissions
-        permissions = self.rust_config_store.get_list('pubsub_permission')
+        permissions = self.config_store.get_list('pubsub_permission')
 
         client_permissions = {}
         username_to_sec_name = {}
@@ -1039,7 +1039,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             log_admin_info(f'Loaded permission -> user:{username}, rules:{len(perms)}')
 
         # Load subscriptions
-        subscriptions = self.rust_config_store.get_list('pubsub_subscription')
+        subscriptions = self.config_store.get_list('pubsub_subscription')
         log_admin_info(f'Loading pub/sub subscriptions -> {len(subscriptions)} subscription(s)')
 
         for sub in subscriptions:
@@ -1085,7 +1085,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         import json
 
         try:
-            self.rust_config_store.load_yaml_string(file_content)
+            self.config_store.load_yaml_string(file_content)
             self.reload_config()
 
             return json.dumps({
@@ -1120,7 +1120,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def export_enmasse(self):
 
         import yaml
-        data = self.rust_config_store.export_to_dict()
+        data = self.config_store.export_to_dict()
         return yaml.dump(data, default_flow_style=False, sort_keys=True)
 
 # ################################################################################################################################
@@ -1130,7 +1130,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         import zato.server.service.internal.pubsub
 
         config_path = os.path.join(os.path.dirname(zato.server.service.internal.pubsub.__file__), 'enmasse.yaml')
-        self.rust_config_store.load_yaml(config_path)
+        self.config_store.load_yaml(config_path)
         self.reload_config()
         return True
 

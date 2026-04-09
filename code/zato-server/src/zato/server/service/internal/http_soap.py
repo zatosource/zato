@@ -90,7 +90,7 @@ class Get(_BaseGet):
         transport = input.get('transport') or 'plain_http'
         entity_type = _get_entity_type(connection, transport)
 
-        items = self.server.rust_config_store.get_list(entity_type)
+        items = self.server.config_store.get_list(entity_type)
         for item in items:
             if item.get('name') == name or str(item.get('id')) == str(name):
                 self.response.payload = item
@@ -118,7 +118,7 @@ class GetList(_BaseGet):
         needs_security_group_names = self.request.input.get('needs_security_group_names') or False
 
         entity_type = _get_entity_type(connection, transport)
-        items = self.server.rust_config_store.get_list(entity_type)
+        items = self.server.config_store.get_list(entity_type)
 
         security_groups_member_count = self.invoke('zato.groups.get-member-count', group_type=Groups.Type.API_Clients)
 
@@ -202,7 +202,7 @@ class Create(AdminService):
         data.setdefault('transport', URL_TYPE.PLAIN_HTTP)
 
         name = input.name
-        self.server.rust_config_store.set(entity_type, name, data)
+        self.server.config_store.set(entity_type, name, data)
 
         self.response.payload.id = data.get('id', name)
         self.response.payload.name = name
@@ -253,14 +253,14 @@ class Edit(AdminService):
 
         name = input.name
         old_name = None
-        for item in self.server.rust_config_store.get_list(entity_type):
+        for item in self.server.config_store.get_list(entity_type):
             if str(item.get('id')) == str(input.id):
                 old_name = item.get('name')
                 break
         if old_name and old_name != name:
-            self.server.rust_config_store.delete(entity_type, old_name)
+            self.server.config_store.delete(entity_type, old_name)
 
-        self.server.rust_config_store.set(entity_type, name, data)
+        self.server.config_store.set(entity_type, name, data)
 
         self.response.payload.id = data.get('id', name)
         self.response.payload.name = name
@@ -288,7 +288,7 @@ class Delete(AdminService):
 
         entity_type = _get_entity_type(connection, transport)
         delete_key = None
-        for item in self.server.rust_config_store.get_list(entity_type):
+        for item in self.server.config_store.get_list(entity_type):
             if item.get('name') == name or str(item.get('id')) == str(name):
                 delete_key = item['name']
                 break
@@ -298,7 +298,7 @@ class Delete(AdminService):
                 raise Exception('HTTP/SOAP object with id or name `{}` not found'.format(name))
             return
 
-        self.server.rust_config_store.delete(entity_type, delete_key)
+        self.server.config_store.delete(entity_type, delete_key)
         self.response.payload.details = 'OK, deleted'
 
 # ################################################################################################################################
@@ -319,7 +319,7 @@ class Ping(AdminService):
         name = self.request.input.id
 
         for entity_type in ('outgoing_rest', 'outgoing_soap'):
-            items = self.server.rust_config_store.get_list(entity_type)
+            items = self.server.config_store.get_list(entity_type)
             for item in items:
                 if str(item.get('id')) == str(name) or item.get('name') == str(name):
                     transport = item.get('transport', 'plain_http')

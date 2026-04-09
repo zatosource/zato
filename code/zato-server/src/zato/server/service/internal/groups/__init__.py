@@ -24,13 +24,13 @@ if 0:
 # ################################################################################################################################
 
 def _next_group_id(server) -> 'int':
-    items = server.rust_config_store.get_list('groups')
+    items = server.config_store.get_list('groups')
     return max((int(x.get('id') or 0) for x in items), default=0) + 1
 
 # ################################################################################################################################
 
 def _find_group_by_id(server, group_id) -> 'dict | None':
-    for item in server.rust_config_store.get_list('groups'):
+    for item in server.config_store.get_list('groups'):
         if str(item.get('id')) == str(group_id):
             return item
     return None
@@ -78,7 +78,7 @@ class GetList(Service):
         needs_members = self.request.input.needs_members
         needs_short_members = self.request.input.needs_short_members
 
-        group_list = list(self.server.rust_config_store.get_list('groups'))
+        group_list = list(self.server.config_store.get_list('groups'))
         member_count = self.invoke(GetMemberCount, group_type=group_type)
 
         for item in group_list:
@@ -129,7 +129,7 @@ class Create(Service):
             'name': input.name,
             'members': [],
         }
-        self.server.rust_config_store.set('groups', input.name, data)
+        self.server.config_store.set('groups', input.name, data)
 
         self.invoke(
             EditMemberList,
@@ -168,14 +168,14 @@ class Edit(Service):
 
         old_name = group['name']
         if old_name != input.name:
-            self.server.rust_config_store.delete('groups', old_name)
+            self.server.config_store.delete('groups', old_name)
 
         data = {
             'id': int(input.id),
             'name': input.name,
             'members': list(group.get('members') or []),
         }
-        self.server.rust_config_store.set('groups', input.name, data)
+        self.server.config_store.set('groups', input.name, data)
 
         if input.members:
 
@@ -235,7 +235,7 @@ class Delete(Service):
         if not group:
             return
 
-        self.server.rust_config_store.delete('groups', group['name'])
+        self.server.config_store.delete('groups', group['name'])
 
         # .. make sure the database configuration of channels using it is also updated ..
         to_update = []
@@ -294,7 +294,7 @@ class GetMemberCount(Service):
         input = self.request.input
 
         member_count = {}
-        for grp in self.server.rust_config_store.get_list('groups'):
+        for grp in self.server.config_store.get_list('groups'):
             gid = grp.get('id')
             members = grp.get('members') or []
             member_count[gid] = len(members)
@@ -370,7 +370,7 @@ class EditMemberList(Service):
             'name': name,
             'members': members,
         }
-        self.server.rust_config_store.set('groups', name, data)
+        self.server.config_store.set('groups', name, data)
 
 # ################################################################################################################################
 # ################################################################################################################################

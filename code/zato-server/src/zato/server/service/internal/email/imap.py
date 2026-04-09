@@ -66,7 +66,7 @@ class GetList(AdminService):
             'filter_criteria')
 
     def handle(self):
-        items = [_enrich_imap_list_item(dict(x)) for x in self.server.rust_config_store.get_list(_entity_type)]
+        items = [_enrich_imap_list_item(dict(x)) for x in self.server.config_store.get_list(_entity_type)]
         self.response.payload[:] = items
 
 # ################################################################################################################################
@@ -87,7 +87,7 @@ class Create(AdminService):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        store = self.server.rust_config_store
+        store = self.server.config_store
 
         if store.get(_entity_type, input.name):
             raise BadRequest(self.cid, 'An IMAP connection `{}` already exists in this cluster'.format(input.name))
@@ -139,7 +139,7 @@ class Edit(AdminService):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        store = self.server.rust_config_store
+        store = self.server.config_store
 
         old = _item_by_id(store.get_list(_entity_type), input.id)
         if not old:
@@ -199,7 +199,7 @@ class Delete(AdminService):
 
     def handle(self):
         input = self.request.input
-        store = self.server.rust_config_store
+        store = self.server.config_store
         input_id = input.get('id')
         input_name = input.get('name')
 
@@ -253,7 +253,7 @@ class ChangePassword(ChangePasswordBase):
 
             instance_id = self.request.input.get('id')
             instance_name = self.request.input.name
-            store = self.server.rust_config_store
+            store = self.server.config_store
 
             item = None
             if instance_id:
@@ -289,7 +289,7 @@ class Ping(AdminService):
         output_optional = 'info'
 
     def handle(self):
-        item = _item_by_id(self.server.rust_config_store.get_list(_entity_type), self.request.input.id)
+        item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
         if not item:
             raise BadRequest(self.cid, 'Could not find IMAP connection with id `{}`'.format(self.request.input.id))
 

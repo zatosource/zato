@@ -31,7 +31,7 @@ class GetList(AdminService):
         output_optional = ('data_format',)
 
     def handle(self):
-        items = self.server.rust_config_store.get_list(_entity_type)
+        items = self.server.config_store.get_list(_entity_type)
         self.response.payload[:] = items
 
 # ################################################################################################################################
@@ -71,7 +71,7 @@ class Create(AdminService):
         }
 
         name = input.name
-        self.server.rust_config_store.set(_entity_type, name, data)
+        self.server.config_store.set(_entity_type, name, data)
 
         self.response.payload.id = data.get('id', name)
         self.response.payload.name = name
@@ -112,7 +112,7 @@ class Edit(AdminService):
         }
 
         name = input.name
-        self.server.rust_config_store.set(_entity_type, name, data)
+        self.server.config_store.set(_entity_type, name, data)
 
         self.response.payload.id = data.get('id', name)
         self.response.payload.name = name
@@ -132,7 +132,7 @@ class Delete(AdminService):
 
     def handle(self):
         name = str(self.request.input.id)
-        self.server.rust_config_store.delete(_entity_type, name)
+        self.server.config_store.delete(_entity_type, name)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -38,7 +38,7 @@ class GetList(AdminService):
         output_optional = ('extra', 'engine_display_name')
 
     def handle(self):
-        items = self.server.rust_config_store.get_list(_entity_type)
+        items = self.server.config_store.get_list(_entity_type)
         for item in items:
             extra = item.get('extra', '')
             if isinstance(extra, bytes):
@@ -83,7 +83,7 @@ class Create(AdminService):
         }
 
         name = input.name
-        self.server.rust_config_store.set(_entity_type, name, data)
+        self.server.config_store.set(_entity_type, name, data)
 
         self.response.payload.id = data.get('id', name)
         self.response.payload.name = name
@@ -114,10 +114,10 @@ class Edit(AdminService):
         target_id = str(input.id)
         old_name = None
         existing = None
-        for item in self.server.rust_config_store.get_list(_entity_type):
+        for item in self.server.config_store.get_list(_entity_type):
             if str(item.get('id')) == target_id:
                 old_name = item['name']
-                existing = self.server.rust_config_store.get(_entity_type, old_name)
+                existing = self.server.config_store.get(_entity_type, old_name)
                 if not existing:
                     existing = dict(item)
                 break
@@ -138,9 +138,9 @@ class Edit(AdminService):
         })
 
         if old_name != input.name:
-            self.server.rust_config_store.delete(_entity_type, old_name)
+            self.server.config_store.delete(_entity_type, old_name)
 
-        self.server.rust_config_store.set(_entity_type, input.name, existing)
+        self.server.config_store.set(_entity_type, input.name, existing)
 
         self.response.payload.id = existing.get('id', input.name)
         self.response.payload.name = input.name
@@ -159,9 +159,9 @@ class Delete(AdminService):
 
     def handle(self):
         target_id = str(self.request.input.id)
-        for item in self.server.rust_config_store.get_list(_entity_type):
+        for item in self.server.config_store.get_list(_entity_type):
             if str(item.get('id')) == target_id or item.get('name') == target_id:
-                self.server.rust_config_store.delete(_entity_type, item['name'])
+                self.server.config_store.delete(_entity_type, item['name'])
                 return
         raise Exception('Outgoing SQL connection with id `{}` not found'.format(target_id))
 
@@ -179,11 +179,11 @@ class ChangePassword(AdminService):
     def handle(self):
         input = self.request.input
         target_id = str(input.id)
-        items = self.server.rust_config_store.get_list(_entity_type)
+        items = self.server.config_store.get_list(_entity_type)
         for item in items:
             if str(item.get('id')) == target_id or item.get('name') == target_id:
                 item['password'] = input.password1
-                self.server.rust_config_store.set(_entity_type, item['name'], item)
+                self.server.config_store.set(_entity_type, item['name'], item)
                 return
 
 # ################################################################################################################################
@@ -200,7 +200,7 @@ class Ping(AdminService):
 
     def handle(self):
         target_id = str(self.request.input.id)
-        items = self.server.rust_config_store.get_list(_entity_type)
+        items = self.server.config_store.get_list(_entity_type)
 
         item_name = None
         for item in items:

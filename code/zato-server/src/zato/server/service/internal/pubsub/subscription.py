@@ -107,7 +107,7 @@ def get_topic_link(topic_name:'str', is_pub_enabled:'bool', is_delivery_enabled:
 def _get_sec_by_id(server, sec_base_id):
     """ Look up security definition from its ID via the config store.
     """
-    for item in server.rust_config_store.get_list('security'):
+    for item in server.config_store.get_list('security'):
         if item.get('id') == sec_base_id:
             return item
     raise Exception('Security definition with id `{}` not found'.format(sec_base_id))
@@ -117,7 +117,7 @@ def _get_sec_by_id(server, sec_base_id):
 def _find_security(server, username=None, sec_name=None):
     """ Look up security definition by username or sec_name via the config store.
     """
-    for item in server.rust_config_store.get_list('security'):
+    for item in server.config_store.get_list('security'):
         if username and item.get('username') == username:
             return item
         if sec_name and item.get('name') == sec_name:
@@ -130,7 +130,7 @@ def _find_security(server, username=None, sec_name=None):
 def _topic_exists(server, topic_name):
     """ Check whether a topic exists in the config store.
     """
-    for item in server.rust_config_store.get_list('pubsub_topic'):
+    for item in server.config_store.get_list('pubsub_topic'):
         if item.get('name') == topic_name:
             return True
     return False
@@ -141,7 +141,7 @@ def _check_permission(server, sec_name, topic_name):
     """ Check whether a security definition has permission for a topic using config store permissions.
     Returns True if allowed, False otherwise.
     """
-    for perm in server.rust_config_store.get_list('pubsub_permission'):
+    for perm in server.config_store.get_list('pubsub_permission'):
         perm_sec = perm.get('security') or perm.get('name')
         if perm_sec != sec_name:
             continue
@@ -176,7 +176,7 @@ class GetList(AdminService):
         output_repeated = True
 
     def handle(self):
-        items = self.server.rust_config_store.get_list('pubsub_subscription')
+        items = self.server.config_store.get_list('pubsub_subscription')
         self.response.payload[:] = items
 
 # ################################################################################################################################
@@ -231,7 +231,7 @@ class Create(AdminService):
             'topic_link_list': ', '.join(sorted(topic_link_list)),
         }
 
-        self.server.rust_config_store.set('pubsub_subscription', config_key, data)
+        self.server.config_store.set('pubsub_subscription', config_key, data)
 
         self.response.payload.id = config_key
         self.response.payload.sub_key = sub_key
@@ -268,11 +268,11 @@ class Edit(AdminService):
         if not topic_data_list:
             self.logger.info('No topics provided for subscription %s, deleting subscription', input.sub_key)
 
-            for item in self.server.rust_config_store.get_list('pubsub_subscription'):
+            for item in self.server.config_store.get_list('pubsub_subscription'):
                 if item.get('sub_key') == input.sub_key:
                     sec_name = item.get('security') or item.get('sec_name')
                     config_key = '{}:{}'.format(sec_name, item.get('delivery_type', ''))
-                    self.server.rust_config_store.delete('pubsub_subscription', config_key)
+                    self.server.config_store.delete('pubsub_subscription', config_key)
                     break
 
             sec_def = _get_sec_by_id(self.server, input.sec_base_id)
@@ -302,7 +302,7 @@ class Edit(AdminService):
 
         # Find the existing entry to preserve created/sub_key
         existing = None
-        for item in self.server.rust_config_store.get_list('pubsub_subscription'):
+        for item in self.server.config_store.get_list('pubsub_subscription'):
             if item.get('sub_key') == input.sub_key:
                 existing = item
                 break
@@ -324,7 +324,7 @@ class Edit(AdminService):
             'topic_link_list': ', '.join(sorted(topic_link_list)),
         }
 
-        self.server.rust_config_store.set('pubsub_subscription', config_key, data)
+        self.server.config_store.set('pubsub_subscription', config_key, data)
 
         self.response.payload.id = config_key
         self.response.payload.sub_key = input.sub_key
@@ -354,7 +354,7 @@ class Delete(AdminService):
         input_id = self.request.input.get('id')
         sub_key = self.request.input.get('sub_key')
 
-        for item in self.server.rust_config_store.get_list('pubsub_subscription'):
+        for item in self.server.config_store.get_list('pubsub_subscription'):
             match_by_id = input_id and (item.get('id') == input_id)
             match_by_key = sub_key and (item.get('sub_key') == sub_key)
 
@@ -362,7 +362,7 @@ class Delete(AdminService):
                 sec_name = item.get('security') or item.get('sec_name')
                 delivery_type = item.get('delivery_type', '')
                 config_key = '{}:{}'.format(sec_name, delivery_type)
-                self.server.rust_config_store.delete('pubsub_subscription', config_key)
+                self.server.config_store.delete('pubsub_subscription', config_key)
                 return
 
         raise Exception('Pub/sub subscription not found (id:`{}`, sub_key:`{}`)'.format(input_id, sub_key))

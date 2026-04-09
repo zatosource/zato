@@ -38,7 +38,7 @@ class GetByID(AdminService):
         output_optional = output_optional
 
     def handle(self):
-        for item in self.server.rust_config_store.get_list('security'):
+        for item in self.server.config_store.get_list('security'):
             if str(item.get('id')) == str(self.request.input.id):
                 out = dict(item)
                 if 'sec_type' not in out and out.get('type'):
@@ -97,7 +97,7 @@ class GetList(AdminService):
         else:
             query_criteria = []
 
-        items = self.server.rust_config_store.get_list('security')
+        items = self.server.config_store.get_list('security')
 
         for raw in items:
             row = dict(raw)

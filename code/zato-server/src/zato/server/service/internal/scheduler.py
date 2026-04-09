@@ -44,7 +44,7 @@ def _item_by_id(items, id_):
 class _SchedulerAdmin(AdminService):
 
     def _service_by_name(self, service_name):
-        for s in self.server.rust_config_store.get_list('service'):
+        for s in self.server.config_store.get_list('service'):
             if s.get('name') == service_name:
                 return s
         return None
@@ -73,7 +73,7 @@ def _create_edit(self, action):
     service_name = input.service
     logger = self.logger
     cid = self.cid
-    store = self.server.rust_config_store
+    store = self.server.config_store
 
     if job_type not in (SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED):
         msg = 'Unrecognized job type [{}]'.format(job_type)
@@ -201,7 +201,7 @@ class GetList(_Get):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        items = [self._enrich_job(dict(x)) for x in self.server.rust_config_store.get_list(_entity_type)]
+        items = [self._enrich_job(dict(x)) for x in self.server.config_store.get_list(_entity_type)]
         if input.get('service_name'):
             items = [x for x in items if x.get('service_name') == input.service_name or x.get('service') == input.service_name]
         self.response.payload[:] = items
@@ -221,7 +221,7 @@ class GetByID(_Get):
         output_repeated = False
 
     def handle(self):
-        item = _item_by_id(self.server.rust_config_store.get_list(_entity_type), self.request.input.id)
+        item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
         if not item:
             raise ZatoException(self.cid, 'Job not found')
         self.response.payload = self._enrich_job(item)
@@ -241,7 +241,7 @@ class GetByName(_Get):
         output_repeated = False
 
     def handle(self):
-        item = self.server.rust_config_store.get(_entity_type, self.request.input.name)
+        item = self.server.config_store.get(_entity_type, self.request.input.name)
         if not item:
             raise ZatoException(self.cid, 'Job not found')
         self.response.payload = self._enrich_job(item)
@@ -284,7 +284,7 @@ class Delete(_SchedulerAdmin):
         input_required = ('id',)
 
     def handle(self):
-        store = self.server.rust_config_store
+        store = self.server.config_store
         try:
             item = _item_by_id(store.get_list(_entity_type), self.request.input.id)
             if not item:
@@ -309,7 +309,7 @@ class Execute(_SchedulerAdmin):
 
     def handle(self):
         try:
-            item = _item_by_id(self.server.rust_config_store.get_list(_entity_type), self.request.input.id)
+            item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
             if not item:
                 raise ZatoException(self.cid, 'Job not found')
             msg = {'action': SCHEDULER_MSG.EXECUTE.value, 'name': item['name']}

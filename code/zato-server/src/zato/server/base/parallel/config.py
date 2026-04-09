@@ -42,7 +42,7 @@ class ConfigLoader:
     def set_up_security(self:'ParallelServer', _cluster_id:'int') -> 'None':
 
         # Get all security definitions from the Rust store
-        all_sec = self.rust_config_store.get_list('security')
+        all_sec = self.config_store.get_list('security')
 
         # API keys
         apikey_bunch = Bunch()
@@ -76,7 +76,7 @@ class ConfigLoader:
     def _config_dict_from_rust(self, name, entity_type):
         """ Build a ConfigDict from a Rust ConfigStore entity list.
         """
-        items = self.rust_config_store.get_list(entity_type)
+        items = self.config_store.get_list(entity_type)
         impl = Bunch()
         for item in items:
             item_name = item.get('name', '')
@@ -136,7 +136,7 @@ class ConfigLoader:
         # HTTP/SOAP channels from ConfigStore (includes default-objects.yaml + any enmasse)
         http_soap = []
 
-        for item in self.rust_config_store.get_list('channel_rest'):
+        for item in self.config_store.get_list('channel_rest'):
 
             hs_item = dict(item)
             hs_item['name'] = resolve_name(hs_item.get('name', ''))
@@ -219,13 +219,13 @@ class ConfigLoader:
         secrets_yaml_path = os.path.join(self.repo_location, 'secrets.yaml')
         if os.path.exists(secrets_yaml_path):
             logger.info('Loading secrets from %s', secrets_yaml_path)
-            self.rust_config_store.load_yaml(secrets_yaml_path)
+            self.config_store.load_yaml(secrets_yaml_path)
 
         # Then load default objects -- shipped with the codebase (channels referencing security by name)
         from zato.common.data import default_objects_yaml_path
         if os.path.exists(default_objects_yaml_path):
             logger.info('Loading default objects from %s', default_objects_yaml_path)
-            self.rust_config_store.load_yaml(default_objects_yaml_path)
+            self.config_store.load_yaml(default_objects_yaml_path)
 
         # Then load any enmasse YAML from external directories (Docker, deploy_auto_from)
         enmasse_dirs = []
@@ -243,7 +243,7 @@ class ConfigLoader:
             for pattern in ('*.yaml', '*.yml'):
                 for yaml_path in sorted(glob.glob(os.path.join(enmasse_dir, pattern))):
                     logger.info('Loading enmasse YAML from %s', yaml_path)
-                    self.rust_config_store.load_yaml(yaml_path)
+                    self.config_store.load_yaml(yaml_path)
 
 # ################################################################################################################################
 

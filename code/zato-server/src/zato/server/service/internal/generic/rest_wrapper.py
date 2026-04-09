@@ -188,11 +188,11 @@ class ChangePassword(_WrapperBase):
         password = self.server.encrypt(password)
 
         # Update via the ConfigStore
-        outconn_list = self.server.rust_config_store.get_list('outgoing_rest')
+        outconn_list = self.server.config_store.get_list('outgoing_rest')
         for item in outconn_list:
             if item.get('id') == id:
                 item['password'] = password
-                self.server.rust_config_store.set('outgoing_rest', item['name'], item)
+                self.server.config_store.set('outgoing_rest', item['name'], item)
                 break
 
         # Notify all the members of the cluster of the change

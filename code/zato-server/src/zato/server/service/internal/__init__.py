@@ -253,7 +253,7 @@ class ChangePasswordBase(AdminService):
             raise Exception('Passwords need to be the same')
 
         if not instance_name and instance_id:
-            for item in self.server.rust_config_store.get_list(entity_type):
+            for item in self.server.config_store.get_list(entity_type):
                 if item.get('id') == instance_id:
                     instance_name = item['name']
                     break
@@ -261,12 +261,12 @@ class ChangePasswordBase(AdminService):
         if not instance_name:
             raise Exception('Either ID or name are required on input')
 
-        existing = self.server.rust_config_store.get(entity_type, instance_name)
+        existing = self.server.config_store.get(entity_type, instance_name)
         if not existing:
             raise Exception('Could not find `{}` in `{}`'.format(instance_name, entity_type))
 
         existing['password'] = password1_decrypted
-        self.server.rust_config_store.set(entity_type, instance_name, existing)
+        self.server.config_store.set(entity_type, instance_name, existing)
 
         self.response.payload.id = existing.get('id') or instance_id
 
