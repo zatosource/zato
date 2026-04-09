@@ -519,7 +519,6 @@ class ServiceStore:
                     # .. generate the input model class now ..
                     model_input = DataClassModel.build_model_from_flat_input(
                         service_store.server,
-                        service_store.server.sio_config,
                         SIOProcessor,
                         name,
                         sio_input
@@ -543,7 +542,6 @@ class ServiceStore:
                     # .. generate the output model class now ..
                     model_output = DataClassModel.build_model_from_flat_input(
                         service_store.server,
-                        service_store.server.sio_config,
                         SIOProcessor,
                         name,
                         sio_output
@@ -554,9 +552,9 @@ class ServiceStore:
 
             if has_input_data_class or has_output_data_class:
                 SIOClass = DataClassSimpleIO
-                _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_) # type: ignore
+                _ = SIOClass.attach_sio(service_store.server, None, class_) # type: ignore
             else:
-                _ = SIOProcessor.attach_sio(service_store.server, service_store.server.sio_config, class_)
+                _ = SIOProcessor.attach_sio(service_store.server, None, class_)
 
         # May be None during unit-tests - not every test provides it.
         if service_store:

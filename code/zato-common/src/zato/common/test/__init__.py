@@ -25,7 +25,7 @@ from six import string_types
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.api import CHANNEL, DATA_FORMAT
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
@@ -460,15 +460,9 @@ class ServiceTestCase(TestCase):
         worker_store.worker_config.cloud_aws_s3 = MagicMock(return_value=None)
         worker_store.invoke_matcher.is_allowed = MagicMock(return_value=True)
 
-        simple_io_config = {
-            'int_parameters': SIMPLE_IO.INT_PARAMETERS.VALUES,
-            'int_parameter_suffixes': SIMPLE_IO.INT_PARAMETERS.SUFFIXES,
-            'bool_parameter_prefixes': SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES,
-        }
-
         class_.update(
             instance, channel, TestServer(service_store_name_to_impl_name, service_store_impl_name_to_service, worker_store),
-            None, worker_store, new_cid(), request_data, request_data, simple_io_config=simple_io_config,
+            None, worker_store, new_cid(), request_data, request_data,
             data_format=data_format, job_type=job_type)
 
         def get_data(self, *ignored_args, **ignored_kwargs):

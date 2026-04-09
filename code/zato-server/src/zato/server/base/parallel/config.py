@@ -170,16 +170,7 @@ class ConfigLoader:
 
         self.config.http_soap = http_soap
 
-        # SimpleIO
         self.config.simple_io = ConfigDict('simple_io', Bunch())
-
-        int_exact = self.sio_config.int_config.exact
-        int_suffixes = self.sio_config.int_config.suffixes
-        bool_prefixes = self.sio_config.bool_config.prefixes
-
-        self.config.simple_io['int_parameters'] = int_exact
-        self.config.simple_io['int_parameter_suffixes'] = int_suffixes
-        self.config.simple_io['bool_parameter_prefixes'] = bool_prefixes
 
         # E-mail - SMTP
         self.config.email_smtp = self._config_dict_from_rust('email_smtp', 'email_smtp')

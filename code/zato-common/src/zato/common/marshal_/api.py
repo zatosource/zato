@@ -191,9 +191,8 @@ class Model(BaseModel):
 
     @staticmethod
     def build_model_from_flat_input(
-        server,            # type: ParallelServer
-        sio_server_config, # type: ignore
-        _SIOProcessor,     # type: ignore
+        server,        # type: ParallelServer
+        _SIOProcessor, # type: ignore
         name,  # type: str
         input, # type: str | tuplist
     ) -> 'type_[BaseModel]':

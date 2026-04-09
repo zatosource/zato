@@ -352,8 +352,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
 
-    sio_config = None
-
     server_config.main.token = server_config.main.token.encode('utf8')
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
@@ -376,7 +374,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     startup_callable_tool.invoke(SERVER_STARTUP.PHASE.FS_CONFIG_ONLY, kwargs={
         'server_config': server_config,
         'pickup_config': pickup_config,
-        'sio_config': sio_config,
         'base_dir': base_dir,
     })
 
@@ -447,7 +444,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
-    server.sio_config = sio_config
     server.user_config.update(server_config.user_config_items)
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']

@@ -185,7 +185,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pickup_config = Bunch()
         self.logging_config = Bunch()
         self.logging_conf_path = 'server-'
-        self.sio_config = None # type: ignore
         self.connector_server_grace_time = None
         self.id = -1
         self.name = ''
