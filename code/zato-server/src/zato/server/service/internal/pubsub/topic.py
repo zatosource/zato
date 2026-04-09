@@ -22,7 +22,7 @@ class GetList(AdminService):
 
     def handle(self):
         items = self.server.config_store.get_list('pubsub_topic')
-        self.response.payload[:] = items
+        self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
 # ################################################################################################################################

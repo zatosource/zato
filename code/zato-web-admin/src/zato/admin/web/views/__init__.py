@@ -440,11 +440,15 @@ class Index(BaseView):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
-        names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
+        sio_names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
         for msg_item in (item_list or []):
 
             item = self.output_class()
+
+            # .. use the SIO field names if declared, otherwise take all keys from the response item.
+            names = sio_names if sio_names else msg_item.keys()
+
             for name in sorted(names):
                 value = getattr(msg_item, name, None)
                 if value is not None:
@@ -488,8 +492,6 @@ class Index(BaseView):
             self.set_input()
 
             return_data = {'cluster_id':self.cluster_id}
-            output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
-
             response = None
 
             if self.can_invoke_admin_service():
@@ -501,11 +503,8 @@ class Index(BaseView):
                 if response and response.ok:
                     return_data['response_inner'] = response.inner_service_response
 
-                    if output_repeated:
-                        data = response.data
-                        is_extracted = isinstance(data, list)
-                        self.handle_item_list(data, is_extracted)
-
+                    if isinstance(response.data, list):
+                        self.handle_item_list(response.data, True)
                     else:
                         self._handle_item(response.data)
                 else:
@@ -605,7 +604,10 @@ class CreateEdit(BaseView):
 
                 return_data.update(initial_return_data)
 
-                for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
+                sio_output = tuple(chain(self.SimpleIO.output_optional, self.SimpleIO.output_required))
+                output_names = sio_output if sio_output else response.data.keys()
+
+                for name in output_names:
                     if name not in initial_return_data:
                         value = getattr(response.data, name, None)
                         if value:

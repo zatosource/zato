@@ -278,7 +278,7 @@ class GetChannelList(AdminService):
                         continue
                     out.append(Bunch(id=item['id'], name=item['name']))
 
-        self.response.payload[:] = out
+        self.response.payload = self._paginate_list(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -598,7 +598,7 @@ class GetDeploymentInfoList(AdminService):
         return out
 
     def handle(self):
-        self.response.payload[:] = self.get_data()
+        self.response.payload = self._paginate_list(self.get_data())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -729,12 +729,6 @@ class ServiceInvoker(AdminService):
                 http_environ={'HTTP_METHOD':self.request.http.method},
                 zato_response_headers_container=zato_response_headers_container
                 )
-
-            # Extract _meta if present and merge it into the top-level response
-            if response and isinstance(response, dict):
-                meta = response.pop('_meta', None)
-                if meta:
-                    response['_meta'] = meta
 
             response = response.to_dict() if isinstance(response, Model) else response
 

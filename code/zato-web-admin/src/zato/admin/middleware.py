@@ -114,7 +114,15 @@ class _InvokeResponse:
 
         if isinstance(raw, dict):
             self.meta = raw.pop('_meta', None) or {}
-            self.data = Bunch(raw)
+
+            # .. GetList responses have a "data" key with the list of items ..
+            if 'data' in raw and isinstance(raw['data'], list):
+                self.data = [Bunch(item) if isinstance(item, dict) else item for item in raw['data']]
+
+            # .. all other dict responses are plain key-value payloads.
+            else:
+                self.data = Bunch(raw)
+
         elif isinstance(raw, list):
             self.data = [Bunch(item) if isinstance(item, dict) else item for item in raw]
         else:

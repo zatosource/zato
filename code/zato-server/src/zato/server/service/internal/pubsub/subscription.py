@@ -205,7 +205,7 @@ class GetList(AdminService):
 
             out.append(enriched)
 
-        self.response.payload[:] = out
+        self.response.payload = self._paginate_list(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -413,8 +413,10 @@ class _BaseModifyTopicList(AdminService):
             'sec_base_id': sec_base_id
         }
 
-        get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request, skip_response_elem=True)
+        get_list_response = self.invoke('zato.pubsub.subscription.get-list', get_list_request)
 
+        if isinstance(get_list_response, dict):
+            return get_list_response.get('data', [])
         return get_list_response
 
 # ################################################################################################################################

@@ -239,7 +239,8 @@ class Delete(Service):
 
         # .. make sure the database configuration of channels using it is also updated ..
         to_update = []
-        data = self.invoke('zato.http-soap.get-list', connection=CONNECTION.CHANNEL, paginate=False, skip_response_elem=True)
+        response = self.invoke('zato.http-soap.get-list', connection=CONNECTION.CHANNEL, paginate=False)
+        data = response.get('data', []) if isinstance(response, dict) else response
 
         for item in data:
             if security_groups := item.get('security_groups'):
@@ -320,7 +321,8 @@ class EditMemberList(Service):
         member_name_list = member_name_list if isinstance(member_name_list, list) else [member_name_list] # type: ignore
 
         # Get a list of all the security definitions possible, out of which we will be building our IDs.
-        security_list = self.invoke('zato.security.get-list', skip_response_elem=True)
+        security_response = self.invoke('zato.security.get-list')
+        security_list = security_response.get('data', []) if isinstance(security_response, dict) else security_response
         for item in member_name_list:
             if isinstance(item, dict):
                 item_name:'str' = item['name']

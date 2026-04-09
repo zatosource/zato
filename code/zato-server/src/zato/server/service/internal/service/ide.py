@@ -247,18 +247,21 @@ class _IDEBase(Service):
         invoke_params = {
             'needs_details': True,
             'include_internal': False,
-            'skip_response_elem': True,
         }
 
         # Invoke the service
         service_list_response = self.invoke('zato.service.get-deployment-info-list', **invoke_params)
 
-        # Check if the response is None
         if service_list_response is None:
             return
 
-        # Iterate and yield items
-        for item in service_list_response:
+        # .. extract the list of items ..
+        if isinstance(service_list_response, dict):
+            items = service_list_response.get('data', [])
+        else:
+            items = service_list_response
+
+        for item in items:
             yield item
 
 # ################################################################################################################################

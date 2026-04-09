@@ -31,7 +31,7 @@ class GetList(AdminService):
     def handle(self):
         items = self.server.config_store.get_list('security')
         out = [item for item in items if _is_ntlm(item)]
-        self.response.payload[:] = out
+        self.response.payload = self._paginate_list(out)
 
 # ################################################################################################################################
 # ################################################################################################################################

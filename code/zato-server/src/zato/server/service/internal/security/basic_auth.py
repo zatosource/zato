@@ -30,7 +30,7 @@ class GetList(AdminService):
                 if self.request.input.get('needs_password') and item.get('password'):
                     item['password'] = self.crypto.decrypt(item['password'])
                 out.append(item)
-        self.response.payload[:] = out
+        self.response.payload = self._paginate_list(out)
 
 # ################################################################################################################################
 # ################################################################################################################################

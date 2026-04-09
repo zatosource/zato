@@ -90,6 +90,7 @@ class GetList(AdminService):
             query_criteria = []
 
         items = self.server.config_store.get_list('security')
+        out = []
 
         for raw in items:
             row = dict(raw)
@@ -108,7 +109,9 @@ class GetList(AdminService):
                 if not needs_internal:
                     continue
 
-            self.response.payload.append(row)
+            out.append(row)
+
+        self.response.payload = self._paginate_list(out)
 
 # ################################################################################################################################
 # ################################################################################################################################

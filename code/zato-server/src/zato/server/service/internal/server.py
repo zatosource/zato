@@ -23,7 +23,7 @@ class GetList(AdminService):
     output_repeated = True
 
     def handle(self):
-        self.response.payload[:] = [self._get_server_data()]
+        self.response.payload = self._paginate_list([self._get_server_data()])
 
     def _get_server_data(self):
         return {

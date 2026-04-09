@@ -58,10 +58,13 @@ class GetList(Service):
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
             'paginate': False,
-        }, skip_response_elem=True)
+        })
+
+        # .. extract the list of items ..
+        items = response.get('data', response) if isinstance(response, dict) else response
 
         # .. iterate through each of them ..
-        for item in response:
+        for item in items:
 
             # .. ignore items that are not wrappers ..
             if not item.get('is_wrapper'):

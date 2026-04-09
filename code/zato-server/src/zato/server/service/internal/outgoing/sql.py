@@ -249,7 +249,7 @@ class GetEngineList(AdminService):
         return sorted(out, key=itemgetter('name'))
 
     def handle(self):
-        self.response.payload[:] = self.get_data()
+        self.response.payload = self._paginate_list(self.get_data())
 
 # ################################################################################################################################
 # ################################################################################################################################

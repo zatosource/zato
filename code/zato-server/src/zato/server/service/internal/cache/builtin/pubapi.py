@@ -160,7 +160,7 @@ class _Multi(_BaseService):
 
         result = self._get_cache_func(cache)(*args)
         if return_prev:
-            self.response.payload[:] = [{'key':key, 'prev_value':value} for key, value in iteritems(result)]
+            self.response.payload = [{'key':key, 'prev_value':value} for key, value in iteritems(result)]
 
     def _get_cache_func(self, cache):
         raise NotImplementedError('Must be implemented in subclasses')

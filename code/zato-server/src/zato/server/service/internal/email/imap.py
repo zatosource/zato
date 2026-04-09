@@ -64,7 +64,7 @@ class GetList(AdminService):
 
     def handle(self):
         items = [_enrich_imap_list_item(dict(x)) for x in self.server.config_store.get_list(_entity_type)]
-        self.response.payload[:] = items
+        self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
 # ################################################################################################################################
