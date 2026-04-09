@@ -12,13 +12,6 @@ from logging import getLogger
 # Bunch
 from bunch import Bunch
 
-class _PermissiveBunch(Bunch):
-    def __getattr__(self, key):
-        try:
-            return super().__getattr__(key)
-        except AttributeError:
-            return None
-
 # Django
 from django.urls import resolve
 
@@ -114,15 +107,15 @@ class _InvokeResponse:
                 if keys:
                     inner = self._raw_data[keys[0]]
                     if isinstance(inner, list):
-                        self.data = [_PermissiveBunch(item) if isinstance(item, dict) else item for item in inner]
+                        self.data = [Bunch(item) if isinstance(item, dict) else item for item in inner]
                     elif isinstance(inner, dict):
-                        self.data = _PermissiveBunch(inner)
+                        self.data = Bunch(inner)
                     else:
                         self.data = inner
                 else:
-                    self.data = _PermissiveBunch(self._raw_data) if self._raw_data else []
+                    self.data = Bunch(self._raw_data) if self._raw_data else []
             elif isinstance(self._raw_data, list):
-                self.data = [_PermissiveBunch(item) if isinstance(item, dict) else item for item in self._raw_data]
+                self.data = [Bunch(item) if isinstance(item, dict) else item for item in self._raw_data]
             else:
                 self.data = self._raw_data
         else:

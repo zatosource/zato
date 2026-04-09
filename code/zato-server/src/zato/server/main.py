@@ -508,16 +508,22 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     http_server = _create_http_server(zato_host, int(zato_port), server.on_http_request, server_software)
     logger.info('Starting Zato HTTP server on %s:%s', zato_host, zato_port)
 
-    # Graceful shutdown handler
+    _shutting_down = False
+
     def _on_shutdown() -> 'None':
+        nonlocal _shutting_down
+        if _shutting_down:
+            os._exit(0)
+        _shutting_down = True
+
         logger.info('Shutting down server')
         http_server.stop()
-        _ = server.cleanup_on_stop()
+        server.cleanup_on_stop()
+        os._exit(0)
 
     gevent_signal_handler(signal.SIGTERM, _on_shutdown)
     gevent_signal_handler(signal.SIGINT, _on_shutdown)
 
-    # Start serving - this blocks until the server is stopped
     http_server.serve_forever()
 
     return None

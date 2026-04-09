@@ -8,8 +8,10 @@ use pyo3::intern;
 type PyObject = Py<PyAny>;
 
 use std::sync::atomic::{AtomicI32, Ordering::Relaxed};
+use std::sync::Mutex;
 
 static LISTEN_FD: AtomicI32 = AtomicI32::new(-1);
+static ACCEPT_WATCHER: Mutex<Option<PyObject>> = Mutex::new(None);
 
 const MAX_HEADERS: usize = 96;
 const READ_BUF: usize = 16384;
@@ -46,6 +48,7 @@ impl HTTPServer {
 
     fn stop<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         close_listen_fd();
+        stop_accept_watcher(py);
         Ok(py.None().into_bound(py))
     }
 }
@@ -67,6 +70,14 @@ fn close_listen_fd() {
     let fd = LISTEN_FD.swap(-1, Relaxed);
     if fd >= 0 {
         unsafe { libc::close(fd); }
+    }
+}
+
+fn stop_accept_watcher(py: Python<'_>) {
+    if let Ok(mut guard) = ACCEPT_WATCHER.lock() {
+        if let Some(watcher) = guard.take() {
+            let _ = watcher.call_method0(py, "stop");
+        }
     }
 }
 
@@ -145,7 +156,27 @@ fn accept_loop(
     let loop_obj = hub.getattr(intern!(py, "loop"))?;
     let accept_watcher = loop_obj.call_method1(intern!(py, "io"), (listen_fd, 1))?;
 
+    {
+        if let Ok(mut guard) = ACCEPT_WATCHER.lock() {
+            *guard = Some(accept_watcher.clone().unbind());
+        }
+    }
+
+    struct WatcherCleanup;
+    impl Drop for WatcherCleanup {
+        fn drop(&mut self) {
+            if let Ok(mut guard) = ACCEPT_WATCHER.lock() {
+                *guard = None;
+            }
+        }
+    }
+    let _cleanup = WatcherCleanup;
+
     loop {
+        if LISTEN_FD.load(Relaxed) < 0 {
+            return Ok(());
+        }
+
         // Batch accept
         for _ in 0..MAX_BATCH_ACCEPT {
             let mut client_addr: libc::sockaddr_in = unsafe { std::mem::zeroed() };
@@ -164,6 +195,9 @@ fn accept_loop(
                 let err = std::io::Error::last_os_error();
                 if err.kind() == std::io::ErrorKind::WouldBlock {
                     break;
+                }
+                if err.raw_os_error() == Some(libc::EBADF) {
+                    return Ok(());
                 }
                 continue; // transient error, skip
             }
@@ -213,7 +247,14 @@ fn accept_loop(
         }
 
         // Wait for more incoming connections
-        hub.call_method1(intern!(py, "wait"), (&accept_watcher,))?;
+        if LISTEN_FD.load(Relaxed) < 0 {
+            return Ok(());
+        }
+        let wait_result = hub.call_method1(intern!(py, "wait"), (&accept_watcher,));
+        if LISTEN_FD.load(Relaxed) < 0 {
+            return Ok(());
+        }
+        wait_result?;
     }
 }
 

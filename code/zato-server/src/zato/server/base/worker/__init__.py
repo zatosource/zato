@@ -499,20 +499,20 @@ class WorkerStore(_WorkerStoreBase):
         wrapper_config = {
             'id':config.id,
             'is_active':config.is_active,
-            'method':config.method,
+            'method':config.get('method'),
             'data_format':config.get('data_format'),
             'name':config.name,
-            'transport':config.transport,
-            'address_host':config.host,
-            'address_url_path':config.url_path,
-            'soap_action':config.soap_action,
-            'soap_version':config.soap_version,
-            'ping_method':config.ping_method,
-            'pool_size':config.pool_size,
-            'serialization_type':config.serialization_type,
-            'timeout':config.timeout,
-            'content_type':config.content_type,
-            'validate_tls':config.validate_tls,
+            'transport':config.get('transport', 'plain_http'),
+            'address_host':config.get('host', ''),
+            'address_url_path':config.get('url_path', '/'),
+            'soap_action':config.get('soap_action', ''),
+            'soap_version':config.get('soap_version'),
+            'ping_method':config.get('ping_method', 'HEAD'),
+            'pool_size':config.get('pool_size', 20),
+            'serialization_type':config.get('serialization_type', 'json'),
+            'timeout':config.get('timeout', 90),
+            'content_type':config.get('content_type'),
+            'validate_tls':config.get('validate_tls', True),
         }
 
         wrapper_config.update(sec_config)
@@ -527,9 +527,10 @@ class WorkerStore(_WorkerStoreBase):
 
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
+            for name in list(config_dict):
                 config_data = config_dict[name]
                 if not isinstance(config_data, str):
+                    config_data.config.setdefault('transport', transport)
                     out.append([config_dict, config_data])
 
         return out

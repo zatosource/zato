@@ -108,6 +108,20 @@ class GetList(_BaseGet):
         output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
         output_repeated = True
 
+    def _build_sec_lookup(self):
+        out = {}
+        for sec in self.server.config_store.get_list('security'):
+            out[sec.get('name')] = sec
+        return out
+
+    def _build_service_lookup(self):
+        out = {}
+        for svc_data in self.server.service_store.services.values():
+            name = svc_data['name']
+            svc_id = self.server.service_store.impl_name_to_id.get(svc_data.get('impl_name'), 0)
+            out[name] = svc_id
+        return out
+
     def handle(self):
         from zato.common.api import Groups
 
@@ -126,6 +140,9 @@ class GetList(_BaseGet):
             all_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
         else:
             all_security_groups = []
+
+        sec_lookup = self._build_sec_lookup()
+        svc_lookup = self._build_service_lookup()
 
         out = []
 
@@ -150,6 +167,23 @@ class GetList(_BaseGet):
 
             item['connection'] = connection
             item['transport'] = transport
+
+            sec_name = item.get('security_name')
+            if sec_name and sec_name in sec_lookup:
+                sec_def = sec_lookup[sec_name]
+                item.setdefault('security_id', sec_def.get('id'))
+                item.setdefault('sec_type', sec_def.get('sec_type') or sec_def.get('type'))
+            else:
+                item.setdefault('security_id', None)
+                item.setdefault('sec_type', None)
+
+            svc_name = item.get('service') or item.get('service_name')
+            item.setdefault('service_name', svc_name)
+            item.setdefault('service_id', svc_lookup.get(svc_name, 0) if svc_name else None)
+
+            for field in ('soap_action', 'soap_version', 'ping_method', 'pool_size',
+                          'serialization_type', 'timeout', 'cache_id', 'cache_name', 'cache_type'):
+                item.setdefault(field, None)
 
             out.append(item)
 
