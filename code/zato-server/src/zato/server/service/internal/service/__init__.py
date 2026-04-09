@@ -115,7 +115,7 @@ class GetList(AdminService):
         return out
 
     def handle(self):
-        self.response.payload[:] = self.get_data()
+        self.response.payload[:] = self._paginate_list(self.get_data())
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -800,10 +800,11 @@ class ServiceInvoker(AdminService):
                 )
 
             # All internal services wrap their responses in top-level elements that we need to shed here ..
-            if is_internal and response:
+            if is_internal and response and isinstance(response, dict):
                 meta = response.pop('_meta', None)
-                top_level = list(iterkeys(response))[0]
-                response = response[top_level]
+                keys = list(iterkeys(response))
+                if keys:
+                    response = response[keys[0]]
                 if meta:
                     response = {'response': response, '_meta': meta}
 

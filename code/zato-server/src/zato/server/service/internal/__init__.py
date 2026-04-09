@@ -188,6 +188,32 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
+    def _paginate_list(self, items):
+        """ Paginates an in-memory list based on request params and sets _meta for the response.
+        """
+        from zato.common.util.search import SearchResults
+
+        needs_pagination = self.request.input.get('paginate')
+        if not needs_pagination:
+            return items
+
+        cur_page = int(self.request.input.get('cur_page') or 1)
+        page_size = int(self.request.input.get('page_size') or 50)
+
+        query = self.request.input.get('query') or ''
+        if query:
+            items = [item for item in items if query.lower() in str(item.get('name', '')).lower()]
+
+        result = SearchResults.from_list(items, cur_page, page_size, needs_sort=False, needs_reverse=False)
+
+        if not hasattr(self, '_search_tool'):
+            self._search_tool = SearchTool()
+        self._search_tool.set_output_meta(result)
+
+        return list(result)
+
+# ################################################################################################################################
+
 class Ping(AdminService):
     """ A ping service, useful for API testing.
     """

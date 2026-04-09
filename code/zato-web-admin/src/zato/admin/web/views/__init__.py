@@ -60,17 +60,8 @@ SKIP_VALUE = 'zato.skip.value'
 def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """
-    if isinstance(response.data, list):
-        return response.data, None
-
-    meta = response.data.pop('_meta', None)
-
-    keys = list(response.data.keys())
-    if keys:
-        data = response.data[keys[0]]
-    else:
-        data = []
-
+    data = response.data if isinstance(response.data, list) else [response.data] if response.data else []
+    meta = response.meta or None
     return data, meta
 
 # ################################################################################################################################
@@ -511,21 +502,8 @@ class Index(BaseView):
                     return_data['response_inner'] = response.inner_service_response
 
                     if output_repeated:
-                        if response and isinstance(response.data, dict):
-                            response.data.pop('_meta', None)
-                            keys = list(response.data.keys())
-                            if self.should_extract_top_level(keys):
-                                data = response.data[keys[0]]
-                                is_extracted = True
-                            else:
-                                data = response.data
-                                is_extracted = False
-                        else:
-                            data = response.data
-                            is_extracted = False
-
-                        # At this point, this may be just a list of elements, if self.should_extract_top_level returns True,
-                        # or a dictionary of keys pointing to lists with such elements.
+                        data = response.data
+                        is_extracted = isinstance(data, list)
                         self.handle_item_list(data, is_extracted)
 
                     else:
