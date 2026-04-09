@@ -32,39 +32,53 @@ pub struct SIOProcessor {
 }
 
 impl SIOProcessor {
-    fn parse_elem_list(_py: Python<'_>, items: &Bound<'_, PyAny>) -> PyResult<Vec<ElemInfo>> {
-        let mut elems = Vec::new();
 
+    fn parse_single_elem(item: &Bound<'_, PyAny>) -> PyResult<ElemInfo> {
+        if let Ok(elem) = item.extract::<Elem>() {
+            return Ok(ElemInfo {
+                name: elem.name.clone(),
+                elem_type: elem.elem_type,
+                is_required: elem.is_required,
+            });
+        }
+
+        let name_str: String = item.extract().map_err(|_| {
+            pyo3::exceptions::PyTypeError::new_err(
+                format!("SIO element must be a string or Elem instance, got {}", item.get_type())
+            )
+        })?;
+
+        let is_required = !name_str.starts_with('-');
+        let clean_name = if name_str.starts_with('-') {
+            name_str[1..].to_string()
+        } else {
+            name_str
+        };
+        let elem_type = infer_type(&clean_name);
+        Ok(ElemInfo {
+            name: clean_name,
+            elem_type,
+            is_required,
+        })
+    }
+
+    fn parse_elem_list(_py: Python<'_>, items: &Bound<'_, PyAny>) -> PyResult<Vec<ElemInfo>> {
+
+        // Single Elem instance (e.g. input = AsIs('data'))
+        if items.extract::<Elem>().is_ok() {
+            return Ok(vec![Self::parse_single_elem(items)?]);
+        }
+
+        // Single bare string (e.g. input = 'name') - do not iterate chars
+        if items.is_instance_of::<PyString>() {
+            return Ok(vec![Self::parse_single_elem(items)?]);
+        }
+
+        // Iterable (tuple or list)
+        let mut elems = Vec::new();
         for item in items.try_iter()? {
             let item = item?;
-
-            if let Ok(elem) = item.extract::<Elem>() {
-                elems.push(ElemInfo {
-                    name: elem.name.clone(),
-                    elem_type: elem.elem_type,
-                    is_required: elem.is_required,
-                });
-                continue;
-            }
-
-            let name_str: String = item.extract().map_err(|_| {
-                pyo3::exceptions::PyTypeError::new_err(
-                    format!("SIO element must be a string or Elem instance, got {}", item.get_type())
-                )
-            })?;
-
-            let is_required = !name_str.starts_with('-');
-            let clean_name = if name_str.starts_with('-') {
-                name_str[1..].to_string()
-            } else {
-                name_str
-            };
-            let elem_type = infer_type(&clean_name);
-            elems.push(ElemInfo {
-                name: clean_name,
-                elem_type,
-                is_required,
-            });
+            elems.push(Self::parse_single_elem(&item)?);
         }
         Ok(elems)
     }
