@@ -21,7 +21,7 @@ from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
-from zato.client import AnyServiceInvoker
+from zato.client import APIClient
 from zato.common.json_internal import loads
 from zato.common.odb.model import Cluster
 from zato.common.version import get_version
@@ -87,41 +87,71 @@ class HeadersEnrichedException(Exception):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Client(AnyServiceInvoker):
-    def __init__(self, req, *args, **kwargs):
+class _InvokeResponse:
+    """ Wraps an APIClient response to provide the interface that web-admin views expect.
+    """
+    def __init__(self, api_response):
+        self.inner = api_response.inner
+        self.ok = api_response.ok
+        self.has_data = bool(api_response.data)
+        self._raw_data = api_response.data
+
+        if self.ok and self._raw_data:
+            if isinstance(self._raw_data, dict):
+                self.data = Bunch(self._raw_data)
+            elif isinstance(self._raw_data, list):
+                self.data = [Bunch(item) if isinstance(item, dict) else item for item in self._raw_data]
+            else:
+                self.data = self._raw_data
+        else:
+            self.data = self._raw_data
+
+    def __iter__(self):
+        if isinstance(self.data, list):
+            return iter(self.data)
+        if isinstance(self.data, dict):
+            return iter([self.data])
+        return iter([])
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Client:
+    def __init__(self, req, address, path, auth):
         self.forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR') or req.META.get('REMOTE_ADDR')
-        super(Client, self).__init__(*args, **kwargs)
+        self.api_client = APIClient(address, auth[0], auth[1], path=path)
 
 # ################################################################################################################################
 
-    def invoke(self, *args, **kwargs):
-        response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
-        if response.inner.status_code != OK:
+    def invoke(self, service_name, request=None, **kwargs):
+        needs_exception = kwargs.pop('needs_exception', True)
 
-            json_data = loads(response.inner.text)
-            cid = json_data.get('cid')
-            err_details = json_data.get('details')
-            full_details = 'CID: {}; nDetails: {}'.format(cid, err_details)
+        api_response = self.api_client.invoke(service_name, request or {})
+        response = _InvokeResponse(api_response)
+
+        if not response.ok:
+            try:
+                json_data = loads(response.inner.text)
+            except Exception:
+                json_data = {}
+
+            cid = json_data.get('cid', '')
+            err_details = json_data.get('details', '')
+            full_details = 'CID: {}; Details: {}'.format(cid, err_details)
 
             if not err_details:
                 err_details = json_data
 
-            if kwargs.get('needs_exception', True):
+            if needs_exception:
                 logger.warning(full_details)
                 msg = err_details[0] if isinstance(err_details, list) else err_details
 
                 exc = HeadersEnrichedException(msg)
-                exc.headers = response.inner.headers
+                exc.headers = dict(response.inner.headers)
                 raise exc
-
             else:
                 logger.warning(err_details)
-        return response
 
-# ################################################################################################################################
-
-    def invoke_async(self, *args, **kwargs):
-        response = super(Client, self).invoke_async(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
         return response
 
 # ################################################################################################################################
@@ -173,7 +203,7 @@ class ZatoMiddleware:
                 url = 'http://127.0.0.1:17010'
 
                 auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
-                req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth, to_bunch=True)
+                req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth)
 
             req.zato.clusters = req.zato.odb.query(Cluster).order_by(Cluster.name).all()
             req.zato.search_form = SearchForm(req.zato.clusters, req.GET)

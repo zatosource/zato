@@ -17,9 +17,6 @@ from tempfile import gettempdir
 from traceback import format_exc
 from unittest import TestCase
 
-# Prometheus
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-
 # Zato
 from zato.common.test import rand_csv, rand_string
 from zato.common.typing_ import cast_, intnone, list_, optional
@@ -163,17 +160,6 @@ class PubInputLogger(Service):
         logger.info(f'Received request: `{self.request.raw_request}`')
         logger.info(f'Channel info: `{self.channel.to_dict()}`')
         self.response.payload.world = f'{self.name} received your request.'
-
-# ################################################################################################################################
-
-class GetMetrics(Service):
-    """ Returns metrics in Prometheus format.
-    """
-    name = 'zato.metrics.get'
-
-    def handle(self):
-        self.response.payload = generate_latest().decode('utf-8')
-        self.response.content_type = CONTENT_TYPE_LATEST
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -744,21 +730,16 @@ class OpenAPIHandler(Service):
                 out.append(int(item['id']))
         return out
 
-    def _get_basic_auth_security_ids(self, session, rest_channels):
+    def _get_basic_auth_security_ids(self, rest_channels):
         """ Returns set of security IDs for REST channels that use basic auth.
         """
-        from zato.common.odb.model import SecurityBase
-
         out = set()
         for rest_channel in rest_channels:
-            if rest_channel.security_id:
-                # Check if this security definition is basic auth
-                sec_base = session.query(SecurityBase).filter(
-                    SecurityBase.id == rest_channel.security_id,
-                    SecurityBase.sec_type == SEC_DEF_TYPE.BASIC_AUTH,
-                ).first()
-                if sec_base:
-                    out.add(rest_channel.security_id)
+            security_id = rest_channel.get('security_id')
+            if security_id:
+                sec_def = self.server.worker_store.basic_auth_get_by_id(security_id)
+                if sec_def:
+                    out.add(security_id)
         return out
 
     def _check_credentials(self, auth_header, basic_auth_security_ids):
@@ -783,30 +764,27 @@ class OpenAPIHandler(Service):
         """
         out = []
         for rest_channel in rest_channels:
-            # Try to get the source path for the service
+            service_name = rest_channel.get('service_name', rest_channel.get('name', ''))
+
             source_path = None
-            if rest_channel.service:
+            if service_name:
                 try:
                     source_info = self.invoke('zato.service.get-source-info', {
                         'cluster_id': self.server.cluster_id,
-                        'name': rest_channel.service.name,
+                        'name': service_name,
                     })
                     if source_info:
                         response_data = source_info['zato_service_get_source_info_response']
                         source_path = response_data['source_path']
                 except Exception:
-                    logger.warning('Could not get source info for %s: %s', rest_channel.service.name, format_exc())
+                    logger.warning('Could not get source info for %s: %s', service_name, format_exc())
 
-            # Get security name if assigned
-            security_name = None
-            if rest_channel.security:
-                security_name = rest_channel.security.name
+            security_name = rest_channel.get('security_name')
 
-            # Build service info dict
             out.append({
-                'name': rest_channel.service.name if rest_channel.service else rest_channel.name,
-                'url_path': rest_channel.url_path,
-                'http_method': rest_channel.method or 'POST',
+                'name': service_name,
+                'url_path': rest_channel.get('url_path', ''),
+                'http_method': rest_channel.get('method', 'POST'),
                 'source_path': source_path,
                 'security_name': security_name,
             })

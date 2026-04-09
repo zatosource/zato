@@ -169,7 +169,6 @@ command_imports = (
     ('enmasse', 'zato.cli.enmasse_command.Enmasse'),
     ('from_config', 'zato.cli.FromConfig'),
     ('hash_get_rounds', 'zato.cli.crypto.GetHashRounds'),
-    ('info', 'zato.cli.info.Info'),
     ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
     ('quickstart_create', 'zato.cli.quickstart.Create'),
     ('service_invoke', 'zato.cli.service.Invoke'),

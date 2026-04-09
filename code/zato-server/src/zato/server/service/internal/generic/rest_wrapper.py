@@ -7,14 +7,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from contextlib import closing
 from json import dumps
 
 # Zato
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.broker_message import OUTGOING
-from zato.common.odb.model import HTTPSOAP
-from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -184,27 +181,19 @@ class ChangePassword(_WrapperBase):
 
     def handle(self) -> 'None':
 
-        # Reusable
         request = self.request.raw_request
-
-        # This must always exist
         id = request['id']
 
-        # This is optional
         password = request.get('password') or request.get('password1') or ''
         password = self.server.encrypt(password)
 
-        with closing(self.odb.session()) as session:
-
-            item = session.query(HTTPSOAP).filter_by(id=id).one()
-
-            opaque = parse_instance_opaque_attr(item)
-            opaque['password'] = password
-
-            set_instance_opaque_attrs(item, opaque)
-
-            session.add(item)
-            session.commit()
+        # Update via the ConfigStore
+        outconn_list = self.server.rust_config_store.get_list('outgoing_rest')
+        for item in outconn_list:
+            if item.get('id') == id:
+                item['password'] = password
+                self.server.rust_config_store.set('outgoing_rest', item['name'], item)
+                break
 
         # Notify all the members of the cluster of the change
         self.broker_client.publish({

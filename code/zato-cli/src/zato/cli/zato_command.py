@@ -118,7 +118,6 @@ class CommandStore:
              enmasse_command     as enmasse_mod,             \
              FromConfig,                                     \
              ide                 as ide_mod,                 \
-             info                as info_mod,                \
              quickstart          as quickstart_mod,          \
              service             as service_mod,             \
              stop                as stop_mod,                \
@@ -338,14 +337,6 @@ class CommandStore:
         ide.add_argument('path', help='Path to a Zato server')
         ide.set_defaults(command='set_ide_password')
         self.add_opts(ide, ide_mod.SetIDEPassword.opts)
-
-        #
-        # info
-        #
-        info = subs.add_parser('info', description=info_mod.Info.__doc__, parents=[base_parser])
-        info.add_argument('path', help='Path to a Zato component')
-        info.set_defaults(command='info')
-        self.add_opts(info, info_mod.Info.opts)
 
         #
         # reset-totp-key
