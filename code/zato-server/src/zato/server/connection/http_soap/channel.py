@@ -381,10 +381,12 @@ class RequestDispatcher:
                 # Return payload to the client, deserializing from the Rust Payload if needed.
                 if isinstance(response.payload, CySimpleIOPayload):
                     payload = response.payload.getvalue()
+                    logger.info('SIO payload getvalue -> type:%s, value:%r', type(payload).__name__, payload)
                     if isinstance(payload, dict):
                         payload = dumps(payload)
                 else:
                     payload = response.payload
+                    logger.info('Raw payload -> type:%s, value:%r', type(payload).__name__, payload)
 
                 return payload
 
@@ -436,7 +438,10 @@ class RequestDispatcher:
                         http_environ['zato.http.response.headers']['X-Zato-Message'] = str(e.args)
                         response = pretty_format_exception(e, cid)
                     else:
-                        response = e.args if self.return_tracebacks else self.default_error_message
+                        if self.return_tracebacks:
+                            response = str(e.args[0]) if e.args else str(e)
+                        else:
+                            response = self.default_error_message
 
                 # Check whether this was a JSON-based channel, in which case our response should
                 # have a JSON data format on ouput too.

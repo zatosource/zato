@@ -159,12 +159,19 @@ class Client:
             except Exception:
                 json_data = {}
 
+            logger.info('Error response from server: ok=%s, text=%r, json_data=%r, headers=%r',
+                response.ok, response.inner.text, json_data, dict(response.inner.headers))
+
             cid = json_data.get('cid', '')
             err_details = json_data.get('details', '')
-            full_details = 'CID: {}; Details: {}'.format(cid, err_details)
 
             if not err_details:
-                err_details = json_data
+                err_details = response.inner.headers.get('X-Zato-Message', '')
+
+            if not err_details:
+                err_details = json_data or response.inner.text
+
+            full_details = 'CID: {}; Details: {}'.format(cid, err_details)
 
             if needs_exception:
                 logger.warning(full_details)

@@ -616,8 +616,9 @@ class CreateEdit(BaseView):
                 logger.error(msg)
                 raise ZatoException(msg=msg)
 
-        except Exception:
-            return HttpResponseServerError(format_exc())
+        except Exception as e:
+            msg = str(e) or format_exc()
+            return HttpResponseServerError(msg)
 
     def pre_process_input_dict(self, input_dict):
         pass
