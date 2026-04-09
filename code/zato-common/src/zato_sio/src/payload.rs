@@ -104,12 +104,12 @@ impl Payload {
         Ok(())
     }
 
-    #[pyo3(signature = (serialize=true, force_dict_serialisation=true))]
-    fn getvalue(&self, py: Python<'_>, serialize: bool, force_dict_serialisation: bool) -> PyResult<PyObject> {
-        let do_serialize = if self.data_format.as_deref() == Some("dict") && force_dict_serialisation {
-            true
-        } else {
-            serialize
+    #[pyo3(signature = (serialize=None, force_dict_serialisation=true))]
+    fn getvalue(&self, py: Python<'_>, serialize: Option<bool>, force_dict_serialisation: bool) -> PyResult<PyObject> {
+        let do_serialize = match serialize {
+            Some(false) => false,
+            Some(true) => true,
+            None => self.data_format.as_deref() == Some("dict") && force_dict_serialisation,
         };
 
         if let Some(ref meta) = self.zato_meta {
@@ -144,9 +144,31 @@ impl Payload {
         !self.user_attrs_dict.is_empty() || !self.user_attrs_list.is_empty()
     }
 
-    fn append(&mut self, value: PyObject) {
-        self.user_attrs_list.push(value);
+    fn append(&mut self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<()> {
+        if self.output_elem_names.is_empty() {
+            self.user_attrs_list.push(value.clone().unbind());
+        } else if let Ok(dict) = value.cast::<PyDict>() {
+            let filtered = PyDict::new(py);
+            for name in &self.output_elem_names {
+                match dict.get_item(name)? {
+                    Some(v) => filtered.set_item(name, v)?,
+                    None => filtered.set_item(name, py.None())?,
+                }
+            }
+            self.user_attrs_list.push(filtered.into_any().unbind());
+        } else {
+            let filtered = PyDict::new(py);
+            for name in &self.output_elem_names {
+                let py_name = PyString::new(py, name);
+                match value.getattr(&py_name) {
+                    Ok(v) => filtered.set_item(name, v)?,
+                    Err(_) => filtered.set_item(name, py.None())?,
+                }
+            }
+            self.user_attrs_list.push(filtered.into_any().unbind());
+        }
         self.is_list_output = true;
+        Ok(())
     }
 
     fn __setattr__(&mut self, key: String, value: PyObject) {

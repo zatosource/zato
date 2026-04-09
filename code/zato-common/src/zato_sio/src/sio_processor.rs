@@ -1,8 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyString, PyTuple};
 use crate::inference::{infer_type, ElemType};
-use crate::compat::{Elem, Bool, Int, Secret, Text};
-use crate::service_input::ServiceInput;
+use crate::compat::{Elem, Bool, Int, Secret, Text, AsIs, Float, CSV, Date, DateTime, Decimal, Dict, DictList, List, UTC, UUID};
 
 type PyObject = Py<PyAny>;
 
@@ -33,13 +32,34 @@ pub struct SIOProcessor {
 
 impl SIOProcessor {
 
+    fn elem_type_from_instance(item: &Bound<'_, PyAny>) -> Option<ElemType> {
+        if item.is_instance_of::<Bool>() { return Some(ElemType::Bool); }
+        if item.is_instance_of::<Int>() { return Some(ElemType::Int); }
+        if item.is_instance_of::<Secret>() { return Some(ElemType::Secret); }
+        if item.is_instance_of::<AsIs>()
+            || item.is_instance_of::<Float>()
+            || item.is_instance_of::<CSV>()
+            || item.is_instance_of::<Date>()
+            || item.is_instance_of::<DateTime>()
+            || item.is_instance_of::<Decimal>()
+            || item.is_instance_of::<Dict>()
+            || item.is_instance_of::<DictList>()
+            || item.is_instance_of::<List>()
+            || item.is_instance_of::<UTC>()
+            || item.is_instance_of::<UUID>()
+        {
+            return Some(ElemType::AsIs);
+        }
+        if item.is_instance_of::<Text>() { return Some(ElemType::Text); }
+        if item.is_instance_of::<Elem>() { return Some(ElemType::Text); }
+        None
+    }
+
     fn parse_single_elem(item: &Bound<'_, PyAny>) -> PyResult<ElemInfo> {
-        if let Ok(elem) = item.extract::<Elem>() {
-            return Ok(ElemInfo {
-                name: elem.name.clone(),
-                elem_type: elem.elem_type,
-                is_required: elem.is_required,
-            });
+        if let Some(elem_type) = Self::elem_type_from_instance(item) {
+            let name: String = item.getattr("name")?.extract()?;
+            let is_required: bool = item.getattr("is_required")?.extract()?;
+            return Ok(ElemInfo { name, elem_type, is_required });
         }
 
         let name_str: String = item.extract().map_err(|_| {
@@ -65,7 +85,7 @@ impl SIOProcessor {
     fn parse_elem_list(_py: Python<'_>, items: &Bound<'_, PyAny>) -> PyResult<Vec<ElemInfo>> {
 
         // Single Elem instance (e.g. input = AsIs('data'))
-        if items.extract::<Elem>().is_ok() {
+        if Self::elem_type_from_instance(items).is_some() {
             return Ok(vec![Self::parse_single_elem(items)?]);
         }
 
@@ -238,8 +258,7 @@ impl SIOProcessor {
             }
         }
 
-        let si = ServiceInput::create(Some(&result_dict.as_borrowed()))?;
-        Ok(Py::new(py, si)?.into_any())
+        Ok(result_dict.into_any().unbind())
     }
 
     fn get_output<'py>(&self, py: Python<'py>, value: &Bound<'py, PyAny>) -> PyResult<PyObject> {
@@ -272,6 +291,59 @@ impl SIOProcessor {
     #[getter]
     fn all_input_elem_names(&self) -> Vec<String> {
         self.input_elems.iter().map(|e| e.name.clone()).collect()
+    }
+
+    #[pyo3(signature = (elem_name, value, encrypt_func=None))]
+    fn eval_<'py>(
+        &self,
+        py: Python<'py>,
+        elem_name: &str,
+        value: &Bound<'py, PyAny>,
+        encrypt_func: Option<&Bound<'py, PyAny>>,
+    ) -> PyResult<PyObject> {
+        let elem_type = infer_type(elem_name);
+
+        match elem_type {
+            ElemType::Bool => {
+                if value.is_none() || (value.is_instance_of::<PyString>() && value.str()?.to_string().is_empty()) {
+                    let b = false;
+                    return Ok(b.into_pyobject(py)?.to_owned().into_any().unbind());
+                }
+                if value.is_instance_of::<pyo3::types::PyBool>() {
+                    return Ok(value.clone().unbind());
+                }
+                let s = value.str()?.to_string().to_lowercase();
+                let b = matches!(s.as_str(), "true" | "1" | "yes" | "t" | "on");
+                Ok(b.into_pyobject(py)?.to_owned().into_any().unbind())
+            }
+            ElemType::Int => {
+                if value.is_none() || (value.is_instance_of::<PyString>() && value.str()?.to_string().is_empty()) {
+                    return Ok(py.None().into());
+                }
+                if value.is_instance_of::<pyo3::types::PyInt>() {
+                    Ok(value.clone().unbind())
+                } else {
+                    let builtins = py.import("builtins")?;
+                    let result = builtins.call_method1("int", (value,))?;
+                    Ok(result.unbind())
+                }
+            }
+            ElemType::Secret => {
+                if let Some(func) = encrypt_func {
+                    let result = func.call1((value,))?;
+                    Ok(result.unbind())
+                } else {
+                    Ok(value.clone().unbind())
+                }
+            }
+            _ => {
+                if value.is_none() || (value.is_instance_of::<PyString>() && value.str()?.to_string().is_empty()) {
+                    Ok("".into_pyobject(py)?.into_any().unbind())
+                } else {
+                    Ok(value.clone().unbind())
+                }
+            }
+        }
     }
 }
 

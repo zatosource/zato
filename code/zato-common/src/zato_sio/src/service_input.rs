@@ -132,6 +132,16 @@ impl ServiceInput {
         Ok(Self { data: new_data })
     }
 
+    #[pyo3(signature = (_memo=None))]
+    fn __deepcopy__(&self, py: Python<'_>, _memo: Option<&Bound<'_, PyAny>>) -> PyResult<Self> {
+        self.deepcopy(py)
+    }
+
+    fn __copy__(&self, py: Python<'_>) -> Self {
+        let new_data = self.data.iter().map(|(k, v)| (k.clone(), v.clone_ref(py))).collect();
+        Self { data: new_data }
+    }
+
     #[pyo3(signature = (*elems))]
     fn require_any(&self, elems: &Bound<'_, pyo3::types::PyTuple>) -> PyResult<()> {
         for elem in elems.iter() {
