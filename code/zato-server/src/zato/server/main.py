@@ -226,7 +226,7 @@ def _create_wsgi_server(
     """ Creates the WSGI server. This function is the extension point
     for replacing the transport with a StreamServer + Rust handler.
     """
-    out = ZatoWSGIServer((host, port), wsgi_app)
+    out = ZatoWSGIServer((host, port), wsgi_app, log=None)
     out._server_software = server_software
     return out
 

@@ -80,6 +80,17 @@ class HTTPHandler:
         """ Handles incoming HTTP requests.
         """
 
+        # Populate variables that gevent.pywsgi does not set but that the rest of the code expects ..
+        if 'RAW_URI' not in wsgi_environ:
+            query_string = wsgi_environ.get('QUERY_STRING', '')
+            raw_uri = wsgi_environ.get('PATH_INFO', '/')
+            if query_string:
+                raw_uri = f'{raw_uri}?{query_string}'
+            wsgi_environ['RAW_URI'] = raw_uri
+
+        if 'REMOTE_PORT' not in wsgi_environ:
+            wsgi_environ['REMOTE_PORT'] = '0'
+
         # This is reusable
         user_agent = wsgi_environ.get('HTTP_USER_AGENT', '(None)')
 
@@ -131,7 +142,7 @@ class HTTPHandler:
         except Exception:
             error_msg = '`%s` Exception caught `%s`' % (cid, format_exc())
             logger.error(error_msg)
-            wsgi_environ['zato.http.response.status'] = b'500 Internal Server Error'
+            wsgi_environ['zato.http.response.status'] = '500 Internal Server Error'
             payload = error_msg if self.return_tracebacks else self.default_error_message
             raise
 
@@ -145,7 +156,9 @@ class HTTPHandler:
             # 405 because this was an invalid HTTP method
             channel_name = '-'
 
-        start_response(wsgi_environ['zato.http.response.status'], wsgi_environ['zato.http.response.headers'].items())
+        # gevent.pywsgi requires all header values to be native strings
+        response_headers = [(k, str(v)) for k, v in wsgi_environ['zato.http.response.headers'].items()]
+        start_response(wsgi_environ['zato.http.response.status'], response_headers)
 
         if isinstance(payload, str):
             payload = payload.encode('utf-8')
