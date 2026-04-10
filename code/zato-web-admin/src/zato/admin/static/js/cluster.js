@@ -3,10 +3,9 @@
 
 $.fn.zato.data_table.Cluster = new Class({
     toString: function() {
-        var s = '<Cluster id:{0} name:{1} odb_type:{2}>';
+        var s = '<Cluster id:{0} name:{1}>';
         return String.format(s, this.id ? this.id : '(none)', 
-                                this.name ? this.name : '(none)',
-                                this.odb_type ? this.odb_type : '(none)');
+                                this.name ? this.name : '(none)');
     }
 });
 
@@ -17,7 +16,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Cluster;
     $.fn.zato.data_table.new_row_func = $.fn.zato.cluster.data_table.new_row;
     $.fn.zato.data_table.parse();
-    var attrs = ['name', 'odb_host', 'odb_port', 'odb_db_name', 'odb_user',
+    var attrs = ['name',
         'lb_host', 'lb_agent_port', 'broker_host', 'broker_start_port', 'broker_token'];
     $.fn.zato.data_table.setup_forms(attrs);
 })

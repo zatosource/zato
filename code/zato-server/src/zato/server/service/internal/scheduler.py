@@ -441,6 +441,7 @@ class HolidayCalendarEdit(_HolidayCalendarAdmin):
             self.server.config_store.delete(_cal_entity_type, old_name)
 
         data = {
+            'id': input.id,
             'name': input.name,
             'description': input.get('description') or None,
             'dates': input.get('dates') or [],

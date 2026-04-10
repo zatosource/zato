@@ -397,84 +397,13 @@ command_store = CommandStore()
 # ################################################################################################################################
 
 def pre_process_quickstart(sys_argv:'strlist', opts_idx:'int') -> 'None':
-
-    # We know that it exists so we can skip the try/except ValueError: block
-    create_idx = sys_argv.index('create')
-
-    # We are looking for the idx of the path element but it is still possible
-    # that we have an incomplete command 'zato quickstart create' alone on input.
-    # In such a case, 'create' will be our last element among args and we can return immediately.
-    if len(sys_argv) == create_idx:
-        return
-
-    # If we are here, we have 'zato quickstart create' followed by a path, ODB and Redis options.
-    path_idx = create_idx + 1
-
-    # ODB + Redis options start here .
-    original_odb_type_idx   = path_idx + 1
-    opts = sys_argv[path_idx+1:opts_idx]
-
-    # No options = we can return
-    if not opts:
-        return
-
-    # Extract the options ..
-    odb_type   = opts[0]
-
-    # .. remove them from their pre-3.2 non-optional positions,
-    # .. note that we need to do it once for each of odb_type, redis_host and redis_port
-    # .. using the same index because .pop will modify the list in place ..
-    _ = sys_argv.pop(original_odb_type_idx)
-    _ = sys_argv.pop(original_odb_type_idx)
-    _ = sys_argv.pop(original_odb_type_idx)
-
-    # .. now, add the options back as '--' ones.
-    sys_argv.append('--odb_type')
-    sys_argv.append(odb_type)
+    pass
 
 # ################################################################################################################################
 
 def pre_process_server(sys_argv, opts_idx, opts):
     # type: (list, int, list) -> None
-
-    #
-    # This is pre-3.2
-    # 'zato0', 'create1', 'server2', '/path/to/server3', 'sqlite4', 'kvdb_host5', 'kvdb_port6', 'cluster_name7', 'server_name8'
-    #
-    len_pre_32 = 9
-
-    #
-    # This is 3.2
-    # 'zato0', 'create1', 'server2', '/path/to/server3', 'cluster_name7', 'server_name8'
-    #
-
-    # We are turning pre-3.2 options into 3.2 ones.
-    if len(sys_argv[:opts_idx]) == len_pre_32:
-
-        # New arguments to produce
-        new_argv = []
-
-        new_argv.append(sys_argv[0]) # zato0
-        new_argv.append(sys_argv[1]) # create1
-        new_argv.append(sys_argv[2]) # server2
-        new_argv.append(sys_argv[3]) # /path/to/server3
-
-        new_argv.append(sys_argv[7]) # cluster_name7
-        new_argv.append(sys_argv[8]) # server_name8
-
-        new_argv.append('--odb_type') # sqlite4
-        new_argv.append(sys_argv[4])
-
-        new_argv.append('--kvdb_host') # kvdb_host5
-        new_argv.append(sys_argv[5])
-
-        new_argv.append('--kvdb_port') # kvdb_port6
-        new_argv.append(sys_argv[6])
-
-        new_argv.extend(opts)
-
-        # We are ready to replace sys.argv now
-        sys_argv[:] = new_argv
+    pass
 
 # ################################################################################################################################
 

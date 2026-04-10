@@ -197,7 +197,7 @@ if 'DATABASES' in globals():
 
     db_data['db_type'] = db_type
 
-    # ODB SQLAlchemy setup
+    # SQLAlchemy setup for web admin's database
     SASession = scoped_session(sessionmaker())
 
     kwargs = {}

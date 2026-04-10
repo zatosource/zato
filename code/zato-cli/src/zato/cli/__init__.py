@@ -23,24 +23,7 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Some objects are re-defined here to avoid importing them from zato.common = improves CLI performance.
-class MS_SQL:
-    ZATO_DIRECT = 'zato+mssql1'
-
 ZATO_INFO_FILE = '.zato-info'
-
-SUPPORTED_DB_TYPES = ('mysql', 'postgresql', 'sqlite')
-
-# ################################################################################################################################
-
-_opts_odb_type = 'Operational database type, must be one of {}'.format(SUPPORTED_DB_TYPES) # noqa
-_opts_odb_host = 'Operational database host'
-_opts_odb_port = 'Operational database port'
-_opts_odb_user = 'Operational database user'
-_opts_odb_schema = 'Operational database schema'
-_opts_odb_db_name = 'Operational database name'
-
-# ################################################################################################################################
 
 ca_defaults = {
     'organization': 'My Company',
@@ -57,16 +40,6 @@ default_ca_name = 'Sample CA'
 default_common_name = 'localhost'
 
 # ################################################################################################################################
-
-common_odb_opts = [
-    {'name':'--odb-type', 'help':_opts_odb_type, 'choices':SUPPORTED_DB_TYPES, 'default':'sqlite'}, # noqa
-    {'name':'--odb-host', 'help':_opts_odb_host},
-    {'name':'--odb-port', 'help':_opts_odb_port},
-    {'name':'--odb-user', 'help':_opts_odb_user},
-    {'name':'--odb-db-name', 'help':_opts_odb_db_name},
-    {'name':'--postgresql-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
-    {'name':'--odb-password', 'help':'ODB database password', 'default':''},
-]
 
 common_ca_create_opts = [
     {'name':'--organization', 'help':'Organization name (defaults to {organization})'.format(**ca_defaults)},
@@ -111,35 +84,7 @@ common_scheduler_server_api_client_opts = [
 
 # ################################################################################################################################
 
-sql_conf_contents = """
-# ######### ######################## ######### #
-# ######### Engines defined by Zato  ######### #
-# ######### ######################## ######### #
-
-[mysql+pymysql]
-display_name=MySQL
-ping_query=SELECT 1+1
-
-[postgresql+pg8000]
-display_name=PostgreSQL
-ping_query=SELECT 1
-
-[oracle]
-display_name=Oracle
-ping_query=SELECT 1 FROM dual
-
-[{}]
-display_name="MS SQL"
-ping_query=SELECT 1
-
-# ######### ################################# ######### #
-# ######### User-defined SQL engines go below ######### #
-# ######### ################################# ######### #
-
-#[label]
-#friendly_name=My DB
-#sqlalchemy_driver=sa-name
-""".lstrip().format(MS_SQL.ZATO_DIRECT) # nopep8
+sql_conf_contents = ''
 
 # ################################################################################################################################
 
@@ -222,10 +167,8 @@ class ZatoCommand:
     class SYS_ERROR:
         """ All non-zero sys.exit return codes the commands may use.
         """
-        ODB_EXISTS = 1
         FILE_MISSING = 2
         NOT_A_ZATO_COMPONENT = 3
-        NO_ODB_FOUND = 4
         DIR_NOT_EMPTY = 5
         CLUSTER_NAME_ALREADY_EXISTS = 6
         SERVER_NAME_ALREADY_EXISTS = 7
@@ -530,33 +473,6 @@ class ZatoCommand:
 
 # ################################################################################################################################
 
-    def _get_engine(self, args):
-
-        # SQLAlchemy
-        import sqlalchemy
-
-        # Zato
-        from zato.common.util import api as util_api
-        from zato.common.util.api import get_engine_url
-
-        if not args.odb_type.startswith('postgresql'):
-            connect_args = {}
-        else:
-            connect_args = {'application_name':util_api.get_component_name('enmasse')}
-
-        return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
-
-# ################################################################################################################################
-
-    def _get_session(self, engine):
-
-        # Zato
-        from zato.common.util.api import get_session
-
-        return get_session(engine)
-
-# ################################################################################################################################
-
     def _check_passwords(self, args, check_password):
         """ Get the password from a user for each argument that needs a password.
         """
@@ -637,10 +553,6 @@ class ZatoCommand:
                     if name == '--secret-key':
                         continue
 
-                    # Don't require passwords with SQLite
-                    if 'odb' in name and args.odb_type == 'sqlite':
-                        continue
-
                     check_password.append((name, opt_dict['help']))
 
             self.before_execute(args)
@@ -679,11 +591,9 @@ class ZatoCommand:
 # ################################################################################################################################
 
     def before_execute(self, args):
-        """ A hooks that lets commands customize their input before they are actually executed.
+        """ A hook that lets commands customize their input before they are actually executed.
         """
-        # Update odb_type if it's MySQL so that users don't have to think about the particular client implementation.
-        if getattr(args, 'odb_type', None) == 'mysql':
-            args.odb_type = 'mysql+pymysql'
+        pass
 
 # ################################################################################################################################
 
@@ -737,12 +647,6 @@ class ZatoCommand:
 
 # ################################################################################################################################
 
-    def get_odb_session_from_server_config(self, config, cm):
-
-        # Zato
-        from zato.common.util.api import get_odb_session_from_server_config
-
-        return get_odb_session_from_server_config(config, cm, False)
 
 # ################################################################################################################################
 

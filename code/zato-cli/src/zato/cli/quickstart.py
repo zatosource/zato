@@ -11,7 +11,7 @@ import os
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
+from zato.cli import common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.platform_ import is_windows
@@ -150,7 +150,7 @@ $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py {check_tcp_ports_suffix}
 
 zato_qs_check_config_extra = """
 echo [1/$STEPS] Redis connection OK
-echo [2/$STEPS] SQL ODB connection OK
+echo [2/$STEPS] Configuration check OK
 """
 
 # ################################################################################################################################
@@ -298,7 +298,7 @@ class Create(ZatoCommand):
     """ Quickly creates a working environment.
     """
     needs_empty_dir = True
-    opts:'any_' = deepcopy(common_odb_opts)
+    opts:'any_' = []
     opts.append({'name':'--cluster-name', 'help':'Name to be given to the new environment'})
     opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1}) # type: ignore
     opts.append({'name':'--threads-per-server', 'help':'How many main threads to use per server', 'default':1}) # type: ignore
@@ -322,16 +322,8 @@ class Create(ZatoCommand):
         out.verbose = args.verbose
         out.store_log = args.store_log
         out.store_config = args.store_config
-        out.odb_type = args.odb_type
-        out.odb_host = args.odb_host
-        out.odb_port = args.odb_port
-        out.odb_user = args.odb_user
-        out.odb_db_name = args.odb_db_name
         out.kvdb_host = self.get_arg('kvdb_host')
         out.kvdb_port = self.get_arg('kvdb_port')
-        out.sqlite_path = getattr(args, 'sqlite_path', None)
-        out.postgresql_schema = getattr(args, 'postgresql_schema', None)
-        out.odb_password = args.odb_password
         out.kvdb_password = self.get_arg('kvdb_password')
         out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'
@@ -354,12 +346,11 @@ class Create(ZatoCommand):
 
     def execute(self, args:'any_') -> 'None':
         """ Quickly creates Zato components
-        1) ODB
-        2) ODB initial data
-        3) Server
-        4) Dashboard
-        5) Scheduler
-        6) Scripts
+        1) Cluster initial data
+        2) Server
+        3) Dashboard
+        4) Scheduler
+        5) Scripts
         """
 
         # stdlib
@@ -689,7 +680,7 @@ class Create(ZatoCommand):
         if admin_created:
             self.logger.info('Dashboard user:[admin], password:[%s]', web_admin_password.decode('utf8')) # type: ignore
         else:
-            self.logger.info('User [admin] already exists in the ODB')
+            self.logger.info('User [admin] already exists')
 
         self.logger.info('Start the environment by issuing this command: %s', zato_qs_start_path)
         self.logger.info('Visit https://zato.io/support for more information and support options')

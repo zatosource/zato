@@ -250,12 +250,10 @@ class ServiceStore:
         self,
         *,
         services,   # type: strdictdict
-        odb=None,   # type: ODBManager
         server,     # type: ParallelServer
         is_testing, # type: bool
     ) -> 'None':
         self.services = services
-        self.odb = odb
         self.server = server
         self.is_testing = is_testing
         self.max_batch_size = 0
@@ -477,7 +475,6 @@ class ServiceStore:
                 class_.add_http_method_handlers()
                 class_._worker_store = service_store.server.worker_store
                 class_._enforce_service_invokes = service_store.server.enforce_service_invokes # type: ignore
-                class_.odb = service_store.server.odb
                 class_.schedule = SchedulerFacade(service_store.server)
                 class_.cloud.confluence = service_store.server.worker_store.cloud_confluence
                 class_.cloud.jira = service_store.server.worker_store.cloud_jira

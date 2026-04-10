@@ -286,7 +286,6 @@ class WorkerStore(_WorkerStoreBase):
             self.worker_config.oauth,
             self.worker_config.apikey,
             self.broker_client,
-            self.server.odb,
         )
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
