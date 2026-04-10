@@ -38,7 +38,7 @@ from sqlalchemy.engine.row import Row as SQLAlchemyRow
 # Zato
 from zato.common.api import DATA_FORMAT, ZATO_NONE
 from zato.common.marshal_.api import ElementMissing
-from zato.common.odb.api import SQLRow
+from zato.common.sql_pool import SQLRow
 from zato.util_convert import to_bool
 
 # Zato - Cython

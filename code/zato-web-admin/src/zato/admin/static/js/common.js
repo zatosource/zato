@@ -142,7 +142,7 @@ $.fn.zato.post = function(url, callback, data, data_type, suppress_user_message,
         data_type = 'json';
     }
 
-    if(!suppress_user_message) {
+    if(!suppress_user_message && !$('#zato-action-overlay').length) {
         $.fn.zato.user_message(false, '', true);
     }
 
@@ -168,6 +168,7 @@ $.fn.zato.user_message = function(is_success, msg, loading) {
     var new_css_class = ''
 
     if(!loading) {
+        $.fn.zato.hide_action_overlay();
         if(is_success) {
             css_class = 'user-message-success';
         }
@@ -189,6 +190,18 @@ $.fn.zato.user_message = function(is_success, msg, loading) {
     div.fadeOut(100, function() {
         div.fadeIn(250);
     });
+}
+
+$.fn.zato.show_action_overlay = function(label) {
+    $.fn.zato.hide_action_overlay();
+    var html = '<div class="zato-action-overlay" id="zato-action-overlay">' +
+        '<div class="zato-action-spinner"></div>' +
+        '<span>' + (label || 'Please wait ...') + '</span></div>';
+    $('body').append(html);
+}
+
+$.fn.zato.hide_action_overlay = function() {
+    $('#zato-action-overlay').remove();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -456,7 +469,15 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
     else {
         msg = data.responseText;
     }
-    $.fn.zato.user_message(success, msg);
+
+    $.fn.zato.hide_action_overlay();
+
+    if(!success) {
+        $.fn.zato.user_message(false, msg);
+    }
+    else {
+        $('#user-message-div').hide();
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -514,14 +535,41 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.remove_row = function(td_prefix, instance_id) {
-    $(td_prefix + instance_id).parent().remove();
-    $.fn.zato.data_table.data[instance_id] = null;
+    var td = $(td_prefix + instance_id);
+    var tr = td.length ? td.parent() : $(document.getElementById('tr_' + instance_id));
+    tr.animate({opacity: 0}, 200, function() {
+        tr.remove();
+        $.fn.zato.data_table.data[instance_id] = null;
+        if($('#data-table tr').length == 1) {
+            var row = '<tr><td colspan="100">No results</td></tr>';
+            $('#data-table > tbody:last').prepend(row);
+            $('#data-table').data('is_empty', true);
+        }
+    });
+}
 
-    if($('#data-table tr').length == 1) {
-        var row = '<tr><td colspan="100">No results</td></tr>';
-        $('#data-table > tbody:last').prepend(row);
-        $('#data-table').data('is_empty', true);
-    }
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.data_table._bounce_row = function(tr) {
+    tr.find('td').each(function() {
+        var td = $(this);
+        if(!td.find('.zato-bounce-wrap').length) {
+            td.wrapInner('<span class="zato-bounce-wrap"></span>');
+        }
+    });
+    tr.removeClass('zato-row-bounce');
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            tr.addClass('zato-row-bounce');
+            tr.find('.zato-bounce-wrap:first').one('animationend', function() {
+                tr.removeClass('zato-row-bounce');
+                tr.find('.zato-bounce-wrap').each(function() {
+                    var wrap = $(this);
+                    wrap.replaceWith(wrap.contents());
+                });
+            });
+        });
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -548,6 +596,8 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
     var _callback = function(data, status) {
         var success = (status == 'success' || status == 'parsererror');
 
+        $.fn.zato.hide_action_overlay();
+
         if(success) {
             if(_remove_tr) {
                 $.fn.zato.data_table.remove_row(td_prefix, instance.id);
@@ -557,16 +607,17 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
                 on_success_callback();
             }
 
-            msg = String.format(success_pattern, name);
+            $('#user-message-div').hide();
         }
         else {
             msg = data.responseText;
+            $.fn.zato.user_message(false, msg);
         }
-        $.fn.zato.user_message(success, msg);
     }
 
     var callback = function(ok) {
         if(ok) {
+            $.fn.zato.show_action_overlay('Deleting ...');
             if(url_pattern) {
                 var url = String.format(url_pattern, id);
             }
@@ -1089,6 +1140,8 @@ $.fn.zato.data_table.on_submit = function(action) {
     }
 
     if($.fn.zato.is_form_valid(form)) {
+        var label = action === 'create' ? 'Creating ...' : 'Saving ...';
+        $.fn.zato.show_action_overlay(label);
         return $.fn.zato.data_table._on_submit(form, callback);
     }
 }
@@ -1128,12 +1181,14 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
         if(needs_create) {
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
+            var new_tr = $('#data-table > tbody:last > tr:first');
+            $.fn.zato.data_table._bounce_row(new_tr);
         }
         else {
-            console.log('[DEBUG] on_submit_complete: Updating existing row with id=' + JSON.stringify(json.id));
-            var tr = $('#tr_'+ json.id).html(row);
-            console.log('[DEBUG] on_submit_complete: Updated row element=' + JSON.stringify(tr.length));
+            var tr = $(document.getElementById('tr_'+ json.id));
+            tr.html(row);
             tr.addClass('updated');
+            $.fn.zato.data_table._bounce_row(tr);
         }
     }
 

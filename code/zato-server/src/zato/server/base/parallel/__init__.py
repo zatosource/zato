@@ -30,7 +30,7 @@ from gevent.lock import RLock
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SERVER_STARTUP, \
-    SEC_DEF_TYPE, ZATO_ODB_POOL_NAME
+    SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
@@ -67,7 +67,7 @@ if 0:
     from zato.common.facade import SecurityFacade
     from zato.common.log_streaming import LogStreamingManager
     from zato.common.marshal_.api import MarshalAPI
-    from zato.common.odb.api import ODBManager, PoolStore
+    from zato.common.sql_pool import PoolStore
     from zato.common.pubsub.backend import PubSubBackend
     from zato.common.pubsub.matcher import PatternMatcher
     from zato.common.pubsub.subscriptions_store import SubscriptionsStore
@@ -113,7 +113,6 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
-    odb: 'ODBManager'  # ServiceStore dependency -- removed in Phase 6
     config_store: 'RustConfigStore'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
@@ -796,33 +795,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         with self.zato_lock_manager(uuid4().hex):
             pass
-
-        # ODB pool -- still needed by ServiceStore for service deployment tracking (Phase 6 removes this).
-        # Feed odb_data from server.conf into the Python ConfigStore so WorkerStore.init_sql can connect.
-        odb_data = Bunch()
-        odb_data.db_name = self.fs_server_config.odb.db_name
-        odb_data.extra = self.fs_server_config.odb.extra
-        odb_data.engine = self.fs_server_config.odb.engine
-        odb_data.token = self.fs_server_config.main.token
-        odb_data.is_odb = True
-        odb_data.is_active = True
-
-        if odb_data.engine != 'sqlite':
-            odb_data.password = self.fs_server_config.odb.password
-            odb_data.host = self.fs_server_config.odb.host
-            odb_data.port = self.fs_server_config.odb.port
-            odb_data.pool_size = self.fs_server_config.odb.pool_size
-            odb_data.username = self.fs_server_config.odb.username
-
-        self.config.odb_data = odb_data
-        self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        self.odb.token = self.config.odb_data.token if isinstance(self.config.odb_data.token, str) \
-            else self.config.odb_data.token.decode('utf8')
-        self.odb.decrypt_func = self.decrypt
-
-
 
         # Load enmasse YAML into the Rust ConfigStore
         self.load_enmasse_yaml()

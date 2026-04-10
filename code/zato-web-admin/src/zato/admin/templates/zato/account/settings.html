@@ -72,7 +72,7 @@
                         {% else %}
                             <input type="text" style="color:#999" id="color_{{ cluster.id }}" name="color_{{ cluster.id }}" value="{{ default_prompt }}" />
                         {% endif %}
-                        {% if cluster.id|slugify in cluster_colors %}<a id="previev_a_{{ cluster.id }}" href="javascript:$.fn.zato.account.basic_settings.preview({{ cluster.id }})">(preview)</a>{% endif %}
+                        {% if cluster.id|slugify in cluster_colors %}<a id="previev_a_{{ cluster.id }}" href="javascript:$.fn.zato.account.basic_settings.preview('{{ cluster.id }}')">(preview)</a>{% endif %}
                     </span>
                 </td>
             </tr>

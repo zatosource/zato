@@ -32,12 +32,12 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
-from zato.common.odb.api import PoolStore, SessionWrapper
+from zato.common.sql_pool import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, parse_datetime, \
     rebuild_subscription_dict_list, spawn_greenlet, update_apikey_username_to_channel, utcnow, visit_py_source, \

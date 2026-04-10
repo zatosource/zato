@@ -22,7 +22,6 @@ from zato.common.api import SCHEDULER
 from zato.common.const import ServiceConst
 from zato.common.crypto.api import SchedulerCryptoManager
 from zato.common.crypto.const import well_known_data
-from zato.common.odb.model import Cluster
 from zato.common.scheduler import startup_jobs
 from zato.common.util.config import get_scheduler_api_client_for_server_auth_required, \
     get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username

@@ -39,7 +39,7 @@ if 0:
     from kombu.message import Message as KombuAMQPMessage
 
     # Zato
-    from zato.common.odb.api import PoolStore
+    from zato.common.sql_pool import PoolStore
     from zato.common.typing_ import any_, callable_, stranydict, strnone
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI

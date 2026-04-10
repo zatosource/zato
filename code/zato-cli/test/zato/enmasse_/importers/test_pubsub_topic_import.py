@@ -1,26 +1,46 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
-Simple test script to verify pubsub topic importer imports work correctly.
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-try:
-    from zato.cli.enmasse.importers.pubsub_topic import PubSubTopicImporter
-    from zato.cli.enmasse.importer import EnmasseYAMLImporter
-    from zato.common.odb.model import PubSubTopic
-    from zato.common.odb.query import pubsub_topic_list
-    
-    print("✓ All imports successful")
-    
-    # Test basic instantiation
-    importer = EnmasseYAMLImporter()
-    pubsub_importer = PubSubTopicImporter(importer)
-    
-    print("✓ Importer instantiation successful")
-    print("✓ PubSub topic importer implementation is ready")
-    
-except ImportError as e:
-    print(f"✗ Import error: {e}")
-except Exception as e:
-    print(f"✗ Error: {e}")
+# stdlib
+from unittest import TestCase, main
+
+# zato_server_core
+from zato_server_core import ConfigStore
+
+# Zato
+from zato.cli.enmasse.importer import EnmasseYAMLImporter
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestPubSubTopicImportSmoke(TestCase):
+
+    def test_config_store_can_be_instantiated(self) -> 'None':
+        store = ConfigStore()
+        self.assertIsNotNone(store)
+
+# ################################################################################################################################
+
+    def test_enmasse_yaml_importer_can_be_instantiated(self) -> 'None':
+        importer = EnmasseYAMLImporter()
+        self.assertIsNotNone(importer)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if __name__ == '__main__':
+
+    # stdlib
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    _ = main()
+
+# ################################################################################################################################
+# ################################################################################################################################

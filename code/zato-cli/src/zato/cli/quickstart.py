@@ -386,7 +386,6 @@ class Create(ZatoCommand):
         from zato.cli import create_cluster, create_odb, create_scheduler, create_server, create_web_admin
         from zato.common.crypto.api import CryptoManager
         from zato.common.defaults import http_plain_server_port
-        from zato.common.odb.model import Cluster
         from zato.common.util.api import get_engine, get_session
 
         random.seed()

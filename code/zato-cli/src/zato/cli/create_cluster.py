@@ -51,7 +51,6 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import IDEDeploy
-        from zato.common.odb.model import Cluster, HTTPBasicAuth, Service
         from zato.common.odb.post_process import ODBPostProcess
 
         engine = self._get_engine(args)
@@ -194,7 +193,6 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import SIMPLE_IO
-        from zato.common.odb.model import HTTPSOAP, Service
 
         ping_impl_name = 'zato.server.service.internal.Ping'
         ping_service_name = 'demo.ping'
@@ -214,7 +212,6 @@ class Create(ZatoCommand):
         """ Adds a channel for the metrics service.
         """
         from zato.common.api import DATA_FORMAT
-        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
 
         metrics_password = os.environ['Zato_Server_Metrics_Password']
 
@@ -235,7 +232,6 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import MISC, SIMPLE_IO
-        from zato.common.odb.model import HTTPSOAP
 
         channel = HTTPSOAP(
             None, MISC.DefaultAdminInvokeChannel, True, True, 'channel', 'plain_http',
@@ -252,7 +248,6 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import SIMPLE_IO
-        from zato.common.odb.model import HTTPSOAP
 
         channel = HTTPSOAP(
             None, 'zato.ide_publisher', True, True, 'channel', 'plain_http',
@@ -269,7 +264,6 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import CACHE
-        from zato.common.odb.model import CacheBuiltin
 
         # This is the default cache that is used if a specific one is not selected by users
         item = CacheBuiltin()
@@ -308,7 +302,6 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import DATA_FORMAT, Groups, SEC_DEF_TYPE
-        from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP
         from zato.server.groups.base import GroupsManager
         from json import dumps
 
@@ -383,7 +376,6 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import DATA_FORMAT
-        from zato.common.odb.model import HTTPSOAP
 
         # Toggle log streaming on/off
         toggle_channel = HTTPSOAP(
@@ -407,7 +399,6 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import DATA_FORMAT
-        from zato.common.odb.model import HTTPSOAP
 
         channel = HTTPSOAP(
             None, 'zato.django', True, True, 'channel',
@@ -423,7 +414,6 @@ class Create(ZatoCommand):
 
         # Zato
         from zato.common.api import DATA_FORMAT
-        from zato.common.odb.model import HTTPSOAP, Service
 
         self.logger.info('Creating pub/sub REST channels')
 

@@ -56,7 +56,6 @@ from zato_sio import SIOProcessor
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.hot_deploy_ import HotDeployProject
-    from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, callable_, intstrdict, module_, stranydict, \
         strdictdict, strint, strintdict, strlist, stroriter, tuple_
     from zato.server.base.parallel import ParallelServer

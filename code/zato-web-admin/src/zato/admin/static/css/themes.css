@@ -614,3 +614,48 @@
     background: var(--panel-bg);
     color: var(--body-text);
 }
+
+/* Action overlay (creating, saving, deleting) */
+.zato-action-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--panel-bg);
+    color: var(--body-text);
+    padding: 18px 28px;
+    border: 1px solid var(--border-color-strong);
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    z-index: 10000;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.zato-action-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color-strong);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: zatoSpin 0.6s linear infinite;
+}
+
+@keyframes zatoSpin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes zatoRowBounce {
+    0%   { transform: scale(1);    font-weight: 400; }
+    30%  { transform: scale(1.12); font-weight: 600; }
+    60%  { transform: scale(0.97); font-weight: 500; }
+    100% { transform: scale(1);    font-weight: 400; }
+}
+
+tr.zato-row-bounce td > .zato-bounce-wrap {
+    display: inline-block;
+    transform-origin: left center;
+    animation: zatoRowBounce 0.9s ease-in-out;
+}

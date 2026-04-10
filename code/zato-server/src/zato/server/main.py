@@ -111,7 +111,7 @@ import yaml
 from gevent import signal_handler as gevent_signal_handler
 
 # Zato
-from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.api import SERVER_STARTUP, TRACE1
 
 from zato.common.crypto.api import ServerCryptoManager
 
@@ -132,7 +132,7 @@ from zato.common.util.open_ import open_r
 
 if 0:
     from bunch import Bunch
-    from zato.common.odb.api import ODBManager, PoolStore
+    from zato.common.sql_pool import PoolStore
     from zato.common.repo import RepoManager
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
     from zato.server.base.parallel import ParallelServer
@@ -252,7 +252,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     oracledb.version = '8.3.0'
     sys.modules['cx_Oracle'] = oracledb
 
-    from zato.common.odb.api import ODBManager, PoolStore
+    from zato.common.sql_pool import PoolStore
     from zato.common.repo import RepoManager
     from zato.server.base.parallel import ParallelServer
     from zato.server.service.store import ServiceStore
@@ -392,9 +392,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     zato_host, zato_port = _parse_bind_config(server_config.main)
 
     # Basic components needed for the server to boot up
-    odb_manager = ODBManager()
-
-    odb_manager.well_known_data = ZATO_CRYPTO_WELL_KNOWN_DATA
     sql_pool_store = PoolStore()
 
     # Create it upfront here
@@ -406,14 +403,10 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         is_testing=False
     )
 
-    server.odb = odb_manager
     server.service_store = service_store
     server.service_store.server = server
     server.sql_pool_store = sql_pool_store
     server.stderr_path = options.get('stderr_path') or ''
-
-    # Assigned here because it is a circular dependency
-    odb_manager.parallel_server = server
 
     stop_after = options.get('stop_after') or os.environ.get('Zato_Stop_After')  or os.environ.get('ZATO_STOP_AFTER')
     if stop_after:
@@ -428,7 +421,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.env_variables_from_files[:] = initial_env_variables
     server.deploy_auto_from = options.get('deploy_auto_from') or ''
     server.crypto_manager = crypto_manager
-    server.odb_data = server_config.odb
     server.host = zato_host
     server.port = zato_port
     server.use_tls = server_config.crypto.use_tls

@@ -445,7 +445,6 @@ class Create(ZatoCommand):
         from zato.common.api import SERVER_JOIN_STATUS
         from zato.common.crypto.const import well_known_data
         from zato.common.defaults import http_plain_server_port
-        from zato.common.odb.model import Cluster, Server
         from zato.common.util.logging_ import get_logging_conf_contents
 
         logging_conf_contents = get_logging_conf_contents()

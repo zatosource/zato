@@ -109,12 +109,10 @@ class CommandStore:
              check_config        as check_config_mod,        \
              component_version   as component_version_mod,   \
              create_cluster      as create_cluster_mod,      \
-             create_odb          as create_odb_mod,          \
              create_scheduler    as create_scheduler_mod,    \
              create_server       as create_server_mod,       \
              create_web_admin    as create_web_admin_mod,    \
              crypto              as crypto_mod,              \
-             delete_odb          as delete_odb_mod,          \
              enmasse_command     as enmasse_mod,             \
              FromConfig,                                     \
              ide                 as ide_mod,                 \
@@ -208,10 +206,6 @@ class CommandStore:
         create_cluster.set_defaults(command='create_cluster')
         self.add_opts(create_cluster, create_cluster_mod.Create.opts)
 
-        create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
-        create_odb.set_defaults(command='create_odb')
-        self.add_opts(create_odb, create_odb_mod.Create.opts)
-
         create_scheduler = create_subs.add_parser(
             'scheduler', description=create_scheduler_mod.Create.__doc__, parents=[base_parser])
         create_scheduler.add_argument('path', help='Path to an empty directory to install the scheduler in')
@@ -268,7 +262,7 @@ class CommandStore:
         #
         # delete
         #
-        delete = subs.add_parser('delete', description=delete_odb_mod.Delete.__doc__)
+        delete = subs.add_parser('delete', description='Deletes Zato components')
         delete_subs = delete.add_subparsers()
 
         delete_api_key = delete_subs.add_parser('api-key', description='Deletes an API key definition',
@@ -280,11 +274,6 @@ class CommandStore:
             parents=[base_parser])
         delete_basic_auth.set_defaults(command='delete_basic_auth')
         self.add_opts(delete_basic_auth, sec_basic_auth_mod.DeleteDefinition.opts)
-
-        delete_odb = delete_subs.add_parser('odb', description='Deletes a Zato ODB', parents=[base_parser])
-        delete_odb.set_defaults(command='delete_odb')
-
-        self.add_opts(delete_odb, delete_odb_mod.Delete.opts)
 
         #
         # delete-rest-channel
@@ -761,33 +750,6 @@ def main() -> 'any_':
 
     # .. otherwise, try to run the command now ..
     else:
-
-        # Now that we are here, we also need to check if non-SQLite databases
-        # have all their required options on input. We do it here rather than in create_odb.py
-        # because we want to report it as soon as possible, before actual commands execute.
-        odb_type = getattr(args, 'odb_type', None)
-        if odb_type and odb_type != 'sqlite':
-            missing = []
-            for name in 'odb_db_name', 'odb_host', 'odb_port', 'odb_user':
-                if not getattr(args, name, None):
-                    missing.append(name)
-
-            if missing:
-                missing_noun = 'Option ' if len(missing) == 1 else 'Options '
-                missing_verb = ' is '    if len(missing) == 1 else ' are '
-                missing.sort()
-
-                _ = sys.stdout.write(
-                    missing_noun                  + \
-                    '`'                           + \
-                    ', '.join(missing)            + \
-                    '`'                           + \
-                    missing_verb                  + \
-                    'required if odb_type is '    + \
-                    '`{}`.'.format(args.odb_type) + \
-                    '\n'
-                )
-                sys.exit(1)
 
         # Zato
         from zato.cli import run_command

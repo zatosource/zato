@@ -39,7 +39,6 @@ class SetIDEPassword(ManageCommand):
         # Zato
         from zato.common.api import IDEDeploy
         from zato.common.crypto.api import CryptoManager, ServerCryptoManager
-        from zato.common.odb.model import HTTPBasicAuth
         from zato.common.util.cli import CommandLineServiceInvoker
 
         password = self.args.password or CryptoManager.generate_password()

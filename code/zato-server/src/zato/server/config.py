@@ -312,9 +312,6 @@ class ConfigStore:
         # Configuration for broker clients
         self.broker_config = None
 
-        # ODB
-        self.odb_data = Bunch()
-
         # SimpleIO
         self.simple_io = None # type: stranydict
 
@@ -404,7 +401,6 @@ class ConfigStore:
         config_store.http_soap = http_soap
         config_store.url_sec = self.url_sec
         config_store.broker_config = self.broker_config
-        config_store.odb_data = deepcopy(self.odb_data)
 
         return config_store
 

@@ -29,10 +29,7 @@ from zato.common.api import CHANNEL, DATA_FORMAT
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
-from zato.common.odb import model
-from zato.common.odb.model import Cluster, ElasticSearch
-from zato.common.odb.api import SessionWrapper, SQLConnectionPool
-from zato.common.odb.query import search_es_list
+from zato.common.sql_pool import SessionWrapper, SQLConnectionPool
 from zato.common.simpleio_ import get_bytes_to_str_encoding
 from zato.common.py23_ import maxint
 from zato.common.typing_ import cast_
@@ -49,10 +46,8 @@ from zato.common.py23_.past.builtins import basestring, cmp, unicode, xrange
 # ################################################################################################################################
 
 if 0:
-    from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, intnone, strnone
     from zato.common.util.search import SearchResults
-    ODBManager = ODBManager
     SearchResults = SearchResults
 
 # ################################################################################################################################
