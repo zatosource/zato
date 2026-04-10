@@ -17,7 +17,6 @@ from traceback import format_exc
 from unittest import TestCase
 
 # Zato
-from zato.common.test import rand_csv, rand_string
 from zato.common.typing_ import cast_, intnone, list_, optional
 from zato.common.util.api import utcnow
 from zato.common.util.open_ import open_w
@@ -460,6 +459,7 @@ class CommandsService(Service):
 
             # Local aliases
             tmp_dir = gettempdir()
+            from zato.common.test import rand_csv, rand_string as _rand_string
 
             # Test data that we will expect to read back from a test file
             data = data or rand_csv()
@@ -470,7 +470,7 @@ class CommandsService(Service):
                 timeout = cast_('float', None)
 
             # Where our test data is
-            test_file_name = rand_string(prefix='commands-test_invoke_core') + '.txt'
+            test_file_name = _rand_string(prefix='commands-test_invoke_core') + '.txt'
             full_path = os.path.join(tmp_dir, test_file_name)
 
             # Log useful details

@@ -1238,11 +1238,9 @@ class ServiceStore:
     def _should_deploy_service(self, name:'str', item:'any_', current_module:'module_', fs_location:'str') -> 'bool':
         """ Is item a service that we can deploy?
         """
-        from zato.common.odb.model.base import Base as ModelBase
-
         if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
             if item is not Service and item is not AdminService:
-                if not hasattr(item, DONT_DEPLOY_ATTR_NAME) and not issubclass(item, ModelBase):
+                if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
 
                     # Do not deploy services that only happened to have been imported
                     # in this module but are actually defined elsewhere.
