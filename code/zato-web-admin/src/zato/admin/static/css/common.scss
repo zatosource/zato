@@ -1,10 +1,11 @@
 
 h2.zato {
     font-size:80%;
-	padding:10px;
-	padding-left:4px;
-    color: #222;
-    border-bottom:1px dotted #767676;
+	padding:10px 0;
+    color: var(--heading-text);
+    border-bottom:1px dotted var(--border-color-strong);
+    width:94%;
+    margin:0 auto;
 }
 
 div.prompt {
@@ -18,7 +19,7 @@ div.prompt form {
 }
 
 a {
-    color: #000;
+    color: var(--link-color);
     font-family: arial,helvetica,clean,sans-serif;
 	text-decoration:underline;
 	padding:3px;
@@ -26,33 +27,33 @@ a {
 }
 
 a:hover {
-    background-color: #e0e030;
-    color:#000033;
+    background-color: var(--link-hover-bg);
+    color: var(--link-hover-text);
     text-decoration:none
 }
 
 a.top {
-	color: #fff;
+	color: var(--header-link-color);
 	text-shadow: none
 }
 
 a.top:hover {
-	color: #000;
+	color: var(--link-hover-text);
 }
 
 a.hint {
-	color: #333;
+	color: var(--hint-text);
 	font-size:10px;
 }
 
 
 
 #footer {
-    border-top:1px solid #999999;
-    border-bottom:1px solid #999999;
+    border-top:1px solid var(--footer-border);
+    border-bottom:1px solid var(--footer-border);
     margin:5px 5px 0px 0px;
     padding:5px;
-    background-color:#e0e0e0;
+    background-color: var(--footer-bg);
     text-align:right
 }
 
@@ -66,7 +67,7 @@ a.hint {
 
 #markup {
 	width:94%;
-	text-align: center;
+	margin:0 auto;
 }
 
 th.ignore, td.ignore, div.ignore {
@@ -93,9 +94,4 @@ div.page_prompt a.current {
 
 .visible {
 	visibility: visible;
-	
-	/* The question is whether this is a proper approach, I wish there was
-	   a 'browser-default' value instead of 'initial' available.
-	*/
-	
 }

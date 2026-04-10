@@ -33,56 +33,7 @@
 
     {% endif %}
 
-    {% if items %}
-        {% include "zato/css-titlebar-padding.html" %}
-    {% endif %}
-
     <link rel="stylesheet" media="screen" href="/static/css/hide-show-password.css" />
-
-    {% if zato_template_name == "zato/scheduler.html" %}
-
-        <style type="text/css">
-            .ui-dialog-titlebar {
-                padding-bottom:-4px !important;
-            }
-        </style>
-
-    {% elif zato_template_name == "zato/outgoing/amqp.html" %}
-
-        <style type="text/css">
-            .ui-dialog-titlebar {
-                margin-bottom:-25px !important;
-            }
-        </style>
-
-    {% elif zato_template_name == "zato/groups/index.html" %}
-
-        <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:0px !important;
-        }
-        </style>
-
-
-    {% elif zato_template_name == "zato/http_soap/index.html" %}
-
-        <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:-25px !important;
-        }
-        </style>
-
-    {% else %}
-
-        {% if not items %}
-            <style type="text/css">
-                .ui-dialog-titlebar {
-                    padding-bottom:10px !important;
-                }
-            </style>
-        {% endif %}
-
-    {% endif %}
 
     {% block "extra_css" %}
     {% if not zato_template_name %}
@@ -95,7 +46,19 @@
 
     <script nonce="{{ CSP_NONCE }}">
 
+        function zatoSetTheme(value) {
+            if (value !== 'light' && value !== 'dark' && value !== 'high-contrast') { value = 'light'; }
+            localStorage.setItem('zato.theme', value);
+            document.documentElement.setAttribute('data-theme', value);
+        }
+
+        function zatoInitThemeSelect() {
+            var sel = document.getElementById('theme-select');
+            if (sel) { sel.value = localStorage.getItem('zato.theme') || 'light'; }
+        }
+
         $(document).ready(function() {
+            zatoInitThemeSelect();
             $('input[type="password"]').hidePassword(true);
         });
 
@@ -292,8 +255,21 @@
                     <a class="status-badge header-badge" href="{% url 'updates' %}" id="update-status-badge">
                         <span id="update-status-text"></span>
                     </a>
+                    <select id="theme-select" onchange="zatoSetTheme(this.value)">
+                        <option value="light">Light theme</option>
+                        <option value="dark">Dark theme</option>
+                        <option value="high-contrast">High contrast</option>
+                    </select>
                     <a class="top header-link-styled" href="{% url "account-settings-basic" %}">My settings</a>
                     <a class="top header-link-styled" href="{% url "logout" %}"><span id="session-timer">00:00:00</span> (log out)</a>
+                </span>
+            {% else %}
+                <span id="logout">
+                    <select id="theme-select" onchange="zatoSetTheme(this.value)">
+                        <option value="light">Light theme</option>
+                        <option value="dark">Dark theme</option>
+                        <option value="high-contrast">High contrast</option>
+                    </select>
                 </span>
             {% endif %}
             </div>

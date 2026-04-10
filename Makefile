@@ -14,7 +14,6 @@ static-check:
 	cd $(CURDIR)/code/zato-common    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-distlock  && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cy        && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-scheduler && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-server    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
@@ -51,6 +50,7 @@ hl7-tests:
 
 build:
 	$(MAKE) server-build
+	$(MAKE) scheduler-build
 	$(MAKE) broker-build
 	$(MAKE) sio-build
 
@@ -58,6 +58,11 @@ server-build:
 	. $(HOME)/.cargo/env && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
 	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-server/src/zato_server_core/Cargo.toml
+
+scheduler-build:
+	. $(HOME)/.cargo/env && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-scheduler/src/zato_scheduler_core/Cargo.toml
 
 sio-build:
 	cd $(CURDIR)/code/zato-common && $(MAKE) build
@@ -170,13 +175,10 @@ stop-server:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-server
 
 restart-server-with-scheduler:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server-with-scheduler
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server
 
-stop-scheduler:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-scheduler
-
-restart-scheduler:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-scheduler
+restart-server:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server
 
 stop-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-dashboard

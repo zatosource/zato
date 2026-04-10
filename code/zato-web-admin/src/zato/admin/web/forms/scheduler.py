@@ -28,7 +28,6 @@ class OneTimeSchedulerJobForm(_Base):
     pass
 
 class IntervalBasedSchedulerJobForm(_Base):
-    # Attributes specific to interval-based jobs.
     weeks = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
     days = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
     hours = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
@@ -36,3 +35,11 @@ class IntervalBasedSchedulerJobForm(_Base):
     seconds = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
     start_date = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
     repeats = forms.CharField(widget=forms.TextInput(attrs={'style':'width:8%'}))
+    jitter_ms = forms.CharField(required=False, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
+    timezone = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:40%'}))
+    calendar = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:40%'}))
+    on_missed = forms.ChoiceField(required=False, choices=[
+        ('run_once', 'Run once'), ('skip', 'Skip'), ('run_all', 'Run all')
+    ], widget=forms.Select(attrs={'style':'width:20%'}))
+    max_execution_time_ms = forms.CharField(required=False, widget=forms.TextInput(
+        attrs={'class':'validate-digits', 'style':'width:15%'}))

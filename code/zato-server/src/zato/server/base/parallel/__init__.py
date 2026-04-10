@@ -1005,6 +1005,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
+        # Start the Rust scheduler thread (in-process, same pattern as the broker)
+        self._start_scheduler()
+
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
@@ -1014,6 +1017,52 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def _pre_initialize(self) -> 'None':
         pass
+
+# ################################################################################################################################
+
+    def _start_scheduler(self) -> 'None':
+        """ Start the Rust scheduler thread inside this server process.
+        """
+        from json import loads as json_loads
+
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+        from zato_scheduler_core import scheduler_start
+
+        self._scheduler_started = False
+
+        def _scheduler_run_cb(spawn_fn, on_job_executed_cb, ctx_json):
+            spawn_fn(on_job_executed_cb, ctx_json)
+
+        def _on_job_executed(ctx_json):
+            try:
+                ctx = json_loads(ctx_json)
+                msg = {
+                    'action': SCHEDULER_MSG.JOB_EXECUTED.value,
+                    'name': ctx['name'],
+                    'service': ctx['service'],
+                    'payload': ctx.get('extra') or '',
+                    'cid': new_cid_server(),
+                    'job_type': ctx['job_type'],
+                    'zato_ctx': {
+                        'scheduler_job_id': ctx['id'],
+                    },
+                }
+                self.broker_client.invoke_async(msg)
+            except Exception:
+                logger.warning('Scheduler dispatch error: %s', format_exc())
+
+        try:
+            scheduler_start(
+                self.config_store,
+                _scheduler_run_cb,
+                spawn,
+                _on_job_executed,
+                0.5,
+            )
+            self._scheduler_started = True
+            logger.info('Scheduler started')
+        except Exception:
+            logger.warning('Scheduler could not be started: %s', format_exc())
 
 # ################################################################################################################################
 
@@ -1524,6 +1573,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             return
         else:
             self._is_process_closing = True
+
+        # Stop the scheduler thread
+        if getattr(self, '_scheduler_started', False):
+            try:
+                from zato_scheduler_core import scheduler_stop
+                scheduler_stop(5.0)
+                logger.info('Scheduler thread stopped')
+            except Exception:
+                logger.warning('Error stopping scheduler: %s', format_exc())
 
         # Stop the broker (including its Rust HTTP server and OS thread)
         if hasattr(self, 'broker_client') and self.broker_client:

@@ -250,6 +250,19 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", minutes);
     row += String.format("<td class='ignore'>{0}</td>", seconds);
     row += String.format("<td class='ignore'>{0}</td>", repeats);
+    row += "<td class='ignore'></td>";
+
+    var jitter_ms = job.jitter_ms || '';
+    var timezone = job.timezone || '';
+    var calendar = job.calendar || '';
+    var on_missed = job.on_missed || '';
+    var max_execution_time_ms = job.max_execution_time_ms || '';
+
+    row += String.format("<td class='ignore'>{0}</td>", jitter_ms);
+    row += String.format("<td class='ignore'>{0}</td>", timezone);
+    row += String.format("<td class='ignore'>{0}</td>", calendar);
+    row += String.format("<td class='ignore'>{0}</td>", on_missed);
+    row += String.format("<td class='ignore'>{0}</td>", max_execution_time_ms);
 
     if(include_tr) {
         row += '</tr>';

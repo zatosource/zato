@@ -37,6 +37,7 @@ pub struct ConfigStore {
     email_smtp:          RwLock<HashMap<String, EmailSmtp>>,
     email_imap:          RwLock<HashMap<String, EmailImap>>,
     scheduler:           RwLock<HashMap<String, SchedulerJob>>,
+    holiday_calendar:    RwLock<HashMap<String, HolidayCalendar>>,
     generic_connection:  RwLock<HashMap<String, GenericConnection>>,
     pubsub_topic:        RwLock<HashMap<String, PubSubTopic>>,
     pubsub_permission:   RwLock<HashMap<String, PubSubPermission>>,
@@ -63,6 +64,7 @@ impl ConfigStore {
     typed_store!(email_smtp, EmailSmtp);
     typed_store!(email_imap, EmailImap);
     typed_store!(scheduler, SchedulerJob);
+    typed_store!(holiday_calendar, HolidayCalendar);
     typed_store!(generic_connection, GenericConnection);
     typed_store!(pubsub_topic, PubSubTopic);
     typed_store!(pubsub_permission, PubSubPermission);
@@ -249,6 +251,8 @@ impl ConfigStore {
         _get_email_imap, _get_list_email_imap, _set_email_imap, _delete_email_imap);
     impl_crud!(scheduler, "scheduler", SchedulerJob,
         _get_scheduler, _get_list_scheduler, _set_scheduler, _delete_scheduler);
+    impl_crud!(holiday_calendar, "holiday_calendar", HolidayCalendar,
+        _get_holiday_calendar, _get_list_holiday_calendar, _set_holiday_calendar, _delete_holiday_calendar);
     impl_crud!(generic_connection, "generic_connection", GenericConnection,
         _get_generic_connection, _get_list_generic_connection, _set_generic_connection, _delete_generic_connection);
     impl_crud!(pubsub_topic, "pubsub_topic", PubSubTopic,
@@ -291,6 +295,7 @@ impl ConfigStore {
             email_smtp:          RwLock::new(HashMap::new()),
             email_imap:          RwLock::new(HashMap::new()),
             scheduler:           RwLock::new(HashMap::new()),
+            holiday_calendar:    RwLock::new(HashMap::new()),
             generic_connection:  RwLock::new(HashMap::new()),
             pubsub_topic:        RwLock::new(HashMap::new()),
             pubsub_permission:   RwLock::new(HashMap::new()),
@@ -336,6 +341,7 @@ impl ConfigStore {
             "email_smtp"          => self._get_email_smtp(py, name),
             "email_imap"          => self._get_email_imap(py, name),
             "scheduler"           => self._get_scheduler(py, name),
+            "holiday_calendar"    => self._get_holiday_calendar(py, name),
             "generic_connection"  => self._get_generic_connection(py, name),
             "pubsub_topic"        => self._get_pubsub_topic(py, name),
             "pubsub_permission"   => self._get_pubsub_permission(py, name),
@@ -368,6 +374,7 @@ impl ConfigStore {
             "email_smtp"          => self._get_list_email_smtp(py),
             "email_imap"          => self._get_list_email_imap(py),
             "scheduler"           => self._get_list_scheduler(py),
+            "holiday_calendar"    => self._get_list_holiday_calendar(py),
             "generic_connection"  => self._get_list_generic_connection(py),
             "pubsub_topic"        => self._get_list_pubsub_topic(py),
             "pubsub_permission"   => self._get_list_pubsub_permission(py),
@@ -400,6 +407,7 @@ impl ConfigStore {
             "email_smtp"          => self._set_email_smtp(py, name, data),
             "email_imap"          => self._set_email_imap(py, name, data),
             "scheduler"           => self._set_scheduler(py, name, data),
+            "holiday_calendar"    => self._set_holiday_calendar(py, name, data),
             "generic_connection"  => self._set_generic_connection(py, name, data),
             "pubsub_topic"        => self._set_pubsub_topic(py, name, data),
             "pubsub_permission"   => self._set_pubsub_permission(py, name, data),
@@ -432,6 +440,7 @@ impl ConfigStore {
             "email_smtp"          => self._delete_email_smtp(name),
             "email_imap"          => self._delete_email_imap(name),
             "scheduler"           => self._delete_scheduler(name),
+            "holiday_calendar"    => self._delete_holiday_calendar(name),
             "generic_connection"  => self._delete_generic_connection(name),
             "pubsub_topic"        => self._delete_pubsub_topic(name),
             "pubsub_permission"   => self._delete_pubsub_permission(name),
@@ -482,6 +491,7 @@ impl ConfigStore {
         export_section!("outgoing_rest", outgoing_rest);
         export_section!("outgoing_soap", outgoing_soap);
         export_section!("scheduler", scheduler);
+        export_section!("holiday_calendar", holiday_calendar);
         export_section!("sql", outgoing_sql);
         export_section!("ldap", generic_connection);
         export_section!("cache", cache_builtin);
@@ -495,6 +505,16 @@ impl ConfigStore {
         export_section!("channel_openapi", channel_openapi);
 
         Ok(out.unbind())
+    }
+
+    fn get_scheduler_jobs_json(&self) -> String {
+        let store = self.scheduler.read().unwrap();
+        serde_json::to_string(&*store).unwrap_or_else(|_| "{}".to_string())
+    }
+
+    fn get_holiday_calendars_json(&self) -> String {
+        let store = self.holiday_calendar.read().unwrap();
+        serde_json::to_string(&*store).unwrap_or_else(|_| "{}".to_string())
     }
 }
 
@@ -556,6 +576,14 @@ impl ConfigStore {
             let mut store = self.scheduler.write().map_err(lock_err)?;
             for job in config.scheduler {
                 store.insert(job.name.clone(), job);
+            }
+        }
+
+        // Holiday calendars
+        {
+            let mut store = self.holiday_calendar.write().map_err(lock_err)?;
+            for cal in config.holiday_calendar {
+                store.insert(cal.name.clone(), cal);
             }
         }
 
@@ -704,4 +732,19 @@ impl ConfigStore {
             .map_err(|_| pyo3::exceptions::PyRuntimeError::new_err("lock poisoned"))?;
         Ok(store.remove(name).is_some())
     }
+
+    pub fn get_scheduler_jobs_raw(&self) -> HashMap<String, crate::models::SchedulerJob> {
+        let store = self.scheduler.read().unwrap();
+        store.clone()
+    }
+
+    pub fn get_scheduler_lock(&self) -> &RwLock<HashMap<String, crate::models::SchedulerJob>> {
+        &self.scheduler
+    }
+
+    pub fn get_holiday_calendars_raw(&self) -> HashMap<String, crate::models::HolidayCalendar> {
+        let store = self.holiday_calendar.read().unwrap();
+        store.clone()
+    }
+
 }

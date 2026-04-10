@@ -14,7 +14,8 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.oauth.outconn_client_credentials import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, \
      CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.odb.model import OAuth
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -29,7 +30,7 @@ class Index(_Index):
     url_name = 'security-oauth-outconn-client-credentials'
     template = 'zato/security/oauth/outconn-client-credentials.html'
     service_name = 'zato.security.oauth.get-list'
-    output_class = OAuth
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

@@ -1,6 +1,6 @@
 #console-header {
-    background-color:#0e0e0e;
-	box-shadow:0px 0px 4px #333;
+    background-color: var(--header-bg);
+	box-shadow: 0px 0px 4px var(--header-shadow);
 }
 
 #logo{
@@ -9,11 +9,11 @@
     color:#999;
     font-weight:600;
 	font-family:sans-serif;
-	text-shadow: 2px 2px 0 #333;
+	text-shadow: 2px 2px 0 var(--header-shadow);
 }
 
 #logout {
-	color:#fff;
+	color: var(--header-link-color);
 	float:right;
 	font-size:11px;
 	padding-top:6px;

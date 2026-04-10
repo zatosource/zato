@@ -1,0 +1,616 @@
+/*
+ * Zato web admin theme definitions.
+ *
+ * Light theme based on VS Code "Light Modern"
+ *   (https://github.com/microsoft/vscode/blob/main/extensions/theme-defaults/themes/light_modern.json)
+ *   with Zato's own seablue accent colors.
+ *
+ * Dark theme based on VS Code "Dark Modern"
+ *   (https://github.com/microsoft/vscode/blob/main/extensions/theme-defaults/themes/dark_modern.json)
+ *
+ * High-contrast theme based on VS Code "Dark High Contrast"
+ *   (https://github.com/microsoft/vscode/blob/main/extensions/theme-defaults/themes/hc_black.json)
+ *
+ * VS Code theme files are stored in static/themes/vscode/ under the MIT licence
+ * (see static/themes/vscode/LICENSE.txt).
+ */
+
+/* ================================================================ */
+/* Light theme (default)                                            */
+/* ================================================================ */
+
+:root,
+[data-theme="light"] {
+
+    /* Zato brand */
+    --zato-seablue:        #012845;
+    --zato-seablue-light1: #063c65;
+    --zato-seablue-light2: #14578a;
+    --zato-seablue-light3: #2f81bf;
+
+    /* Page */
+    --body-bg:             #F8F8F8;
+    --body-text:           #3B3B3B;
+    --heading-text:        #1F1F1F;
+
+    /* Links */
+    --link-color:          #063c65;
+    --link-hover-bg:       #e0e030;
+    --link-hover-text:     #000033;
+
+    /* Panels and surfaces */
+    --panel-bg:            #FFFFFF;
+    --widget-bg:           #F3F3F3;
+
+    /* Borders */
+    --border-color:        #E5E5E5;
+    --border-color-strong: #CECECE;
+
+    /* Tables */
+    --table-header-bg:     #F0F0F0;
+    --row-odd-bg:          #FFFFFF;
+    --row-even-bg:         #F5F5F5;
+    --row-attention-border:#a9a244;
+
+    /* Forms */
+    --form-data-bg:        #F0F0F0;
+    --form-data-border:    #CECECE;
+    --form-data-text-shadow: 1px 1px 0 #fff;
+    --input-bg:            #FFFFFF;
+    --input-text:          #3B3B3B;
+    --input-border:        #CECECE;
+
+    /* Dialogs */
+    --dialog-titlebar-bg:  #333;
+    --dialog-titlebar-text:#eee;
+    --dialog-titlebar-text-shadow: 1px 1px 0 #000;
+    --dialog-shadow:       #000;
+
+    /* Buttons */
+    --button-bg:           #063c65;
+    --button-text:         #FFFFFF;
+    --button-hover-bg:     #012845;
+
+    /* Accent and attention */
+    --accent:              #063c65;
+    --attention-bg:        #f7f089;
+    --attention-bg2:       #ccc;
+
+    /* Text variants */
+    --muted-text:          #616161;
+    --hint-text:           #333;
+
+    /* Messages */
+    --msg-success-bg:      #bbdd55;
+    --msg-success-border:  #333333;
+    --msg-failure-bg:      #eeee33;
+    --msg-failure-border:  red;
+    --msg-error-bg:        #ffccbb;
+    --msg-error-border:    #999999;
+    --msg-error-text:      #993333;
+    --msg-text:            #333333;
+
+    /* Header */
+    --header-bg:           var(--zato-seablue);
+    --header-shadow:       #333;
+    --header-link-color:   #fff;
+
+    /* Footer */
+    --footer-bg:           #e0e0e0;
+    --footer-border:       #999999;
+
+    /* Nav menu */
+    --nav-bg:              var(--zato-seablue-light1);
+    --nav-hover-bg:        var(--zato-seablue);
+    --nav-text:            #fff;
+    --nav-text-shadow:     1px 1px 0 #000;
+    --nav-border:          #aaa;
+    --nav-dropdown-shadow: #363636;
+
+    /* Pagination */
+    --pagination-text:     #3B3B3B;
+    --pagination-link:     #063c65;
+    --pagination-disabled: #999;
+
+    /* jQuery UI overrides */
+    --ui-datepicker-bg:    #ffffff;
+    --ui-datepicker-text:  #222222;
+    --ui-datepicker-border:#aaaaaa;
+    --ui-slider-border:    #999;
+
+    /* Chosen dropdown */
+    --chosen-bg:           #fff;
+    --chosen-text:         #444;
+    --chosen-border:       #aaa;
+    --chosen-hover-bg:     #1e90ff;
+    --chosen-hover-text:   #fff;
+
+    /* News cards */
+    --news-card-bg:        #fffef0;
+    --news-card-shadow:    rgba(0, 0, 0, 0.15);
+    --news-card-border:    #e8e4c8;
+    --news-card-header:    #666;
+    --news-card-title:     #2a7d4f;
+    --news-card-title-bg:  rgba(42, 125, 79, 0.1);
+    --news-card-summary:   #444;
+    --news-card-img-border:#ddd;
+    --news-card-img-bg:    #f0f0f0;
+
+    /* Hide-show password */
+    --password-toggle-color:#666;
+
+    /* Spinner filter (dark spinner on light bg) */
+    --spinner-filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
+
+    /* Scrollbar */
+    --scrollbar-thumb:     #c1c1c1;
+    --scrollbar-track:     transparent;
+}
+
+/* ================================================================ */
+/* Dark theme                                                       */
+/* ================================================================ */
+
+[data-theme="dark"] {
+
+    /* Zato brand - stays the same */
+    --zato-seablue:        #012845;
+    --zato-seablue-light1: #063c65;
+    --zato-seablue-light2: #14578a;
+    --zato-seablue-light3: #2f81bf;
+
+    /* Page */
+    --body-bg:             #1F1F1F;
+    --body-text:           #CCCCCC;
+    --heading-text:        #CCCCCC;
+
+    /* Links */
+    --link-color:          #4daafc;
+    --link-hover-bg:       #0078D4;
+    --link-hover-text:     #FFFFFF;
+
+    /* Panels and surfaces */
+    --panel-bg:            #181818;
+    --widget-bg:           #202020;
+
+    /* Borders */
+    --border-color:        #2B2B2B;
+    --border-color-strong: #3C3C3C;
+
+    /* Tables */
+    --table-header-bg:     #181818;
+    --row-odd-bg:          #1F1F1F;
+    --row-even-bg:         #262626;
+    --row-attention-border:#7a7030;
+
+    /* Forms */
+    --form-data-bg:        #313131;
+    --form-data-border:    #3C3C3C;
+    --form-data-text-shadow: none;
+    --input-bg:            #313131;
+    --input-text:          #CCCCCC;
+    --input-border:        #3C3C3C;
+
+    /* Dialogs */
+    --dialog-titlebar-bg:  #2B2B2B;
+    --dialog-titlebar-text:#CCCCCC;
+    --dialog-titlebar-text-shadow: none;
+    --dialog-shadow:       #000;
+
+    /* Buttons */
+    --button-bg:           #0078D4;
+    --button-text:         #FFFFFF;
+    --button-hover-bg:     #026EC1;
+
+    /* Accent and attention */
+    --accent:              #0078D4;
+    --attention-bg:        #9E6A03;
+    --attention-bg2:       #444;
+
+    /* Text variants */
+    --muted-text:          #9D9D9D;
+    --hint-text:           #9D9D9D;
+
+    /* Messages */
+    --msg-success-bg:      #2a5a1a;
+    --msg-success-border:  #4a8a3a;
+    --msg-failure-bg:      #6a4a00;
+    --msg-failure-border:  #cc6600;
+    --msg-error-bg:        #5a1a1a;
+    --msg-error-border:    #666;
+    --msg-error-text:      #ff9999;
+    --msg-text:            #CCCCCC;
+
+    /* Header */
+    --header-bg:           #181818;
+    --header-shadow:       #000;
+    --header-link-color:   #fff;
+
+    /* Footer */
+    --footer-bg:           #2B2B2B;
+    --footer-border:       #3C3C3C;
+
+    /* Nav menu */
+    --nav-bg:              #2B2B2B;
+    --nav-hover-bg:        #3C3C3C;
+    --nav-text:            #CCCCCC;
+    --nav-text-shadow:     none;
+    --nav-border:          #3C3C3C;
+    --nav-dropdown-shadow: #000;
+
+    /* Pagination */
+    --pagination-text:     #CCCCCC;
+    --pagination-link:     #4daafc;
+    --pagination-disabled: #666;
+
+    /* jQuery UI overrides */
+    --ui-datepicker-bg:    #313131;
+    --ui-datepicker-text:  #CCCCCC;
+    --ui-datepicker-border:#3C3C3C;
+    --ui-slider-border:    #3C3C3C;
+
+    /* Chosen dropdown */
+    --chosen-bg:           #313131;
+    --chosen-text:         #CCCCCC;
+    --chosen-border:       #3C3C3C;
+    --chosen-hover-bg:     #0078D4;
+    --chosen-hover-text:   #fff;
+
+    /* News cards */
+    --news-card-bg:        #262626;
+    --news-card-shadow:    rgba(0, 0, 0, 0.4);
+    --news-card-border:    #3C3C3C;
+    --news-card-header:    #9D9D9D;
+    --news-card-title:     #4daafc;
+    --news-card-title-bg:  rgba(77, 170, 252, 0.1);
+    --news-card-summary:   #CCCCCC;
+    --news-card-img-border:#3C3C3C;
+    --news-card-img-bg:    #313131;
+
+    /* Hide-show password */
+    --password-toggle-color:#9D9D9D;
+
+    /* Spinner filter (light spinner on dark bg) */
+    --spinner-filter: brightness(0) saturate(100%) invert(80%) sepia(10%) saturate(200%) hue-rotate(180deg) brightness(100%) contrast(90%);
+
+    /* Scrollbar */
+    --scrollbar-thumb:     #555;
+    --scrollbar-track:     #1F1F1F;
+}
+
+/* ================================================================ */
+/* High-contrast theme                                              */
+/* ================================================================ */
+
+[data-theme="high-contrast"] {
+
+    /* Zato brand */
+    --zato-seablue:        #012845;
+    --zato-seablue-light1: #063c65;
+    --zato-seablue-light2: #14578a;
+    --zato-seablue-light3: #4daafc;
+
+    /* Page */
+    --body-bg:             #000000;
+    --body-text:           #FFFFFF;
+    --heading-text:        #FFFFFF;
+
+    /* Links */
+    --link-color:          #4daafc;
+    --link-hover-bg:       #0078D4;
+    --link-hover-text:     #FFFFFF;
+
+    /* Panels and surfaces */
+    --panel-bg:            #000000;
+    --widget-bg:           #0a0a0a;
+
+    /* Borders */
+    --border-color:        #6B6B6B;
+    --border-color-strong: #FFFFFF;
+
+    /* Tables */
+    --table-header-bg:     #0a0a0a;
+    --row-odd-bg:          #000000;
+    --row-even-bg:         #0a0a0a;
+    --row-attention-border:#ccaa00;
+
+    /* Forms */
+    --form-data-bg:        #1a1a1a;
+    --form-data-border:    #6B6B6B;
+    --form-data-text-shadow: none;
+    --input-bg:            #000000;
+    --input-text:          #FFFFFF;
+    --input-border:        #6B6B6B;
+
+    /* Dialogs */
+    --dialog-titlebar-bg:  #1a1a1a;
+    --dialog-titlebar-text:#FFFFFF;
+    --dialog-titlebar-text-shadow: none;
+    --dialog-shadow:       #fff;
+
+    /* Buttons */
+    --button-bg:           #0078D4;
+    --button-text:         #FFFFFF;
+    --button-hover-bg:     #026EC1;
+
+    /* Accent and attention */
+    --accent:              #0078D4;
+    --attention-bg:        #9E6A03;
+    --attention-bg2:       #555;
+
+    /* Text variants */
+    --muted-text:          #CCCCCC;
+    --hint-text:           #CCCCCC;
+
+    /* Messages */
+    --msg-success-bg:      #004400;
+    --msg-success-border:  #00ff00;
+    --msg-failure-bg:      #444400;
+    --msg-failure-border:  #ffff00;
+    --msg-error-bg:        #440000;
+    --msg-error-border:    #ff0000;
+    --msg-error-text:      #ff6666;
+    --msg-text:            #FFFFFF;
+
+    /* Header */
+    --header-bg:           #000000;
+    --header-shadow:       #6B6B6B;
+    --header-link-color:   #FFFFFF;
+
+    /* Footer */
+    --footer-bg:           #0a0a0a;
+    --footer-border:       #6B6B6B;
+
+    /* Nav menu */
+    --nav-bg:              #0a0a0a;
+    --nav-hover-bg:        #1a1a1a;
+    --nav-text:            #FFFFFF;
+    --nav-text-shadow:     none;
+    --nav-border:          #6B6B6B;
+    --nav-dropdown-shadow: #000;
+
+    /* Pagination */
+    --pagination-text:     #FFFFFF;
+    --pagination-link:     #4daafc;
+    --pagination-disabled: #999;
+
+    /* jQuery UI overrides */
+    --ui-datepicker-bg:    #000000;
+    --ui-datepicker-text:  #FFFFFF;
+    --ui-datepicker-border:#6B6B6B;
+    --ui-slider-border:    #6B6B6B;
+
+    /* Chosen dropdown */
+    --chosen-bg:           #000000;
+    --chosen-text:         #FFFFFF;
+    --chosen-border:       #6B6B6B;
+    --chosen-hover-bg:     #0078D4;
+    --chosen-hover-text:   #fff;
+
+    /* News cards */
+    --news-card-bg:        #0a0a0a;
+    --news-card-shadow:    rgba(255, 255, 255, 0.1);
+    --news-card-border:    #6B6B6B;
+    --news-card-header:    #CCCCCC;
+    --news-card-title:     #4daafc;
+    --news-card-title-bg:  rgba(77, 170, 252, 0.15);
+    --news-card-summary:   #FFFFFF;
+    --news-card-img-border:#6B6B6B;
+    --news-card-img-bg:    #1a1a1a;
+
+    /* Hide-show password */
+    --password-toggle-color:#CCCCCC;
+
+    /* Spinner filter (light spinner on black bg) */
+    --spinner-filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+
+    /* Scrollbar */
+    --scrollbar-thumb:     #6B6B6B;
+    --scrollbar-track:     #000;
+}
+
+/* ================================================================ */
+/* Dark and high-contrast - global overrides for third-party CSS    */
+/* ================================================================ */
+
+[data-theme="dark"] body,
+[data-theme="high-contrast"] body {
+    color-scheme: dark;
+}
+
+[data-theme="dark"] img.logo,
+[data-theme="high-contrast"] img.logo {
+    filter: brightness(1.2);
+}
+
+/* Input and form element overrides */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="high-contrast"] input,
+[data-theme="high-contrast"] select,
+[data-theme="high-contrast"] textarea {
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    border-color: var(--input-border);
+}
+
+[data-theme="dark"] button,
+[data-theme="high-contrast"] button {
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border-color: var(--border-color-strong);
+}
+
+/* Formalize overrides */
+[data-theme="dark"] .input_tiny,
+[data-theme="dark"] .input_small,
+[data-theme="dark"] .input_medium,
+[data-theme="dark"] .input_large,
+[data-theme="dark"] .input_xlarge,
+[data-theme="dark"] .input_xxlarge,
+[data-theme="dark"] .input_full,
+[data-theme="high-contrast"] .input_tiny,
+[data-theme="high-contrast"] .input_small,
+[data-theme="high-contrast"] .input_medium,
+[data-theme="high-contrast"] .input_large,
+[data-theme="high-contrast"] .input_xlarge,
+[data-theme="high-contrast"] .input_xxlarge,
+[data-theme="high-contrast"] .input_full {
+    background-color: var(--input-bg);
+    color: var(--input-text);
+}
+
+/* jQuery UI overrides */
+[data-theme="dark"] .ui-widget,
+[data-theme="high-contrast"] .ui-widget {
+    color: var(--body-text);
+}
+
+[data-theme="dark"] .ui-widget-content,
+[data-theme="high-contrast"] .ui-widget-content {
+    background: var(--panel-bg);
+    color: var(--body-text);
+    border-color: var(--border-color-strong);
+}
+
+[data-theme="dark"] .ui-widget-header,
+[data-theme="high-contrast"] .ui-widget-header {
+    background: var(--dialog-titlebar-bg);
+    color: var(--dialog-titlebar-text);
+    border-color: var(--border-color-strong);
+}
+
+[data-theme="dark"] .ui-state-default,
+[data-theme="dark"] .ui-widget-content .ui-state-default,
+[data-theme="high-contrast"] .ui-state-default,
+[data-theme="high-contrast"] .ui-widget-content .ui-state-default {
+    background: var(--form-data-bg);
+    color: var(--body-text);
+    border-color: var(--border-color-strong);
+}
+
+[data-theme="dark"] .ui-state-hover,
+[data-theme="dark"] .ui-widget-content .ui-state-hover,
+[data-theme="high-contrast"] .ui-state-hover,
+[data-theme="high-contrast"] .ui-widget-content .ui-state-hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+[data-theme="dark"] .ui-state-active,
+[data-theme="dark"] .ui-widget-content .ui-state-active,
+[data-theme="high-contrast"] .ui-state-active,
+[data-theme="high-contrast"] .ui-widget-content .ui-state-active {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* Chosen dropdown overrides */
+[data-theme="dark"] .chosen-container .chosen-results,
+[data-theme="high-contrast"] .chosen-container .chosen-results {
+    background: var(--chosen-bg);
+    color: var(--chosen-text);
+}
+
+[data-theme="dark"] .chosen-container .chosen-results li,
+[data-theme="high-contrast"] .chosen-container .chosen-results li {
+    color: var(--chosen-text);
+}
+
+[data-theme="dark"] .chosen-container .chosen-results li.highlighted,
+[data-theme="high-contrast"] .chosen-container .chosen-results li.highlighted {
+    background: var(--chosen-hover-bg);
+    color: var(--chosen-hover-text);
+}
+
+[data-theme="dark"] .chosen-container-single .chosen-single,
+[data-theme="high-contrast"] .chosen-container-single .chosen-single {
+    background: var(--chosen-bg);
+    color: var(--chosen-text);
+    border-color: var(--chosen-border);
+}
+
+[data-theme="dark"] .chosen-container .chosen-drop,
+[data-theme="high-contrast"] .chosen-container .chosen-drop {
+    background: var(--chosen-bg);
+    border-color: var(--chosen-border);
+}
+
+[data-theme="dark"] .chosen-container-single .chosen-search input[type="text"],
+[data-theme="high-contrast"] .chosen-container-single .chosen-search input[type="text"] {
+    background: var(--input-bg);
+    color: var(--input-text);
+    border-color: var(--input-border);
+}
+
+/* Colorpicker overrides */
+[data-theme="dark"] .colorpicker,
+[data-theme="high-contrast"] .colorpicker {
+    background: var(--panel-bg);
+    border-color: var(--border-color-strong);
+}
+
+/* Scrollbar styling for dark themes */
+[data-theme="dark"] ::-webkit-scrollbar,
+[data-theme="high-contrast"] ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb,
+[data-theme="high-contrast"] ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 5px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track,
+[data-theme="high-contrast"] ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+/* Pagination and action panel */
+.action-panel {
+    margin-top: 8px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: var(--pagination-text);
+    text-align: right;
+}
+
+.action-panel .pagination-wrapper {
+    color: var(--pagination-text);
+}
+
+.action-panel .pagination-wrapper .form_hint {
+    color: var(--pagination-disabled);
+}
+
+.action-panel .previous-next {
+    color: var(--pagination-link);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.action-panel .previous-next.form_hint {
+    color: var(--pagination-disabled);
+    cursor: default;
+    text-decoration: none;
+}
+
+/* Theme select in header */
+#theme-select {
+    font-size: 11px;
+    padding: 1px 2px;
+    vertical-align: middle;
+    background: var(--header-bg);
+    color: var(--header-link-color);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#theme-select option {
+    background: var(--panel-bg);
+    color: var(--body-text);
+}

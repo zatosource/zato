@@ -730,6 +730,7 @@ dependencies = [
  "pyo3",
  "rand",
  "serde",
+ "serde_json",
  "serde_yaml",
 ]
 

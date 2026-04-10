@@ -28,6 +28,7 @@ from zato.server.service.internal import AdminService
 _service_name_prefix = 'zato.scheduler.job.'
 _entity_type = 'scheduler'
 _ib_params = ('weeks', 'days', 'hours', 'minutes', 'seconds')
+_new_params = ('jitter_ms', 'timezone', 'calendar', 'on_missed', 'max_execution_time_ms')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -132,6 +133,13 @@ def _create_edit(self, action):
             val = None
         data[k] = val
 
+    for k in _new_params:
+        val = input.get(k)
+        if val == ZATO_NONE:
+            val = None
+        if val is not None and val != '':
+            data[k] = val
+
     if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
         if not any(input.get(key) for key in _ib_params):
             msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given"
@@ -151,6 +159,15 @@ def _create_edit(self, action):
             store.delete(_entity_type, old_name)
         store.set(_entity_type, name, data)
         saved = store.get(_entity_type, name) or data
+
+        job_id = str(saved.get('id'))
+
+        from zato_scheduler_core import scheduler_create_job, scheduler_edit_job
+        if action == 'create':
+            scheduler_create_job(job_id, data)
+        else:
+            scheduler_edit_job(job_id, data)
+
         self.response.payload.id = saved.get('id')
         self.response.payload.name = input.name
     except Exception:
@@ -165,7 +182,8 @@ class _CreateEdit(_SchedulerAdmin):
     """
     input = 'cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', \
         '-id', '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
-        '-cron_definition', '-should_ignore_existing'
+        '-cron_definition', '-should_ignore_existing', \
+        '-jitter_ms', '-timezone', '-calendar', '-on_missed', '-max_execution_time_ms'
     output = '-id', '-name', '-cron_definition'
 
     def handle(self):
@@ -176,7 +194,8 @@ class _CreateEdit(_SchedulerAdmin):
 
 class _Get(_SchedulerAdmin):
     output = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name', \
-        '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition'
+        '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition', \
+        '-jitter_ms', '-timezone', '-calendar', '-on_missed', '-max_execution_time_ms'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -260,7 +279,12 @@ class Delete(_SchedulerAdmin):
             item = _item_by_id(store.get_list(_entity_type), self.request.input.id)
             if not item:
                 raise ZatoException(self.cid, 'Job not found')
+
+            job_id = str(item['id'])
             store.delete(_entity_type, item['name'])
+
+            from zato_scheduler_core import scheduler_delete_job
+            scheduler_delete_job(job_id)
         except Exception:
             self.logger.error('Could not delete the job, e:`%s`', format_exc())
             raise
@@ -280,10 +304,178 @@ class Execute(_SchedulerAdmin):
             item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
             if not item:
                 raise ZatoException(self.cid, 'Job not found')
-            msg = {'action': SCHEDULER_MSG.EXECUTE.value, 'name': item['name']}
-            self.broker_client.publish(msg, routing_key='scheduler')
+
+            job_id = str(item['id'])
+
+            from zato_scheduler_core import scheduler_execute_job
+            scheduler_execute_job(job_id)
         except Exception:
             self.logger.error('Could not execute the job, e:`%s`', format_exc())
             raise
 
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetHistory(_SchedulerAdmin):
+    """ Returns execution history for a scheduler job.
+    """
+    name = _service_name_prefix + 'get-history'
+
+    input = 'id',
+
+    def handle(self):
+        try:
+            from zato_scheduler_core import scheduler_get_history
+            job_id = str(self.request.input.id)
+            self.response.payload = scheduler_get_history(job_id)
+        except Exception:
+            self.logger.error('Could not get job history, e:`%s`', format_exc())
+            raise
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetAllHistory(_SchedulerAdmin):
+    """ Returns execution history for all scheduler jobs.
+    """
+    name = _service_name_prefix + 'get-all-history'
+
+    def handle(self):
+        try:
+            from zato_scheduler_core import scheduler_get_all_history
+            self.response.payload = scheduler_get_all_history()
+        except Exception:
+            self.logger.error('Could not get all job history, e:`%s`', format_exc())
+            raise
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_cal_entity_type = 'holiday_calendar'
+_cal_service_prefix = 'zato.scheduler.holiday-calendar.'
+
+class _HolidayCalendarAdmin(AdminService):
+    pass
+
+# ################################################################################################################################
+
+class HolidayCalendarGetList(_HolidayCalendarAdmin):
+    """ Returns a list of all holiday calendars.
+    """
+    name = _cal_service_prefix + 'get-list'
+
+    input = Int('-cur_page'), Bool('-paginate'), '-query'
+    output = 'id', 'name', '-description'
+
+    def handle(self):
+        items = [dict(x) for x in self.server.config_store.get_list(_cal_entity_type)]
+        self.response.payload = self._paginate_list(items)
+
+# ################################################################################################################################
+
+class HolidayCalendarGetByID(_HolidayCalendarAdmin):
+    """ Returns a holiday calendar by its ID.
+    """
+    name = _cal_service_prefix + 'get-by-id'
+
+    input = 'id',
+    output = 'id', 'name', '-description', '-dates', '-weekdays'
+
+    def handle(self):
+        items = self.server.config_store.get_list(_cal_entity_type)
+        sid = str(self.request.input.id)
+        for item in items:
+            if str(item.get('id')) == sid:
+                self.response.payload = item
+                return
+        raise ZatoException(self.cid, 'Holiday calendar not found')
+
+# ################################################################################################################################
+
+class HolidayCalendarCreate(_HolidayCalendarAdmin):
+    """ Creates a new holiday calendar.
+    """
+    name = _cal_service_prefix + 'create'
+
+    input = 'name', '-description', '-dates', '-weekdays'
+    output = 'id', 'name'
+
+    def handle(self):
+        input = self.request.input
+        data = {
+            'name': input.name,
+            'description': input.get('description') or None,
+            'dates': input.get('dates') or [],
+            'weekdays': input.get('weekdays') or [],
+        }
+        self.server.config_store.set(_cal_entity_type, input.name, data)
+        saved = self.server.config_store.get(_cal_entity_type, input.name) or data
+
+        from zato_scheduler_core import scheduler_reload
+        scheduler_reload()
+
+        self.response.payload.id = saved.get('id')
+        self.response.payload.name = input.name
+
+# ################################################################################################################################
+
+class HolidayCalendarEdit(_HolidayCalendarAdmin):
+    """ Updates a holiday calendar.
+    """
+    name = _cal_service_prefix + 'edit'
+
+    input = 'id', 'name', '-description', '-dates', '-weekdays'
+    output = 'id', 'name'
+
+    def handle(self):
+        input = self.request.input
+        items = self.server.config_store.get_list(_cal_entity_type)
+        sid = str(input.id)
+        old_name = None
+        for item in items:
+            if str(item.get('id')) == sid:
+                old_name = item.get('name')
+                break
+
+        if old_name and old_name != input.name:
+            self.server.config_store.delete(_cal_entity_type, old_name)
+
+        data = {
+            'name': input.name,
+            'description': input.get('description') or None,
+            'dates': input.get('dates') or [],
+            'weekdays': input.get('weekdays') or [],
+        }
+        self.server.config_store.set(_cal_entity_type, input.name, data)
+        saved = self.server.config_store.get(_cal_entity_type, input.name) or data
+
+        from zato_scheduler_core import scheduler_reload
+        scheduler_reload()
+
+        self.response.payload.id = saved.get('id')
+        self.response.payload.name = input.name
+
+# ################################################################################################################################
+
+class HolidayCalendarDelete(_HolidayCalendarAdmin):
+    """ Deletes a holiday calendar.
+    """
+    name = _cal_service_prefix + 'delete'
+
+    input = 'id',
+
+    def handle(self):
+        items = self.server.config_store.get_list(_cal_entity_type)
+        sid = str(self.request.input.id)
+        for item in items:
+            if str(item.get('id')) == sid:
+                self.server.config_store.delete(_cal_entity_type, item['name'])
+
+                from zato_scheduler_core import scheduler_reload
+                scheduler_reload()
+                return
+
+        raise ZatoException(self.cid, 'Holiday calendar not found')
+
+# ################################################################################################################################
 # ################################################################################################################################

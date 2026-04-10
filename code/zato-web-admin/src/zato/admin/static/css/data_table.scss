@@ -1,8 +1,7 @@
 #data-table {
     width:100%;
     margin-top: 8px;
-    margin-left: 2%;
-    border:1px solid #ccc;
+    border:1px solid var(--border-color);
     font-size:12px;
 
 	counter-reset: data_table_counter;
@@ -12,19 +11,19 @@
     }
 
     tr.odd {
-        background-color:#fff;
+        background-color: var(--row-odd-bg);
     }
 
     tr.even {
-        background-color:#e8e8e8;
+        background-color: var(--row-even-bg);
     }
 
     tr.updated {
-        background-color: $attention
+        background-color: var(--attention-bg);
     }
 
     tr.attention td, tr.updated td {
-        border-bottom:1px solid #a9a244;
+        border-bottom:1px solid var(--row-attention-border);
     }
 
     td, th {
@@ -32,7 +31,7 @@
     }
 
     th {
-		background: #ddd;
+		background: var(--table-header-bg);
         font-size:11px;
     }
 
@@ -41,7 +40,7 @@
     }
 
     td.inline_header {
-		background: #ddd;
+		background: var(--table-header-bg);
     }
 
 	td.numbering:before {
@@ -62,12 +61,12 @@
 
 .form-data{
     width:100%;
-	border:1px solid #666;
+	border:1px solid var(--form-data-border);
 	padding:10px;
 	font-size:12px;
-	background-color:#ccc;
-	color:#000;
-	text-shadow: 1px 1px 0 #eee;
+	background-color: var(--form-data-bg);
+	color: var(--body-text);
+	text-shadow: var(--form-data-text-shadow);
 }
 
 .form-data td {
@@ -79,26 +78,26 @@
 
 .ui-dialog-titlebar {
     padding:10px;
-    background-color:#999;
+    background-color: var(--dialog-titlebar-bg);
 	font-size:13px;
-	border:1px solid #666;
+	border:1px solid var(--border-color-strong);
 	border-bottom:none;
 	text-align:left;
-	text-shadow: 1px 1px 0 #aaa;
+	text-shadow: var(--dialog-titlebar-text-shadow);
 }
 
 .form_hint {
     font-size:smaller;
-    color:#333
+    color: var(--hint-text);
 }
 
 
 .attention {
-	background-color: $attention;
+	background-color: var(--attention-bg);
 }
 
 div.bd {
-	box-shadow: 1px 1px 10px #000;
+	box-shadow: 1px 1px 10px var(--dialog-shadow);
 }
 
 div.ui-dialog {
@@ -106,12 +105,12 @@ div.ui-dialog {
 }
 
 p.big-notice {
-	background-color: $attention2;
+	background-color: var(--attention-bg2);
 	width:50%;
 	margin:0 auto;
 	padding:20px;
 	margin-top:20px;
 	text-align:center;
 	font-size:large;
-	border:1px solid #999
+	border:1px solid var(--border-color-strong);
 }

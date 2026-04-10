@@ -556,16 +556,8 @@ Examples:
 # ################################################################################################################################
 
     def _on_scheduler(self, *ignored:'any_') -> 'None':
-        from zato.common.util.updates import setup_update_file_logger
-        setup_update_file_logger(component_name='scheduler')
-
-        env_vars = {
-            'Zato_Component_Dir': self.component_dir,
-            'ZATO_SCHEDULER_BASE_DIR': self.component_dir
-        }
-        self.run_check_config()
-        _ = self.check_pidfile()
-        _ = self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile, env_vars=env_vars)
+        self.logger.info('The scheduler is now an in-process thread inside the Zato server, not a separate component.')
+        self.logger.info('Start the server instead: zato start /path/to/server')
 
 # ################################################################################################################################
 # ################################################################################################################################

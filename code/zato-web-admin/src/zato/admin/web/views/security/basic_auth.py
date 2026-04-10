@@ -16,7 +16,8 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.basic_auth import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
      method_allowed
-from zato.common.odb.model import HTTPBasicAuth
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class Index(_Index):
     url_name = 'security-basic-auth'
     template = 'zato/security/basic-auth.html'
     service_name = 'zato.security.basic-auth.get-list'
-    output_class = HTTPBasicAuth
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

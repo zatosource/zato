@@ -49,15 +49,16 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Show entries"%}
-
     {% if cluster_id %}
+
+        <div id="markup">
+
+{% include "zato/search-form.html" with page_prompt="Show entries"%}
 
 <div class='page_prompt' style="clear:left">
     <a href="{% url "cache-builtin-create-entry" id cluster_id %}">Add a new entry</a>
 </div>
 
-        <div id="markup">
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
@@ -113,9 +114,9 @@
                 <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
                 <input type="hidden" name="id" id="id" value="{{ id }}" />
             </form>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
     {% endif %} {% comment %}cluster_id{% endcomment %}
 

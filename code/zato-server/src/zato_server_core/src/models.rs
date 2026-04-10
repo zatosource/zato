@@ -490,6 +490,29 @@ pub struct SchedulerJob {
     pub seconds: Option<u32>,
     #[serde(default)]
     pub repeats: Option<u32>,
+    #[serde(default)]
+    pub jitter_ms: Option<u32>,
+    #[serde(default)]
+    pub timezone: Option<String>,
+    #[serde(default)]
+    pub calendar: Option<String>,
+    #[serde(default)]
+    pub on_missed: Option<String>,
+    #[serde(default)]
+    pub max_execution_time_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HolidayCalendar {
+    #[serde(default = "next_id")]
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub dates: Vec<String>,
+    #[serde(default)]
+    pub weekdays: Vec<u8>,
+    #[serde(default)]
+    pub description: Option<String>,
 }
 
 // ── Generic connections ──
@@ -705,6 +728,8 @@ pub struct EnmasseConfig {
     pub outgoing_soap_alias: Vec<OutgoingSoap>,
     #[serde(default)]
     pub scheduler: Vec<SchedulerJob>,
+    #[serde(default)]
+    pub holiday_calendar: Vec<HolidayCalendar>,
     #[serde(default, alias = "outconn_sql")]
     pub sql: Vec<OutgoingSql>,
     #[serde(default, alias = "outgoing_ldap")]

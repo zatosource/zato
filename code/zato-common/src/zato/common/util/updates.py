@@ -1437,7 +1437,6 @@ class Updater:
                 changed_files = self.get_stored_changed_files()
                 if changed_files:
                     component_dirs = {
-                        'scheduler': 'code/zato-scheduler/',
                         'server': 'code/zato-server/',
                         'dashboard': 'code/zato-web-admin/'
                     }
@@ -1515,7 +1514,6 @@ class Updater:
         changed_files = changed_files or []
 
         component_dirs = {
-            'scheduler': 'code/zato-scheduler/',
             'server': 'code/zato-server/',
             'dashboard': 'code/zato-web-admin/'
         }

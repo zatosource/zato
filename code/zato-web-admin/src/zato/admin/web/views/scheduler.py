@@ -33,7 +33,8 @@ from zato.admin.web.forms.scheduler import IntervalBasedSchedulerJobForm, OneTim
 from zato.common.api import SCHEDULER, TRACE1
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
-from zato.common.odb.model import IntervalBasedJob, Job
+# Bunch
+from bunch import Bunch
 from zato.common.util.api import pprint
 
 # Python 2/3 compatibility
@@ -179,6 +180,11 @@ def _get_create_edit_interval_based_message(user_profile, cluster, params, form_
     input_dict['minutes'] = params.get(form_prefix + 'minutes', '')
     input_dict['repeats'] = params.get(form_prefix + 'repeats', '')
 
+    for param in ('jitter_ms', 'timezone', 'calendar', 'on_missed', 'max_execution_time_ms'):
+        val = params.get(form_prefix + param, '')
+        if val:
+            input_dict[param] = val
+
     return input_dict
 
 # ################################################################################################################################
@@ -302,10 +308,15 @@ def index(req):
                 extra = job_elem.extra
                 job_type_friendly = job_type_friendly_names[job_type]
 
-                job = Job(id, name, is_active, job_type,
-                          from_utc_to_user(start_date+'+00:00', req.zato.user_profile),
-                          extra, service_name=service_name,
-                          job_type_friendly=job_type_friendly)
+                job = Bunch()
+                job.id = id
+                job.name = name
+                job.is_active = is_active
+                job.job_type = job_type
+                job.start_date = from_utc_to_user(start_date+'+00:00', req.zato.user_profile)
+                job.extra = extra
+                job.service_name = service_name
+                job.job_type_friendly = job_type_friendly
 
                 if job_type == SCHEDULER.JOB_TYPE.ONE_TIME:
                     definition_text=_one_time_job_def(req.zato.user_profile, start_date)
@@ -323,8 +334,20 @@ def index(req):
                     seconds = job_elem.seconds or ''
                     repeats = job_elem.repeats or ''
 
-                    ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes, seconds, repeats)
+                    ib_job = Bunch()
+                    ib_job.weeks = weeks
+                    ib_job.days = days
+                    ib_job.hours = hours
+                    ib_job.minutes = minutes
+                    ib_job.seconds = seconds
+                    ib_job.repeats = repeats
                     job.interval_based = ib_job
+
+                    job.jitter_ms = getattr(job_elem, 'jitter_ms', '') or ''
+                    job.timezone = getattr(job_elem, 'timezone', '') or ''
+                    job.calendar = getattr(job_elem, 'calendar', '') or ''
+                    job.on_missed = getattr(job_elem, 'on_missed', '') or ''
+                    job.max_execution_time_ms = getattr(job_elem, 'max_execution_time_ms', '') or ''
 
                 else:
                     msg = 'Unrecognized job type, name:`{}`, type:`{}`'.format(name, job_type)

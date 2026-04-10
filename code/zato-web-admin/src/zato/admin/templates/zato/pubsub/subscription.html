@@ -8,10 +8,6 @@
     <link rel="stylesheet" type="text/css" href="/static/css/multi-select.css">
     <style>
 
-        .ui-dialog-titlebar {
-            margin-bottom: 0px !important;
-        }
-
         /* Smooth transitions for security definitions loading */
         .loading-spinner {
             opacity: 0;
@@ -320,16 +316,16 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Search"%}
-
-
     {% if cluster_id %}
+
+        <div id="markup">
+
+{% include "zato/search-form.html" with page_prompt="Search"%}
 
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.pubsub.subscription.create()">Create a new pub/sub subscription</a>
         </div>
 
-        <div id="markup">
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
@@ -415,9 +411,9 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

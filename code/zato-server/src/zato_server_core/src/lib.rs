@@ -1,5 +1,5 @@
-mod models;
-mod config_store;
+pub mod models;
+pub mod config_store;
 
 use pyo3::prelude::*;
 use pyo3::types::{PyCFunction, PyBytes, PyDict, PyTuple};

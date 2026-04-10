@@ -20,7 +20,8 @@ from zato.admin.web.forms.email.smtp import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
      Index as _Index, method_allowed
 from zato.common.api import EMAIL
-from zato.common.odb.model import SMTP
+# Bunch
+from bunch import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class Index(_Index):
     url_name = 'email-smtp'
     template = 'zato/email/smtp.html'
     service_name = 'zato.email.smtp.get-list'
-    output_class = SMTP
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

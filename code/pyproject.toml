@@ -70,7 +70,6 @@ extraPaths = [
     "./zato-cy/src",
     "./zato-distlock/src",
     "./zato-hl7/src",
-    "./zato-scheduler/src",
     "./zato-server/src",
     "./zato-testing/src",
     "./zato-web-admin/src",

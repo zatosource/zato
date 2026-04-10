@@ -94,17 +94,17 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
+    {% if cluster_id %}
+        <div id="markup">
+
 {% with has_generic="1" generic_type="outconn-ldap" %}
     {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}
 {% endwith %}
 
-    {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.outgoing.ldap.create()">Create a new outgoing LDAP connection</a>
         </div>
 
-
-        <div id="markup">
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
@@ -240,9 +240,9 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

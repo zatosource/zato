@@ -1297,7 +1297,30 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg:'bunch_', args:'any_'=None) -> 'any_':
-        return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
+        import time as _time
+        _t0 = _time.monotonic()
+        outcome = 'executed'
+        try:
+            response = self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
+        except Exception:
+            outcome = 'error'
+            response = None
+
+        duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+        job_id = None
+        zato_ctx = getattr(msg, 'zato_ctx', None) or {}
+        if isinstance(zato_ctx, dict):
+            job_id = zato_ctx.get('scheduler_job_id')
+
+        if job_id:
+            try:
+                from zato_scheduler_core import scheduler_mark_complete
+                scheduler_mark_complete(str(job_id), outcome, duration_ms)
+            except Exception:
+                pass
+
+        return response
 
 # ################################################################################################################################
 

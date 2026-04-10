@@ -5,13 +5,6 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-    {% if items %}
-    <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:-4px !important;
-        }
-    </style>
-    {% endif %}
 {% endblock %}
 
 {% block "extra_js" %}
@@ -63,16 +56,17 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
+    {% if cluster_id %}
+        <div id="markup">
+
 {% with has_generic="1" generic_type="cloud-microsoft-365" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}
 {% endwith %}
 
-    {% if cluster_id %}
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.cloud.microsoft_365.create()">Create a new connection</a>
         </div>
 
-        <div id="markup">
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
@@ -137,9 +131,10 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

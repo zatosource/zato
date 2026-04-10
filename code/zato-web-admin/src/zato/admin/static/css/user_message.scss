@@ -1,36 +1,36 @@
 #user-message-div {
     padding-top:16px;
     font-size:12px;
-    margin-left:4px;
-    margin-right:4px;
+    width:94%;
+    margin:0 auto;
 }
 
 .user-message {
     padding:6px;
     border-style:dotted;
-    color:#333333;
+    color: var(--msg-text);
     text-align:left;
 }
 
 .user-message-success {
-    border-color:#333333;
+    border-color: var(--msg-success-border);
     border-width:1px;
-    background-color:#bbdd55;
+    background-color: var(--msg-success-bg);
 }
 
 .user-message-failure {
-    border-color:red;
+    border-color: var(--msg-failure-border);
     border-width:2px;
-    background-color:#eeee33;
+    background-color: var(--msg-failure-bg);
 }
 
 .error-message {
-    background-color:#ffccbb;
+    background-color: var(--msg-error-bg);
     padding:6px;
     margin-bottom:12px;
-    border:1px dotted #999999;
+    border:1px dotted var(--msg-error-border);
     font-weight:600;
-    color:#993333
+    color: var(--msg-error-text);
 }
 
 .loading {

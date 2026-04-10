@@ -24,7 +24,8 @@ from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
 from zato.admin.middleware import HeadersEnrichedException
 from zato.common.ext.validate_ import is_boolean
-from zato.common.odb.model import Service
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,7 +85,7 @@ class Index(_Index):
     url_name = 'service'
     template = 'zato/service/index.html'
     service_name = 'zato.service.get-list'
-    output_class = Service
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
@@ -148,7 +149,7 @@ def overview(req:'HttpRequest', service_name:'str') -> 'TemplateResponse':
 
         response = req.zato.client.invoke('zato.service.get-by-name', input_dict) # type: ignore
         if response.has_data:
-            service = Service()
+            service = Bunch()
 
             for name in('id', 'name', 'is_active', 'impl_name', 'is_internal',
                   'usage', 'last_duration', 'usage_min', 'usage_max',
