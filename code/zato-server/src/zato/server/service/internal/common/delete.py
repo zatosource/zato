@@ -72,7 +72,7 @@ class DeleteObjectsImpl(Service):
 
     def _delete_object_list(self, object_id_list:'anylist') -> 'anylist':
 
-        object_id_list = [int(elem) for elem in object_id_list]
+        object_id_list = [str(elem) for elem in object_id_list]
 
         out:'anylist' = []
 

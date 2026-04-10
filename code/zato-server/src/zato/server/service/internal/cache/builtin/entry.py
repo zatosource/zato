@@ -34,7 +34,7 @@ class _Base(AdminService):
     """ Base class for services that access the contents of a given cache.
     """
     def _get_cache_by_input(self, needs_config=False):
-        cache_id = int(self.request.input.id)
+        cache_id = str(self.request.input.id)
         cache_list = self.server.config_store.get_list('cache_builtin')
         cache_item = None
         for item in cache_list:

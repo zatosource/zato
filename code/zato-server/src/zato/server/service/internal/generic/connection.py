@@ -79,8 +79,7 @@ skip_simple_type = {
 # Values of these generic attributes should be converted to ints
 int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
 
-# Fields stored top-level on the Rust GenericConnection model (rest go under opaque).
-_RUST_GENERIC_KEYS = frozenset({
+_generic_connection_keys = frozenset({
     'id', 'name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn',
     'address', 'port', 'timeout', 'data_format', 'version', 'extra', 'pool_size',
     'username', 'secret', 'cache_expiry', 'security',
@@ -121,7 +120,7 @@ def _conn_to_rust_payload(conn:'GenericConnection') -> 'anydict':
     payload:'anydict' = {}
     extra:'anydict' = {}
     for k, v in flat.items():
-        if k in _RUST_GENERIC_KEYS:
+        if k in _generic_connection_keys:
             payload[k] = v
         else:
             extra[k] = v
@@ -220,8 +219,6 @@ class _CreateEdit(AdminService):
             sec_def_type, security_id = security_id.split(sec_def_sep)
             sec_def_type_name = SEC_DEF_TYPE_NAME[sec_def_type]
 
-            security_id = int(security_id)
-
             # .. look up the security name by its ID ..
             if sec_def_type == SEC_DEF_TYPE.BASIC_AUTH:
                 func = self.server.worker_store.basic_auth_get_by_id
@@ -239,9 +236,8 @@ class _CreateEdit(AdminService):
             # .. potentially overwrites the security type with what we have here ..
             data['auth_type'] = sec_def_type
 
-            # .. turns the ID into an integer but also remove the sec_type prefix,
-            # .. e.g. 17 instead of 'oauth/17'.
-            data['security_id'] = int(security_id)
+            # .. strip the sec_type prefix, e.g. '2026-...' instead of 'oauth/2026-...'.
+            data['security_id'] = security_id
 
             # .. and store everything else now.
             data['sec_def_type_name'] = sec_def_type_name
@@ -276,7 +272,10 @@ class _CreateEdit(AdminService):
             hook_func(self, data, existing, old_name)
 
         rust_payload = _conn_to_rust_payload(conn)
-        rust_payload['id'] = str(data['id'])
+        if data.get('id'):
+            rust_payload['id'] = str(data['id'])
+        else:
+            rust_payload.pop('id', None)
         rust_payload['name'] = data['name']
         rust_payload.setdefault('type_', data.get('type_') or '')
 
@@ -287,11 +286,8 @@ class _CreateEdit(AdminService):
         self.logger.info('create/edit: storing type_=%r, rust_payload keys=%r', rust_payload.get('type_'), list(rust_payload.keys()))
         self.server.config_store.set('generic_connection', new_name, rust_payload)
 
-        # Verify it was stored
-        verify = self.server.config_store.get('generic_connection', new_name)
-        self.logger.info('create/edit: verify after store: %r', verify is not None)
-
-        self.response.payload.id = rust_payload['id']
+        stored = self.server.config_store.get('generic_connection', new_name)
+        self.response.payload.id = stored['id']
         self.response.payload.name = new_name
 
 # ################################################################################################################################
@@ -573,7 +569,7 @@ class ChangePassword(ChangePasswordBase):
             conn = GenericConnection.from_dict(flat)
             conn.secret = enc
             rust_payload = _conn_to_rust_payload(conn)
-            rust_payload['id'] = int(item.get('id') or instance_id)
+            rust_payload['id'] = str(item.get('id') or instance_id)
             rust_payload['name'] = item['name']
             self.server.config_store.set('generic_connection', item['name'], rust_payload)
 

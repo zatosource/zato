@@ -69,7 +69,8 @@ class Create(AdminService):
         name = input.name
         self.server.config_store.set(_entity_type, name, data)
 
-        self.response.payload.id = data.get('id', name)
+        stored = self.server.config_store.get(_entity_type, name)
+        self.response.payload.id = stored['id']
         self.response.payload.name = name
 
 # ################################################################################################################################

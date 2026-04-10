@@ -23,9 +23,9 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _next_group_id(server) -> 'int':
-    items = server.config_store.get_list('groups')
-    return max((int(x.get('id') or 0) for x in items), default=0) + 1
+def _next_group_id(server) -> 'str':
+    """No longer needed — Rust auto-generates string IDs — but kept for backward compat."""
+    return ''
 
 # ################################################################################################################################
 
@@ -39,9 +39,8 @@ def _find_group_by_id(server, group_id) -> 'dict | None':
 # ################################################################################################################################
 
 def _member_string_to_dict(server, group_id, member_str:'str') -> 'dict':
-    sec_info = member_str.split('-')
+    sec_info = member_str.split('-', 1)
     sec_type, security_id = sec_info[0], sec_info[1]
-    security_id = int(security_id)
 
     if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
         get_sec_func = server.worker_store.basic_auth_get_by_id
@@ -171,7 +170,7 @@ class Edit(Service):
             self.server.config_store.delete('groups', old_name)
 
         data = {
-            'id': int(input.id),
+            'id': str(input.id),
             'name': input.name,
             'members': list(group.get('members') or []),
         }
@@ -229,7 +228,7 @@ class Delete(Service):
 
         # Local variables
         input = self.request.input
-        group_id = int(input.id)
+        group_id = str(input.id)
 
         group = _find_group_by_id(self.server, group_id)
         if not group:
@@ -368,7 +367,7 @@ class EditMemberList(Service):
                     members.remove(mid)
 
         data = {
-            'id': int(group['id']),
+            'id': group['id'],
             'name': name,
             'members': members,
         }

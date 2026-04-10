@@ -240,7 +240,8 @@ class Create(AdminService):
         name = input.name
         self.server.config_store.set(entity_type, name, data)
 
-        self.response.payload.id = data.get('id', name)
+        stored = self.server.config_store.get(entity_type, name)
+        self.response.payload.id = stored['id']
         self.response.payload.name = name
         self.response.payload.url_path = input.url_path
 
@@ -297,7 +298,8 @@ class Edit(AdminService):
 
         self.server.config_store.set(entity_type, name, data)
 
-        self.response.payload.id = data.get('id', name)
+        stored = self.server.config_store.get(entity_type, name)
+        self.response.payload.id = stored['id']
         self.response.payload.name = name
 
 # ################################################################################################################################

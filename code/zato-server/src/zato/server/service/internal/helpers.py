@@ -723,7 +723,7 @@ class OpenAPIHandler(Service):
         out = []
         for item in rest_channel_list:
             if item['state'] == 'on':
-                out.append(int(item['id']))
+                out.append(item['id'])
         return out
 
     def _get_basic_auth_security_ids(self, rest_channels):
