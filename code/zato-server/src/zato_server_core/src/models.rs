@@ -3,12 +3,10 @@ use std::collections::HashMap;
 
 // ── ID generation ──
 
-use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
-
-static NEXT_ID: AtomicU64 = AtomicU64::new(1);
-
-pub fn next_id() -> u64 {
-    NEXT_ID.fetch_add(1, Relaxed)
+pub fn next_id() -> String {
+    let ts = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S%.6f");
+    let suffix: u32 = rand::random();
+    format!("{}-{:08x}", ts, suffix)
 }
 
 // ── Security ──
@@ -16,7 +14,7 @@ pub fn next_id() -> u64 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BasicAuthDef {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -31,7 +29,7 @@ pub struct BasicAuthDef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiKeyDef {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -44,7 +42,7 @@ pub struct ApiKeyDef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NtlmDef {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -57,7 +55,7 @@ pub struct NtlmDef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OAuthDef {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -76,7 +74,7 @@ pub struct OAuthDef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BearerTokenDef {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -101,7 +99,7 @@ pub struct BearerTokenDef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityGroup {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default)]
     pub members: Vec<String>,
@@ -112,7 +110,7 @@ pub struct SecurityGroup {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelRest {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -155,7 +153,7 @@ pub struct ChannelRest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelSoap {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -180,7 +178,7 @@ pub struct ChannelSoap {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutgoingRest {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -221,7 +219,7 @@ pub struct OutgoingRest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutgoingSoap {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -246,7 +244,7 @@ pub struct OutgoingSoap {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutgoingAmqp {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -281,7 +279,7 @@ pub struct OutgoingAmqp {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutgoingFtp {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -304,7 +302,7 @@ pub struct OutgoingFtp {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutgoingSql {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -331,7 +329,7 @@ pub struct OutgoingSql {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutgoingOdoo {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -356,7 +354,7 @@ pub struct OutgoingOdoo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutgoingSap {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -383,7 +381,7 @@ pub struct OutgoingSap {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheBuiltinDef {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -408,7 +406,7 @@ pub struct CacheBuiltinDef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmailSmtp {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -433,7 +431,7 @@ pub struct EmailSmtp {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmailImap {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -460,7 +458,7 @@ pub struct EmailImap {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchedulerJob {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -491,7 +489,7 @@ pub struct SchedulerJob {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenericConnection {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default)]
     pub type_: String,
@@ -534,7 +532,7 @@ pub struct GenericConnection {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PubSubTopic {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default)]
     pub description: Option<String>,
@@ -545,7 +543,7 @@ pub struct PubSubTopic {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PubSubPermission {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub security: String,
     #[serde(default)]
     pub pub_: Vec<String>,
@@ -558,7 +556,7 @@ pub struct PubSubPermission {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PubSubSubscription {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub security: String,
     #[serde(default)]
     pub delivery_type: String,
@@ -577,7 +575,7 @@ pub struct PubSubSubscription {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElasticSearchDef {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -594,7 +592,7 @@ pub struct ElasticSearchDef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceInfo {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -611,7 +609,7 @@ pub struct ServiceInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelAmqp {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
@@ -646,7 +644,7 @@ pub struct ChannelAmqp {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelOpenApi {
     #[serde(default = "next_id")]
-    pub id: u64,
+    pub id: String,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
