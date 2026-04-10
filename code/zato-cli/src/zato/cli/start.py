@@ -62,7 +62,8 @@ Examples:
         {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'},
         {'name':'--env-file', 'help':'Path to a file with environment variables to use', 'action':'store'},
         {'name':'--stop-after', 'help':'After how many seconds to stop all the Zato components in the system', 'action':'store'},
-        {'name':'--stderr-path', 'help':'Where to redirect stderr', 'action':'store'}
+        {'name':'--stderr-path', 'help':'Where to redirect stderr', 'action':'store'},
+        {'name':'--enforce-manifest', 'help':'Build and reuse an internal services manifest for O(1) startup', 'action':'store_true'}
     ]
 
 # ################################################################################################################################
@@ -163,6 +164,7 @@ Examples:
             'stderr_path': self.args.stderr_path,
             'env_file': env_file,
             'stop_after': self.args.stop_after,
+            'enforce_manifest': getattr(self.args, 'enforce_manifest', False),
         }
 
         if extra_options:

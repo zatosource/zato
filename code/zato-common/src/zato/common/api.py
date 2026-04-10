@@ -1007,6 +1007,79 @@ class SourceCodeInfo:
 # ################################################################################################################################
 # ################################################################################################################################
 
+class LazySourceCodeInfo:
+    """ Like SourceCodeInfo but defers file reading, hashing, and line-number lookup until first access.
+    """
+    __slots__ = '_mod', '_class', '_path', '_loaded', '_source', '_len_source', '_hash', '_line_number'
+
+    def __init__(self, mod, class_, path):
+        self._mod = mod
+        self._class = class_
+        self._path = path
+        self._loaded = False
+        self._source = b''
+        self._len_source = 0
+        self._hash = ''
+        self._line_number = 0
+
+    def _load(self):
+        if self._loaded:
+            return
+        self._loaded = True
+
+        from hashlib import sha256
+        import inspect
+
+        try:
+            file_name = self._mod.__file__ or ''
+            if file_name[-1] in ('c', 'o'):
+                file_name = file_name[:-1]
+            self._source = open(file_name, 'rb').read()
+            self._len_source = len(self._source)
+            self._hash = sha256(self._source).hexdigest()
+            self._line_number = inspect.findsource(self._class)[1]
+        except (IOError, OSError, TypeError):
+            pass
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def source(self):
+        self._load()
+        return self._source
+
+    @property
+    def len_source(self):
+        self._load()
+        return self._len_source
+
+    @property
+    def hash(self):
+        self._load()
+        return self._hash
+
+    @property
+    def hash_method(self):
+        return 'SHA-256'
+
+    @property
+    def server_name(self):
+        return None
+
+    @property
+    def line_number(self):
+        self._load()
+        return self._line_number
+
+    @property
+    def source_html(self):
+        return ''
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class IDEDeploy:
     Username = 'ide_publisher'
 

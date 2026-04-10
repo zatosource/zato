@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import importlib
 import inspect
+import json
 import logging
 import os
 import sys
@@ -38,7 +39,7 @@ except ImportError:
     Dumper = Dumper
 
 # Zato
-from zato.common.api import DONT_DEPLOY_ATTR_NAME, SourceCodeInfo, TRACE1
+from zato.common.api import DONT_DEPLOY_ATTR_NAME, LazySourceCodeInfo, SourceCodeInfo, TRACE1
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.marshal_.api import Model as DataClassModel
@@ -650,10 +651,158 @@ class ServiceStore:
                 'deployment_info': 'no-deployment-info'
             })
 
-        logger.info('{} %d internal services (%s) (%s)'.format(self.action_internal_done),
-            len(info.to_process), info.total_size_human, self.server.name)
+        logger.info('{} %d internal services (%s)'.format(self.action_internal_done),
+            len(info.to_process), self.server.name)
 
         return info.to_process
+
+# ################################################################################################################################
+
+    @staticmethod
+    def _get_manifest_paths(base_dir:'str') -> 'tuple':
+        """ Returns (server_manifest_path, package_manifest_path).
+        """
+        server_path = os.path.join(base_dir, 'config', 'repo', '.internal-manifest.json')
+        package_path = os.path.join(os.path.dirname(__file__), '_internal_manifest.json')
+        return server_path, package_path
+
+# ################################################################################################################################
+
+    @staticmethod
+    def _find_manifest(base_dir:'str') -> 'str':
+        """ Returns the path to an existing manifest or empty string.
+        """
+        server_path, package_path = ServiceStore._get_manifest_paths(base_dir)
+        if os.path.exists(server_path):
+            return server_path
+        if os.path.exists(package_path):
+            return package_path
+        return ''
+
+# ################################################################################################################################
+
+    def _build_manifest(self, items:'list', base_dir:'str') -> 'list':
+        """ Runs the full scan and returns manifest entries plus writes the manifest file.
+        """
+        info = self.import_services_from_anywhere(items, base_dir, is_internal=True)
+
+        manifest_entries = []
+        for service in info.to_process:
+            class_ = service.service_class
+            manifest_entries.append({
+                'module': class_.__module__,
+                'class': class_.__name__,
+            })
+
+        server_path, _ = ServiceStore._get_manifest_paths(base_dir)
+        os.makedirs(os.path.dirname(server_path), exist_ok=True)
+
+        with open(server_path, 'w') as f:
+            json.dump(manifest_entries, f, indent=2, sort_keys=True)
+
+        logger.info('Wrote internal services manifest to %s (%d entries)', server_path, len(manifest_entries))
+
+        return info.to_process
+
+# ################################################################################################################################
+
+    def _import_from_manifest(self, manifest_path:'str') -> 'list':
+        """ Fast O(1)-style import path: reads the manifest, bulk-imports modules, getattr classes.
+        """
+        from time import monotonic as _mn
+
+        _t0 = _mn()
+
+        with open(manifest_path) as f:
+            entries = json.load(f)
+
+        _t_json = _mn()
+
+        to_process = []
+        modules_cache = {}
+
+        _slow_imports = []
+        _import_total = 0.0
+        _setup_total = 0.0
+
+        for entry in entries:
+            module_name = entry['module']
+            class_name = entry['class']
+
+            if module_name not in modules_cache:
+                _ti = _mn()
+                try:
+                    modules_cache[module_name] = import_module(module_name)
+                except Exception:
+                    logger.warning('Manifest: could not import module `%s`', module_name)
+                    continue
+                _td = (_mn() - _ti) * 1000
+                _import_total += _td
+                if _td > 5.0:
+                    _slow_imports.append((module_name, _td))
+
+            mod = modules_cache[module_name]
+            class_ = getattr(mod, class_name, None)
+
+            if class_ is None:
+                logger.warning('Manifest: class `%s` not found in module `%s`', class_name, module_name)
+                continue
+
+            _ts = _mn()
+
+            fs_location = inspect.getfile(mod)
+            class_.zato_set_module_name(fs_location)
+
+            self.set_up_class_attributes(class_, self)
+
+            name = class_.get_name()
+
+            if issubclass(class_, PubSubHook):
+                self.server.pubsub_hooks.append(name)
+                self.server.pubsub_hooks.sort()
+
+            service = InRAMService()
+            service.cluster_id = self.server.cluster_id
+            service.is_active = True
+            service.is_internal = True
+            service.name = name
+            service.impl_name = class_.get_impl_name()
+            service.service_class = class_
+            service.source_code_info = LazySourceCodeInfo(mod, class_, getsourcefile(mod) or 'no-source-file')
+
+            to_process.append(service)
+            _setup_total += (_mn() - _ts) * 1000
+
+        _t_imports = _mn()
+
+        self._store_in_ram(None, to_process)
+        self._store_deployment_info(to_process)
+
+        _t_store = _mn()
+
+        info = type('DeploymentInfo', (), {'to_process': to_process, 'total_size': 0, 'total_size_human': ''})()
+        self._after_import_to_config(info)
+
+        _t_config = _mn()
+
+        logger.info(
+            'Manifest timing: json=%.1f ms, imports=%.1f ms, setup=%.1f ms, loop=%.1f ms (%d mods, %d svcs), store=%.1f ms, config=%.1f ms, total=%.1f ms',
+            (_t_json - _t0) * 1000,
+            _import_total,
+            _setup_total,
+            (_t_imports - _t_json) * 1000,
+            len(modules_cache),
+            len(to_process),
+            (_t_store - _t_imports) * 1000,
+            (_t_config - _t_store) * 1000,
+            (_t_config - _t0) * 1000,
+        )
+        if _slow_imports:
+            _slow_imports.sort(key=lambda x: -x[1])
+            for _smod, _stime in _slow_imports[:10]:
+                logger.info('  slow import: %s -> %.1f ms', _smod, _stime)
+
+        return to_process
 
 # ################################################################################################################################
 
@@ -677,7 +826,7 @@ class ServiceStore:
                 self.services[item.impl_name]['deployment_info'] = item_deployment_info
                 self.services[item.impl_name]['service_class'] = item_service_class
                 self.services[item.impl_name]['path'] = item.source_code_info.path
-                self.services[item.impl_name]['source_code'] = item.source_code_info.source.decode('utf8')
+                self.services[item.impl_name]['_source_code_info'] = item.source_code_info
 
                 item_is_active = item.is_active
                 item_slow_threshold = item.slow_threshold
@@ -701,7 +850,7 @@ class ServiceStore:
             class_ = service.service_class
             path = service.source_code_info.path
             deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
-            deployment_info_dict['line_number'] = service.source_code_info.line_number
+            deployment_info_dict['_source_code_info'] = service.source_code_info
             self.deployment_info[service.impl_name] = deployment_info_dict
 
 # ################################################################################################################################
@@ -783,19 +932,13 @@ class ServiceStore:
                 imported = self.import_services_from_module_object(item, is_internal)
                 to_process.extend(imported)
 
-        total_size = 0
-
         to_process = set(to_process)
         to_process = list(to_process)
 
-        for item in to_process:
-            item = cast_('InRAMService', item)
-            total_size += item.source_code_info.len_source
-
         info = DeploymentInfo()
         info.to_process[:] = to_process
-        info.total_size = total_size
-        info.total_size_human = naturalsize(info.total_size)
+        info.total_size = 0
+        info.total_size_human = ''
 
         self._store_in_ram(None, info.to_process)
         self._store_deployment_info(info.to_process)
@@ -1002,7 +1145,8 @@ class ServiceStore:
                 continue
             else:
                 # .. get the actual source code ..
-                source_code = service_data['source_code']
+                _sci = service_data.get('_source_code_info')
+                source_code = _sci.source.decode('utf8') if _sci else ''
 
                 # .. this module can be ignored if it does not import the input one ..
                 if not self._has_module_import(source_code, mod_name):
@@ -1121,32 +1265,11 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _get_source_code_info(self, mod:'any_', class_:'any_') -> 'SourceCodeInfo':
-        """ Returns the source code of and the FS path to the given module.
+    def _get_source_code_info(self, mod:'any_', class_:'any_') -> 'LazySourceCodeInfo':
+        """ Returns a lazy source code info object that defers file reading until first access.
         """
-        source_info = SourceCodeInfo()
-        try:
-            file_name = mod.__file__ or ''
-            if file_name[-1] in('c', 'o'):
-                file_name = file_name[:-1]
-
-            # We would have used inspect.getsource(mod) had it not been apparently using
-            # cached copies of the source code
-            source_info.source = open(file_name, 'rb').read()
-            source_info.len_source = len(source_info.source)
-
-            source_info.path = inspect.getsourcefile(mod) or 'no-source-file'
-            source_info.hash = sha256(source_info.source).hexdigest()
-            source_info.hash_method = 'SHA-256'
-
-            # The line number this class object is defined on
-            source_info.line_number = inspect.findsource(class_)[1]
-
-        except IOError:
-            if has_trace1:
-                logger.log(TRACE1, 'Ignoring IOError, mod:`%s`, e:`%s`', mod, format_exc())
-
-        return source_info
+        path = inspect.getsourcefile(mod) or 'no-source-file'
+        return LazySourceCodeInfo(mod, class_, path)
 
 # ################################################################################################################################
 

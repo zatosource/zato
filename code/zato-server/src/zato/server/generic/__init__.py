@@ -6,18 +6,12 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# Zato
-from zato.common.api import GENERIC
-from zato.common.odb.model import GenericConn as ModelGenericConn
-from zato.common.util.api import get_sa_model_columns
-
 # ################################################################################################################################
 
-columns_gen_conn = set(get_sa_model_columns(ModelGenericConn))
-
-attrs_gen_conn = set(columns_gen_conn)
-attrs_gen_conn.remove(GENERIC.ATTR_NAME)
-attrs_gen_conn.add('opaque')
-attrs_gen_conn = tuple(attrs_gen_conn)
+attrs_gen_conn = (
+    'address', 'cache_expiry', 'cache_id', 'cluster_id', 'conn_def_id', 'data_format', 'extra',
+    'id', 'is_active', 'is_channel', 'is_internal', 'is_outconn', 'name', 'opaque',
+    'pool_size', 'port', 'secret', 'secret_type', 'timeout', 'type_', 'username', 'username_type', 'version',
+)
 
 # ################################################################################################################################

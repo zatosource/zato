@@ -581,7 +581,7 @@ class GetDeploymentInfoList(AdminService):
                 'service_name': name,
                 'fs_location': fs_location,
                 'file_name': os.path.basename(fs_location) if fs_location else '',
-                'line_number': deployment.get('line_number', 0),
+                'line_number': deployment.get('_source_code_info').line_number if deployment.get('_source_code_info') else 0,
             }
 
             if needs_details:
@@ -612,12 +612,8 @@ class GetSourceInfo(AdminService):
 
         svc_data = store.services[impl_name]
         service_id = store.impl_name_to_id.get(impl_name, 0)
-        source_code = svc_data.get('source_code', '')
-
-        if isinstance(source_code, str):
-            source_bytes = source_code.encode('utf-8')
-        else:
-            source_bytes = source_code
+        _sci = svc_data.get('_source_code_info')
+        source_bytes = _sci.source if _sci else b''
 
         self.response.payload.service_id = service_id
         self.response.payload.server_name = self.server.name

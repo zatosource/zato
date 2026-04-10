@@ -207,7 +207,6 @@ class SessionWrapper:
     _Session: 'SASession'
 
     def __init__(self) -> 'None':
-        _load_sa()
         self.session_initialized = False
         self.pool = None      # type: SQLConnectionPool
         self.config = {}    # type: dict
@@ -220,6 +219,7 @@ class SessionWrapper:
 
     def _init_session(self, name, config, pool, use_scoped_session=True):
         # type: (str, dict, SQLConnectionPool, bool)  # type: ignore
+        _load_sa()
         self.config = config
         self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
@@ -302,7 +302,6 @@ class SQLConnectionPool:
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
     def __init__(self, name:'str', config:'strdict', config_no_sensitive:'strdict', should_init:'bool'=True):
-        _load_sa()
         self.name = name
         self.config = config
         self.config_no_sensitive = config_no_sensitive
@@ -319,6 +318,7 @@ class SQLConnectionPool:
             self.init()
 
     def init(self):
+        _load_sa()
 
         # Check if Oracle DB connections are enabled
         if self._is_oracle_db:
@@ -689,7 +689,12 @@ class ODBManager(SessionWrapper):
 
     def __init__(self) -> 'None':
         super().__init__()
+
+# ################################################################################################################################
+
+    def init_session(self, *args, **kwargs):
         _load_odb_models()
+        super().init_session(*args, **kwargs)
 
 # ################################################################################################################################
 

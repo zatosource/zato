@@ -417,10 +417,14 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
 
     is_grafana_cloud_enabled = bool(grafana_cloud_instance_id and grafana_cloud_api_key and grafana_cloud_endpoint)
 
+    _ts('run-pre-config-load')
+
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
     pickup_config = get_config(repo_location, 'pickup.conf')
+
+    _ts('run-config-loaded')
 
     server_config.main.token = server_config.main.token.encode('utf8')
 
@@ -463,8 +467,12 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     # Parse bind configuration
     zato_host, zato_port = _parse_bind_config(server_config.main)
 
+    _ts('run-pre-odb-create')
+
     # Basic components needed for the server to boot up
     odb_manager = ODBManager()
+    _ts('run-odb-manager-created')
+
     odb_manager.well_known_data = ZATO_CRYPTO_WELL_KNOWN_DATA
     sql_pool_store = PoolStore()
 
@@ -517,6 +525,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.user_config.update(server_config.user_config_items)
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
+    server.enforce_manifest = asbool(options.get('enforce_manifest', False))
     server.env_manager = env_manager
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore
@@ -565,6 +574,8 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
         'server': server,
     })
+
+    _ts('run-pre-start-server')
 
     # Initialize the server - this sets up ODB, services, broker, etc.
     ParallelServer.start_server(server, deployment_key)
