@@ -744,18 +744,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         from zato.server.groups.ctx import SecurityGroupsCtxBuilder
         from zato_broker_core import log_admin_info
 
-        import time as _time
-        _ss_t0 = _time.monotonic()
-        def _ss_ts(label):
-            elapsed = (_time.monotonic() - _ss_t0) * 1000
-            import sys as _sys
-            _sys.stderr.write(f'[start-server] {elapsed:8.1f} ms - {label}\n')
-            _sys.stderr.flush()
-
         # Easier to type
         self = parallel_server
-
-        _ss_ts('entered')
 
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
@@ -832,7 +822,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             else self.config.odb_data.token.decode('utf8')
         self.odb.decrypt_func = self.decrypt
 
-        _ss_ts('odb-pool-created')
+
 
         # Load enmasse YAML into the Rust ConfigStore
         self.load_enmasse_yaml()
@@ -847,7 +837,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         server.cluster.name = self.cluster_name
         server.cluster_id = self.cluster_id
 
-        _ss_ts('enmasse-yaml-loaded')
+
 
         logger.info(
             'Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`',
@@ -862,14 +852,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         http_methods_allowed_re = '|'.join(self.http_methods_allowed)
         self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
 
-        _ss_ts('pre-worker-store')
+
 
         # Reads in all configuration from the Rust ConfigStore
         self.worker_store = WorkerStore(self.config, self)
-        _ss_ts('worker-store-created')
 
         self.set_up_config(server) # type: ignore
-        _ss_ts('config-set-up')
 
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
@@ -901,18 +889,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Some parts of the worker store's configuration are required during the deployment of services
         # which is why we are doing it here, before worker_store.init() is called.
         self.worker_store.early_init()
-        _ss_ts('early-init-done')
 
+        locally_deployed = self._after_init_common(server) # type: ignore
+
+        # Broker construction - start it in a greenlet so the Rust-heavy __init__
+        # (fs_init, fs_start_http_server) overlaps with the Python setup below.
         def _init_broker():
             self.broker_client = BrokerCoreAPI(server=self)
             self.broker_client.ping_connection()
             self.broker_client.delete_queue(self.process_cid, 'server')
             self.broker_client.create_internal_queue('server')
             self.broker_client.start_consumer()
-
-        # Deploy services first (must complete before broker starts to avoid gevent context-switching overhead)
-        locally_deployed = self._after_init_common(server) # type: ignore
-        _ss_ts('services-deployed')
 
         broker_greenlet = spawn(_init_broker)
 
@@ -922,7 +909,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Initializes worker store, including connectors
         self.worker_store.init()
-        _ss_ts('worker-store-init-done')
 
         # Security facade wrapper
         self.security_facade = SecurityFacade(self)
@@ -950,8 +936,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
+        # Pub/sub objects that don't need the broker client yet
+        self.pubsub_pattern_matcher = PatternMatcher()
+        self.pubsub_subscriptions = SubscriptionsStore()
+        self._load_pubsub_permissions()
+
         broker_greenlet.get()
-        _ss_ts('broker-consumer-started')
 
         # Configure internal pub/sub
         _ = spawn_greenlet(
@@ -964,11 +954,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Initialize the pub/sub backend using the broker client
         self.pubsub_backend = PubSubBackend(self.broker_client)
-        self.pubsub_pattern_matcher = PatternMatcher()
-        self.pubsub_subscriptions = SubscriptionsStore()
-
-        # Load pub/sub permissions from database into pattern matcher
-        self._load_pubsub_permissions()
 
         # Register auth callbacks so the broker's Rust HTTP server
         # can validate credentials and permissions through the Zato security layer.

@@ -64,8 +64,6 @@ def setup_update_file_logger(base_dir:'strnone'=None, component_name:'str'='unkn
 
         logger.addHandler(file_handler)
         logger.setLevel(DEBUG)
-
-        logger.debug('setup_update_file_logger: update.log configured for component [{}] at {}'.format(component_name, update_log_path))
     except Exception:
         logger.error('setup_update_file_logger: failed to setup update logger for component [{}]: {}'.format(component_name, format_exc()))
 
