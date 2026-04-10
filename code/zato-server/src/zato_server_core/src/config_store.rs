@@ -643,14 +643,13 @@ impl ConfigStore {
         {
             let mut store = self.pubsub_permission.write().map_err(lock_err)?;
             for p in config.pubsub_permission {
-                store.insert(p.security.clone(), p);
+                store.insert(p.id.clone(), p);
             }
         }
         {
             let mut store = self.pubsub_subscription.write().map_err(lock_err)?;
             for s in config.pubsub_subscription {
-                let key = format!("{}:{}", s.security, s.delivery_type);
-                store.insert(key, s);
+                store.insert(s.id.clone(), s);
             }
         }
 

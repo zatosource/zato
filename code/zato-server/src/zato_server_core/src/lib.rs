@@ -565,9 +565,15 @@ fn push_usize(buf: &mut Vec<u8>, n: usize) {
 
 // ── module ──
 
+#[pyfunction]
+fn next_id() -> String {
+    models::next_id()
+}
+
 #[pymodule]
 fn zato_server_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<HTTPServer>()?;
     m.add_class::<config_store::ConfigStore>()?;
+    m.add_function(wrap_pyfunction!(next_id, m)?)?;
     Ok(())
 }

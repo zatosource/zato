@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.server.service.internal import AdminService
+from zato_server_core import next_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,10 +63,12 @@ class Create(AdminService):
             'sub': sub,
         }
 
-        self.server.config_store.set('pubsub_permission', sec_base_id, data)
+        perm_id = next_id()
 
-        stored = self.server.config_store.get('pubsub_permission', sec_base_id)
-        self.response.payload.id = stored['id']
+        data['id'] = perm_id
+        self.server.config_store.set('pubsub_permission', perm_id, data)
+
+        self.response.payload.id = perm_id
         self.response.payload.security = sec_name
 
 # ################################################################################################################################
@@ -80,9 +83,9 @@ class Edit(AdminService):
     def handle(self):
         input = self.request.input
 
+        perm_id = str(input.id)
         sec_base_id = input.sec_base_id
         sec_name = _get_sec_name_by_id(self.server, sec_base_id)
-        old_key = str(input.id)
 
         pub = input.get('pub') or []
         sub = input.get('sub') or []
@@ -92,25 +95,19 @@ class Edit(AdminService):
         if isinstance(sub, str):
             sub = [t.strip() for t in sub.split(',') if t.strip()]
 
-        # Find the old entry by its ID and delete it if the key changed
-        for item in self.server.config_store.get_list('pubsub_permission'):
-            if str(item.get('id')) == old_key:
-                old_sec_base_id = item.get('sec_base_id', '')
-                if old_sec_base_id and old_sec_base_id != sec_base_id:
-                    self.server.config_store.delete('pubsub_permission', old_sec_base_id)
-                break
+        self.server.config_store.delete('pubsub_permission', perm_id)
 
         data = {
+            'id': perm_id,
             'security': sec_name,
             'sec_base_id': sec_base_id,
             'pub': pub,
             'sub': sub,
         }
 
-        self.server.config_store.set('pubsub_permission', sec_base_id, data)
+        self.server.config_store.set('pubsub_permission', perm_id, data)
 
-        stored = self.server.config_store.get('pubsub_permission', sec_base_id)
-        self.response.payload.id = stored['id']
+        self.response.payload.id = perm_id
         self.response.payload.security = sec_name
 
 # ################################################################################################################################
@@ -122,15 +119,8 @@ class Delete(AdminService):
     input = 'id',
 
     def handle(self):
-        input_id = self.request.input.id
-
-        for item in self.server.config_store.get_list('pubsub_permission'):
-            if str(item.get('id')) == str(input_id) or item.get('sec_base_id') == str(input_id):
-                key = item.get('sec_base_id') or item.get('security')
-                self.server.config_store.delete('pubsub_permission', key)
-                return
-
-        raise Exception('Pub/sub permission with id `{}` not found'.format(input_id))
+        perm_id = str(self.request.input.id)
+        self.server.config_store.delete('pubsub_permission', perm_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

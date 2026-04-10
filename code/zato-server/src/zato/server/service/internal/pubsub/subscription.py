@@ -20,6 +20,7 @@ from zato.common.pubsub.util import set_time_since
 from zato.common.util.api import new_sub_key, utcnow
 from zato.server.service import AsIs, PubSubMessage, Service
 from zato.server.service.internal import AdminService
+from zato_server_core import next_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -236,9 +237,10 @@ class Create(AdminService):
             topic_link = get_topic_link(topic_obj['topic_name'], topic_obj['is_pub_enabled'], topic_obj['is_delivery_enabled'])
             topic_link_list.append(topic_link)
 
-        config_key = '{}:{}'.format(sec_name, input.delivery_type)
+        sub_id = next_id()
 
         data = {
+            'id': sub_id,
             'sub_key': sub_key,
             'is_delivery_active': input.is_delivery_active,
             'is_pub_active': input.is_pub_active,
@@ -255,9 +257,9 @@ class Create(AdminService):
             'topic_link_list': ', '.join(sorted(topic_link_list)),
         }
 
-        self.server.config_store.set('pubsub_subscription', config_key, data)
+        self.server.config_store.set('pubsub_subscription', sub_id, data)
 
-        self.response.payload.id = config_key
+        self.response.payload.id = sub_id
         self.response.payload.sub_key = sub_key
         self.response.payload.is_delivery_active = input.is_delivery_active
         self.response.payload.is_pub_active = input.is_pub_active
@@ -291,9 +293,7 @@ class Edit(AdminService):
 
             for item in self.server.config_store.get_list('pubsub_subscription'):
                 if item.get('sub_key') == input.sub_key:
-                    sec_name = item.get('security') or item.get('sec_name')
-                    config_key = '{}:{}'.format(sec_name, item.get('delivery_type', ''))
-                    self.server.config_store.delete('pubsub_subscription', config_key)
+                    self.server.config_store.delete('pubsub_subscription', item['id'])
                     break
 
             sec_def = _get_sec_by_id(self.server, input.sec_base_id)
@@ -319,27 +319,25 @@ class Edit(AdminService):
             topic_link = get_topic_link(topic_obj['topic_name'], topic_obj['is_pub_enabled'], topic_obj['is_delivery_enabled'])
             topic_link_list.append(topic_link)
 
-        config_key = '{}:{}'.format(sec_name, input.delivery_type)
-
-        # Find the existing entry to preserve created/sub_key and detect key changes
         existing = None
-        old_config_key = None
+        sub_id = None
         for item in self.server.config_store.get_list('pubsub_subscription'):
             if item.get('sub_key') == input.sub_key:
                 existing = item
-                old_sec = item.get('security') or item.get('sec_name', '')
-                old_dt = item.get('delivery_type', '')
-                old_config_key = '{}:{}'.format(old_sec, old_dt)
+                sub_id = item.get('id')
                 break
 
-        if old_config_key and old_config_key != config_key:
-            self.server.config_store.delete('pubsub_subscription', old_config_key)
+        if not sub_id:
+            raise Exception('Pub/sub subscription with sub_key `{}` not found'.format(input.sub_key))
+
+        self.server.config_store.delete('pubsub_subscription', sub_id)
 
         data = {
+            'id': sub_id,
             'sub_key': input.sub_key,
             'is_delivery_active': input.get('is_delivery_active', True),
             'is_pub_active': input.get('is_pub_active', True),
-            'created': existing.get('created', str(utcnow())) if existing else str(utcnow()),
+            'created': existing.get('created', str(utcnow())),
             'sec_base_id': input.sec_base_id,
             'sec_name': sec_name,
             'username': username,
@@ -352,9 +350,9 @@ class Edit(AdminService):
             'topic_link_list': ', '.join(sorted(topic_link_list)),
         }
 
-        self.server.config_store.set('pubsub_subscription', config_key, data)
+        self.server.config_store.set('pubsub_subscription', sub_id, data)
 
-        self.response.payload.id = config_key
+        self.response.payload.id = sub_id
         self.response.payload.sub_key = input.sub_key
         self.response.payload.is_pub_active = data['is_pub_active']
         self.response.payload.is_delivery_active = data['is_delivery_active']
@@ -384,10 +382,7 @@ class Delete(AdminService):
             match_by_key = sub_key and (item.get('sub_key') == sub_key)
 
             if match_by_id or match_by_key:
-                sec_name = item.get('security') or item.get('sec_name')
-                delivery_type = item.get('delivery_type', '')
-                config_key = '{}:{}'.format(sec_name, delivery_type)
-                self.server.config_store.delete('pubsub_subscription', config_key)
+                self.server.config_store.delete('pubsub_subscription', item['id'])
                 return
 
         raise Exception('Pub/sub subscription not found (id:`{}`, sub_key:`{}`)'.format(input_id, sub_key))

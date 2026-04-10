@@ -61,7 +61,7 @@ class Get(AdminService):
         response.setdefault('cache_type', _COMMON_CACHE.TYPE.BUILTIN)
         try:
             response['current_size'] = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, response['name'])
-        except KeyError:
+        except Exception:
             response['current_size'] = 0
 
         self.response.payload = response
@@ -84,7 +84,7 @@ class GetList(AdminService):
             item.setdefault('cache_type', _COMMON_CACHE.TYPE.BUILTIN)
             try:
                 item['current_size'] = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, item['name'])
-            except KeyError:
+            except Exception:
                 item['current_size'] = 0
             items.append(item)
 
