@@ -25,7 +25,6 @@ from zato.common.py23_.past.builtins import unicode
 from zato.common.api import ZATO_NONE
 from zato.common.const import SECRETS
 from zato.common.util.config import resolve_name, resolve_value
-from zato.common.util.sql import ElemsWithOpaqueMaker
 
 # ################################################################################################################################
 
@@ -256,6 +255,7 @@ class ConfigDict:
                                 config['_encrypted_in_odb'] = False
 
         # Post-process data before it is returned to resolve any opaque attributes
+        from zato.common.util.sql import ElemsWithOpaqueMaker
         for value in config_dict.values():
             value_config = value['config']
             if ElemsWithOpaqueMaker.has_opaque_data(value_config):

@@ -43,7 +43,6 @@ from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
 from zato.common.marshal_.api import Model as DataClassModel
 from zato.common.marshal_.simpleio import DataClassSimpleIO
-from zato.common.odb.model.base import Base as ModelBase
 from zato.common.typing_ import cast_, list_
 from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
 from zato.common.util.python_ import get_module_name_by_path
@@ -1096,6 +1095,7 @@ class ServiceStore:
     def _should_deploy_service(self, name:'str', item:'any_', current_module:'module_', fs_location:'str') -> 'bool':
         """ Is item a service that we can deploy?
         """
+        from zato.common.odb.model.base import Base as ModelBase
 
         if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
             if item is not Service and item is not AdminService:

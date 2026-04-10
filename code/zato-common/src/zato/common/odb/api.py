@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 import os
+import warnings
 from contextlib import closing
 from copy import deepcopy
 from datetime import datetime
@@ -20,28 +21,14 @@ from time import time
 # Bunch
 from bunch import Bunch, bunchify
 
-# SQLAlchemy
-from sqlalchemy import and_, create_engine, event, select
-from sqlalchemy.exc import IntegrityError, OperationalError
-from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.orm.query import Query
-from sqlalchemy.pool import NullPool
-from sqlalchemy.sql.expression import true
-from sqlalchemy.sql.type_api import TypeEngine
 
 # Zato
 from zato.common.api import DEPLOYMENT_STATUS, HTTP_SOAP, MS_SQL, NotGiven, SEC_DEF_TYPE, SECRET_SHADOW, \
      SERVER_UP_STATUS, UNITTEST, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.exception import Inactive
-from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
-from zato.common.odb import query
 from zato.common.odb.ping import get_ping_query
-from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     NTLM, SecurityBase, Server, Service
 from zato.common.odb.testing import UnittestEngine
-from zato.common.odb.query import generic as query_generic
 from zato.common.util.api import current_host, get_component_name, get_engine_url, new_cid, parse_extra_into_dict, spawn_greenlet
-from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
 from zato.common.util.time_ import utcnow
 from zato.common.util.url_dispatcher import get_match_target
 
@@ -68,12 +55,105 @@ unittest_fs_sql_config = {
 
 # ################################################################################################################################
 
-ServiceTable = Service.__table__
-ServiceTableInsert = ServiceTable.insert
+_sa_loaded = False
 
-DeployedServiceTable = DeployedService.__table__
-DeployedServiceInsert = DeployedServiceTable.insert
-DeployedServiceDelete = DeployedServiceTable.delete
+def _load_sa() -> 'None':
+    """ Loads SQLAlchemy and related names into module globals on first use.
+    """
+    global _sa_loaded
+    if _sa_loaded:
+        return
+    _sa_loaded = True
+
+    from sqlalchemy import and_, create_engine, event, select
+    from sqlalchemy.exc import IntegrityError, OperationalError
+    from sqlalchemy.orm import sessionmaker, scoped_session
+    from sqlalchemy.orm.query import Query
+    from sqlalchemy.pool import NullPool
+    from sqlalchemy.sql.expression import true
+    from sqlalchemy.sql.type_api import TypeEngine
+
+    _g = globals()
+    _g['and_']               = and_
+    _g['create_engine']      = create_engine
+    _g['event']              = event
+    _g['select']             = select
+    _g['IntegrityError']     = IntegrityError
+    _g['OperationalError']   = OperationalError
+    _g['sessionmaker']       = sessionmaker
+    _g['scoped_session']     = scoped_session
+    _g['NullPool']           = NullPool
+    _g['true']               = true
+    _g['TypeEngine']         = TypeEngine
+
+    # WritableTupleQuery depends on Query and TypeEngine
+    class WritableTupleQuery(Query):
+
+        def __iter__(self):
+            out = super(WritableTupleQuery, self).__iter__()
+
+            columns_desc = self.column_descriptions
+
+            first_type = columns_desc[0]['type']
+            len_columns_desc = len(columns_desc)
+
+            if len_columns_desc == 1 and isinstance(first_type, TypeEngine):
+                return out
+            elif len_columns_desc > 1:
+                return (SQLRow(elem) for elem in out)
+            else:
+                return out
+
+    _g['WritableTupleQuery'] = WritableTupleQuery
+
+    from sqlalchemy import exc as _sa_exc
+    warnings.filterwarnings('ignore', category=_sa_exc.SAWarning, message='.*')
+
+    from zato.common.mssql_direct import MSSQLDirectAPI, SimpleSession
+    _g['MSSQLDirectAPI'] = MSSQLDirectAPI
+    _g['SimpleSession']  = SimpleSession
+
+# ################################################################################################################################
+
+_odb_models_loaded = False
+
+def _load_odb_models() -> 'None':
+    """ Loads ODB models, query modules, and table references into module globals on first use.
+    """
+    global _odb_models_loaded
+    if _odb_models_loaded:
+        return
+    _odb_models_loaded = True
+
+    _load_sa()
+
+    from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, \
+        DeploymentStatus, HTTPBasicAuth, NTLM, SecurityBase, Server, Service
+    from zato.common.odb import query as _query
+    from zato.common.odb.query import generic as _query_generic
+
+    _g = globals()
+    _g['APIKeySecurity']        = APIKeySecurity
+    _g['Cluster']               = Cluster
+    _g['DeployedService']       = DeployedService
+    _g['DeploymentPackage']     = DeploymentPackage
+    _g['DeploymentStatus']      = DeploymentStatus
+    _g['HTTPBasicAuth']         = HTTPBasicAuth
+    _g['NTLM']                  = NTLM
+    _g['SecurityBase']          = SecurityBase
+    _g['Server']                = Server
+    _g['Service']               = Service
+    _g['ServiceTable']          = Service.__table__
+    _g['ServiceTableInsert']    = Service.__table__.insert
+    _g['DeployedServiceTable']  = DeployedService.__table__
+    _g['DeployedServiceInsert'] = DeployedService.__table__.insert
+    _g['DeployedServiceDelete'] = DeployedService.__table__.delete
+    _g['query']                 = _query
+    _g['query_generic']         = _query_generic
+
+    from zato.common.util.sql import ElemsWithOpaqueMaker, elems_with_opaque
+    _g['ElemsWithOpaqueMaker']  = ElemsWithOpaqueMaker
+    _g['elems_with_opaque']     = elems_with_opaque
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,6 +207,7 @@ class SessionWrapper:
     _Session: 'SASession'
 
     def __init__(self) -> 'None':
+        _load_sa()
         self.session_initialized = False
         self.pool = None      # type: SQLConnectionPool
         self.config = {}    # type: dict
@@ -217,35 +298,11 @@ class SessionWrapper:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class WritableTupleQuery(Query):
-
-    def __iter__(self):
-        out = super(WritableTupleQuery, self).__iter__()
-
-        columns_desc = self.column_descriptions
-
-        first_type = columns_desc[0]['type']
-        len_columns_desc = len(columns_desc)
-
-        # This is a simple result of a query such as session.query(ObjectName).count()
-        if len_columns_desc == 1 and isinstance(first_type, TypeEngine):
-            return out
-
-        # A list of objects, e.g. from .all()
-        elif len_columns_desc > 1:
-            return (SQLRow(elem) for elem in out)
-
-        # Anything else
-        else:
-            return out
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class SQLConnectionPool:
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
     def __init__(self, name:'str', config:'strdict', config_no_sensitive:'strdict', should_init:'bool'=True):
+        _load_sa()
         self.name = name
         self.config = config
         self.config_no_sensitive = config_no_sensitive
@@ -627,6 +684,12 @@ class ODBManager(SessionWrapper):
     decrypt_func:'callable_'
     server:'ServerModel'
     cluster:'ClusterModel'
+
+# ################################################################################################################################
+
+    def __init__(self) -> 'None':
+        super().__init__()
+        _load_odb_models()
 
 # ################################################################################################################################
 

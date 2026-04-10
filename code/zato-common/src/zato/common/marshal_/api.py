@@ -30,9 +30,6 @@ from dateutil.parser import parse as dt_parse
 # orjson
 from orjson import dumps
 
-# SQLAlchemy
-from sqlalchemy.sql.schema import Table
-
 # typing-utils
 from typing_utils import issubtype
 
@@ -389,7 +386,7 @@ class FieldCtx:
             elif isinstance(self.dict_ctx.current_dict, Model): # type: ignore
                 value = getattr(self.dict_ctx.current_dict, self.name, ZatoNotGiven)
 
-        # We do not handle SQLAlchemy Table objects
+        from sqlalchemy.sql.schema import Table
         is_table = isinstance(value, Table)
 
         # If this field has a value, we can try to parse it into a specific type ..

@@ -71,9 +71,6 @@ from OpenSSL import crypto
 # pytz
 import pytz
 
-# SQLAlchemy
-import sqlalchemy as sa
-from sqlalchemy import orm
 
 # Texttable
 from texttable import Texttable
@@ -105,7 +102,6 @@ from zato.common.exception import ZatoException
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.ext.validate_ import is_boolean, is_integer, VdtTypeError
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Server
 from zato.common.util.config import enrich_config_from_environment
 from zato.common.util.python_ import get_current_stack
 from zato.common.util.tcp import get_free_port, is_port_taken, wait_for_zato_ping, wait_until_port_free, wait_until_port_taken
@@ -1158,128 +1154,6 @@ def get_basic_auth_credentials(auth):
 
 # ################################################################################################################################
 
-def get_http_json_channel(name, service, cluster, security):
-    return HTTPSOAP(None, '{}.json'.format(name), True, True, 'channel', 'plain_http', None, '/zato/json/{}'.format(name),
-        None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
-
-# ################################################################################################################################
-
-def get_engine(args):
-    return sa.create_engine(get_engine_url(args))
-
-# ################################################################################################################################
-
-def get_session(engine):
-    session = orm.sessionmaker() # noqa
-    session.configure(bind=engine)
-    return session()
-
-# ################################################################################################################################
-
-def get_crypto_manager_from_server_config(config, repo_dir):
-
-    priv_key_location = os.path.abspath(os.path.join(repo_dir, config.crypto.priv_key_location))
-
-    cm = CryptoManager(priv_key_location=priv_key_location)
-    cm.load_keys()
-
-    return cm
-
-# ################################################################################################################################
-
-def get_odb_session_from_server_config(config, cm, odb_password_encrypted):
-
-    engine_args = Bunch()
-    engine_args.odb_type = config.odb.engine
-    engine_args.odb_user = config.odb.username
-    engine_args.odb_host = config.odb.host
-    engine_args.odb_port = config.odb.port
-    engine_args.odb_db_name = config.odb.db_name
-
-    if odb_password_encrypted:
-        engine_args.odb_password = cm.decrypt(config.odb.password) if config.odb.password else ''
-    else:
-        engine_args.odb_password = config.odb.password
-
-    return get_session(get_engine(engine_args))
-
-# ################################################################################################################################
-
-def get_odb_session_from_component_dir(component_dir, config_file, CryptoManagerClass):
-
-    repo_dir = get_repo_dir_from_component_dir(component_dir)
-    cm = CryptoManagerClass.from_repo_dir(None, repo_dir, None)
-    secrets_conf = get_config(repo_dir, 'secrets.conf', needs_user_config=False)
-    config = get_config(repo_dir, config_file, crypto_manager=cm, secrets_conf=secrets_conf)
-
-    return get_odb_session_from_server_config(config, None, False)
-
-# ################################################################################################################################
-
-def get_odb_session_from_server_dir(server_dir):
-
-    # Zato
-    from zato.common.crypto.api import ServerCryptoManager
-
-    return get_odb_session_from_component_dir(server_dir, 'server.conf', ServerCryptoManager)
-
-# ################################################################################################################################
-
-def get_server_client_auth(
-    config,
-    repo_dir,
-    cm,
-    odb_password_encrypted,
-    *,
-    url_path=None,
-) -> 'any_':
-    """ Returns credentials to authenticate with against Zato's own inocation channels.
-    """
-    # This is optional on input
-    url_path = url_path or ServiceConst.API_Admin_Invoke_Url_Path
-
-    session = get_odb_session_from_server_config(config, cm, odb_password_encrypted)
-
-    with closing(session) as session:
-
-        # This will exist if config is read from server.conf,
-        # otherwise, it means that it is based on scheduler.conf.
-        token = config.get('main', {}).get('token')
-
-        # This is server.conf ..
-        if token:
-            cluster = session.query(Server).\
-                filter(Server.token == config.main.token).\
-                one().cluster
-
-        # .. this will be scheduler.conf.
-        else:
-            cluster_id = config.get('cluster', {}).get('id')
-            cluster_id = cluster_id or 1
-            cluster = session.query(Cluster).\
-                filter(Cluster.id == cluster_id).\
-                one()
-
-        channel = session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id == cluster.id).\
-            filter(HTTPSOAP.url_path == url_path).\
-            filter(HTTPSOAP.connection== 'channel').\
-            one()
-
-        if channel.security_id:
-            security = session.query(HTTPBasicAuth).\
-                filter(HTTPBasicAuth.id == channel.security_id).\
-                first()
-
-            if security:
-                if password:= security.password:
-                    password = security.password.replace(SECRETS.PREFIX, '')
-                    if password.startswith(SECRETS.Encrypted_Indicator):
-                        if cm:
-                            password = cm.decrypt(password)
-                else:
-                    password = ''
-                return (security.username, password)
 
 # ################################################################################################################################
 

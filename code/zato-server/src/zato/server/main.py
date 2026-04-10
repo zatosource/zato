@@ -6,15 +6,37 @@ Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from time import monotonic as _mono
+
+_t0 = _mono()
+_t_prev = _t0
+
+def _ts(label:'str') -> None:
+    global _t_prev
+    now = _mono()
+    elapsed_total = (now - _t0) * 1000
+    elapsed_delta = (now - _t_prev) * 1000
+    _t_prev = now
+    import sys
+    sys.stderr.write(f'[startup-timing] {elapsed_total:8.1f} ms total, {elapsed_delta:7.1f} ms delta - {label}\n')
+    sys.stderr.flush()
+
+_ts('process-started')
+
 # Silence warnings before any imports
 import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning, message='.*multi-threaded.*fork.*')
 warnings.filterwarnings('ignore', category=UserWarning, message='.*pkg_resources is deprecated.*')
 
+_ts('warnings-configured')
+
 # Monkey-patching modules individually can be about 20% faster,
 # or, in absolute terms, instead of 275 ms it may take 220 ms.
 from gevent.monkey import patch_builtins, patch_contextvars, patch_thread, patch_time, patch_os, patch_queue, patch_select, \
      patch_selectors, patch_signal, patch_socket, patch_ssl, patch_subprocess, patch_sys
+
+_ts('gevent-monkey-imported')
 
 # Note that the order of patching matters, just like in patch_all
 patch_os()
@@ -31,6 +53,8 @@ patch_signal()
 patch_queue()
 patch_contextvars()
 
+_ts('gevent-monkey-patched')
+
 # ConcurrentLogHandler - updates stdlib's logging config on import so this needs to stay after gevent patches
 try:
     import cloghandler # type: ignore
@@ -38,6 +62,8 @@ except ImportError:
     pass
 else:
     cloghandler = cloghandler # For pyflakes
+
+_ts('cloghandler-done')
 
 # stdlib
 import logging
@@ -91,6 +117,8 @@ grafana_cloud_api_key = None
 grafana_cloud_endpoint = None
 is_grafana_cloud_enabled = False
 
+_ts('datadog-grafana-env-done')
+
 # stdlib
 import locale
 import signal
@@ -99,57 +127,75 @@ from logging.config import dictConfig
 from random import seed as random_seed
 from uuid import uuid4
 
+_ts('stdlib-imports-done')
+
 # Update logging.Logger._log to make it a bit faster
 from zato.common.microopt import logging_Logger_log
 from logging import Logger
 Logger._log = logging_Logger_log # type: ignore
 
+_ts('microopt-done')
+
 # YAML
 import yaml
+
+_ts('yaml-imported')
 
 # gevent
 from gevent import signal_handler as gevent_signal_handler
 
+_ts('gevent-signal-imported')
+
 # Zato
 from zato.common.api import SERVER_STARTUP, TRACE1, ZATO_CRYPTO_WELL_KNOWN_DATA
+
+_ts('zato-common-api-imported')
+
 from zato.common.crypto.api import ServerCryptoManager
+
+_ts('zato-crypto-imported')
+
 from zato.common.ext.configobj_ import ConfigObj
+
+_ts('configobj-imported')
+
 from zato.common.ipaddress_ import get_preferred_ip
-from zato.common.odb.api import ODBManager, PoolStore
-from zato.common.repo import RepoManager
+
+_ts('ipaddress-imported')
+
 from zato.common.util.api import asbool, get_config, is_encrypted, parse_cmd_line_options, \
      store_pidfile, utcnow
+
+_ts('util-api-imported')
+
 from zato.common.util.env import populate_environment_from_file
+
+_ts('util-env-imported')
+
 from zato.common.util.platform_ import is_linux, is_mac, is_windows
 from zato.common.util.open_ import open_r
-from zato.server.base.parallel import ParallelServer
-from zato.server.service.store import ServiceStore
-from zato.server.startup_callable import StartupCallableTool
+
+_ts('util-platform-open-imported')
+
+_ts('all-imports-done')
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch
+    from zato.common.odb.api import ODBManager, PoolStore
+    from zato.common.repo import RepoManager
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
+    from zato.server.base.parallel import ParallelServer
+    from zato.server.service.store import ServiceStore
+    from zato.server.startup_callable import StartupCallableTool
     callable_ = callable_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-# Silence out SQLAlchemy warnings
-from sqlalchemy import exc as sa_exc
-warnings.filterwarnings('ignore',  category=sa_exc.SAWarning, message='.*')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-#
-# Needed for SQLAlchemy 1.4
-#
-import oracledb
-oracledb.version = '8.3.0'
-sys.modules['cx_Oracle'] = oracledb
+_ts('module-level-done')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -256,6 +302,28 @@ def get_env_manager_base_dir(code_dir:'str') -> 'str':
 
 def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
 
+    _ts('run-entered')
+
+    import oracledb
+    oracledb.version = '8.3.0'
+    sys.modules['cx_Oracle'] = oracledb
+    _ts('run-oracledb-done')
+
+    from zato.common.odb.api import ODBManager, PoolStore
+    _ts('run-odb-api-done')
+
+    from zato.common.repo import RepoManager
+    _ts('run-repo-manager-done')
+
+    from zato.server.base.parallel import ParallelServer
+    _ts('run-parallel-done')
+
+    from zato.server.service.store import ServiceStore
+    _ts('run-service-store-done')
+
+    from zato.server.startup_callable import StartupCallableTool
+    _ts('run-deferred-imports-done')
+
     # Zato
     from zato.common.util.cli import read_stdin_data
 
@@ -276,6 +344,8 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     # Capture warnings to log files
     logging.captureWarnings(True)
 
+    _ts('run-pre-env-manager')
+
     #
     # Look up the standalone zato_environment.py module to import its manager object.
     # The module needs to be standalone because it runs when install.sh does,
@@ -294,8 +364,12 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     # .. now, we can import the environment manager class ..
     from zato_environment import EnvironmentManager # type: ignore
 
+    _ts('env-manager-imported')
+
     # .. build the object that we now have access to ..
     env_manager:'any_' = EnvironmentManager(env_manager_base_dir, bin_dir)
+
+    _ts('env-manager-constructed')
 
     # .. and run the initial runtime setup, based on environment variables.
     env_manager.runtime_setup_with_env_variables()

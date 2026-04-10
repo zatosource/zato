@@ -26,33 +26,15 @@ from bunch import bunchify
 from gevent import sleep
 from gevent.lock import RLock
 
-# Open Telemetry
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
 # Zato
 from zato.broker import BrokerMessageReceiver
-from zato.broker.api import BrokerCoreAPI
-from zato_broker_core import log_admin_info
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
-from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
-from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
-from zato.common.log_streaming import LogStreamingManager
-from zato.common.marshal_.api import MarshalAPI
-from zato.common.odb.api import PoolStore
-from zato.common.pubsub.consumer import start_internal_consumer
-from zato.common.pubsub.matcher import PatternMatcher
-from zato.common.pubsub.backend import PubSubBackend
-from zato.common.pubsub.subscriptions_store import SubscriptionsStore
-from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
@@ -64,14 +46,9 @@ from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.time_ import TimeUtil
-from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
-from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
-from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
-from zato.server.groups.base import GroupsManager
-from zato.server.groups.ctx import SecurityGroupsCtxBuilder
 from zato_server_core import ConfigStore as RustConfigStore
 
 # ################################################################################################################################
@@ -84,13 +61,26 @@ if 0:
     from ddtrace._trace.tracer import Tracer as DatadogTracer
     from kombu.transport.pyamqp import Message as KombuMessage
     from opentelemetry.trace import Tracer as OTLPTracer
+    from zato.broker.api import BrokerCoreAPI
+    from zato.common.bearer_token import BearerTokenManager
     from zato.common.crypto.api import ServerCryptoManager
-    from zato.common.odb.api import ODBManager
+    from zato.common.facade import SecurityFacade
+    from zato.common.log_streaming import LogStreamingManager
+    from zato.common.marshal_.api import MarshalAPI
+    from zato.common.odb.api import ODBManager, PoolStore
+    from zato.common.pubsub.backend import PubSubBackend
+    from zato.common.pubsub.matcher import PatternMatcher
+    from zato.common.pubsub.subscriptions_store import SubscriptionsStore
+    from zato.common.rules.api import RulesManager
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
+    from zato.distlock import LockManager
+    from zato.server.base.worker import WorkerStore
     from zato.server.connection.cache import Cache, CacheAPI
+    from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
+    from zato.server.groups.base import GroupsManager
+    from zato.server.groups.ctx import SecurityGroupsCtxBuilder
     from zato.server.service.store import ServiceStore
-    pass # SIOServerConfig removed - inference is now hardcoded in Rust
     from zato.server.startup_callable import StartupCallableTool
 
     bunch_ = bunch_
@@ -222,6 +212,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.platform_system = platform_system().lower()
         self.user_config = Bunch()
         self.stderr_path = ''
+        from zato.common.marshal_.api import MarshalAPI
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
@@ -266,6 +257,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
 
         # Rule engine
+        from zato.common.rules.api import RulesManager
         self.rules = RulesManager()
 
         # The Rust-backed config store
@@ -275,6 +267,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.config = ConfigStore()
 
         # Log streaming manager
+        from zato.common.log_streaming import LogStreamingManager
         self.log_streaming_manager = LogStreamingManager()
 
 # ################################################################################################################################
@@ -680,6 +673,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def build_server_rpc(self) -> 'ServerRPC':
 
+        from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
+
         # A combination of runtime configuration (no ODB needed)
         config_ctx = _ServerRPC_ConfigCtx(None, self)
 
@@ -727,6 +722,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     @staticmethod
     def start_server(parallel_server:'ParallelServer', zato_deployment_key:'str'='') -> 'None':
+
+        # Deferred imports - loaded here to keep module-level import time low
+        from zato.broker.api import BrokerCoreAPI
+        from zato.common.bearer_token import BearerTokenManager
+        from zato.common.facade import SecurityFacade
+        from zato.common.pubsub.consumer import start_internal_consumer
+        from zato.common.pubsub.matcher import PatternMatcher
+        from zato.common.pubsub.backend import PubSubBackend
+        from zato.common.pubsub.subscriptions_store import SubscriptionsStore
+        from zato.distlock import LockManager
+        from zato.server.base.worker import WorkerStore
+        from zato.server.groups.base import GroupsManager
+        from zato.server.groups.ctx import SecurityGroupsCtxBuilder
+        from zato_broker_core import log_admin_info
 
         # Easier to type
         self = parallel_server
@@ -997,6 +1006,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """
         # Zato
         from zato.common.api import PubSub
+        from zato_broker_core import log_admin_info
 
         # Load permissions
         permissions = self.config_store.get_list('pubsub_permission')
