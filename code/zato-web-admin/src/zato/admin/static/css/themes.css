@@ -648,14 +648,25 @@
 }
 
 @keyframes zatoRowBounce {
-    0%   { transform: scale(1);    font-weight: 400; }
-    30%  { transform: scale(1.12); font-weight: 600; }
-    60%  { transform: scale(0.97); font-weight: 500; }
-    100% { transform: scale(1);    font-weight: 400; }
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.12); }
+    60%  { transform: scale(0.97); }
+    100% { transform: scale(1); }
+}
+
+@keyframes zatoRowBounceBackground {
+    0%   { background-color: transparent; }
+    30%  { background-color: rgba(0,0,0,0.03); }
+    60%  { background-color: rgba(0,0,0,0.01); }
+    100% { background-color: transparent; }
 }
 
 tr.zato-row-bounce td > .zato-bounce-wrap {
     display: inline-block;
     transform-origin: left center;
     animation: zatoRowBounce 0.9s ease-in-out;
+}
+
+tr.zato-row-bounce td {
+    animation: zatoRowBounceBackground 0.9s ease-in-out;
 }
