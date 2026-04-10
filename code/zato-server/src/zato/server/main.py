@@ -118,7 +118,7 @@ from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.common.repo import RepoManager
 from zato.common.util.api import asbool, get_config, is_encrypted, parse_cmd_line_options, \
-     register_diag_handlers, store_pidfile, utcnow
+     store_pidfile, utcnow
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.platform_ import is_linux, is_mac, is_windows
 from zato.common.util.open_ import open_r
@@ -272,10 +272,6 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         initial_env_variables = populate_environment_from_file(env_file)
     else:
         initial_env_variables = []
-
-    # For dumping stacktraces
-    if is_linux:
-        register_diag_handlers()
 
     # Capture warnings to log files
     logging.captureWarnings(True)

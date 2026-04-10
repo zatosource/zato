@@ -56,7 +56,7 @@ from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
-    register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
+    spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
@@ -767,10 +767,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Each time a server starts a new deployment key is generated to uniquely
         # identify this particular time the server is running.
         self.deployment_key = zato_deployment_key
-
-        # This is to handle SIGURG signals.
-        if is_posix:
-            register_diag_handlers()
 
         # Server identity from server.conf [misc] section
         self.name = self.fs_server_config.misc.initial_server_name

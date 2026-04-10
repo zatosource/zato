@@ -45,6 +45,10 @@ class GetList(AdminService):
     output = ('id', 'name', Bool('is_active'), 'host', Int('port'), Int('timeout'), Bool('is_debug'), 'mode',
         'ping_address', '-username', '-opaque1')
 
+    def handle(self):
+        items = [dict(x) for x in self.server.config_store.get_list(_entity_type)]
+        self.response.payload = self._paginate_list(items)
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -79,8 +83,8 @@ class Create(AdminService):
             data['opaque1'] = input.opaque1
 
         store.set(_entity_type, input.name, data)
-        saved = store.get(_entity_type, input.name) or data
-        self.response.payload.id = saved.get('id', input.name)
+        saved = store.get(_entity_type, input.name)
+        self.response.payload.id = saved['id']
         self.response.payload.name = input.name
 
 # ################################################################################################################################
@@ -130,8 +134,8 @@ class Edit(AdminService):
             store.delete(_entity_type, old_name)
         store.set(_entity_type, input.name, data)
 
-        saved = store.get(_entity_type, input.name) or data
-        self.response.payload.id = saved.get('id', input.id)
+        saved = store.get(_entity_type, input.name)
+        self.response.payload.id = saved['id']
         self.response.payload.name = input.name
 
 # ################################################################################################################################

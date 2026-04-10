@@ -966,57 +966,6 @@ def get_stack(f, with_locals=False):
 
 # ################################################################################################################################
 
-def get_threads_traceback(pid):
-    result = {}
-    id_name = {th.ident: th.name for th in threading.enumerate()}
-
-    for thread_id, frame in iteritems(sys._current_frames()):
-        key = '{}:{}'.format(pid, id_name.get(thread_id, '(No name)'))
-        result[key] = get_stack(frame, True)
-
-    return result
-
-# ################################################################################################################################
-
-def get_greenlets_traceback(pid):
-    result = {}
-    for item in gc.get_objects():
-        if not isinstance(item, (Greenlet, Hub)):
-            continue
-        if not item:
-            continue
-
-        key = '{}:{}'.format(pid, repr(item))
-        result[key] = ''.join(get_stack(item.gr_frame, True))
-
-    return result
-
-# ################################################################################################################################
-
-def dump_stacks(*ignored):
-    pid = os.getpid()
-
-    table = Texttable()
-    table.set_cols_width((30, 90))
-    table.set_cols_dtype(['t', 't'])
-
-    rows = [['Proc:Thread/Greenlet', 'Traceback']]
-
-    rows.extend(sorted(iteritems(get_threads_traceback(pid))))
-    rows.extend(sorted(iteritems(get_greenlets_traceback(pid))))
-
-    table.add_rows(rows)
-    logger.info('\n' + table.draw())
-
-# ################################################################################################################################
-
-def register_diag_handlers():
-    """ Registers diagnostic handlers dumping stacks, threads and greenlets on receiving a signal.
-    """
-    signal.signal(signal.SIGURG, dump_stacks)
-
-# ################################################################################################################################
-
 def parse_simple_type(value:'any_', convert_bool:'bool'=True) -> 'any_':
     if convert_bool:
         try:
