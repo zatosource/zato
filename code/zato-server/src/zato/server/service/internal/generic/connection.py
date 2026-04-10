@@ -596,7 +596,7 @@ class Ping(AdminService):
         start_time = utcnow()
 
         try:
-            _ = ping_func(self.request.input.id)
+            _ = ping_func(self.request.input.id, conn_name=found.get('name', ''))
         except Exception:
             exc = format_exc()
             self.logger.warning(exc)

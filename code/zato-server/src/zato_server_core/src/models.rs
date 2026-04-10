@@ -559,13 +559,36 @@ pub struct PubSubPermission {
 pub struct PubSubSubscription {
     #[serde(default = "next_id")]
     pub id: String,
+    #[serde(default)]
     pub security: String,
+    #[serde(default)]
+    pub sub_key: String,
+    #[serde(default)]
+    pub sec_base_id: String,
+    #[serde(default)]
+    pub sec_name: String,
+    #[serde(default)]
+    pub username: String,
     #[serde(default)]
     pub delivery_type: String,
     #[serde(default)]
+    pub push_type: String,
+    #[serde(default)]
+    pub created: String,
+    #[serde(default = "default_true")]
+    pub is_delivery_active: bool,
+    #[serde(default = "default_true")]
+    pub is_pub_active: bool,
+    #[serde(default)]
     pub topic_list: Vec<String>,
     #[serde(default)]
+    pub topic_name_list: Vec<serde_yaml::Value>,
+    #[serde(default)]
+    pub topic_link_list: String,
+    #[serde(default)]
     pub push_rest_endpoint: Option<String>,
+    #[serde(default)]
+    pub rest_push_endpoint_id: Option<String>,
     #[serde(default)]
     pub push_service_name: Option<String>,
     #[serde(default)]
