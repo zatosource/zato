@@ -321,12 +321,19 @@ class Edit(AdminService):
 
         config_key = '{}:{}'.format(sec_name, input.delivery_type)
 
-        # Find the existing entry to preserve created/sub_key
+        # Find the existing entry to preserve created/sub_key and detect key changes
         existing = None
+        old_config_key = None
         for item in self.server.config_store.get_list('pubsub_subscription'):
             if item.get('sub_key') == input.sub_key:
                 existing = item
+                old_sec = item.get('security') or item.get('sec_name', '')
+                old_dt = item.get('delivery_type', '')
+                old_config_key = '{}:{}'.format(old_sec, old_dt)
                 break
+
+        if old_config_key and old_config_key != config_key:
+            self.server.config_store.delete('pubsub_subscription', old_config_key)
 
         data = {
             'sub_key': input.sub_key,

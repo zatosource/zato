@@ -143,9 +143,9 @@ def _find_generic_item(server, id=None, name=None, type_=None) -> 'anydict | Non
 
 # ################################################################################################################################
 
-def _next_generic_connection_id(server) -> 'int':
-    items = server.config_store.get_list('generic_connection')
-    return max((int(x.get('id') or 0) for x in items), default=0) + 1
+def _next_generic_connection_id(server) -> 'str':
+    """No longer needed — Rust auto-generates string IDs — but kept for backward compat."""
+    return ''
 
 # ################################################################################################################################
 
@@ -276,7 +276,7 @@ class _CreateEdit(AdminService):
             hook_func(self, data, existing, old_name)
 
         rust_payload = _conn_to_rust_payload(conn)
-        rust_payload['id'] = int(data['id'])
+        rust_payload['id'] = str(data['id'])
         rust_payload['name'] = data['name']
         rust_payload.setdefault('type_', data.get('type_') or '')
 

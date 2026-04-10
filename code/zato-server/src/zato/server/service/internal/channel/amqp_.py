@@ -65,8 +65,9 @@ class Create(AdminService):
         name = input.name
         self.server.config_store.set(_entity_type, name, data)
 
-        self.response.payload.id = data.get('id', name)
-        self.response.payload.name = name
+        item = self.server.config_store.get(_entity_type, name)
+        self.response.payload.id = item['id']
+        self.response.payload.name = item['name']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -83,27 +84,38 @@ class Edit(AdminService):
     def handle(self):
         input = self.request.input
 
-        data = {
-            'id': input.id,
-            'name': input.name,
-            'is_active': input.is_active,
-            'address': input.address,
-            'username': input.username,
-            'password': input.password,
-            'queue': input.queue,
-            'consumer_tag_prefix': input.consumer_tag_prefix,
-            'service_name': input.service,
-            'pool_size': input.pool_size,
-            'ack_mode': input.ack_mode,
-            'prefetch_count': input.prefetch_count,
-            'data_format': input.get('data_format'),
-        }
+        old_name = None
+        for item in self.server.config_store.get_list(_entity_type):
+            if item.get('id') == input.id:
+                old_name = item['name']
+                break
 
-        name = input.name
-        self.server.config_store.set(_entity_type, name, data)
+        if not old_name:
+            raise Exception('AMQP channel with id `{}` not found'.format(input.id))
 
-        self.response.payload.id = data.get('id', name)
-        self.response.payload.name = name
+        existing = self.server.config_store.get(_entity_type, old_name) or {}
+
+        existing['name'] = input.name
+        existing['is_active'] = input.is_active
+        existing['address'] = input.address
+        existing['username'] = input.username
+        existing['password'] = input.password
+        existing['queue'] = input.queue
+        existing['consumer_tag_prefix'] = input.consumer_tag_prefix
+        existing['service_name'] = input.service
+        existing['pool_size'] = input.pool_size
+        existing['ack_mode'] = input.ack_mode
+        existing['prefetch_count'] = input.prefetch_count
+        existing['data_format'] = input.get('data_format')
+
+        if old_name != input.name:
+            self.server.config_store.delete(_entity_type, old_name)
+
+        self.server.config_store.set(_entity_type, input.name, existing)
+
+        item = self.server.config_store.get(_entity_type, input.name)
+        self.response.payload.id = item['id']
+        self.response.payload.name = item['name']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -116,8 +128,12 @@ class Delete(AdminService):
     input = 'id'
 
     def handle(self):
-        name = str(self.request.input.id)
-        self.server.config_store.delete(_entity_type, name)
+        input_id = self.request.input.id
+        for item in self.server.config_store.get_list(_entity_type):
+            if item.get('id') == input_id or item.get('name') == input_id:
+                self.server.config_store.delete(_entity_type, item['name'])
+                return
+        raise Exception('AMQP channel with id `{}` not found'.format(input_id))
 
 # ################################################################################################################################
 # ################################################################################################################################

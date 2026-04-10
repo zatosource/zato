@@ -55,7 +55,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a pub/sub topic.
     """
-    input = 'name', 'is_active', '-id', '-cluster_id', '-description'
+    input = 'name', 'is_active', '-id', '-cluster_id', '-description', '-old_name'
     output = 'id', 'name'
 
     def handle(self):
@@ -63,16 +63,24 @@ class Edit(AdminService):
 
         validate_topic_name(input.name)
 
-        data = {
-            'name': input.name,
-            'is_active': input.is_active,
-            'description': input.get('description') or '',
-        }
+        old_name = input.get('old_name') or input.name
 
-        self.server.config_store.set('pubsub_topic', input.name, data)
+        existing = self.server.config_store.get('pubsub_topic', old_name)
+        if not existing:
+            raise Exception('Pub/sub topic `{}` not found'.format(old_name))
 
-        self.response.payload.id = input.get('id') or input.name
-        self.response.payload.name = input.name
+        existing['name'] = input.name
+        existing['is_active'] = input.is_active
+        existing['description'] = input.get('description') or ''
+
+        if old_name != input.name:
+            self.server.config_store.delete('pubsub_topic', old_name)
+
+        self.server.config_store.set('pubsub_topic', input.name, existing)
+
+        item = self.server.config_store.get('pubsub_topic', input.name)
+        self.response.payload.id = item['id']
+        self.response.payload.name = item['name']
 
 # ################################################################################################################################
 # ################################################################################################################################

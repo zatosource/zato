@@ -87,19 +87,23 @@ class Edit(AdminService):
             raise Exception('At least one valid pattern is required')
 
         sec_name = _get_sec_name_by_id(self.server, input.sec_base_id)
+        old_key = str(input.id)
 
-        data = {
-            'id': input.id,
-            'security': sec_name,
-            'name': sec_name,
-            'sec_base_id': input.sec_base_id,
-            'access_type': input.access_type,
-            'pattern': '\n'.join(patterns),
-        }
+        existing = self.server.config_store.get('pubsub_permission', old_key) or {}
 
-        self.server.config_store.set('pubsub_permission', sec_name, data)
+        if old_key != sec_name:
+            self.server.config_store.delete('pubsub_permission', old_key)
 
-        self.response.payload.id = input.id
+        existing['security'] = sec_name
+        existing['name'] = sec_name
+        existing['sec_base_id'] = input.sec_base_id
+        existing['access_type'] = input.access_type
+        existing['pattern'] = '\n'.join(patterns)
+
+        self.server.config_store.set('pubsub_permission', sec_name, existing)
+
+        item = self.server.config_store.get('pubsub_permission', sec_name)
+        self.response.payload.id = item['id']
         self.response.payload.name = sec_name
 
 # ################################################################################################################################
