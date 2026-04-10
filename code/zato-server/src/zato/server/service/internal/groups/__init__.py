@@ -14,6 +14,7 @@ from operator import itemgetter
 from zato.common.api import CONNECTION, Groups, SEC_DEF_TYPE
 from zato.common.groups import Member
 from zato.server.service import AsIs, Service
+from zato_server_core import next_id
 
 # ################################################################################################################################
 
@@ -24,8 +25,7 @@ if 0:
 # ################################################################################################################################
 
 def _next_group_id(server) -> 'str':
-    """No longer needed — Rust auto-generates string IDs — but kept for backward compat."""
-    return ''
+    return next_id()
 
 # ################################################################################################################################
 

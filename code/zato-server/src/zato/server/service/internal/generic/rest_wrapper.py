@@ -6,9 +6,6 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-# stdlib
-from json import dumps
-
 # Zato
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.broker_message import OUTGOING
@@ -51,6 +48,9 @@ class GetList(Service):
         if isinstance(self.request.raw_request, dict):
             wrapper_type = self.request.raw_request.get('wrapper_type', '') # type: str
 
+        import logging
+        logger = logging.getLogger(__name__)
+
         # This response has all the REST connections possible ..
         response = self.invoke(service_name, {
             'include_wrapper': True,
@@ -60,11 +60,18 @@ class GetList(Service):
             'paginate': False,
         })
 
+        logger.info('rest-wrapper.get-list -> response type:%s, value:%s', type(response).__name__, response)
+
         # .. extract the list of items ..
         items = response.get('data', response) if isinstance(response, dict) else response
 
+        logger.info('rest-wrapper.get-list -> items type:%s, len:%s', type(items).__name__, len(items) if hasattr(items, '__len__') else '?')
+
         # .. iterate through each of them ..
         for item in items:
+
+            logger.info('rest-wrapper.get-list -> item is_wrapper:%s, wrapper_type:%s, name:%s',
+                item.get('is_wrapper'), item.get('wrapper_type'), item.get('name'))
 
             # .. ignore items that are not wrappers ..
             if not item.get('is_wrapper'):
@@ -87,7 +94,7 @@ class GetList(Service):
             # .. and append the item to the result ..
             out.append(item)
 
-        self.response.payload = dumps(out)
+        self.response.payload = out
 
 # ################################################################################################################################
 # ################################################################################################################################

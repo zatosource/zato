@@ -68,7 +68,7 @@ class Create(AdminService):
 
 class Edit(AdminService):
 
-    input = 'name', 'is_active', 'username', 'realm', '-id', '-cluster_id'
+    input = 'name', 'is_active', 'username', 'realm', '-id', '-cluster_id', '-old_name'
     output = 'id', 'name'
 
     def handle(self):

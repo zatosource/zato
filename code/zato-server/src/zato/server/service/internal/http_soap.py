@@ -135,8 +135,17 @@ class GetList(_BaseGet):
         should_ignore_wrapper = not include_wrapper
         needs_security_group_names = self.request.input.get('needs_security_group_names') or False
 
+        import logging
+        _logger = logging.getLogger(__name__)
+
         entity_type = _get_entity_type(connection, transport)
         items = self.server.config_store.get_list(entity_type)
+
+        _logger.info('http-soap.get-list -> entity_type:%s, include_wrapper:%s, item_count:%s',
+            entity_type, include_wrapper, len(items))
+        for _i, _item in enumerate(items):
+            _logger.info('http-soap.get-list -> raw item[%s] is_wrapper:%s, wrapper_type:%s, name:%s, keys:%s',
+                _i, _item.get('is_wrapper'), _item.get('wrapper_type'), _item.get('name'), list(_item.keys()))
 
         security_groups_member_count = self.invoke('zato.groups.get-member-count', group_type=Groups.Type.API_Clients)
 

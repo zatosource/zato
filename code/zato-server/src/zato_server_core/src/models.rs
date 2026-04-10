@@ -214,6 +214,14 @@ pub struct OutgoingRest {
     pub tls_verify: Option<bool>,
     #[serde(default)]
     pub is_internal: bool,
+    #[serde(default)]
+    pub is_wrapper: bool,
+    #[serde(default)]
+    pub wrapper_type: Option<String>,
+    #[serde(default)]
+    pub username: Option<String>,
+    #[serde(default)]
+    pub password: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
