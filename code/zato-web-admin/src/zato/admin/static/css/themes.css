@@ -75,6 +75,7 @@
     --accent:              #063c65;
     --attention-bg:        #f7f089;
     --attention-bg2:       #ccc;
+    --row-bounce-highlight:rgba(0,0,0,0.03);
 
     /* Text variants */
     --muted-text:          #616161;
@@ -181,7 +182,7 @@
     --table-header-bg:     #181818;
     --row-odd-bg:          #1F1F1F;
     --row-even-bg:         #262626;
-    --row-attention-border:#7a7030;
+    --row-attention-border:#3a3a3a;
 
     /* Forms */
     --form-data-bg:        #313131;
@@ -204,8 +205,9 @@
 
     /* Accent and attention */
     --accent:              #0078D4;
-    --attention-bg:        #9E6A03;
+    --attention-bg:        #2a2a2a;
     --attention-bg2:       #444;
+    --row-bounce-highlight:rgba(255,255,255,0.05);
 
     /* Text variants */
     --muted-text:          #9D9D9D;
@@ -312,7 +314,7 @@
     --table-header-bg:     #0a0a0a;
     --row-odd-bg:          #000000;
     --row-even-bg:         #0a0a0a;
-    --row-attention-border:#ccaa00;
+    --row-attention-border:#2a2a2a;
 
     /* Forms */
     --form-data-bg:        #1a1a1a;
@@ -335,8 +337,9 @@
 
     /* Accent and attention */
     --accent:              #0078D4;
-    --attention-bg:        #9E6A03;
+    --attention-bg:        #1a1a1a;
     --attention-bg2:       #555;
+    --row-bounce-highlight:rgba(255,255,255,0.07);
 
     /* Text variants */
     --muted-text:          #CCCCCC;
@@ -656,8 +659,8 @@
 
 @keyframes zatoRowBounceBackground {
     0%   { background-color: transparent; }
-    30%  { background-color: rgba(0,0,0,0.03); }
-    60%  { background-color: rgba(0,0,0,0.01); }
+    30%  { background-color: var(--row-bounce-highlight); }
+    60%  { background-color: transparent; }
     100% { background-color: transparent; }
 }
 

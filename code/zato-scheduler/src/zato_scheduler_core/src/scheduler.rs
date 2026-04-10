@@ -142,6 +142,7 @@ pub fn load_from_config_store_py(
 fn load_jobs_from_config_store(shared: &SchedulerShared, config_store: &PyObject) {
     Python::try_attach(|py| {
         let cs = config_store.bind(py);
+        // TODO: load calendars here too, same as scheduler_reload does in lib.rs
         if let Ok((jobs, _cals)) = load_from_config_store_py(cs) {
             let mut state = shared.state.lock().unwrap();
             for (id, job) in &jobs {
@@ -152,7 +153,7 @@ fn load_jobs_from_config_store(shared: &SchedulerShared, config_store: &PyObject
     });
 }
 
-fn compute_sleep_duration(state: &SchedulerState) -> Duration {
+pub(crate) fn compute_sleep_duration(state: &SchedulerState) -> Duration {
     let now = Utc::now();
     let mut min_ms: i64 = 60_000;
 
@@ -171,7 +172,7 @@ fn compute_sleep_duration(state: &SchedulerState) -> Duration {
     Duration::from_millis(min_ms.max(1) as u64)
 }
 
-fn collect_due_jobs(
+pub(crate) fn collect_due_jobs(
     state: &mut SchedulerState,
     now: chrono::DateTime<Utc>,
 ) -> Vec<(String, String, String, Option<String>, String, u32)> {
@@ -280,7 +281,7 @@ fn dispatch_jobs(
     });
 }
 
-fn check_in_flight_timeouts(state: &mut SchedulerState) {
+pub(crate) fn check_in_flight_timeouts(state: &mut SchedulerState) {
     let now_instant = Instant::now();
 
     for rj in state.jobs.values_mut() {
@@ -305,7 +306,7 @@ fn check_in_flight_timeouts(state: &mut SchedulerState) {
     }
 }
 
-fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
+pub(crate) fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
     for rj in state.jobs.values_mut() {
         if rj.is_active {
             rj.compute_next_fire(now);
@@ -314,7 +315,7 @@ fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
     apply_missed_catchup(state, now);
 }
 
-fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
+pub(crate) fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
     let job_ids: Vec<String> = state.jobs.keys().cloned().collect();
 
     for id in job_ids {

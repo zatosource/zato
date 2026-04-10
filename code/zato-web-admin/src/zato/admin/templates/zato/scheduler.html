@@ -52,7 +52,6 @@
             'cron_definition',
             'jitter_ms',
             'timezone',
-            'calendar',
             'on_missed',
             'max_execution_time_ms'
         ]
@@ -143,7 +142,6 @@
                         <td class='ignore'></td>
                         <td class='ignore'>{{ job.jitter_ms|default:"" }}</td>
                         <td class='ignore'>{{ job.timezone|default:"" }}</td>
-                        <td class='ignore'>{{ job.calendar|default:"" }}</td>
                         <td class='ignore'>{{ job.on_missed|default:"" }}</td>
                         <td class='ignore'>{{ job.max_execution_time_ms|default:"" }}</td>
                     </tr>
