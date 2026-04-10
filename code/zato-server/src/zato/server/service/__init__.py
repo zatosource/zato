@@ -10,6 +10,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from functools import lru_cache as _lru_cache
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
 from re import findall
@@ -17,10 +18,6 @@ from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
-
-# lxml
-from lxml.etree import _Element as EtreeElement # type: ignore
-from lxml.objectify import ObjectifiedElement
 
 # gevent
 from gevent import Timeout, sleep as _gevent_sleep, spawn as _gevent_spawn
@@ -34,25 +31,16 @@ from zato.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
-from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
-from zato.common.monitoring.logger_ import DatadogLogger
-from zato.common.monitoring.metrics import ServiceMetrics
 from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
-from zato.server.connection.cache import CacheAPI
-from zato.server.connection.email import EMailAPI
-from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
-from zato.server.connection.http_soap.outgoing import current_datadog_cid, current_datadog_context, \
-    current_datadog_env_name, current_datadog_process_name, current_datadog_service_name
-from zato.server.connection.search import SearchAPI
-from zato.server.pattern.api import FanOut
-from zato.server.pattern.api import InvokeRetry
-from zato.server.pattern.api import ParallelExec
-from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
+from zato.server.connection.facade import RESTFacade, SchedulerFacade
+from zato.server.pattern.base import FanOut, ParallelExec
+from zato.server.pattern.invoke_retry import InvokeRetry
+from zato.server.service.reqresp import Cloud, Outgoing, Request
 
 # Zato - Rust SIO
 from zato_sio import Payload as SimpleIOPayload
@@ -61,7 +49,6 @@ from zato_sio import Response
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.common.ext.dataclasses import dataclass
 from zato.common.marshal_.api import Model, ModelCtx
-from zato.server.connection.cloud.microsoft_dataverse import DataverseClient
 from zato_sio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
      Opaque, Text, UTC, UUID
 
@@ -73,7 +60,6 @@ dataclass = dataclass
 Date = Date
 DateTime = DateTime
 Decimal = Decimal
-DataverseClient = DataverseClient
 Dict = Dict
 DictList = DictList
 Float = Float
@@ -154,8 +140,13 @@ _http_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 
 # ################################################################################################################################
 
-_response_raw_types=(bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
 _utcnow = utcnow
+
+@_lru_cache(maxsize=1)
+def _get_response_raw_types():
+    from lxml.etree import _Element as EtreeElement
+    from lxml.objectify import ObjectifiedElement
+    return (bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
 
 # ################################################################################################################################
 
@@ -522,10 +513,12 @@ class Service:
 
         if self.component_enabled_email:
             if not Service.email:
+                from zato.server.connection.email import EMailAPI
                 Service.email = EMailAPI(self._worker_store.email_smtp_api, self._worker_store.email_imap_api)
 
         if self.component_enabled_search:
             if not Service.search:
+                from zato.server.connection.search import SearchAPI
                 Service.search = SearchAPI(self._worker_store.search_es_api)
 
         if may_have_http_environ:
@@ -543,6 +536,7 @@ class Service:
         self.rest.init(self.cid, self._worker_store.worker_config.out_plain_http)
 
         # Vendors - Keysight
+        from zato.server.connection.facade import KeysightContainer
         self.keysight = KeysightContainer()
         self.keysight.init(self.cid, self._worker_store.worker_config.out_plain_http)
 
@@ -550,7 +544,7 @@ class Service:
 
     def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
         response = service.response.payload
-        if not isinstance(response, _response_raw_types):
+        if not isinstance(response, _get_response_raw_types()):
 
             if hasattr(response, 'getvalue'):
                 response = response.getvalue(serialize=kwargs.get('serialize'))
@@ -660,7 +654,8 @@ class Service:
         # Here's an edge case. If a SOAP request has a single child in Body and this child is an empty element
         # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
         # to False so we'd be parsing the payload again superfluously.
-        if not isinstance(payload, ObjectifiedElement) and not payload:
+        from lxml.objectify import ObjectifiedElement as _ObjectifiedElement
+        if not isinstance(payload, _ObjectifiedElement) and not payload:
             payload = payload_from_request(server.json_parser, cid, raw_request, data_format, transport, channel_item)
 
         job_type = kwargs.get('job_type') or ''
@@ -1166,8 +1161,10 @@ class Service:
         service.user_config = server.user_config
         service.static_config = server.static_config
         service.time = server.time_util
-        service.security = SecurityFacade(service.server)
-        service.metrics = ServiceMetrics(service)
+        from zato.common.facade import SecurityFacade as _SecurityFacade
+        service.security = _SecurityFacade(service.server)
+        from zato.common.monitoring.metrics import ServiceMetrics as _ServiceMetrics
+        service.metrics = _ServiceMetrics(service)
 
         if channel_params:
             service.request.channel_params.update(channel_params)
@@ -1181,6 +1178,7 @@ class Service:
         sec_def_info = http_environ.get('zato.sec_def', {})
 
         if channel_type == _AMQP:
+            from zato.server.service.reqresp import AMQPRequestData
             service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
 
         chan_sec_info = ChannelSecurityInfo(

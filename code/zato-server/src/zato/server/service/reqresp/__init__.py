@@ -13,10 +13,6 @@ from copy import deepcopy
 # Bunch
 from bunch import Bunch, bunchify
 
-# lxml
-from lxml.etree import _Element as EtreeElement
-from lxml.objectify import ObjectifiedElement
-
 # Zato
 from zato.common.api import simple_types
 from zato.common.marshal_.api import Model
@@ -76,8 +72,6 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
 # ################################################################################################################################
-
-direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 
 # ################################################################################################################################
 # ################################################################################################################################

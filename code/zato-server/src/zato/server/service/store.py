@@ -28,7 +28,6 @@ from typing import Any, List
 from gevent.lock import RLock
 
 # humanize
-from humanize import naturalsize
 
 # PyYAML
 try:
@@ -40,15 +39,11 @@ except ImportError:
 
 # Zato
 from zato.common.api import DONT_DEPLOY_ATTR_NAME, LazySourceCodeInfo, SourceCodeInfo, TRACE1
-from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
-from zato.common.marshal_.api import Model as DataClassModel
-from zato.common.marshal_.simpleio import DataClassSimpleIO
 from zato.common.typing_ import cast_, list_
-from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
+from zato.common.util.api import import_module_from_path, is_python_file, visit_py_source
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
-from zato.server.config import ConfigDict
 from zato.server.service import PubSubHook, SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
@@ -416,7 +411,7 @@ class ServiceStore:
         # Dataclasses require class objects ..
         if isclass(msg_class):
 
-            # .. and it needs to be our own Model subclass ..
+            from zato.common.marshal_.api import Model as DataClassModel
             if not issubclass(msg_class,  DataClassModel):
                 logger.warning('%s definition %s in service %s will be ignored - \'%s\' should be a subclass of %s',
                 msg_type,
@@ -455,6 +450,7 @@ class ServiceStore:
             has_output_data_class = self._has_io_data_class(class_, _sio_output, 'Output')
 
             if has_input_data_class or has_output_data_class:
+                from zato.common.marshal_.simpleio import DataClassSimpleIO
                 _ = DataClassSimpleIO.attach_sio(service_store.server, None, class_) # type: ignore
             else:
                 _ = SIOProcessor.attach_sio(service_store.server, None, class_)
@@ -584,6 +580,7 @@ class ServiceStore:
         service.config = self.server.user_config
         service.user_config = self.server.user_config
         service.time = self.server.time_util
+        from zato.common.facade import SecurityFacade
         service.security = SecurityFacade(service.server)
 
         # .. and return everything to our caller.
@@ -849,6 +846,7 @@ class ServiceStore:
         for service in to_process: # type: InRAMService
             class_ = service.service_class
             path = service.source_code_info.path
+            from zato.common.util.api import deployment_info
             deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
             deployment_info_dict['_source_code_info'] = service.source_code_info
             self.deployment_info[service.impl_name] = deployment_info_dict
@@ -1227,6 +1225,7 @@ class ServiceStore:
         """ Is item a model that we can deploy?
         """
         if isclass(item) and hasattr(item, '__mro__'):
+            from zato.common.marshal_.api import Model as DataClassModel
             if issubclass(item, DataClassModel) and (item is not DataClassModel):
                 if item.__module__ == current_module.__name__:
                     return True
