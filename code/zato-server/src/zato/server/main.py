@@ -432,7 +432,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.static_dir = os.path.join(server.base_dir, 'config', 'repo', 'static')
     server.fs_server_config = server_config
-    server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False)
+    server.fs_sql_config = get_config(repo_location, 'sql.conf', needs_user_config=False, log_exception=False)
     server.logging_config = logging_config
     server.logging_conf_path = logging_conf_path
     server.user_config.update(server_config.user_config_items)

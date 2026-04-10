@@ -433,8 +433,7 @@ class Create(ZatoCommand):
         should_create_scheduler = not no_scheduler
         create_components_other_than_scheduler = not scheduler_only
 
-        # Under Windows, even if the load balancer is created, we do not log this information.
-        total_non_servers_steps = 3 if is_windows else 5
+        total_non_servers_steps = 4
         total_steps = total_non_servers_steps + servers
 
         # Take the scheduler into account
@@ -443,8 +442,7 @@ class Create(ZatoCommand):
         elif scheduler_only:
             # 1 for servers
             # 1 for Dashboard
-            # 1 for the load-balancer
-            total_steps -= 3
+            total_steps -= 2
 
 # ################################################################################################################################
 
