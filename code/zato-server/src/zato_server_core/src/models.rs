@@ -546,6 +546,8 @@ pub struct PubSubPermission {
     pub id: String,
     pub security: String,
     #[serde(default)]
+    pub sec_base_id: String,
+    #[serde(default)]
     pub pub_: Vec<String>,
     #[serde(rename = "pub", default)]
     pub pub_topics: Vec<String>,
