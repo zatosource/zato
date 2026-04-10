@@ -170,7 +170,6 @@ command_imports = (
     ('reset_totp_key', 'zato.cli.web_admin_auth.ResetTOTPKey'),
     ('quickstart_create', 'zato.cli.quickstart.Create'),
     ('service_invoke', 'zato.cli.service.Invoke'),
-    ('set_ide_password', 'zato.cli.ide.SetIDEPassword'),
     ('set_admin_invoke_password', 'zato.cli.web_admin_auth.SetAdminInvokePassword'),
     ('start', 'zato.cli.start.Start'),
     ('stop', 'zato.cli.stop.Stop'),

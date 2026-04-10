@@ -37,7 +37,6 @@ class IntervalBasedSchedulerJobForm(_Base):
     repeats = forms.CharField(widget=forms.TextInput(attrs={'style':'width:8%'}))
     jitter_ms = forms.CharField(required=False, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
     timezone = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:40%'}))
-    calendar = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:40%'}))
     on_missed = forms.ChoiceField(required=False, choices=[
         ('run_once', 'Run once'), ('skip', 'Skip'), ('run_all', 'Run all')
     ], widget=forms.Select(attrs={'style':'width:20%'}))

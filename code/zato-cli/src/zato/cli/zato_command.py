@@ -115,7 +115,6 @@ class CommandStore:
              crypto              as crypto_mod,              \
              enmasse_command     as enmasse_mod,             \
              FromConfig,                                     \
-             ide                 as ide_mod,                 \
              quickstart          as quickstart_mod,          \
              service             as service_mod,             \
              stop                as stop_mod,                \
@@ -318,14 +317,6 @@ class CommandStore:
         hash_get_rounds = hash_subs.add_parser('get-rounds', description=crypto_mod.GetHashRounds.__doc__, parents=[base_parser])
         hash_get_rounds.set_defaults(command='hash_get_rounds')
         self.add_opts(hash_get_rounds, crypto_mod.GetHashRounds.opts)
-
-        #
-        # IDE
-        #
-        ide = subs.add_parser('set-ide-password', description=ide_mod.SetIDEPassword.__doc__, parents=[base_parser])
-        ide.add_argument('path', help='Path to a Zato server')
-        ide.set_defaults(command='set_ide_password')
-        self.add_opts(ide, ide_mod.SetIDEPassword.opts)
 
         #
         # reset-totp-key

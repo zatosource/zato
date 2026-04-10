@@ -367,7 +367,6 @@ class Create(ZatoCommand):
         import random
         import stat
         from collections import OrderedDict
-        from contextlib import closing
         from itertools import count
         from uuid import uuid4
 
@@ -383,10 +382,9 @@ class Create(ZatoCommand):
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
 
         # Zato
-        from zato.cli import create_cluster, create_odb, create_scheduler, create_server, create_web_admin
+        from zato.cli import create_cluster, create_scheduler, create_server, create_web_admin
         from zato.common.crypto.api import CryptoManager
         from zato.common.defaults import http_plain_server_port
-        from zato.common.util.api import get_engine, get_session
 
         random.seed()
 
@@ -414,9 +412,6 @@ class Create(ZatoCommand):
 
         # Make sure we always work with absolute paths
         args_path = os.path.abspath(args.path)
-
-        if args.odb_type == 'sqlite':
-            args.sqlite_path = os.path.join(args_path, 'zato.db')
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
@@ -463,23 +458,13 @@ class Create(ZatoCommand):
 # ################################################################################################################################
 
         #
-        # 1) ODB
-        #
-        if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
-            self.logger.info('[{}/{}] ODB schema already exists'.format(next(next_step), total_steps))
-        else:
-            self.logger.info('[{}/{}] ODB schema created'.format(next(next_step), total_steps))
-
-# ################################################################################################################################
-
-        #
-        # 2) ODB initial data
+        # 1) Cluster initial data
         #
         create_cluster_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
         create_cluster_args.secret_key = secret_key
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 
-        self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
+        self.logger.info('[{}/{}] Cluster initial data created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -550,14 +535,9 @@ class Create(ZatoCommand):
             scheduler_path = os.path.join(args_path, 'scheduler')
             os.mkdir(scheduler_path)
 
-            session = get_session(get_engine(args)) # type: ignore
-
-            with closing(session):
-                cluster_id:'int' = session.query(Cluster.id).filter(Cluster.name==cluster_name).one()[0] # type: ignore
-
             create_scheduler_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
             create_scheduler_args.path = scheduler_path
-            create_scheduler_args.cluster_id = cluster_id
+            create_scheduler_args.cluster_id = 1
             create_scheduler_args.server_path = first_server_path
             create_scheduler_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
             create_scheduler_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username

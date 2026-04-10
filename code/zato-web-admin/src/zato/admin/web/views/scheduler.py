@@ -180,7 +180,7 @@ def _get_create_edit_interval_based_message(user_profile, cluster, params, form_
     input_dict['minutes'] = params.get(form_prefix + 'minutes', '')
     input_dict['repeats'] = params.get(form_prefix + 'repeats', '')
 
-    for param in ('jitter_ms', 'timezone', 'calendar', 'on_missed', 'max_execution_time_ms'):
+    for param in ('jitter_ms', 'timezone', 'on_missed', 'max_execution_time_ms'):
         val = params.get(form_prefix + param, '')
         if val:
             input_dict[param] = val
@@ -345,7 +345,6 @@ def index(req):
 
                     job.jitter_ms = getattr(job_elem, 'jitter_ms', '') or ''
                     job.timezone = getattr(job_elem, 'timezone', '') or ''
-                    job.calendar = getattr(job_elem, 'calendar', '') or ''
                     job.on_missed = getattr(job_elem, 'on_missed', '') or ''
                     job.max_execution_time_ms = getattr(job_elem, 'max_execution_time_ms', '') or ''
 
