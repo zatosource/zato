@@ -477,7 +477,7 @@ class EnvironmentManager:
                 'zato-cli',
                 'zato-client',
                 'zato-distlock',
-                'zato-scheduler',
+                'zato-hl7',
                 'zato-openapi',
                 'zato-server',
                 'zato-web-admin',

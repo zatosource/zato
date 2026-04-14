@@ -17,7 +17,8 @@ from django.views import View
 from zato.admin.web.forms.pubsub.client import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.admin.web.util import get_pubsub_security_definitions
-from zato.common.odb.model import PubSubPermission
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 
@@ -30,7 +31,7 @@ class Index(_Index):
     url_name = 'pubsub-permission'
     template = 'zato/pubsub/client.html'
     service_name = 'zato.pubsub.client.get-list'
-    output_class = PubSubPermission
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

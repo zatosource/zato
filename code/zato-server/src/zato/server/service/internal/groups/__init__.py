@@ -11,12 +11,11 @@ from json import dumps
 from operator import itemgetter
 
 # Zato
-from zato.common.api import CONNECTION, Groups
-from zato.common.broker_message import Groups as Broker_Message_Groups
-from zato.common.odb.model import GenericObject as ModelGenericObject
+from zato.common.api import CONNECTION, Groups, SEC_DEF_TYPE
+from zato.common.groups import Member
 from zato.server.service import AsIs, Service
+from zato_server_core import next_id
 
-# ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
@@ -25,7 +24,44 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-ModelGenericObjectTable:'any_' = ModelGenericObject.__table__
+def _next_group_id(server) -> 'str':
+    return next_id()
+
+# ################################################################################################################################
+
+def _find_group_by_id(server, group_id) -> 'dict | None':
+    for item in server.config_store.get_list('groups'):
+        if str(item.get('id')) == str(group_id):
+            return item
+    return None
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _member_string_to_dict(server, group_id, member_str:'str') -> 'dict':
+    sec_info = member_str.split('-', 1)
+    sec_type, security_id = sec_info[0], sec_info[1]
+
+    if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+        get_sec_func = server.worker_store.basic_auth_get_by_id
+    elif sec_type == SEC_DEF_TYPE.APIKEY:
+        get_sec_func = server.worker_store.apikey_get_by_id
+    else:
+        raise Exception(f'Unrecognized sec_type: {sec_type}')
+
+    item = {
+        'name': member_str,
+        'type': sec_type,
+        'group_id': group_id,
+        'security_id': security_id,
+        'sec_type': sec_type,
+    }
+
+    if sec_config := get_sec_func(security_id):
+        item['name'] = sec_config['name']
+        item['security_id'] = sec_config['id']
+
+    return item
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,7 +77,7 @@ class GetList(Service):
         needs_members = self.request.input.needs_members
         needs_short_members = self.request.input.needs_short_members
 
-        group_list = self.server.groups_manager.get_group_list(group_type)
+        group_list = list(self.server.config_store.get_list('groups'))
         member_count = self.invoke(GetMemberCount, group_type=group_type)
 
         for item in group_list:
@@ -86,17 +122,23 @@ class Create(Service):
         # Local variables
         input = self.request.input
 
-        id = self.server.groups_manager.create_group(input.group_type, input.name)
+        new_id = _next_group_id(self.server)
+        data = {
+            'id': new_id,
+            'name': input.name,
+            'members': [],
+        }
+        self.server.config_store.set('groups', input.name, data)
 
         self.invoke(
             EditMemberList,
             group_type=input.group_type,
             group_action=Groups.Membership_Action.Add,
-            group_id=id,
-            members=input.members,
+            group_id=new_id,
+            members=input.get('members') or [],
         )
 
-        self.response.payload.id = id
+        self.response.payload.id = new_id
         self.response.payload.name = input.name
 
 # ################################################################################################################################
@@ -119,11 +161,24 @@ class Edit(Service):
         # All the members that have to be removed from the group
         to_remove:'strlist' = []
 
-        self.server.groups_manager.edit_group(input.id, input.group_type, input.name)
+        group = _find_group_by_id(self.server, input.id)
+        if not group:
+            raise Exception('Group not found: id=`{}`'.format(input.id))
+
+        old_name = group['name']
+        if old_name != input.name:
+            self.server.config_store.delete('groups', old_name)
+
+        data = {
+            'id': str(input.id),
+            'name': input.name,
+            'members': list(group.get('members') or []),
+        }
+        self.server.config_store.set('groups', input.name, data)
 
         if input.members:
 
-            group_members = self.server.groups_manager.get_member_list(input.group_type, input.id)
+            group_members = self.invoke(GetMemberList, group_type=input.group_type, group_id=input.id)
 
             input_member_names = {item['name'] for item in input.members}
             group_member_names = {item['name'] for item in group_members}
@@ -161,14 +216,6 @@ class Edit(Service):
         self.response.payload.id = self.request.input.id
         self.response.payload.name = self.request.input.name
 
-        # .. enrich the message that is to be published ..
-        input.to_add = to_add
-        input.to_remove = to_remove
-
-        # .. now, let all the threads know about the update.
-        input.action = Broker_Message_Groups.Edit.value
-        self.broker_client.publish(input)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -181,14 +228,18 @@ class Delete(Service):
 
         # Local variables
         input = self.request.input
-        group_id = int(input.id)
+        group_id = str(input.id)
 
-        # Delete this group from the database ..
-        self.server.groups_manager.delete_group(group_id)
+        group = _find_group_by_id(self.server, group_id)
+        if not group:
+            return
+
+        self.server.config_store.delete('groups', group['name'])
 
         # .. make sure the database configuration of channels using it is also updated ..
         to_update = []
-        data = self.invoke('zato.http-soap.get-list', connection=CONNECTION.CHANNEL, paginate=False, skip_response_elem=True)
+        response = self.invoke('zato.http-soap.get-list', connection=CONNECTION.CHANNEL, paginate=False)
+        data = response.get('data', []) if isinstance(response, dict) else response
 
         for item in data:
             if security_groups := item.get('security_groups'):
@@ -199,10 +250,6 @@ class Delete(Service):
 
         for item in to_update: # type: ignore
             _= self.invoke('zato.http-soap.edit', item)
-
-        # .. now, let all the threads know about the update.
-        input.action = Broker_Message_Groups.Delete.value
-        self.broker_client.publish(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -217,7 +264,15 @@ class GetMemberList(Service):
         # Local variables
         input = self.request.input
 
-        member_list = self.server.groups_manager.get_member_list(input.group_type, input.group_id)
+        group = _find_group_by_id(self.server, input.group_id)
+        if not group:
+            member_list = []
+        else:
+            member_list = []
+            for member_str in group.get('members') or []:
+                item = _member_string_to_dict(self.server, input.group_id, member_str)
+                member_list.append(Member.from_dict(item))
+
         member_list = [elem.to_dict() for elem in member_list]
 
         if input.should_serialize:
@@ -238,7 +293,12 @@ class GetMemberCount(Service):
         # Local variables
         input = self.request.input
 
-        member_count = self.server.groups_manager.get_member_count(input.group_type)
+        member_count = {}
+        for grp in self.server.config_store.get_list('groups'):
+            gid = grp.get('id')
+            members = grp.get('members') or []
+            member_count[gid] = len(members)
+
         if input.should_serialize:
             member_count = dumps(member_count)
         self.response.payload = member_count
@@ -260,7 +320,8 @@ class EditMemberList(Service):
         member_name_list = member_name_list if isinstance(member_name_list, list) else [member_name_list] # type: ignore
 
         # Get a list of all the security definitions possible, out of which we will be building our IDs.
-        security_list = self.invoke('zato.security.get-list', skip_response_elem=True)
+        security_response = self.invoke('zato.security.get-list')
+        security_list = security_response.get('data', []) if isinstance(security_response, dict) else security_response
         for item in member_name_list:
             if isinstance(item, dict):
                 item_name:'str' = item['name']
@@ -282,6 +343,10 @@ class EditMemberList(Service):
         # Local variables
         input = self.request.input
 
+        group = _find_group_by_id(self.server, input.group_id)
+        if not group:
+            return
+
         # We need to have member IDs in further steps so if we have names, they have to be turned into IDs here.
         if not (member_id_list := input.get('member_id_list')):
             member_id_list = self._get_member_id_list_from_name_list(input.members)
@@ -289,16 +354,24 @@ class EditMemberList(Service):
         if not member_id_list:
             return
 
+        members = list(group.get('members') or [])
+        name = group['name']
+
         if input.group_action == Groups.Membership_Action.Add:
-            func = self.server.groups_manager.add_members_to_group
+            for mid in member_id_list:
+                if mid not in members:
+                    members.append(mid)
         else:
-            func = self.server.groups_manager.remove_members_from_group
+            for mid in member_id_list:
+                if mid in members:
+                    members.remove(mid)
 
-        func(input.group_id, member_id_list)
-
-        # .. now, let all the threads know about the update.
-        input.action = Broker_Message_Groups.Edit_Member_List.value
-        self.broker_client.publish(input)
+        data = {
+            'id': group['id'],
+            'name': name,
+            'members': members,
+        }
+        self.server.config_store.set('groups', name, data)
 
 # ################################################################################################################################
 # ################################################################################################################################

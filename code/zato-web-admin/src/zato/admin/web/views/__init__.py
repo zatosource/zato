@@ -44,7 +44,7 @@ slugify = slugify
 # ################################################################################################################################
 
 if 0:
-    from zato.client import ServiceInvokeResponse
+    from zato.client import _APIResponse
     from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
@@ -54,16 +54,6 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 SKIP_VALUE = 'zato.skip.value'
-
-# ################################################################################################################################
-
-def parse_response_data(response):
-    """ Parses out data and metadata out an internal API call response.
-    """
-    meta = response.data.pop('_meta', None)
-    keys = list(response.data.keys())
-    data = response.data[keys[0]]
-    return data, meta
 
 # ################################################################################################################################
 
@@ -142,35 +132,6 @@ def method_allowed(*methods_allowed):
     return inner_method_allowed
 
 # ################################################################################################################################
-
-def set_servers_state(cluster, client):
-    """ Assignes 3 flags to the cluster indicating whether load-balancer believes the servers are UP, DOWN or in the MAINT mode.
-    """
-    servers_state = client.get_servers_state()
-
-    up = []
-    down = []
-    maint = []
-
-    cluster.some_down = False
-    cluster.some_maint = False
-    cluster.all_down = False
-
-    # Note: currently we support only the 'http_plain' access_type.
-    for access_type in('http_plain',):
-        up.extend(servers_state['UP'][access_type])
-        down.extend(servers_state['DOWN'][access_type])
-        maint.extend(servers_state['MAINT'][access_type])
-
-    # Do we have any servers at all?
-    if any((up, down, maint)):
-        if not(up or maint) and down:
-            cluster.all_down = True
-        else:
-            if down:
-                cluster.some_down = True
-            if maint:
-                cluster.some_maint = True
 
 # ################################################################################################################################
 
@@ -267,7 +228,6 @@ def build_sec_def_link_by_input(req, cluster_id, input_data):
 class BaseView:
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
-    async_invoke = False
     form_prefix = ''
 
     def __init__(self):
@@ -418,9 +378,8 @@ class Index(BaseView):
     def should_extract_top_level(self, _keys):
         return True
 
-    def invoke_admin_service(self) -> 'ServiceInvokeResponse':
+    def invoke_admin_service(self) -> '_APIResponse':
         if self.req.zato.get('cluster'):
-            func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
             service_name = self.service_name if self.service_name else self.get_service_name(self.req)
             request = self.get_initial_input()
 
@@ -429,11 +388,10 @@ class Index(BaseView):
             else:
                 logger.info('Not updating request with self.input')
 
-            # Auto-populate the field if it exists
             if self.wrapper_type:
                 request['wrapper_type'] = self.wrapper_type
 
-            return func(service_name, request)
+            return self.req.zato.client.invoke(service_name, request)
 
     def should_include(self, item) -> 'bool':
         return True
@@ -473,11 +431,15 @@ class Index(BaseView):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
-        names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
+        sio_names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
 
         for msg_item in (item_list or []):
 
             item = self.output_class()
+
+            # .. use the SIO field names if declared, otherwise take all keys from the response item.
+            names = sio_names if sio_names else msg_item.keys()
+
             for name in sorted(names):
                 value = getattr(msg_item, name, None)
                 if value is not None:
@@ -521,8 +483,6 @@ class Index(BaseView):
             self.set_input()
 
             return_data = {'cluster_id':self.cluster_id}
-            output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
-
             response = None
 
             if self.can_invoke_admin_service():
@@ -534,24 +494,8 @@ class Index(BaseView):
                 if response and response.ok:
                     return_data['response_inner'] = response.inner_service_response
 
-                    if output_repeated:
-                        if response and isinstance(response.data, dict):
-                            response.data.pop('_meta', None)
-                            keys = list(response.data.keys())
-                            if self.should_extract_top_level(keys):
-                                data = response.data[keys[0]]
-                                is_extracted = True
-                            else:
-                                data = response.data
-                                is_extracted = False
-                        else:
-                            data = response.data
-                            is_extracted = False
-
-                        # At this point, this may be just a list of elements, if self.should_extract_top_level returns True,
-                        # or a dictionary of keys pointing to lists with such elements.
-                        self.handle_item_list(data, is_extracted)
-
+                    if isinstance(response.data, list):
+                        self.handle_item_list(response.data, True)
                     else:
                         self._handle_item(response.data)
                 else:
@@ -651,7 +595,10 @@ class CreateEdit(BaseView):
 
                 return_data.update(initial_return_data)
 
-                for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
+                sio_output = tuple(chain(self.SimpleIO.output_optional, self.SimpleIO.output_required))
+                output_names = sio_output if sio_output else response.data.keys()
+
+                for name in output_names:
                     if name not in initial_return_data:
                         value = getattr(response.data, name, None)
                         if value:
@@ -669,8 +616,9 @@ class CreateEdit(BaseView):
                 logger.error(msg)
                 raise ZatoException(msg=msg)
 
-        except Exception:
-            return HttpResponseServerError(format_exc())
+        except Exception as e:
+            msg = str(e) or format_exc()
+            return HttpResponseServerError(msg)
 
     def pre_process_input_dict(self, input_dict):
         pass

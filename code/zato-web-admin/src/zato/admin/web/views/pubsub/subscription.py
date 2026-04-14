@@ -19,7 +19,8 @@ from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.util import get_pubsub_security_definitions, get_service_list as util_get_service_list
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, get_outconn_rest_list
 from zato.common.api import CONNECTION, PubSub, URL_TYPE
-from zato.common.odb.model import PubSubSubscription
+# Bunch
+from bunch import Bunch
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,7 +35,7 @@ class Index(_Index):
     url_name = 'pubsub-subscription'
     template = 'zato/pubsub/subscription.html'
     service_name = 'zato.pubsub.subscription.get-list'
-    output_class = PubSubSubscription
+    output_class = Bunch
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):

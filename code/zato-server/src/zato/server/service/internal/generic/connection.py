@@ -7,30 +7,22 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from contextlib import closing
 from copy import deepcopy
-from datetime import datetime
 from traceback import format_exc
 from uuid import uuid4
 
 # Zato
 from zato.common.api import GENERIC as COMMON_GENERIC, generic_attrs, SEC_DEF_TYPE, SEC_DEF_TYPE_NAME, ZATO_NONE
-from zato.common.broker_message import GENERIC
 from zato.common.json_internal import dumps, loads
-from zato.common.odb.model import GenericConn as ModelGenericConn
-from zato.common.odb.query.generic import connection_list
 from zato.common.typing_ import cast_
 from zato.common.util.api import parse_simple_type
 from zato.common.util.config import replace_query_string_items_in_dict
+from zato.common.util.search import SearchResults
 from zato.common.util.time_ import utcnow
+from zato.server.connection.http_soap import BadRequest
 from zato.server.generic.connection import GenericConnection
-from zato.server.service import AsIs, Int
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
-from zato.server.service.internal.generic import _BaseService
-from zato.server.service.meta import DeleteMeta
-
-# Python 2/3 compatibility
-from six import add_metaclass
+from zato.server.service import AsIs, Bool, Int
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 # ################################################################################################################################
 
@@ -46,15 +38,7 @@ if 0:
 # ################################################################################################################################
 
 elem = 'generic_connection'
-model = ModelGenericConn
 label = 'a generic connection'
-broker_message = GENERIC
-broker_message_prefix = 'CONNECTION_'
-list_func = None
-extra_delete_attrs = ['type_']
-
-# ################################################################################################################################
-
 hook = {}
 
 # ################################################################################################################################
@@ -95,6 +79,12 @@ skip_simple_type = {
 # Values of these generic attributes should be converted to ints
 int_attrs = ['pool_size', 'ping_interval', 'pings_missed_threshold', 'socket_read_timeout', 'socket_write_timeout']
 
+_generic_connection_keys = frozenset({
+    'id', 'name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn',
+    'address', 'port', 'timeout', 'data_format', 'version', 'extra', 'pool_size',
+    'username', 'secret', 'cache_expiry', 'security',
+})
+
 # ################################################################################################################################
 
 def ensure_ints(data:'strdict') -> 'None':
@@ -110,26 +100,67 @@ def ensure_ints(data:'strdict') -> 'None':
 
 # ################################################################################################################################
 
-class _CreateEditSIO(AdminSIO):
-    input_required = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'))
-    input_optional = ('cluster_id', 'id', Int('cache_expiry'), 'address', Int('port'), Int('timeout'), 'data_format', 'version',
-        'extra', 'username', 'username_type', 'secret', 'secret_type', 'conn_def_id', 'cache_id', AsIs('tenant_id'),
-        AsIs('client_id'), AsIs('security_id')) + extra_secret_keys + generic_attrs
-    force_empty_keys = True
+def _flatten_rust_generic_item(item:'anydict') -> 'anydict':
+    """ Merge Rust generic_connection dict (optional nested opaque) into a flat dict for GenericConnection.from_dict.
+    """
+    flat = dict(item)
+    opaque = flat.pop('opaque', None) or {}
+    if isinstance(opaque, dict):
+        flat.update(opaque)
+    return flat
 
 # ################################################################################################################################
+
+def _conn_to_rust_payload(conn:'GenericConnection') -> 'anydict':
+    """ Build a PyDict suitable for config_store.set for entity generic_connection.
+    """
+    flat = conn.to_dict()
+    if not isinstance(flat, dict):
+        flat = dict(flat)
+    payload:'anydict' = {}
+    extra:'anydict' = {}
+    for k, v in flat.items():
+        if k in _generic_connection_keys:
+            payload[k] = v
+        else:
+            extra[k] = v
+    if extra:
+        payload['opaque'] = extra
+    return payload
+
 # ################################################################################################################################
 
-class _CreateEdit(_BaseService):
-    """ Creates a new or updates an existing generic connection in ODB.
+def _find_generic_item(server, id=None, name=None, type_=None) -> 'anydict | None':
+    for item in server.config_store.get_list('generic_connection'):
+        if type_ is not None and item.get('type_') != type_:
+            continue
+        if id is not None and str(item.get('id')) == str(id):
+            return item
+        if name is not None and item.get('name') == name:
+            return item
+    return None
+
+# ################################################################################################################################
+
+def _next_generic_connection_id(server) -> 'str':
+    """No longer needed — Rust auto-generates string IDs — but kept for backward compat."""
+    return ''
+
+# ################################################################################################################################
+
+class _CreateEdit(AdminService):
+    """ Creates a new or updates an existing generic connection in the Rust config store.
     """
     is_create: 'bool'
     is_edit:   'bool'
 
-    class SimpleIO(_CreateEditSIO):
-        output_required = ('id', 'name')
-        default_value = None
-        response_elem = None
+    input = ('name', 'type_', 'is_active', 'is_internal', 'is_channel', 'is_outconn', Int('pool_size'),
+        '-cluster_id', '-id', Int('-cache_expiry'), '-address', Int('-port'), Int('-timeout'), '-data_format', '-version',
+        '-extra', '-username', '-username_type', '-secret', '-secret_type', '-conn_def_id', '-cache_id', AsIs('-tenant_id'),
+        AsIs('-client_id'), AsIs('-security_id')) + tuple('-' + k for k in extra_secret_keys) + tuple('-' + k for k in generic_attrs)
+    output = 'id', 'name'
+    force_empty_keys = True
+    default_value = None
 
 # ################################################################################################################################
 
@@ -188,8 +219,6 @@ class _CreateEdit(_BaseService):
             sec_def_type, security_id = security_id.split(sec_def_sep)
             sec_def_type_name = SEC_DEF_TYPE_NAME[sec_def_type]
 
-            security_id = int(security_id)
-
             # .. look up the security name by its ID ..
             if sec_def_type == SEC_DEF_TYPE.BASIC_AUTH:
                 func = self.server.worker_store.basic_auth_get_by_id
@@ -207,76 +236,59 @@ class _CreateEdit(_BaseService):
             # .. potentially overwrites the security type with what we have here ..
             data['auth_type'] = sec_def_type
 
-            # .. turns the ID into an integer but also remove the sec_type prefix,
-            # .. e.g. 17 instead of 'oauth/17'.
-            data['security_id'] = int(security_id)
+            # .. strip the sec_type prefix, e.g. '2026-...' instead of 'oauth/2026-...'.
+            data['security_id'] = security_id
 
             # .. and store everything else now.
             data['sec_def_type_name'] = sec_def_type_name
             data['security_name'] = security_name
 
+        existing = None
+        old_name = None
+        if self.is_edit:
+            existing = _find_generic_item(self.server, id=data.get('id'), type_=data.get('type_'))
+            if not existing:
+                raise Exception('Could not find generic connection with id `{}`'.format(data.get('id')))
+            old_name = existing['name']
+            if not has_input_secret:
+                data['secret'] = existing.get('secret')
+            if data.get('id') is None:
+                data['id'] = existing.get('id')
+        else:
+            data['id'] = data.get('id') or _next_generic_connection_id(self.server)
+            secret = self.crypto.generate_secret().decode('utf8')
+            secret = self.server.encrypt('auto.generated.{}'.format(secret))
+            secret = cast_('str', secret)
+            if not has_input_secret:
+                data['secret'] = secret
+
+        if has_input_secret:
+            data['secret'] = input_secret
+
         conn = GenericConnection.from_dict(data)
 
-        with closing(self.server.odb.session()) as session:
+        hook_func = hook.get(data.type_)
+        if hook_func:
+            hook_func(self, data, existing, old_name)
 
-            # If this is the edit action, we need to find our instance in the database
-            # and we need to make sure that we publish its encrypted secret for other layers ..
-            if self.is_edit:
-                model = self._get_instance_by_id(session, ModelGenericConn, data.id)
+        rust_payload = _conn_to_rust_payload(conn)
+        if data.get('id'):
+            rust_payload['id'] = str(data['id'])
+        else:
+            rust_payload.pop('id', None)
+        rust_payload['name'] = data['name']
+        rust_payload.setdefault('type_', data.get('type_') or '')
 
-                # Use the secret that was given on input because it may be a new one.
-                # Otherwise, if no secret is given on input, it means that we are not changing it
-                # so we can reuse the same secret that the model already uses.
-                if has_input_secret:
-                    secret = input_secret
-                else:
-                    secret = model.secret
+        new_name = data['name']
+        if self.is_edit and old_name and old_name != new_name:
+            self.server.config_store.delete('generic_connection', old_name)
 
-                secret = self.server.decrypt(secret)
-                conn.secret = secret
-                data.secret = secret # We need to set it here because we also publish this message to other servers
+        self.logger.info('create/edit: storing type_=%r, rust_payload keys=%r', rust_payload.get('type_'), list(rust_payload.keys()))
+        self.server.config_store.set('generic_connection', new_name, rust_payload)
 
-            # .. but if it is the create action, we need to create a new instance
-            # .. and ensure that its secret is auto-generated.
-            else:
-                model = self._new_zato_instance_with_cluster(ModelGenericConn)
-                secret = self.crypto.generate_secret().decode('utf8')
-                secret = self.server.encrypt('auto.generated.{}'.format(secret))
-                secret = cast_('str', secret)
-                conn.secret = secret
-
-            conn_dict = conn.to_sql_dict()
-
-            # This will be needed in case this is a rename
-            old_name = model.name
-
-            for key, value in sorted(conn_dict.items()):
-
-                # If we are merely creating this connection, do not set the field unless a secret was sent on input.
-                # If it is an edit, then we will have the secret either from the input or from the model,
-                # which is why we do to enter this branch.
-                if self.is_create:
-                    if key == 'secret' and not (has_input_secret):
-                        continue
-
-                setattr(model, key, value)
-
-            hook_func = hook.get(data.type_)
-            if hook_func:
-                hook_func(self, data, model, old_name)
-
-            session.add(model)
-            session.commit()
-
-            instance = self._get_instance_by_name(session, ModelGenericConn, data.type_, data.name)
-
-            self.response.payload.id = instance.id
-            self.response.payload.name = instance.name
-
-        data['old_name'] = old_name
-        data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
-        data['id'] = instance.id
-        self.broker_client.publish(data)
+        stored = self.server.config_store.get('generic_connection', new_name)
+        self.response.payload.id = stored['id']
+        self.response.payload.name = new_name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -299,10 +311,33 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@add_metaclass(DeleteMeta)
 class Delete(AdminService):
     """ Deletes a generic connection.
     """
+    input = '-id', '-name', '-should_raise_if_missing', '-cluster_id', '-type_'
+
+# ################################################################################################################################
+
+    def handle(self) -> 'None':
+
+        input = self.request.input
+        input_id = input.get('id')
+        input_name = input.get('name')
+        type_ = input.get('type_')
+
+        if not (input_id or input_name):
+            raise BadRequest(self.cid, 'Either id or name is required on input')
+
+        found = _find_generic_item(self.server, id=input_id, name=input_name, type_=type_)
+        if not found:
+            if input.get('should_raise_if_missing', True):
+                attr_name = 'id' if input_id else 'name'
+                attr_value = input_id or input_name
+                raise BadRequest(self.cid, 'Could not find a generic connection instance with {} `{}`'.format(
+                    attr_name, attr_value))
+            return
+
+        self.server.config_store.delete('generic_connection', found['name'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -310,18 +345,9 @@ class Delete(AdminService):
 class GetList(AdminService):
     """ Returns a list of generic connections by their type; includes pagination.
     """
-    _filter_by = ModelGenericConn.name,
+    _filter_by = 'name',
 
-    class SimpleIO(GetListAdminSIO):
-        input_required = ('cluster_id',)
-        input_optional = GetListAdminSIO.input_optional + ('type_',)
-
-# ################################################################################################################################
-
-    def get_data(self, session:'any_') -> 'any_':
-        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
-        data = self._search(connection_list, session, cluster_id, self.request.input.type_, False)
-        return data
+    input = 'cluster_id', Int('-cur_page'), Bool('-paginate'), '-query', '-type_', Int('-page_size')
 
 # ################################################################################################################################
 
@@ -375,27 +401,78 @@ class GetList(AdminService):
             conn_dict.update(to_add)
 
 # ################################################################################################################################
+
+    def _filter_items_by_query(self, items:'anylist', query_tokens:'anylist') -> 'anylist':
+        if not query_tokens:
+            return items
+        out = []
+        for item in items:
+            name = (item.get('name') or '')
+            ok = True
+            for criterion in query_tokens:
+                neg = criterion.startswith('-')
+                crit = criterion[1:] if neg else criterion
+                contained = crit in name
+                if neg and contained:
+                    ok = False
+                    break
+                if not neg and not contained:
+                    ok = False
+                    break
+            if ok:
+                out.append(item)
+        return out
+
 # ################################################################################################################################
 
     def handle(self) -> 'None':
-        out = {'_meta':{}, 'response':[]}
+        out = {'_meta':{}, 'data':[]}
         _meta = cast_('anydict', out['_meta'])
 
-        with closing(self.odb.session()) as session:
+        type_ = self.request.input.type_
 
-            search_result = self.get_data(session)
-            _meta.update(search_result.to_dict())
+        all_items = self.server.config_store.get_list('generic_connection')
+        self.logger.info('get-list: type_=%r, store has %d items, types=%r', type_, len(all_items), [x.get('type_') for x in all_items])
 
-            for item in search_result:
-                conn = GenericConnection.from_model(item)
-                conn_dict = conn.to_dict()
-                self._enrich_conn_dict(conn_dict)
-                cast_('anylist', out['response']).append(conn_dict)
+        items = all_items
+        if type_:
+            items = [x for x in items if x.get('type_') == type_]
+        self.logger.info('get-list: after filter %d items', len(items))
+        items.sort(key=lambda x: (x.get('name') or ''))
 
-        # Results are already included in the list of out['response'] elements
+        query = self.request.input.get('query')
+        if query:
+            query = query.strip().split()
+            items = self._filter_items_by_query(items, query)
+
+        needs_pagination = self.request.input.get('paginate')
+        if needs_pagination:
+            try:
+                cur_page = int(self.request.input.get('cur_page', 1))
+            except (ValueError, TypeError):
+                cur_page = 1
+            try:
+                page_size = int(self.request.input.get('page_size', 50))
+            except (ValueError, TypeError):
+                page_size = 50
+            search_result = SearchResults.from_list(list(items), cur_page, page_size, needs_sort=False)
+            iter_items = list(search_result)
+        else:
+            search_result = SearchResults(None, items, None, len(items))
+            iter_items = items
+
+        _meta.update(search_result.to_dict())
+
+        for item in iter_items:
+            flat = _flatten_rust_generic_item(item)
+            conn = GenericConnection.from_dict(flat)
+            conn_dict = conn.to_dict()
+            self._enrich_conn_dict(conn_dict)
+            cast_('anylist', out['data']).append(conn_dict)
+
         _ = _meta.pop('result', None)
 
-        self.response.payload = dumps(out)
+        self.response.payload = out
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -404,9 +481,6 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the secret (password) of a generic connection.
     """
     password_required = False
-
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        response_elem = None
 
 # ################################################################################################################################
 
@@ -461,72 +535,79 @@ class ChangePassword(ChangePasswordBase):
 
     def handle(self) -> 'None':
 
-        def _auth(instance:'any_', secret:'str | bytes') -> 'None':
-            if secret:
+        inp = self.request.input
+        password1 = inp.get('password1', '')
+        password2 = inp.get('password2', '')
+        password1_decrypted = self.server.decrypt(password1) if password1 else password1
+        password2_decrypted = self.server.decrypt(password2) if password2 else password2
 
-                # Always encrypt the secret given on input
-                instance.secret = self.server.encrypt(secret)
+        if password1_decrypted != password2_decrypted:
+            raise Exception('Passwords need to be the same')
 
-        if self.request.input.id:
-            instance_id = self.request.input.id
-        else:
-            with closing(self.odb.session()) as session:
-                instance_id = session.query(ModelGenericConn).\
-                    filter(ModelGenericConn.name==self.request.input.name).\
-                    filter(ModelGenericConn.type_==self.request.input.type_).\
-                    one().id
+        instance_id = inp.get('id')
+        type_ = inp.get('type_')
+        if not instance_id:
+            if not (inp.get('name') and type_):
+                raise Exception('Either ID or name and type_ are required on input')
+            found = _find_generic_item(self.server, name=inp.get('name'), type_=type_)
+            if not found:
+                raise Exception('Could not find generic connection')
+            instance_id = found['id']
 
-        with closing(self.odb.session()) as session:
-            query = session.query(ModelGenericConn)
-            query = query.filter(ModelGenericConn.id==instance_id)
-            instance = query.one()
+        item = _find_generic_item(self.server, id=instance_id, type_=type_)
+        if not item:
+            raise Exception('Could not find generic connection with id `{}`'.format(instance_id))
 
-            # This steps runs optional post-handle tasks that some types of connections may require.
-            self._run_pre_handle_tasks(session, instance)
+        self._run_pre_handle_tasks(None, item)
 
-        # This step updates the secret.
-        self._handle(ModelGenericConn, _auth, GENERIC.CONNECTION_CHANGE_PASSWORD.value, instance_id=instance_id,
-            publish_instance_attrs=['type_'])
+        if password1_decrypted:
+            enc = self.server.encrypt(password1_decrypted)
+            if isinstance(enc, bytes):
+                enc = enc.decode('utf8')
+            item = dict(item)
+            flat = _flatten_rust_generic_item(item)
+            conn = GenericConnection.from_dict(flat)
+            conn.secret = enc
+            rust_payload = _conn_to_rust_payload(conn)
+            rust_payload['id'] = str(item.get('id') or instance_id)
+            rust_payload['name'] = item['name']
+            self.server.config_store.set('generic_connection', item['name'], rust_payload)
+
+        self.response.payload.id = instance_id
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Ping(_BaseService):
+class Ping(AdminService):
     """ Pings a generic connection.
     """
-    class SimpleIO(AdminSIO):
-        input_required = 'id'
-        output_required = 'info'
-        output_optional = 'is_success'
-        response_elem = None
+    input = 'id'
+    output = 'info', '-is_success'
 
     def handle(self) -> 'None':
-        with closing(self.odb.session()) as session:
 
-            # To ensure that the input ID is correct
-            instance = self._get_instance_by_id(session, ModelGenericConn, self.request.input.id)
+        found = _find_generic_item(self.server, id=self.request.input.id)
+        if not found:
+            raise BadRequest(self.cid, 'Could not find generic connection with id `{}`'.format(self.request.input.id))
 
-            # Different code paths will be taken depending on what kind of a generic connection this is
-            custom_ping_func_dict = {}
+        custom_ping_func_dict = {}
+        ping_func = custom_ping_func_dict.get(found.get('type_'), self.server.worker_store.ping_generic_connection)
 
-            # Most connections use a generic ping function, unless overridden on a case-by-case basis.
-            ping_func = custom_ping_func_dict.get(instance.type_, self.server.worker_store.ping_generic_connection)
+        start_time = utcnow()
 
-            start_time = utcnow()
-
-            try:
-                _ = ping_func(self.request.input.id)
-            except Exception:
-                exc = format_exc()
-                self.logger.warning(exc)
-                self.response.payload.info = exc
-                self.response.payload.is_success = False
-            else:
-                response_time = utcnow() - start_time
-                info = 'Connection pinged; response time: {}'.format(response_time)
-                self.logger.info(info)
-                self.response.payload.info = info
-                self.response.payload.is_success = True
+        try:
+            _ = ping_func(self.request.input.id, conn_name=found.get('name', ''))
+        except Exception:
+            exc = format_exc()
+            self.logger.warning(exc)
+            self.response.payload.info = exc
+            self.response.payload.is_success = False
+        else:
+            response_time = utcnow() - start_time
+            info = 'Connection pinged; response time: {}'.format(response_time)
+            self.logger.info(info)
+            self.response.payload.info = info
+            self.response.payload.is_success = True
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -534,11 +615,8 @@ class Ping(_BaseService):
 class Invoke(AdminService):
     """ Invokes a generic connection by its name.
     """
-    class SimpleIO:
-        input_required = 'conn_type', 'conn_name'
-        input_optional = 'request_data'
-        output_optional = 'response_data'
-        response_elem = None
+    input = 'conn_type', 'conn_name', '-request_data'
+    output = '-response_data'
 
     def handle(self) -> 'None':
 

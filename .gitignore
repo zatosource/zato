@@ -67,6 +67,21 @@ vscode
 !code/bundle-ext/**/*.pyd
 *.pyo
 *.so
+!code/support-linux/zato_hl7v2/*.so
 *.swp
 *.*~
 ~
+
+# Java / Gradle build artifacts
+code/zato-hl7/test/java_/build/
+code/zato-hl7/test/java_/.gradle/
+code/zato-hl7/test/java_/gradlew
+code/zato-hl7/test/java_/gradlew.bat
+code/zato-hl7/test/java_/gradle/
+
+# .NET build artifacts
+code/zato-hl7/test/dotnet/bin/
+code/zato-hl7/test/dotnet/obj/
+
+# Rust build artifacts
+**/target/

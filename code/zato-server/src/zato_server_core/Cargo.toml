@@ -1,0 +1,47 @@
+[package]
+name = "zato_server_core"
+version = "4.1.0"
+edition = "2021"
+
+[lib]
+name = "zato_server_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+pyo3 = { version = "0.28.3", features = ["multiple-pymethods"] }
+http = "1.4.0"
+httparse = "1"
+libc = "0.2.184"
+log = "0.4.29"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+chrono = "0.4.44"
+rand = "0.10.0"
+serde_json = "1"
+
+[dev-dependencies]
+proptest = "1.11.0"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+complexity = { level = "deny", priority = -1 }
+perf = { level = "deny", priority = -1 }
+style = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+module_name_repetitions = "warn"
+must_use_candidate = "warn"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+
+[profile.release]
+overflow-checks = true

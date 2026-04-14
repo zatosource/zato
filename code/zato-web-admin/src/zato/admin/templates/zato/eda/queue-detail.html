@@ -1,0 +1,48 @@
+{% extends "zato/settings-base.html" %}
+
+{% block page_title %}Queue: {{ sub_key }}{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
+{% endblock %}
+
+{% block section_title %}Queue: {{ sub_key }}
+
+<span class="eda-refresh-indicator" id="eda-last-refresh"></span>
+
+{% endblock %}
+{% block help_icon_id %}eda-queue-help{% endblock %}
+
+{% block extra_page_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/queue-detail.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.eda.queue_detail.init('{{ topic_name }}', '{{ sub_key }}', {{ queue_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block content_rows %}
+
+<div class="stat-cards">
+    <div class="stat-card">
+        <div><div class="stat-card-label">Topic</div><div class="stat-card-value" style="font-size:18px"><a href="{% url 'eda-topic-detail' topic_name=topic_name %}?cluster={{ cluster_id|default:'1' }}" style="color:var(--eda-link-color)">{{ topic_name }}</a></div></div>
+        <div></div>
+    </div>
+    <div class="stat-card">
+        <div><div class="stat-card-label">Depth</div><div class="stat-card-value" id="stat-depth">-</div></div>
+        <div id="spark-depth"></div>
+    </div>
+</div>
+
+<div class="button-container">
+    <button class="action-button" onclick="$.fn.zato.eda.queue_detail.purge()">Purge queue</button>
+</div>
+
+<h3 class="section-title">Pending messages</h3>
+<table class="eda-table">
+    <thead><tr><th>Message ID</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
+    <tbody id="messages-body"></tbody>
+</table>
+{% endblock %}

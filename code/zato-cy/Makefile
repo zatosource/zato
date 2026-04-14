@@ -28,7 +28,7 @@ reqresp-tests:
 simpleio-tests:
 	$(Zato_Python_Dir)/pytest $(CURDIR)/test/zato/cy/simpleio_/test_*.py -s
 
-run-tests:
+test:
 	echo "Running tests in $(Zato_Package_Name)"
 	$(MAKE) reqresp-tests
 	$(MAKE) simpleio-tests

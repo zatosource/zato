@@ -1,28 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2023, Zato Source s.r.o. https://zato.io
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-from contextlib import closing
-from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.api import SEC_DEF_TYPE
-from zato.common.broker_message import SECURITY
-from zato.common.odb.model import Cluster, NTLM
-from zato.common.odb.query import ntlm_list
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
+from zato.server.service import Bool, Int
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from zato.common.typing_ import any_
+def _is_ntlm(item):
+    return item.get('sec_type') == 'ntlm' or item.get('type') == 'ntlm'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -30,20 +25,13 @@ if 0:
 class GetList(AdminService):
     """ Returns a list of NTLM definitions available.
     """
-    _filter_by = NTLM.name,
-
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_security_ntlm_get_list_request'
-        response_elem = 'zato_security_ntlm_get_list_response'
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username')
-
-    def get_data(self, session):
-        return self._search(ntlm_list, session, self.request.input.cluster_id, False)
+    input = 'cluster_id', Int('-cur_page'), Bool('-paginate'), '-query'
+    output = 'id', 'name', 'is_active', 'username'
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+        items = self.server.config_store.get_list('security')
+        out = [item for item in items if _is_ntlm(item)]
+        self.response.payload = self._paginate_list(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,51 +39,28 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new NTLM definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_ntlm_create_request'
-        response_elem = 'zato_security_ntlm_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'username')
-        output_required = ('id', 'name')
+    input = 'cluster_id', 'name', 'is_active', 'username'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
-        input.password = uuid4().hex
+        name = input.name
 
-        with closing(self.odb.session()) as session:
-            try:
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
+        if self.server.config_store.get('security', name):
+            raise Exception('NTLM definition `{}` already exists'.format(name))
 
-                # Let's see if we already have a definition of that name before committing
-                # any stuff into the database.
-                existing_one = session.query(NTLM).\
-                    filter(Cluster.id==input.cluster_id).\
-                    filter(NTLM.name==input.name).first()
+        self.server.config_store.set('security', name, {
+            'type': 'ntlm',
+            'name': name,
+            'is_active': input.is_active,
+            'username': input.username,
+            'password': uuid4().hex,
+        })
 
-                if existing_one:
-                    raise Exception('NTLM definition [{0}] already exists on this cluster'.format(input.name))
+        item = self.server.config_store.get('security', name)
 
-                auth = NTLM(None, input.name, input.is_active, input.username, input.password, cluster)
-
-                session.add(auth)
-                session.commit()
-
-            except Exception:
-                msg = 'Could not create an NTLM definition, e:`{}`'.format(format_exc())
-                self.logger.error(msg)
-                session.rollback()
-
-                raise
-            else:
-                input.id = auth.id
-                input.action = SECURITY.NTLM_CREATE.value
-                input.sec_type = SEC_DEF_TYPE.NTLM
-                self.broker_client.publish(input)
-
-            self.response.payload.id = auth.id
-            self.response.payload.name = auth.name
-
-        # Make sure the object has been created
-        _:'any_' = self.server.worker_store.wait_for_ntlm(input.name)
+        self.response.payload.id = item['id']
+        self.response.payload.name = name
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -103,67 +68,88 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an NTLM definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_ntlm_edit_request'
-        response_elem = 'zato_security_ntlm_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username')
-        output_required = ('id', 'name')
+    input = 'id', 'cluster_id', 'name', 'is_active', 'username'
+    output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
-        with closing(self.odb.session()) as session:
-            try:
-                existing_one = session.query(NTLM).\
-                    filter(Cluster.id==input.cluster_id).\
-                    filter(NTLM.name==input.name).\
-                    filter(NTLM.id!=input.id).\
-                    first()
+        name = input.name
 
-                if existing_one:
-                    raise Exception('NTLM definition [{0}] already exists on this cluster'.format(input.name))
+        items = self.server.config_store.get_list('security')
+        old_name = None
+        for item in items:
+            if _is_ntlm(item) and str(item['id']) == str(input.id):
+                old_name = item['name']
+                break
 
-                definition = session.query(NTLM).filter_by(id=input.id).one()
-                old_name = definition.name
+        if not old_name:
+            raise Exception('NTLM definition not found')
 
-                definition.name = input.name
-                definition.is_active = input.is_active
-                definition.username = input.username
+        existing = self.server.config_store.get('security', old_name)
+        if not existing:
+            raise Exception('NTLM definition not found')
 
-                session.add(definition)
-                session.commit()
+        if name != old_name:
+            if self.server.config_store.get('security', name):
+                raise Exception('NTLM definition `{}` already exists'.format(name))
+            self.server.config_store.delete('security', old_name)
 
-            except Exception:
-                msg = 'Could not update the NTLM definition, e:`{}`'.format(format_exc())
-                self.logger.error(msg)
-                session.rollback()
+        existing['name'] = name
+        existing['is_active'] = input.is_active
+        existing['username'] = input.username
+        existing['password'] = existing.get('password', '')
+        existing['type'] = 'ntlm'
 
-                raise
-            else:
-                input.action = SECURITY.NTLM_EDIT.value
-                input.old_name = old_name
-                input.sec_type = SEC_DEF_TYPE.NTLM
-                self.broker_client.publish(input)
+        self.server.config_store.set('security', name, existing)
 
-                self.response.payload.id = definition.id
-                self.response.payload.name = definition.name
+        self.response.payload.id = existing['id']
+        self.response.payload.name = name
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChangePassword(ChangePasswordBase):
+class ChangePassword(AdminService):
     """ Changes the password of an NTLM definition.
     """
     password_required = False
 
-    class SimpleIO(ChangePasswordBase.SimpleIO):
-        request_elem = 'zato_security_ntlm_change_password_request'
-        response_elem = 'zato_security_ntlm_change_password_response'
+    input = 'password1', 'password2', '-id', '-name'
+    output = 'id',
 
     def handle(self):
-        def _auth(instance, password):
-            instance.password = password
+        input = self.request.input
+        name = input.get('name', '')
 
-        return self._handle(NTLM, _auth, SECURITY.NTLM_CHANGE_PASSWORD.value)
+        password1 = self.server.decrypt(input.password1) if input.password1 else ''
+        password2 = self.server.decrypt(input.password2) if input.password2 else ''
+
+        if self.password_required:
+            if not password1:
+                raise Exception('Password must not be empty')
+            if not password2:
+                raise Exception('Password must be repeated')
+
+        if password1 != password2:
+            raise Exception('Passwords need to be the same')
+
+        if not name and input.get('id'):
+            for item in self.server.config_store.get_list('security'):
+                if _is_ntlm(item) and str(item.get('id')) == str(input.id):
+                    name = item['name']
+                    break
+
+        if not name:
+            raise Exception('Either ID or name are required on input')
+
+        existing = self.server.config_store.get('security', name)
+        if not existing:
+            raise Exception('NTLM definition not found')
+
+        existing['password'] = password1
+        existing['type'] = 'ntlm'
+        self.server.config_store.set('security', name, existing)
+
+        self.response.payload.id = existing['id']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -171,30 +157,20 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an NTLM definition.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_ntlm_delete_request'
-        response_elem = 'zato_security_ntlm_delete_response'
-        input_required = ('id',)
+    input = 'id',
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            try:
-                auth = session.query(NTLM).\
-                    filter(NTLM.id==self.request.input.id).\
-                    one()
+        items = self.server.config_store.get_list('security')
+        target_name = None
+        for item in items:
+            if _is_ntlm(item) and str(item.get('id')) == str(self.request.input.id):
+                target_name = item['name']
+                break
 
-                session.delete(auth)
-                session.commit()
-            except Exception:
-                msg = 'Could not delete the NTLM definition, e:`{}`'.format(format_exc())
-                self.logger.error(msg)
-                session.rollback()
+        if not target_name:
+            raise Exception('NTLM definition not found')
 
-                raise
-            else:
-                self.request.input.action = SECURITY.NTLM_DELETE.value
-                self.request.input.name = auth.name
-                self.broker_client.publish(self.request.input)
+        self.server.config_store.delete('security', target_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

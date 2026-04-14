@@ -16,7 +16,6 @@ from zato.common.api import CACHE, NotGiven
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.json_internal import dumps
 from zato.common.util.api import as_bool, get_config, get_odb_session_from_server_dir, get_repo_dir_from_component_dir
-from zato.common.odb.model import Cluster, HTTPBasicAuth, Server
 
 # ################################################################################################################################
 
@@ -121,7 +120,7 @@ class Client:
         return Client.from_dict({
             'username': CACHE.API_USERNAME,
             'password': password,
-            'address': config.main.gunicorn_bind,
+            'address': f'{config.main.host}:{config.main.port}',
             'cache_name': cache_name,
             'is_https': is_https,
         })

@@ -57,6 +57,7 @@ class SCHEDULER(Constants):
     DELETE = ValueConstant('')
     EXECUTE = ValueConstant('')
     JOB_EXECUTED = ValueConstant('')
+    JOB_COMPLETED = ValueConstant('')
     SET_JOB_INACTIVE = ValueConstant('')
     SET_SERVER_ADDRESS = ValueConstant('')
     SET_SCHEDULER_ADDRESS = ValueConstant('')

@@ -228,9 +228,9 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format('<td style="text-align:center">{0}</td>', friendly_names[job.job_type]);
     row += String.format('<td style="text-align:center">{0}</td>', data.definition_text);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.execute({0})'>Execute</a>", job.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.execute('{0}')\">Execute</a>", job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job.job_type, job.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.delete_({0});'>Delete</a>", job.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.delete_('{0}');\">Delete</a>", job.id));
     row += String.format("<td class='ignore job_id_{0}'>{0}</td>", job.id);
     row += String.format("<td class='ignore'>{0}</td>", job.is_active);
     row += String.format("<td class='ignore'>{0}</td>", job.job_type);
@@ -250,6 +250,17 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", minutes);
     row += String.format("<td class='ignore'>{0}</td>", seconds);
     row += String.format("<td class='ignore'>{0}</td>", repeats);
+    row += "<td class='ignore'></td>";
+
+    var jitter_ms = job.jitter_ms || '';
+    var timezone = job.timezone || '';
+    var on_missed = job.on_missed || '';
+    var max_execution_time_ms = job.max_execution_time_ms || '';
+
+    row += String.format("<td class='ignore'>{0}</td>", jitter_ms);
+    row += String.format("<td class='ignore'>{0}</td>", timezone);
+    row += String.format("<td class='ignore'>{0}</td>", on_missed);
+    row += String.format("<td class='ignore'>{0}</td>", max_execution_time_ms);
 
     if(include_tr) {
         row += '</tr>';

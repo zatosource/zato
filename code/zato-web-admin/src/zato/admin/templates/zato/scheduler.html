@@ -49,7 +49,11 @@
             'minutes',
             'seconds',
             'repeats',
-            'cron_definition'
+            'cron_definition',
+            'jitter_ms',
+            'timezone',
+            'on_missed',
+            'max_execution_time_ms'
         ]
     }
     </script>
@@ -68,9 +72,11 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Show jobs"%}
-
     {% if cluster_id %}
+
+        <div id="markup">
+
+{% include "zato/search-form.html" with page_prompt="Show jobs"%}
 
         <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
 
@@ -81,8 +87,6 @@
             <a href="javascript:$.fn.zato.scheduler.create('interval_based')" class="common">interval-based</a>
     </div>
 
-
-        <div id="markup">
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
@@ -107,7 +111,6 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -121,9 +124,9 @@
                         <td style="text-align:center">{{ job.job_type_friendly }}</td>
                         <td>{{ job.definition_text|safe }}</td>
                         <td><a href="{% url "service-overview" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
-                        <td><a href="javascript:$.fn.zato.scheduler.execute({{ job.id }})">Execute</a></td>
-                        <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.scheduler.delete_({{ job.id }});">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.execute('{{ job.id }}')">Execute</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', '{{ job.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.delete_('{{ job.id }}');">Delete</a></td>
                         <td class='ignore job_id_{{ job.id }}'>{{ job.id }}</td>
                         <td class='ignore'>{{ job.is_active }}</td>
                         <td class='ignore'>{{ job.job_type }}</td>
@@ -135,6 +138,11 @@
                         <td class='ignore'>{{ job.interval_based.minutes|default:"" }}</td>
                         <td class='ignore'>{{ job.interval_based.seconds|default:"" }}</td>
                         <td class='ignore'>{{ job.interval_based.repeats|default:"" }}</td>
+                        <td class='ignore'></td>
+                        <td class='ignore'>{{ job.jitter_ms|default:"" }}</td>
+                        <td class='ignore'>{{ job.timezone|default:"" }}</td>
+                        <td class='ignore'>{{ job.on_missed|default:"" }}</td>
+                        <td class='ignore'>{{ job.max_execution_time_ms|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -145,9 +153,9 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-one_time" class='data-popup ignore'>
             <div>
@@ -396,6 +404,40 @@
                         </tr>
 
                         <tr>
+                            <td style="vertical-align:middle">Advanced</td>
+                            <td>
+                                <label>
+                                Jitter (ms)
+                                {{ create_interval_based_form.jitter_ms }}
+                                </label>
+
+                                |
+
+                                <label>
+                                On missed
+                                {{ create_interval_based_form.on_missed }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Timezone (IANA)
+                                {{ create_interval_based_form.timezone }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Max execution time (ms)
+                                {{ create_interval_based_form.max_execution_time_ms }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -515,6 +557,40 @@
                                 </label>
                             </td>
                             <td>{{ edit_interval_based_form.extra }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Advanced</td>
+                            <td>
+                                <label>
+                                Jitter (ms)
+                                {{ edit_interval_based_form.jitter_ms }}
+                                </label>
+
+                                |
+
+                                <label>
+                                On missed
+                                {{ edit_interval_based_form.on_missed }}
+                                </label>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle"></td>
+                            <td>
+                                <label>
+                                Timezone (IANA)
+                                {{ edit_interval_based_form.timezone }}
+                                </label>
+
+                                |
+
+                                <label>
+                                Max execution time (ms)
+                                {{ edit_interval_based_form.max_execution_time_ms }}
+                                </label>
+                            </td>
                         </tr>
 
                         <tr>

@@ -54,7 +54,7 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0}, \"Change secret\")'>Change secret</a>", item.id));
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.oauth.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.oauth.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.oauth.delete_('{0}');\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     row += String.format("<td class='ignore'>{0}</td>", is_active);

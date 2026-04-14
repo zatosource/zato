@@ -25,7 +25,6 @@ from zato.common.py23_.past.builtins import unicode
 from zato.common.api import ZATO_NONE
 from zato.common.const import SECRETS
 from zato.common.util.config import resolve_name, resolve_value
-from zato.common.util.sql import ElemsWithOpaqueMaker
 
 # ################################################################################################################################
 
@@ -256,6 +255,7 @@ class ConfigDict:
                                 config['_encrypted_in_odb'] = False
 
         # Post-process data before it is returned to resolve any opaque attributes
+        from zato.common.util.sql import ElemsWithOpaqueMaker
         for value in config_dict.values():
             value_config = value['config']
             if ElemsWithOpaqueMaker.has_opaque_data(value_config):
@@ -311,9 +311,6 @@ class ConfigStore:
 
         # Configuration for broker clients
         self.broker_config = None
-
-        # ODB
-        self.odb_data = Bunch()
 
         # SimpleIO
         self.simple_io = None # type: stranydict
@@ -404,7 +401,6 @@ class ConfigStore:
         config_store.http_soap = http_soap
         config_store.url_sec = self.url_sec
         config_store.broker_config = self.broker_config
-        config_store.odb_data = deepcopy(self.odb_data)
 
         return config_store
 

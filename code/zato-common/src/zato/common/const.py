@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 class ServiceConst:
     ServiceInvokerName = 'pub.zato.service.service-invoker'
     API_Admin_Invoke_Username = 'admin.invoke'
-    API_Admin_Invoke_Url_Path = '/zato/admin/invoke'
+    API_Admin_Invoke_Url_Path = '/zato/api/invoke/{}'
 
 # ################################################################################################################################
 # ################################################################################################################################

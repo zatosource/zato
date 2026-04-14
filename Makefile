@@ -1,62 +1,83 @@
-.PHONY: build install
+.PHONY: build install test fuzzy
 MAKEFLAGS += --silent
 
-default: run-tests
+default: test
 
 install:
-	$(CURDIR)/code/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out $@,$(MAKECMDGOALS))
+	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out $@,$(MAKECMDGOALS))
 PY_DIR=$(CURDIR)/../bin
 
 static-check:
-	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-client    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-common    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-distlock  && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cy        && $(MAKE) static-check
-	cd $(CURDIR)/code/zato-scheduler && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-server    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-testing   && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-web-admin && $(MAKE) static-check
 	echo "Static checks OK"
 
-type-check:
-	cd $(CURDIR)/code/zato-common && $(MAKE) type-check
-	cd $(CURDIR)/code/zato-server && $(MAKE) type-check
-	echo "Type checks OK"
-
 web-admin-tests:
-	cd $(CURDIR)/code/zato-web-admin && PYTHONWARNINGS='ignore:X509Extension support in pyOpenSSL is deprecated.:DeprecationWarning' make run-tests
+	cd $(CURDIR)/code/zato-web-admin && PYTHONWARNINGS='ignore:X509Extension support in pyOpenSSL is deprecated.:DeprecationWarning' make test
 
 common-tests:
-	cd $(CURDIR)/code/zato-common && make run-tests
+	cd $(CURDIR)/code/zato-common && make test
 
 server-tests:
-	cd $(CURDIR)/code/zato-server && PYTHONWARNINGS=ignore make run-tests
+	cd $(CURDIR)/code/zato-server && PYTHONWARNINGS=ignore make test
 
 cy-tests:
-	cd $(CURDIR)/code/zato-cy && make PYTHONWARNINGS='ignore:X509Extension support in pyOpenSSL is deprecated.:DeprecationWarning' run-tests
+	cd $(CURDIR)/code/zato-cy && make PYTHONWARNINGS='ignore:X509Extension support in pyOpenSSL is deprecated.:DeprecationWarning' test
 
 cli-tests:
-	cd $(CURDIR)/code/zato-cli && make run-tests
+	cd $(CURDIR)/code/zato-cli && make test
 
 enmasse-tests:
-	cd $(CURDIR)/code/zato-cli && make run-tests
+	cd $(CURDIR)/code/zato-cli && make test
 
 openapi-tests:
 	cd $(CURDIR)/code/zato-openapi && $(CURDIR)/code/bin/py -m unittest discover -s test/zato/openapi_ -p 'test_*.py' -v
+
+hl7-tests:
+	cd $(CURDIR)/code/zato-hl7 && $(MAKE) hl7-test
+
+build:
+	$(MAKE) server-build
+	$(MAKE) scheduler-build
+	$(MAKE) sio-build
+
+server-build:
+	. $(HOME)/.cargo/env && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-server/src/zato_server_core/Cargo.toml
+
+scheduler-build:
+	. $(HOME)/.cargo/env && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-scheduler/src/zato_scheduler_core/Cargo.toml
+
+sio-build:
+	cd $(CURDIR)/code/zato-common && $(MAKE) build
+
+json:
+	@:
 
 %:
 	@:
 
 qa-reqs-install:
-	$(CURDIR)/code/bin/pip install --upgrade -r $(CURDIR)/code/qa-requirements.txt
-	npx playwright install
+	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python -r $(CURDIR)/code/qa-requirements.txt
+	npx --yes playwright install chromium
 	mkdir -p $(CURDIR)/code/eggs/requests/ || true
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 	sudo snap install k6
 
-run-tests:
+fuzzy:
+	cd $(CURDIR)/code/zato-server    && $(MAKE) fuzzy
+
+test:
+	$(MAKE) fuzzy
 #	$(MAKE) web-admin-tests
 	$(MAKE) common-tests
 #	$(MAKE) server-tests
@@ -64,7 +85,7 @@ run-tests:
 #	$(MAKE) cy-tests
 
 all-tests:
-	$(MAKE) run-tests
+	$(MAKE) test
 
 unify:
 	mkdir -p $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2
@@ -99,9 +120,6 @@ run-consumers:
 prometheus:
 	prometheus --config.file=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/prometheus_/prometheus.yml
 
-test-var:
-	@echo "Zato_Grafana_Password is: $$Zato_Grafana_Password"
-
 grafana:
 	env GF_SECURITY_ADMIN_PASSWORD=$$Zato_Grafana_Password \
 	Zato_Grafana_Base_Path=$(CURDIR)/code/zato-common/src/zato/common/pubsub/perftest/grafana_ \
@@ -123,13 +141,10 @@ stop-server:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-server
 
 restart-server-with-scheduler:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server-with-scheduler
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server
 
-stop-scheduler:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-scheduler
-
-restart-scheduler:
-	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-scheduler
+restart-server:
+	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-server
 
 stop-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py stop-dashboard
@@ -138,4 +153,6 @@ restart-dashboard:
 	py $(CURDIR)/code/zato-common/src/zato/common/util/component_cli.py restart-dashboard
 
 pubsub-tests:
-	cd $(CURDIR)/code/zato-server/test/zato/pubsub/rest_tests && $(CURDIR)/code/bin/py -m unittest discover -v -p 'test_*.py'
+	cd $(CURDIR)/code/zato-server/test/zato/pubsub/rest_tests && \
+		Zato_PubSub_Base_Url=http://localhost:$(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),17010) \
+		$(CURDIR)/code/bin/py -m unittest discover -v -p 'test_*.py'

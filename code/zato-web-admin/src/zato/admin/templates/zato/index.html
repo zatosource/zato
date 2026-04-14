@@ -328,6 +328,13 @@
                                         <a class="menu-link" href="#">Channels &rarr;</a>
                                         <ul>
                                             <li class="child"><a class="menu-link" href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:"1" }}">AMQP</a></li>
+                                            <li class="child">
+                                                <a class="menu-link" href="#">HL7 &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-hl7-mllp">MLLP</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "channel-hl7-rest" %}?cluster={{ cluster_id|default:"1" }}">REST</a></li>
+                                                </ul>
+                                            </li>
                                             <li class="child"><a class="menu-link" href="{% url "channel-openapi" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=channel-openapi">OpenAPI</a></li>
                                             <li class="child"><a class="menu-link" href="{% url "http-soap" %}?cluster={{ cluster_id|default:"1" }}&amp;connection=channel&amp;transport=plain_http">REST</a></li>
                                         </ul>
@@ -339,6 +346,13 @@
                                             {% if False %}
                                             <li class="child"><a class="menu-link" href="{% url "out-ftp" %}?cluster={{ cluster_id|default:"1" }}">FTP</a></li>
                                             {% endif %}
+                                            <li class="child">
+                                                <a class="menu-link" href="#">HL7 &rarr;</a>
+                                                <ul>
+                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-fhir" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-fhir">FHIR</a></li>
+                                                    <li class="child"><a class="menu-link" href="{% url "outgoing-hl7-mllp" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-hl7-mllp">MLLP</a></li>
+                                                </ul>
+                                            </li>
                                             <li class="child"><a class="menu-link" href="{% url "out-ldap" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-ldap">LDAP</a></li>
                                             {% if 0%}
                                             <li class="child"><a class="menu-link" href="{% url "out-mongodb" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=outconn-mongodb">MongoDB</a></li>
@@ -384,8 +398,6 @@
                                             </li>
                                         </ul>
                                     </li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">AWS</a></li>
-                                    <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-aws">Google</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-microsoft-365" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-microsoft-365">Microsoft 365</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "cloud-salesforce" %}?cluster={{ cluster_id|default:"1" }}&amp;type_=cloud-salesforce">Salesforce</a></li>
                                 </ul>
@@ -448,6 +460,9 @@
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:"1" }}">Topics</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-permission" %}?cluster={{ cluster_id|default:"1" }}">Permissions</a></li>
                                     <li class="child"><a class="menu-link" href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:"1" }}">Subscriptions</a></li>
+                                    <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="{% url "eda-dashboard" %}?cluster={{ cluster_id|default:"1" }}">Activity</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "eda-messages" %}?cluster={{ cluster_id|default:"1" }}">Message browser</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "eda-publish" %}?cluster={{ cluster_id|default:"1" }}">Publish</a></li>
                                     <li class="child" style="border-top: 1px solid #246291"><a class="menu-link" href="javascript:$.fn.zato.pubsub.import_test_config()">Import test config</a></li>
                                     <li class="child"><a class="menu-link" href="javascript:$.fn.zato.pubsub.download_openapi()">Download OpenAPI</a></li>
                                 </ul>

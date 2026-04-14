@@ -28,14 +28,12 @@ from bunch import Bunch
 
 # Zato
 from zato.common.api import SCHEDULER
-from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from zato.common.typing_ import any_, list_
-    from zato.scheduler.api import SchedulerAPI
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,7 +67,7 @@ def wait_for_odb_service_by_odb(session:'any_', cluster_id:'int', service_name:'
 # ################################################################################################################################
 # ################################################################################################################################
 
-def wait_for_odb_service_by_api(api:'SchedulerAPI', service_name:'str') -> 'None':
+def wait_for_odb_service_by_api(api:'any_', service_name:'str') -> 'None':
 
     # Assume we do not have it
     is_deployed = None
@@ -91,7 +89,7 @@ def wait_for_odb_service_by_api(api:'SchedulerAPI', service_name:'str') -> 'None
 
 # ################################################################################################################################
 
-def _add_scheduler_job(api:'SchedulerAPI', job_data:'Bunch', spawn:'bool', source:'str') -> 'None':
+def _add_scheduler_job(api:'any_', job_data:'Bunch', spawn:'bool', source:'str') -> 'None':
 
     # Ignore jobs that have been removed
     if job_data.name in SCHEDULER.JobsToIgnore:
@@ -166,7 +164,7 @@ def add_startup_jobs_to_odb_by_odb(cluster_id:'int', odb:'any_', jobs:'any_') ->
 
 # ################################################################################################################################
 
-def load_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int', spawn:'bool'=True) -> 'None':
+def load_scheduler_jobs_by_odb(api:'any_', odb:'any_', cluster_id:'int', spawn:'bool'=True) -> 'None':
     """ Uses ODB connections directly to obtain a list of all jobs that the scheduler should run.
     """
 
@@ -191,7 +189,7 @@ def load_scheduler_jobs_by_odb(api:'SchedulerAPI', odb:'any_', cluster_id:'int',
 
 # ################################################################################################################################
 
-def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]') -> 'None':
+def add_startup_jobs_to_odb_by_api(api:'any_', jobs:'list_[Bunch]') -> 'None':
     """ Uses server API calls to add initial startup jobs to the ODB.
     """
 
@@ -235,7 +233,7 @@ def add_startup_jobs_to_odb_by_api(api:'SchedulerAPI', jobs:'list_[Bunch]') -> '
 
 # ################################################################################################################################
 
-def load_scheduler_jobs_by_api(api:'SchedulerAPI', spawn:'bool') -> 'None':
+def load_scheduler_jobs_by_api(api:'any_', spawn:'bool') -> 'None':
     """ Uses server API calls to obtain a list of all jobs that the scheduler should run.
     """
     # Get a list of all the jobs we are to run ..

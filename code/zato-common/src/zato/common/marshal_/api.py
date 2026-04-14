@@ -30,9 +30,6 @@ from dateutil.parser import parse as dt_parse
 # orjson
 from orjson import dumps
 
-# SQLAlchemy
-from sqlalchemy.sql.schema import Table
-
 # typing-utils
 from typing_utils import issubtype
 
@@ -191,15 +188,14 @@ class Model(BaseModel):
 
     @staticmethod
     def build_model_from_flat_input(
-        server,            # type: ParallelServer
-        sio_server_config, # type: ignore
-        _CySimpleIO,       # type: ignore
+        server,        # type: ParallelServer
+        _SIOProcessor, # type: ignore
         name,  # type: str
         input, # type: str | tuplist
     ) -> 'type_[BaseModel]':
 
         # Local imports
-        from zato.simpleio import is_sio_bool, is_sio_int
+        from zato_sio import is_sio_bool, is_sio_int
 
         # Local aliases
         model_fields = []
@@ -208,8 +204,8 @@ class Model(BaseModel):
         if isinstance(input, str):
             input = [input]
 
-        # .. build an actual SIO handler ..
-        _cy_simple_io = _CySimpleIO(server, sio_server_config, input) # type: ignore
+        # .. build a SIO processor to convert element names to typed instances ..
+        _sio_proc = _SIOProcessor()
 
         # .. now, go through everything we have on input ..
         for item in input:
@@ -218,10 +214,10 @@ class Model(BaseModel):
             is_optional = item.startswith('-')
             is_required = not is_optional
 
-            # .. turn each element input into a Cython-based one ..
-            sio_elem = _cy_simple_io.convert_to_elem_instance(item, is_required) # type: ignore
+            # .. turn each element input into a typed SIO element ..
+            sio_elem = _sio_proc.convert_to_elem_instance(item, is_required)
 
-            # .. check if it is not a string ..
+            # .. check the inferred type ..
             is_int:'bool'  = is_sio_int(sio_elem)
             is_bool:'bool' = is_sio_bool(sio_elem)
 
@@ -390,7 +386,7 @@ class FieldCtx:
             elif isinstance(self.dict_ctx.current_dict, Model): # type: ignore
                 value = getattr(self.dict_ctx.current_dict, self.name, ZatoNotGiven)
 
-        # We do not handle SQLAlchemy Table objects
+        from sqlalchemy.sql.schema import Table
         is_table = isinstance(value, Table)
 
         # If this field has a value, we can try to parse it into a specific type ..

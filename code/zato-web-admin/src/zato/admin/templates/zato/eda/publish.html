@@ -1,0 +1,43 @@
+{% extends "zato/settings-base.html" %}
+
+{% block page_title %}Publish message{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
+{% endblock %}
+
+{% block section_title %}Publish message{% endblock %}
+{% block help_icon_id %}eda-publish-help{% endblock %}
+
+{% block extra_page_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/publish.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.eda.publish.init({{ topics|safe }}, '{{ initial_topic_name }}');
+});
+</script>
+{% endblock %}
+
+{% block content_rows %}
+
+<div class="publish-form">
+    <div class="form-row">
+        <label>Topic</label>
+        <select id="publish-topic" data-placeholder="Select a topic..."></select>
+    </div>
+    <div class="form-row">
+        <label>Data</label>
+        <textarea id="publish-data" placeholder="Enter any data - plain text, JSON, XML or any other format"></textarea>
+        <div class="eda-file-upload-area" id="publish-file-drop">
+            Or drag and drop a file here, or <a href="#" id="publish-file-browse">browse</a>
+            <input type="file" id="publish-file-input" style="display:none" />
+        </div>
+    </div>
+    <div class="form-actions" style="display:flex; align-items:center; justify-content:flex-end; gap:12px;">
+        <span class="status-message" id="publish-status"></span>
+        <img src="/static/gfx/spinner.svg" class="button-spinner" id="publish-spinner">
+        <button class="action-button" id="publish-button" onclick="$.fn.zato.eda.publish.submit()">Publish</button>
+    </div>
+</div>
+{% endblock %}

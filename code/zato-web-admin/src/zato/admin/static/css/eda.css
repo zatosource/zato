@@ -1,0 +1,417 @@
+:root {
+    --eda-badge-bg: #063c65;
+    --eda-link-color: #037ac7;
+}
+
+.settings-panel {
+    max-width: 1400px !important;
+}
+
+a {
+    text-decoration: none !important;
+}
+
+.stat-cards {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+
+.stat-card {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 16px 20px;
+    box-shadow: 4px 4px 0px var(--shadow-dark);
+    min-width: 160px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    height: 80px;
+}
+
+.stat-card > div:last-child {
+    width: 60px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stat-card-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-card-value {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--primary-dark);
+    line-height: 1.1;
+}
+
+.stat-card-value-sm {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    line-height: 1.3;
+    font-family: monospace;
+}
+
+.stat-card-value-sm a {
+    color: var(--eda-link-color);
+    text-decoration: none !important;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin: 24px 0 10px 0;
+    letter-spacing: 0.5px;
+}
+
+.eda-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.eda-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 3px solid var(--primary-dark);
+    font-weight: 600;
+    color: var(--primary-dark);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.eda-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.eda-table tbody tr:first-child td {
+    padding-top: 0.9rem;
+}
+
+.eda-table tr:hover {
+    background: var(--background-light);
+}
+
+.eda-table a {
+    color: var(--eda-link-color);
+    text-decoration: none !important;
+}
+
+.eda-table a:hover {
+    text-decoration: none !important;
+}
+
+.eda-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 30px;
+    text-align: center;
+    background: var(--eda-badge-bg);
+    color: #fff;
+}
+
+.view-all-link {
+    display: block;
+    text-align: right;
+    margin-top: 8px;
+    font-size: 13px;
+    padding-top: 0.4rem;
+}
+
+.view-all-link:last-of-type {
+    padding-top: 0.6rem;
+    padding-bottom: 1rem;
+}
+
+.view-all-link a {
+    color: var(--eda-link-color);
+}
+
+.eda-refresh-indicator {
+    float: right;
+    font-size: 0.7rem;
+    font-family: monospace;
+    font-weight: 500;
+    color: #333;
+    padding-top: 5px;
+}
+
+.data-preview {
+    font-family: monospace;
+    font-size: 12px;
+    color: #555;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.button-container {
+    margin: 16px 0;
+    display: flex;
+    gap: 8px;
+}
+
+.eda-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 32px;
+    font-size: 13px;
+    color: var(--primary-dark);
+    margin-bottom: 20px;
+}
+
+.eda-meta strong {
+    font-weight: 700;
+}
+
+.eda-meta a {
+    color: var(--eda-link-color);
+    text-decoration: none !important;
+}
+
+.eda-meta a:hover {
+    text-decoration: none !important;
+}
+
+.publish-form {
+    background: var(--white);
+    border: 3px solid var(--primary-dark);
+    padding: 24px;
+    box-shadow: 4px 4px 0px var(--shadow-dark);
+}
+
+.form-row {
+    margin-bottom: 16px;
+}
+
+.form-row label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 2px solid var(--primary-dark);
+    font-size: 13px;
+    box-sizing: border-box;
+    font-family: monospace;
+}
+
+.form-row textarea {
+    height: 200px;
+}
+
+.form-row select {
+    width: auto;
+    min-width: 100px;
+}
+
+.form-actions {
+    margin-top: 20px;
+}
+
+.publish-form .status-message {
+    display: none;
+    color: #067f39;
+    font-weight: 600;
+    font-size: 12px;
+    font-family: monospace;
+}
+
+.publish-form .status-message.show {
+    display: inline-block;
+}
+
+.publish-form .button-spinner {
+    display: none;
+    width: 25px;
+    height: 25px;
+    filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%) hue-rotate(194deg) brightness(96%) contrast(99%);
+}
+
+.publish-form .button-spinner.active {
+    display: inline-block;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.filter-bar label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.filter-bar input,
+.filter-bar select {
+    padding: 6px 10px;
+    border: 2px solid var(--primary-dark);
+    font-size: 13px;
+    font-family: monospace;
+}
+
+.pagination-bar {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.pagination-bar a {
+    color: var(--eda-link-color);
+    text-decoration: none;
+    margin: 0 8px;
+}
+
+.pagination-bar .current-page {
+    font-weight: 700;
+    color: var(--primary-dark);
+}
+
+.total-info {
+    font-size: 13px;
+    font-family: monospace;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.msg-data-block {
+    background: var(--background-light);
+    border: 3px solid var(--primary-dark);
+    padding: 16px;
+    font-family: monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.eda-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #fff;
+}
+
+.eda-status-badge.status-delivered {
+    background: linear-gradient(135deg, #0a7a3e 0%, #10a858 100%);
+}
+
+.eda-status-badge.status-pending {
+    background: linear-gradient(135deg, #c47f17 0%, #e8a830 100%);
+}
+
+.eda-status-badge.status-not_reached {
+    background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+}
+
+.eda-status-badge.status-error {
+    background: linear-gradient(135deg, #b91c1c 0%, #e53e3e 100%);
+}
+
+.eda-msg-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.eda-msg-metadata .meta-card {
+    background: var(--white);
+    border: 2px solid var(--primary-dark);
+    padding: 10px 16px;
+    box-shadow: 3px 3px 0px var(--shadow-dark);
+    min-width: 180px;
+    flex: 1;
+}
+
+.eda-msg-metadata .meta-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.eda-msg-metadata .meta-value {
+    font-family: monospace;
+    font-size: 13px;
+    color: var(--primary-dark);
+    word-break: break-all;
+}
+
+.eda-msg-metadata .meta-value a {
+    color: var(--eda-link-color);
+    text-decoration: none !important;
+}
+
+.eda-copy-target {
+    cursor: pointer;
+    border-bottom: 1px dashed var(--text-muted);
+}
+
+.eda-copy-target:hover {
+    color: var(--eda-link-color);
+}
+
+.eda-file-upload-area {
+    border: 2px dashed var(--primary-dark);
+    padding: 16px;
+    text-align: center;
+    margin-top: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.eda-file-upload-area:hover {
+    background: var(--background-light);
+}
+
+.eda-file-upload-area.has-file {
+    border-style: solid;
+    background: var(--background-light);
+    color: var(--primary-dark);
+    font-weight: 600;
+}
