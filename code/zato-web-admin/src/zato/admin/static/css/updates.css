@@ -9,7 +9,7 @@
     padding-left: 6px;
     margin-left: 10px;
     border: 1px solid var(--primary-dark);
-    background: var(--panel-bg);
+    background: #fff;
     color: var(--primary-dark);
     font-weight: 600;
     cursor: pointer;
@@ -60,7 +60,7 @@
 }
 
 .audit-log-time {
-    color: var(--body-text);
+    color: #333;
     font-size: 13px;
     text-align: left;
     font-weight: 600;
@@ -86,16 +86,16 @@
 .audit-log-label {
     min-width: 50px;
     font-weight: 400;
-    color: var(--body-text);
+    color: #333;
 }
 
 .audit-log-version {
     font-family: monospace;
-    color: var(--body-text);
+    color: #333;
 }
 
 .audit-log-empty {
-    color: var(--body-text);
+    color: #333;
     font-size: 14px;
     text-align: center;
     margin-top: 10px;

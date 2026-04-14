@@ -1,12 +1,12 @@
 
 .ui-dialog-titlebar {
-    background-color: var(--dialog-titlebar-bg);
+    background-color:#333;
 	font-size:13px;
-	border:1px solid var(--border-color-strong);
+	border:1px solid #666;
 	border-bottom:none;
 	text-align:left;
-	color: var(--dialog-titlebar-text);
-	text-shadow: var(--dialog-titlebar-text-shadow);
+	color:#eee;
+	text-shadow: 1px 1px 0 #000;
 }
 
 .ui-icon-closethick {
@@ -22,16 +22,16 @@
 }
 
 .ui-widget {
-	box-shadow: 1px 1px 10px var(--dialog-shadow);
+	box-shadow: 1px 1px 10px #000;
 }
 
-.ui-datepicker {
-    border: 1px solid var(--ui-datepicker-border);
-    background: var(--ui-datepicker-bg);
-    color: var(--ui-datepicker-text);
+.ui-datepicker { 
+    border: 1px solid #aaaaaa; 
+    background: #ffffff url(images/ui-bg_glass_75_ffffff_1x400.png) 50% 50% repeat-x; 
+    color: #222222; 
     font-size:0.9em
 }
 
 .ui-slider .ui-slider-handle {
-	border:1px solid var(--ui-slider-border);
+	border:1px solid #999;
 }

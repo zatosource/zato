@@ -1,4 +1,4 @@
-/*
+/* 
 http://meyerweb.com/eric/thoughts/2007/05/01/reset-reloaded/
 */
 
@@ -27,8 +27,8 @@ table, caption, tbody, tfoot, thead, tr, th, td {
 html {overflow-y: scroll;}
 
 body {
-	color: var(--body-text);
-	background: var(--body-bg);
+	color: black;
+	background: #f3f3f3;
 }
 ol, ul {
 	list-style: none;

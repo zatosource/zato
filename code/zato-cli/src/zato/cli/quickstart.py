@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
+import sys
 from copy import deepcopy
 
 # Zato
@@ -23,6 +24,31 @@ from zato.common.util.open_ import open_w
 if 0:
     from bunch import Bunch
     from zato.common.typing_ import any_
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _use_color() -> 'bool':
+    if os.environ.get('NO_COLOR') is not None:
+        return False
+    if os.environ.get('TERM') == 'dumb':
+        return False
+    if not hasattr(sys.stdout, 'isatty'):
+        return False
+    return sys.stdout.isatty()
+
+_color_enabled = _use_color()
+
+def _highlight(text:'str') -> 'str':
+    if _color_enabled:
+        return '\033[1;33m{}\033[0m'.format(text)
+    return '[{}]'.format(text)
+
+def _step(current:'int', total:'int', msg:'str') -> 'str':
+    tag = '{}/{}'.format(current, total)
+    if _color_enabled:
+        tag = '\033[1;36m{}\033[0m'.format(tag)
+    return '| {} | {}'.format(tag, msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,7 +126,7 @@ check_config_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
 start_servers_template = """
 $ZATO_BIN start $BASE_DIR/{server_name} --verbose --env-file /opt/hot-deploy/enmasse/env.ini
 $ZATO_BIN wait --path $BASE_DIR/{server_name}
-echo [{step_number}/$STEPS] {server_name} started
+_step "{step_number}/$STEPS" "{server_name} started"
 """
 
 # ################################################################################################################################
@@ -110,6 +136,14 @@ zato_qs_start_head_template = """#!/bin/bash
 
 set -e
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
+
+_step() {{
+    if [ -t 1 ] && [ -z "${{NO_COLOR:-}}" ] && [ "${{TERM:-}}" != "dumb" ]; then
+        printf '| \\033[1;36m%s\\033[0m | %s\\n' "$1" "$2"
+    else
+        printf '| %s | %s\\n' "$1" "$2"
+    fi
+}}
 
 {preamble_script}
 
@@ -130,7 +164,7 @@ zato_qs_start_body_template = """
 {check_config_extra}
 
 # Make sure TCP ports are available
-echo [{check_config_step_number}/$STEPS] Checking TCP ports availability
+_step "{check_config_step_number}/$STEPS" "Checking TCP ports availability"
 
 ZATO_BIN_PATH=`which zato`
 ZATO_BIN_DIR=`python -c "import os; print(os.path.dirname('$ZATO_BIN_PATH'))"`
@@ -149,8 +183,8 @@ $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py {check_tcp_ports_suffix}
 # ################################################################################################################################
 
 zato_qs_check_config_extra = """
-echo [1/$STEPS] Redis connection OK
-echo [2/$STEPS] Configuration check OK
+_step "1/$STEPS" "Redis connection OK"
+_step "2/$STEPS" "Configuration check OK"
 """
 
 # ################################################################################################################################
@@ -159,7 +193,7 @@ echo [2/$STEPS] Configuration check OK
 zato_qs_start_dashboard = """
 # .. Dashboard comes as the last one because it may ask Django-related questions.
 $ZATO_BIN start $BASE_DIR/web-admin --verbose
-echo [$STEPS/$STEPS] Dashboard started
+_step "$STEPS/$STEPS" "Dashboard started"
 """
 
 # ################################################################################################################################
@@ -195,7 +229,7 @@ exit 0
 
 stop_servers_template = """
 $ZATO_BIN stop $BASE_DIR/{server_name}
-echo [{step_number}/$STEPS] {server_name} stopped
+_step "{step_number}/$STEPS" "{server_name} stopped"
 """
 
 # ################################################################################################################################
@@ -203,12 +237,12 @@ echo [{step_number}/$STEPS] {server_name} stopped
 
 zato_qs_start_scheduler = """
 $ZATO_BIN start $BASE_DIR/scheduler --verbose
-echo [{scheduler_step_count}/$STEPS] Scheduler started
+_step "{scheduler_step_count}/$STEPS" "Scheduler started"
 """
 
 zato_qs_stop_scheduler = """
 $ZATO_BIN stop $BASE_DIR/scheduler
-echo [$STEPS/$STEPS] Scheduler stopped
+_step "$STEPS/$STEPS" "Scheduler stopped"
 """
 
 # ################################################################################################################################
@@ -217,6 +251,14 @@ echo [$STEPS/$STEPS] Scheduler stopped
 zato_qs_stop_template = """#!/bin/bash
 
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
+
+_step() {{
+    if [ -t 1 ] && [ -z "${{NO_COLOR:-}}" ] && [ "${{TERM:-}}" != "dumb" ]; then
+        printf '| \\033[1;36m%s\\033[0m | %s\\n' "$1" "$2"
+    else
+        printf '| %s | %s\\n' "$1" "$2"
+    fi
+}}
 
 {script_dir}
 
@@ -242,13 +284,13 @@ CLUSTER={cluster_name}
 
 # Start the load balancer first ..
 $ZATO_BIN stop $BASE_DIR/load-balancer
-echo [1/$STEPS] Load-balancer stopped
+_step "1/$STEPS" "Load-balancer stopped"
 
 # .. servers ..
 {stop_servers}
 
 $ZATO_BIN stop $BASE_DIR/web-admin
-echo [{web_admin_step_count}/$STEPS] Dashboard stopped
+_step "{web_admin_step_count}/$STEPS" "Dashboard stopped"
 
 # .. scheduler ..
 {stop_scheduler}
@@ -453,7 +495,7 @@ class Create(ZatoCommand):
         create_cluster_args.secret_key = secret_key
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 
-        self.logger.info('[{}/{}] Cluster initial data created'.format(next(next_step), total_steps))
+        self.logger.info(_step(next(next_step), total_steps, 'Cluster initial data created'))
 
 # ################################################################################################################################
 
@@ -482,7 +524,7 @@ class Create(ZatoCommand):
                 _ = create_server.Create(
                     create_server_args).execute(create_server_args, next(next_port), False, True) # type: ignore
 
-                self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
+                self.logger.info(_step(next(next_step), total_steps, 'server{} created'.format(name)))
 
 # ################################################################################################################################
 
@@ -508,7 +550,7 @@ class Create(ZatoCommand):
             # Need to reset the logger here because executing the create_web_admin command
             # loads the Dashboard's logger which doesn't like that of ours.
             self.reset_logger(args, True)
-            self.logger.info('[{}/{}] Dashboard created'.format(next(next_step), total_steps))
+            self.logger.info(_step(next(next_step), total_steps, 'Dashboard created'))
         else:
             admin_created = False
 
@@ -533,7 +575,7 @@ class Create(ZatoCommand):
             create_scheduler_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
             _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True) # type: ignore
-            self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
+            self.logger.info(_step(next(next_step), total_steps, 'Scheduler created'))
 
 # ################################################################################################################################
 
@@ -671,14 +713,17 @@ class Create(ZatoCommand):
             os.chmod(zato_qs_stop_path, file_mod)
             os.chmod(zato_qs_restart_path, file_mod)
 
-            self.logger.info('[{}/{}] Management scripts created'.format(next(next_step), total_steps))
+            self.logger.info(_step(next(next_step), total_steps, 'Management scripts created'))
 
-        self.logger.info('Quickstart environment {} created'.format(cluster_name))
+        self.logger.info('All done')
 
         if admin_created:
-            self.logger.info('Dashboard user:[admin], password:[%s]', web_admin_password.decode('utf8')) # type: ignore
+            self.logger.info(
+                'Dashboard user: %s, password: %s',
+                _highlight('admin'),
+                _highlight(web_admin_password.decode('utf8'))) # type: ignore
         else:
-            self.logger.info('User [admin] already exists')
+            self.logger.info('User %s already exists', _highlight('admin'))
 
         self.logger.info('Start the environment by issuing this command: %s', zato_qs_start_path)
         self.logger.info('Visit https://zato.io/support for more information and support options')

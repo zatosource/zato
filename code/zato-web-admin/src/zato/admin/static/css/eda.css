@@ -1,6 +1,6 @@
 :root {
-    --eda-badge-bg: var(--zato-seablue-light1);
-    --eda-link-color: var(--link-color);
+    --eda-badge-bg: #063c65;
+    --eda-link-color: #037ac7;
 }
 
 .settings-panel {
@@ -150,14 +150,14 @@ a {
     font-size: 0.7rem;
     font-family: monospace;
     font-weight: 500;
-    color: var(--muted-text);
+    color: #333;
     padding-top: 5px;
 }
 
 .data-preview {
     font-family: monospace;
     font-size: 12px;
-    color: var(--muted-text);
+    color: #555;
     max-width: 400px;
     overflow: hidden;
     text-overflow: ellipsis;

@@ -342,6 +342,7 @@ class ZatoCommand:
 
         self.logger = logging.getLogger(self.__class__.__name__) # noqa
         self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO) # noqa
+        self.logger.propagate = False
         self.logger.handlers[:] = []
 
         console_handler = logging.StreamHandler(sys.stdout) # noqa

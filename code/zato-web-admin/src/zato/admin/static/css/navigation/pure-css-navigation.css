@@ -3,8 +3,8 @@
 
 .pure-css-nav {
    position: sticky;
-   background-color: var(--nav-bg);
-   border-bottom: 3px solid var(--nav-border);
+   background-color:#363636;
+   border-bottom: 3px solid #aaa;
    z-index: 9999;
 }
 
@@ -13,13 +13,13 @@
 }
 
 div.nav-container {
-   background-color: var(--nav-bg);
+   background-color: var(--zato-seablue-light1);
    height: 2.5rem;
    z-index: 9999;
 }
 
 nav.menu {
-   background-color: var(--nav-bg);
+   background-color:#363636;
    z-index: 9999;
 }
 
@@ -45,8 +45,8 @@ nav.menu ul.right {
 }
 
 .pure-css-nav > nav ul li a {
-    color: var(--nav-text);
-    text-shadow: var(--nav-text-shadow);
+    color:#fff;
+    text-shadow: 1px 1px 0 #000;
 }
 
 ul {
@@ -55,7 +55,7 @@ ul {
 
 /* Level 1 */
  .pure-css-nav > nav ul li {
-    background-color: var(--nav-bg);
+    background-color: var(--zato-seablue-light1);
 }
 
 .pure-css-nav > nav ul li.first-level {
@@ -88,7 +88,7 @@ ul {
  .pure-css-nav > nav ul li:hover,
  .pure-css-nav > nav ul li li:hover > a:first-child:nth-last-child(2),
  .pure-css-nav > nav > ul > li:hover > a:first-child:nth-last-child(2) {
-    background-color: var(--nav-hover-bg);
+    background-color: var(--zato-seablue);
 }
 /* Font icon arrow colors */
  .pure-css-nav > nav > ul > li > a:first-child:nth-last-child(2):after {
@@ -155,7 +155,7 @@ ul {
      position:absolute;
      z-index:1;
      display:block;
-     filter: drop-shadow(1px 1px 0.06rem var(--nav-dropdown-shadow));
+     filter: drop-shadow(1px 1px 0.06rem #363636);
 }
  .pure-css-nav > nav ul li:hover > ul {
     visibility:visible;

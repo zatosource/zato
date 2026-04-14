@@ -190,7 +190,8 @@ class Create(ZatoCommand):
 
         try:
             call_command(
-                'createsuperuser', interactive=False, username=user_name, email='admin@invalid.example.com')
+                'createsuperuser', interactive=False, username=user_name, email='admin@invalid.example.com',
+                verbosity=0)
             admin_created = True
 
             user = User.objects.get(username=user_name)

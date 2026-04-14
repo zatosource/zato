@@ -61,7 +61,7 @@
 }
 
 .info-label {
-    color: var(--body-text);
+    color: #000;
     font-weight: 600;
     letter-spacing: 0.5px;
     font-size: 12px;
@@ -97,14 +97,14 @@
 }
 
 .info-value input[type="text"]:disabled {
-    background: var(--widget-bg);
-    border-color: var(--border-color-strong);
-    color: var(--muted-text);
+    background: #e8e8e8;
+    border-color: #aaa;
+    color: #777;
     cursor: not-allowed;
 }
 
 .info-value input[type="text"]:disabled::placeholder {
-    color: var(--muted-text);
+    color: #aaa;
 }
 
 .info-badge {
@@ -205,18 +205,18 @@
 }
 
 .action-button:disabled {
-    background: var(--border-color-strong);
-    color: var(--muted-text) !important;
+    background: #c8c8c8;
+    color: #777 !important;
     cursor: not-allowed;
 }
 
 .action-button:disabled:hover {
-    background: var(--border-color-strong);
-    color: var(--muted-text) !important;
+    background: #c8c8c8;
+    color: #777 !important;
 }
 
 .secondary-button {
-    background: var(--panel-bg);
+    background: #fff;
     color: var(--primary-dark);
     border: 1px solid var(--primary-dark);
     font-size: 11px;
@@ -237,22 +237,22 @@
 }
 
 .secondary-button:hover {
-    background: var(--panel-bg);
+    background: #fff;
     color: var(--primary-dark);
     box-shadow: none;
     text-shadow: none;
 }
 
 .secondary-button:disabled {
-    color: var(--muted-text);
-    border-color: var(--border-color-strong);
+    color: #aaa;
+    border-color: #aaa;
     cursor: not-allowed;
 }
 
 .secondary-button:disabled:hover {
-    background: var(--panel-bg);
-    color: var(--muted-text);
-    border-color: var(--border-color-strong);
+    background: #fff;
+    color: #aaa;
+    border-color: #aaa;
 }
 
 .button-spinner {
@@ -299,8 +299,8 @@
 
 .copy-tooltip {
     position: fixed;
-    background: var(--dialog-titlebar-bg);
-    color: var(--dialog-titlebar-text);
+    background: #333;
+    color: #fff;
     padding: 6px 12px;
     border-radius: 3px;
     font-size: 12px;
@@ -358,7 +358,7 @@
 }
 
 .config-label {
-    color: var(--body-text);
+    color: #000;
     font-weight: 600;
     letter-spacing: 0.5px;
     font-size: 12px;
@@ -385,7 +385,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--border-color-strong);
+    background-color: #ccc;
     transition: 0.3s;
     border-radius: 24px;
 }
@@ -429,7 +429,7 @@ input:checked + .toggle-slider:before {
 }
 
 .driver-popover {
-    background: var(--panel-bg) !important;
+    background: #fff !important;
     border: 3px solid var(--primary-dark) !important;
     box-shadow: 8px 8px 0px var(--shadow-dark) !important;
     border-radius: 0 !important;
@@ -444,12 +444,12 @@ input:checked + .toggle-slider:before {
 }
 
 .driver-popover-description {
-    color: var(--body-text) !important;
+    color: #333 !important;
     line-height: 1.6 !important;
 }
 
 .driver-popover-close-btn {
-    color: var(--muted-text) !important;
+    color: #494949 !important;
     font-size: 24px !important;
     background: transparent !important;
     border: 1px solid transparent !important;
@@ -465,7 +465,7 @@ input:checked + .toggle-slider:before {
 }
 
 .driver-popover-close-btn:hover {
-    background: var(--widget-bg) !important;
+    background: #e9e9e9 !important;
     border-radius: 5px !important;
     padding: 0px 2px !important;
 }
@@ -696,7 +696,7 @@ input:checked + .toggle-slider:before {
 }
 
 .progress-text .progress-count {
-    color: var(--body-text);
+    color: #000;
     font-weight: 600;
 }
 
@@ -706,7 +706,7 @@ input:checked + .toggle-slider:before {
 
 .progress-item.error-state .progress-text {
     margin-top: 19px;
-    color: var(--body-text);
+    color: #000;
 }
 
 .progress-error-copy {
@@ -799,7 +799,7 @@ input:checked + .toggle-slider:before {
 }
 
 .audit-log-time {
-    color: var(--body-text);
+    color: #333;
     font-size: 13px;
     text-align: left;
     font-weight: 600;
@@ -825,16 +825,16 @@ input:checked + .toggle-slider:before {
 .audit-log-label {
     min-width: 50px;
     font-weight: 400;
-    color: var(--body-text);
+    color: #333;
 }
 
 .audit-log-version {
     font-family: monospace;
-    color: var(--body-text);
+    color: #333;
 }
 
 .audit-log-empty {
-    color: var(--body-text);
+    color: #333;
     font-size: 14px;
     text-align: center;
     margin-top: 10px;
