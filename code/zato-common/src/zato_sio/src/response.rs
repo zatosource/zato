@@ -118,9 +118,10 @@ impl Response {
 
     #[setter]
     fn set_payload(&mut self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<()> {
-        if value.is_instance_of::<pyo3::types::PyDict>() {
-            self.payload_inner = value.clone().unbind();
-        } else if value.is_instance_of::<pyo3::types::PyString>() || value.is_instance_of::<pyo3::types::PyBytes>() {
+        if value.is_instance_of::<pyo3::types::PyDict>()
+            || value.is_instance_of::<pyo3::types::PyString>()
+            || value.is_instance_of::<pyo3::types::PyBytes>()
+        {
             self.payload_inner = value.clone().unbind();
         } else if self._has_sio_output {
             let payload = self.payload_inner.bind(py);

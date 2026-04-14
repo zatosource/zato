@@ -52,7 +52,7 @@ static-check:
 	echo "Running static checks in $(Zato_Package_Name)"
 	$(MAKE) flake8
 
-run-tests:
+test:
 	$(MAKE) hl7-test
 	$(MAKE) static-check
 	echo

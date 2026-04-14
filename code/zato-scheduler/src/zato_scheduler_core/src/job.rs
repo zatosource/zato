@@ -8,7 +8,7 @@ use chrono_tz::Tz;
 use rand::rngs::SmallRng;
 use rand::{RngExt, SeedableRng};
 
-use zato_server_core::models::SchedulerJob;
+use zato_server_core::model::SchedulerJob;
 
 use crate::types::{JobId, JobType, OnMissedPolicy, ServiceName};
 

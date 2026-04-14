@@ -167,7 +167,7 @@ fn scheduler_reload() -> PyResult<()> {
 
 fn reload_jobs(
     state: &mut scheduler::SchedulerState,
-    new_jobs: std::collections::HashMap<String, zato_server_core::models::SchedulerJob>,
+    new_jobs: std::collections::HashMap<String, zato_server_core::model::SchedulerJob>,
 ) {
     let old_ids: std::collections::HashSet<String> = state.jobs.keys().cloned().collect();
     let new_ids: std::collections::HashSet<String> = new_jobs.keys().cloned().collect();
@@ -188,7 +188,7 @@ fn reload_jobs(
 
 fn reload_calendars(
     state: &mut scheduler::SchedulerState,
-    new_cals: std::collections::HashMap<String, zato_server_core::models::HolidayCalendar>,
+    new_cals: std::collections::HashMap<String, zato_server_core::model::HolidayCalendar>,
 ) {
     state.calendars.clear();
     for (name, cal) in new_cals {
@@ -225,7 +225,7 @@ fn scheduler_get_all_history(py: Python<'_>) -> PyResult<Py<PyDict>> {
     history::all_history_to_py_dict(py, &state.jobs)
 }
 
-fn dict_to_scheduler_job(job_id: &str, d: &Bound<'_, PyDict>) -> PyResult<zato_server_core::models::SchedulerJob> {
+fn dict_to_scheduler_job(job_id: &str, d: &Bound<'_, PyDict>) -> PyResult<zato_server_core::model::SchedulerJob> {
     let get_str = |key: &str| -> String {
         d.get_item(key).ok().flatten().and_then(|v| v.extract::<String>().ok()).unwrap_or_default()
     };
@@ -242,7 +242,7 @@ fn dict_to_scheduler_job(job_id: &str, d: &Bound<'_, PyDict>) -> PyResult<zato_s
         d.get_item(key).ok().flatten().and_then(|v| v.extract::<bool>().ok()).unwrap_or(default)
     };
 
-    Ok(zato_server_core::models::SchedulerJob {
+    Ok(zato_server_core::model::SchedulerJob {
         id: job_id.to_string(),
         name: get_str("name"),
         is_active: get_bool("is_active", true),

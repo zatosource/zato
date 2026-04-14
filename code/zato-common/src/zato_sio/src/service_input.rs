@@ -106,7 +106,7 @@ impl ServiceInput {
     fn get(&self, py: Python<'_>, key: &str, default: Option<PyObject>) -> PyObject {
         match self.data.get(key) {
             Some(v) => v.clone_ref(py),
-            None => default.unwrap_or_else(|| py.None().into()),
+            None => default.unwrap_or_else(|| py.None()),
         }
     }
 

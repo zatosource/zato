@@ -126,17 +126,17 @@ pub fn scheduler_loop(
 pub fn load_from_config_store_py(
     cs: &Bound<'_, PyAny>,
 ) -> PyResult<(
-    HashMap<String, zato_server_core::models::SchedulerJob>,
-    HashMap<String, zato_server_core::models::HolidayCalendar>,
+    HashMap<String, zato_server_core::model::SchedulerJob>,
+    HashMap<String, zato_server_core::model::HolidayCalendar>,
 )> {
     let jobs_json: String = cs.call_method0("get_scheduler_jobs_json")?.extract()?;
     let cals_json: String = cs.call_method0("get_holiday_calendars_json")?.extract()?;
 
-    let jobs: HashMap<String, zato_server_core::models::SchedulerJob> =
+    let jobs: HashMap<String, zato_server_core::model::SchedulerJob> =
         serde_json::from_str(&jobs_json).map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!("bad scheduler jobs JSON: {}", e))
         })?;
-    let cals: HashMap<String, zato_server_core::models::HolidayCalendar> =
+    let cals: HashMap<String, zato_server_core::model::HolidayCalendar> =
         serde_json::from_str(&cals_json).map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!("bad holiday calendars JSON: {}", e))
         })?;
@@ -148,11 +148,22 @@ fn load_jobs_from_config_store(shared: &SchedulerShared, config_store: &PyObject
     Python::try_attach(|py| {
         let cs = config_store.bind(py);
         match load_from_config_store_py(cs) {
-            Ok((jobs, _cals)) => {
+            Ok((jobs, cals)) => {
                 let mut state = shared.state.lock().unwrap();
                 for (id, job) in &jobs {
                     let rj = RunningJob::from_scheduler_job(job);
                     state.jobs.insert(id.clone(), rj);
+                }
+                for (name, cal) in cals {
+                    let mut cd = CalendarData::new(name.clone());
+                    for ds in &cal.dates {
+                        if let Ok(d) = chrono::NaiveDate::parse_from_str(ds, "%Y-%m-%d") {
+                            cd.dates.insert(d);
+                        }
+                    }
+                    cd.weekdays = cal.weekdays.clone();
+                    cd.description = cal.description.clone();
+                    state.calendars.insert(name, cd);
                 }
             }
             Err(e) => {

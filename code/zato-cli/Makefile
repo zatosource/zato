@@ -4,7 +4,7 @@
 Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-cli
 
-run-tests:
+test:
 	$(Zato_Python_Dir)/py -m unittest discover -s $(CURDIR)/test/zato/enmasse_ -p 'test_*.py' -v
 
 flake8:

@@ -15,11 +15,10 @@ pub struct Elem {
 impl Elem {
     #[new]
     fn new(name: String) -> Self {
-        let is_required = !name.starts_with('-');
-        let clean_name = if name.starts_with('-') {
-            name[1..].to_string()
+        let (is_required, clean_name) = if let Some(stripped) = name.strip_prefix('-') {
+            (false, stripped.to_string())
         } else {
-            name
+            (true, name)
         };
         Self {
             name: clean_name,
@@ -41,11 +40,10 @@ macro_rules! define_elem_type {
 
         impl $name {
             pub fn create(name: String) -> (Self, Elem) {
-                let is_required = !name.starts_with('-');
-                let clean_name = if name.starts_with('-') {
-                    name[1..].to_string()
+                let (is_required, clean_name) = if let Some(stripped) = name.strip_prefix('-') {
+                    (false, stripped.to_string())
                 } else {
-                    name
+                    (true, name)
                 };
                 ($name, Elem {
                     name: clean_name,

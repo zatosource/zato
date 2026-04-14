@@ -68,11 +68,10 @@ impl SIOProcessor {
             )
         })?;
 
-        let is_required = !name_str.starts_with('-');
-        let clean_name = if name_str.starts_with('-') {
-            name_str[1..].to_string()
+        let (is_required, clean_name) = if let Some(stripped) = name_str.strip_prefix('-') {
+            (false, stripped.to_string())
         } else {
-            name_str
+            (true, name_str)
         };
         let elem_type = infer_type(&clean_name);
         Ok(ElemInfo {
@@ -160,8 +159,8 @@ impl SIOProcessor {
     }
 
     fn convert_to_elem_instance<'py>(&self, py: Python<'py>, name: String, _is_required: bool) -> PyResult<Bound<'py, PyAny>> {
-        let clean_name = if name.starts_with('-') {
-            name[1..].to_string()
+        let clean_name = if let Some(stripped) = name.strip_prefix('-') {
+            stripped.to_string()
         } else {
             name.clone()
         };
@@ -199,7 +198,7 @@ impl SIOProcessor {
         service: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<PyObject> {
         if self.input_elems.is_empty() {
-            return Ok(py.None().into());
+            return Ok(py.None());
         }
 
         let parsed: Bound<'_, PyAny> = if data.is_instance_of::<PyString>() {
@@ -313,7 +312,7 @@ impl SIOProcessor {
             }
             ElemType::Int => {
                 if value.is_none() || (value.is_instance_of::<PyString>() && value.str()?.to_string().is_empty()) {
-                    return Ok(py.None().into());
+                    return Ok(py.None());
                 }
                 if value.is_instance_of::<pyo3::types::PyInt>() {
                     Ok(value.clone().unbind())
@@ -345,7 +344,7 @@ impl SIOProcessor {
 impl SIOProcessor {
     fn coerce_value(&self, py: Python<'_>, value: &Bound<'_, PyAny>, elem_type: ElemType) -> PyResult<PyObject> {
         if value.is_none() {
-            return Ok(py.None().into());
+            return Ok(py.None());
         }
 
         match elem_type {
