@@ -12,7 +12,7 @@ default = []
 extension-module = ["pyo3/extension-module"]
 
 [dependencies]
-pyo3 = { version = "0.28.3" }
+pyo3 = { version = "0.28.3", features = ["multiple-pymethods"] }
 http = "1.4.0"
 httparse = "1"
 libc = "0.2.184"

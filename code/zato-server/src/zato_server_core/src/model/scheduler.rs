@@ -1,0 +1,54 @@
+use serde::{Deserialize, Serialize};
+use super::defaults::*;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SchedulerJob {
+    #[serde(default = "next_id")]
+    pub id: String,
+    pub name: String,
+    #[serde(default = "default_true")]
+    pub is_active: bool,
+    #[serde(default)]
+    pub service: String,
+    #[serde(default = "default_job_type")]
+    pub job_type: String,
+    #[serde(default)]
+    pub start_date: String,
+    #[serde(default)]
+    pub extra: Option<String>,
+    #[serde(default)]
+    pub weeks: Option<u32>,
+    #[serde(default)]
+    pub days: Option<u32>,
+    #[serde(default)]
+    pub hours: Option<u32>,
+    #[serde(default)]
+    pub minutes: Option<u32>,
+    #[serde(default)]
+    pub seconds: Option<u32>,
+    #[serde(default)]
+    pub repeats: Option<u32>,
+    #[serde(default)]
+    pub jitter_ms: Option<u32>,
+    #[serde(default)]
+    pub timezone: Option<String>,
+    #[serde(default)]
+    pub calendar: Option<String>,
+    #[serde(default)]
+    pub on_missed: Option<String>,
+    #[serde(default)]
+    pub max_execution_time_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HolidayCalendar {
+    #[serde(default = "next_id")]
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub dates: Vec<String>,
+    #[serde(default)]
+    pub weekdays: Vec<u8>,
+    #[serde(default)]
+    pub description: Option<String>,
+}
