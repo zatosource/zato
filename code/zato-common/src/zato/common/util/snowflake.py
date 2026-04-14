@@ -14,8 +14,8 @@ _rust_func = None
 def _get_rust_func():
     global _rust_func
     if _rust_func is None:
-        from zato_broker_core import fs_new_cid_pubsub
-        _rust_func = fs_new_cid_pubsub
+        from zato_broker_core import broker_new_cid_pubsub
+        _rust_func = broker_new_cid_pubsub
     return _rust_func
 
 # ################################################################################################################################

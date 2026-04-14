@@ -12,19 +12,19 @@ from json import loads
 
 # zato-broker-core (Rust extension)
 from zato_broker_core import (
-    fs_backup,
-    fs_eda_overview,
-    fs_message_detail,
-    fs_message_list,
-    fs_queue_detail,
-    fs_queue_purge,
-    fs_restore_item,
-    fs_status,
-    fs_stream_xadd,
-    fs_topic_detail,
-    fs_topic_purge,
-    fs_topic_stats,
-    fs_validate,
+    broker_backup,
+    broker_eda_overview,
+    broker_message_detail,
+    broker_message_list,
+    broker_queue_detail,
+    broker_queue_purge,
+    broker_restore_item,
+    broker_status,
+    broker_stream_xadd,
+    broker_topic_detail,
+    broker_topic_purge,
+    broker_topic_stats,
+    broker_validate,
 )
 
 # Zato
@@ -92,7 +92,7 @@ class Status(Service):
 
     def handle(self) -> 'None':
         client = self.server.broker_client
-        status = loads(fs_status(client._cfg))
+        status = loads(broker_status(client._cfg))
 
         self.response.payload.is_ok = True
         self.response.payload.broker_dir = client.broker_dir
@@ -111,7 +111,7 @@ class Validate(Service):
 
     def handle(self) -> 'None':
         client = self.server.broker_client
-        is_valid, errors = fs_validate(client._cfg)
+        is_valid, errors = broker_validate(client._cfg)
 
         self.response.payload.valid = is_valid
         self.response.payload.errors = errors
@@ -131,7 +131,7 @@ class Backup(Service):
         backup_dir = input.get('backup_dir') or os.path.join(client.broker_dir, '_backups')
         compress = bool(input.get('compress'))
 
-        result = loads(fs_backup(client._cfg, backup_dir, compress))
+        result = loads(broker_backup(client._cfg, backup_dir, compress))
 
         self.response.payload.is_ok = True
         self.response.payload.backup_path = result['backup_dir']
@@ -197,7 +197,7 @@ class Restore(Service):
             return
 
         for item in items:
-            fs_restore_item(client._cfg, backup_path, item)
+            broker_restore_item(client._cfg, backup_path, item)
 
         self.response.payload.is_ok = True
         self.response.payload.details = f'Restored {len(items)} item(s) from {backup_path}'
@@ -211,7 +211,7 @@ class Dashboard(Service):
 
     def handle(self) -> 'None':
         client = self.server.broker_client
-        self.response.payload = fs_eda_overview(client._cfg)
+        self.response.payload = broker_eda_overview(client._cfg)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
@@ -227,7 +227,7 @@ class TopicGetDetail(Service):
         client = self.server.broker_client
         last_n = int(input.get('last_n') or 25)
 
-        self.response.payload = fs_topic_detail(client._cfg, input.topic_name, last_n)
+        self.response.payload = broker_topic_detail(client._cfg, input.topic_name, last_n)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
@@ -243,7 +243,7 @@ class QueueGetDetail(Service):
         client = self.server.broker_client
         last_n = int(input.get('last_n') or 25)
 
-        self.response.payload = fs_queue_detail(client._cfg, input.topic_name, input.sub_key, last_n)
+        self.response.payload = broker_queue_detail(client._cfg, input.topic_name, input.sub_key, last_n)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
@@ -262,7 +262,7 @@ class MessageGetList(Service):
         offset = int(input.get('offset') or 0)
         limit = int(input.get('limit') or 50)
 
-        self.response.payload = fs_message_list(client._cfg, topic_name, offset, limit)
+        self.response.payload = broker_message_list(client._cfg, topic_name, offset, limit)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
@@ -277,7 +277,7 @@ class MessageGetDetail(Service):
         input = self.request.input
         client = self.server.broker_client
 
-        self.response.payload = fs_message_detail(client._cfg, input.topic_name, input.msg_id)
+        self.response.payload = broker_message_detail(client._cfg, input.topic_name, input.msg_id)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
@@ -291,7 +291,7 @@ class TopicPurge(Service):
     def handle(self) -> 'None':
         from json import dumps as json_dumps
         client = self.server.broker_client
-        count = fs_topic_purge(client._cfg, self.request.input.topic_name)
+        count = broker_topic_purge(client._cfg, self.request.input.topic_name)
 
         self.response.payload = json_dumps({'is_ok': True, 'messages_removed': count})
         self.response.content_type = 'application/json'
@@ -308,7 +308,7 @@ class QueuePurge(Service):
         from json import dumps as json_dumps
         input = self.request.input
         client = self.server.broker_client
-        count = fs_queue_purge(client._cfg, input.topic_name, input.sub_key)
+        count = broker_queue_purge(client._cfg, input.topic_name, input.sub_key)
 
         self.response.payload = json_dumps({'is_ok': True, 'messages_removed': count})
         self.response.content_type = 'application/json'
@@ -335,7 +335,7 @@ class TopicPublish(Service):
             'mime_type': input.get('mime_type') or 'text/plain',
         }
 
-        msg_id = fs_stream_xadd(client._cfg, input.topic_name, json_dumps(meta), payload=user_data)
+        msg_id = broker_stream_xadd(client._cfg, input.topic_name, json_dumps(meta), payload=user_data)
 
         self.response.payload = json_dumps({'is_ok': True, 'msg_id': msg_id})
         self.response.content_type = 'application/json'

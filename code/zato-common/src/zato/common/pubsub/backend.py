@@ -14,19 +14,15 @@ from logging import getLogger
 # zato-broker-core (Rust extension)
 from zato_broker_core import (
     BrokerConfig,
-    fs_stream_xadd,
-    fs_stream_xreadgroup,
-    fs_stream_xack,
-    fs_stream_xgroup_create,
-    fs_stream_xgroup_destroy,
-    fs_stream_xdel,
-    fs_stream_xrange,
-    fs_set_sadd,
-    fs_set_srem,
-    fs_set_smembers,
-    fs_set_scard,
-    fs_rename,
-    fs_delete_tree,
+    broker_stream_xadd,
+    broker_stream_xreadgroup,
+    broker_stream_xack,
+    broker_stream_xgroup_create,
+    broker_stream_xgroup_destroy,
+    broker_stream_xdel,
+    broker_stream_xrange,
+    broker_rename,
+    broker_delete_tree,
 )
 
 # Zato
@@ -48,16 +44,14 @@ logger = getLogger(__name__)
 
 class ModuleCtx:
     Stream_Prefix = ''
-    Subs_Prefix = 'subs.'
-    Topic_Subs_Prefix = 'topic_subs.'
     Default_Max_Len = 100_000
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class PubSubBackend:
-    """ Broker-backed pub/sub backend replacing RedisPubSubBackend.
-    Uses Rust extension functions for streams, sets, and key-value operations.
+    """ Broker-backed pub/sub backend.
+    Uses Rust extension functions for stream operations.
     """
 
     def __init__(self, broker_client:'any_') -> 'None':
@@ -67,16 +61,6 @@ class PubSubBackend:
 
     def _get_stream_key(self, topic_name:'str') -> 'str':
         return f'{ModuleCtx.Stream_Prefix}{topic_name}'
-
-# ################################################################################################################################
-
-    def _get_subs_key(self, sub_key:'str') -> 'str':
-        return f'{ModuleCtx.Subs_Prefix}{sub_key}'
-
-# ################################################################################################################################
-
-    def _get_topic_subs_key(self, topic_name:'str') -> 'str':
-        return f'{ModuleCtx.Topic_Subs_Prefix}{topic_name}'
 
 # ################################################################################################################################
 
@@ -127,7 +111,7 @@ class PubSubBackend:
 
         stream_key = self._get_stream_key(topic_name)
         fields_json = json.dumps(message)
-        _ = fs_stream_xadd(self._cfg, stream_key, fields_json, maxlen=ModuleCtx.Default_Max_Len)
+        _ = broker_stream_xadd(self._cfg, stream_key, fields_json, maxlen=ModuleCtx.Default_Max_Len)
 
         return msg_id
 
@@ -135,16 +119,10 @@ class PubSubBackend:
 
     def subscribe(self, sub_key:'str', topic_name:'str') -> 'None':
         topic_name = topic_name.lower()
-
-        subs_key = self._get_subs_key(sub_key)
-        topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
 
-        _ = fs_set_sadd(self._cfg, subs_key, [topic_name])
-        _ = fs_set_sadd(self._cfg, topic_subs_key, [sub_key])
-
         try:
-            fs_stream_xgroup_create(self._cfg, stream_key, sub_key, '$', True)
+            broker_stream_xgroup_create(self._cfg, stream_key, sub_key, '$', True)
         except Exception as e:
             if 'already exists' not in str(e).lower():
                 raise
@@ -153,78 +131,63 @@ class PubSubBackend:
 
     def unsubscribe(self, sub_key:'str', topic_name:'str') -> 'None':
         topic_name = topic_name.lower()
-
-        subs_key = self._get_subs_key(sub_key)
-        topic_subs_key = self._get_topic_subs_key(topic_name)
         stream_key = self._get_stream_key(topic_name)
 
-        _ = fs_set_srem(self._cfg, subs_key, [topic_name])
-        _ = fs_set_srem(self._cfg, topic_subs_key, [sub_key])
-
-        remaining = fs_set_scard(self._cfg, subs_key)
-
-        if remaining == 0:
-            try:
-                fs_stream_xgroup_destroy(self._cfg, stream_key, sub_key)
-            except Exception:
-                pass
+        try:
+            broker_stream_xgroup_destroy(self._cfg, stream_key, sub_key)
+        except Exception:
+            pass
 
 # ################################################################################################################################
 
     def fetch_messages(
         self,
         sub_key:'str',
+        topic_name:'str',
         max_messages:'int'=50,
         max_len:'int'=5_000_000
     ) -> 'anylist':
-        subs_key = self._get_subs_key(sub_key)
 
-        topics = list(fs_set_smembers(self._cfg, subs_key))
-
-        if not topics:
-            return []
+        stream_key = self._get_stream_key(topic_name)
 
         messages = []
         total_len = 0
 
-        for topic in topics:
-            stream_key = self._get_stream_key(topic)
+        try:
+            entries = broker_stream_xreadgroup(self._cfg, stream_key, sub_key, sub_key, max_messages)
+        except Exception:
+            return []
 
+        for seq_id, fields_json in entries:
             try:
-                entries = fs_stream_xreadgroup(self._cfg, stream_key, sub_key, sub_key, max_messages)
+                msg_data = json.loads(fields_json)
             except Exception:
-                continue
+                msg_data = {'data': fields_json}
 
-            for seq_id, fields_json in entries:
+            expiration_time_iso = msg_data.get('expiration_time_iso', '')
+            if expiration_time_iso:
                 try:
-                    msg_data = json.loads(fields_json)
-                except Exception:
-                    msg_data = {'data': fields_json}
+                    expiration_time = datetime.fromisoformat(expiration_time_iso.replace('Z', '+00:00'))
+                    now = utcnow()
+                    if now > expiration_time:
+                        _ = broker_stream_xack(self._cfg, stream_key, sub_key, [seq_id])
+                        continue
+                except (ValueError, TypeError):
+                    pass
 
-                expiration_time_iso = msg_data.get('expiration_time_iso', '')
-                if expiration_time_iso:
-                    try:
-                        expiration_time = datetime.fromisoformat(expiration_time_iso.replace('Z', '+00:00'))
-                        now = utcnow()
-                        if now > expiration_time:
-                            _ = fs_stream_xack(self._cfg, stream_key, sub_key, [seq_id])
-                            continue
-                    except (ValueError, TypeError):
-                        pass
+            data_len = len(msg_data.get('data', ''))
+            if total_len + data_len > max_len:
+                break
 
-                data_len = len(msg_data.get('data', ''))
-                if total_len + data_len > max_len:
-                    break
+            total_len += data_len
 
-                total_len += data_len
+            msg_data['priority'] = int(msg_data.get('priority', 5))
+            msg_data['_seq_id'] = seq_id
+            msg_data['_stream_key'] = stream_key
 
-                msg_data['priority'] = int(msg_data.get('priority', 5))
-                msg_data['_seq_id'] = seq_id
-                msg_data['_stream_key'] = stream_key
+            messages.append(msg_data)
 
-                messages.append(msg_data)
-
-                _ = fs_stream_xack(self._cfg, stream_key, sub_key, [seq_id])
+            _ = broker_stream_xack(self._cfg, stream_key, sub_key, [seq_id])
 
         messages.sort(key=lambda m: (-m['priority'], m.get('pub_time_iso', '')))
 
@@ -261,41 +224,13 @@ class PubSubBackend:
 
 # ################################################################################################################################
 
-    def get_subscribed_topics(self, sub_key:'str') -> 'strlist':
-        subs_key = self._get_subs_key(sub_key)
-        return list(fs_set_smembers(self._cfg, subs_key))
-
-# ################################################################################################################################
-
-    def get_topic_subscribers(self, topic_name:'str') -> 'strlist':
-        topic_subs_key = self._get_topic_subs_key(topic_name)
-        return list(fs_set_smembers(self._cfg, topic_subs_key))
-
-# ################################################################################################################################
-
     def delete_topic(self, topic_name:'str') -> 'None':
         stream_key = self._get_stream_key(topic_name)
-        topic_subs_key = self._get_topic_subs_key(topic_name)
-
-        subs = self.get_topic_subscribers(topic_name)
-
-        for sub_key in subs:
-            subs_key = self._get_subs_key(sub_key)
-            _ = fs_set_srem(self._cfg, subs_key, [topic_name])
-
-            try:
-                fs_stream_xgroup_destroy(self._cfg, stream_key, sub_key)
-            except Exception:
-                pass
 
         try:
-            fs_delete_tree(self._cfg, stream_key)
+            broker_delete_tree(self._cfg, stream_key)
         except Exception:
             pass
-
-        remaining_subs = list(fs_set_smembers(self._cfg, topic_subs_key))
-        if remaining_subs:
-            _ = fs_set_srem(self._cfg, topic_subs_key, remaining_subs)
 
 # ################################################################################################################################
 
@@ -303,25 +238,10 @@ class PubSubBackend:
         old_stream_key = self._get_stream_key(old_topic_name)
         new_stream_key = self._get_stream_key(new_topic_name)
 
-        subs = self.get_topic_subscribers(old_topic_name)
-
         try:
-            fs_rename(self._cfg, old_stream_key, new_stream_key)
+            broker_rename(self._cfg, old_stream_key, new_stream_key)
         except Exception:
             pass
-
-        old_topic_subs_key = self._get_topic_subs_key(old_topic_name)
-        new_topic_subs_key = self._get_topic_subs_key(new_topic_name)
-
-        old_members = list(fs_set_smembers(self._cfg, old_topic_subs_key))
-        if old_members:
-            _ = fs_set_sadd(self._cfg, new_topic_subs_key, old_members)
-            _ = fs_set_srem(self._cfg, old_topic_subs_key, old_members)
-
-        for sub_key in subs:
-            subs_key = self._get_subs_key(sub_key)
-            _ = fs_set_srem(self._cfg, subs_key, [old_topic_name])
-            _ = fs_set_sadd(self._cfg, subs_key, [new_topic_name])
 
 # ################################################################################################################################
 # ################################################################################################################################

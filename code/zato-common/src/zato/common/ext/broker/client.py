@@ -14,33 +14,23 @@ from logging import getLogger
 # zato-broker-core (Rust extension)
 from zato_broker_core import (
     BrokerConfig,
-    fs_init,
-    fs_ping,
-    fs_kv_get,
-    fs_kv_set,
-    fs_kv_delete,
-    fs_kv_keys,
-    fs_list_lpush,
-    fs_list_ltrim,
-    fs_list_lrange,
-    fs_set_sadd,
-    fs_set_srem,
-    fs_set_smembers,
-    fs_set_scard,
-    fs_stream_xadd,
-    fs_stream_xreadgroup,
-    fs_stream_xack,
-    fs_stream_xgroup_create,
-    fs_stream_xgroup_destroy,
-    fs_stream_xrange,
-    fs_stream_xdel,
+    broker_init,
+    broker_ping,
+    broker_rename,
+    broker_stream_xadd,
+    broker_stream_xreadgroup,
+    broker_stream_xack,
+    broker_stream_xgroup_create,
+    broker_stream_xgroup_destroy,
+    broker_stream_xrange,
+    broker_stream_xdel,
 )
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from typing import Any, Dict, List, Optional, Set
+    from typing import Any, Dict, List, Optional
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -91,7 +81,7 @@ class BrokerClient:
         self._cfg = BrokerConfig(root_dir, log_dir, do_fsync)
 
         os.makedirs(log_dir, exist_ok=True)
-        fs_init(self._cfg)
+        broker_init(self._cfg)
 
     @property
     def cfg(self) -> 'BrokerConfig':
@@ -110,57 +100,12 @@ class BrokerClient:
         return BrokerPubSub(self)
 
     # ############################################################################################################################
-    # Key-value
-    # ############################################################################################################################
-
-    def get(self, key:'str') -> 'Optional[str]':
-        return fs_kv_get(self._cfg, key)
-
-    def set(self, key:'str', value:'str', ex:'Optional[int]'=None, nx:'bool'=False) -> 'Optional[bool]':
-        return fs_kv_set(self._cfg, key, value, ex=ex, nx=nx)
-
-    def delete(self, *keys:'str') -> 'int':
-        return fs_kv_delete(self._cfg, list(keys))
-
-    def keys(self, pattern:'str') -> 'List[str]':
-        return fs_kv_keys(self._cfg, pattern)
-
-    # ############################################################################################################################
-    # Lists
-    # ############################################################################################################################
-
-    def lpush(self, key:'str', *values:'str') -> 'int':
-        return fs_list_lpush(self._cfg, key, list(values))
-
-    def ltrim(self, key:'str', start:'int', stop:'int') -> 'None':
-        fs_list_ltrim(self._cfg, key, start, stop)
-
-    def lrange(self, key:'str', start:'int', stop:'int') -> 'List[str]':
-        return fs_list_lrange(self._cfg, key, start, stop)
-
-    # ############################################################################################################################
-    # Sets
-    # ############################################################################################################################
-
-    def sadd(self, key:'str', *members:'str') -> 'int':
-        return fs_set_sadd(self._cfg, key, list(members))
-
-    def srem(self, key:'str', *members:'str') -> 'int':
-        return fs_set_srem(self._cfg, key, list(members))
-
-    def smembers(self, key:'str') -> 'Set[str]':
-        return set(fs_set_smembers(self._cfg, key))
-
-    def scard(self, key:'str') -> 'int':
-        return fs_set_scard(self._cfg, key)
-
-    # ############################################################################################################################
     # Streams
     # ############################################################################################################################
 
     def xadd(self, key:'str', fields:'Dict', maxlen:'Optional[int]'=None, payload:'bytes | None'=None) -> 'str':
         fields_json = dumps(fields)
-        return fs_stream_xadd(self._cfg, key, fields_json, maxlen=maxlen, payload=payload)
+        return broker_stream_xadd(self._cfg, key, fields_json, maxlen=maxlen, payload=payload)
 
     def xreadgroup(
         self,
@@ -171,7 +116,7 @@ class BrokerClient:
     ) -> 'List':
         result = []
         for stream_key in streams:
-            entries = fs_stream_xreadgroup(self._cfg, stream_key, groupname, consumername, count)
+            entries = broker_stream_xreadgroup(self._cfg, stream_key, groupname, consumername, count)
             if entries:
                 parsed = []
                 for seq_id, fields_json in entries:
@@ -184,16 +129,16 @@ class BrokerClient:
         return result
 
     def xack(self, key:'str', groupname:'str', *ids:'str') -> 'int':
-        return fs_stream_xack(self._cfg, key, groupname, list(ids))
+        return broker_stream_xack(self._cfg, key, groupname, list(ids))
 
     def xgroup_create(self, key:'str', groupname:'str', id:'str'='$', mkstream:'bool'=False) -> 'None':
-        fs_stream_xgroup_create(self._cfg, key, groupname, id, mkstream)
+        broker_stream_xgroup_create(self._cfg, key, groupname, id, mkstream)
 
     def xgroup_destroy(self, key:'str', groupname:'str') -> 'None':
-        fs_stream_xgroup_destroy(self._cfg, key, groupname)
+        broker_stream_xgroup_destroy(self._cfg, key, groupname)
 
     def xrange(self, key:'str', min:'str'='-', max:'str'='+', count:'Optional[int]'=None) -> 'List':
-        entries = fs_stream_xrange(self._cfg, key, count=count)
+        entries = broker_stream_xrange(self._cfg, key, count=count)
         result = []
         for seq_id, fields_json in entries:
             try:
@@ -204,18 +149,17 @@ class BrokerClient:
         return result
 
     def xdel(self, key:'str', *ids:'str') -> 'int':
-        return fs_stream_xdel(self._cfg, key, list(ids))
+        return broker_stream_xdel(self._cfg, key, list(ids))
 
     # ############################################################################################################################
     # Other
     # ############################################################################################################################
 
     def rename(self, old_key:'str', new_key:'str') -> 'None':
-        from zato_broker_core import fs_rename
-        fs_rename(self._cfg, old_key, new_key)
+        broker_rename(self._cfg, old_key, new_key)
 
     def ping(self) -> 'bool':
-        return fs_ping(self._cfg)
+        return broker_ping(self._cfg)
 
 # ################################################################################################################################
 # ################################################################################################################################
