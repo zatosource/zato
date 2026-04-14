@@ -7,13 +7,14 @@ use chrono::Utc;
 use pyo3::prelude::*;
 use pyo3::types::PyString;
 
-type PyObject = Py<PyAny>;
-
 use crate::calendar::CalendarData;
 use crate::job::{ExecutionRecord, RunningJob};
+use crate::types::{FireBatch, JobType, OnMissedPolicy, outcome};
 
-const CLOCK_JUMP_THRESHOLD_MS: i64 = 5_000;
-const COALESCE_WINDOW_MS: i64 = 50;
+type PyObject = Py<PyAny>;
+
+const DEFAULT_CLOCK_JUMP_THRESHOLD_MS: i64 = 5_000;
+const DEFAULT_COALESCE_WINDOW_MS: i64 = 50;
 
 pub struct SchedulerState {
     pub jobs: HashMap<String, RunningJob>,
@@ -35,6 +36,8 @@ pub struct SchedulerShared {
     pub state: Mutex<SchedulerState>,
     pub condvar: Condvar,
     pub stop_flag: AtomicBool,
+    pub clock_jump_threshold_ms: i64,
+    pub coalesce_window_ms: i64,
 }
 
 impl SchedulerShared {
@@ -43,6 +46,8 @@ impl SchedulerShared {
             state: Mutex::new(SchedulerState::new()),
             condvar: Condvar::new(),
             stop_flag: AtomicBool::new(false),
+            clock_jump_threshold_ms: DEFAULT_CLOCK_JUMP_THRESHOLD_MS,
+            coalesce_window_ms: DEFAULT_COALESCE_WINDOW_MS,
         }
     }
 }
@@ -98,7 +103,7 @@ pub fn scheduler_loop(
         let wall_delta_ms = (now_wall - last_wall).num_milliseconds();
         let mono_delta_ms = now_mono.duration_since(last_mono).as_millis() as i64;
 
-        if (wall_delta_ms - mono_delta_ms).abs() > CLOCK_JUMP_THRESHOLD_MS {
+        if (wall_delta_ms - mono_delta_ms).abs() > shared.clock_jump_threshold_ms {
             let mut state = shared.state.lock().unwrap();
             reanchor_all_jobs(&mut state, now_wall);
         }
@@ -109,7 +114,7 @@ pub fn scheduler_loop(
         let fire_batch = {
             let mut state = shared.state.lock().unwrap();
             check_in_flight_timeouts(&mut state);
-            collect_due_jobs(&mut state, now_wall)
+            collect_due_jobs(&mut state, now_wall, shared.coalesce_window_ms)
         };
 
         if !fire_batch.is_empty() {
@@ -142,12 +147,16 @@ pub fn load_from_config_store_py(
 fn load_jobs_from_config_store(shared: &SchedulerShared, config_store: &PyObject) {
     Python::try_attach(|py| {
         let cs = config_store.bind(py);
-        // TODO: load calendars here too, same as scheduler_reload does in lib.rs
-        if let Ok((jobs, _cals)) = load_from_config_store_py(cs) {
-            let mut state = shared.state.lock().unwrap();
-            for (id, job) in &jobs {
-                let rj = RunningJob::from_scheduler_job(job);
-                state.jobs.insert(id.clone(), rj);
+        match load_from_config_store_py(cs) {
+            Ok((jobs, _cals)) => {
+                let mut state = shared.state.lock().unwrap();
+                for (id, job) in &jobs {
+                    let rj = RunningJob::from_scheduler_job(job);
+                    state.jobs.insert(id.clone(), rj);
+                }
+            }
+            Err(e) => {
+                log::error!("Failed to load jobs from config store: {}", e);
             }
         }
     });
@@ -175,13 +184,15 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
 pub fn collect_due_jobs(
     state: &mut SchedulerState,
     now: chrono::DateTime<Utc>,
-) -> Vec<(String, String, String, Option<String>, String, u32)> {
-    let threshold = now + chrono::Duration::milliseconds(COALESCE_WINDOW_MS);
+    coalesce_window_ms: i64,
+) -> Vec<FireBatch> {
+    let threshold = now + chrono::Duration::milliseconds(coalesce_window_ms);
     let mut batch = Vec::new();
 
     let job_ids: Vec<String> = state.jobs.keys().cloned().collect();
 
     for id in job_ids {
+        let calendars_ref = &state.calendars;
         let rj = match state.jobs.get_mut(&id) {
             Some(rj) => rj,
             None => continue,
@@ -197,30 +208,21 @@ pub fn collect_due_jobs(
             continue;
         }
 
+        let planned = fire_utc.to_rfc3339();
+        let actual = now.to_rfc3339();
+
         if rj.in_flight {
-            rj.record_execution(ExecutionRecord {
-                planned_fire_time_iso: fire_utc.to_rfc3339(),
-                actual_fire_time_iso: now.to_rfc3339(),
-                dispatch_latency_ms: 0,
-                outcome: "skipped_concurrent".into(),
-                current_run: rj.current_run,
-                duration_ms: None,
-                error: None,
-            });
+            rj.record_execution(
+                ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_CONCURRENT, rj.current_run)
+            );
             rj.advance_to_next(now);
             continue;
         }
 
-        if rj.is_holiday_today(&state.calendars) {
-            rj.record_execution(ExecutionRecord {
-                planned_fire_time_iso: fire_utc.to_rfc3339(),
-                actual_fire_time_iso: now.to_rfc3339(),
-                dispatch_latency_ms: 0,
-                outcome: "skipped_holiday".into(),
-                current_run: rj.current_run,
-                duration_ms: None,
-                error: None,
-            });
+        if rj.is_holiday_today(calendars_ref) {
+            rj.record_execution(
+                ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_HOLIDAY, rj.current_run)
+            );
             rj.advance_to_next(now);
             continue;
         }
@@ -231,24 +233,19 @@ pub fn collect_due_jobs(
 
         let latency = (now - fire_utc).num_milliseconds().max(0) as u64;
 
-        batch.push((
-            rj.id.clone(),
-            rj.name.clone(),
-            rj.service.clone(),
-            rj.extra.clone(),
-            rj.job_type.clone(),
-            rj.current_run,
-        ));
-
-        rj.record_execution(ExecutionRecord {
-            planned_fire_time_iso: fire_utc.to_rfc3339(),
-            actual_fire_time_iso: now.to_rfc3339(),
-            dispatch_latency_ms: latency,
-            outcome: "executed".into(),
+        batch.push(FireBatch {
+            job_id: rj.id.clone(),
+            name: rj.name.clone(),
+            service: rj.service.clone(),
+            extra: rj.extra.clone(),
+            job_type: rj.job_type.clone(),
             current_run: rj.current_run,
-            duration_ms: None,
-            error: None,
         });
+
+        rj.record_execution(
+            ExecutionRecord::new(&planned, &actual, outcome::EXECUTED, rj.current_run)
+                .with_latency(latency)
+        );
 
         rj.advance_to_next(now);
     }
@@ -257,25 +254,28 @@ pub fn collect_due_jobs(
 }
 
 fn dispatch_jobs(
-    batch: &[(String, String, String, Option<String>, String, u32)],
+    batch: &[FireBatch],
     run_cb: &PyObject,
     spawn_fn: &PyObject,
     on_job_executed_cb: &PyObject,
 ) {
     Python::try_attach(|py| {
-        for (id, name, service, extra, job_type, current_run) in batch {
+        for item in batch {
             let ctx = serde_json::json!({
-                "id": id,
-                "name": name,
-                "service": service,
-                "extra": extra,
-                "job_type": job_type,
-                "current_run": current_run,
+                "id": item.job_id.as_ref(),
+                "name": item.name,
+                "service": item.service.as_ref(),
+                "extra": item.extra,
+                "job_type": item.job_type.as_str(),
+                "current_run": item.current_run,
             });
             let ctx_str = ctx.to_string();
             let py_ctx = PyString::new(py, &ctx_str).into_any().unbind();
             if let Err(e) = run_cb.call1(py, (spawn_fn, on_job_executed_cb, py_ctx)) {
-                eprintln!("zato_scheduler_core: failed to dispatch job `{}`: {}", name, e);
+                log::error!(
+                    "Failed to dispatch job `{}` (service=`{}`, run={}): {}",
+                    item.name, item.service, item.current_run, e
+                );
             }
         }
     });
@@ -293,15 +293,11 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
         if elapsed_ms > rj.max_execution_time_ms {
             rj.in_flight = false;
             rj.in_flight_since = None;
-            rj.record_execution(ExecutionRecord {
-                planned_fire_time_iso: String::new(),
-                actual_fire_time_iso: Utc::now().to_rfc3339(),
-                dispatch_latency_ms: 0,
-                outcome: "timeout".into(),
-                current_run: rj.current_run,
-                duration_ms: Some(elapsed_ms),
-                error: Some(format!("exceeded max_execution_time_ms={}", rj.max_execution_time_ms)),
-            });
+            rj.record_execution(
+                ExecutionRecord::new("", &Utc::now().to_rfc3339(), outcome::TIMEOUT, rj.current_run)
+                    .with_duration(elapsed_ms)
+                    .with_error(format!("exceeded max_execution_time_ms={}", rj.max_execution_time_ms))
+            );
         }
     }
 }
@@ -324,7 +320,7 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
             None => continue,
         };
 
-        if !rj.is_active || rj.job_type == "one_time" {
+        if !rj.is_active || rj.job_type == JobType::OneTime {
             continue;
         }
 
@@ -333,30 +329,25 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
             continue;
         }
 
-        let policy = rj.on_missed.clone();
-        match policy.as_str() {
-            "skip" => {
+        match rj.on_missed {
+            OnMissedPolicy::Skip => {
                 rj.compute_next_fire(now);
             }
-            "run_once" => {
+            OnMissedPolicy::RunOnce => {
                 if let Some(fire) = rj.next_fire_utc {
                     if fire < now {
-                        rj.record_execution(ExecutionRecord {
-                            planned_fire_time_iso: fire.to_rfc3339(),
-                            actual_fire_time_iso: now.to_rfc3339(),
-                            dispatch_latency_ms: 0,
-                            outcome: "missed_catchup".into(),
-                            current_run: rj.current_run,
-                            duration_ms: None,
-                            error: None,
-                        });
+                        rj.record_execution(
+                            ExecutionRecord::new(
+                                &fire.to_rfc3339(),
+                                &now.to_rfc3339(),
+                                outcome::MISSED_CATCHUP,
+                                rj.current_run,
+                            )
+                        );
                         rj.next_fire_utc = Some(now);
                         rj.sync_instant_from_utc_pub(now);
                     }
                 }
-            }
-            _ => {
-                rj.compute_next_fire(now);
             }
         }
     }

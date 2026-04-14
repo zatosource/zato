@@ -9,12 +9,13 @@ pub mod calendar;
 pub mod history;
 pub mod job;
 pub mod scheduler;
-
-type PyObject = Py<PyAny>;
+pub mod types;
 
 use calendar::CalendarData;
 use job::{ExecutionRecord, RunningJob};
 use scheduler::SchedulerShared;
+
+type PyObject = Py<PyAny>;
 
 static SHARED: std::sync::OnceLock<Arc<SchedulerShared>> = std::sync::OnceLock::new();
 static CONFIG_STORE: std::sync::OnceLock<PyObject> = std::sync::OnceLock::new();
@@ -23,6 +24,18 @@ fn get_shared() -> PyResult<&'static Arc<SchedulerShared>> {
     SHARED.get().ok_or_else(|| {
         pyo3::exceptions::PyRuntimeError::new_err("scheduler not started")
     })
+}
+
+fn with_state_mut<F, R>(shared: &SchedulerShared, f: F) -> R
+where
+    F: FnOnce(&mut scheduler::SchedulerState) -> R,
+{
+    let mut state = shared.state.lock().unwrap();
+    let result = f(&mut state);
+    state.dirty = true;
+    drop(state);
+    shared.condvar.notify_one();
+    result
 }
 
 #[pyfunction]
@@ -67,11 +80,9 @@ fn scheduler_create_job(_py: Python<'_>, job_id: &str, job_data: &Bound<'_, PyDi
     let shared = get_shared()?;
     let sj = dict_to_scheduler_job(job_id, job_data)?;
     let rj = RunningJob::from_scheduler_job(&sj);
-    let mut state = shared.state.lock().unwrap();
-    state.jobs.insert(job_id.to_string(), rj);
-    state.dirty = true;
-    drop(state);
-    shared.condvar.notify_one();
+    with_state_mut(shared, |state| {
+        state.jobs.insert(job_id.to_string(), rj);
+    });
     Ok(())
 }
 
@@ -80,16 +91,14 @@ fn scheduler_create_job(_py: Python<'_>, job_id: &str, job_data: &Bound<'_, PyDi
 fn scheduler_edit_job(_py: Python<'_>, job_id: &str, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
     let shared = get_shared()?;
     let sj = dict_to_scheduler_job(job_id, job_data)?;
-    let mut state = shared.state.lock().unwrap();
-    if let Some(existing) = state.jobs.get_mut(job_id) {
-        existing.update_from_job(&sj);
-    } else {
-        let rj = RunningJob::from_scheduler_job(&sj);
-        state.jobs.insert(job_id.to_string(), rj);
-    }
-    state.dirty = true;
-    drop(state);
-    shared.condvar.notify_one();
+    with_state_mut(shared, |state| {
+        if let Some(existing) = state.jobs.get_mut(job_id) {
+            existing.update_from_job(&sj);
+        } else {
+            let rj = RunningJob::from_scheduler_job(&sj);
+            state.jobs.insert(job_id.to_string(), rj);
+        }
+    });
     Ok(())
 }
 
@@ -97,11 +106,9 @@ fn scheduler_edit_job(_py: Python<'_>, job_id: &str, job_data: &Bound<'_, PyDict
 #[pyo3(signature = (job_id,))]
 fn scheduler_delete_job(job_id: &str) -> PyResult<()> {
     let shared = get_shared()?;
-    let mut state = shared.state.lock().unwrap();
-    state.jobs.remove(job_id);
-    state.dirty = true;
-    drop(state);
-    shared.condvar.notify_one();
+    with_state_mut(shared, |state| {
+        state.jobs.remove(job_id);
+    });
     Ok(())
 }
 
@@ -109,14 +116,12 @@ fn scheduler_delete_job(job_id: &str) -> PyResult<()> {
 #[pyo3(signature = (job_id,))]
 fn scheduler_execute_job(job_id: &str) -> PyResult<()> {
     let shared = get_shared()?;
-    let mut state = shared.state.lock().unwrap();
-    if let Some(rj) = state.jobs.get_mut(job_id) {
-        rj.next_fire_utc = Some(Utc::now());
-        rj.sync_instant_from_utc_pub(Utc::now());
-    }
-    state.dirty = true;
-    drop(state);
-    shared.condvar.notify_one();
+    with_state_mut(shared, |state| {
+        if let Some(rj) = state.jobs.get_mut(job_id) {
+            rj.next_fire_utc = Some(Utc::now());
+            rj.sync_instant_from_utc_pub(Utc::now());
+        }
+    });
     Ok(())
 }
 
@@ -124,17 +129,18 @@ fn scheduler_execute_job(job_id: &str) -> PyResult<()> {
 #[pyo3(signature = (job_id, outcome, duration_ms))]
 fn scheduler_mark_complete(job_id: &str, outcome: &str, duration_ms: u64) -> PyResult<()> {
     let shared = get_shared()?;
-    let mut state = shared.state.lock().unwrap();
-    if let Some(rj) = state.jobs.get_mut(job_id) {
-        rj.in_flight = false;
-        rj.in_flight_since = None;
-        if let Some(last) = rj.history.back_mut() {
-            last.duration_ms = Some(duration_ms);
-            if outcome != "executed" {
-                last.outcome = outcome.to_string();
+    with_state_mut(shared, |state| {
+        if let Some(rj) = state.jobs.get_mut(job_id) {
+            rj.in_flight = false;
+            rj.in_flight_since = None;
+            if let Some(last) = rj.history.back_mut() {
+                last.duration_ms = Some(duration_ms);
+                if outcome != "executed" {
+                    last.outcome = outcome.to_string();
+                }
             }
         }
-    }
+    });
     Ok(())
 }
 
@@ -149,43 +155,53 @@ fn scheduler_reload() -> PyResult<()> {
     Python::try_attach(|py| {
         let cs_bound = cs.bind(py);
         let (new_jobs, new_cals) = scheduler::load_from_config_store_py(cs_bound)?;
-        let mut state = shared.state.lock().unwrap();
-
-        let old_ids: std::collections::HashSet<String> = state.jobs.keys().cloned().collect();
-        let new_ids: std::collections::HashSet<String> = new_jobs.keys().cloned().collect();
-
-        for id in old_ids.difference(&new_ids) {
-            state.jobs.remove(id);
-        }
-
-        for (id, sj) in &new_jobs {
-            if let Some(existing) = state.jobs.get_mut(id.as_str()) {
-                existing.update_from_job(sj);
-            } else {
-                let rj = RunningJob::from_scheduler_job(sj);
-                state.jobs.insert(id.clone(), rj);
-            }
-        }
-
-        state.calendars.clear();
-        for (name, cal) in new_cals {
-            let mut cd = CalendarData::new(name.clone());
-            for ds in &cal.dates {
-                if let Ok(d) = chrono::NaiveDate::parse_from_str(ds, "%Y-%m-%d") {
-                    cd.dates.insert(d);
-                }
-            }
-            cd.weekdays = cal.weekdays.clone();
-            cd.description = cal.description.clone();
-            state.calendars.insert(name, cd);
-        }
-
-        state.dirty = true;
+        with_state_mut(shared, |state| {
+            reload_jobs(state, new_jobs);
+            reload_calendars(state, new_cals);
+        });
         Ok::<_, PyErr>(())
     }).ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("GIL not available"))??;
 
-    shared.condvar.notify_one();
     Ok(())
+}
+
+fn reload_jobs(
+    state: &mut scheduler::SchedulerState,
+    new_jobs: std::collections::HashMap<String, zato_server_core::models::SchedulerJob>,
+) {
+    let old_ids: std::collections::HashSet<String> = state.jobs.keys().cloned().collect();
+    let new_ids: std::collections::HashSet<String> = new_jobs.keys().cloned().collect();
+
+    for id in old_ids.difference(&new_ids) {
+        state.jobs.remove(id);
+    }
+
+    for (id, sj) in &new_jobs {
+        if let Some(existing) = state.jobs.get_mut(id.as_str()) {
+            existing.update_from_job(sj);
+        } else {
+            let rj = RunningJob::from_scheduler_job(sj);
+            state.jobs.insert(id.clone(), rj);
+        }
+    }
+}
+
+fn reload_calendars(
+    state: &mut scheduler::SchedulerState,
+    new_cals: std::collections::HashMap<String, zato_server_core::models::HolidayCalendar>,
+) {
+    state.calendars.clear();
+    for (name, cal) in new_cals {
+        let mut cd = CalendarData::new(name.clone());
+        for ds in &cal.dates {
+            if let Ok(d) = chrono::NaiveDate::parse_from_str(ds, "%Y-%m-%d") {
+                cd.dates.insert(d);
+            }
+        }
+        cd.weekdays = cal.weekdays.clone();
+        cd.description = cal.description.clone();
+        state.calendars.insert(name, cd);
+    }
 }
 
 #[pyfunction]

@@ -761,6 +761,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "chrono-tz",
+ "log",
  "pyo3",
  "rand",
  "serde",

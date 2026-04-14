@@ -10,8 +10,13 @@ use rand::{RngExt, SeedableRng};
 
 use zato_server_core::models::SchedulerJob;
 
+use crate::types::{JobId, JobType, OnMissedPolicy, ServiceName};
+
 pub const DEFAULT_MAX_EXECUTION_TIME_MS: u64 = 3_600_000;
 pub const DEFAULT_MAX_HISTORY: usize = 100;
+
+const MIN_MAX_EXECUTION_TIME_MS: u64 = 1_000;
+const MAX_MAX_EXECUTION_TIME_MS: u64 = 86_400_000;
 
 #[derive(Debug, Clone)]
 pub struct ExecutionRecord {
@@ -25,6 +30,33 @@ pub struct ExecutionRecord {
 }
 
 impl ExecutionRecord {
+    pub fn new(planned: &str, actual: &str, outcome: &str, current_run: u32) -> Self {
+        ExecutionRecord {
+            planned_fire_time_iso: planned.to_string(),
+            actual_fire_time_iso: actual.to_string(),
+            dispatch_latency_ms: 0,
+            outcome: outcome.to_string(),
+            current_run,
+            duration_ms: None,
+            error: None,
+        }
+    }
+
+    pub fn with_latency(mut self, latency_ms: u64) -> Self {
+        self.dispatch_latency_ms = latency_ms;
+        self
+    }
+
+    pub fn with_duration(mut self, duration_ms: u64) -> Self {
+        self.duration_ms = Some(duration_ms);
+        self
+    }
+
+    pub fn with_error(mut self, error: String) -> Self {
+        self.error = Some(error);
+        self
+    }
+
     pub fn to_dict_items(&self) -> Vec<(&'static str, String)> {
         let mut items = vec![
             ("planned_fire_time_iso", self.planned_fire_time_iso.clone()),
@@ -45,12 +77,12 @@ impl ExecutionRecord {
 
 #[derive(Debug)]
 pub struct RunningJob {
-    pub id: String,
+    pub id: JobId,
     pub name: String,
     pub is_active: bool,
-    pub service: String,
+    pub service: ServiceName,
     pub extra: Option<String>,
-    pub job_type: String,
+    pub job_type: JobType,
     pub start_date: Option<DateTime<Utc>>,
     pub interval_ms: u64,
     pub repeats: Option<u32>,
@@ -58,7 +90,7 @@ pub struct RunningJob {
     pub timezone: Option<Tz>,
     pub timezone_str: Option<String>,
     pub calendar: Option<String>,
-    pub on_missed: String,
+    pub on_missed: OnMissedPolicy,
     pub max_execution_time_ms: u64,
 
     pub next_fire_utc: Option<DateTime<Utc>>,
@@ -73,6 +105,24 @@ pub struct RunningJob {
     jitter_rng: SmallRng,
 }
 
+fn clamp_max_execution_time(raw: u64, job_name: &str) -> u64 {
+    if raw < MIN_MAX_EXECUTION_TIME_MS {
+        log::warn!(
+            "Job `{}`: max_execution_time_ms={} below minimum, clamped to {}",
+            job_name, raw, MIN_MAX_EXECUTION_TIME_MS
+        );
+        return MIN_MAX_EXECUTION_TIME_MS;
+    }
+    if raw > MAX_MAX_EXECUTION_TIME_MS {
+        log::warn!(
+            "Job `{}`: max_execution_time_ms={} above maximum, clamped to {}",
+            job_name, raw, MAX_MAX_EXECUTION_TIME_MS
+        );
+        return MAX_MAX_EXECUTION_TIME_MS;
+    }
+    raw
+}
+
 impl RunningJob {
 
     pub fn from_scheduler_job(job: &SchedulerJob) -> Self {
@@ -82,16 +132,21 @@ impl RunningJob {
         let start_date = Self::parse_start_date(&job.start_date, tz.as_ref());
         let seed = Self::name_hash(&job.id);
         let jitter_rng = SmallRng::seed_from_u64(seed);
-        let on_missed = job.on_missed.clone().unwrap_or_else(|| "run_once".to_string());
-        let max_exec = job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS);
+        let on_missed = OnMissedPolicy::from(
+            job.on_missed.as_deref().unwrap_or("run_once")
+        );
+        let max_exec = clamp_max_execution_time(
+            job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS),
+            &job.name,
+        );
 
         let mut rj = RunningJob {
-            id: job.id.clone(),
+            id: JobId(job.id.clone()),
             name: job.name.clone(),
             is_active: job.is_active,
-            service: job.service.clone(),
+            service: ServiceName(job.service.clone()),
             extra: job.extra.clone(),
-            job_type: job.job_type.clone(),
+            job_type: JobType::from(job.job_type.as_str()),
             start_date,
             interval_ms,
             repeats: job.repeats,
@@ -119,12 +174,17 @@ impl RunningJob {
     pub fn update_from_job(&mut self, job: &SchedulerJob) {
         self.name = job.name.clone();
         self.is_active = job.is_active;
-        self.service = job.service.clone();
+        self.service = ServiceName(job.service.clone());
         self.extra = job.extra.clone();
-        self.job_type = job.job_type.clone();
+        self.job_type = JobType::from(job.job_type.as_str());
         self.calendar = job.calendar.clone();
-        self.on_missed = job.on_missed.clone().unwrap_or_else(|| "run_once".to_string());
-        self.max_execution_time_ms = job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS);
+        self.on_missed = OnMissedPolicy::from(
+            job.on_missed.as_deref().unwrap_or("run_once")
+        );
+        self.max_execution_time_ms = clamp_max_execution_time(
+            job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS),
+            &job.name,
+        );
         self.repeats = job.repeats;
 
         let new_interval = Self::compute_interval_ms(job);
@@ -143,7 +203,7 @@ impl RunningJob {
 
         if job.jitter_ms != self.jitter_ms {
             self.jitter_ms = job.jitter_ms;
-            self.jitter_rng = SmallRng::seed_from_u64(Self::name_hash(&self.id));
+            self.jitter_rng = SmallRng::seed_from_u64(Self::name_hash(self.id.as_ref()));
         }
 
         if schedule_changed && self.is_active {
@@ -155,35 +215,40 @@ impl RunningJob {
     }
 
     pub fn compute_next_fire(&mut self, now: DateTime<Utc>) {
-        if self.job_type == "one_time" {
-            if let Some(sd) = self.start_date {
-                if sd > now {
-                    self.next_fire_utc = Some(sd);
-                } else if self.current_run == 0 {
-                    self.next_fire_utc = Some(now);
+        match self.job_type {
+            JobType::OneTime => {
+                if let Some(sd) = self.start_date {
+                    if sd > now {
+                        self.next_fire_utc = Some(sd);
+                    } else if self.current_run == 0 {
+                        self.next_fire_utc = Some(now);
+                    } else {
+                        self.next_fire_utc = None;
+                    }
                 } else {
                     self.next_fire_utc = None;
                 }
-            } else {
-                self.next_fire_utc = None;
             }
-        } else if self.interval_ms > 0 {
-            if let Some(sd) = self.start_date {
-                let n = self.find_next_n(sd, now);
-                let base_ms = n * self.interval_ms;
-                let jitter = self.compute_jitter();
-                self.next_fire_utc = Some(sd + chrono::Duration::milliseconds((base_ms + jitter) as i64));
-            } else {
-                self.next_fire_utc = None;
+            JobType::IntervalBased => {
+                if self.interval_ms > 0 {
+                    if let Some(sd) = self.start_date {
+                        let n = self.find_next_n(sd, now);
+                        let base_ms = n * self.interval_ms;
+                        let jitter = self.compute_jitter();
+                        self.next_fire_utc = Some(sd + chrono::Duration::milliseconds((base_ms + jitter) as i64));
+                    } else {
+                        self.next_fire_utc = None;
+                    }
+                } else {
+                    self.next_fire_utc = None;
+                }
             }
-        } else {
-            self.next_fire_utc = None;
         }
         self.sync_instant_from_utc(now);
     }
 
     pub fn advance_to_next(&mut self, now: DateTime<Utc>) {
-        if self.job_type == "one_time" {
+        if self.job_type == JobType::OneTime {
             self.next_fire_utc = None;
             self.next_fire_instant = None;
             return;
@@ -244,7 +309,7 @@ impl RunningJob {
         });
     }
 
-    fn compute_interval_ms(job: &SchedulerJob) -> u64 {
+    pub(crate) fn compute_interval_ms(job: &SchedulerJob) -> u64 {
         let w = job.weeks.unwrap_or(0) as u64 * 7 * 86_400_000;
         let d = job.days.unwrap_or(0) as u64 * 86_400_000;
         let h = job.hours.unwrap_or(0) as u64 * 3_600_000;
@@ -275,31 +340,22 @@ impl RunningJob {
         None
     }
 
-    fn naive_to_utc_in_tz(naive: chrono::NaiveDateTime, tz: &Tz) -> Option<DateTime<Utc>> {
-        match tz.from_local_datetime(&naive) {
-            LocalResult::Single(dt) => {
-                let r: DateTime<Utc> = dt.with_timezone(&Utc);
-                Some(r)
-            }
-            LocalResult::Ambiguous(dt, _) => {
-                let r: DateTime<Utc> = dt.with_timezone(&Utc);
-                Some(r)
-            }
-            LocalResult::None => {
-                let advanced = naive + chrono::Duration::hours(1);
-                match tz.from_local_datetime(&advanced) {
-                    LocalResult::Single(dt) => {
-                        let r: DateTime<Utc> = dt.with_timezone(&Utc);
-                        Some(r)
-                    }
-                    LocalResult::Ambiguous(dt, _) => {
-                        let r: DateTime<Utc> = dt.with_timezone(&Utc);
-                        Some(r)
-                    }
-                    LocalResult::None => Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc)),
-                }
-            }
+    fn local_result_to_utc(lr: LocalResult<DateTime<Tz>>) -> Option<DateTime<Utc>> {
+        match lr {
+            LocalResult::Single(dt) | LocalResult::Ambiguous(dt, _) => Some(dt.with_timezone(&Utc)),
+            LocalResult::None => None,
         }
+    }
+
+    fn naive_to_utc_in_tz(naive: chrono::NaiveDateTime, tz: &Tz) -> Option<DateTime<Utc>> {
+        if let Some(utc) = Self::local_result_to_utc(tz.from_local_datetime(&naive)) {
+            return Some(utc);
+        }
+        let advanced = naive + chrono::Duration::hours(1);
+        if let Some(utc) = Self::local_result_to_utc(tz.from_local_datetime(&advanced)) {
+            return Some(utc);
+        }
+        Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc))
     }
 
     fn name_hash(name: &str) -> u64 {
