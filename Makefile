@@ -8,7 +8,6 @@ install:
 PY_DIR=$(CURDIR)/../bin
 
 static-check:
-	cd $(CURDIR)/code/zato-broker    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-cli       && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-client    && $(MAKE) static-check
 	cd $(CURDIR)/code/zato-common    && $(MAKE) static-check
@@ -51,7 +50,6 @@ hl7-tests:
 build:
 	$(MAKE) server-build
 	$(MAKE) scheduler-build
-	$(MAKE) broker-build
 	$(MAKE) sio-build
 
 server-build:
@@ -66,34 +64,6 @@ scheduler-build:
 
 sio-build:
 	cd $(CURDIR)/code/zato-common && $(MAKE) build
-
-broker-build:
-	cd $(CURDIR)/code/zato-broker && $(MAKE) build
-
-broker-run:
-	cd $(CURDIR)/code/zato-broker && $(MAKE) run
-
-broker-tests:
-	cd $(CURDIR)/code/zato-broker && $(MAKE) test
-
-PERF_NUMS := $(filter-out broker-perf-tests broker-perf-tests-rest broker-extra-tests json,$(MAKECMDGOALS))
-
-broker-perf-tests:
-ifeq ($(filter json,$(MAKECMDGOALS)),json)
-	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="--json $(PERF_NUMS)"
-else
-	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test PERF_ARGS="$(PERF_NUMS)"
-endif
-
-broker-perf-tests-rest:
-ifeq ($(filter json,$(MAKECMDGOALS)),json)
-	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test-rest PERF_ARGS="--json $(PERF_NUMS)"
-else
-	cd $(CURDIR)/code/zato-broker && $(MAKE) perf-test-rest PERF_ARGS="$(PERF_NUMS)"
-endif
-
-broker-extra-tests:
-	cd $(CURDIR)/code/zato-broker && $(MAKE) extra-tests
 
 json:
 	@:
