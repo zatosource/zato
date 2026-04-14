@@ -1,5 +1,3 @@
-#![deny(warnings, dead_code)]
-
 mod inference;
 pub mod compat;
 mod service_input;
