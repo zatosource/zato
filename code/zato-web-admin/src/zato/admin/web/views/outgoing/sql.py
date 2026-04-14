@@ -94,6 +94,7 @@ def index(req):
         'edit_form':edit_form,
         'change_password_form': change_password_form,
         'paginate':True,
+        'show_search_form':True,
         'meta': meta,
         'req': req,
         }

@@ -315,6 +315,7 @@ def index(req): # type: ignore
         'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
         'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
         'paginate':True,
+        'show_search_form':True,
         'meta': meta,
         'req':req,
         'openapi_sample_data': openapi_sample_data,
