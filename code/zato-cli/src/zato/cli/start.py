@@ -58,11 +58,12 @@ Examples:
     opts = [
         {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'},
         {'name':'--deploy', 'help':'Resources to deploy', 'action':'store'},
-        {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'},
+        {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state", 'action':'store_true'},
         {'name':'--secret-key', 'help':"Component's secret key", 'action':'store'},
         {'name':'--env-file', 'help':'Path to a file with environment variables to use', 'action':'store'},
         {'name':'--stop-after', 'help':'After how many seconds to stop all the Zato components in the system', 'action':'store'},
-        {'name':'--stderr-path', 'help':'Where to redirect stderr', 'action':'store'}
+        {'name':'--stderr-path', 'help':'Where to redirect stderr', 'action':'store'},
+        {'name':'--enforce-manifest', 'help':'Build and reuse an internal services manifest for O(1) startup', 'action':'store_true'}
     ]
 
 # ################################################################################################################################
@@ -163,6 +164,7 @@ Examples:
             'stderr_path': self.args.stderr_path,
             'env_file': env_file,
             'stop_after': self.args.stop_after,
+            'enforce_manifest': getattr(self.args, 'enforce_manifest', False),
         }
 
         if extra_options:
@@ -554,16 +556,8 @@ Examples:
 # ################################################################################################################################
 
     def _on_scheduler(self, *ignored:'any_') -> 'None':
-        from zato.common.util.updates import setup_update_file_logger
-        setup_update_file_logger(component_name='scheduler')
-
-        env_vars = {
-            'Zato_Component_Dir': self.component_dir,
-            'ZATO_SCHEDULER_BASE_DIR': self.component_dir
-        }
-        self.run_check_config()
-        _ = self.check_pidfile()
-        _ = self.start_component('zato.scheduler.main', 'scheduler', '', self.delete_pidfile, env_vars=env_vars)
+        self.logger.info('The scheduler is now an in-process thread inside the Zato server, not a separate component.')
+        self.logger.info('Start the server instead: zato start /path/to/server')
 
 # ################################################################################################################################
 # ################################################################################################################################

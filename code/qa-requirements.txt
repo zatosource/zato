@@ -4,6 +4,8 @@ flake8-bugbear
 flake8-coding
 flake8-comprehensions
 flake8-quotes
+hl7apy==1.3.5
+hypothesis==6.151.9
 mock==5.2.0
 mypy
 mypy-extensions>=1.0.0,<2.0.0
@@ -11,10 +13,11 @@ openapi-spec-validator
 openapi3==1.8.2
 pyflakes==3.2.0
 pylint
-pyright==1.1.266
-pytest==8.3.4
+pyright==1.1.408
+pytest==9.0.2
+pytest-cov==7.1.0
 requests-openapi
-schemathesis==4.1.3
+schemathesis==4.14.3
 selenium==4.2.0
 selenium-wire
 types-markdown

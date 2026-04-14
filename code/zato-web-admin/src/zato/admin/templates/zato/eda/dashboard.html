@@ -1,0 +1,65 @@
+{% extends "zato/settings-base.html" %}
+
+{% block page_title %}Pub/sub activity{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
+{% endblock %}
+
+{% block section_title %}Pub/sub activity
+
+<span class="eda-refresh-indicator" id="eda-last-refresh"></span>
+
+{% endblock %}
+{% block help_icon_id %}eda-dashboard-help{% endblock %}
+
+{% block extra_page_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/dashboard.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.eda.dashboard.init({{ dashboard_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block content_rows %}
+
+<div class="stat-cards">
+
+    <div class="stat-card">
+        <div><div class="stat-card-label">Topics</div><div class="stat-card-value" id="stat-topics">-</div></div>
+        <div id="spark-topics"></div>
+    </div>
+
+    <div class="stat-card">
+        <div><div class="stat-card-label">Total published</div><div class="stat-card-value" id="stat-messages">-</div></div>
+        <div id="spark-messages"></div>
+    </div>
+
+    <div class="stat-card">
+        <div><div class="stat-card-label">Current depth</div><div class="stat-card-value" id="stat-depth">-</div></div>
+        <div id="spark-depth"></div>
+    </div>
+
+    <div class="stat-card">
+        <div><div class="stat-card-label">Subscribers</div><div class="stat-card-value" id="stat-subscribers">-</div></div>
+        <div id="spark-subscribers"></div>
+    </div>
+
+</div>
+
+<h3 class="section-title">Topic activity</h3>
+<table class="eda-table" id="topic-table">
+    <thead><tr><th>Topic</th><th>Depth</th><th>Published</th><th>Last publish</th><th>Subscribers</th></tr></thead>
+    <tbody id="topic-table-body"></tbody>
+</table>
+<div class="view-all-link"><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:"1" }}">View all topics</a></div>
+
+<h3 class="section-title">Subscriber queues</h3>
+<table class="eda-table" id="queue-table">
+    <thead><tr><th>Subscriber</th><th>Queue depth</th><th>Topic</th></tr></thead>
+    <tbody id="queue-table-body"></tbody>
+</table>
+<div class="view-all-link"><a href="{% url "pubsub-subscription" %}?cluster={{ cluster_id|default:"1" }}">View all subscriptions</a></div>
+{% endblock %}

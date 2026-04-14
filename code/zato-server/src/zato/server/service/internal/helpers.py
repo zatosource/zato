@@ -8,7 +8,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-from contextlib import closing
 from dataclasses import dataclass
 from io import StringIO
 from json import loads
@@ -17,11 +16,7 @@ from tempfile import gettempdir
 from traceback import format_exc
 from unittest import TestCase
 
-# Prometheus
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-
 # Zato
-from zato.common.test import rand_csv, rand_string
 from zato.common.typing_ import cast_, intnone, list_, optional
 from zato.common.util.api import utcnow
 from zato.common.util.open_ import open_w
@@ -165,17 +160,6 @@ class PubInputLogger(Service):
         self.response.payload.world = f'{self.name} received your request.'
 
 # ################################################################################################################################
-
-class GetMetrics(Service):
-    """ Returns metrics in Prometheus format.
-    """
-    name = 'zato.metrics.get'
-
-    def handle(self):
-        self.response.payload = generate_latest().decode('utf-8')
-        self.response.content_type = CONTENT_TYPE_LATEST
-
-# ################################################################################################################################
 # ################################################################################################################################
 
 class HTMLService(Service):
@@ -232,7 +216,7 @@ class BaseServiceGateway:
             raise Unauthorized(self.cid, 'Unauthorized', 'gateway')
 
     def _set_sec_def(self, username):
-        self.wsgi_environ['zato.sec_def'] = {
+        self.http_environ['zato.sec_def'] = {
             'id': None,
             'name': None,
             'type': SEC_DEF_TYPE.BASIC_AUTH,
@@ -241,7 +225,21 @@ class BaseServiceGateway:
         }
 
     def _invoke_service(self, service, request):
-        return self.invoke(service, request, wsgi_environ=self.wsgi_environ)
+        if isinstance(request, bytes):
+            request = request.decode('utf-8')
+        if isinstance(request, str):
+            import json as json_lib
+            try:
+                request = json_lib.loads(request)
+            except (ValueError, TypeError):
+                pass
+        if isinstance(request, dict):
+            for key in list(request):
+                if isinstance(request[key], dict):
+                    request = request[key]
+                    break
+            request['cluster_id'] = 1
+        return self.invoke(service, request, http_environ=self.http_environ)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -258,7 +256,7 @@ class ServiceGateway(BaseServiceGateway, Service):
 
         self._check_service_allowed(service, channel_id)
 
-        username = self.wsgi_environ.get('HTTP_X_ZATO_USERNAME', '')
+        username = self.http_environ.get('HTTP_X_ZATO_USERNAME', '')
         self._set_sec_def(username)
 
         self.response.payload = self._invoke_service(service, request)
@@ -278,7 +276,7 @@ class DjangoServiceGateway(BaseServiceGateway, Service):
         if not password:
             raise Forbidden(self.cid)
 
-        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        auth_header = self.http_environ.get('HTTP_AUTHORIZATION', '')
         if not auth_header:
             raise Forbidden(self.cid)
 
@@ -289,11 +287,11 @@ class DjangoServiceGateway(BaseServiceGateway, Service):
         service = self.request.http.params.get('service')
         request = self.request.raw_request
 
-        django_user = self.wsgi_environ.get('HTTP_X_ZATO_USER', '')
-        correlation_id = self.wsgi_environ.get('HTTP_X_ZATO_CORRELATION_ID', '')
-        forwarded_for = self.wsgi_environ.get('HTTP_X_ZATO_FORWARDED_FOR', '')
+        django_user = self.http_environ.get('HTTP_X_ZATO_USER', '')
+        correlation_id = self.http_environ.get('HTTP_X_ZATO_CORRELATION_ID', '')
+        forwarded_for = self.http_environ.get('HTTP_X_ZATO_FORWARDED_FOR', '')
 
-        self.wsgi_environ['zato.request_ctx'] = {
+        self.http_environ['zato.request_ctx'] = {
             'django_user': django_user,
             'correlation_id': correlation_id,
             'forwarded_for': forwarded_for,
@@ -312,9 +310,8 @@ class APISpecHelperUser(Service):
     """
     name = 'helpers.api-spec.user'
 
-    class SimpleIO:
-        input  = GetUserRequest
-        output = GetUserResponse
+    input  = GetUserRequest
+    output = GetUserResponse
 
 # ################################################################################################################################
 
@@ -421,9 +418,8 @@ class MyDataclassService(Service):
     """
     name = 'helpers.dataclass-service'
 
-    class SimpleIO:
-        input  = MyRequest
-        output = MyResponse
+    input  = MyRequest
+    output = MyResponse
 
     def handle(self):
         pass
@@ -435,8 +431,7 @@ class CommandsService(Service):
 
     name = 'helpers.commands-service'
 
-    class SimpleIO:
-        output = CommandResult
+    output = CommandResult
 
     class _CommandsServiceTestCase(TestCase):
 
@@ -464,6 +459,7 @@ class CommandsService(Service):
 
             # Local aliases
             tmp_dir = gettempdir()
+            from zato.common.test import rand_csv, rand_string as _rand_string
 
             # Test data that we will expect to read back from a test file
             data = data or rand_csv()
@@ -474,7 +470,7 @@ class CommandsService(Service):
                 timeout = cast_('float', None)
 
             # Where our test data is
-            test_file_name = rand_string(prefix='commands-test_invoke_core') + '.txt'
+            test_file_name = _rand_string(prefix='commands-test_invoke_core') + '.txt'
             full_path = os.path.join(tmp_dir, test_file_name)
 
             # Log useful details
@@ -727,24 +723,19 @@ class OpenAPIHandler(Service):
         out = []
         for item in rest_channel_list:
             if item['state'] == 'on':
-                out.append(int(item['id']))
+                out.append(item['id'])
         return out
 
-    def _get_basic_auth_security_ids(self, session, rest_channels):
+    def _get_basic_auth_security_ids(self, rest_channels):
         """ Returns set of security IDs for REST channels that use basic auth.
         """
-        from zato.common.odb.model import SecurityBase
-
         out = set()
         for rest_channel in rest_channels:
-            if rest_channel.security_id:
-                # Check if this security definition is basic auth
-                sec_base = session.query(SecurityBase).filter(
-                    SecurityBase.id == rest_channel.security_id,
-                    SecurityBase.sec_type == SEC_DEF_TYPE.BASIC_AUTH,
-                ).first()
-                if sec_base:
-                    out.add(rest_channel.security_id)
+            security_id = rest_channel.get('security_id')
+            if security_id:
+                sec_def = self.server.worker_store.basic_auth_get_by_id(security_id)
+                if sec_def:
+                    out.add(security_id)
         return out
 
     def _check_credentials(self, auth_header, basic_auth_security_ids):
@@ -769,30 +760,27 @@ class OpenAPIHandler(Service):
         """
         out = []
         for rest_channel in rest_channels:
-            # Try to get the source path for the service
+            service_name = rest_channel.get('service_name', rest_channel.get('name', ''))
+
             source_path = None
-            if rest_channel.service:
+            if service_name:
                 try:
                     source_info = self.invoke('zato.service.get-source-info', {
                         'cluster_id': self.server.cluster_id,
-                        'name': rest_channel.service.name,
+                        'name': service_name,
                     })
                     if source_info:
                         response_data = source_info['zato_service_get_source_info_response']
                         source_path = response_data['source_path']
                 except Exception:
-                    logger.warning('Could not get source info for %s: %s', rest_channel.service.name, format_exc())
+                    logger.warning('Could not get source info for %s: %s', service_name, format_exc())
 
-            # Get security name if assigned
-            security_name = None
-            if rest_channel.security:
-                security_name = rest_channel.security.name
+            security_name = rest_channel.get('security_name')
 
-            # Build service info dict
             out.append({
-                'name': rest_channel.service.name if rest_channel.service else rest_channel.name,
-                'url_path': rest_channel.url_path,
-                'http_method': rest_channel.method or 'POST',
+                'name': service_name,
+                'url_path': rest_channel.get('url_path', ''),
+                'http_method': rest_channel.get('method', 'POST'),
                 'source_path': source_path,
                 'security_name': security_name,
             })
@@ -801,71 +789,51 @@ class OpenAPIHandler(Service):
     def handle(self):
         """ Main entry point - validates credentials and returns OpenAPI spec.
         """
-        from zato.common.odb.model import GenericConn, HTTPSOAP
         from zato.common.util.openapi_.exporter import build_openapi_spec
         from zato.server.connection.http_soap import BadRequest
 
-        # Credentials are required - reject immediately if missing
-        auth_header = self.wsgi_environ.get('HTTP_AUTHORIZATION', '')
+        auth_header = self.http_environ.get('HTTP_AUTHORIZATION', '')
         if not auth_header:
             raise Forbidden(self.cid)
 
-        # Channel name from URL is required
         channel_name = self.request.http.params.get('name')
         if not channel_name:
             raise Forbidden(self.cid)
 
         try:
-            with closing(self.odb.session()) as session:
+            channel = self.server.config_store.get('generic_connection', channel_name)
+            if not channel:
+                raise Forbidden(self.cid)
 
-                # Look up the OpenAPI channel by name
-                channel = session.query(GenericConn).filter(
-                    GenericConn.type_ == GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI,
-                    GenericConn.name == channel_name,
-                    GenericConn.cluster_id == self.server.cluster_id,
-                ).first()
+            active_rest_channel_ids = self._get_active_rest_channel_ids(channel)
 
-                # Reject if channel not found
-                if not channel:
-                    raise Forbidden(self.cid)
+            rest_channels = []
+            if active_rest_channel_ids:
+                channel_data = self.server.worker_store.request_dispatcher.url_data.channel_data
+                for item in channel_data:
+                    if item.get('connection') == CONNECTION.CHANNEL and \
+                       item.get('transport') == URL_TYPE.PLAIN_HTTP and \
+                       item.get('id') in active_rest_channel_ids:
+                        rest_channels.append(item)
 
-                # Get IDs of active REST channels
-                active_rest_channel_ids = self._get_active_rest_channel_ids(channel)
+            basic_auth_security_ids = self._get_basic_auth_security_ids(rest_channels)
 
-                # Fetch the actual REST channel objects
-                rest_channels = []
-                if active_rest_channel_ids:
-                    rest_channels = list(session.query(HTTPSOAP).filter(
-                        HTTPSOAP.id.in_(active_rest_channel_ids),
-                        HTTPSOAP.cluster_id == self.server.cluster_id,
-                        HTTPSOAP.connection == CONNECTION.CHANNEL,
-                        HTTPSOAP.transport == URL_TYPE.PLAIN_HTTP,
-                    ))
+            if not self._check_credentials(auth_header, basic_auth_security_ids):
+                raise Forbidden(self.cid)
 
-                # Get basic auth security IDs from the REST channels
-                basic_auth_security_ids = self._get_basic_auth_security_ids(session, rest_channels)
+            services_info = self._collect_services_info(rest_channels)
 
-                # Validate credentials against any of the basic auth definitions
-                if not self._check_credentials(auth_header, basic_auth_security_ids):
-                    raise Forbidden(self.cid)
+            file_paths = []
+            for item in services_info:
+                if item['source_path']:
+                    file_paths.append(item['source_path'])
 
-                # Collect service metadata from REST channels
-                services_info = self._collect_services_info(rest_channels)
+            yaml_output = build_openapi_spec(channel_name, services_info, file_paths)
 
-                # Collect source file paths for scanning
-                file_paths = []
-                for item in services_info:
-                    if item['source_path']:
-                        file_paths.append(item['source_path'])
+            logger.info('Generated OpenAPI for channel %s', channel_name)
 
-                # Use shared OpenAPI generation
-                yaml_output = build_openapi_spec(channel_name, services_info, file_paths)
-
-                logger.info('Generated OpenAPI for channel %s', channel_name)
-
-                # Return YAML response
-                self.response.payload = yaml_output
-                self.response.content_type = 'application/x-yaml'
+            self.response.payload = yaml_output
+            self.response.content_type = 'application/x-yaml'
 
         except Forbidden:
             raise

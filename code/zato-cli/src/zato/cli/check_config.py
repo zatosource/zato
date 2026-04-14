@@ -48,61 +48,6 @@ class CheckConfig(ManageCommand):
 
 # ################################################################################################################################
 
-    def ping_sql(self, engine_params, ping_query):
-
-        # Zato
-        from zato.common.odb import ping_database
-
-        ping_database(engine_params, ping_query)
-
-        if self.show_output:
-            self.logger.info('SQL ODB connection OK')
-
-# ################################################################################################################################
-
-    def check_sql_odb_server_scheduler(self, cm, conf, fs_sql_config, needs_decrypt_password=True):
-
-        # Zato
-        from zato.common.odb.ping import get_ping_query
-
-        engine_params = dict((conf['odb']))
-        engine_params['extra'] = {}
-        engine_params['pool_size'] = 1
-
-        # This will be needed by scheduler but not server
-        if needs_decrypt_password:
-            password = engine_params['password']
-            if password:
-                engine_params['password'] = cm.decrypt(password)
-
-        self.ping_sql(engine_params, get_ping_query(fs_sql_config, engine_params))
-
-# ################################################################################################################################
-
-    def check_sql_odb_web_admin(self, cm, conf):
-
-        # Zato
-        from zato.common.api import ping_queries
-
-        pairs = (
-            ('engine', 'db_type'),
-            ('username', 'DATABASE_USER'),
-            ('password', 'DATABASE_PASSWORD'),
-            ('host', 'DATABASE_HOST'),
-            ('port', 'DATABASE_PORT'),
-            ('db_name', 'DATABASE_NAME'),
-        )
-        engine_params = {'extra':{}, 'pool_size':1}
-        for sqlalch_name, django_name in pairs:
-            engine_params[sqlalch_name] = conf[django_name]
-        password = engine_params['password']
-        if password:
-            engine_params['password'] = cm.decrypt(password)
-
-        self.ping_sql(engine_params, ping_queries[engine_params['engine']])
-
-# ################################################################################################################################
-
     def ensure_no_pidfile(self, log_file_marker):
 
         # stdlib
@@ -110,7 +55,6 @@ class CheckConfig(ManageCommand):
 
         pidfile = abspath(join(self.component_dir, 'pidfile'))
 
-        # Pidfile exists ..
         if exists(pidfile):
 
             # stdlib
@@ -123,9 +67,6 @@ class CheckConfig(ManageCommand):
             from zato.common.api import INFO_FORMAT
             from zato.common.component_info import get_info
 
-            # .. but raise an error only if the PID it points to belongs
-            # to an already running component. Otherwise, it must be a stale pidfile
-            # that we can safely delete.
             pid = open_r(pidfile).read().strip()
             try:
                 if pid:
@@ -136,28 +77,14 @@ class CheckConfig(ManageCommand):
                 try:
                     _ = get_info(self.component_dir, INFO_FORMAT.DICT)
                 except AccessDenied:
-                    # This could be another process /or/ it can be our own component started by another user,
-                    # so to be on the safe side, indicate an error instead of deleting the pidfile
                     raise Exception('Access denied to PID `{}` found in `{}`'.format(pid, pidfile))
                 except NoSuchProcess:
-                    # This is fine, there is no process of that PID,
-                    # which means that this PID does not belong to our component
-                    # (because it doesn't belong to any process), so we may just delete this pidfile safely ..
                     try:
                         os.remove(pidfile)
                     except Exception:
                         pass
 
                 else:
-                    #
-                    # This PID exists, but it still still possible that it belongs to another process
-                    # that took over a PID previously assigned to a Zato component,
-                    # in which case we can still delete the pidfile.
-                    #
-                    # We decide that a process is actually an already running Zato component if it has
-                    # opened log files that should belong that kind of component, as indicated by log_file_marker,
-                    # otherwise we assume this PID belongs to a completely different process and we can delete pidfile.
-                    #
                     has_log = False
                     has_lock = False
 
@@ -171,11 +98,9 @@ class CheckConfig(ManageCommand):
                             elif name.path == lock_path:
                                 has_lock = True
 
-                    # Both files exist - this is our component and it's running so we cannot continue
                     if has_log and has_lock:
                         raise Exception('Cannot proceed, found pidfile `{}`'.format(pidfile))
 
-                    # This must be an unrelated process, so we can delete pidfile ..
                     try:
                         os.remove(pidfile)
                     except Exception:
@@ -188,31 +113,10 @@ class CheckConfig(ManageCommand):
 
     def on_server_check_port_available(self, server_conf):
 
-        address = server_conf['main']['gunicorn_bind']
-        _, port = address.split(':')
+        host = server_conf['main'].get('host', '0.0.0.0')
+        port = server_conf['main']['port']
+        address = f'{host}:{port}'
         self.ensure_port_free('Server', int(port), address)
-
-# ################################################################################################################################
-
-    def get_crypto_manager(self, secret_key=None, stdin_data=None, class_=None):
-
-        # stdlib
-        from os.path import join
-
-        return class_.from_repo_dir(secret_key, join(self.config_dir, 'repo'), stdin_data)
-
-# ################################################################################################################################
-
-    def get_sql_ini(self, conf_file, repo_dir=None):
-
-        # stdlib
-        from os.path import join
-
-        # Zato
-        from zato.common.ext.configobj_ import ConfigObj
-
-        repo_dir = repo_dir or join(self.config_dir, 'repo')
-        return ConfigObj(join(repo_dir, conf_file))
 
 # ################################################################################################################################
 
@@ -223,20 +127,15 @@ class CheckConfig(ManageCommand):
 
         # Zato
         from zato.common.ext.configobj_ import ConfigObj
-
-        # Zato
         from zato.common.crypto.api import ServerCryptoManager
 
         cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None),
             class_=ServerCryptoManager)
 
-        fs_sql_config = self.get_sql_ini('sql.conf')
         repo_dir = join(self.component_dir, 'config', 'repo')
         server_conf_path = join(repo_dir, 'server.conf')
         secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
         server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
-
-        self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config, False)
 
         if getattr(args, 'ensure_no_pidfile', False):
             self.ensure_no_pidfile('server')
@@ -248,22 +147,6 @@ class CheckConfig(ManageCommand):
 
     def _on_web_admin(self, args, *ignored_args, **ignored_kwargs):
 
-        # stdlib
-        from os.path import join
-
-        # Zato
-        from zato.common.crypto.api import WebAdminCryptoManager
-        from zato.common.crypto.secret_key import resolve_secret_key
-
-        repo_dir = join(self.component_dir, 'config', 'repo')
-
-        secret_key = getattr(args, 'secret_key', None)
-        secret_key = resolve_secret_key(secret_key)
-
-        self.check_sql_odb_web_admin(
-            self.get_crypto_manager(secret_key, getattr(args, 'stdin_data', None), WebAdminCryptoManager),
-            self.get_json_conf('web-admin.conf', repo_dir))
-
         self.ensure_no_pidfile('web-admin')
         self.ensure_json_config_port_free('Web admin', 'web-admin.conf')
 
@@ -271,25 +154,15 @@ class CheckConfig(ManageCommand):
 
     def _on_scheduler(self, args, *ignored_args, **ignored_kwargs):
 
+        self.ensure_no_pidfile('scheduler')
+
+# ################################################################################################################################
+
+    def get_crypto_manager(self, secret_key=None, stdin_data=None, class_=None):
+
         # stdlib
         from os.path import join
 
-        # Zato
-        from zato.common.crypto.api import SchedulerCryptoManager
-        from zato.common.ext.configobj_ import ConfigObj
-
-        repo_dir = join(self.component_dir, 'config', 'repo')
-        server_conf_path = join(repo_dir, 'scheduler.conf')
-
-        cm = self.get_crypto_manager(getattr(args, 'secret_key', None), getattr(args, 'stdin_data', None), SchedulerCryptoManager)
-
-        secrets_conf_path = ConfigObj(join(repo_dir, 'secrets.conf'), use_zato=False)
-        server_conf = ConfigObj(server_conf_path, zato_secrets_conf=secrets_conf_path, zato_crypto_manager=cm, use_zato=True)
-
-        # ODB is optional for schedulers
-        if 'odb' in server_conf:
-            fs_sql_config = self.get_sql_ini('sql.conf')
-            self.check_sql_odb_server_scheduler(cm, server_conf, fs_sql_config)
-            self.ensure_no_pidfile('scheduler')
+        return class_.from_repo_dir(secret_key, join(self.config_dir, 'repo'), stdin_data)
 
 # ################################################################################################################################

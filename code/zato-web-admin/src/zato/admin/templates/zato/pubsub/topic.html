@@ -57,16 +57,16 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/search-form.html" with page_prompt="Search"%}
-
-
     {% if cluster_id %}
+
+        <div id="markup">
+
+{% include "zato/search-form.html" with page_prompt="Search"%}
 
         <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.pubsub.topic.create()">Create a new pub/sub topic</a>
         </div>
 
-        <div id="markup">
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
@@ -80,7 +80,7 @@
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -102,6 +102,7 @@
                         <td class='ignore' style="text-align:center">{{ item.publisher_count }}</td>
                         <td class='ignore' style="text-align:center">{{ item.subscriber_count }}</td>
 
+                        <td><a href="{% url 'eda-topic-detail' topic_name=item.name %}?cluster={{ cluster_id|default:'1' }}">View</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -121,9 +122,9 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

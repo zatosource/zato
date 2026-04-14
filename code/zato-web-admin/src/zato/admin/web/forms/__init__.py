@@ -194,7 +194,7 @@ class SearchForm(forms.Form):
         #
         # https://github.com/zatosource/zato/issues/361
         #
-        # If the length is 1 it we have only one cluster defined in ODB.
+        # If the length is 1 we have only one cluster defined.
         # This means we can make use that only one straightaway to display anything that is needed.
         #
 

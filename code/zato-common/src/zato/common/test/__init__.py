@@ -25,22 +25,19 @@ from six import string_types
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common.api import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.api import CHANNEL, DATA_FORMAT
 from zato.common.ext.configobj_ import ConfigObj
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import MarshalAPI
-from zato.common.odb import model
-from zato.common.odb.model import Cluster, ElasticSearch
-from zato.common.odb.api import SessionWrapper, SQLConnectionPool
-from zato.common.odb.query import search_es_list
-from zato.common.simpleio_ import get_bytes_to_str_encoding, get_sio_server_config, simple_io_conf_contents
+from zato.common.sql_pool import SessionWrapper, SQLConnectionPool
+from zato.common.simpleio_ import get_bytes_to_str_encoding
 from zato.common.py23_ import maxint
 from zato.common.typing_ import cast_
 from zato.common.util.api import is_port_taken, new_cid
 from zato.server.service import Service
 
-# Zato - Cython
-from zato.simpleio import CySimpleIO
+# Zato - Rust SIO
+from zato_sio import SIOProcessor
 
 # Python 2/3 compatibility
 from zato.common.py23_.past.builtins import basestring, cmp, unicode, xrange
@@ -49,10 +46,8 @@ from zato.common.py23_.past.builtins import basestring, cmp, unicode, xrange
 # ################################################################################################################################
 
 if 0:
-    from zato.common.odb.api import ODBManager
     from zato.common.typing_ import any_, anydict, anylist, intnone, strnone
     from zato.common.util.search import SearchResults
-    ODBManager = ODBManager
     SearchResults = SearchResults
 
 # ################################################################################################################################
@@ -460,15 +455,9 @@ class ServiceTestCase(TestCase):
         worker_store.worker_config.cloud_aws_s3 = MagicMock(return_value=None)
         worker_store.invoke_matcher.is_allowed = MagicMock(return_value=True)
 
-        simple_io_config = {
-            'int_parameters': SIMPLE_IO.INT_PARAMETERS.VALUES,
-            'int_parameter_suffixes': SIMPLE_IO.INT_PARAMETERS.SUFFIXES,
-            'bool_parameter_prefixes': SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES,
-        }
-
         class_.update(
             instance, channel, TestServer(service_store_name_to_impl_name, service_store_impl_name_to_service, worker_store),
-            None, worker_store, new_cid(), request_data, request_data, simple_io_config=simple_io_config,
+            None, worker_store, new_cid(), request_data, request_data,
             data_format=data_format, job_type=job_type)
 
         def get_data(self, *ignored_args, **ignored_kwargs):
@@ -671,36 +660,13 @@ class BaseSIOTestCase(TestCase):
         self.maxDiff = maxint
 
     def get_server_config(self, needs_response_elem=False):
-
-        with NamedTemporaryFile(delete=False) as f:
-            contents = simple_io_conf_contents.format(bytes_to_str_encoding=get_bytes_to_str_encoding())
-            if isinstance(contents, unicode):
-                contents = contents.encode('utf8')
-            f.write(contents)
-            f.flush()
-            temporary_file_name=f.name
-
-        sio_fs_config = ConfigObj(temporary_file_name)
-        sio_fs_config = bunchify(sio_fs_config)
-
-        import os
-        os.remove(temporary_file_name)
-
-        sio_server_config = get_sio_server_config(sio_fs_config)
-
-        if not needs_response_elem:
-            sio_server_config.response_elem = None
-
-        return sio_server_config
+        return None
 
 # ################################################################################################################################
 
     def get_sio(self, declaration, class_):
-
-        sio = CySimpleIO(None, self.get_server_config(), declaration)
-        sio.build(class_)
-
-        return sio
+        SIOProcessor.attach_sio(None, None, class_)
+        return getattr(class_, '_sio', None)
 
 # ################################################################################################################################
 # ################################################################################################################################

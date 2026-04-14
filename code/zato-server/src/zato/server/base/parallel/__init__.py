@@ -23,40 +23,22 @@ from uuid import uuid4
 from bunch import bunchify
 
 # gevent
-from gevent import sleep
+from gevent import sleep, spawn
 from gevent.lock import RLock
-
-# Open Telemetry
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 # Zato
 from zato.broker import BrokerMessageReceiver
-from zato.broker.redis_client import RedisBrokerClient as BrokerClient
 from zato.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
-    SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SERVER_STARTUP, \
+    SEC_DEF_TYPE
 from zato.common.audit import audit_pii
-from zato.common.bearer_token import BearerTokenManager
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB
 from zato.common.const import SECRETS
-from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
-from zato.common.log_streaming import LogStreamingManager
-from zato.common.marshal_.api import MarshalAPI
-from zato.common.odb.api import PoolStore
-from zato.common.odb.post_process import ODBPostProcess
-from zato.common.pubsub.redis_consumer import start_internal_redis_consumer as start_internal_consumer
-from zato.common.pubsub.matcher import PatternMatcher
-from zato.common.pubsub.redis_backend import RedisPubSubBackend
-from zato.common.pubsub.subscriptions_store import SubscriptionsStore
-from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
-    register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
+    spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.env import populate_environment_from_file
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
@@ -64,15 +46,10 @@ from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
 from zato.common.util.platform_ import is_posix
 from zato.common.util.time_ import TimeUtil
-from zato.distlock import LockManager
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
-from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
-from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
-from zato.server.connection.server.rpc.config import ODBConfigSource
-from zato.server.groups.base import GroupsManager
-from zato.server.groups.ctx import SecurityGroupsCtxBuilder
+from zato_server_core import ConfigStore as RustConfigStore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -84,21 +61,30 @@ if 0:
     from ddtrace._trace.tracer import Tracer as DatadogTracer
     from kombu.transport.pyamqp import Message as KombuMessage
     from opentelemetry.trace import Tracer as OTLPTracer
+    from zato.broker.api import BrokerCoreAPI
+    from zato.common.bearer_token import BearerTokenManager
     from zato.common.crypto.api import ServerCryptoManager
-    from zato.common.odb.api import ODBManager
-    from zato.common.odb.model import Cluster as ClusterModel
+    from zato.common.facade import SecurityFacade
+    from zato.common.log_streaming import LogStreamingManager
+    from zato.common.marshal_.api import MarshalAPI
+    from zato.common.sql_pool import PoolStore
+    from zato.common.pubsub.backend import PubSubBackend
+    from zato.common.pubsub.matcher import PatternMatcher
+    from zato.common.pubsub.subscriptions_store import SubscriptionsStore
+    from zato.common.rules.api import RulesManager
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
         strlist, strorlistnone, strnone, strorlist, strset
+    from zato.distlock import LockManager
+    from zato.server.base.worker import WorkerStore
     from zato.server.connection.cache import Cache, CacheAPI
-    from zato.server.ext.zunicorn.arbiter import Arbiter
-    from zato.server.ext.zunicorn.workers.ggevent import GeventWorker
+    from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
+    from zato.server.groups.base import GroupsManager
+    from zato.server.groups.ctx import SecurityGroupsCtxBuilder
     from zato.server.service.store import ServiceStore
-    from zato.simpleio import SIOServerConfig
     from zato.server.startup_callable import StartupCallableTool
 
     bunch_ = bunch_
     KombuMessage = KombuMessage
-    ODBManager = ODBManager
     random_seed = random_seed
     ServerCryptoManager = ServerCryptoManager
     ServiceStore = ServiceStore
@@ -109,7 +95,7 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-kvdb_logger = logging.getLogger('zato_kvdb')
+kvdb_logger = logging.getLogger('zato_broker')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,18 +113,17 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
-    odb: 'ODBManager'
+    config_store: 'RustConfigStore'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
-    on_wsgi_request: 'any_'
+    on_http_request: 'any_'
 
-    cluster: 'ClusterModel'
     worker_store: 'WorkerStore'
     service_store: 'ServiceStore'
 
     rpc: 'ServerRPC'
-    broker_client: 'BrokerClient'
+    broker_client: 'BrokerCoreAPI'
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
     bearer_token_manager: 'BearerTokenManager'
@@ -158,7 +143,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
-    pubsub_redis: 'RedisPubSubBackend'
+    pubsub_backend: 'PubSubBackend'
     pubsub_pattern_matcher: 'PatternMatcher'
     pubsub_subscriptions: 'SubscriptionsStore'
 
@@ -170,7 +155,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.port = -1
         self.use_tls = False
         self.is_starting_first = '<not-set>'
-        self.odb_data = Bunch()
         self.repo_location = ''
         self.user_conf_location:'strlist' = []
         self.user_conf_location_extra:'strset' = set()
@@ -190,7 +174,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pickup_config = Bunch()
         self.logging_config = Bunch()
         self.logging_conf_path = 'server-'
-        self.sio_config = cast_('SIOServerConfig', None)
         self.connector_server_grace_time = None
         self.id = -1
         self.name = ''
@@ -228,12 +211,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.platform_system = platform_system().lower()
         self.user_config = Bunch()
         self.stderr_path = ''
+        from zato.common.marshal_.api import MarshalAPI
         self.marshal_api = MarshalAPI()
         self.env_manager = None # This is taken from util/zato_environment.py:EnvironmentManager
         self.enforce_service_invokes = False
         self.json_parser = BasicParser()
         self.api_key_header = 'Zato-Default-Not-Set-API-Key-Header'
-        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
+        self.api_key_header_http = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
         self.needs_x_zato_cid = False
 
         # Our arbiter may potentially call the cleanup procedure multiple times
@@ -272,12 +256,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.is_admin_enabled_for_info = logging.getLogger('zato_admin').isEnabledFor(INFO)
 
         # Rule engine
+        from zato.common.rules.api import RulesManager
         self.rules = RulesManager()
 
-        # The main config store
+        # The Rust-backed config store
+        self.config_store = RustConfigStore()
+
+        # The main config store (Python side, populated from Rust store)
         self.config = ConfigStore()
 
         # Log streaming manager
+        from zato.common.log_streaming import LogStreamingManager
         self.log_streaming_manager = LogStreamingManager()
 
 # ################################################################################################################################
@@ -295,22 +284,31 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             from zato.common.util.api import find_internal_modules
             from zato.server.service import internal
 
-            # All non-internal services that we have deployed
             locally_deployed = []
 
-            # Internal modules with that are potentially to be deployed
-            deploy_internal = find_internal_modules(internal)
-            internal_service_modules = []
+            manifest_path = self.service_store._find_manifest(self.base_dir)
 
-            # All internal modules were found, now we can build a list of what is to be enabled.
-            if deploy_internal:
-                for module_name in deploy_internal:
-                    internal_service_modules.append(module_name)
+            if manifest_path:
+                logger.info('Using internal services manifest: %s', manifest_path)
+                internal_deployed = self.service_store._import_from_manifest(manifest_path)
+            elif getattr(self, 'enforce_manifest', False):
+                logger.info('Building internal services manifest (enforce-manifest mode)')
+                deploy_internal = find_internal_modules(internal)
+                if not deploy_internal:
+                    raise Exception('No internal modules found to be imported')
+                internal_deployed = self.service_store._build_manifest(list(deploy_internal), self.base_dir)
             else:
-                raise Exception('No internal modules found to be imported')
+                deploy_internal = find_internal_modules(internal)
+                internal_service_modules = []
+                if deploy_internal:
+                    for module_name in deploy_internal:
+                        internal_service_modules.append(module_name)
+                else:
+                    raise Exception('No internal modules found to be imported')
+                internal_deployed = self.service_store.import_internal_services(
+                    internal_service_modules, self.base_dir, self.sync_internal)
 
-            internal = self.service_store.import_internal_services(internal_service_modules, self.base_dir, self.sync_internal)
-            locally_deployed.extend(internal)
+            locally_deployed.extend(internal_deployed)
 
             logger.info('Deploying user-defined services (%s) (%s)', self.name, self.service_sources)
 
@@ -322,20 +320,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             suffix = '' if len_user_defined_deployed == 1 else 's'
 
-            # This will be always logged ..
             logger.info('Deployed %d user-defined service%s (%s)', len_user_defined_deployed, suffix, self.name)
 
-            # .. whereas details are optional.
             if as_bool(os.environ.get('Zato_Log_User_Services_Deployed', False)):
                 for item in sorted(elem.name for elem in user_defined_deployed):
                     logger.info('Deployed user service: %s', item)
 
             return set(locally_deployed)
 
-        # Remove all the deployed services from the DB ..
-        self.odb.drop_deployed_services(server.id)
-
-        # .. deploy them back including any missing ones found on other servers.
+        # Deploy services
         locally_deployed = import_initial_services_jobs()
 
         return locally_deployed
@@ -684,23 +677,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def set_up_odb(self) -> 'None':
-        # This is the call that creates an SQLAlchemy connection
-        self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        self.odb.token = self.config.odb_data.token.decode('utf8')
-        self.odb.decrypt_func = self.decrypt
-
-# ################################################################################################################################
-
     def build_server_rpc(self) -> 'ServerRPC':
 
-        # What our configuration backend is
-        config_source = ODBConfigSource(self.odb, self.cluster_name, self.name, self.decrypt)
+        from zato.server.connection.server.rpc.api import ConfigCtx as _ServerRPC_ConfigCtx, ServerRPC
 
-        # A combination of backend and runtime configuration
-        config_ctx = _ServerRPC_ConfigCtx(config_source, self)
+        # A combination of runtime configuration (no ODB needed)
+        config_ctx = _ServerRPC_ConfigCtx(None, self)
 
         # A publicly available RPC client
         return ServerRPC(config_ctx)
@@ -709,24 +691,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def handle_enmasse_auto_from(self) -> 'None':
 
-        # Zato
-        from zato.server.commands import CommandsFacade
+        enmasse_dir = os.path.join(self.deploy_auto_from, 'enmasse')
 
-        # Local aliases
-        commands = CommandsFacade()
-        commands.init(self)
+        if not os.path.isdir(enmasse_dir):
+            return
 
-        # Full path to a directory with enmasse files ..
-        path = os.path.join(self.deploy_auto_from, 'enmasse')
-        path = Path(path)
+        for file_name in sorted(os.listdir(enmasse_dir)):
+            if file_name.endswith(('.yaml', '.yml')):
+                file_path = os.path.join(enmasse_dir, file_name)
+                logger.info('Loading enmasse auto-deploy YAML: %s', file_path)
+                self.config_store.load_yaml(file_path)
 
-        # enmasse --import --input ./zato-export.yml /path/to/server/
-
-        # .. find all the enmasse files in this directory ..
-        for file_path in sorted(path.iterdir()):
-
-            # .. and run enmasse with each of them.
-            _ = commands.run_enmasse_async_import(file_path)
+        self.reload_config()
 
 # ################################################################################################################################
 
@@ -752,6 +728,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     @staticmethod
     def start_server(parallel_server:'ParallelServer', zato_deployment_key:'str'='') -> 'None':
+
+        # Deferred imports - loaded here to keep module-level import time low
+        from zato.broker.api import BrokerCoreAPI
+        from zato.common.bearer_token import BearerTokenManager
+        from zato.common.facade import SecurityFacade
+        from zato.common.pubsub.consumer import start_internal_consumer
+        from zato.common.pubsub.matcher import PatternMatcher
+        from zato.common.pubsub.backend import PubSubBackend
+        from zato.common.pubsub.subscriptions_store import SubscriptionsStore
+        from zato.distlock import LockManager
+        from zato.server.base.worker import WorkerStore
+        from zato.server.groups.base import GroupsManager
+        from zato.server.groups.ctx import SecurityGroupsCtxBuilder
+        from zato_broker_core import log_admin_info
 
         # Easier to type
         self = parallel_server
@@ -793,48 +783,33 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # identify this particular time the server is running.
         self.deployment_key = zato_deployment_key
 
-        # This is to handle SIGURG signals.
-        if is_posix:
-            register_diag_handlers()
+        # Server identity from server.conf [misc] section
+        self.name = self.fs_server_config.misc.initial_server_name
+        self.cluster_name = self.fs_server_config.misc.initial_cluster_name
+        self.id = 1
+        self.cluster_id = 1
+        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, self.process_cid)
 
-        # Store the ODB configuration, create an ODB connection pool and have self.odb use it
-        self.config.odb_data = self.get_config_odb_data(self)
-        self.set_up_odb()
+        # File-based lock manager (no ODB needed)
+        self.zato_lock_manager = LockManager('fcntl', 'zato', None)
 
-        # Now try grabbing the basic server's data from the ODB. No point
-        # in doing anything else if we can't get past this point.
-        server:'any_' = self.odb.fetch_server(self.config.odb_data)
-
-        if not server:
-            raise Exception('Server does not exist in the ODB')
-
-        # Set up the server-wide default lock manager
-        odb_data:'bunch_' = self.config.odb_data
-
-        if is_posix:
-            backend_type:'str' = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
-        else:
-            backend_type = 'zato-pass-through'
-
-        self.zato_lock_manager = LockManager(backend_type, 'zato', self.odb.session)
-
-        # Just to make sure distributed locking is configured correctly
         with self.zato_lock_manager(uuid4().hex):
             pass
 
-        # Basic metadata
-        self.id = server.id
-        self.name = server.name
-        self.cluster = self.odb.cluster
-        self.cluster_id = self.cluster.id
-        self.cluster_name = self.cluster.name
-        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, self.process_cid)
+        # Load enmasse YAML into the Rust ConfigStore
+        self.load_enmasse_yaml()
 
-        # SQL post-processing
-        ODBPostProcess(self.odb.session(), None, self.cluster_id).run()
+        # Create a server-like object for compatibility
+        server = Bunch()
+        server.id = self.id
+        server.name = self.name
+        server.token = self.fs_server_config.main.token
+        server.cluster = Bunch()
+        server.cluster.id = self.cluster_id
+        server.cluster.name = self.cluster_name
+        server.cluster_id = self.cluster_id
 
-        # Things like initializing SQL data on demand
-        self._pre_initialize()
+
 
         logger.info(
             'Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`',
@@ -849,8 +824,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         http_methods_allowed_re = '|'.join(self.http_methods_allowed)
         self.http_methods_allowed_re = '({})'.format(http_methods_allowed_re)
 
-        # Reads in all configuration from ODB
+
+
+        # Reads in all configuration from the Rust ConfigStore
         self.worker_store = WorkerStore(self.config, self)
+
         self.set_up_config(server) # type: ignore
 
         # Normalize hot-deploy configuration
@@ -884,8 +862,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # which is why we are doing it here, before worker_store.init() is called.
         self.worker_store.early_init()
 
-        # Deploys services
         locally_deployed = self._after_init_common(server) # type: ignore
+
+        # Broker construction - start it in a greenlet so the Rust-heavy __init__
+        # (fs_init, fs_start_http_server) overlaps with the Python setup below.
+        def _init_broker():
+            self.broker_client = BrokerCoreAPI(server=self)
+            self.broker_client.ping_connection()
+            self.broker_client.delete_queue(self.process_cid, 'server')
+            self.broker_client.create_internal_queue('server')
+            self.broker_client.start_consumer()
+
+        broker_greenlet = spawn(_init_broker)
 
         # Build objects responsible for groups
         self.groups_manager = GroupsManager(self)
@@ -920,14 +908,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
-        # Set up the broker client
-        self.broker_client = BrokerClient(server=self)
-        self.broker_client.ping_connection()
+        # Pub/sub objects that don't need the broker client yet
+        self.pubsub_pattern_matcher = PatternMatcher()
+        self.pubsub_subscriptions = SubscriptionsStore()
+        self._load_pubsub_permissions()
 
-        # Delete the queue to remove any message we don't want to read since they were published when we were not running,
-        # and then create it all again so we have a fresh start.
-        self.broker_client.delete_queue(self.process_cid, 'server')
-        self.broker_client.create_internal_queue('server')
+        broker_greenlet.get()
 
         # Configure internal pub/sub
         _ = spawn_greenlet(
@@ -938,20 +924,24 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             self.on_pubsub_message
         )
 
-        # Initialize Redis pub/sub backend using broker client's Redis connection
-        self.pubsub_redis = RedisPubSubBackend(self.broker_client.redis)
-        self.pubsub_pattern_matcher = PatternMatcher()
-        self.pubsub_subscriptions = SubscriptionsStore()
+        # Initialize the pub/sub backend using the broker client
+        self.pubsub_backend = PubSubBackend(self.broker_client)
 
-        # Load pub/sub permissions from database into pattern matcher
-        self._load_pubsub_permissions()
+        # Register auth callbacks so the broker's Rust HTTP server
+        # can validate credentials and permissions through the Zato security layer.
+        self.broker_client.set_auth_callbacks(
+            self._check_broker_credentials,
+            self._check_broker_permission,
+        )
+
+        # Pre-load all Basic Auth credentials into Rust for GIL-free checking.
+        self._push_broker_credentials()
 
         # Let the worker know the broker client is ready
         self.worker_store.set_broker_client(self.broker_client)
         self.worker_store.after_broker_client_set()
 
         self._after_init_accepted(locally_deployed)
-        self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
 
         self.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.IN_PROCESS_FIRST, kwargs={
             'server': self,
@@ -987,6 +977,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
+        # Start the Rust scheduler thread (in-process, same pattern as the broker)
+        self._start_scheduler()
+
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
@@ -995,167 +988,159 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _pre_initialize(self) -> 'None':
+        pass
 
-        from contextlib import closing
-        from zato.common.util.channel import ensure_django_channel_exists, ensure_openapi_channel_exists
+# ################################################################################################################################
 
-        with closing(self.odb.session()) as session:
-            openapi_created = ensure_openapi_channel_exists(session, self.cluster_id)
-            django_created = ensure_django_channel_exists(session, self.cluster_id)
+    def _start_scheduler(self) -> 'None':
+        """ Start the Rust scheduler thread inside this server process.
+        """
+        from json import loads as json_loads
 
-            if openapi_created or django_created:
-                session.commit()
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+        from zato_scheduler_core import scheduler_start
 
-            if openapi_created:
-                logger.info('Created OpenAPI handler channel')
+        self._scheduler_started = False
 
-            if django_created:
-                logger.info('Created Django handler channel')
+        def _scheduler_run_cb(spawn_fn, on_job_executed_cb, ctx_json):
+            spawn_fn(on_job_executed_cb, ctx_json)
+
+        def _on_job_executed(ctx_json):
+            try:
+                ctx = json_loads(ctx_json)
+                msg = {
+                    'action': SCHEDULER_MSG.JOB_EXECUTED.value,
+                    'name': ctx['name'],
+                    'service': ctx['service'],
+                    'payload': ctx.get('extra') or '',
+                    'cid': new_cid_server(),
+                    'job_type': ctx['job_type'],
+                    'zato_ctx': {
+                        'scheduler_job_id': ctx['id'],
+                    },
+                }
+                self.broker_client.invoke_async(msg)
+            except Exception:
+                logger.warning('Scheduler dispatch error: %s', format_exc())
+
+        try:
+            scheduler_start(
+                self.config_store,
+                _scheduler_run_cb,
+                spawn,
+                _on_job_executed,
+                0.5,
+            )
+            self._scheduler_started = True
+            logger.info('Scheduler started')
+        except Exception:
+            logger.warning('Scheduler could not be started: %s', format_exc())
 
 # ################################################################################################################################
 
     def _load_pubsub_permissions(self) -> 'None':
-        """ Load pub/sub permissions from database into the pattern matcher.
+        """ Load pub/sub permissions from the Rust ConfigStore into the pattern matcher.
         """
-        # stdlib
-        from contextlib import closing
-
         # Zato
         from zato.common.api import PubSub
-        from zato.common.odb.model import PubSubPermission, SecurityBase
+        from zato_broker_core import log_admin_info
 
-        logger.info('_load_pubsub_permissions: starting, cluster_id=%s', self.cluster_id)
+        # Load permissions
+        permissions = self.config_store.get_list('pubsub_permission')
 
-        with closing(self.odb.session()) as session:
+        client_permissions = {}
+        username_to_sec_name = {}
 
-            # First log all SecurityBase entries
-            all_sec = session.query(SecurityBase).all()
-            logger.info('_load_pubsub_permissions: found %d SecurityBase entries in DB', len(all_sec))
-            for sec in all_sec:
-                logger.info('_load_pubsub_permissions: SecurityBase id=%s, name=%s, username=%s', sec.id, sec.name, sec.username)
+        for perm in permissions:
+            security = perm.get('security', '')
 
-            # Log all PubSubPermission entries
-            all_perms = session.query(PubSubPermission).filter(PubSubPermission.cluster_id == self.cluster_id).all()
-            logger.info('_load_pubsub_permissions: found %d PubSubPermission entries in DB', len(all_perms))
-            for perm in all_perms:
-                logger.info('_load_pubsub_permissions: PubSubPermission id=%s, sec_base_id=%s, pattern=%s',
-                    perm.id, perm.sec_base_id, perm.pattern)
+            if security not in client_permissions:
+                client_permissions[security] = []
+                username_to_sec_name[security] = security
 
-            permissions = session.query(
-                PubSubPermission.pattern,
-                PubSubPermission.access_type,
-                SecurityBase.username,
-                SecurityBase.name
-            ).join(
-                SecurityBase, PubSubPermission.sec_base_id == SecurityBase.id
-            ).filter(
-                PubSubPermission.cluster_id == self.cluster_id
-            ).all()
+            for topic in perm.get('pub_topics', []):
+                client_permissions[security].append({
+                    'pattern': topic,
+                    'access_type': PubSub.API_Client.Publisher
+                })
+            for topic in perm.get('sub_topics', []):
+                client_permissions[security].append({
+                    'pattern': topic,
+                    'access_type': PubSub.API_Client.Subscriber
+                })
 
-            logger.info('_load_pubsub_permissions: joined query returned %d rows', len(permissions))
+        log_admin_info(f'Loading pub/sub config -> {len(client_permissions)} permission(s)')
 
-            client_permissions = {}
-            username_to_sec_name = {}
+        for username, perms in client_permissions.items():
+            self.pubsub_pattern_matcher.add_client(username, perms)
 
-            for pattern_str, access_type, username, sec_name in permissions:
-                logger.info('_load_pubsub_permissions: processing row - pattern=%s, access_type=%s, username=%s, sec_name=%s',
-                    pattern_str, access_type, username, sec_name)
+            sec_name = username_to_sec_name.get(username)
+            if sec_name:
+                self.pubsub_subscriptions.register_user(username, sec_name)
 
-                if username not in client_permissions:
-                    client_permissions[username] = []
-                    username_to_sec_name[username] = sec_name
+            log_admin_info(f'Loaded permission -> user:{username}, rules:{len(perms)}')
 
-                # Parse the combined pattern string (e.g. "pub=demo.*\nsub=orders.*")
-                for line in pattern_str.split('\n'):
-                    line = line.strip()
-                    if line.startswith('pub='):
-                        client_permissions[username].append({
-                            'pattern': line[4:],
-                            'access_type': PubSub.API_Client.Publisher
-                        })
-                    elif line.startswith('sub='):
-                        client_permissions[username].append({
-                            'pattern': line[4:],
-                            'access_type': PubSub.API_Client.Subscriber
-                        })
+        # Load subscriptions
+        subscriptions = self.config_store.get_list('pubsub_subscription')
+        log_admin_info(f'Loading pub/sub subscriptions -> {len(subscriptions)} subscription(s)')
 
-            logger.info('_load_pubsub_permissions: processed %d unique users: %s', len(client_permissions), list(client_permissions.keys()))
-            logger.info('_load_pubsub_permissions: username_to_sec_name=%s', username_to_sec_name)
+        for sub in subscriptions:
+            security = sub.get('security', '')
+            delivery_type = sub.get('delivery_type', '')
+            sub_key = f'{security}:{delivery_type}'
+            self.pubsub_subscriptions.register_user(security, security, sub_key)
+            log_admin_info(f'Loaded subscription -> sub_key:{sub_key}, user:{security}')
 
-            for username, perms in client_permissions.items():
-                logger.info('Loading permissions for user %s: %s', username, perms)
-                self.pubsub_pattern_matcher.add_client(username, perms)
-
-                sec_name = username_to_sec_name.get(username)
-                if sec_name:
-                    self.pubsub_subscriptions.register_user(username, sec_name)
-                    logger.info('Registered user %s with sec_name %s', username, sec_name)
-
-                logger.info('Loaded pub/sub permissions for user: %s (%d patterns)', username, len(perms))
-
-        logger.info('_load_pubsub_permissions: completed')
+            for topic_name in sub.get('topic_list', []):
+                self.pubsub_backend.subscribe(sub_key, topic_name)
+                log_admin_info(f'Subscribed -> sub_key:{sub_key}, topic:{topic_name}')
 
 # ################################################################################################################################
 
     def reload_config(self):
 
-        # Optionally, log what we're doing ..
         if _needs_details:
             logger.debug('Config reloading')
 
-        # .. actually set up the configuration ..
+        # Rebuild Python-side config from the Rust ConfigStore
         self.set_up_config(self) # type: ignore
 
-        # .. now reload it ..
+        # Reinitialize workers and pub/sub
         self.worker_store.init()
         self.worker_store.init_pubsub()
 
-        # .. notify the pub/sub server too ..
+        # Reload pub/sub permissions from ConfigStore
+        self._load_pubsub_permissions()
+
+        # Notify pub/sub
         pubsub_msg = Bunch()
         pubsub_msg.cid = new_cid_server()
         pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
-
-        # .. publish the message for pub/sub ..
         self.broker_client.publish_to_pubsub(pubsub_msg)
 
-        # .. finally, log what happened.
-        logger.info('⭐ Config loaded OK')
+        logger.info('Config loaded OK')
 
 # ################################################################################################################################
 
     def import_enmasse(self, file_content:'str', file_name:'str') -> 'str':
 
-        # stdlib
         import json
-        import tempfile
-
-        # Zato
-        from zato.server.commands import CommandsFacade
-
-        # Local aliases
-        commands = CommandsFacade()
-        commands.init(self)
-
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
-            _ = temp_file.write(file_content)
-            temp_file_path = temp_file.name
 
         try:
-            result = commands.run_enmasse_sync_import(temp_file_path)
+            self.config_store.load_yaml_string(file_content)
+            self.reload_config()
 
-            response = {
-                'is_ok': result.is_ok,
-                'exit_code': result.exit_code,
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'is_timeout': result.is_timeout,
-                'timeout_msg': result.timeout_msg if result.is_timeout else '',
-                'total_time': result.total_time,
-                'len_stdout_human': result.len_stdout_human,
-                'len_stderr_human': result.len_stderr_human,
-            }
-
-            return json.dumps(response)
+            return json.dumps({
+                'is_ok': True,
+                'exit_code': 0,
+                'stdout': 'Loaded into ConfigStore',
+                'stderr': '',
+                'is_timeout': False,
+                'timeout_msg': '',
+                'total_time': '',
+                'len_stdout_human': '',
+                'len_stderr_human': '',
+            })
 
         except Exception:
             exc = format_exc()
@@ -1171,43 +1156,25 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'len_stdout_human': '',
                 'len_stderr_human': '',
             })
-        finally:
-            os.unlink(temp_file_path)
 
 # ################################################################################################################################
 
     def export_enmasse(self):
 
-        # Zato
-        from zato.server.commands import CommandsFacade
-
-        facade = CommandsFacade()
-        facade.init(self)
-
-        result = facade.run_enmasse_sync_export()
-
-        if result.is_ok:
-            with open('/tmp/enmasse-export.yaml') as f:
-                data = f.read()
-            return data
-        else:
-            return result.stderr
+        import yaml
+        data = self.config_store.export_to_dict()
+        return yaml.dump(data, default_flow_style=False, sort_keys=True)
 
 # ################################################################################################################################
 
     def import_test_pubsub_enmasse(self):
 
-        # Zato
-        from zato.server.commands import CommandsFacade
         import zato.server.service.internal.pubsub
 
         config_path = os.path.join(os.path.dirname(zato.server.service.internal.pubsub.__file__), 'enmasse.yaml')
-
-        facade = CommandsFacade()
-        facade.init(self)
-
-        result = facade.run_enmasse_sync_import(config_path)
-        return result.is_ok
+        self.config_store.load_yaml(config_path)
+        self.reload_config()
+        return True
 
 # ################################################################################################################################
 
@@ -1256,7 +1223,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # If a pid has any of these names in its name or command line,
         # we consider it a process that will be stopped.
-        to_include = ['zato', 'gunicorn']
+        to_include = ['zato']
 
         for proc in list(psutil.process_iter(['pid', 'name'])):
             proc_name = proc.name()
@@ -1293,7 +1260,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. now, we can set it for later use.
         self.api_key_header = api_key_header
-        self.api_key_header_wsgi = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
+        self.api_key_header_http = 'HTTP_' + self.api_key_header.upper().replace('-', '_')
 
 # ################################################################################################################################
 
@@ -1534,49 +1501,38 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    @staticmethod
-    def post_fork(arbiter:'Arbiter', worker:'any_') -> 'None':
-        """ A Gunicorn hook which initializes the worker.
-        """
-
-        # Each subprocess needs to have the random number generator re-seeded.
-        random_seed()
-
-        # This is our parallel server
-        server = worker.app.zato_wsgi_app # type: ParallelServer
-
-        server.startup_callable_tool.invoke(SERVER_STARTUP.PHASE.BEFORE_POST_FORK, kwargs={
-            'arbiter': arbiter,
-            'worker': worker,
-        })
-
-        worker.app.zato_wsgi_app.worker_pid = worker.pid
-        ParallelServer.start_server(server, arbiter.zato_deployment_key)
+    def _check_broker_credentials(self, username:'str', password:'str') -> 'bool':
+        """ Auth callback invoked by the Rust HTTP server for each request with Basic Auth. """
+        try:
+            result = self.worker_store.basic_auth_get(username)
+            if result:
+                return result.config.password
+            return False
+        except Exception:
+            return False
 
 # ################################################################################################################################
 
-    @staticmethod
-    def on_starting(arbiter:'Arbiter') -> 'None':
-        """ A Gunicorn hook for setting the deployment key for this particular
-        set of server processes. It needs to be added to the arbiter because
-        we want for each worker to be (re-)started to see the same key.
-        """
-        arbiter.zato_deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
+    def _push_broker_credentials(self) -> 'None':
+        """ Push all known Basic Auth credentials into the Rust-side store
+        so that check_credentials can run without acquiring the GIL. """
+        try:
+            ba_config = self.worker_store.request_dispatcher.url_data.basic_auth_config
+            for name in ba_config:
+                entry = ba_config[name]
+                password = entry.config.password
+                self.broker_client.set_credentials(name, password)
+        except Exception:
+            logger.warning('Could not push broker credentials to Rust store')
 
 # ################################################################################################################################
 
-    @staticmethod
-    def worker_exit(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
-
-        # Invoke cleanup procedures
-        app:'ParallelServer' = worker.app.zato_wsgi_app
-        _ = app.cleanup_on_stop()
-
-# ################################################################################################################################
-
-    @staticmethod
-    def before_pid_kill(arbiter:'Arbiter', worker:'GeventWorker') -> 'None':
-        pass
+    def _check_broker_permission(self, username:'str', topic_name:'str', action:'str') -> 'bool':
+        """ Permission callback invoked by the Rust HTTP server on pub/sub endpoints. """
+        try:
+            return self.pubsub_pattern_matcher.is_allowed(username, topic_name, action)
+        except Exception:
+            return False
 
 # ################################################################################################################################
 
@@ -1584,37 +1540,30 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         """ A shutdown cleanup procedure.
         """
 
-        # Tell the ODB we've gone through a clean shutdown but only if this is
-        # the main process going down (Arbiter) not one of Gunicorn workers.
-        # We know it's the main process because its ODB's session has never
-        # been initialized.
-        if not self.odb.session_initialized:
-
-            self.config.odb_data = self.get_config_odb_data(self)
-            self.config.odb_data['fs_sql_config'] = self.fs_sql_config
-            self.set_up_odb()
-
-            self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
-
-            self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
-            self.odb.close()
-
-        # Cleanup
+        # Only run cleanup once
+        if self._is_process_closing:
+            return
         else:
+            self._is_process_closing = True
 
-            # Set the flag to True only the first time we are called, otherwise simply return
-            if self._is_process_closing:
-                return
-            else:
-                self._is_process_closing = True
+        # Stop the scheduler thread
+        if getattr(self, '_scheduler_started', False):
+            try:
+                from zato_scheduler_core import scheduler_stop
+                scheduler_stop(5.0)
+                logger.info('Scheduler thread stopped')
+            except Exception:
+                logger.warning('Error stopping scheduler: %s', format_exc())
 
-            # Close SQL pools
+        # Stop the broker (including its Rust HTTP server and OS thread)
+        if hasattr(self, 'broker_client') and self.broker_client:
+            self.broker_client.stop_consumer()
+
+        # Close SQL pools (user-defined outgoing connections only)
+        if hasattr(self, 'sql_pool_store') and self.sql_pool_store:
             self.sql_pool_store.cleanup_on_stop()
 
-            logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
-
-            import sys
-            sys.exit(3) # Same as arbiter's WORKER_BOOT_ERROR
+        logger.info('Stopping server process (%s:%s) (%s)', self.name, self.pid, os.getpid())
 
 # ################################################################################################################################
 

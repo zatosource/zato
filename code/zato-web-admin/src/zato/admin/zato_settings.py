@@ -83,8 +83,8 @@ job_type_friendly_names = {
 
 # Maps AMQP delivery modes to UI-friendly names
 delivery_friendly_name = {
-    '1': 'Non-persistent',
-    '2': 'Persistent',
+    'non_persistent': 'Non-persistent',
+    'persistent': 'Persistent',
 }
 
 # ################################################################################################################################

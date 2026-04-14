@@ -11,11 +11,9 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 # Zato
-from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, \
-    sql_conf_contents, ZatoCommand
+from zato.cli import common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
 from zato.common.api import CONTENT_TYPE, Default_Service_File_Data, NotGiven, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
-from zato.common.simpleio_ import simple_io_conf_contents
 from zato.common.util.api import as_bool, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_r, open_w
@@ -29,8 +27,6 @@ if 0:
 # ################################################################################################################################
 # ################################################################################################################################
 
-# For pyflakes
-simple_io_conf_contents = simple_io_conf_contents
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -41,15 +37,8 @@ server_conf_dict = deepcopy(CONTENT_TYPE)
 # ################################################################################################################################
 
 server_conf_template = """[main]
-gunicorn_bind=0.0.0.0:{{port}}
-gunicorn_worker_class=gevent
-gunicorn_workers={{gunicorn_workers}}
-gunicorn_timeout=1234567890
-gunicorn_user=
-gunicorn_group=
-gunicorn_proc_name=
-gunicorn_logger_class=
-gunicorn_graceful_timeout=1
+host=0.0.0.0
+port={{port}}
 
 work_dir=../../work
 
@@ -81,17 +70,6 @@ priv_key_location=zato-server-priv-key.pem
 pub_key_location=zato-server-pub-key.pem
 cert_location=zato-server-cert.pem
 ca_certs_location=zato-server-ca-certs.pem
-
-[odb]
-db_name={{odb_db_name}}
-engine={{odb_engine}}
-extra=echo=False
-host={{odb_host}}
-port={{odb_port}}
-password=zato+secret://zato.server_conf.odb.password
-pool_size={{odb_pool_size}}
-username={{odb_user}}
-use_async_driver=True
 
 [scheduler]
 scheduler_host={{scheduler_host}}
@@ -127,7 +105,7 @@ needs_x_zato_cid=False
 return_tracebacks=True
 default_error_message="An error has occurred"
 startup_callable=
-service_invoker_allow_internal="demo.ping", "/zato/api/invoke/service_name"
+service_invoker_allow_internal="demo.ping", "/zato/api/invoke/service_name", "zato.api.invoke"
 
 [http]
 methods_allowed=GET, POST, DELETE, PUT, PATCH, HEAD, OPTIONS
@@ -171,7 +149,7 @@ allow_loopback=False
 
 [logging]
 http_access_log_ignore=
-rest_log_ignore=/zato/admin/invoke, /metrics, /zato/ping
+rest_log_ignore=/zato/api/invoke/, /metrics, /zato/ping
 
 [os_environ]
 sample_key=sample_value
@@ -259,12 +237,7 @@ key1={keys_key1}
 well_known_data={zato_well_known_data} # Pi number
 server_conf.kvdb.password={zato_kvdb_password}
 server_conf.main.token={zato_main_token}
-server_conf.odb.password={zato_odb_password}
 """
-
-# ################################################################################################################################
-
-default_odb_pool_size = 60
 
 # ################################################################################################################################
 
@@ -313,7 +286,7 @@ class Create(ZatoCommand):
     """
     needs_empty_dir = True
 
-    opts:'any_' = deepcopy(common_odb_opts)
+    opts:'any_' = []
 
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':'Server\'s name'})
@@ -439,53 +412,26 @@ class Create(ZatoCommand):
         # stdlib
         import os
         import platform
-        from datetime import datetime
         from traceback import format_exc
 
         # Cryptography
         from cryptography.fernet import Fernet
 
-        # SQLAlchemy
-        from sqlalchemy.exc import IntegrityError
-
         # Python 2/3 compatibility
         from six import PY3
 
         # Zato
-        from zato.common.api import SERVER_JOIN_STATUS
         from zato.common.crypto.const import well_known_data
         from zato.common.defaults import http_plain_server_port
-        from zato.common.odb.model import Cluster, Server
         from zato.common.util.logging_ import get_logging_conf_contents
 
         logging_conf_contents = get_logging_conf_contents()
 
         files = {
             'config/repo/logging.conf': logging_conf_contents,
-            'config/repo/sql.conf': sql_conf_contents,
         }
 
         default_http_port = default_http_port or http_plain_server_port
-
-        engine = self._get_engine(args)
-        session = self._get_session(engine) # type: ignore
-
-        cluster = session.query(Cluster).filter(Cluster.name == args.cluster_name).first() # type: ignore
-
-        if not cluster:
-            self.logger.error("Cluster `%s` doesn't exist in ODB", args.cluster_name)
-            return self.SYS_ERROR.NO_SUCH_CLUSTER
-
-        server = Server(cluster=cluster)
-        server.name = args.server_name
-        if isinstance(self.token, (bytes, bytearray)): # type: ignore
-            server.token = self.token.decode('utf8') # type: ignore
-        else:
-            server.token = self.token
-        server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED # type: ignore
-        server.last_join_mod_by = self._get_user_host() # type: ignore
-        server.last_join_mod_date = datetime.utcnow() # type: ignore
-        session.add(server)
 
         try:
             if not self.dirs_prepared:
@@ -493,8 +439,6 @@ class Create(ZatoCommand):
 
             repo_dir = os.path.join(self.target_dir, 'config', 'repo')
 
-            # Note that server crypto material is optional so if none was given on input
-            # this command will be a no-op.
             self.copy_server_crypto(repo_dir, args)
 
             if show_output:
@@ -517,14 +461,9 @@ class Create(ZatoCommand):
             if show_output:
                 self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
 
-            odb_engine=args.odb_type
-            if odb_engine.startswith('postgresql'):
-                odb_engine = 'postgresql+pg8000'
-
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open_w(server_conf_loc)
 
-            # There will be multiple keys in future releases to allow for key rotation
             secret_key = args.secret_key or Fernet.generate_key()
 
             try:
@@ -532,19 +471,10 @@ class Create(ZatoCommand):
             except Exception:
                 threads = 1
 
-            # Build the scheduler's configuration
             scheduler_config = self._get_scheduler_config(args, secret_key)
 
-            # Substitue the variables ..
             server_conf_data = server_conf_template.format(
                     port=getattr(args, 'http_port', None) or default_http_port,
-                    gunicorn_workers=threads,
-                    odb_db_name=args.odb_db_name or args.sqlite_path,
-                    odb_engine=odb_engine,
-                    odb_host=args.odb_host or '',
-                    odb_port=args.odb_port or '',
-                    odb_pool_size=default_odb_pool_size,
-                    odb_user=args.odb_user or '',
                     kvdb_host=self.get_arg('kvdb_host'),
                     kvdb_port=self.get_arg('kvdb_port'),
                     initial_cluster_name=args.cluster_name,
@@ -556,8 +486,6 @@ class Create(ZatoCommand):
                     scheduler_api_client_for_server_password=scheduler_config.api_client.from_server_to_scheduler.password,
                 )
 
-            # .. and special-case this one as it contains the {} characters
-            # .. which makes it more complex to substitute them.
             server_conf_data = server_conf_data.replace('/zato/api/invoke/service_name', '/zato/api/invoke/{service_name}')
 
             _ = server_conf.write(server_conf_data)
@@ -573,10 +501,6 @@ class Create(ZatoCommand):
             _ = user_conf.write(user_conf_contents)
             user_conf.close()
 
-            # On systems other than Windows, where symlinks are not fully supported,
-            # for convenience and backward compatibility,
-            # create a shortcut symlink from incoming/user-conf to config/repo/user-conf.
-
             system = platform.system()
             is_windows = 'windows' in system.lower()
 
@@ -585,7 +509,6 @@ class Create(ZatoCommand):
                 user_conf_src = os.path.join(self.target_dir, 'pickup', 'incoming', 'user-conf')
                 os.symlink(user_conf_src, user_conf_dir)
 
-                # Add default rules
                 demo_zrules_loc = os.path.join(user_conf_dir, 'demo.zrules')
                 demo_zrules = open_w(demo_zrules_loc)
                 _ = demo_zrules.write(demo_zrules_contents)
@@ -601,11 +524,6 @@ class Create(ZatoCommand):
             kvdb_password = fernet1.encrypt(kvdb_password)
             kvdb_password = kvdb_password.decode('utf8')
 
-            odb_password = self.get_arg('odb_password') or ''
-            odb_password = odb_password.encode('utf8')
-            odb_password = fernet1.encrypt(odb_password)
-            odb_password = odb_password.decode('utf8')
-
             zato_well_known_data = fernet1.encrypt(well_known_data.encode('utf8'))
             zato_well_known_data = zato_well_known_data.decode('utf8')
 
@@ -620,49 +538,42 @@ class Create(ZatoCommand):
                 zato_well_known_data=zato_well_known_data,
                 zato_kvdb_password=kvdb_password,
                 zato_main_token=zato_main_token,
-                zato_odb_password=odb_password,
             ))
             secrets_conf.close()
 
-            bytes_to_str_encoding = 'utf8' if PY3 else ''
+            admin_invoke_password = getattr(args, 'admin_invoke_password', '') or \
+                                   getattr(args, 'server_password', '') or ''
 
-            simple_io_conf_loc = os.path.join(self.target_dir, 'config/repo/simple-io.conf')
-            simple_io_conf = open_w(simple_io_conf_loc)
-            _ = simple_io_conf.write(simple_io_conf_contents.format(
-                bytes_to_str_encoding=bytes_to_str_encoding
-            ))
-            simple_io_conf.close()
+            if admin_invoke_password:
+                encrypted_password = fernet1.encrypt(admin_invoke_password.encode('utf8')).decode('utf8')
+            else:
+                encrypted_password = ''
+
+            secrets_yaml_loc = os.path.join(self.target_dir, 'config/repo/secrets.yaml')
+            secrets_yaml = open_w(secrets_yaml_loc)
+            _ = secrets_yaml.write(
+                'security:\n'
+                '  - name: admin.invoke\n'
+                '    username: admin.invoke\n'
+                '    password: "{}"\n'
+                '    type: basic_auth\n'
+                '    realm: zato\n'
+                '    is_active: true\n'.format(encrypted_password)
+            )
+            secrets_yaml.close()
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
 
-            # Prepare paths for the demo service ..
             demo_py_fs = get_demo_py_fs_locations(self.target_dir)
 
-            # .. and create it now.
             self._add_demo_service(demo_py_fs.pickup_incoming_full_path, demo_py_fs.pickup_incoming_full_path)
             self._add_demo_service(demo_py_fs.work_dir_full_path, demo_py_fs.pickup_incoming_full_path)
 
-            # Initial info
             self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
-
-            session.commit()
-
-        except IntegrityError:
-            msg = 'Server name `{}` already exists'.format(args.server_name)
-            if self.verbose:
-                msg += '. Caught an exception:`{}`'.format(format_exc())
-            self.logger.error(msg)
-            session.rollback()
-
-            return self.SYS_ERROR.SERVER_NAME_ALREADY_EXISTS
 
         except Exception:
             self.logger.error('Could not create the server, e:`%s`', format_exc())
-            session.rollback()
-        else:
-            if show_output:
-                self.logger.debug('Server added to the ODB')
 
         if show_output:
             if self.verbose:
@@ -671,11 +582,6 @@ You can now start it with the 'zato start {}' command.""".format(self.target_dir
                 self.logger.debug(msg)
             else:
                 self.logger.info('OK')
-
-        # This is optional - need only by quickstart.py and needs to be requested explicitly,
-        # otherwise it would be construed as a non-0 return code from this process.
-        if return_server_id:
-            return server.id # type: ignore
 
 # ################################################################################################################################
 # ################################################################################################################################

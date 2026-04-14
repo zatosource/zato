@@ -30,13 +30,11 @@ datetime_keys = 'last_read', 'prev_read', 'last_write', 'prev_write', 'expires_a
 
 class _BaseService(Service):
 
-    class SimpleIO:
-        response_elem = None
-        input_required = ('key',)
-        input_optional = (Bool('return_prev'),)
-        output_optional = optional_keys
-        skip_empty_keys = True
-        allow_empty_required = True
+    input = 'key', Bool('-return_prev')
+    output = AsIs('-key'), AsIs('-value'), '-last_read', '-prev_read', '-last_write', '-prev_write', '-expiry', '-expires_at', \
+             '-hits', '-position'
+    skip_empty_keys = True
+    allow_empty_required = True
 
     def _get_cache(self, input):
         cache_name = input.get('cache')
@@ -65,9 +63,9 @@ class _BaseService(Service):
 class SingleKeyService(_BaseService):
     """ Base class for cache services accepting a single key on input, except for Expiry which uses its own service.
     """
-    class SimpleIO(_BaseService.SimpleIO):
-        input_optional = _BaseService.SimpleIO.input_optional + ('cache', AsIs('value'), 'details', Float('expiry'))
-        output_optional = _BaseService.SimpleIO.output_optional + ('prev_value',)
+    input = 'key', Bool('-return_prev'), '-cache', AsIs('-value'), '-details', Float('-expiry')
+    output = AsIs('-key'), AsIs('-value'), '-last_read', '-prev_read', '-last_write', '-prev_write', '-expiry', '-expires_at', \
+             '-hits', '-position', '-prev_value'
 
 # ################################################################################################################################
 
@@ -133,10 +131,8 @@ class SingleKeyService(_BaseService):
 class _Multi(_BaseService):
     action = None
 
-    class SimpleIO(_BaseService.SimpleIO):
-        input_optional = _BaseService.SimpleIO.input_optional + ('expiry', 'value')
-        output_optional = ('key', 'prev_value',)
-        output_repeated = True
+    input = 'key', Bool('-return_prev'), '-expiry', '-value'
+    output = '-key', '-prev_value'
 
     def handle(self):
         input = self.request.input
@@ -163,7 +159,7 @@ class _Multi(_BaseService):
 
         result = self._get_cache_func(cache)(*args)
         if return_prev:
-            self.response.payload[:] = [{'key':key, 'prev_value':value} for key, value in iteritems(result)]
+            self.response.payload = [{'key':key, 'prev_value':value} for key, value in iteritems(result)]
 
     def _get_cache_func(self, cache):
         raise NotImplementedError('Must be implemented in subclasses')

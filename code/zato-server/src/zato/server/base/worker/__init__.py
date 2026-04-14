@@ -32,12 +32,12 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
+     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
-from zato.common.odb.api import PoolStore, SessionWrapper
+from zato.common.sql_pool import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, parse_datetime, \
     rebuild_subscription_dict_list, spawn_greenlet, update_apikey_username_to_channel, utcnow, visit_py_source, \
@@ -55,12 +55,14 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
-from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
+from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
+from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 
@@ -75,7 +77,7 @@ logger = logging.getLogger(__name__)
 if 0:
     from bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
-    from zato.broker.client import BrokerClient
+    from zato.broker.broker import BrokerCoreAPI
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
@@ -115,14 +117,6 @@ class _generic_msg:
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GeventWorker(GunicornGeventWorker):
-
-    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
-        self.deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
-        super(GunicornGeventWorker, self).__init__(*args, **kwargs)
-
-# ################################################################################################################################
-
 def _get_base_classes() -> 'anytuple':
     ignore = ('__init__.py', 'common.py')
     out = []
@@ -152,9 +146,9 @@ _base_type = '_WorkerStoreBase'
 _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 
 class WorkerStore(_WorkerStoreBase):
-    """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
+    """ Dispatches work between different pieces of configuration of an individual server worker.
     """
-    broker_client: 'BrokerClient | None' = None
+    broker_client: 'BrokerCoreAPI | None' = None
 
     def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -166,6 +160,9 @@ class WorkerStore(_WorkerStoreBase):
 
         # To expedite look-ups
         self._simple_types = simple_types
+
+        # Generic connections - Channel - HL7 MLLP
+        self.channel_hl7_mllp = {}
 
         # Generic connections - Channel - OpenAPI
         self.channel_openapi = {}
@@ -184,6 +181,12 @@ class WorkerStore(_WorkerStoreBase):
 
         # Generic connections - Cloud - Salesforce
         self.cloud_salesforce = {}
+
+        # Generic connections - HL7 FHIR outconns
+        self.outconn_hl7_fhir = {}
+
+        # Generic connections - HL7 MLLP outconns
+        self.outconn_hl7_mllp = {}
 
         # Generic connections - LDAP outconns
         self.outconn_ldap = {}
@@ -211,21 +214,27 @@ class WorkerStore(_WorkerStoreBase):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: self.channel_openapi,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: self.cloud_microsoft_365,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.outconn_hl7_fhir,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
         }
 
         self._generic_conn_handler = {
+            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: ChannelOpenAPIWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: CloudMicrosoft365Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutconnHL7FHIRWrapper,
+            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
         }
@@ -252,6 +261,21 @@ class WorkerStore(_WorkerStoreBase):
         # API keys
         self.update_apikeys()
 
+        # Resolve service_name -> service_impl_name for each channel
+        for channel_item in self.worker_config.http_soap:
+            svc_name = channel_item.get('service_name', '')
+            if svc_name and 'service_impl_name' not in channel_item:
+                impl_name = self.server.service_store.name_to_impl_name.get(svc_name, '')
+                channel_item['service_impl_name'] = impl_name
+                if impl_name:
+                    channel_item['service_id'] = self.server.service_store.impl_name_to_id.get(impl_name, None)
+            channel_item.setdefault('service_impl_name', '')
+            channel_item.setdefault('cache_type', None)
+            channel_item.setdefault('cache_id', None)
+            channel_item.setdefault('cache_expiry', None)
+            channel_item.setdefault('cache_name', None)
+            channel_item.setdefault('security_groups', None)
+
         request_handler = RequestHandler(self.server)
         url_data = URLData(
             self,
@@ -262,7 +286,6 @@ class WorkerStore(_WorkerStoreBase):
             self.worker_config.oauth,
             self.worker_config.apikey,
             self.broker_client,
-            self.server.odb,
         )
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
@@ -309,8 +332,62 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def _get_channel_url_sec(self) -> 'any_':
-        out:'any_' = self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0]
-        return out
+        from zato.common.api import HTTP_SOAP, MISC, ZATO_NONE
+        from zato.common.util.url_dispatcher import get_match_target
+
+        result = {}
+        sec_def_cache = {}
+
+        security_list = self.server.config_store.get_list('security')
+        sec_by_name = {}
+        for sec_item in security_list:
+            sec_by_name[sec_item.get('name', '')] = sec_item
+
+        for entity_type in ('channel_rest', 'channel_soap'):
+            channels = self.server.config_store.get_list(entity_type)
+            for item in channels:
+
+                transport = 'soap' if entity_type == 'channel_soap' else 'plain_http'
+                soap_action = item.get('soap_action', '')
+
+                target = get_match_target({
+                    'http_accept': item.get('http_accept', ''),
+                    'http_method': item.get('method', ''),
+                    'soap_action': soap_action,
+                    'url_path': item.get('url_path', ''),
+                }, http_methods_allowed_re=self.server.http_methods_allowed_re)
+
+                result[target] = Bunch()
+                result[target].is_active = item.get('is_active', True)
+                result[target].transport = transport
+                result[target].data_format = item.get('data_format', '')
+
+                security_name = item.get('security_name') or item.get('sec_def') or ''
+                sec_type = item.get('sec_type', '')
+
+                if security_name and security_name != ZATO_NONE:
+                    sec_def = sec_by_name.get(security_name)
+                    if sec_def:
+                        result[target].sec_def = Bunch()
+                        result[target].sec_def.id = sec_def.get('id', 0)
+                        result[target].sec_def.name = sec_def['name']
+                        result[target].sec_def.password = self.server.decrypt(sec_def.get('password') or '')
+                        result[target].sec_def.sec_type = sec_def.get('sec_type') or sec_def.get('type', '')
+
+                        if result[target].sec_def.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+                            result[target].sec_def.username = sec_def.get('username', '')
+                            result[target].sec_def.realm = sec_def.get('realm', '')
+                        elif result[target].sec_def.sec_type == SEC_DEF_TYPE.APIKEY:
+                            header = sec_def.get('header', 'X-API-Key')
+                            result[target].sec_def.header = 'HTTP_{}'.format(header.upper().replace('-', '_'))
+                        elif result[target].sec_def.sec_type == SEC_DEF_TYPE.NTLM:
+                            result[target].sec_def.username = sec_def.get('username', '')
+                    else:
+                        result[target].sec_def = ZATO_NONE
+                else:
+                    result[target].sec_def = ZATO_NONE
+
+        return result
 
 # ################################################################################################################################
 
@@ -331,7 +408,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def set_broker_client(self, broker_client:'BrokerClient') -> 'None':
+    def set_broker_client(self, broker_client:'BrokerCoreAPI') -> 'None':
         self.broker_client = broker_client
 
 # ################################################################################################################################
@@ -421,20 +498,20 @@ class WorkerStore(_WorkerStoreBase):
         wrapper_config = {
             'id':config.id,
             'is_active':config.is_active,
-            'method':config.method,
+            'method':config.get('method'),
             'data_format':config.get('data_format'),
             'name':config.name,
-            'transport':config.transport,
-            'address_host':config.host,
-            'address_url_path':config.url_path,
-            'soap_action':config.soap_action,
-            'soap_version':config.soap_version,
-            'ping_method':config.ping_method,
-            'pool_size':config.pool_size,
-            'serialization_type':config.serialization_type,
-            'timeout':config.timeout,
-            'content_type':config.content_type,
-            'validate_tls':config.validate_tls,
+            'transport':config.get('transport', 'plain_http'),
+            'address_host':config.get('host', ''),
+            'address_url_path':config.get('url_path', '/'),
+            'soap_action':config.get('soap_action', ''),
+            'soap_version':config.get('soap_version'),
+            'ping_method':config.get('ping_method', 'HEAD'),
+            'pool_size':config.get('pool_size', 20),
+            'serialization_type':config.get('serialization_type', 'json'),
+            'timeout':config.get('timeout', 90),
+            'content_type':config.get('content_type'),
+            'validate_tls':config.get('validate_tls', True),
         }
 
         wrapper_config.update(sec_config)
@@ -449,9 +526,10 @@ class WorkerStore(_WorkerStoreBase):
 
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
+            for name in list(config_dict):
                 config_data = config_dict[name]
                 if not isinstance(config_data, str):
+                    config_data.config.setdefault('transport', transport)
                     out.append([config_dict, config_data])
 
         return out
@@ -459,17 +537,10 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def init_sql(self) -> 'None':
-        """ Initializes SQL connections, first to ODB and then any user-defined ones.
+        """ Initializes SQL connections for user-defined outgoing pools.
         """
-        # We need a store first
         self.sql_pool_store = PoolStore()
 
-        # Connect to ODB
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
-        self.odb = SessionWrapper()
-        self.odb.init_session(ZATO_ODB_POOL_NAME, self.worker_config.odb_data, self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
-
-        # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:
             config = self.worker_config.out_sql[pool_name]['config']
             config['fs_sql_config'] = self.server.fs_sql_config
@@ -622,7 +693,7 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def update_apikeys(self) -> 'None':
-        """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
+        """ API keys need to be upper-cased and in the format that the HTTP environment will have them in.
         """
         for config_dict in self.worker_config.apikey.values():
             config_dict.config.orig_header = config_dict.config.get('header') or API_Key.Default_Header
@@ -718,21 +789,27 @@ class WorkerStore(_WorkerStoreBase):
     def init_generic_connections_config(self) -> 'None':
 
         # Local aliases
+        channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
         cloud_microsoft_365_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
+        outconn_hl7_fhir_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, {})
+        outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
+            channel_hl7_mllp_map,
             channel_openapi_map,
             cloud_confluence_map,
             cloud_jira_map,
             cloud_microsoft_365_map,
             cloud_salesforce_map,
+            outconn_hl7_fhir_map,
+            outconn_hl7_mllp_map,
             outconn_ldap_map,
             outconn_mongodb_map,
         ]
@@ -1148,9 +1225,9 @@ class WorkerStore(_WorkerStoreBase):
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
-            'wsgi_environ': kwargs.get('wsgi_environ'),
+            'http_environ': kwargs.get('http_environ'),
             'channel_item': kwargs.get('channel_item'),
-        }, channel, '', needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
+        }, channel, '', needs_response=True, serialize=serialize)
 
 # ################################################################################################################################
 
@@ -1160,8 +1237,7 @@ class WorkerStore(_WorkerStoreBase):
         zato_ctx = msg.get('zato_ctx') or {}
         cid = msg['cid']
 
-        # The default WSGI environment that always exists ..
-        wsgi_environ = {
+        http_environ = {
             'zato.request_ctx.async_msg':msg,
             'zato.request_ctx.in_reply_to':msg.get('in_reply_to'),
             'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
@@ -1169,7 +1245,7 @@ class WorkerStore(_WorkerStoreBase):
         }
 
         if zato_ctx:
-            wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
+            http_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
 
         data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')
@@ -1186,24 +1262,17 @@ class WorkerStore(_WorkerStoreBase):
             logger.warning(msg)
             raise Exception(msg)
 
-        skip_response_elem=kwargs.get('skip_response_elem')
-
         response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
-            self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
+            self.worker_config.simple_io, job_type=msg.get('job_type'), http_environ=http_environ,
             environ=msg.get('environ'))
 
-        if skip_response_elem:
-            response = dumps(response)
-            response = response.decode('utf8')
-
-        # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('callback'):
 
             cb_msg = {}
             cb_msg['action'] = SERVICE.PUBLISH.value
             cb_msg['service'] = msg['callback']
-            cb_msg['payload'] = response if skip_response_elem else service.response.payload
+            cb_msg['payload'] = service.response.payload
             cb_msg['cid'] = new_cid_server()
             cb_msg['channel'] = CHANNEL.INVOKE_ASYNC_CALLBACK
             cb_msg['data_format'] = data_format
@@ -1214,23 +1283,43 @@ class WorkerStore(_WorkerStoreBase):
             self.broker_client.invoke_async(cb_msg) # type: ignore
 
         if kwargs.get('needs_response'):
-            if skip_response_elem:
+            if isinstance(response, dict):
                 return response
-            else:
-                if isinstance(response, dict):
-                    return response
 
-                response = service.response.payload
+            response = service.response.payload
 
-                if hasattr(response, 'getvalue'):
-                    response = response.getvalue(serialize=kwargs.get('serialize'))
+            if hasattr(response, 'getvalue'):
+                response = response.getvalue(serialize=kwargs.get('serialize'))
 
-                return response
+            return response
 
 # ################################################################################################################################
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg:'bunch_', args:'any_'=None) -> 'any_':
-        return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
+        import time as _time
+        _t0 = _time.monotonic()
+        outcome = 'executed'
+        try:
+            response = self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
+        except Exception:
+            outcome = 'error'
+            response = None
+
+        duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+        job_id = None
+        zato_ctx = getattr(msg, 'zato_ctx', None) or {}
+        if isinstance(zato_ctx, dict):
+            job_id = zato_ctx.get('scheduler_job_id')
+
+        if job_id:
+            try:
+                from zato_scheduler_core import scheduler_mark_complete
+                scheduler_mark_complete(str(job_id), outcome, duration_ms)
+            except Exception:
+                pass
+
+        return response
 
 # ################################################################################################################################
 
@@ -1689,7 +1778,7 @@ class WorkerStore(_WorkerStoreBase):
         sub_key = msg.get('sub_key')
         topic_name = msg.get('topic_name')
         if sub_key and topic_name:
-            self.server.pubsub_redis.subscribe(sub_key, topic_name)
+            self.server.pubsub_backend.subscribe(sub_key, topic_name)
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
         pass
@@ -1698,20 +1787,20 @@ class WorkerStore(_WorkerStoreBase):
         sub_key = msg.get('sub_key')
         topic_name = msg.get('topic_name')
         if sub_key and topic_name:
-            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+            self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
-        old_name = msg.get('old_name')
-        new_name = msg.get('name')
+        old_name = msg.get('old_topic_name')
+        new_name = msg.get('new_topic_name')
         if old_name and new_name and old_name != new_name:
-            self.server.pubsub_redis.rename_topic(old_name, new_name)
+            self.server.pubsub_backend.rename_topic(old_name, new_name)
 
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
-        topic_name = msg.get('name')
+        topic_name = msg.get('topic_name')
         if topic_name:
-            self.server.pubsub_redis.delete_topic(topic_name)
+            self.server.pubsub_backend.delete_topic(topic_name)
 
 # ################################################################################################################################
 

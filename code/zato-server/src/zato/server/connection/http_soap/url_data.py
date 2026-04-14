@@ -47,7 +47,7 @@ class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
-                 oauth_config=None, apikey_config=None, broker_client=None, odb=None):
+                 oauth_config=None, apikey_config=None, broker_client=None):
         super(URLData, self).__init__(channel_data)
 
         self.worker = worker
@@ -57,7 +57,6 @@ class URLData(PyURLData):
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
         self.broker_client = broker_client
-        self.odb = odb
 
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
@@ -89,11 +88,11 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _handle_security_apikey(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+    def _handle_security_apikey(self, cid, sec_def, path_info, body, http_environ, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication against an API key in a specified HTTP header.
         """
         # Find out if the header was provided at all
-        if sec_def['header'] not in wsgi_environ:
+        if sec_def['header'] not in http_environ:
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'
@@ -105,7 +104,7 @@ class URLData(PyURLData):
         expected_key = sec_def.get('password', '')
 
         # Passwords are not required
-        if expected_key and wsgi_environ[sec_def['header']] != expected_key:
+        if expected_key and http_environ[sec_def['header']] != expected_key:
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'
@@ -118,12 +117,15 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None,
+    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, http_environ, ignored_post_data=None,
         enforce_auth=True):
         """ Performs the authentication using HTTP Basic Auth.
         """
-        env = {'HTTP_AUTHORIZATION':wsgi_environ.get('HTTP_AUTHORIZATION')}
+        env = {'HTTP_AUTHORIZATION':http_environ.get('HTTP_AUTHORIZATION')}
         url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
+
+        logger.info('server auth check: path=%s, user=%s', path_info, sec_def.username)
+
         result = on_basic_auth(cid, env, url_config, False)
 
         if not result:
@@ -140,7 +142,7 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, *,
+    def check_security(self, sec, cid, channel_item, path_info, payload, http_environ, post_data, worker_store, *,
         enforce_auth=True):
         """ Authenticates and authorizes a given request. Returns None on success
         """
@@ -148,11 +150,11 @@ class URLData(PyURLData):
         sec_def, sec_def_type = sec.sec_def, sec.sec_def['sec_type']
         handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
 
-        auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth)
+        auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, http_environ, post_data, enforce_auth)
         if not auth_result:
             return False
 
-        enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
+        enrich_with_sec_data(http_environ, sec_def, sec_def_type)
 
         return auth_result
 

@@ -38,7 +38,7 @@ from sqlalchemy.engine.row import Row as SQLAlchemyRow
 # Zato
 from zato.common.api import DATA_FORMAT, ZATO_NONE
 from zato.common.marshal_.api import ElementMissing
-from zato.common.odb.api import SQLRow
+from zato.common.sql_pool import SQLRow
 from zato.util_convert import to_bool
 
 # Zato - Cython
@@ -1527,10 +1527,6 @@ class CySimpleIO:
             self._resolve_bool_force_empty_keys()
 
         response_elem = getattr(self.user_declaration, 'response_elem', InternalNotGiven)
-
-        if response_elem is InternalNotGiven:
-            if getattr(class_, '_zato_needs_response_wrapper', None) is False:
-                response_elem = None
 
         if response_elem is InternalNotGiven:
             response_elem = getattr(self.server_config, 'response_elem', InternalNotGiven)

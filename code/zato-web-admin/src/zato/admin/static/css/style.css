@@ -546,7 +546,7 @@ h2.zato {
 div.prompt {
     font-size: 11px;
     padding: 10px;
-    padding-left: 4px
+    padding-left: 2%
 }
 
 div.prompt form {
@@ -614,7 +614,7 @@ a.hint {
 
 #markup {
     width: 94%;
-    text-align: center
+    margin: 0 auto
 }
 
 #markup.columns {
@@ -797,6 +797,7 @@ div.ignore {
 
 div.page_prompt {
     padding: 4px;
+    padding-left: 2%;
     font-size: 12px;
 }
 

@@ -20,13 +20,14 @@ from django.template.response import TemplateResponse
 from zato.admin.web.forms.http_soap import SearchForm, CreateForm, EditForm
 from zato.admin.web.views import get_group_list as common_get_group_list, get_http_channel_security_id, \
     get_security_id_from_select, get_security_groups_from_checkbox_list, id_only_service, \
-        method_allowed, parse_response_data, SecurityList
+        method_allowed, SecurityList
 from zato.common.api import CACHE, DATA_FORMAT, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      generic_attrs, Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, \
      SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.exception import ZatoException
 from zato.common.json_internal import dumps
-from zato.common.odb.model import HTTPSOAP
+# Bunch
+from bunch import Bunch
 from zato.common.util import openapi_ as openapi_module
 
 # ################################################################################################################################
@@ -216,9 +217,9 @@ def index(req): # type: ignore
             'query': req.GET.get('query', ''),
         }
 
-        data, meta = parse_response_data(req.zato.client.invoke('zato.http-soap.get-list', input_dict))
+        response = req.zato.client.invoke('zato.http-soap.get-list', input_dict)
 
-        for item in data:
+        for item in response.data:
             if query not in item.name:
                 continue
 
@@ -251,16 +252,39 @@ def index(req): # type: ignore
             # New in 3.1
             http_accept = item.get('http_accept') or ''
 
-            http_soap = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
-                    transport, item.host, item.url_path, item.method, item.soap_action,
-                    item.soap_version, item.data_format, item.ping_method,
-                    item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri,
-                    item.serialization_type, item.timeout, service_id=item.service_id,
-                    service_name=item.service_name, security_id=security_id,
-                    security_name=security_name, content_type=item.content_type,
-                    cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry,
-                    content_encoding=item.content_encoding, match_slash=match_slash, http_accept=http_accept,
-                    validate_tls=item.get('validate_tls', True))
+            http_soap = Bunch()
+            http_soap.id = item.id
+            http_soap.name = item.name
+            http_soap.is_active = item.is_active
+            http_soap.is_internal = item.is_internal
+            http_soap.connection = connection
+            http_soap.transport = transport
+            http_soap.host = item.host
+            http_soap.url_path = item.url_path
+            http_soap.method = item.method
+            http_soap.soap_action = item.soap_action
+            http_soap.soap_version = item.soap_version
+            http_soap.data_format = item.data_format
+            http_soap.ping_method = item.ping_method
+            http_soap.pool_size = item.pool_size
+            http_soap.merge_url_params_req = item.merge_url_params_req
+            http_soap.url_params_pri = item.url_params_pri
+            http_soap.params_pri = item.params_pri
+            http_soap.serialization_type = item.serialization_type
+            http_soap.timeout = item.timeout
+            http_soap.service_id = item.service_id
+            http_soap.service_name = item.service_name
+            http_soap.security_id = security_id
+            http_soap.security_name = security_name
+            http_soap.content_type = item.content_type
+            http_soap.cache_id = item.cache_id
+            http_soap.cache_name = cache_name
+            http_soap.cache_type = item.cache_type
+            http_soap.cache_expiry = item.cache_expiry
+            http_soap.content_encoding = item.content_encoding
+            http_soap.match_slash = match_slash
+            http_soap.http_accept = http_accept
+            http_soap.validate_tls = item.get('validate_tls', True)
 
             for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))
@@ -291,6 +315,7 @@ def index(req): # type: ignore
         'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
         'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
         'paginate':True,
+        'show_search_form':True,
         'meta': meta,
         'req':req,
         'openapi_sample_data': openapi_sample_data,

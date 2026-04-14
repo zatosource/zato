@@ -1,0 +1,59 @@
+{% extends "zato/settings-base.html" %}
+
+{% block page_title %}Topic: {{ topic_name }}{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/eda.css">
+{% endblock %}
+
+{% block section_title %}Topic: {{ topic_name }}
+
+<span class="eda-refresh-indicator" id="eda-last-refresh"></span>
+
+{% endblock %}
+{% block help_icon_id %}eda-topic-help{% endblock %}
+
+{% block extra_page_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/topic-detail.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.eda.topic_detail.init('{{ topic_name }}', {{ topic_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block content_rows %}
+
+<div class="stat-cards">
+    <div class="stat-card">
+        <div><div class="stat-card-label">Published</div><div class="stat-card-value" id="stat-published">-</div></div>
+        <div id="spark-published"></div>
+    </div>
+    <div class="stat-card">
+        <div><div class="stat-card-label">Depth</div><div class="stat-card-value" id="stat-depth">-</div></div>
+        <div id="spark-depth"></div>
+    </div>
+    <div class="stat-card">
+        <div><div class="stat-card-label">Last publish</div><div class="stat-card-value-sm" id="stat-last-pub">-</div></div>
+        <div></div>
+    </div>
+</div>
+
+<div class="button-container">
+    <button class="action-button" onclick="window.location='{% url 'eda-publish' %}?cluster={{ cluster_id|default:'1' }}&amp;topic_name={{ topic_name }}'">Publish to topic</button>
+    <button class="action-button" onclick="$.fn.zato.eda.topic_detail.purge()">Purge topic</button>
+</div>
+
+<h3 class="section-title">Subscriber queues</h3>
+<table class="eda-table">
+    <thead><tr><th>Subscriber</th><th>Pending</th></tr></thead>
+    <tbody id="queues-body"></tbody>
+</table>
+
+<h3 class="section-title">Recent messages</h3>
+<table class="eda-table">
+    <thead><tr><th>Message ID</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
+    <tbody id="messages-body"></tbody>
+</table>
+{% endblock %}

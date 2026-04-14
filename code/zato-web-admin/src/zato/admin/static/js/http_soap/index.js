@@ -310,11 +310,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     /* 31, 32 */
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.delete_('{0}');\">Delete</a>", item.id));
 
     if(is_outgoing) {
         /* 33 */
-        row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
+        row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.ping('{0}');\">Ping</a>", item.id));
     }
 
     /* 38a */

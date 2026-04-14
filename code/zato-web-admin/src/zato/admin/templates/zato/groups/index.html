@@ -5,11 +5,6 @@
 
 {% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
-    <style type="text/css">
-        .ui-dialog-titlebar {
-            padding-bottom:10px !important;
-        }
-    </style>
 {% endblock %}
 
 {% block "extra_js" %}
@@ -57,11 +52,11 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
     {% if cluster_id %}
+        <div id="markup">
         <div class='page_prompt' style="clear:left; padding-top:1rem">
             <a href="javascript:$.fn.zato.groups.create()">Create a new group</a>
         </div>
 
-        <div id="markup">
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
@@ -121,9 +116,9 @@
 
                 </tbody>
             </table>
-        </div>
 
 {% include "zato/paginate/action-panel.html" %}
+        </div>
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

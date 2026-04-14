@@ -109,16 +109,12 @@ class CommandStore:
              check_config        as check_config_mod,        \
              component_version   as component_version_mod,   \
              create_cluster      as create_cluster_mod,      \
-             create_odb          as create_odb_mod,          \
              create_scheduler    as create_scheduler_mod,    \
              create_server       as create_server_mod,       \
              create_web_admin    as create_web_admin_mod,    \
              crypto              as crypto_mod,              \
-             delete_odb          as delete_odb_mod,          \
              enmasse_command     as enmasse_mod,             \
              FromConfig,                                     \
-             ide                 as ide_mod,                 \
-             info                as info_mod,                \
              quickstart          as quickstart_mod,          \
              service             as service_mod,             \
              stop                as stop_mod,                \
@@ -209,10 +205,6 @@ class CommandStore:
         create_cluster.set_defaults(command='create_cluster')
         self.add_opts(create_cluster, create_cluster_mod.Create.opts)
 
-        create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
-        create_odb.set_defaults(command='create_odb')
-        self.add_opts(create_odb, create_odb_mod.Create.opts)
-
         create_scheduler = create_subs.add_parser(
             'scheduler', description=create_scheduler_mod.Create.__doc__, parents=[base_parser])
         create_scheduler.add_argument('path', help='Path to an empty directory to install the scheduler in')
@@ -269,7 +261,7 @@ class CommandStore:
         #
         # delete
         #
-        delete = subs.add_parser('delete', description=delete_odb_mod.Delete.__doc__)
+        delete = subs.add_parser('delete', description='Deletes Zato components')
         delete_subs = delete.add_subparsers()
 
         delete_api_key = delete_subs.add_parser('api-key', description='Deletes an API key definition',
@@ -281,11 +273,6 @@ class CommandStore:
             parents=[base_parser])
         delete_basic_auth.set_defaults(command='delete_basic_auth')
         self.add_opts(delete_basic_auth, sec_basic_auth_mod.DeleteDefinition.opts)
-
-        delete_odb = delete_subs.add_parser('odb', description='Deletes a Zato ODB', parents=[base_parser])
-        delete_odb.set_defaults(command='delete_odb')
-
-        self.add_opts(delete_odb, delete_odb_mod.Delete.opts)
 
         #
         # delete-rest-channel
@@ -330,22 +317,6 @@ class CommandStore:
         hash_get_rounds = hash_subs.add_parser('get-rounds', description=crypto_mod.GetHashRounds.__doc__, parents=[base_parser])
         hash_get_rounds.set_defaults(command='hash_get_rounds')
         self.add_opts(hash_get_rounds, crypto_mod.GetHashRounds.opts)
-
-        #
-        # IDE
-        #
-        ide = subs.add_parser('set-ide-password', description=ide_mod.SetIDEPassword.__doc__, parents=[base_parser])
-        ide.add_argument('path', help='Path to a Zato server')
-        ide.set_defaults(command='set_ide_password')
-        self.add_opts(ide, ide_mod.SetIDEPassword.opts)
-
-        #
-        # info
-        #
-        info = subs.add_parser('info', description=info_mod.Info.__doc__, parents=[base_parser])
-        info.add_argument('path', help='Path to a Zato component')
-        info.set_defaults(command='info')
-        self.add_opts(info, info_mod.Info.opts)
 
         #
         # reset-totp-key
@@ -426,84 +397,13 @@ command_store = CommandStore()
 # ################################################################################################################################
 
 def pre_process_quickstart(sys_argv:'strlist', opts_idx:'int') -> 'None':
-
-    # We know that it exists so we can skip the try/except ValueError: block
-    create_idx = sys_argv.index('create')
-
-    # We are looking for the idx of the path element but it is still possible
-    # that we have an incomplete command 'zato quickstart create' alone on input.
-    # In such a case, 'create' will be our last element among args and we can return immediately.
-    if len(sys_argv) == create_idx:
-        return
-
-    # If we are here, we have 'zato quickstart create' followed by a path, ODB and Redis options.
-    path_idx = create_idx + 1
-
-    # ODB + Redis options start here .
-    original_odb_type_idx   = path_idx + 1
-    opts = sys_argv[path_idx+1:opts_idx]
-
-    # No options = we can return
-    if not opts:
-        return
-
-    # Extract the options ..
-    odb_type   = opts[0]
-
-    # .. remove them from their pre-3.2 non-optional positions,
-    # .. note that we need to do it once for each of odb_type, redis_host and redis_port
-    # .. using the same index because .pop will modify the list in place ..
-    _ = sys_argv.pop(original_odb_type_idx)
-    _ = sys_argv.pop(original_odb_type_idx)
-    _ = sys_argv.pop(original_odb_type_idx)
-
-    # .. now, add the options back as '--' ones.
-    sys_argv.append('--odb_type')
-    sys_argv.append(odb_type)
+    pass
 
 # ################################################################################################################################
 
 def pre_process_server(sys_argv, opts_idx, opts):
     # type: (list, int, list) -> None
-
-    #
-    # This is pre-3.2
-    # 'zato0', 'create1', 'server2', '/path/to/server3', 'sqlite4', 'kvdb_host5', 'kvdb_port6', 'cluster_name7', 'server_name8'
-    #
-    len_pre_32 = 9
-
-    #
-    # This is 3.2
-    # 'zato0', 'create1', 'server2', '/path/to/server3', 'cluster_name7', 'server_name8'
-    #
-
-    # We are turning pre-3.2 options into 3.2 ones.
-    if len(sys_argv[:opts_idx]) == len_pre_32:
-
-        # New arguments to produce
-        new_argv = []
-
-        new_argv.append(sys_argv[0]) # zato0
-        new_argv.append(sys_argv[1]) # create1
-        new_argv.append(sys_argv[2]) # server2
-        new_argv.append(sys_argv[3]) # /path/to/server3
-
-        new_argv.append(sys_argv[7]) # cluster_name7
-        new_argv.append(sys_argv[8]) # server_name8
-
-        new_argv.append('--odb_type') # sqlite4
-        new_argv.append(sys_argv[4])
-
-        new_argv.append('--kvdb_host') # kvdb_host5
-        new_argv.append(sys_argv[5])
-
-        new_argv.append('--kvdb_port') # kvdb_port6
-        new_argv.append(sys_argv[6])
-
-        new_argv.extend(opts)
-
-        # We are ready to replace sys.argv now
-        sys_argv[:] = new_argv
+    pass
 
 # ################################################################################################################################
 
@@ -574,6 +474,143 @@ def pre_process_sys_argv(sys_argv):
 
 # ################################################################################################################################
 
+def _run_broker_cli():
+    """ Fast path for `zato broker <subcommand>`. Dispatches directly to Rust. """
+
+    # stdlib
+    import json
+    import os
+    import sys
+
+    argv = sys.argv[2:]
+
+    if not argv or argv[0] in ('-h', '--help'):
+        sys.stdout.write(
+            'Usage: zato broker <command> [options]\n\n'
+            'Admin commands:\n'
+            '  status       Show broker status and statistics\n'
+            '  validate     Validate the broker directory structure\n'
+            '  init         Create the broker directory tree\n'
+            '  backup       Back up the broker directory\n'
+            '  backup-list  List existing backups\n'
+            '  cleanup      Remove expired keys, consumed messages, and old stream entries\n'
+            '  restore      Restore items from a backup\n\n'
+            'Convenience commands:\n'
+            '  current      Overview of topics, queues, keys with counts and depths\n'
+            '  top          Live-updating terminal dashboard\n'
+            '  tail         Live-stream messages from a topic\n'
+            '  watch        Live counters for one topic\n'
+            '  publish      Publish a message to a topic\n'
+            '  inspect      Full detail for a single message\n'
+            '  tree         Colored directory tree with counts and sizes\n'
+            '  drain        Consume and print pending messages from a queue\n'
+            '  perf         Throughput benchmark\n'
+            '  diff         Compare current state against a backup\n\n'
+            'Options:\n'
+            '  --path       Broker directory path (default: ~/env/qs-1/data/broker)\n'
+            '  --no-color   Disable colored output\n'
+        )
+        return
+
+    command = argv[0]
+    broker_dir = os.path.expanduser('~/env/qs-1/data/broker')
+    args_dict = {}
+
+    # ..  for commands that take a positional argument after the command name,
+    # ..  capture it before option parsing starts.
+    positional_commands = {
+        'tail': 'topic',
+        'watch': 'topic',
+        'inspect': 'msg_id',
+        'publish': 'topic',
+    }
+
+    i = 1
+    if command in positional_commands and i < len(argv) and not argv[i].startswith('-'):
+        args_dict[positional_commands[command]] = argv[i]
+        i += 1
+
+    while i < len(argv):
+        arg = argv[i]
+        if arg == '--path' and i + 1 < len(argv):
+            broker_dir = os.path.expanduser(argv[i + 1])
+            i += 2
+        elif arg == '--to' and i + 1 < len(argv):
+            args_dict['to'] = argv[i + 1]
+            i += 2
+        elif arg == '--from' and i + 1 < len(argv):
+            args_dict['from'] = argv[i + 1]
+            i += 2
+        elif arg == '--backup' and i + 1 < len(argv):
+            args_dict['backup'] = argv[i + 1]
+            i += 2
+        elif arg == '--dir' and i + 1 < len(argv):
+            args_dict['dir'] = argv[i + 1]
+            i += 2
+        elif arg == '--items' and i + 1 < len(argv):
+            args_dict['items'] = argv[i + 1].split(',')
+            i += 2
+        elif arg == '--filter' and i + 1 < len(argv):
+            args_dict['filter'] = argv[i + 1]
+            i += 2
+        elif arg == '--topic' and i + 1 < len(argv):
+            args_dict['topic'] = argv[i + 1]
+            i += 2
+        elif arg == '--sub-key' and i + 1 < len(argv):
+            args_dict['sub_key'] = argv[i + 1]
+            i += 2
+        elif arg == '--limit' and i + 1 < len(argv):
+            args_dict['limit'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--messages' and i + 1 < len(argv):
+            args_dict['messages'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--topics' and i + 1 < len(argv):
+            args_dict['topics'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--size' and i + 1 < len(argv):
+            args_dict['size'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--priority' and i + 1 < len(argv):
+            args_dict['priority'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--expiration' and i + 1 < len(argv):
+            args_dict['expiration'] = int(argv[i + 1])
+            i += 2
+        elif arg == '--compress':
+            args_dict['compress'] = True
+            i += 1
+        elif arg == '--no-color':
+            args_dict['no_color'] = True
+            i += 1
+        elif arg == '--no-ack':
+            args_dict['no_ack'] = True
+            i += 1
+        elif arg == '--full':
+            args_dict['full'] = True
+            i += 1
+        else:
+            # ..  for publish, the last non-flag arg is data
+            if command == 'publish' and not arg.startswith('-'):
+                args_dict['data'] = arg
+                i += 1
+            else:
+                sys.stderr.write(f'Unknown option: {arg}\n')
+                sys.exit(1)
+
+    # ..  for publish, read stdin if no data was provided
+    if command == 'publish' and 'data' not in args_dict and not sys.stdin.isatty():
+        args_dict['data'] = sys.stdin.read()
+
+    # zato-broker-core (Rust extension)
+    from zato_broker_core import broker_cli
+
+    args_json = json.dumps(args_dict) if args_dict else None
+    output = broker_cli(command, broker_dir, args_json)
+    sys.stdout.write(output)
+
+# ################################################################################################################################
+
 def main() -> 'any_':
 
     # stdlib
@@ -603,6 +640,11 @@ def main() -> 'any_':
     elif has_args and sys.argv[1] == 'start':
         parser = command_store.load_start_parser()
 
+    # Fast path for `zato broker <subcommand>` - dispatches directly to Rust
+    elif has_args and sys.argv[1] == 'broker':
+        _run_broker_cli()
+        sys.exit(0)
+
     # All the other commands
     else:
 
@@ -628,33 +670,6 @@ def main() -> 'any_':
 
     # .. otherwise, try to run the command now ..
     else:
-
-        # Now that we are here, we also need to check if non-SQLite databases
-        # have all their required options on input. We do it here rather than in create_odb.py
-        # because we want to report it as soon as possible, before actual commands execute.
-        odb_type = getattr(args, 'odb_type', None)
-        if odb_type and odb_type != 'sqlite':
-            missing = []
-            for name in 'odb_db_name', 'odb_host', 'odb_port', 'odb_user':
-                if not getattr(args, name, None):
-                    missing.append(name)
-
-            if missing:
-                missing_noun = 'Option ' if len(missing) == 1 else 'Options '
-                missing_verb = ' is '    if len(missing) == 1 else ' are '
-                missing.sort()
-
-                _ = sys.stdout.write(
-                    missing_noun                  + \
-                    '`'                           + \
-                    ', '.join(missing)            + \
-                    '`'                           + \
-                    missing_verb                  + \
-                    'required if odb_type is '    + \
-                    '`{}`.'.format(args.odb_type) + \
-                    '\n'
-                )
-                sys.exit(1)
 
         # Zato
         from zato.cli import run_command

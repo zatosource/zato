@@ -13,10 +13,6 @@ from copy import deepcopy
 # Bunch
 from bunch import Bunch, bunchify
 
-# lxml
-from lxml.etree import _Element as EtreeElement
-from lxml.objectify import ObjectifiedElement
-
 # Zato
 from zato.common.api import simple_types
 from zato.common.marshal_.api import Model
@@ -25,8 +21,8 @@ from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
 
-# Zato - Cython
-from zato.simpleio import ServiceInput
+# Zato - Rust SIO
+from zato_sio import ServiceInput
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -43,7 +39,7 @@ if 0:
     from kombu.message import Message as KombuAMQPMessage
 
     # Zato
-    from zato.common.odb.api import PoolStore
+    from zato.common.sql_pool import PoolStore
     from zato.common.typing_ import any_, callable_, stranydict, strnone
     from zato.server.config import ConfigDict, ConfigStore
     from zato.server.connection.email import EMailAPI
@@ -51,8 +47,8 @@ if 0:
     from zato.server.connection.search import SearchAPI
     from zato.server.service import AMQPFacade, Service
 
-    # Zato - Cython
-    from zato.simpleio import CySimpleIO
+    # Zato - Rust SIO
+    from zato_sio import SIOProcessor
 
     callable_ = callable_
     strnone = strnone
@@ -60,7 +56,7 @@ if 0:
     Arrow = Arrow
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    CySimpleIO = CySimpleIO
+    SIOProcessor = SIOProcessor
     EMailAPI = EMailAPI
     FTPStore = FTPStore
     KombuAMQPMessage = KombuAMQPMessage
@@ -77,15 +73,13 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 # ################################################################################################################################
 # ################################################################################################################################
 
-direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 class HTTPRequestData:
     """ Data regarding an HTTP request.
     """
-    __slots__ = 'method', 'GET', 'POST', 'path', 'params', 'user_agent', 'headers', '_wsgi_environ'
+    __slots__ = 'method', 'GET', 'POST', 'path', 'params', 'user_agent', 'headers', '_http_environ'
 
     def __init__(self, _Bunch=Bunch):
         self.method = None # type: str
@@ -95,26 +89,26 @@ class HTTPRequestData:
         self.params = _Bunch()
         self.user_agent = ''
         self.headers = _Bunch()
-        self._wsgi_environ = None # type: dict
+        self._http_environ = None # type: dict
 
-    def init(self, wsgi_environ=None):
-        self._wsgi_environ = wsgi_environ or {}
-        self.method = wsgi_environ.get('REQUEST_METHOD') # type: str
-        self.GET.update(wsgi_environ.get('zato.http.GET', {})) # type: dict
-        self.POST.update(wsgi_environ.get('zato.http.POST', {}))
-        self.path = wsgi_environ.get('PATH_INFO') # type: str
-        self.params.update(wsgi_environ.get('zato.http.path_params', {}))
-        self.user_agent = wsgi_environ.get('HTTP_USER_AGENT')
+    def init(self, http_environ=None):
+        self._http_environ = http_environ or {}
+        self.method = http_environ.get('REQUEST_METHOD') # type: str
+        self.GET.update(http_environ.get('zato.http.GET', {})) # type: dict
+        self.POST.update(http_environ.get('zato.http.POST', {}))
+        self.path = http_environ.get('PATH_INFO') # type: str
+        self.params.update(http_environ.get('zato.http.path_params', {}))
+        self.user_agent = http_environ.get('HTTP_USER_AGENT')
         self._extract_headers()
 
     def _extract_headers(self):
-        for key, value in self._wsgi_environ.items():
+        for key, value in self._http_environ.items():
             if key.startswith('HTTP_'):
                 header_name = key[5:].replace('_', '-').lower()
                 self.headers[header_name] = value
 
     def get_form_data(self) -> 'stranydict':
-        return util_get_form_data(self._wsgi_environ)
+        return util_get_form_data(self._http_environ)
 
     def __repr__(self):
         return make_repr(self)
@@ -151,7 +145,7 @@ class Request:
     text: 'any_'
 
     __slots__ = ('service', 'logger', 'payload', 'text', 'input', 'cid', 'data_format', 'transport',
-        'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_wsgi_environ', 'channel_params',
+        'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_http_environ', 'channel_params',
         'merge_channel_params', 'http', 'amqp', 'enforce_string_encoding')
 
     def __init__(
@@ -170,7 +164,7 @@ class Request:
         self.data_format = cast_('str', data_format)
         self.transport = cast_('str', transport)
         self.http = HTTPRequestData()
-        self._wsgi_environ = cast_('stranydict', None)
+        self._http_environ = cast_('stranydict', None)
         self.channel_params = cast_('stranydict', {})
         self.merge_channel_params = True
         self.amqp = cast_('AMQPRequestData', None)
@@ -184,10 +178,10 @@ class Request:
         self,
         is_sio,       # type: bool
         cid,          # type: str
-        sio,          # type: CySimpleIO
+        sio,          # type: SIOProcessor
         data_format,  # type: str
         transport,    # type: str
-        wsgi_environ, # type: stranydict
+        http_environ, # type: stranydict
         encrypt_func  # type: callable_
     ) -> 'None':
         """ Initializes the object with an invocation-specific data.

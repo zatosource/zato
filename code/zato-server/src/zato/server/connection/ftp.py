@@ -14,9 +14,6 @@ from copy import deepcopy
 from threading import RLock
 from traceback import format_exc
 
-# pyfilesystem
-from fs.ftpfs import FTPFS
-
 # Zato
 from zato.common.api import SECRET_SHADOW, TRACE1
 from zato.common.exception import Inactive
@@ -29,14 +26,33 @@ from zato.common.ext.future.utils import PY2
 
 logger = logging.getLogger(__name__)
 
+_FTPFS = None
+
+def _get_ftpfs_class():
+    global _FTPFS
+    if _FTPFS is None:
+        from fs.ftpfs import FTPFS
+        _FTPFS = FTPFS
+    return _FTPFS
+
 # ################################################################################################################################
 # ################################################################################################################################
 
-class FTPFacade(FTPFS):
+class FTPFacade:
     """ A thin wrapper around fs's FTPFS so it looks like the other Zato connection objects.
     """
+    def __init__(self, *args, **kwargs):
+        cls = _get_ftpfs_class()
+        self._impl = cls(*args, **kwargs)
+
     def conn(self):
         return self
+
+    def __getattr__(self, name):
+        return getattr(self._impl, name)
+
+    def close(self):
+        self._impl.close()
 
 # ################################################################################################################################
 # ################################################################################################################################

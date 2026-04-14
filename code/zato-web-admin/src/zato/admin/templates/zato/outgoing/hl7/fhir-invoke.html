@@ -1,0 +1,63 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}HL7 FHIR invoke{% endblock %}
+
+{% block "extra_js" %}
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/common.js"></script>
+    <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/invoke-connection.js"></script>
+
+{% endblock %}
+
+{% block "content" %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<div id="markup">
+    <table id="data-table">
+        <tr>
+            <td class='inline_header'>
+            Invoke HL7 FHIR connection
+            <a href="{% url "outgoing-hl7-fhir" %}?cluster={{ cluster_id|default:'' }}&amp;type_=outconn-hl7-fhir&amp;query={{ conn_name }}">{{ conn_name }}</a>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <form novalidate id="send_message_form" action="{% url "outgoing-hl7-fhir-invoke-action" conn_name %}?cluster={{ cluster_id }}" method="post">
+                {% csrf_token %}
+                    Request:
+                    <textarea style="width:100%; height:250px" id="request_data" name="request_data">Hello from Zato!</textarea>
+                    <br/><br/>
+                    Response:
+                    <textarea style="width:100%; height:250px" id="response_data" name="response_data"></textarea>
+
+                    <table style="width:100%">
+                        <tr>
+                            <td style="width:70px">
+                                Timeout&nbsp;<span class="form_hint">(s)</span>:
+                            </td>
+                            <td style="width:5%">
+                                <input type="text" name="timeout" id="timeout" style="width:60px" value="{{ timeout }}"/>
+                            </td>
+
+                            <td style="text-align:right">
+                                <input type="submit" value="Submit" />
+                            </td>
+                        </tr>
+                    </table>
+
+                    <input type="hidden" id="conn_type" name="conn_type" value="{{ conn_type }}" />
+                    <input type="hidden" id="conn_name" name="conn_name" value="{{ conn_name }}" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    </div>
+
+                </form>
+            </td>
+        </tr>
+    </table>
+</div>
+
+
+{% endblock %}

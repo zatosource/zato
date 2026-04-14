@@ -18,7 +18,7 @@ class TestTopicNameRules(BaseTestCase):
         """ Test that non-ASCII topic names are rejected.
         """
         client = self.get_client()
-        topic = 'demo.тест'
+        topic = 'demo.testé'
 
         result = client.publish(topic, 'test message')
         self.assertFalse(result.get('is_ok'), 'Non-ASCII topic name should be rejected')

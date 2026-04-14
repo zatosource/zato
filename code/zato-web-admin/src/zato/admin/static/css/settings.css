@@ -1,7 +1,7 @@
 .settings-container {
     background: linear-gradient(135deg, var(--white) 0%, var(--background-light) 50%, var(--border-light) 100%);
     min-height: 100vh;
-    padding: 40px;
+    padding: 30px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -10,7 +10,6 @@
     margin: 0 auto;
     background: var(--white);
     border: 3px solid var(--primary-dark);
-    box-shadow: 8px 8px 0px var(--shadow-dark);
 }
 
 .settings-content {
@@ -21,12 +20,14 @@
     flex: 1;
     padding: 24px 40px 40px 40px;
     padding-bottom: 11px;
+    padding-top: 15px;
 }
 
 .settings-sidebar {
     background: var(--background-light);
     border-left: 3px solid var(--primary-dark);
     padding: 24px 32px 40px 32px;
+    padding-top: 15px;
 }
 
 .settings-main h3, .settings-sidebar h3 {

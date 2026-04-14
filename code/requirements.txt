@@ -10,11 +10,11 @@ cffi==2.0.0
 chardet==5.2.0
 colorama==0.4.6
 configparser==7.1.0
-cryptography==46.0.5
+cryptography==46.0.6
 curl-cffi==0.15.0b3
 dacite==1.6.0
 dateparser==0.7.6
-ddtrace==4.2.2
+ddtrace==4.8.0rc3
 decorator==5.1.0
 distro==1.5.0
 Django==4.2.29
@@ -23,6 +23,7 @@ django-zato-plugin
 docformatter==0.8
 elasticsearch==9.0.1
 faker==8.12.1
+fhirpy==2.2.0
 fs==2.4.16
 gevent==25.8.2
 globre==0.1.5
@@ -69,7 +70,7 @@ pyasn1==0.6.3
 pycparser==2.21
 pycryptodome==3.19.1
 pydantic==2.12.5
-pygments==2.19.2
+pygments==2.20.0
 pymongo==4.13.0
 PyMySQL==1.1.1
 pyOpenSSL==26.0.0
