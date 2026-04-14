@@ -1,62 +1,62 @@
-use zato_server_core::http::io::{parse_cl, val_eq_ci, trim_ows};
+use zato_server_core::http::io::{parse_content_length, header_value_eq, trim_ows};
 
 const MAX_REQUEST_SIZE: usize = 1_048_576;
 
 #[test]
-fn parse_cl_zero() {
-    assert_eq!(parse_cl(b"0"), 0);
+fn parse_content_length_zero() {
+    assert_eq!(parse_content_length(b"0"), 0);
 }
 
 #[test]
-fn parse_cl_exact_max() {
+fn parse_content_length_exact_max() {
     let s = MAX_REQUEST_SIZE.to_string();
-    assert_eq!(parse_cl(s.as_bytes()), MAX_REQUEST_SIZE);
+    assert_eq!(parse_content_length(s.as_bytes()), MAX_REQUEST_SIZE);
 }
 
 #[test]
-fn parse_cl_above_max_clamps() {
+fn parse_content_length_above_max_clamps() {
     let s = (MAX_REQUEST_SIZE + 1).to_string();
-    assert_eq!(parse_cl(s.as_bytes()), MAX_REQUEST_SIZE);
+    assert_eq!(parse_content_length(s.as_bytes()), MAX_REQUEST_SIZE);
 }
 
 #[test]
-fn parse_cl_empty() {
-    assert_eq!(parse_cl(b""), 0);
+fn parse_content_length_empty() {
+    assert_eq!(parse_content_length(b""), 0);
 }
 
 #[test]
-fn parse_cl_non_digit() {
-    assert_eq!(parse_cl(b"abc"), 0);
+fn parse_content_length_non_digit() {
+    assert_eq!(parse_content_length(b"abc"), 0);
 }
 
 #[test]
-fn parse_cl_leading_spaces() {
-    assert_eq!(parse_cl(b"  42"), 42);
+fn parse_content_length_leading_spaces() {
+    assert_eq!(parse_content_length(b"  42"), 42);
 }
 
 #[test]
-fn val_eq_ci_same_case() {
-    assert!(val_eq_ci(b"hello", b"hello"));
+fn header_value_eq_same_case() {
+    assert!(header_value_eq(b"hello", b"hello"));
 }
 
 #[test]
-fn val_eq_ci_mixed_case() {
-    assert!(val_eq_ci(b"HeLLo", b"hello"));
+fn header_value_eq_mixed_case() {
+    assert!(header_value_eq(b"HeLLo", b"hello"));
 }
 
 #[test]
-fn val_eq_ci_with_ows() {
-    assert!(val_eq_ci(b" hello ", b"hello"));
+fn header_value_eq_with_ows() {
+    assert!(header_value_eq(b" hello ", b"hello"));
 }
 
 #[test]
-fn val_eq_ci_mismatch() {
-    assert!(!val_eq_ci(b"hello", b"world"));
+fn header_value_eq_mismatch() {
+    assert!(!header_value_eq(b"hello", b"world"));
 }
 
 #[test]
-fn val_eq_ci_different_length() {
-    assert!(!val_eq_ci(b"hi", b"hello"));
+fn header_value_eq_different_length() {
+    assert!(!header_value_eq(b"hi", b"hello"));
 }
 
 #[test]

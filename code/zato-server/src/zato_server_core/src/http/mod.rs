@@ -4,6 +4,7 @@ mod connection;
 mod headers;
 #[allow(unsafe_code)]
 pub mod io;
+pub mod request;
 pub mod response;
 #[allow(unsafe_code)]
 mod server;
@@ -11,6 +12,9 @@ mod server;
 mod socket;
 
 pub use server::HTTPServer;
+pub use headers::extract_headers;
+pub use request::handle_http_request;
+pub use request::make_cid_public;
 
 use pyo3::prelude::*;
 

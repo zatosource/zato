@@ -115,7 +115,7 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-class Ping(AdminService):
+class Ping(Service):
     """ A ping service, useful for API testing.
     """
     name = 'demo.ping'

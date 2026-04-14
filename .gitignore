@@ -83,5 +83,7 @@ code/zato-hl7/test/java_/gradle/
 code/zato-hl7/test/dotnet/bin/
 code/zato-hl7/test/dotnet/obj/
 
+code/util/extra
+
 # Rust build artifacts
 **/target/

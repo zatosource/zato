@@ -10,14 +10,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from functools import lru_cache as _lru_cache
 from http.client import BAD_REQUEST, METHOD_NOT_ALLOWED, OK
 from inspect import isclass
 from re import findall
 from traceback import format_exc
-
-# Bunch
-from bunch import bunchify
 
 # gevent
 from gevent import Timeout, sleep as _gevent_sleep, spawn as _gevent_spawn
@@ -32,7 +28,7 @@ from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIOR
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
 from zato.common.json_internal import dumps
-from zato.common.typing_ import cast_, type_
+from zato.common.typing_ import type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
@@ -140,12 +136,6 @@ _http_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 # ################################################################################################################################
 
 _utcnow = utcnow
-
-@_lru_cache(maxsize=1)
-def _get_response_raw_types():
-    from lxml.etree import _Element as EtreeElement
-    from lxml.objectify import ObjectifiedElement
-    return (bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
 
 # ################################################################################################################################
 
@@ -323,6 +313,13 @@ class Service:
     email:'EMailAPI | None' = None
     search:'SearchAPI | None' = None
     patterns: 'PatternsFacade | None' = None
+
+    _EMailAPI:'type | None' = None
+    _SearchAPI:'type | None' = None
+    _KeysightContainer:'type | None' = None
+    _SecurityFacade:'type | None' = None
+    _ServiceMetrics:'type | None' = None
+    _AMQPRequestData:'type | None' = None
 
     amqp = AMQPFacade()
     commands = CommandsFacade()
@@ -512,13 +509,17 @@ class Service:
 
         if self.component_enabled_email:
             if not Service.email:
-                from zato.server.connection.email import EMailAPI
-                Service.email = EMailAPI(self._worker_store.email_smtp_api, self._worker_store.email_imap_api)
+                if Service._EMailAPI is None:
+                    from zato.server.connection.email import EMailAPI
+                    Service._EMailAPI = EMailAPI
+                Service.email = Service._EMailAPI(self._worker_store.email_smtp_api, self._worker_store.email_imap_api)
 
         if self.component_enabled_search:
             if not Service.search:
-                from zato.server.connection.search import SearchAPI
-                Service.search = SearchAPI(self._worker_store.search_es_api)
+                if Service._SearchAPI is None:
+                    from zato.server.connection.search import SearchAPI
+                    Service._SearchAPI = SearchAPI
+                Service.search = Service._SearchAPI(self._worker_store.search_es_api)
 
         if may_have_http_environ:
             self.request.http.init(self.http_environ)
@@ -535,30 +536,48 @@ class Service:
         self.rest.init(self.cid, self._worker_store.worker_config.out_plain_http)
 
         # Vendors - Keysight
-        from zato.server.connection.facade import KeysightContainer
-        self.keysight = KeysightContainer()
+        _kc = Service._KeysightContainer
+        if _kc is None:
+            from zato.server.connection.facade import KeysightContainer
+            Service._KeysightContainer = KeysightContainer
+            _kc = KeysightContainer
+        self.keysight = _kc()
         self.keysight.init(self.cid, self._worker_store.worker_config.out_plain_http)
 
 # ################################################################################################################################
 
-    def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
-        response = service.response.payload
-        if not isinstance(response, _get_response_raw_types()):
+    @staticmethod
+    def set_response_data(service, **kwargs):
+        response = service.response
+        payload = response.payload
 
-            if hasattr(response, 'getvalue'):
-                response = response.getvalue(serialize=kwargs.get('serialize'))
-                if kwargs.get('as_bunch'):
-                    response = bunchify(response)
+        if isinstance(payload, (bytes, str, dict, list, tuple)):
+            return payload
 
-            elif hasattr(response, 'to_dict'):
-                response = response.to_dict()
+        from zato.common.marshal_.api import Model
+        if isinstance(payload, Model):
+            return payload
 
-            elif hasattr(response, 'to_json'):
-                response = response.to_json()
+        if hasattr(payload, 'getvalue'):
+            serialize = kwargs.get('serialize')
+            if serialize:
+                new_response = payload.getvalue(serialize=serialize)
+            else:
+                new_response = payload.getvalue()
 
-            service.response.payload = response
+            if kwargs.get('as_bunch'):
+                from zato.bunch import bunchify
+                new_response = bunchify(new_response)
 
-        return response
+        elif hasattr(payload, 'to_dict'):
+            new_response = payload.to_dict()
+        elif hasattr(payload, 'to_json'):
+            new_response = payload.to_json()
+        else:
+            new_response = payload
+
+        response.payload = new_response
+        return new_response
 
 # ################################################################################################################################
 
@@ -599,22 +618,6 @@ class Service:
 
 # ################################################################################################################################
 
-    def extract_target(self, name:'str') -> 'tuple[str, str]':
-        """ Splits a service's name into name and target, if the latter is provided on input at all.
-        """
-        # It can be either a name or a name followed by the target to invoke the service on,
-        # i.e. 'myservice' or 'myservice@mytarget'.
-        if '@' in name:
-            name, target = name.split('@')
-            if not target:
-                raise ZatoException(self.cid, 'Target must not be empty in `{}`'.format(name))
-        else:
-            target = ''
-
-        return name, target
-
-# ################################################################################################################################
-
     def update_handle(self,
         set_response_func, # type: callable_
         service,       # type: Service
@@ -637,9 +640,12 @@ class Service:
         if service.needs_datadog_logging:
             service.logger = DatadogLogger(cid, server, service.name, self.process_name, self)
         else:
-
-            # .. no Datadog = use stdlib's logger.
-            service.logger = _get_logger(service.name) # type: Logger
+            _class = service.__class__
+            _cached = getattr(_class, '_cached_logger', None)
+            if _cached is None:
+                _cached = _get_logger(service.name)
+                _class._cached_logger = _cached
+            service.logger = _cached
 
         # .. now we can assign the logger to our request object.
         service.request.logger = service.logger
@@ -650,11 +656,7 @@ class Service:
 
         zato_response_headers_container = kwargs.get('zato_response_headers_container')
 
-        # Here's an edge case. If a SOAP request has a single child in Body and this child is an empty element
-        # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
-        # to False so we'd be parsing the payload again superfluously.
-        from lxml.objectify import ObjectifiedElement as _ObjectifiedElement
-        if not isinstance(payload, _ObjectifiedElement) and not payload:
+        if not payload:
             payload = payload_from_request(server.json_parser, cid, raw_request, data_format, transport, channel_item)
 
         job_type = kwargs.get('job_type') or ''
@@ -1160,10 +1162,16 @@ class Service:
         service.user_config = server.user_config
         service.static_config = server.static_config
         service.time = server.time_util
-        from zato.common.facade import SecurityFacade as _SecurityFacade
-        service.security = _SecurityFacade(service.server)
-        from zato.common.monitoring.metrics import ServiceMetrics as _ServiceMetrics
-        service.metrics = _ServiceMetrics(service)
+
+        if Service._SecurityFacade is None:
+            from zato.common.facade import SecurityFacade
+            Service._SecurityFacade = SecurityFacade
+        service.security = Service._SecurityFacade(service.server)
+
+        if Service._ServiceMetrics is None:
+            from zato.common.monitoring.metrics import ServiceMetrics
+            Service._ServiceMetrics = ServiceMetrics
+        service.metrics = Service._ServiceMetrics(service)
 
         if channel_params:
             service.request.channel_params.update(channel_params)
@@ -1172,13 +1180,14 @@ class Service:
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 
-        channel_item = http_environ.get('zato.channel_item') or {}
-        channel_item = cast_('strdict', channel_item)
+        channel_item: 'strdict' = http_environ.get('zato.channel_item') or {}
         sec_def_info = http_environ.get('zato.sec_def', {})
 
         if channel_type == _AMQP:
-            from zato.server.service.reqresp import AMQPRequestData
-            service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
+            if Service._AMQPRequestData is None:
+                from zato.server.service.reqresp import AMQPRequestData
+                Service._AMQPRequestData = AMQPRequestData
+            service.request.amqp = Service._AMQPRequestData(channel_item['amqp_msg'])
 
         chan_sec_info = ChannelSecurityInfo(
             sec_def_info.get('id'),
@@ -1427,10 +1436,10 @@ SOAPAdapter = RESTAdapter
 
 class BusinessCentralAdapter(Service):
 
-    model     = None
-    conn_name = cast_('str', None)
-    base_url  = cast_('str', None)
-    endpoint  = cast_('str', None)
+    model: 'any_' = None
+    conn_name: 'str' = None
+    base_url: 'str' = None
+    endpoint: 'str' = None
 
 # ################################################################################################################################
 

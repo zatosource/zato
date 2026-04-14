@@ -4,7 +4,7 @@ use pyo3::intern;
 
 use super::{PyObject, MAX_HEADERS, MAX_REQUEST_SIZE};
 use super::headers::set_header;
-use super::io::{fd_read, fd_write_all, parse_cl, val_eq_ci};
+use super::io::{fd_read, fd_write_all, parse_content_length, header_value_eq};
 use super::response::build_response;
 
 pub(super) fn handle_connection(
@@ -58,9 +58,9 @@ pub(super) fn handle_connection(
                     for h in req.headers.iter() {
                         set_header(py, &dict, h.name, h.value)?;
                         if h.name.eq_ignore_ascii_case("content-length") {
-                            cl = parse_cl(h.value);
+                            cl = parse_content_length(h.value);
                         } else if h.name.eq_ignore_ascii_case("connection") {
-                            ka = val_eq_ci(h.value, b"keep-alive");
+                            ka = header_value_eq(h.value, b"keep-alive");
                         }
                     }
                     break (hlen, cl, ka, ver, dict);

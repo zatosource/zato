@@ -11,13 +11,20 @@ from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.hl7.mllp.client import HL7MLLPClient
 from zato.server.connection.queue import Wrapper
+
+try:
+    from zato.hl7.mllp.client import HL7MLLPClient
+except ImportError:
+    HL7MLLPClient = None  # type: ignore[assignment,misc]
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+if HL7MLLPClient is None:
+    logger.warning('HL7 is not available (outconn_hl7_mllp)')
 
 # ################################################################################################################################
 # ################################################################################################################################

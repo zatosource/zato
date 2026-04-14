@@ -25,8 +25,8 @@ from zato.common.exception import HTTP_RESPONSES, BackendInvocationError, Servic
 from zato.common.json_ import dumps
 from zato.common.json_internal import loads
 from zato.common.marshal_.api import Model, ModelValidationError
-from zato.common.typing_ import cast_
-from zato.common.util.api import as_bool, utcnow
+from zato.common.util.api import as_bool
+from zato_common_core import utc_now as utcnow
 from zato.common.util.auth import enrich_with_sec_data, extract_basic_auth
 from zato.common.util.exception import pretty_format_exception
 from zato.common.util.http_ import get_form_data as util_get_form_data, QueryDict
@@ -244,8 +244,8 @@ class RequestDispatcher:
         # Credentials are checked in a call to self.url_data.check_security
         url_match, channel_item = self.url_data.match(path_info, http_method, http_accept) # type: ignore
 
-        url_match = cast_('str', url_match)
-        channel_item = cast_('anydict', channel_item)
+        url_match: 'str' = url_match
+        channel_item: 'anydict' = channel_item
 
         # .. the item itself may be None in case it is a 404 ..
         if channel_item:
@@ -381,12 +381,10 @@ class RequestDispatcher:
                 # Return payload to the client, deserializing from the Rust Payload if needed.
                 if isinstance(response.payload, CySimpleIOPayload):
                     payload = response.payload.getvalue()
-                    logger.info('SIO payload getvalue -> type:%s, value:%r', type(payload).__name__, payload)
                     if isinstance(payload, dict):
                         payload = dumps(payload)
                 else:
                     payload = response.payload
-                    logger.info('Raw payload -> type:%s, value:%r', type(payload).__name__, payload)
 
                 return payload
 
@@ -727,7 +725,7 @@ class RequestHandler:
         # No cache for this channel or no cached response, invoke the service then.
         response = service.update_handle(self._set_response_data, service, raw_request,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
-            cast_('BrokerCoreAPI', worker_store.broker_client),
+            worker_store.broker_client,
             worker_store, cid, simple_io_config, http_environ=http_environ,
             url_match=url_match, channel_item=channel_item, channel_params=channel_params,
             merge_channel_params=channel_item.merge_url_params_req,

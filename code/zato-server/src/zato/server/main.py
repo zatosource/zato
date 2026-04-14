@@ -429,6 +429,12 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     server.base_dir = base_dir
     server.user_conf_location = server.set_up_user_config_location()
     server.logs_dir = os.path.join(server.base_dir, 'logs')
+
+    from zato_server_core import init_rest_log, init_access_log
+    _max_log_bytes = 1_000_000_000
+    init_rest_log(os.path.join(server.logs_dir, 'server.log'), _max_log_bytes)
+    init_access_log(os.path.join(server.logs_dir, 'http_access.log'), _max_log_bytes)
+
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.static_dir = os.path.join(server.base_dir, 'config', 'repo', 'static')
     server.fs_server_config = server_config
@@ -494,6 +500,8 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     http_server = _create_http_server(zato_host, int(zato_port), server.on_http_request, server_software)
     logger.info('Starting Zato HTTP server on %s:%s', zato_host, zato_port)
 
+    _use_yappi = asbool(os.environ.get('Zato_Use_Yappi', ''))
+
     _shutting_down = False
 
     def _on_shutdown() -> 'None':
@@ -503,12 +511,63 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
         _shutting_down = True
 
         logger.info('Shutting down server')
+
+        if _use_yappi:
+
+            import yappi as _yappi
+
+            if _yappi.is_running():
+                _yappi.stop()
+
+            profile_dir = os.path.join(server.logs_dir, 'profile')
+            os.makedirs(profile_dir, exist_ok=True)
+
+            stats = _yappi.get_func_stats()
+            stats.sort('tsub', 'desc')
+            stats.save(os.path.join(profile_dir, 'callgrind.out'), type='callgrind')
+
+            txt_path = os.path.join(profile_dir, 'profile.txt')
+
+            with open(txt_path, 'w') as f:
+                stats.print_all(out=f, columns={
+                    0: ('name', 80), 1: ('ncall', 10),
+                    2: ('tsub', 10), 3: ('ttot', 10), 4: ('tavg', 10),
+                })
+
+            children_path = os.path.join(profile_dir, 'children.txt')
+
+            with open(children_path, 'w') as f:
+                for stat in stats:
+                    children = stat.children
+                    if children and stat.ttot > 0.01:
+                        f.write(f'\n=== {stat.name} (ncall={stat.ncall}, tsub={stat.tsub:.6f}, ttot={stat.ttot:.6f}) ===\n')
+                        for child in children:
+                            f.write(f'  -> {child.name} ncall={child.ncall} tsub={child.tsub:.6f} ttot={child.ttot:.6f}\n')
+
+            callers_path = os.path.join(profile_dir, 'cast_callers.txt')
+            with open(callers_path, 'w') as f:
+                for stat in stats:
+                    for child in stat.children:
+                        if 'cast' in child.name:
+                            f.write(f'{child.ncall:>8} calls  {stat.name}  ->  {child.name}\n')
+
+            logger.info('Profile written to %s', profile_dir)
+
         http_server.stop()
         server.cleanup_on_stop()
         os._exit(0)
 
     gevent_signal_handler(signal.SIGTERM, _on_shutdown)
     gevent_signal_handler(signal.SIGINT, _on_shutdown)
+
+    if _use_yappi:
+
+        import yappi
+
+        yappi.set_context_backend('greenlet')
+        yappi.set_clock_type('wall')
+        yappi.start()
+        logger.info('yappi profiler started')
 
     http_server.serve_forever()
 

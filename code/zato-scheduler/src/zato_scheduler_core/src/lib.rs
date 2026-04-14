@@ -19,6 +19,7 @@ type PyObject = Py<PyAny>;
 
 static SHARED: std::sync::OnceLock<Arc<SchedulerShared>> = std::sync::OnceLock::new();
 static CONFIG_STORE: std::sync::OnceLock<PyObject> = std::sync::OnceLock::new();
+static THREAD_HANDLE: std::sync::Mutex<Option<std::thread::JoinHandle<()>>> = std::sync::Mutex::new(None);
 
 fn get_shared() -> PyResult<&'static Arc<SchedulerShared>> {
     SHARED.get().ok_or_else(|| {
@@ -54,12 +55,16 @@ fn scheduler_start(
 
     let cs = config_store.clone_ref(py);
 
-    std::thread::Builder::new()
+    let handle = std::thread::Builder::new()
         .name("zato-scheduler".into())
         .spawn(move || {
             scheduler::scheduler_loop(shared, cs, run_cb, spawn_fn, on_job_executed_cb, initial_sleep_time);
         })
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("spawn failed: {}", e)))?;
+        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("spawn failed: {e}")))?;
+
+    if let Ok(mut guard) = THREAD_HANDLE.lock() {
+        *guard = Some(handle);
+    }
 
     Ok(())
 }
@@ -70,7 +75,18 @@ fn scheduler_stop(timeout_s: f64) -> PyResult<()> {
     let shared = get_shared()?;
     shared.stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
     shared.condvar.notify_all();
-    std::thread::sleep(Duration::from_secs_f64(timeout_s.min(30.0)));
+
+    let handle = THREAD_HANDLE.lock().ok().and_then(|mut g| g.take());
+    if let Some(h) = handle {
+        let deadline = std::time::Instant::now() + Duration::from_secs_f64(timeout_s.min(30.0));
+        while !h.is_finished() {
+            let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            std::thread::sleep(remaining.min(Duration::from_millis(50)));
+        }
+    }
     Ok(())
 }
 

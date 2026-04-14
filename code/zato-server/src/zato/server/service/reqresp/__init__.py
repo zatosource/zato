@@ -17,11 +17,11 @@ from bunch import Bunch, bunchify
 from zato.common.api import simple_types
 from zato.common.marshal_.api import Model
 from zato.common.json_internal import loads
-from zato.common.typing_ import cast_
 from zato.common.util.api import make_repr
 from zato.common.util.http_ import get_form_data as util_get_form_data
 
-# Zato - Rust SIO
+# Rust
+from zato_server_core import extract_headers
 from zato_sio import ServiceInput
 
 # ################################################################################################################################
@@ -102,10 +102,7 @@ class HTTPRequestData:
         self._extract_headers()
 
     def _extract_headers(self):
-        for key, value in self._http_environ.items():
-            if key.startswith('HTTP_'):
-                header_name = key[5:].replace('_', '-').lower()
-                self.headers[header_name] = value
+        self.headers.update(extract_headers(self._http_environ))
 
     def get_form_data(self) -> 'stranydict':
         return util_get_form_data(self._http_environ)
@@ -142,7 +139,22 @@ class AMQPRequestData:
 class Request:
     """ Wraps a service request and adds some useful meta-data.
     """
+    service: 'Service'
+    logger: 'Logger'
+    payload: 'any_'
     text: 'any_'
+    input: 'any_'
+    cid: 'str'
+    data_format: 'str'
+    transport: 'str'
+    encrypt_func: 'callable_'
+    encrypt_secrets: 'bool'
+    bytes_to_str_encoding: 'str'
+    _http_environ: 'stranydict'
+    channel_params: 'stranydict'
+    merge_channel_params: 'bool'
+    http: 'HTTPRequestData'
+    amqp: 'AMQPRequestData'
 
     __slots__ = ('service', 'logger', 'payload', 'text', 'input', 'cid', 'data_format', 'transport',
         'encrypt_func', 'encrypt_secrets', 'bytes_to_str_encoding', '_http_environ', 'channel_params',
@@ -156,21 +168,21 @@ class Request:
         transport=None    # type: strnone
     ) -> 'None':
         self.service = service
-        self.logger = cast_('Logger', None) # This is populated in a service's update_handle
+        self.logger = None
         self.payload = ''
         self.text = ''
-        self.input = None # type: any_
-        self.cid = cast_('str', None)
-        self.data_format = cast_('str', data_format)
-        self.transport = cast_('str', transport)
+        self.input = None
+        self.cid = None
+        self.data_format = data_format
+        self.transport = transport
         self.http = HTTPRequestData()
-        self._http_environ = cast_('stranydict', None)
-        self.channel_params = cast_('stranydict', {})
+        self._http_environ = None
+        self.channel_params = {}
         self.merge_channel_params = True
-        self.amqp = cast_('AMQPRequestData', None)
+        self.amqp = None
         self.encrypt_func = None
         self.encrypt_secrets = True
-        self.bytes_to_str_encoding = cast_('str', None)
+        self.bytes_to_str_encoding = None
 
 # ################################################################################################################################
 
@@ -243,27 +255,39 @@ class Outgoing:
     """ A container for various outgoing connections a service can access. This in fact is a thin wrapper around data
     fetched from the service's self.worker_store.
     """
+    amqp: 'AMQPFacade'
+    ftp: 'FTPStore'
+    odoo: 'ConfigDict'
+    plain_http: 'ConfigDict'
+    rest: 'ConfigDict'
+    soap: 'ConfigDict'
+    sql: 'PoolStore'
+    sap: 'ConfigDict'
+    ldap: 'stranydict'
+    mongodb: 'stranydict'
+    redis: 'any_'
+
     __slots__ = ('amqp', 'ftp', 'odoo', 'plain_http', 'rest', 'soap', 'sql', 'sap', 'ldap', 'mongodb', 'redis')
 
     def __init__(self, amqp=None, odoo=None, plain_http=None, soap=None, sql=None,
             sap=None, ldap=None, mongodb=None, redis=None):
 
-        self.amqp = cast_('AMQPFacade', amqp)
+        self.amqp = amqp
 
-        self.odoo = cast_('ConfigDict', odoo)
+        self.odoo = odoo
 
-        self.rest = cast_('ConfigDict', plain_http)
+        self.rest = plain_http
         self.plain_http = self.rest
 
-        self.soap  = cast_('ConfigDict', soap)
-        self.sql   = cast_('PoolStore', sql)
+        self.soap  = soap
+        self.sql   = sql
 
-        self.sap  = cast_('ConfigDict', sap)
-        self.ldap = cast_('stranydict', ldap)
+        self.sap  = sap
+        self.ldap = ldap
 
-        self.mongodb = cast_('stranydict', mongodb)
+        self.mongodb = mongodb
 
-        self.redis = cast_('KVDBAPI', redis)
+        self.redis = redis
 
 # ################################################################################################################################
 # ################################################################################################################################

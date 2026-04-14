@@ -1,6 +1,22 @@
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyString};
 use pyo3::intern;
+
+use crate::logging::transform_header_key;
+
+#[pyfunction]
+pub fn extract_headers(environ: &Bound<'_, PyDict>) -> PyResult<Py<PyDict>> {
+    let py = environ.py();
+    let headers = PyDict::new(py);
+    for (key, value) in environ.iter() {
+        let key_str: &Bound<'_, PyString> = key.cast_exact()?;
+        let k = key_str.to_str()?;
+        if let Some(header) = transform_header_key(k) {
+            headers.set_item(header, value)?;
+        }
+    }
+    Ok(headers.unbind())
+}
 
 #[inline]
 pub(super) fn set_header(py: Python<'_>, dict: &Bound<'_, PyDict>, name: &str, value: &[u8]) -> PyResult<()> {

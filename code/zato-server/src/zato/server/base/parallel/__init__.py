@@ -246,6 +246,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # for any pub/sub message before it's delivered.
         self.pubsub_hooks:'strlist' = []
 
+        self.has_prometheus = False
+
         self.access_logger = logging.getLogger('zato_access_log')
         self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)

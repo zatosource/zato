@@ -576,8 +576,10 @@ class ServiceStore:
         service.config = self.server.user_config
         service.user_config = self.server.user_config
         service.time = self.server.time_util
-        from zato.common.facade import SecurityFacade
-        service.security = SecurityFacade(service.server)
+        if Service._SecurityFacade is None:
+            from zato.common.facade import SecurityFacade
+            Service._SecurityFacade = SecurityFacade
+        service.security = Service._SecurityFacade(service.server)
 
         # .. and return everything to our caller.
         return service, is_active

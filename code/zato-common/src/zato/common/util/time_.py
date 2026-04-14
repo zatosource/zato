@@ -48,10 +48,7 @@ local_tz_zone = str(local_tz)
 
 # ################################################################################################################################
 
-def utc_now():
-    """ Returns current time in UTC with the timezone information included.
-    """
-    return datetime.now(timezone.utc)
+from zato_common_core import utc_now
 
 utcnow = utc_now
 

@@ -72,7 +72,7 @@ pub(super) fn fd_write_all(
 }
 
 #[inline]
-pub fn parse_cl(b: &[u8]) -> usize {
+pub fn parse_content_length(b: &[u8]) -> usize {
     let mut n: usize = 0;
     for &c in b {
         match c {
@@ -90,7 +90,7 @@ pub fn parse_cl(b: &[u8]) -> usize {
 }
 
 #[inline]
-pub fn val_eq_ci(raw: &[u8], target: &[u8]) -> bool {
+pub fn header_value_eq(raw: &[u8], target: &[u8]) -> bool {
     let trimmed = trim_ows(raw);
     if trimmed.len() != target.len() { return false; }
     trimmed.iter().zip(target).all(|(a, b)| a.to_ascii_lowercase() == *b)

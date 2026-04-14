@@ -11,11 +11,13 @@ from base64 import b64encode
 from logging import getLogger
 from traceback import format_exc
 
-# FHIR-py
-from fhirpy import SyncFHIRClient
-
 # Zato
 from zato.common.api import HL7
+
+try:
+    from fhirpy import SyncFHIRClient
+except ImportError:
+    SyncFHIRClient = None  # type: ignore[assignment,misc]
 from zato.server.connection.queue import Wrapper
 from zato.common.typing_ import cast_
 
@@ -30,6 +32,9 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+if SyncFHIRClient is None:
+    logger.warning('HL7 is not available (outconn_hl7_fhir)')
 
 # ################################################################################################################################
 # ################################################################################################################################
