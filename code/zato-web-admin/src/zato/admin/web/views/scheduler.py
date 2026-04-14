@@ -412,6 +412,7 @@ def index(req):
             'edit_one_time_form':OneTimeSchedulerJobForm(edit_one_time_prefix, req),
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(edit_interval_based_prefix, req),
             'paginate':True,
+            'show_search_form':True,
             'meta': meta,
             'req': req,
             'zato_template_name': template_name,
