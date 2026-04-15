@@ -11,6 +11,13 @@ pub mod job;
 pub mod scheduler;
 pub mod types;
 
+#[doc(hidden)]
+pub mod test_support {
+    pub use crate::job::clamp_max_execution_time;
+    pub use crate::reload_jobs;
+    pub use crate::reload_calendars;
+}
+
 use calendar::CalendarData;
 use job::{ExecutionRecord, RunningJob};
 use scheduler::SchedulerShared;
@@ -181,7 +188,7 @@ fn scheduler_reload() -> PyResult<()> {
     Ok(())
 }
 
-fn reload_jobs(
+pub fn reload_jobs(
     state: &mut scheduler::SchedulerState,
     new_jobs: std::collections::HashMap<String, zato_server_core::model::SchedulerJob>,
 ) {
@@ -202,7 +209,7 @@ fn reload_jobs(
     }
 }
 
-fn reload_calendars(
+pub fn reload_calendars(
     state: &mut scheduler::SchedulerState,
     new_cals: std::collections::HashMap<String, zato_server_core::model::HolidayCalendar>,
 ) {

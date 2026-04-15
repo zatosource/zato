@@ -15,8 +15,8 @@ use crate::types::{JobId, JobType, OnMissedPolicy, ServiceName};
 pub const DEFAULT_MAX_EXECUTION_TIME_MS: u64 = 3_600_000;
 pub const DEFAULT_MAX_HISTORY: usize = 100;
 
-const MIN_MAX_EXECUTION_TIME_MS: u64 = 1_000;
-const MAX_MAX_EXECUTION_TIME_MS: u64 = 86_400_000;
+pub const MIN_MAX_EXECUTION_TIME_MS: u64 = 1_000;
+pub const MAX_MAX_EXECUTION_TIME_MS: u64 = 86_400_000;
 
 #[derive(Debug, Clone)]
 pub struct ExecutionRecord {
@@ -105,7 +105,7 @@ pub struct RunningJob {
     jitter_rng: SmallRng,
 }
 
-fn clamp_max_execution_time(raw: u64, job_name: &str) -> u64 {
+pub fn clamp_max_execution_time(raw: u64, job_name: &str) -> u64 {
     if raw < MIN_MAX_EXECUTION_TIME_MS {
         log::warn!(
             "Job `{}`: max_execution_time_ms={} below minimum, clamped to {}",
@@ -309,7 +309,7 @@ impl RunningJob {
         });
     }
 
-    pub(crate) fn compute_interval_ms(job: &SchedulerJob) -> u64 {
+    pub fn compute_interval_ms(job: &SchedulerJob) -> u64 {
         let w = job.weeks.unwrap_or(0) as u64 * 7 * 86_400_000;
         let d = job.days.unwrap_or(0) as u64 * 86_400_000;
         let h = job.hours.unwrap_or(0) as u64 * 3_600_000;
