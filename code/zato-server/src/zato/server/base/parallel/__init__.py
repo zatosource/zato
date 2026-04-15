@@ -979,6 +979,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
+        # Start the in-process file listener thread (replaces the old external listener process)
+        self._start_file_listener()
+
         # Start the Rust scheduler thread (in-process, same pattern as the broker)
         self._start_scheduler()
 
@@ -991,6 +994,43 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def _pre_initialize(self) -> 'None':
         pass
+
+# ################################################################################################################################
+
+    def _start_file_listener(self) -> 'None':
+        """ Start the file system listener as a real OS thread.
+        Reads directories already collected in self.pickup_config (populated earlier
+        by add_pickup_conf_from_env, add_pickup_conf_from_auto_deploy, etc.)
+        plus the standard hot_deploy pickup_dir.
+        """
+        from zato.common.file_transfer.listener import start_file_listener_thread
+
+        seen = set()
+        watch_dirs = []
+
+        def _add(path):
+            path = os.path.abspath(path)
+            if path not in seen and os.path.isdir(path):
+                seen.add(path)
+                watch_dirs.append(path)
+
+        # The standard hot-deploy pickup directory
+        if hasattr(self, 'hot_deploy_config') and self.hot_deploy_config:
+            if pickup_dir := self.hot_deploy_config.get('pickup_dir', ''):
+                _add(pickup_dir)
+
+        # Everything already collected in pickup_config by the existing startup methods
+        for _key, value in self.pickup_config.items():
+            if hasattr(value, 'get'):
+                if pickup_from := value.get('pickup_from', ''):
+                    _add(pickup_from)
+
+        try:
+            self._file_listener_thread = start_file_listener_thread(self, watch_dirs)
+            if self._file_listener_thread:
+                logger.info('File listener thread started, watching: %s', watch_dirs)
+        except Exception:
+            logger.warning('File listener could not be started: %s', format_exc())
 
 # ################################################################################################################################
 

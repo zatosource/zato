@@ -232,9 +232,9 @@ class _OnUpdate(Service):
                     # The file is saved on disk so we can call our handler function to post-process it.
                     self.sync_pickup_file_in_ram(ctx)
 
-                except Exception:
-                    self.logger.warning('Could not sync in-RAM contents of `%s`, e:`%s` (%s)',
-                        ctx.full_path, format_exc(), update_type)
+                except Exception as e:
+                    self.logger.warning('Could not sync in-RAM contents of `%s` (%s): %s',
+                        ctx.full_path, update_type, e)
                 else:
                     self.logger.info('Successfully finished syncing in-RAM contents of `%s` (%s)',
                         ctx.full_path, update_type)

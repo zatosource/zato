@@ -20,7 +20,6 @@ distro==1.5.0
 Django==4.2.29
 django-csp==3.8
 django-zato-plugin
-docformatter==0.8
 elasticsearch==9.0.1
 faker==8.12.1
 fhirpy==2.2.0
@@ -31,7 +30,7 @@ google-api-python-client==2.52.0
 google-auth-httplib2==0.1.0
 google-auth-oauthlib==0.5.2
 gunicorn==23.0.0
-hiredis==3.1.0
+hiredis==3.3.1
 httplib2==0.19.0
 humanize==4.12.3
 idna==3.7
