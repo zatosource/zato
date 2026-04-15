@@ -553,7 +553,9 @@ select {
 h2.zato {
     font-size: 80%;
     padding: 10px;
-    padding-left: 4px;
+    padding-left: 0;
+    margin-left: 1.875rem;
+    margin-right: 1.875rem;
     color: #222;
     border-bottom: 1px dotted #767676
 }
@@ -1042,4 +1044,24 @@ div.action-panel a {
 
 .status-badge.white {
     color: #fff !important;
+}
+
+.zato-unique-indicator {
+    margin-left: 0.5rem;
+    vertical-align: middle;
+    display: inline-block
+}
+
+.zato-unique-ok {
+    color: #2e7d32;
+    font-weight: bold
+}
+
+.zato-unique-taken {
+    font-family: monospace;
+    font-size: 0.8rem;
+    background-color: rgba(220, 53, 69, 0.15);
+    color: #b71c1c;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px
 }

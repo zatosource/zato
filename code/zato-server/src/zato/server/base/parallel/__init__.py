@@ -1209,6 +1209,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def check_attr_exists(self, entity_type:'str', attr_name:'str', value:'str') -> 'str':
+        import json
+        exists = self.config_store.attr_value_exists(entity_type, attr_name, value)
+        return json.dumps({'exists': exists})
+
+# ################################################################################################################################
+
     def import_test_pubsub_enmasse(self):
 
         import zato.server.service.internal.pubsub

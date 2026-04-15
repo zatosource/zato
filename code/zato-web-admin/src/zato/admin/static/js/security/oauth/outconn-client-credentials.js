@@ -21,6 +21,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.setup_forms(
         ['name', 'username', 'auth_server_url', 'client_id_field', 'client_secret_field', 'grant_type', 'data_format']
     );
+    var unique_constraints = [
+        {field: 'name', entity_type: 'security', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 

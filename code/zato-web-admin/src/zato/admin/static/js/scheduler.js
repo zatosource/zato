@@ -128,6 +128,13 @@ $(document).ready(function() {
             });
         });
     });
+
+    $.each(job_types, function(ignored, job_type) {
+        $.each(['create', 'edit'], function(ignored, action) {
+            var field_id = String.format('#id_{0}-{1}-name', action, job_type);
+            $.fn.zato.validate_unique(field_id, 'scheduler', 'name');
+        });
+    });
 });
 
 // /////////////////////////////////////////////////////////////////////////////

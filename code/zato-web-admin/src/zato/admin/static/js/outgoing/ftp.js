@@ -19,6 +19,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.ftp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'host', 'port']);
+    var unique_constraints = [
+        {field: 'name', entity_type: 'outgoing_ftp', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 $.fn.zato.outgoing.ftp.create = function() {

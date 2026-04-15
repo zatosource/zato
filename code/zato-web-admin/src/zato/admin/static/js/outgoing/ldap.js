@@ -20,6 +20,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'server_list', 'pool_size', 'pool_exhaust_timeout',
         'pool_keep_alive', 'pool_max_cycles', 'pool_lifetime']);
+    var unique_constraints = [
+        {field: 'name', entity_type: 'generic_connection', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 $.fn.zato.outgoing.ldap.create = function() {

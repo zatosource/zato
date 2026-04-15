@@ -18,6 +18,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.add_row_hook = $.fn.zato.cache.builtin.add_row_hook;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'max_size', 'max_item_size', 'sync_method', 'persistent_storage']);
+    var unique_constraints = [
+        {field: 'name', entity_type: 'cache_builtin', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

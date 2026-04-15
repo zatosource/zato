@@ -55,6 +55,7 @@ from zato.admin.web.views.eda import topic_detail as eda_topic_detail
 from zato.admin.web.views.eda import queue_detail as eda_queue_detail
 from zato.admin.web.views.eda import messages as eda_messages
 from zato.admin.web.views.eda import publish as eda_publish
+from zato.admin.web.views.check_attr import check_attr_exists
 
 urlpatterns = [
 
@@ -71,6 +72,7 @@ urlpatterns = [
     url(r'^zato/$', login_required(main.index), name='main-page'),
     url(r'^zato/news/get$', login_required(news.get_news), name='news-get'),
     url(r'^logout/$', login_required(main.logout), name='logout'),
+    url(r'^zato/check-attr-exists/$', login_required(check_attr_exists), name='check-attr-exists'),
     ]
 
 # ################################################################################################################################

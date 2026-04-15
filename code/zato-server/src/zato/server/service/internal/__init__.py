@@ -138,6 +138,11 @@ class ServerInvoker(AdminService):
             file_content = self.request.raw_request.get('file_content', '')
             file_name = self.request.raw_request.get('file_name', 'enmasse.yaml')
             response = func(file_content, file_name)
+        elif func_name == 'check_attr_exists':
+            entity_type = self.request.raw_request['entity_type']
+            attr_name = self.request.raw_request['attr_name']
+            value = self.request.raw_request['value']
+            response = func(entity_type, attr_name, value)
         else:
             response = func()
 

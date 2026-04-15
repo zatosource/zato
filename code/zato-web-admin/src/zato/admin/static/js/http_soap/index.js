@@ -29,6 +29,19 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.http_soap.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'validate_tls']);
+
+    var _connection = $('input[name="connection"]').val();
+    var _transport = $('input[name="transport"]').val();
+    var _entity_type = (_connection === 'channel' ? 'channel' : 'outgoing') + '_' + (_transport === 'plain_http' ? 'rest' : 'soap');
+    var unique_constraints = [
+        {field: 'name', entity_type: _entity_type, attr_name: 'name'},
+        {field: 'url_path', entity_type: _entity_type, attr_name: 'url_path'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
+
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
     $.fn.zato.http_soap.update_gateway_badges();
 

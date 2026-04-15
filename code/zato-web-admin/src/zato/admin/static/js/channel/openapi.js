@@ -21,6 +21,14 @@ $(document).ready(function() {
         'name',
     ]);
 
+    var unique_constraints = [
+        {field: 'name', entity_type: 'channel_openapi', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
+
     $('#create-div').dialog('option', 'open', function() {
         $.fn.zato.channel.openapi.loadRestChannels('rest-channels-div');
         $.fn.zato.channel.openapi.updateSlug('id_name', 'id_url_path', 'id_url_path_display');

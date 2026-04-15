@@ -18,6 +18,13 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.email.smtp.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'host', 'port', 'timeout', 'mode', 'ping_address']);
+    var unique_constraints = [
+        {field: 'name', entity_type: 'email_smtp', attr_name: 'name'}
+    ];
+    $.each(unique_constraints, function(i, c) {
+        $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+        $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+    });
 })
 
 

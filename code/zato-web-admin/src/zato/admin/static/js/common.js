@@ -2417,3 +2417,51 @@ $.fn.zato.pubsub.download_openapi = function() {
         }
     });
 }
+
+$.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
+    var field = $(field_id);
+    if(!field.length) {
+        return;
+    }
+
+    var timer = null;
+
+    field.on('input', function() {
+        field.siblings('.zato-unique-indicator').remove();
+
+        if(timer) {
+            clearTimeout(timer);
+        }
+
+        var value = field.val().trim();
+        if(!value) {
+            return;
+        }
+
+        timer = setTimeout(function() {
+            $.ajax({
+                type: 'POST',
+                url: '/zato/check-attr-exists/',
+                data: {
+                    'entity_type': entity_type,
+                    'attr_name': attr_name,
+                    'value': value
+                },
+                headers: {'X-CSRFToken': $.cookie('csrftoken')},
+                dataType: 'json',
+                success: function(data) {
+                    field.siblings('.zato-unique-indicator').remove();
+                    if(field.val().trim() !== value) {
+                        return;
+                    }
+                    if(data.exists) {
+                        field.after('<span class="zato-unique-indicator zato-unique-taken">Already taken</span>');
+                    }
+                    else {
+                        field.after('<span class="zato-unique-indicator zato-unique-ok">&#10003;</span>');
+                    }
+                }
+            });
+        }, 300);
+    });
+}

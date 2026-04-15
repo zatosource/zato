@@ -18,6 +18,13 @@ $(document).ready(function() {
    $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.sap.data_table.new_row;
    $.fn.zato.data_table.parse();
    $.fn.zato.data_table.setup_forms(['name', 'host', 'sysnr', 'sysid', 'user', 'client', 'pool_size']);
+   var unique_constraints = [
+       {field: 'name', entity_type: 'outgoing_sap', attr_name: 'name'}
+   ];
+   $.each(unique_constraints, function(i, c) {
+       $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
+       $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
+   });
 })
 
 $.fn.zato.outgoing.sap.create = function() {

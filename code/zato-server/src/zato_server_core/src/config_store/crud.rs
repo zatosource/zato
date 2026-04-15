@@ -1,9 +1,37 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
+use serde::Serialize;
 
 use crate::model::*;
 use super::store::ConfigStore;
 use super::util::{struct_to_pydict, pydict_to_struct};
+
+fn check_attr_in_values<T: Serialize>(store: &std::collections::HashMap<String, T>, attr_name: &str, value: &str) -> PyResult<bool> {
+    for item in store.values() {
+        let json_val = serde_json::to_value(item)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("serialization error: {e}")))?;
+        if let Some(field_val) = json_val.get(attr_name) {
+            let matches = match field_val {
+                serde_json::Value::String(s) => s == value,
+                other => other.to_string() == value,
+            };
+            if matches {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
+macro_rules! impl_attr_value_exists {
+    ($store_field:ident, $fn_name:ident) => {
+        fn $fn_name(&self, attr_name: &str, value: &str) -> PyResult<bool> {
+            let store = self.$store_field.read()
+                .map_err(|_| pyo3::exceptions::PyRuntimeError::new_err("lock poisoned"))?;
+            check_attr_in_values(&*store, attr_name, value)
+        }
+    };
+}
 
 macro_rules! impl_crud {
     ($store_field:ident, $rust_ty:ty,
@@ -219,6 +247,31 @@ impl ConfigStore {
         _get_service, _get_list_service, _set_service, _delete_service);
     impl_crud!(groups, SecurityGroup,
         _get_group, _get_list_groups, _set_group, _delete_group);
+
+    impl_attr_value_exists!(security,            _attr_exists_security);
+    impl_attr_value_exists!(groups,              _attr_exists_groups);
+    impl_attr_value_exists!(channel_rest,        _attr_exists_channel_rest);
+    impl_attr_value_exists!(channel_soap,        _attr_exists_channel_soap);
+    impl_attr_value_exists!(channel_amqp,        _attr_exists_channel_amqp);
+    impl_attr_value_exists!(channel_openapi,     _attr_exists_channel_openapi);
+    impl_attr_value_exists!(outgoing_rest,       _attr_exists_outgoing_rest);
+    impl_attr_value_exists!(outgoing_soap,       _attr_exists_outgoing_soap);
+    impl_attr_value_exists!(outgoing_amqp,       _attr_exists_outgoing_amqp);
+    impl_attr_value_exists!(outgoing_ftp,        _attr_exists_outgoing_ftp);
+    impl_attr_value_exists!(outgoing_sql,        _attr_exists_outgoing_sql);
+    impl_attr_value_exists!(outgoing_odoo,       _attr_exists_outgoing_odoo);
+    impl_attr_value_exists!(outgoing_sap,        _attr_exists_outgoing_sap);
+    impl_attr_value_exists!(cache_builtin,       _attr_exists_cache_builtin);
+    impl_attr_value_exists!(email_smtp,          _attr_exists_email_smtp);
+    impl_attr_value_exists!(email_imap,          _attr_exists_email_imap);
+    impl_attr_value_exists!(scheduler,           _attr_exists_scheduler);
+    impl_attr_value_exists!(holiday_calendar,    _attr_exists_holiday_calendar);
+    impl_attr_value_exists!(generic_connection,  _attr_exists_generic_connection);
+    impl_attr_value_exists!(pubsub_topic,        _attr_exists_pubsub_topic);
+    impl_attr_value_exists!(pubsub_permission,   _attr_exists_pubsub_permission);
+    impl_attr_value_exists!(pubsub_subscription, _attr_exists_pubsub_subscription);
+    impl_attr_value_exists!(elastic_search,      _attr_exists_elastic_search);
+    impl_attr_value_exists!(service,             _attr_exists_service);
 }
 
 #[pymethods]
@@ -242,5 +295,38 @@ impl ConfigStore {
     #[pyo3(signature = (entity_type, name))]
     fn delete(&self, entity_type: &str, name: &str) -> PyResult<bool> {
         dispatch!(delete, self, entity_type, name)
+    }
+
+    #[pyo3(signature = (entity_type, attr_name, value))]
+    fn attr_value_exists(&self, entity_type: &str, attr_name: &str, value: &str) -> PyResult<bool> {
+        match entity_type {
+            "security"            => self._attr_exists_security(attr_name, value),
+            "groups"              => self._attr_exists_groups(attr_name, value),
+            "channel_rest"        => self._attr_exists_channel_rest(attr_name, value),
+            "channel_soap"        => self._attr_exists_channel_soap(attr_name, value),
+            "channel_amqp"        => self._attr_exists_channel_amqp(attr_name, value),
+            "channel_openapi"     => self._attr_exists_channel_openapi(attr_name, value),
+            "outgoing_rest"       => self._attr_exists_outgoing_rest(attr_name, value),
+            "outgoing_soap"       => self._attr_exists_outgoing_soap(attr_name, value),
+            "outgoing_amqp"       => self._attr_exists_outgoing_amqp(attr_name, value),
+            "outgoing_ftp"        => self._attr_exists_outgoing_ftp(attr_name, value),
+            "outgoing_sql"        => self._attr_exists_outgoing_sql(attr_name, value),
+            "outgoing_odoo"       => self._attr_exists_outgoing_odoo(attr_name, value),
+            "outgoing_sap"        => self._attr_exists_outgoing_sap(attr_name, value),
+            "cache_builtin"       => self._attr_exists_cache_builtin(attr_name, value),
+            "email_smtp"          => self._attr_exists_email_smtp(attr_name, value),
+            "email_imap"          => self._attr_exists_email_imap(attr_name, value),
+            "scheduler"           => self._attr_exists_scheduler(attr_name, value),
+            "holiday_calendar"    => self._attr_exists_holiday_calendar(attr_name, value),
+            "generic_connection"  => self._attr_exists_generic_connection(attr_name, value),
+            "pubsub_topic"        => self._attr_exists_pubsub_topic(attr_name, value),
+            "pubsub_permission"   => self._attr_exists_pubsub_permission(attr_name, value),
+            "pubsub_subscription" => self._attr_exists_pubsub_subscription(attr_name, value),
+            "elastic_search"      => self._attr_exists_elastic_search(attr_name, value),
+            "service"             => self._attr_exists_service(attr_name, value),
+            _ => Err(pyo3::exceptions::PyValueError::new_err(
+                format!("unknown entity type: {}", entity_type)
+            )),
+        }
     }
 }

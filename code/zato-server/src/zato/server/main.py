@@ -249,9 +249,13 @@ def get_env_manager_base_dir(code_dir:'str') -> 'str':
 
 def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'ParallelServer | None':
 
+try:
     import oracledb
     oracledb.version = '8.3.0'
     sys.modules['cx_Oracle'] = oracledb
+except (ImportError, Exception) as e:
+    import logging as _logging
+    _logging.getLogger('zato').warning('Could not import oracledb (Oracle DB support disabled): %s', e)
 
     from zato.common.sql_pool import PoolStore
     from zato.common.repo import RepoManager
