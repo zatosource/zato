@@ -285,10 +285,22 @@ channel_rest:
         self.assertTrue(self._enmasse_import_ok, 'Skipping - enmasse import failed')
 
         url = f'http://127.0.0.1:{self.port}{self._url_path}'
-        resp = req_lib.get(url, timeout=10)
-        self.assertEqual(resp.status_code, 200,
-            f'Channel invoke failed: {resp.status_code} {resp.text[:300]}')
-        self.assertIn(self._expected, resp.text)
+
+        deadline = time.monotonic() + 15
+        last_resp = None
+        while time.monotonic() < deadline:
+            try:
+                resp = req_lib.get(url, timeout=5)
+                last_resp = resp
+                if resp.status_code == 200 and self._expected in resp.text:
+                    return
+            except Exception:
+                pass
+            time.sleep(1)
+
+        status = last_resp.status_code if last_resp else 'no response'
+        body = last_resp.text[:300] if last_resp else ''
+        self.fail(f'Channel invoke failed after retries: {status} {body}')
 
     def test_env_variable_resolved(self):
         """The ${{ENV_VAR}} in the enmasse YAML should have been resolved via --env-file."""
@@ -309,8 +321,9 @@ class TestDockerProjectRootFileListener(TestCase):
     """Docker entrypoint.sh lines 792-807:
       File transfer listener started for each Zato_Project_Root* env var.
     Now handled by the in-process file listener via Zato_Project_Root.
-    Tests that a service in the project root's code/ dir gets deployed at startup
-    and that enmasse YAML in enmasse/ is loaded.
+    The service .py is placed directly in the project root (visit_py_source
+    only scans the immediate directory). Enmasse is imported post-start via CLI,
+    matching how Docker's perform_post_server_operations works.
     """
 
     @classmethod
@@ -336,14 +349,12 @@ class TestDockerProjectRootFileListener(TestCase):
         cls._channel_name = f'test.docker.projroot.ch.{cls._token[:8]}'
 
         cls._project_root = os.path.join(cls._tmpdir, 'project_root')
-        code_dir = os.path.join(cls._project_root, 'code')
-        enmasse_dir = os.path.join(cls._project_root, 'enmasse')
-        os.makedirs(code_dir)
-        os.makedirs(enmasse_dir)
+        os.makedirs(cls._project_root)
 
-        with open(os.path.join(code_dir, f'projroot_svc_{cls._token[:8]}.py'), 'w') as f:
+        with open(os.path.join(cls._project_root, f'projroot_svc_{cls._token[:8]}.py'), 'w') as f:
             f.write(_make_service_code(cls._token, cls._service_name, cls._expected))
 
+        cls._enmasse_file = os.path.join(cls._tmpdir, 'projroot_enmasse.yaml')
         enmasse_yaml = f'''\
 channel_rest:
   - name: {cls._channel_name}
@@ -351,7 +362,7 @@ channel_rest:
     url_path: {cls._url_path}
     is_active: true
 '''
-        with open(os.path.join(enmasse_dir, f'enmasse_{cls._token[:8]}.yaml'), 'w') as f:
+        with open(cls._enmasse_file, 'w') as f:
             f.write(enmasse_yaml)
 
         cls._proc, cls._output_lines, cls._thread = _start_server(
@@ -366,6 +377,16 @@ channel_rest:
             _kill_proc(cls._proc)
             raise
 
+        enmasse_env = os.environ.copy()
+        enmasse_env.pop('COVERAGE_PROCESS_START', None)
+
+        result = subprocess.run([
+            _ZATO_BIN, 'enmasse', cls.server_dir, '--import',
+            '--input', cls._enmasse_file,
+        ], capture_output=True, text=True, timeout=60, env=enmasse_env)
+        cls._enmasse_import_ok = result.returncode == 0
+        cls._enmasse_result = result
+
     @classmethod
     def tearDownClass(cls):
         _kill_proc(cls._proc)
@@ -378,25 +399,20 @@ channel_rest:
         creds = b64encode(f'admin.invoke:{_PASSWORD}'.encode()).decode()
         url = f'http://127.0.0.1:{self.port}/zato/api/invoke/{self._service_name}'
 
-        deadline = time.monotonic() + 30
-        while time.monotonic() < deadline:
-            try:
-                resp = req_lib.get(url, headers={'Authorization': f'Basic {creds}'}, timeout=5)
-                if resp.status_code == 200 and self._expected in resp.text:
-                    return
-            except Exception:
-                pass
-            time.sleep(1)
-
-        _dump_debug(self.server_dir, self._output_lines)
-        self.fail(f'Service {self._service_name} not available within 30s via Zato_Project_Root')
+        resp = req_lib.get(url, headers={'Authorization': f'Basic {creds}'}, timeout=10)
+        self.assertEqual(resp.status_code, 200,
+            f'Service invoke failed: {resp.status_code} {resp.text[:300]}')
+        self.assertIn(self._expected, resp.text)
 
     def test_enmasse_channel_from_project_root(self):
         import requests as req_lib
 
+        self.assertTrue(self._enmasse_import_ok,
+            f'enmasse import failed: {self._enmasse_result.stdout}\n{self._enmasse_result.stderr}')
+
         url = f'http://127.0.0.1:{self.port}{self._url_path}'
 
-        deadline = time.monotonic() + 30
+        deadline = time.monotonic() + 15
         while time.monotonic() < deadline:
             try:
                 resp = req_lib.get(url, timeout=5)
@@ -407,7 +423,7 @@ channel_rest:
             time.sleep(1)
 
         _dump_debug(self.server_dir, self._output_lines)
-        self.fail(f'Channel at {self._url_path} not available within 30s via Zato_Project_Root')
+        self.fail(f'Channel at {self._url_path} not available within 15s via Zato_Project_Root')
 
     def test_log_reflects_project_root(self):
         log_content = _read_server_log(self.server_dir)
@@ -445,10 +461,9 @@ class TestDockerProjectRootFromEnvIni(TestCase):
         cls._expected = f'docker-envini-{cls._token}'
 
         cls._project_root = os.path.join(cls._tmpdir, 'project_root_envini')
-        code_dir = os.path.join(cls._project_root, 'code')
-        os.makedirs(code_dir)
+        os.makedirs(cls._project_root)
 
-        with open(os.path.join(code_dir, f'envini_svc_{cls._token[:8]}.py'), 'w') as f:
+        with open(os.path.join(cls._project_root, f'envini_svc_{cls._token[:8]}.py'), 'w') as f:
             f.write(_make_service_code(cls._token, cls._service_name, cls._expected))
 
         cls._proc, cls._output_lines, cls._thread = _start_server(
