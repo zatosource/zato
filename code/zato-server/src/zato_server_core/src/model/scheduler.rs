@@ -1,5 +1,16 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use super::defaults::*;
+
+fn normalize_timezone<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<String>, D::Error> {
+    let val: Option<String> = Option::deserialize(deserializer)?;
+    Ok(val.map(|tz| {
+        if tz == "Europe/Reykjavik" {
+            "Atlantic/Reykjavik".to_string()
+        } else {
+            tz
+        }
+    }))
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchedulerJob {
@@ -30,7 +41,7 @@ pub struct SchedulerJob {
     pub repeats: Option<u32>,
     #[serde(default)]
     pub jitter_ms: Option<u32>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "normalize_timezone")]
     pub timezone: Option<String>,
     #[serde(default)]
     pub calendar: Option<String>,

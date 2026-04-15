@@ -1077,6 +1077,7 @@ div.action-panel a {
 .zato-unique-taken {
     font-family: monospace;
     font-size: 0.55rem;
+    font-weight: bold;
     background-color: rgba(220, 53, 69, 0.15);
     color: #b71c1c;
     border: 1px solid rgba(220, 53, 69, 0.25);

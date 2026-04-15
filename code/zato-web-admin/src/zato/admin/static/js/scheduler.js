@@ -97,6 +97,18 @@ $(document).ready(function() {
         });
     });
 
+    $(document).on('click', '.ui-datepicker-current', function() {
+        var inst = $.datepicker._curInst;
+        if(inst) {
+            var tp = $.datepicker._get(inst, 'timepicker');
+            if(tp) {
+                tp._onTimeChange();
+                tp._updateDateTime(inst);
+            }
+            $.datepicker._hideDatepicker();
+        }
+    });
+
     var one_time_attrs = ['name', 'start_date', 'service'];
     var interval_based_attrs = ['name', 'start_date', 'service'];
 
@@ -211,8 +223,20 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
     var div_id = action +'-'+ job_type;
     var div = $('#'+ div_id);
 
-    div.prev().text(title); // prev() is a .ui-dialog-titlebar
+    div.prev().css('cursor', 'move');
+    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + title + '</span>');
+    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
     div.dialog('open');
+
+    if(action == 'create' && job_type == 'interval_based') {
+        var tz_select = $('#id_create-interval_based-timezone');
+        if(tz_select.length && !tz_select.val()) {
+            var browser_tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if(tz_select.find('option[value="' + browser_tz + '"]').length) {
+                tz_select.val(browser_tz);
+            }
+        }
+    }
 
     $.fn.zato.turn_selects_into_chosen("");
 }

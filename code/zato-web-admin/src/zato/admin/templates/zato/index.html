@@ -33,56 +33,9 @@
 
     {% endif %}
 
-    {% if items %}
-        {% include "zato/css-titlebar-padding.html" %}
-    {% endif %}
+    {% include "zato/css-titlebar-padding.html" %}
 
     <link rel="stylesheet" media="screen" href="/static/css/hide-show-password.css" />
-
-    {% if zato_template_name == "zato/scheduler.html" %}
-
-        <style type="text/css">
-            .ui-dialog-titlebar {
-                padding-bottom:-4px !important;
-            }
-        </style>
-
-    {% elif zato_template_name == "zato/outgoing/amqp.html" %}
-
-        <style type="text/css">
-            .ui-dialog-titlebar {
-                margin-bottom:-25px !important;
-            }
-        </style>
-
-    {% elif zato_template_name == "zato/groups/index.html" %}
-
-        <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:0px !important;
-        }
-        </style>
-
-
-    {% elif zato_template_name == "zato/http_soap/index.html" %}
-
-        <style type="text/css">
-        .ui-dialog-titlebar {
-            margin-bottom:-25px !important;
-        }
-        </style>
-
-    {% else %}
-
-        {% if not items %}
-            <style type="text/css">
-                .ui-dialog-titlebar {
-                    padding-bottom:10px !important;
-                }
-            </style>
-        {% endif %}
-
-    {% endif %}
 
     {% block "extra_css" %}
     {% if not zato_template_name %}

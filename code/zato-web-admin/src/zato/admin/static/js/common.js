@@ -698,7 +698,9 @@ $.fn.zato.data_table.change_password = function(id, title, label, _label_lower) 
 
     var div = $('#change_password-div');
 
-    div.prev().text(_title); // prev() is a .ui-dialog-titlebar
+    div.prev().css('cursor', 'move');
+    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + _title + '</span>');
+    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
     div.dialog('open');
 }
 
@@ -782,8 +784,8 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow,
     }
 
     div.prev().css('cursor', 'move');
-    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + title + '</span>'); // prev() is a .ui-dialog-titlebar
-    div.prev().find('.ui-dialog-title-text').on('mousedown', function(e) { e.stopPropagation(); });
+    div.prev().html('<span class="ui-dialog-title-text" style="user-select: text; cursor: text;">' + title + '</span>');
+    div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
     div.dialog('open');
 
     $.fn.zato.turn_selects_into_chosen(div_id);

@@ -395,6 +395,15 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.create-interval-more-options')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="create-interval-more-options hidden">
+                            <td style="vertical-align:middle">
                                 <label for="id_create-interval_based-extra">
                                 Extra data
                                 </label>
@@ -402,16 +411,11 @@
                             <td>{{ create_interval_based_form.extra }}</td>
                         </tr>
 
-                        <tr>
-                            <td style="vertical-align:middle">Advanced</td>
+                        <tr class="create-interval-more-options hidden">
+                            <td style="vertical-align:middle">Jitter (ms)</td>
                             <td>
-                                <label>
-                                Jitter (ms)
                                 {{ create_interval_based_form.jitter_ms }}
-                                </label>
-
                                 |
-
                                 <label>
                                 On missed
                                 {{ create_interval_based_form.on_missed }}
@@ -419,21 +423,14 @@
                             </td>
                         </tr>
 
-                        <tr>
-                            <td style="vertical-align:middle"></td>
-                            <td>
-                                <label>
-                                Timezone (IANA)
-                                {{ create_interval_based_form.timezone }}
-                                </label>
+                        <tr class="create-interval-more-options hidden">
+                            <td style="vertical-align:middle">Timezone</td>
+                            <td>{{ create_interval_based_form.timezone }}</td>
+                        </tr>
 
-                                |
-
-                                <label>
-                                Max execution time (ms)
-                                {{ create_interval_based_form.max_execution_time_ms }}
-                                </label>
-                            </td>
+                        <tr class="create-interval-more-options hidden">
+                            <td style="vertical-align:middle">Max execution time (ms)</td>
+                            <td>{{ create_interval_based_form.max_execution_time_ms }}</td>
                         </tr>
 
                         <tr>
@@ -551,6 +548,15 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">
+                            More options
+                            </td>
+                            <td>
+                            <a href="javascript:$.fn.zato.toggle_visibility('.edit-interval-more-options')">Toggle options</a>
+                            </td>
+                        </tr>
+
+                        <tr class="edit-interval-more-options hidden">
+                            <td style="vertical-align:middle">
                                 <label for="id_edit-interval_based-extra">
                                 Extra data
                                 </label>
@@ -558,16 +564,11 @@
                             <td>{{ edit_interval_based_form.extra }}</td>
                         </tr>
 
-                        <tr>
-                            <td style="vertical-align:middle">Advanced</td>
+                        <tr class="edit-interval-more-options hidden">
+                            <td style="vertical-align:middle">Jitter (ms)</td>
                             <td>
-                                <label>
-                                Jitter (ms)
                                 {{ edit_interval_based_form.jitter_ms }}
-                                </label>
-
                                 |
-
                                 <label>
                                 On missed
                                 {{ edit_interval_based_form.on_missed }}
@@ -575,21 +576,14 @@
                             </td>
                         </tr>
 
-                        <tr>
-                            <td style="vertical-align:middle"></td>
-                            <td>
-                                <label>
-                                Timezone (IANA)
-                                {{ edit_interval_based_form.timezone }}
-                                </label>
+                        <tr class="edit-interval-more-options hidden">
+                            <td style="vertical-align:middle">Timezone</td>
+                            <td>{{ edit_interval_based_form.timezone }}</td>
+                        </tr>
 
-                                |
-
-                                <label>
-                                Max execution time (ms)
-                                {{ edit_interval_based_form.max_execution_time_ms }}
-                                </label>
-                            </td>
+                        <tr class="edit-interval-more-options hidden">
+                            <td style="vertical-align:middle">Max execution time (ms)</td>
+                            <td>{{ edit_interval_based_form.max_execution_time_ms }}</td>
                         </tr>
 
                         <tr>
