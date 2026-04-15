@@ -143,21 +143,22 @@ def _edit_create_response(req, id, verb, transport, connection, name): # type: i
         'security_groups_info': f'{group_count} group{group_count_suffix}, {group_member_count} client{group_member_count_suffix}'
     }
 
-    # If current item has a cache assigned, provide its human-friendly name to the caller
-    response = req.zato.client.invoke('zato.http-soap.get', {
-        'cluster_id': req.zato.cluster_id,
-        'id': id,
-    })
+    # Caching is a channel-only concept
+    if connection == 'channel':
+        response = req.zato.client.invoke('zato.http-soap.get', {
+            'cluster_id': req.zato.cluster_id,
+            'id': id,
+        })
 
-    if response.data.cache_id:
-        cache_type = response.data.cache_type
-        cache_name = '{}/{}'.format(CACHE_TYPE[cache_type], response.data.cache_name)
-    else:
-        cache_type = None
-        cache_name = None
+        if response.data.cache_id:
+            cache_type = response.data.cache_type
+            cache_name = '{}/{}'.format(CACHE_TYPE[cache_type], response.data.cache_name)
+        else:
+            cache_type = None
+            cache_name = None
 
-    return_data['cache_type'] = cache_type
-    return_data['cache_name'] = cache_name
+        return_data['cache_type'] = cache_type
+        return_data['cache_name'] = cache_name
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
@@ -239,19 +240,6 @@ def index(req): # type: ignore
 
             security_id = get_http_channel_security_id(item)
 
-            if item.cache_id:
-                cache_name = '{}/{}'.format(CACHE_TYPE[item.cache_type], item.cache_name)
-            else:
-                cache_name = None
-
-            # New in 3.0, hence optional
-            match_slash = item.get('match_slash')
-            if match_slash == '':
-                match_slash = True
-
-            # New in 3.1
-            http_accept = item.get('http_accept') or ''
-
             http_soap = Bunch()
             http_soap.id = item.id
             http_soap.name = item.name
@@ -265,26 +253,40 @@ def index(req): # type: ignore
             http_soap.soap_action = item.soap_action
             http_soap.soap_version = item.soap_version
             http_soap.data_format = item.data_format
-            http_soap.ping_method = item.ping_method
-            http_soap.pool_size = item.pool_size
-            http_soap.merge_url_params_req = item.merge_url_params_req
-            http_soap.url_params_pri = item.url_params_pri
-            http_soap.params_pri = item.params_pri
-            http_soap.serialization_type = item.serialization_type
-            http_soap.timeout = item.timeout
-            http_soap.service_id = item.service_id
-            http_soap.service_name = item.service_name
             http_soap.security_id = security_id
             http_soap.security_name = security_name
             http_soap.content_type = item.content_type
-            http_soap.cache_id = item.cache_id
-            http_soap.cache_name = cache_name
-            http_soap.cache_type = item.cache_type
-            http_soap.cache_expiry = item.cache_expiry
-            http_soap.content_encoding = item.content_encoding
-            http_soap.match_slash = match_slash
-            http_soap.http_accept = http_accept
-            http_soap.validate_tls = item.get('validate_tls', True)
+            http_soap.serialization_type = item.serialization_type
+            http_soap.timeout = item.timeout
+
+            if connection == 'channel':
+                http_soap.service_id = item.service_id
+                http_soap.service_name = item.service_name
+                http_soap.merge_url_params_req = item.merge_url_params_req
+                http_soap.url_params_pri = item.url_params_pri
+                http_soap.params_pri = item.params_pri
+                http_soap.content_encoding = item.content_encoding
+
+                if item.cache_id:
+                    cache_name = '{}/{}'.format(CACHE_TYPE[item.cache_type], item.cache_name)
+                else:
+                    cache_name = None
+
+                http_soap.cache_id = item.cache_id
+                http_soap.cache_name = cache_name
+                http_soap.cache_type = item.cache_type
+                http_soap.cache_expiry = item.cache_expiry
+
+                match_slash = item.get('match_slash')
+                if match_slash == '':
+                    match_slash = True
+
+                http_soap.match_slash = match_slash
+                http_soap.http_accept = item.get('http_accept') or ''
+            else:
+                http_soap.ping_method = item.ping_method
+                http_soap.pool_size = item.pool_size
+                http_soap.validate_tls = item.get('validate_tls', True)
 
             for name in generic_attrs:
                 setattr(http_soap, name, item.get(name))

@@ -51,6 +51,10 @@ class ConfigDict:
         self._entity_type = entity_type
         self._sec_type_filter = sec_type_filter
 
+        # Runtime-only Python objects (e.g. .conn, .ping wrappers) that cannot
+        # be serialized to Rust, keyed by item name.
+        self._runtime = {}
+
         if config_store is not None and entity_type is not None:
             self._impl = None
         else:
@@ -60,18 +64,37 @@ class ConfigDict:
     def _delegates_to_rust(self):
         return self._config_store is not None and self._entity_type is not None
 
-    def _wrap_item(self, raw_dict):
-        """Wrap a raw dict from Rust into Bunch({'config': Bunch(...)})."""
-        return Bunch({'config': Bunch(raw_dict)})
+    def _wrap_item(self, raw_dict, key=None):
+        """ Wrap a raw dict from Rust into Bunch({'config': Bunch(...)}).
+        If there are runtime attributes stored for this key, merge them in.
+        """
+        item = Bunch({'config': Bunch(raw_dict)})
+        if key and key in self._runtime:
+            for attr_name, attr_value in self._runtime[key].items():
+                item[attr_name] = attr_value
+        return item
 
-    def _unwrap_item(self, value):
-        """Extract the raw dict from a Bunch({'config': Bunch(...)}) wrapper."""
-        if isinstance(value, dict) and 'config' in value:
-            return dict(value['config'])
-        return dict(value) if isinstance(value, dict) else value
+    def _unwrap_item(self, key, value):
+        """ Extract the raw dict from a Bunch({'config': Bunch(...)}) wrapper.
+        Any non-config, non-serializable attributes are saved to _runtime.
+        """
+        runtime_attrs = {}
+
+        if isinstance(value, dict):
+            config = value.get('config')
+            for attr_name, attr_value in value.items():
+                if attr_name != 'config':
+                    runtime_attrs[attr_name] = attr_value
+            raw = dict(config) if config is not None else dict(value)
+        else:
+            raw = dict(value) if isinstance(value, dict) else value
+
+        if runtime_attrs:
+            self._runtime[key] = runtime_attrs
+        return raw
 
     def _get_all_items_from_rust(self):
-        """Return {name: Bunch({'config': Bunch(...)})} for all items."""
+        """ Return {name: Bunch({'config': Bunch(...)})} for all items. """
         items = self._config_store.get_list(self._entity_type)
         result = Bunch()
         for item in items:
@@ -80,7 +103,7 @@ class ConfigDict:
                 sec_type = item.get('sec_type') or item.get('type', '')
                 if sec_type != self._sec_type_filter:
                     continue
-            result[item_name] = self._wrap_item(item)
+            result[item_name] = self._wrap_item(item, key=item_name)
         return result
 
 # ################################################################################################################################
@@ -96,7 +119,7 @@ class ConfigDict:
                     sec_type = raw.get('sec_type') or raw.get('type', '')
                     if sec_type != self._sec_type_filter:
                         return default
-                return self._wrap_item(raw)
+                return self._wrap_item(raw, key=key)
             return self._impl.get(key, default)
 
 # ################################################################################################################################
@@ -104,7 +127,7 @@ class ConfigDict:
     def set(self, key, value):
         with self.lock:
             if self._delegates_to_rust:
-                raw = self._unwrap_item(value)
+                raw = self._unwrap_item(key, value)
                 self._config_store.set(self._entity_type, key, raw)
             else:
                 self._impl[key] = value
@@ -124,7 +147,7 @@ class ConfigDict:
                     sec_type = raw.get('sec_type') or raw.get('type', '')
                     if sec_type != self._sec_type_filter:
                         raise KeyError(key)
-                return self._wrap_item(raw)
+                return self._wrap_item(raw, key=key)
             return self._impl.__getitem__(key)
 
 # ################################################################################################################################
@@ -133,6 +156,7 @@ class ConfigDict:
         with self.lock:
             if self._delegates_to_rust:
                 self._config_store.delete(self._entity_type, key)
+                self._runtime.pop(key, None)
             else:
                 del self._impl[key]
 
@@ -145,7 +169,8 @@ class ConfigDict:
                 if raw is None:
                     return default
                 self._config_store.delete(self._entity_type, key)
-                return self._wrap_item(raw)
+                self._runtime.pop(key, None)
+                return self._wrap_item(raw, key=key)
             return self._impl.pop(key, default)
 
 # ################################################################################################################################
@@ -154,7 +179,7 @@ class ConfigDict:
         with self.lock:
             if self._delegates_to_rust:
                 for key, value in dict_.items():
-                    raw = self._unwrap_item(value)
+                    raw = self._unwrap_item(key, value)
                     self._config_store.set(self._entity_type, key, raw)
             else:
                 self._impl.update(dict_)

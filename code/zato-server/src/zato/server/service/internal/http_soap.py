@@ -12,7 +12,7 @@ import logging
 from time import time
 
 # Zato
-from zato.common.api import CONNECTION, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.api import CONNECTION, URL_TYPE, ZATO_NONE
 from zato.common.json_internal import dumps
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.service import AsIs, Boolean, Integer
@@ -415,23 +415,22 @@ def _set_invoke_response(service, result):
 # ################################################################################################################################
 
 def _parse_key_value_params(text):
-    """ Parses 'key1=val1&key2=val2' or 'key1=val1\nkey2=val2' into a dict. """
+    """ Parses 'key1=val1&key2=val2' or 'key1=val1\\nkey2=val2' (or a mix) into a dict.
+    Normalizes all separators to newlines, then splits and parses each pair.
+    """
     if not text or not text.strip():
         return {}
 
+    normalized = text.replace('&', '\n')
     result = {}
-    for sep in ('&', '\n'):
-        if sep in text:
-            for pair in text.split(sep):
-                pair = pair.strip()
-                if '=' in pair:
-                    key, _, value = pair.partition('=')
-                    result[key.strip()] = value.strip()
-            return result
 
-    if '=' in text:
-        key, _, value = text.partition('=')
-        result[key.strip()] = value.strip()
+    for line in normalized.split('\n'):
+        line = line.strip()
+        if '=' in line:
+            key, _, value = line.partition('=')
+            key = key.strip()
+            if key:
+                result[key] = value.strip()
 
     return result
 

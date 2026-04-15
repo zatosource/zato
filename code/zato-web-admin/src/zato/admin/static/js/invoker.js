@@ -594,13 +594,16 @@ $.fn.zato.invoker._toggle_response_detail = function(wrapper, index, item) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker.on_history_up = function(key, textarea_selector) {
+$.fn.zato.invoker.on_history_up = function(key, textarea_selector, current_index) {
     let history = $.fn.zato.invoker.get_history(key);
     if (history.length === 0) {
-        return;
+        return current_index;
     }
 
-    let current_index = (typeof window.zato_invoker_history_index === 'number') ? window.zato_invoker_history_index : -1;
+    if (typeof current_index !== 'number') {
+        current_index = -1;
+    }
+
     let textarea_value = $(textarea_selector).val();
     let new_index = current_index + 1;
 
@@ -612,30 +615,31 @@ $.fn.zato.invoker.on_history_up = function(key, textarea_selector) {
     }
 
     if (new_index >= history.length) {
-        return;
+        return current_index;
     }
 
-    window.zato_invoker_history_index = new_index;
     let item = history[new_index];
     $(textarea_selector).val(typeof item === 'string' ? item : item.text);
+    return new_index;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker.on_history_down = function(key, textarea_selector) {
+$.fn.zato.invoker.on_history_down = function(key, textarea_selector, current_index) {
     let history = $.fn.zato.invoker.get_history(key);
     if (history.length === 0) {
-        return;
+        return current_index;
     }
 
-    let current_index = (typeof window.zato_invoker_history_index === 'number') ? window.zato_invoker_history_index : -1;
+    if (typeof current_index !== 'number') {
+        current_index = -1;
+    }
+
     let new_index = current_index - 1;
 
     if (new_index < -1) {
-        return;
+        return current_index;
     }
-
-    window.zato_invoker_history_index = new_index;
 
     if (new_index === -1) {
         $(textarea_selector).val("");
@@ -643,6 +647,7 @@ $.fn.zato.invoker.on_history_down = function(key, textarea_selector) {
         let item = history[new_index];
         $(textarea_selector).val(typeof item === 'string' ? item : item.text);
     }
+    return new_index;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -752,6 +757,23 @@ $.fn.zato.invoker._bind_modal_events = function() {
         } else if (is_ctrl && e.key.toLowerCase() === 'k') {
             e.preventDefault();
             $.fn.zato.invoker._open_modal_history();
+        }
+    });
+
+    $(document).on("keydown.invoker_modal", function(e) {
+        if (e.key !== 'Escape') {
+            return;
+        }
+        let history_overlay = $("#invoker-modal-history-overlay");
+        if (!history_overlay.hasClass("hidden")) {
+            e.preventDefault();
+            $.fn.zato.invoker._close_modal_history();
+            return;
+        }
+        let modal_overlay = $("#invoker-modal-overlay");
+        if (!modal_overlay.hasClass("hidden")) {
+            e.preventDefault();
+            $.fn.zato.invoker.close_overlay();
         }
     });
 }
@@ -912,6 +934,19 @@ $.fn.zato.invoker._on_modal_invoke_success = function(data, request_text) {
 $.fn.zato.invoker._on_modal_invoke_error = function(jq_xhr, request_text) {
     let status = jq_xhr.status + " " + (jq_xhr.statusText || "Error");
     let response_text = jq_xhr.responseText || '';
+
+    try {
+        let parsed = JSON.parse(response_text);
+        if (parsed.data !== undefined) {
+            response_text = typeof parsed.data === 'string' ? parsed.data : JSON.stringify(parsed.data, null, 2);
+        }
+        if (parsed.response_time_human) {
+            status += " | " + parsed.response_time_human;
+        }
+    } catch (e) {
+        // responseText is not JSON, use as-is
+    }
+
     $.fn.zato.invoker._set_modal_result(status, response_text, request_text);
 }
 
@@ -941,7 +976,8 @@ $.fn.zato.invoker._on_format_json = function() {
 $.fn.zato.invoker._on_modal_history_up = function() {
     let config = $.fn.zato.invoker._modal_config;
     if (!config) return;
-    $.fn.zato.invoker.on_history_up(config.history_key, "#invoker-modal-request");
+    window.zato_invoker_history_index = $.fn.zato.invoker.on_history_up(
+        config.history_key, "#invoker-modal-request", window.zato_invoker_history_index);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -949,7 +985,8 @@ $.fn.zato.invoker._on_modal_history_up = function() {
 $.fn.zato.invoker._on_modal_history_down = function() {
     let config = $.fn.zato.invoker._modal_config;
     if (!config) return;
-    $.fn.zato.invoker.on_history_down(config.history_key, "#invoker-modal-request");
+    window.zato_invoker_history_index = $.fn.zato.invoker.on_history_down(
+        config.history_key, "#invoker-modal-request", window.zato_invoker_history_index);
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

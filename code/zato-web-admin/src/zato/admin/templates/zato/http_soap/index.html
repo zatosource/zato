@@ -99,18 +99,24 @@
             'security',
 
             // 17, 18, 19
-            'cache_id',
-            'cache_type',
-            'cache_expiry',
+            {% if connection == 'channel' %}
+                'cache_id',
+                'cache_type',
+                'cache_expiry',
+            {% endif %}
 
             // 20
             'data_format',
 
             // 22, 23a, 23b, 23c
             'timeout',
-            'validate_tls',
-            'match_slash',
-            'http_accept',
+            {% if connection == 'outgoing' %}
+                'validate_tls',
+            {% endif %}
+            {% if connection == 'channel' %}
+                'match_slash',
+                'http_accept',
+            {% endif %}
 
             // 24, 25, 26, 27
             {% if connection == 'outgoing' %}
@@ -232,18 +238,24 @@
                         <th class='ignore'>&nbsp;</th> {% comment %} security {% endcomment %}
 
                         <!-- 17, 18, 19 -->
-                        <th class='ignore'>&nbsp;</th> {% comment %} cache_id {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} cache_type {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} cache_expiry {% endcomment %}
+                        {% if connection == 'channel' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} cache_id {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} cache_type {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} cache_expiry {% endcomment %}
+                        {% endif %}
 
                         <!-- 20, 21 -->
                         <th class='ignore'>&nbsp;</th> {% comment %} data_format {% endcomment %}
 
                         <!-- 22, 23a, 23b, 23c -->
                         <th class='ignore'>&nbsp;</th> {% comment %} timeout {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} use_tls {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} match_slash {% endcomment %}
-                        <th class='ignore'>&nbsp;</th> {% comment %} http_accept {% endcomment %}
+                        {% if connection == 'outgoing' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} validate_tls {% endcomment %}
+                        {% endif %}
+                        {% if connection == 'channel' %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} match_slash {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} http_accept {% endcomment %}
+                        {% endif %}
 
                         <!-- 24, 25, 26, 27 -->
                         {% if connection == 'outgoing' %}
@@ -373,18 +385,24 @@
                         <td class='ignore'>{{ item.security_id }}</td>
 
                         <!-- 17, 18, 19 -->
-                        <td class='ignore'>{{ item.cache_id }}</td>
-                        <td class='ignore'>{{ item.cache_type }}</td>
-                        <td class='ignore'>{{ item.cache_expiry }}</td>
+                        {% if connection == 'channel' %}
+                            <td class='ignore'>{{ item.cache_id }}</td>
+                            <td class='ignore'>{{ item.cache_type }}</td>
+                            <td class='ignore'>{{ item.cache_expiry }}</td>
+                        {% endif %}
 
                         <!-- 20 -->
                         <td class='ignore'>{{ item.data_format }}</td>
 
                         <!-- 22, 23a, 23b, 23c -->
                         <td class='ignore'>{{ item.timeout }}</td>
-                        <td class='ignore'>{{ item.validate_tls }}</td>
-                        <td class='ignore'>{{ item.match_slash }}</td>
-                        <td class='ignore'>{{ item.http_accept|default:"" }}</td>
+                        {% if connection == 'outgoing' %}
+                            <td class='ignore'>{{ item.validate_tls }}</td>
+                        {% endif %}
+                        {% if connection == 'channel' %}
+                            <td class='ignore'>{{ item.match_slash }}</td>
+                            <td class='ignore'>{{ item.http_accept|default:"" }}</td>
+                        {% endif %}
 
                         <!-- 24, 25, 26, 27 -->
                         {% if connection == 'outgoing' %}

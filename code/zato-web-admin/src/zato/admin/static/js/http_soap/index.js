@@ -292,18 +292,24 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", item.security_id);
 
     /* 17, 18, 19 */
-    row += String.format("<td class='ignore'>{0}</td>", item.cache_id);
-    row += String.format("<td class='ignore'>{0}</td>", item.cache_type);
-    row += String.format("<td class='ignore'>{0}</td>", item.cache_expiry);
+    if(is_channel) {
+        row += String.format("<td class='ignore'>{0}</td>", item.cache_id);
+        row += String.format("<td class='ignore'>{0}</td>", item.cache_type);
+        row += String.format("<td class='ignore'>{0}</td>", item.cache_expiry);
+    }
 
     /* 20 */
     row += String.format("<td class='ignore'>{0}</td>", item.data_format);
 
-    /* 22, 23a, 23b */
+    /* 22, 23a, 23b, 23c */
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
-    row += String.format("<td class='ignore'>{0}</td>", item.validate_tls);
-    row += String.format("<td class='ignore'>{0}</td>", item.match_slash);
-    row += String.format("<td class='ignore'>{0}</td>", item.http_accept);
+    if(is_outgoing) {
+        row += String.format("<td class='ignore'>{0}</td>", item.validate_tls);
+    }
+    if(is_channel) {
+        row += String.format("<td class='ignore'>{0}</td>", item.match_slash);
+        row += String.format("<td class='ignore'>{0}</td>", item.http_accept);
+    }
 
     /* 24, 25, 26, 27 */
     if(is_outgoing) {

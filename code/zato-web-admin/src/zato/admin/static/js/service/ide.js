@@ -2263,20 +2263,16 @@ $.fn.zato.ide.save_request_to_history = function(request_text, response_text) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_request_history_up = function() {
-    window.zato_invoker_history_index = window.zato_request_history_index;
     let key = $.fn.zato.ide.get_request_history_key();
-    $.fn.zato.invoker.on_history_up(key, "#data-request");
-    window.zato_request_history_index = window.zato_invoker_history_index;
+    window.zato_request_history_index = $.fn.zato.invoker.on_history_up(key, "#data-request", window.zato_request_history_index);
     $.fn.zato.ide.update_request_history_buttons();
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.ide.on_request_history_down = function() {
-    window.zato_invoker_history_index = window.zato_request_history_index;
     let key = $.fn.zato.ide.get_request_history_key();
-    $.fn.zato.invoker.on_history_down(key, "#data-request");
-    window.zato_request_history_index = window.zato_invoker_history_index;
+    window.zato_request_history_index = $.fn.zato.invoker.on_history_down(key, "#data-request", window.zato_request_history_index);
     $.fn.zato.ide.update_request_history_buttons();
 }
 
