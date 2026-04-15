@@ -1154,6 +1154,39 @@ def get_basic_auth_credentials(auth):
 
 # ################################################################################################################################
 
+def get_server_client_auth(
+    config,
+    repo_dir,
+    cm,
+    odb_password_encrypted,
+    *,
+    url_path=None,
+) -> 'any_':
+    """ Returns credentials to authenticate with against Zato's own invocation channels.
+    Reads from secrets.yaml rather than the ODB.
+    """
+    import os
+    import yaml
+
+    secrets_yaml_path = os.path.join(repo_dir, 'secrets.yaml')
+
+    with open(secrets_yaml_path) as f:
+        data = yaml.safe_load(f.read())
+
+    for item in data.get('security', []):
+        if item.get('name') == 'admin.invoke':
+            username = item['username']
+            password = item.get('password', '')
+
+            if password:
+                password = password.replace(SECRETS.PREFIX, '')
+                if password.startswith(SECRETS.Encrypted_Indicator):
+                    if cm:
+                        password = cm.decrypt(password)
+
+            return (username, password)
+
+    return None
 
 # ################################################################################################################################
 

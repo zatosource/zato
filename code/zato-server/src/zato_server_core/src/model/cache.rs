@@ -10,6 +10,8 @@ pub struct CacheBuiltinDef {
     pub is_active: bool,
     #[serde(default)]
     pub is_default: bool,
+    #[serde(default = "default_cache_type")]
+    pub cache_type: String,
     #[serde(default = "default_cache_max_size")]
     pub max_size: u32,
     #[serde(default = "default_cache_max_item_size")]

@@ -75,7 +75,7 @@ class Enmasse(ZatoCommand):
                 sys.exit(self.SYS_ERROR.PARAMETER_MISSING)
 
             response = client.invoke('zato.server.invoker', {'func_name': 'export_enmasse'})
-            yaml_data = response.data.get('response', '') if hasattr(response, 'data') else str(response)
+            yaml_data = response.data if isinstance(response.data, str) else str(response.data)
 
             with open(args.output, 'w') as f:
                 f.write(yaml_data)
@@ -98,15 +98,16 @@ class Enmasse(ZatoCommand):
 
             response = client.invoke('zato.server.invoker', {
                 'func_name': 'import_enmasse',
-                'func_args': [file_content, os.path.basename(args.input)]
+                'file_content': file_content,
+                'file_name': os.path.basename(args.input),
             })
 
-            response_data = response.data.get('response', '{}') if hasattr(response, 'data') else str(response)
+            response_data = response.data if isinstance(response.data, str) else str(response.data)
 
             try:
-                result = json.loads(response_data) if isinstance(response_data, str) else response_data
+                result = json.loads(response_data) if response_data else {}
             except (json.JSONDecodeError, TypeError):
-                result = {'is_ok': False, 'stderr': str(response_data)}
+                result = {'is_ok': False, 'stderr': response_data}
 
             if result.get('is_ok'):
                 self.logger.info('Enmasse OK (%s)', args.input)

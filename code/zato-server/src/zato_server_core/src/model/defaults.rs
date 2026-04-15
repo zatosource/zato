@@ -8,6 +8,7 @@ pub fn default_ftp_port() -> u16 { 21 }
 pub fn default_odoo_port() -> u16 { 8069 }
 pub fn default_cache_max_size() -> u32 { 10000 }
 pub fn default_cache_max_item_size() -> u32 { 10000 }
+pub fn default_cache_type() -> String { "builtin".to_string() }
 pub fn default_job_type() -> String { "interval_based".to_string() }
 pub fn default_slow_threshold() -> u32 { 99999 }
 

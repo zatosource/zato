@@ -1132,20 +1132,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         try:
             importer = EnmasseImporter(self.config_store)
             importer.import_(file_content)
-            self.reload_config()
-
-            return json.dumps({
-                'is_ok': True,
-                'exit_code': 0,
-                'stdout': 'Loaded into ConfigStore',
-                'stderr': '',
-                'is_timeout': False,
-                'timeout_msg': '',
-                'total_time': '',
-                'len_stdout_human': '',
-                'len_stderr_human': '',
-            })
-
         except Exception:
             exc = format_exc()
             logger.warning('Could not import enmasse: %s', exc)
@@ -1160,6 +1146,23 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'len_stdout_human': '',
                 'len_stderr_human': '',
             })
+
+        try:
+            self.reload_config()
+        except Exception:
+            logger.warning('Enmasse imported OK but config reload failed: %s', format_exc())
+
+        return json.dumps({
+            'is_ok': True,
+            'exit_code': 0,
+            'stdout': 'Loaded into ConfigStore',
+            'stderr': '',
+            'is_timeout': False,
+            'timeout_msg': '',
+            'total_time': '',
+            'len_stdout_human': '',
+            'len_stderr_human': '',
+        })
 
 # ################################################################################################################################
 
