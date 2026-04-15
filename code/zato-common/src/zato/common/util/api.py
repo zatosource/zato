@@ -1158,7 +1158,7 @@ def get_server_client_auth(
     config,
     repo_dir,
     cm,
-    odb_password_encrypted,
+    _unused=None,
     *,
     url_path=None,
 ) -> 'any_':

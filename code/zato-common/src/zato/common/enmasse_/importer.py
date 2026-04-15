@@ -82,8 +82,10 @@ class EnmasseImporter:
         """ Parses the YAML string, preprocesses each section through its
         type-specific importer, then passes the preprocessed YAML to the config store.
         """
+        import os
         import yaml
 
+        yaml_string = os.path.expandvars(yaml_string)
         data = yaml.safe_load(yaml_string)
         if not data:
             return

@@ -96,6 +96,8 @@ class Enmasse(ZatoCommand):
             with open(args.input) as f:
                 file_content = f.read()
 
+            file_content = os.path.expandvars(file_content)
+
             response = client.invoke('zato.server.invoker', {
                 'func_name': 'import_enmasse',
                 'file_content': file_content,

@@ -598,7 +598,6 @@ class ODBTestCase(TestCase):
         cluster = Cluster()
         cluster.id = test_odb_data.cluster_id
         cluster.name = 'my.cluster'
-        cluster.odb_type = 'sqlite'
         cluster.broker_host = 'my.broker.host'
         cluster.broker_port = 1234
 

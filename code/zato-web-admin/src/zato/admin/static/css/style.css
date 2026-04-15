@@ -310,6 +310,25 @@ span.like-a {
     border-bottom: 1px solid rgba(169, 162, 68, 0.5)
 }
 
+@keyframes zatoBounce {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.16); }
+}
+
+@keyframes zatoBounceBackground {
+    0%, 100% { background-color: transparent; }
+    50%      { background-color: rgba(255, 243, 205, 0.6); }
+}
+
+tr.zato-row-bounce .zato-bounce-wrap {
+    display: inline-block;
+    animation: zatoBounce 0.4s ease-in-out 2;
+}
+
+tr.zato-row-bounce {
+    animation: zatoBounceBackground 0.4s ease-in-out 2;
+}
+
 #data-table td,
 #data-table th {
     padding: 10px;
