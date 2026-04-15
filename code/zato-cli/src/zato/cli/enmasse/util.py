@@ -1,0 +1,267 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+
+Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+# stdlib
+import logging
+import os
+import uuid
+
+# Zato
+from zato.common.util.api import asbool
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+if 0:
+    from zato.common.typing_ import any_, anydict, strdict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+# SQL engine type mappings
+SQL_TYPE_MAP = {
+    'mssql': 'zato+mssql1',
+    'mysql': 'mysql+pymysql',
+    'oracle': 'oracle',
+    'postgresql': 'postgresql+pg8000',
+}
+
+# ################################################################################################################################
+
+def get_engine_from_type(raw_type:'str') -> 'str':
+    """Converts a user-friendly database type to the internal type name.
+    """
+
+    # If raw_type is already an internal type name, use it directly ..
+    if raw_type in SQL_TYPE_MAP.values():
+        return raw_type
+
+    # .. Otherwise, try to map it from user-friendly name to internal engine name
+    else:
+        return SQL_TYPE_MAP[raw_type]
+
+# ################################################################################################################################
+
+def get_type_from_engine(engine:'str') -> 'str':
+    """Converts an internal engine name to a user-friendly database type.
+    """
+    engine_to_type_map = {value: key for key, value in SQL_TYPE_MAP.items()}
+
+    # Return user-friendly type if found, otherwise return the engine name unchanged
+    return engine_to_type_map.get(engine, engine)
+
+# ################################################################################################################################
+
+def get_value_from_environment(value:'any_') -> 'str':
+
+    if not isinstance(value, str):
+        return value
+
+    prefix = 'Zato_Enmasse_Env.'
+
+    if not value.startswith(prefix):
+        return value
+
+    env_key = value.replace(prefix, '')
+    default = f'Missing_{env_key}_{uuid.uuid4().hex[:12]}'
+
+    value = os.environ.get(env_key, default)
+
+    try:
+        value = asbool(value)
+    except Exception:
+        pass
+
+    return value
+
+# ################################################################################################################################
+
+def preprocess_item(item:'strdict') -> 'any_':
+
+    for key, value in item.items():
+        value = get_value_from_environment(value)
+        item[key] = value
+
+    return item
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def reorder_fields(fields:'anydict') -> 'anydict':
+
+    field_order = {}
+    field_order['security'] = 'name', 'type', 'username', 'auth_endpoint', 'client_id_field', \
+        'client_secret_field', 'grant_type', 'data_format', 'extra_fields'
+    field_order['groups'] = 'name', 'members'
+    field_order['channel_rest'] = 'name', 'service', 'url_path', 'security', 'groups', 'data_format'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_top_level_order() -> 'strlist':
+
+    return [
+        'security',
+        'groups',
+        'channel_rest',
+        'outgoing_rest',
+        'scheduler',
+        'ldap',
+        'sql',
+        'outgoing_soap',
+        'microsoft_365',
+        'cache',
+        'confluence',
+        'jira',
+        'email_imap',
+        'email_smtp',
+        'odoo',
+        'elastic_search',
+        'pubsub_topic',
+        'pubsub_permission',
+        'pubsub_subscription',
+        'channel_openapi',
+    ]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def get_object_order(object_type:'str') -> 'strlist':
+
+    order = {}
+
+    order['security'] = 'name', 'is_active', 'type', 'username', 'auth_endpoint', 'client_id_field', 'client_secret_field', 'grant_type', \
+        'data_format', 'extra_fields:list',
+
+    order['groups'] = 'name', 'is_active', 'members:list',
+    order['channel_rest'] = 'name', 'is_active', 'service', 'url_path', 'security', 'data_format', 'groups:list',
+    order['outgoing_rest'] = 'name', 'is_active', 'host', 'url_path', 'security', 'data_format', 'timeout', 'ping_method', 'tls_verify',
+    order['scheduler'] = 'name', 'is_active', 'service', 'job_type', 'start_date', 'seconds', 'minutes', 'hours', 'days', 'extra:list',
+    order['ldap'] = 'name', 'is_active', 'username', 'auth_type', 'server_list:list',
+    order['sql'] = 'name', 'is_active', 'type', 'host', 'port', 'db_name', 'username',
+    order['outgoing_soap'] = 'name', 'is_active', 'host', 'port', 'url_path', 'security', 'soap_action', 'soap_version', 'timeout', 'tls_verify',
+    order['microsoft_365'] = 'name', 'is_active', 'client_id', 'tenant_id', 'scopes:list',
+    order['cache'] = 'name', 'is_active', 'extend_expiry_on_get', 'extend_expiry_on_set',
+    order['confluence'] = 'name', 'is_active', 'address', 'username',
+    order['jira'] = 'name', 'is_active', 'address', 'username',
+    order['email_imap'] = 'name', 'is_active', 'type', 'host', 'port', 'username', 'tenant_id', 'client_id', # TODO: Implement type vs. server_type
+    order['email_smtp'] = 'name', 'is_active', 'host', 'port', 'username',
+    order['odoo'] = 'name', 'is_active', 'host', 'port', 'database', 'user'
+    order['elastic_search'] = 'name', 'is_active', 'hosts:list', 'timeout', 'body_as'
+    order['pubsub_topic'] = 'name', 'description'
+    order['pubsub_permission'] = 'security', 'pub', 'sub'
+    order['pubsub_subscription'] = 'security', 'delivery_type', 'push_rest_endpoint', 'push_service', 'max_retry_time', 'topic_list'
+    order['channel_openapi'] = 'name', 'is_active', 'url_path', 'rest_channel_list:list'
+
+    return order[object_type]
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class FileWriter:
+
+    def __init__(self, path:'str') -> 'None':
+        self.path = path
+
+# ################################################################################################################################
+
+    def write(self, data_dict:'anydict') -> 'None':
+
+        # Prefixes to remove from list items
+        prefixes_to_remove = ['pub=', 'sub=']
+
+        top_level = get_top_level_order()
+
+        with open(self.path, 'w') as f:
+
+            previous_had_data = False
+            for element in top_level:
+
+                # Check if this element exists on input
+                if element in data_dict:
+
+                    # Write the element header with newline before it
+                    _ = f.write(f'\n{element}:\n')
+                    previous_had_data = True
+
+                    # Get the field order dictionary
+                    fields = get_object_order(element)
+
+                    # Process each item in the data
+                    for item in data_dict[element]:
+
+                        # Write the first field with dash ..
+                        first_field = fields[0]
+
+                        if first_field in item:
+                            _ = f.write(f'  - {first_field}: {item[first_field]}\n')
+
+                        # .. write remaining fields with indentation but no dash ..
+                        for field in fields[1:]:
+
+                            # Check if this is a list field notation
+                            if ':list' in field:
+                                # Extract the actual field name without the suffix
+                                actual_field = field.split(':')[0]
+
+                                # Check if the actual field exists in the item
+                                if actual_field in item:
+
+                                    # Get the field value
+                                    field_value = item[actual_field]
+
+                                    # Check if it's actually a list
+                                    if isinstance(field_value, list):
+
+                                        # Write the field name as a list header
+                                        _ = f.write(f'    {actual_field}:\n')
+
+                                        # Write each list item with proper indentation
+                                        for list_item in field_value:
+                                            cleaned_item = str(list_item)
+                                            if element == 'pubsub_permission' and actual_field in ['pub', 'sub']:
+                                                for prefix in prefixes_to_remove:
+                                                    if cleaned_item.startswith(prefix):
+                                                        cleaned_item = cleaned_item[len(prefix):]
+                                                        break
+                                            _ = f.write(f'      - {cleaned_item}\n')
+                                    else:
+                                        _ = f.write(f'    {actual_field}: {field_value}\n')
+
+                            # For regular fields
+                            elif field in item:
+                                field_value = item[field]
+                                if isinstance(field_value, list):
+                                    _ = f.write(f'    {field}:\n')
+                                    for list_item in field_value:
+                                        cleaned_item = str(list_item)
+                                        if element == 'pubsub_permission' and field in ['pub', 'sub']:
+                                            for prefix in prefixes_to_remove:
+                                                if cleaned_item.startswith(prefix):
+                                                    cleaned_item = cleaned_item[len(prefix):]
+                                                    break
+                                        _ = f.write(f'      - {cleaned_item}\n')
+                                else:
+                                    _ = f.write(f'    {field}: {field_value}\n')
+
+                else:
+                    # Write the element header for empty sections
+                    if previous_had_data:
+                        _ = f.write(f'\n{element}:\n')
+                    else:
+                        _ = f.write(f'{element}:\n')
+                    previous_had_data = False
+
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -79,6 +79,8 @@ class EnmasseExporter:
         """
         import yaml
         data = self.export_to_dict()
+        if not data:
+            return ''
         return yaml.dump(data, default_flow_style=False, sort_keys=True)
 
 # ################################################################################################################################

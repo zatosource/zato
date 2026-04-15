@@ -1127,9 +1127,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def import_enmasse(self, file_content:'str', file_name:'str') -> 'str':
 
         import json
+        from zato.common.enmasse_.importer import EnmasseImporter
 
         try:
-            self.config_store.load_yaml_string(file_content)
+            importer = EnmasseImporter(self.config_store)
+            importer.import_(file_content)
             self.reload_config()
 
             return json.dumps({
