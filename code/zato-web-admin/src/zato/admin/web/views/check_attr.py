@@ -26,4 +26,9 @@ def check_attr_exists(req):
         'attr_name': attr_name,
         'value': value,
     })
-    return HttpResponse(response.data, content_type='application/json')
+    data = response.data
+    if isinstance(data, dict):
+        data = dumps(data)
+    else:
+        data = str(data)
+    return HttpResponse(data, content_type='application/json')

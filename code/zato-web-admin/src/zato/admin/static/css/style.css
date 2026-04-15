@@ -1046,22 +1046,40 @@ div.action-panel a {
     color: #fff !important;
 }
 
+@keyframes zatoFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
 .zato-unique-indicator {
-    margin-left: 0.5rem;
-    vertical-align: middle;
-    display: inline-block
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    pointer-events: none;
+    animation: zatoFadeIn 0.25s ease-in;
+    transition: opacity 0.2s ease-out
 }
 
 .zato-unique-ok {
     color: #2e7d32;
-    font-weight: bold
+    font-weight: bold;
+    font-size: 0.65rem;
+    background-color: rgba(46, 125, 50, 0.12);
+    border: 1px solid rgba(46, 125, 50, 0.3);
+    width: 0.9rem;
+    height: 0.9rem;
+    line-height: 0.9rem;
+    text-align: center;
+    border-radius: 50%
 }
 
 .zato-unique-taken {
     font-family: monospace;
-    font-size: 0.8rem;
+    font-size: 0.55rem;
     background-color: rgba(220, 53, 69, 0.15);
     color: #b71c1c;
-    padding: 0.15rem 0.5rem;
-    border-radius: 3px
+    border: 1px solid rgba(220, 53, 69, 0.25);
+    padding: 0.02rem 0.4rem;
+    border-radius: 10px
 }
