@@ -54,6 +54,7 @@ class _SchedulerAdmin(AdminService):
         if self._service_by_name(service_name):
             out['service_id'] = self.server.service_store.get_service_id_by_name(service_name)
             out['service_name'] = service_name
+
         else:
             out['service_id'] = None
             out['service_name'] = service_name

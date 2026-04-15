@@ -263,7 +263,7 @@ class WorkerStore(_WorkerStoreBase):
                 impl_name = self.server.service_store.name_to_impl_name.get(svc_name, '')
                 channel_item['service_impl_name'] = impl_name
                 if impl_name:
-                    channel_item['service_id'] = self.server.service_store.impl_name_to_id.get(impl_name, None)
+                    channel_item['service_id'] = self.server.service_store.get_service_id_by_name(svc_name)
             channel_item.setdefault('service_impl_name', '')
             channel_item.setdefault('cache_type', None)
             channel_item.setdefault('cache_id', None)

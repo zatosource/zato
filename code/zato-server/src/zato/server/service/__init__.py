@@ -903,10 +903,12 @@ class Service:
 
 # ################################################################################################################################
 
-    def invoke_by_id(self, service_id:'int', *args:'any_', **kwargs:'any_') -> 'any_':
+    def invoke_by_id(self, service_id:'str', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service synchronously by its ID.
         """
-        return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
+        service_info = self.server.service_store.get_service_info_by_id(str(service_id))
+        impl_name = self.server.service_store.name_to_impl_name[service_info['name']]
+        return self.invoke_by_impl_name(impl_name, *args, **kwargs)
 
 # ################################################################################################################################
 

@@ -212,7 +212,7 @@ class Create(AdminService):
             service = cast_('InRAMService', service)
 
             # .. extract the ID of the deployed service ..
-            service_id = self.server.service_store.impl_name_to_id[service.impl_name]
+            service_id = self.server.service_store.get_service_id_by_name(service.name)
 
             # .. append it for later use ..
             service_id_list.append(service_id)

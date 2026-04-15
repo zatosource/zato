@@ -122,8 +122,8 @@ class GetList(_BaseGet):
         out = {}
         for svc_data in self.server.service_store.services.values():
             name = svc_data['name']
-            svc_id = self.server.service_store.impl_name_to_id.get(svc_data.get('impl_name'), 0)
-            out[name] = svc_id
+            service_id = self.server.service_store.get_service_id_by_name(name)
+            out[name] = service_id
         return out
 
     def handle(self):

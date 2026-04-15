@@ -89,7 +89,7 @@ class GetList(AdminService):
             if not deployment_info.get('fs_location'):
                 continue
 
-            service_id = store.impl_name_to_id.get(impl_name, 0)
+            service_id = store.get_service_id_by_name(name)
 
             item = Bunch(
                 id=service_id,
@@ -161,7 +161,7 @@ class GetByName(_Get):
         store = self.server.service_store
         name = self.request.input.name
         impl_name = store.name_to_impl_name[name]
-        service_id = store.impl_name_to_id[impl_name]
+        service_id = store.get_service_id_by_name(name)
         return service_id, impl_name
 
 # ################################################################################################################################
@@ -174,8 +174,9 @@ class GetByID(_Get):
 
     def _lookup_service(self):
         store = self.server.service_store
-        service_id = int(self.request.input.id)
-        impl_name = store.id_to_impl_name[service_id]
+        service_id = str(self.request.input.id)
+        service_info = store.get_service_info_by_id(service_id)
+        impl_name = store.name_to_impl_name[service_info['name']]
         return service_id, impl_name
 
 # ################################################################################################################################
@@ -191,8 +192,9 @@ class Edit(AdminService):
         input = self.request.input
         store = self.server.service_store
 
-        service_id = int(input.id)
-        impl_name = store.id_to_impl_name[service_id]
+        service_id = str(input.id)
+        service_info = store.get_service_info_by_id(service_id)
+        impl_name = store.name_to_impl_name[service_info['name']]
         svc_data = store.services[impl_name]
 
         svc_data['is_active'] = input.is_active
@@ -224,10 +226,11 @@ class Delete(AdminService):
 
     def handle(self):
         store = self.server.service_store
-        service_id = int(self.request.input.id)
-        impl_name = store.id_to_impl_name[service_id]
+        service_id = str(self.request.input.id)
+        service_info = store.get_service_info_by_id(service_id)
+        name = service_info['name']
+        impl_name = store.name_to_impl_name[name]
         svc_data = store.services[impl_name]
-        name = svc_data['name']
         service_class = svc_data['service_class']
         is_internal = getattr(service_class, 'is_internal', name.startswith('zato.'))
 
@@ -405,8 +408,8 @@ class Invoke(AdminService):
     ) -> 'any_':
 
         if id:
-            impl_name = self.server.service_store.id_to_impl_name[id]
-            name = self.server.service_store.service_data(impl_name)['name']
+            service_info = self.server.service_store.get_service_info_by_id(str(id))
+            name = service_info['name']
 
         response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
         return response
@@ -550,14 +553,18 @@ class GetDeploymentInfoList(AdminService):
 
         service_id = self.request.input.get('id')
         if service_id:
-            service_id = int(service_id)
-            impl_name = store.id_to_impl_name.get(service_id)
-            if impl_name:
+            service_id = str(service_id)
+            try:
+                service_info = store.get_service_info_by_id(service_id)
+                impl_name = store.name_to_impl_name[service_info['name']]
                 items_to_check = [(service_id, impl_name)]
-            else:
+            except KeyError:
                 items_to_check = []
         else:
-            items_to_check = list(store.id_to_impl_name.items())
+            items_to_check = []
+            for impl_name, svc_data in store.services.items():
+                svc_id = store.get_service_id_by_name(svc_data['name'])
+                items_to_check.append((svc_id, impl_name))
 
         for svc_id, impl_name in items_to_check:
             svc_data = store.services.get(impl_name)
@@ -611,7 +618,7 @@ class GetSourceInfo(AdminService):
             return
 
         svc_data = store.services[impl_name]
-        service_id = store.impl_name_to_id.get(impl_name, 0)
+        service_id = store.get_service_id_by_name(name)
         _sci = svc_data.get('_source_code_info')
         source_bytes = _sci.source if _sci else b''
 

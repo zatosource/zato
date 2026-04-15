@@ -56,15 +56,13 @@ from zato_sio import SIOProcessor
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.hot_deploy_ import HotDeployProject
-    from zato.common.typing_ import any_, anydict, anylist, callable_, intstrdict, module_, stranydict, \
-        strdictdict, strint, strintdict, strlist, stroriter, tuple_
+    from zato.common.typing_ import any_, anydict, anylist, callable_, module_, stranydict, \
+        strdictdict, strlist, stroriter, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.config import ConfigStore
     callable_ = callable_
-    intstrdict = intstrdict
     strdictdict = strdictdict
-    strintdict = strintdict
     stroriter = stroriter
     ConfigStore      = ConfigStore
     HotDeployProject = HotDeployProject
@@ -258,13 +256,10 @@ class ServiceStore:
         self.is_testing = is_testing
         self.max_batch_size = 0
         self.models = {}            # type: stranydict
-        self.id_to_impl_name = {}   # type: intstrdict
-        self.impl_name_to_id = {}   # type: strintdict
         self.name_to_impl_name = {} # type: stranydict
         self.deployment_info = {}   # type: stranydict
         self.update_lock = RLock()
         self.needs_post_deploy_attr = 'needs_post_deploy'
-        self._service_id_counter = 0
 
         self.action_internal_doing = 'Deploying'
         self.action_internal_done  = 'Deployed'
@@ -272,10 +267,6 @@ class ServiceStore:
         if self.is_testing:
             self._testing_worker_store = cast_('WorkerStore', _TestingWorkerStore())
             self._testing_worker_store.worker_config = cast_('ConfigStore', _TestingWorkerConfig())
-
-    def _next_service_id(self) -> 'int':
-        self._service_id_counter += 1
-        return self._service_id_counter
 
 # ################################################################################################################################
 
@@ -287,27 +278,12 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _delete_service_from_odb(self, service_id:'int') -> 'None':
-        _ = self.server.invoke('zato.service.delete', {
-            'id':service_id
-        })
-
-# ################################################################################################################################
-
     def _delete_service_data(self, name:'str', delete_from_odb:'bool'=False) -> 'None':
         try:
-            impl_name = self.name_to_impl_name[name]     # type: str
-            service_id = self.impl_name_to_id[impl_name] # type: int
-            del self.id_to_impl_name[service_id]
-            del self.impl_name_to_id[impl_name]
+            impl_name = self.name_to_impl_name[name]
             del self.name_to_impl_name[name]
             del self.services[impl_name]
-            if delete_from_odb:
-                self._delete_service_from_odb(service_id)
         except KeyError:
-            # This is as expected and may happen if a service
-            # was already deleted, e.g. it was in the same module
-            # that another deleted service was in.
             pass
 
 # ################################################################################################################################
@@ -508,41 +484,32 @@ class ServiceStore:
         """ Returns True if service indicated by service_name has a SimpleIO definition.
         """
         with self.update_lock:
-            service_id = self.get_service_id_by_name(service_name)
-            service_info = self.get_service_info_by_id(service_id) # type: stranydict
+            impl_name = self.name_to_impl_name[service_name]
+            service_info = self.services[impl_name]
             class_ = service_info['service_class'] # type: Service
             return getattr(class_, 'has_sio', False)
 
 # ################################################################################################################################
 
-    def get_service_info_by_id(self, service_id:'strint') -> 'stranydict':
-        if not isinstance(service_id, int):
-            service_id = int(service_id)
-
-        try:
-            impl_name = self.id_to_impl_name[service_id]
-        except KeyError:
-            keys_found = sorted(self.id_to_impl_name)
-            keys_found = [(elem, type(elem)) for elem in keys_found]
-            raise KeyError('No such service_id key `{}` `({})` among `{}`'.format(repr(service_id), type(service_id), keys_found))
-        else:
-            try:
-                return self.services[impl_name]
-            except KeyError:
-                keys_found = sorted(repr(elem) for elem in self.services.keys())
-                keys_found = [(elem, type(elem)) for elem in keys_found]
-                raise KeyError('No such impl_name key `{}` `({})` among `{}`'.format(
-                    repr(impl_name), type(impl_name), keys_found))
+    def get_service_info_by_id(self, service_id:'str') -> 'stranydict':
+        service_id = str(service_id)
+        for impl_name, service_data in self.services.items():
+            config = self.server.config_store.get('service', service_data['name'])
+            if config and str(config.get('id', '')) == service_id:
+                return service_data
+        raise KeyError('No such service_id `{}` among deployed services'.format(service_id))
 
 # ################################################################################################################################
 
-    def get_service_id_by_name(self, service_name:'str') -> 'int':
-        impl_name = self.name_to_impl_name[service_name]
-        return self.impl_name_to_id[impl_name]
+    def get_service_id_by_name(self, service_name:'str') -> 'str':
+        config = self.server.config_store.get('service', service_name)
+        if config:
+            return config['id']
+        raise KeyError('No such service `{}` in config store'.format(service_name))
 
 # ################################################################################################################################
 
-    def get_service_name_by_id(self, service_id:'int') -> 'str':
+    def get_service_name_by_id(self, service_id:'str') -> 'str':
         return self.get_service_info_by_id(service_id)['name']
 
 # ################################################################################################################################
@@ -586,8 +553,9 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def new_instance_by_id(self, service_id:'int', *args:'any_', **kwargs:'any_') -> 'tuple_[Service, bool]':
-        impl_name = self.id_to_impl_name[service_id]
+    def new_instance_by_id(self, service_id:'str', *args:'any_', **kwargs:'any_') -> 'tuple_[Service, bool]':
+        service_info = self.get_service_info_by_id(service_id)
+        impl_name = service_info.get('impl_name') or self.name_to_impl_name[service_info['name']]
         return self.new_instance(impl_name)
 
 # ################################################################################################################################
@@ -635,11 +603,14 @@ class ServiceStore:
             class_ = service.service_class
             impl_name = service.impl_name
 
+            service_name = self.services[impl_name]['name']
+            service_id = self.get_service_id_by_name(service_name)
+
             service_info.append({
                 'service_class': class_,
                 'mod': inspect.getmodule(class_),
                 'impl_name': impl_name,
-                'service_id': self.impl_name_to_id[impl_name],
+                'service_id': service_id,
                 'is_active': self.services[impl_name]['is_active'],
                 'slow_threshold': self.services[impl_name]['slow_threshold'],
                 'fs_location': inspect.getfile(class_),
@@ -806,31 +777,15 @@ class ServiceStore:
         with self.update_lock:
             for item in to_process: # type: InRAMService
 
-                if item.name in self.name_to_impl_name:
-                    old_impl = self.name_to_impl_name[item.name]
-                    service_id = self.impl_name_to_id.get(old_impl, self._next_service_id())
-                else:
-                    service_id = self._next_service_id()
-
-                item_name = item.name
-                item_deployment_info = item.deployment_info
-                item_service_class = item.service_class
-
                 self.services[item.impl_name] = {}
-                self.services[item.impl_name]['name'] = item_name
-                self.services[item.impl_name]['deployment_info'] = item_deployment_info
-                self.services[item.impl_name]['service_class'] = item_service_class
+                self.services[item.impl_name]['name'] = item.name
+                self.services[item.impl_name]['deployment_info'] = item.deployment_info
+                self.services[item.impl_name]['service_class'] = item.service_class
                 self.services[item.impl_name]['path'] = item.source_code_info.path
                 self.services[item.impl_name]['_source_code_info'] = item.source_code_info
+                self.services[item.impl_name]['is_active'] = item.is_active
+                self.services[item.impl_name]['slow_threshold'] = item.slow_threshold
 
-                item_is_active = item.is_active
-                item_slow_threshold = item.slow_threshold
-
-                self.services[item.impl_name]['is_active'] = item_is_active
-                self.services[item.impl_name]['slow_threshold'] = item_slow_threshold
-
-                self.id_to_impl_name[service_id] = item.impl_name
-                self.impl_name_to_id[item.impl_name] = service_id
                 self.name_to_impl_name[item.name] = item.impl_name
 
 # ################################################################################################################################
@@ -950,13 +905,10 @@ class ServiceStore:
         for item in info.to_process: # type: InRAMService
             name = item.name
             if name not in self.server.config.service:
-                impl_name = item.impl_name
-                service_id = self.impl_name_to_id.get(impl_name, 0)
                 self.server.config.service[name] = {
                     'config': {
-                        'id': service_id,
                         'name': name,
-                        'impl_name': impl_name,
+                        'impl_name': item.impl_name,
                         'is_active': item.is_active,
                         'slow_threshold': item.slow_threshold,
                     }

@@ -13,6 +13,7 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
+from zato.common.util.config import resolve_name
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
 from zato.url_dispatcher import Matcher

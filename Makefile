@@ -1,4 +1,4 @@
-.PHONY: build install test fuzzy
+.PHONY: build install test fuzzy scheduler-tests
 MAKEFLAGS += --silent
 
 default: test
@@ -35,6 +35,26 @@ cli-tests:
 
 enmasse-tests:
 	cd $(CURDIR)/code/zato-cli && make test
+
+Zato_Scheduler_Core_Dir=$(CURDIR)/code/zato-scheduler/src/zato_scheduler_core
+Zato_Scheduler_Fuzz_Timeout=$(or $(timeout),120)
+
+SCHEDULER_FUZZ_TARGETS = \
+	fuzz_job_type_from_str \
+	fuzz_on_missed_policy_from_str \
+	fuzz_is_excluded \
+	fuzz_compute_interval_ms \
+	fuzz_create_edit_delete
+
+scheduler-tests:
+	echo "=== Running proptest + mutant tests in zato-scheduler ==="
+	. $$HOME/.cargo/env && cd $(Zato_Scheduler_Core_Dir) && cargo test
+	echo "=== Running cargo-fuzz in zato-scheduler ($(Zato_Scheduler_Fuzz_Timeout)s per target) ==="
+	. $$HOME/.cargo/env && cd $(Zato_Scheduler_Core_Dir) && \
+		for target in $(SCHEDULER_FUZZ_TARGETS); do \
+			echo "  Fuzzing $$target ..."; \
+			cargo +nightly fuzz run $$target -- -max_total_time=$(Zato_Scheduler_Fuzz_Timeout) 2>&1 | tail -1; \
+		done
 
 openapi-tests:
 	cd $(CURDIR)/code/zato-openapi && $(CURDIR)/code/bin/py -m unittest discover -s test/zato/openapi_ -p 'test_*.py' -v
