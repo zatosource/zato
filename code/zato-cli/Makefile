@@ -1,5 +1,5 @@
 
-.PHONY: static-check
+.PHONY: static-check test
 
 Zato_Python_Dir=$(CURDIR)/../bin
 Zato_Package_Name=zato-cli

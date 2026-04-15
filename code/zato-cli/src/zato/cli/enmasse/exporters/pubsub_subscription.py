@@ -58,15 +58,13 @@ class PubSubSubscriptionExporter:
             }
 
             if delivery_type == 'push':
-                push_type = item.get('push_type', '')
-                if push_type == 'rest':
-                    push_rest_endpoint = item.get('push_rest_endpoint', '')
-                    if push_rest_endpoint:
-                        subscription_data['push_rest_endpoint'] = push_rest_endpoint
-                elif push_type == 'service':
-                    push_service_name = item.get('push_service_name') or item.get('push_service', '')
-                    if push_service_name:
-                        subscription_data['push_service'] = push_service_name
+                push_rest_endpoint = item.get('push_rest_endpoint', '')
+                if push_rest_endpoint:
+                    subscription_data['push_rest_endpoint'] = push_rest_endpoint
+
+                push_service = item.get('push_service', '')
+                if push_service:
+                    subscription_data['push_service'] = push_service
 
             exported_subscriptions.append(subscription_data)
 

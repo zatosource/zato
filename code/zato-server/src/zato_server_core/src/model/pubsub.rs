@@ -7,7 +7,7 @@ pub struct PubSubTopic {
     pub id: String,
     pub name: String,
     #[serde(default)]
-    pub description: Option<String>,
+    pub description: String,
     #[serde(default = "default_true")]
     pub is_active: bool,
 }
@@ -19,8 +19,6 @@ pub struct PubSubPermission {
     pub security: String,
     #[serde(default)]
     pub sec_base_id: String,
-    #[serde(default)]
-    pub pub_: Vec<String>,
     #[serde(rename = "pub", default)]
     pub pub_topics: Vec<String>,
     #[serde(rename = "sub", default)]
@@ -58,11 +56,11 @@ pub struct PubSubSubscription {
     #[serde(default)]
     pub topic_link_list: String,
     #[serde(default)]
-    pub push_rest_endpoint: Option<String>,
+    pub push_rest_endpoint: String,
     #[serde(default)]
-    pub rest_push_endpoint_id: Option<String>,
+    pub rest_push_endpoint_id: String,
     #[serde(default)]
-    pub push_service_name: Option<String>,
+    pub push_service: String,
     #[serde(default)]
-    pub max_retry_time: Option<String>,
+    pub max_retry_time: String,
 }

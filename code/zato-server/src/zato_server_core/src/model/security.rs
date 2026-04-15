@@ -82,6 +82,8 @@ pub struct BearerTokenDef {
     pub grant_type: String,
     #[serde(default)]
     pub data_format: String,
+    #[serde(default)]
+    pub extra_fields: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

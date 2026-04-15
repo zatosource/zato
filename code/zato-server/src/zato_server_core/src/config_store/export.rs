@@ -33,7 +33,6 @@ impl ConfigStore {
         export_section!("scheduler", scheduler);
         export_section!("holiday_calendar", holiday_calendar);
         export_section!("sql", outgoing_sql);
-        export_section!("ldap", generic_connection);
         export_section!("cache", cache_builtin);
         export_section!("email_smtp", email_smtp);
         export_section!("email_imap", email_imap);
@@ -43,6 +42,30 @@ impl ConfigStore {
         export_section!("pubsub_permission", pubsub_permission);
         export_section!("pubsub_subscription", pubsub_subscription);
         export_section!("channel_openapi", channel_openapi);
+
+        {
+            let store = self.generic_connection.read().map_err(lock_err)?;
+            let type_map: &[(&str, &str)] = &[
+                ("ldap", "outconn-ldap"),
+                ("confluence", "cloud-confluence"),
+                ("jira", "cloud-jira"),
+                ("microsoft_365", "cloud-microsoft-365"),
+            ];
+            for &(section_key, type_prefix) in type_map {
+                let list = PyList::empty(py);
+                let mut has_items = false;
+                for item in store.values() {
+                    if item.type_ == type_prefix {
+                        let d = struct_to_pydict(py, item)?;
+                        let _ = list.append(d.bind(py));
+                        has_items = true;
+                    }
+                }
+                if has_items {
+                    let _ = out.set_item(section_key, list);
+                }
+            }
+        }
 
         Ok(out.unbind())
     }
