@@ -34,7 +34,7 @@ _tz_choices = [('', '--- Same as server ---')] + sorted([
     ('America/Argentina/Buenos_Aires', 'America/Argentina/Buenos_Aires'),
     ('America/Mexico_City', 'America/Mexico_City'),
     ('America/Sao_Paulo', 'America/Sao_Paulo'),
-    ('Europe/Reykjavik', 'Europe/Reykjavik (Atlantic/Reykjavik)'),
+    ('Europe/Reykjavik', 'Europe/Reykjavik'),
     ('Asia/Bangkok', 'Asia/Bangkok'),
     ('Asia/Dubai', 'Asia/Dubai'),
     ('Asia/Hong_Kong', 'Asia/Hong_Kong'),

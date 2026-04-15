@@ -297,6 +297,16 @@ impl ConfigStore {
         dispatch!(delete, self, entity_type, name)
     }
 
+    #[pyo3(signature = (username, password))]
+    fn check_basic_auth_py(&self, username: &str, password: &str) -> PyResult<Option<String>> {
+        self.check_basic_auth(username, password)
+    }
+
+    #[pyo3(signature = (header_value,))]
+    fn check_apikey_py(&self, header_value: &str) -> PyResult<Option<String>> {
+        self.check_apikey(header_value)
+    }
+
     #[pyo3(signature = (entity_type, attr_name, value))]
     fn attr_value_exists(&self, entity_type: &str, attr_name: &str, value: &str) -> PyResult<bool> {
         match entity_type {

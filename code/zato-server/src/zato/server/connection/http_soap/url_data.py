@@ -22,6 +22,7 @@ from zato.common.py23_.past.builtins import unicode
 from zato.bunch import Bunch
 from zato.common.api import CHANNEL, CONNECTION, MISC, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY
+from zato.common.crypto.api import is_string_equal
 from zato.common.dispatch import dispatcher
 from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
@@ -104,7 +105,7 @@ class URLData(PyURLData):
         expected_key = sec_def.get('password', '')
 
         # Passwords are not required
-        if expected_key and http_environ[sec_def['header']] != expected_key:
+        if expected_key and not is_string_equal(http_environ[sec_def['header']], expected_key):
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'

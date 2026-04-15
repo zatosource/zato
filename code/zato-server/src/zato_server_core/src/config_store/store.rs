@@ -32,6 +32,11 @@ pub struct ConfigStore {
     pub(super) pubsub_subscription: RwLock<HashMap<String, PubSubSubscription>>,
     pub(super) elastic_search:      RwLock<HashMap<String, ElasticSearchDef>>,
     pub(super) service:             RwLock<HashMap<String, ServiceInfo>>,
+
+    /// username -> security def name (for O(1) basic auth credential lookup)
+    pub(super) security_by_username: RwLock<HashMap<String, String>>,
+    /// api key value -> security def name (for O(1) API key credential lookup)
+    pub(super) security_by_apikey_value: RwLock<HashMap<String, String>>,
 }
 
 #[pymethods]

@@ -1,16 +1,14 @@
-use serde::{Deserialize, Deserializer, Serialize};
+use std::collections::HashMap;
+use std::sync::LazyLock;
+
+use serde::{Deserialize, Serialize};
 use super::defaults::*;
 
-fn normalize_timezone<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<String>, D::Error> {
-    let val: Option<String> = Option::deserialize(deserializer)?;
-    Ok(val.map(|tz| {
-        if tz == "Europe/Reykjavik" {
-            "Atlantic/Reykjavik".to_string()
-        } else {
-            tz
-        }
-    }))
-}
+static TZ_ALIASES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
+    HashMap::from([
+        ("Europe/Reykjavik", "Atlantic/Reykjavik"),
+    ])
+});
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchedulerJob {
@@ -41,7 +39,7 @@ pub struct SchedulerJob {
     pub repeats: Option<u32>,
     #[serde(default)]
     pub jitter_ms: Option<u32>,
-    #[serde(default, deserialize_with = "normalize_timezone")]
+    #[serde(default)]
     pub timezone: Option<String>,
     #[serde(default)]
     pub calendar: Option<String>,
@@ -49,6 +47,12 @@ pub struct SchedulerJob {
     pub on_missed: Option<String>,
     #[serde(default)]
     pub max_execution_time_ms: Option<u64>,
+}
+
+impl SchedulerJob {
+    pub fn iana_timezone(&self) -> Option<&str> {
+        self.timezone.as_deref().map(|tz| TZ_ALIASES.get(tz).copied().unwrap_or(tz))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

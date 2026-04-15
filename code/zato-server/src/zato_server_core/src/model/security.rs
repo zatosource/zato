@@ -104,21 +104,51 @@ pub enum SecurityDef {
 impl SecurityDef {
     pub fn name(&self) -> &str {
         match self {
-            SecurityDef::BasicAuth(d) => &d.name,
-            SecurityDef::ApiKey(d) => &d.name,
-            SecurityDef::Ntlm(d) => &d.name,
-            SecurityDef::OAuth(d) => &d.name,
-            SecurityDef::BearerToken(d) => &d.name,
+            Self::BasicAuth(d) => &d.name,
+            Self::ApiKey(d) => &d.name,
+            Self::Ntlm(d) => &d.name,
+            Self::OAuth(d) => &d.name,
+            Self::BearerToken(d) => &d.name,
         }
     }
 
     pub fn sec_type(&self) -> &str {
         match self {
-            SecurityDef::BasicAuth(_) => "basic_auth",
-            SecurityDef::ApiKey(_) => "apikey",
-            SecurityDef::Ntlm(_) => "ntlm",
-            SecurityDef::OAuth(_) => "oauth",
-            SecurityDef::BearerToken(_) => "bearer_token",
+            Self::BasicAuth(_) => "basic_auth",
+            Self::ApiKey(_) => "apikey",
+            Self::Ntlm(_) => "ntlm",
+            Self::OAuth(_) => "oauth",
+            Self::BearerToken(_) => "bearer_token",
+        }
+    }
+
+    pub fn username(&self) -> &str {
+        match self {
+            Self::BasicAuth(d) => &d.username,
+            Self::ApiKey(d) => &d.username,
+            Self::Ntlm(d) => &d.username,
+            Self::OAuth(d) => &d.username,
+            Self::BearerToken(d) => &d.username,
+        }
+    }
+
+    pub fn password(&self) -> &str {
+        match self {
+            Self::BasicAuth(d) => &d.password,
+            Self::ApiKey(d) => &d.password,
+            Self::Ntlm(d) => &d.password,
+            Self::OAuth(d) => &d.password,
+            Self::BearerToken(d) => &d.password,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        match self {
+            Self::BasicAuth(d) => &d.id,
+            Self::ApiKey(d) => &d.id,
+            Self::Ntlm(d) => &d.id,
+            Self::OAuth(d) => &d.id,
+            Self::BearerToken(d) => &d.id,
         }
     }
 }

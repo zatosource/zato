@@ -13,7 +13,6 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
-from zato.common.util.config import resolve_name
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
 from zato.url_dispatcher import Matcher
@@ -40,49 +39,21 @@ class ConfigLoader:
 # ################################################################################################################################
 
     def set_up_security(self:'ParallelServer', _cluster_id:'int') -> 'None':
-
-        # Get all security definitions from the Rust store
-        all_sec = self.config_store.get_list('security')
-
-        # API keys
-        apikey_bunch = Bunch()
-        basic_auth_bunch = Bunch()
-        ntlm_bunch = Bunch()
-        oauth_bunch = Bunch()
-
-        for item in all_sec:
-            sec_type = item.get('sec_type') or item.get('type', '')
-
-            config = Bunch(item)
-            config['name'] = resolve_name(config['name'])
-            entry = Bunch({'config': config})
-
-            if sec_type == 'apikey':
-                apikey_bunch[config['name']] = entry
-            elif sec_type == 'basic_auth':
-                basic_auth_bunch[config['name']] = entry
-            elif sec_type == 'ntlm':
-                ntlm_bunch[config['name']] = entry
-            elif sec_type in ('oauth', 'bearer_token'):
-                oauth_bunch[config['name']] = entry
-
-        self.config.apikey = ConfigDict('apikey', apikey_bunch)
-        self.config.basic_auth = ConfigDict('basic_auth', basic_auth_bunch)
-        self.config.ntlm = ConfigDict('ntlm', ntlm_bunch)
-        self.config.oauth = ConfigDict('oauth', oauth_bunch)
+        self.config.apikey = ConfigDict(
+            'apikey', config_store=self.config_store, entity_type='security', sec_type_filter='apikey')
+        self.config.basic_auth = ConfigDict(
+            'basic_auth', config_store=self.config_store, entity_type='security', sec_type_filter='basic_auth')
+        self.config.ntlm = ConfigDict(
+            'ntlm', config_store=self.config_store, entity_type='security', sec_type_filter='ntlm')
+        self.config.oauth = ConfigDict(
+            'oauth', config_store=self.config_store, entity_type='security', sec_type_filter='oauth')
 
 # ################################################################################################################################
 
     def _config_dict_from_rust(self, name, entity_type):
-        """ Build a ConfigDict from a Rust ConfigStore entity list.
+        """ Build a delegating ConfigDict backed by the Rust ConfigStore.
         """
-        items = self.config_store.get_list(entity_type)
-        impl = Bunch()
-        for item in items:
-            item_name = item.get('name', '')
-            item_name = resolve_name(item_name)
-            impl[item_name] = Bunch({'config': Bunch(item)})
-        return ConfigDict(name, impl)
+        return ConfigDict(name, config_store=self.config_store, entity_type=entity_type)
 
 # ################################################################################################################################
 
