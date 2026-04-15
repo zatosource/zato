@@ -13,7 +13,7 @@ from operator import itemgetter
 from traceback import format_exc
 
 # Django
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError, JsonResponse
 from django.template.response import TemplateResponse
 
 # Zato
@@ -391,6 +391,60 @@ def reload_wsdl(req, id, cluster_id): # type: ignore
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse('WSDL reloaded, check server logs for details')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _extract_invoke_params(req):
+    return {
+        'payload': req.POST.get('data-request', ''),
+        'request_method': req.POST.get('request_method', 'POST'),
+        'query_params': req.POST.get('query_params', ''),
+        'path_params': req.POST.get('path_params', ''),
+    }
+
+# ################################################################################################################################
+
+def _build_invoke_response(service_response):
+    if service_response.ok:
+        data = service_response.data
+        return JsonResponse({
+            'data': getattr(data, 'response_body', ''),
+            'response_time_human': getattr(data, 'response_time', ''),
+        })
+
+    return JsonResponse({
+        'data': str(service_response.details),
+        'response_time_human': '',
+    }, status=500)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def invoke_channel(req, id):
+    try:
+        params = _extract_invoke_params(req)
+        params['id'] = id
+        response = req.zato.client.invoke('zato.http-soap.invoke-channel', params)
+        return _build_invoke_response(response)
+    except Exception as e:
+        logger.error('invoke_channel error: %s', format_exc())
+        return JsonResponse({'data': str(e), 'response_time_human': ''}, status=500)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def invoke_outconn(req, id):
+    try:
+        params = _extract_invoke_params(req)
+        params['id'] = id
+        response = req.zato.client.invoke('zato.http-soap.invoke-outconn', params)
+        return _build_invoke_response(response)
+    except Exception as e:
+        logger.error('invoke_outconn error: %s', format_exc())
+        return JsonResponse({'data': str(e), 'response_time_human': ''}, status=500)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -7,11 +7,14 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+import yaml
 from unittest import TestCase, main
 
 # Zato
 from zato.common.enmasse_.exporter import EnmasseExporter
+from zato.common.enmasse_.importer import EnmasseImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
+from zato.common.test.enmasse_._template_scheduler_01 import template_scheduler_01
 from zato_server_core import ConfigStore
 
 # ################################################################################################################################
@@ -29,7 +32,6 @@ class TestEnmasseSchedulerExporter(TestCase):
 
     def test_scheduler_export(self):
 
-        import yaml
         template_dict = yaml.safe_load(template_complex_01)
         scheduler_list_from_yaml = template_dict.get('scheduler', [])
 
@@ -59,6 +61,110 @@ class TestEnmasseSchedulerExporter(TestCase):
                 if attr in yaml_def and yaml_def[attr] is not None:
                     self.assertEqual(exported_def.get(attr), yaml_def.get(attr),
                         f'Mismatch for interval attribute "{attr}" in scheduler job "{name}"')
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestEnmasseSchedulerExporterExtended(TestCase):
+    """ Extended tests for scheduler export using the dedicated scheduler template.
+    """
+
+    def setUp(self) -> 'None':
+        self.config_store = ConfigStore()
+        importer = EnmasseImporter(self.config_store)
+        importer.import_(template_scheduler_01)
+
+        self.exporter = EnmasseExporter(self.config_store)
+        self.exported = self.exporter.export_to_dict()
+        self.scheduler_list = self.exported.get('scheduler', [])
+        self.by_name = {item['name']: item for item in self.scheduler_list}
+
+# ################################################################################################################################
+
+    def test_all_jobs_exported(self):
+        expected_names = [
+            'enmasse.scheduler.one_time.1',
+            'enmasse.scheduler.weeks.1',
+            'enmasse.scheduler.repeats.1',
+            'enmasse.scheduler.extra_list.1',
+            'enmasse.scheduler.extra_string.1',
+            'enmasse.scheduler.inactive.1',
+            'enmasse.scheduler.future.1',
+            'enmasse.scheduler.no_start_date.1',
+        ]
+        for name in expected_names:
+            self.assertIn(name, self.by_name, f'Job "{name}" not found in export')
+
+# ################################################################################################################################
+
+    def test_one_time_export(self):
+        job = self.by_name['enmasse.scheduler.one_time.1']
+        self.assertEqual(job['job_type'], 'one_time')
+        self.assertEqual(job['service'], 'demo.ping')
+        self.assertTrue(job['is_active'])
+
+# ################################################################################################################################
+
+    def test_weeks_export(self):
+        job = self.by_name['enmasse.scheduler.weeks.1']
+        self.assertEqual(job['weeks'], 2)
+
+# ################################################################################################################################
+
+    def test_repeats_export(self):
+        job = self.by_name['enmasse.scheduler.repeats.1']
+        self.assertEqual(job['minutes'], 30)
+        self.assertEqual(job['repeats'], 5)
+
+# ################################################################################################################################
+
+    def test_extra_exported(self):
+        job = self.by_name['enmasse.scheduler.extra_list.1']
+        self.assertIn('extra', job)
+        self.assertIn('key1=value1', job['extra'])
+
+# ################################################################################################################################
+
+    def test_extra_string_exported(self):
+        job = self.by_name['enmasse.scheduler.extra_string.1']
+        self.assertIn('extra', job)
+        self.assertEqual(job['extra'], 'single_extra_value')
+
+# ################################################################################################################################
+
+    def test_inactive_exported(self):
+        job = self.by_name['enmasse.scheduler.inactive.1']
+        self.assertFalse(job['is_active'])
+
+# ################################################################################################################################
+
+    def test_future_start_date_exported(self):
+        job = self.by_name['enmasse.scheduler.future.1']
+        self.assertIn('start_date', job)
+        self.assertIn('2099', job['start_date'])
+
+# ################################################################################################################################
+
+    def test_required_fields_present(self):
+        for name, job in self.by_name.items():
+            self.assertIn('name', job, f'Missing "name" in job "{name}"')
+            self.assertIn('service', job, f'Missing "service" in job "{name}"')
+            self.assertIn('job_type', job, f'Missing "job_type" in job "{name}"')
+            self.assertIn('is_active', job, f'Missing "is_active" in job "{name}"')
+
+# ################################################################################################################################
+
+    def test_export_count(self):
+        template_dict = yaml.safe_load(template_scheduler_01)
+        expected_count = len(template_dict['scheduler'])
+        self.assertEqual(len(self.scheduler_list), expected_count)
+
+# ################################################################################################################################
+
+    def test_no_start_date_job_exported(self):
+        job = self.by_name['enmasse.scheduler.no_start_date.1']
+        self.assertEqual(job['hours'], 4)
+        self.assertEqual(job['service'], 'demo.ping')
 
 # ################################################################################################################################
 # ################################################################################################################################

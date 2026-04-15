@@ -330,6 +330,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.ping('{0}');\">Ping</a>", item.id));
     }
 
+    /* Invoke (REST only) */
+    if(!is_soap) {
+        row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.invoke('{0}')\">Invoke</a>", item.id));
+    }
+
     /* 38a */
     row += String.format("<td class='ignore'>{0}</td>", data.data_encoding || data_encoding);
 
@@ -426,6 +431,36 @@ $.fn.zato.http_soap.data_table.on_serialization_change = function() {
     var is_edit = this.id.indexOf('edit') > 1;
     var suffix = is_edit ? 'edit-' : '';
     $.fn.zato.http_soap.data_table.toggle_validate_tls(suffix, this.value == 'suds');
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.get_invoke_url = function(id) {
+    var connection = $(document).getUrlParam('connection');
+    if (connection === 'channel') {
+        return '/zato/http-soap/invoke-channel/' + id + '/';
+    }
+    return '/zato/http-soap/invoke-outconn/' + id + '/';
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.http_soap.invoke = function(id) {
+    var item = $.fn.zato.data_table.data[id];
+    if (!item) {
+        return;
+    }
+
+    var connection = $(document).getUrlParam('connection');
+    var history_key = 'zato.invoke-history.' + (connection === 'channel' ? 'channel' : 'outconn') + '.' + id;
+
+    $.fn.zato.invoker.open_overlay({
+        id: id,
+        name: item.name,
+        connection: connection,
+        history_key: history_key,
+        get_invoke_url_func: $.fn.zato.http_soap.get_invoke_url
+    });
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

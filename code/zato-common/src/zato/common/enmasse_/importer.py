@@ -94,6 +94,11 @@ class EnmasseImporter:
             items = data.get(section_key)
             if items:
                 data[section_key] = importer_class.preprocess(items)
+            elif section_key in data:
+                del data[section_key]
+
+        if not data:
+            return
 
         preprocessed_yaml = yaml.dump(data, default_flow_style=False, sort_keys=True)
         self.config_store.load_yaml_string(preprocessed_yaml)

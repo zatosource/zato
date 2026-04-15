@@ -129,7 +129,10 @@ impl RunningJob {
         let interval_ms = Self::compute_interval_ms(job);
         let tz: Option<Tz> = job.timezone.as_deref().and_then(|s| s.parse::<Tz>().ok());
         let tz_str = job.timezone.clone();
-        let start_date = Self::parse_start_date(&job.start_date, tz.as_ref());
+        let start_date = Some(
+            Self::parse_start_date(&job.start_date, tz.as_ref())
+                .unwrap_or_else(|| Utc::now())
+        );
         let seed = Self::name_hash(&job.id);
         let jitter_rng = SmallRng::seed_from_u64(seed);
         let on_missed = OnMissedPolicy::from(
@@ -189,7 +192,10 @@ impl RunningJob {
 
         let new_interval = Self::compute_interval_ms(job);
         let new_tz: Option<Tz> = job.timezone.as_deref().and_then(|s| s.parse::<Tz>().ok());
-        let new_start = Self::parse_start_date(&job.start_date, new_tz.as_ref());
+        let new_start = Some(
+            Self::parse_start_date(&job.start_date, new_tz.as_ref())
+                .unwrap_or_else(|| Utc::now())
+        );
 
         let schedule_changed = new_interval != self.interval_ms
             || new_start != self.start_date

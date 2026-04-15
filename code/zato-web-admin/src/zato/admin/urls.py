@@ -502,6 +502,11 @@ urlpatterns += [
     url(r'^zato/http-soap/get-security-groups/(?P<group_type>.*)/$',
         login_required(groups.get_group_list), name='http-soap-get-all-security-groups'),
 
+    url(r'^zato/http-soap/invoke-channel/(?P<id>.*)/$',
+        login_required(http_soap.invoke_channel), name='http-soap-invoke-channel'),
+    url(r'^zato/http-soap/invoke-outconn/(?P<id>.*)/$',
+        login_required(http_soap.invoke_outconn), name='http-soap-invoke-outconn'),
+
     url(r'^zato/http-soap/openapi/parse/$',
         login_required(openapi_.parse), name='http-soap-openapi-parse'),
 

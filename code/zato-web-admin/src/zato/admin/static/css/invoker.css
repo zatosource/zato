@@ -1,5 +1,7 @@
 
 /* ***************************** */
+/*   Blinking / draw-attention   */
+/* ***************************** */
 
 .invoker-blinking {
     display: inline;
@@ -21,8 +23,6 @@
     }
 }
 
-/* ***************************** */
-
 #result-header {
     padding: 0.4rem;
     padding-left: 0.2rem;
@@ -38,9 +38,7 @@
     50%  { background: #deedf8; }
     75%  { background: #ebf4fa; }
     100% { background: #fff; }
-  }
-
-/* ***************************** */
+}
 
 input {
     xtext-decoration:underline;
@@ -74,4 +72,584 @@ textarea {
     background: linear-gradient(to right, #33f, #036 , #090, #c06, #660);
     animation: rainbow 6s ease-in-out infinite;
     background-size: 400% 100%;
+}
+
+/* ******************************************** */
+/*   History overlay (shared by IDE + invoker)  */
+/* ******************************************** */
+
+.invoker-history-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.invoker-history-overlay.hidden {
+    display: none;
+}
+
+.invoker-history-overlay-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.invoker-history-overlay-content {
+    position: relative;
+    width: 1063px;
+    max-height: 80vh;
+    background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.invoker-history-overlay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.invoker-history-overlay-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+}
+
+.invoker-history-close-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.invoker-history-close-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.invoker-history-overlay-search {
+    padding: 16px 24px;
+    background: #1f1f1f;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.invoker-history-overlay-search input {
+    width: 100%;
+    padding: 12px 16px;
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.invoker-history-overlay-search input:focus {
+    outline: none;
+    border-color: #4a9eff;
+    background: #333;
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+}
+
+.invoker-history-overlay-search input::placeholder {
+    color: #666;
+}
+
+.invoker-history-overlay-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    background: #1a1a1a;
+}
+
+.invoker-history-overlay-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.invoker-history-overlay-list::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.invoker-history-overlay-list::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+.invoker-history-overlay-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.invoker-history-item-wrapper {
+    display: grid;
+    grid-template-columns: auto 60% auto 1fr auto;
+    gap: 8px;
+    margin: 4px 0;
+    cursor: pointer;
+}
+
+.invoker-history-item-number {
+    padding: 14px 12px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 16px;
+    color: #e0e0e0;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.invoker-history-item-text {
+    padding: 14px 16px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 16px;
+    color: #e0e0e0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    flex: 1;
+    cursor: pointer;
+}
+
+.invoker-history-item-timestamp {
+    padding: 14px 12px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-style: italic;
+}
+
+.invoker-history-item-show-response {
+    padding: 14px 12px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #e0e0e0;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    cursor: pointer;
+    width: 130px;
+}
+
+.invoker-history-item-delete {
+    padding: 14px 12px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 16px;
+    color: #999;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.invoker-history-item-delete:hover {
+    background: #3a1a1a;
+    border-color: rgba(255, 100, 100, 0.3);
+    color: #ff6666;
+}
+
+.invoker-history-item-wrapper:hover .invoker-history-item-number,
+.invoker-history-item-wrapper:hover .invoker-history-item-text,
+.invoker-history-item-wrapper:hover .invoker-history-item-timestamp,
+.invoker-history-item-wrapper:hover .invoker-history-item-show-response {
+    background: #2d2d2d;
+    border-color: rgba(74, 158, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.invoker-history-item-wrapper:hover {
+    transform: translateX(2px);
+}
+
+.invoker-history-item-wrapper:active {
+    transform: translateX(1px);
+}
+
+.invoker-history-response-detail {
+    display: none;
+    background: linear-gradient(135deg, #3a3a2a 0%, #2d2d22 100%);
+    border: 1px solid rgba(255, 255, 150, 0.2);
+    border-radius: 8px;
+    margin: 4px 0;
+    padding: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.invoker-history-response-detail.visible {
+    display: block;
+}
+
+.invoker-history-response-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.invoker-history-response-detail-title {
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 14px;
+    color: #e0e0e0;
+    font-weight: 600;
+}
+
+.invoker-history-response-detail-copy {
+    padding: 8px 16px;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.invoker-history-response-detail-copy:hover {
+    background: #333;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.invoker-history-response-detail-content {
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #e0e0e0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #1a1a1a;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.invoker-history-response-detail::-webkit-scrollbar {
+    width: 8px;
+}
+
+.invoker-history-response-detail::-webkit-scrollbar-track {
+    background: #2d2d22;
+}
+
+.invoker-history-response-detail::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+.invoker-history-response-detail::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+.invoker-history-overlay-list .invoker-history-item-wrapper:first-child .invoker-history-item-number,
+.invoker-history-overlay-list .invoker-history-item-wrapper:first-child .invoker-history-item-text {
+    border-color: rgba(74, 158, 255, 0.2);
+    background: linear-gradient(135deg, #252525 0%, #2a2a35 100%);
+}
+
+.invoker-history-empty {
+    padding: 40px 24px;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+/* ******************************************** */
+/*   Invoker modal overlay (channel / outconn)  */
+/* ******************************************** */
+
+.invoker-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.invoker-modal-overlay.hidden {
+    display: none;
+}
+
+.invoker-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.invoker-modal-content {
+    position: relative;
+    width: 900px;
+    max-height: 90vh;
+    background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.invoker-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.invoker-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+}
+
+.invoker-modal-close-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.invoker-modal-close-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.invoker-modal-body {
+    padding: 16px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.invoker-modal-request-textarea {
+    width: 100%;
+    min-height: 150px;
+    resize: vertical;
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 14px;
+    padding: 12px 16px;
+    box-sizing: border-box;
+}
+
+.invoker-modal-request-textarea:focus {
+    outline: none;
+    border-color: #4a9eff;
+    background: #333;
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+}
+
+.invoker-modal-request-textarea::placeholder {
+    color: #666;
+}
+
+.invoker-modal-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+.invoker-modal-buttons input[type="button"],
+.invoker-modal-buttons button {
+    padding: 8px 18px;
+    background: #333;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.invoker-modal-buttons input[type="button"]:hover,
+.invoker-modal-buttons button:hover {
+    background: #444;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.invoker-modal-buttons .invoker-btn-primary {
+    background: #2a5a8a;
+    border-color: #3a7abf;
+}
+
+.invoker-modal-buttons .invoker-btn-primary:hover {
+    background: #3a6a9a;
+}
+
+.invoker-modal-status {
+    margin-top: 10px;
+    padding: 6px 8px;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    color: #aaa;
+    min-height: 20px;
+}
+
+.invoker-modal-response-label {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #999;
+    font-family: 'Zato_IDE_Font', monospace;
+}
+
+.invoker-modal-response-textarea {
+    width: 100%;
+    min-height: 200px;
+    resize: vertical;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 14px;
+    padding: 12px 16px;
+    margin-top: 6px;
+    box-sizing: border-box;
+}
+
+.invoker-modal-response-textarea:focus {
+    outline: none;
+}
+
+/* "More options" toggle block inside the invoker modal */
+
+.invoker-more-options-toggle {
+    margin-top: 12px;
+    font-size: 13px;
+}
+
+.invoker-more-options-toggle a {
+    color: #7ab3ef;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.invoker-more-options-toggle a:hover {
+    text-decoration: underline;
+}
+
+.invoker-more-options-block {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: #222;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+.invoker-more-options-block.hidden {
+    display: none;
+}
+
+.invoker-more-options-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.invoker-more-options-row:last-child {
+    margin-bottom: 0;
+}
+
+.invoker-more-options-row label {
+    color: #aaa;
+    font-size: 13px;
+    font-family: 'Zato_IDE_Font', monospace;
+    min-width: 120px;
+}
+
+.invoker-more-options-row select,
+.invoker-more-options-row input[type="text"],
+.invoker-more-options-row textarea {
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-family: 'Zato_IDE_Font', monospace;
+    font-size: 13px;
+    padding: 6px 10px;
+    flex: 1;
+}
+
+.invoker-more-options-row select:focus,
+.invoker-more-options-row input[type="text"]:focus,
+.invoker-more-options-row textarea:focus {
+    outline: none;
+    border-color: #4a9eff;
 }
