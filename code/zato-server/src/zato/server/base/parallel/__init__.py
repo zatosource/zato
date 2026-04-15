@@ -1163,9 +1163,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def export_enmasse(self):
 
-        import yaml
-        data = self.config_store.export_to_dict()
-        return yaml.dump(data, default_flow_style=False, sort_keys=True)
+        from zato.common.enmasse_.exporter import EnmasseExporter
+        exporter = EnmasseExporter(self.config_store)
+        return exporter.export()
 
 # ################################################################################################################################
 
