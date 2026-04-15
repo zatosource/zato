@@ -108,7 +108,16 @@ class ChangePassword(AdminService):
 
     def handle(self):
         input = self.request.input
-        name = input.get('name', '')
+        name = input.get('name') or ''
+
+        if not name and input.get('id'):
+            for item in self.server.config_store.get_list('security'):
+                if item.get('id') == input.id:
+                    name = item['name']
+                    break
+
+        if not name:
+            raise Exception('Either ID or name are required on input')
 
         password1 = self.server.decrypt(input.password1) if input.password1 else ''
         password2 = self.server.decrypt(input.password2) if input.password2 else ''

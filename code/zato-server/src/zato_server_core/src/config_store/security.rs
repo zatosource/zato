@@ -111,14 +111,14 @@ impl ConfigStore {
 
     /// O(1) basic auth credential check with constant-time password comparison.
     /// Returns the security def's `id` on success, `None` on failure.
-    pub fn check_basic_auth(&self, username: &str, password: &str) -> PyResult<Option<String>> {
+    pub fn _check_basic_auth(&self, username: &str, password: &str) -> PyResult<Option<String>> {
         self.check_basic_auth_inner(username, password)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))
     }
 
     /// O(1) API key credential check with constant-time key comparison.
     /// Returns the security def's `id` on success, `None` on failure.
-    pub fn check_apikey(&self, header_value: &str) -> PyResult<Option<String>> {
+    pub fn _check_apikey(&self, header_value: &str) -> PyResult<Option<String>> {
         self.check_apikey_inner(header_value)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))
     }

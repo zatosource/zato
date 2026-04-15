@@ -298,13 +298,13 @@ impl ConfigStore {
     }
 
     #[pyo3(signature = (username, password))]
-    fn check_basic_auth_py(&self, username: &str, password: &str) -> PyResult<Option<String>> {
-        self.check_basic_auth(username, password)
+    fn check_basic_auth(&self, username: &str, password: &str) -> PyResult<Option<String>> {
+        self._check_basic_auth(username, password)
     }
 
     #[pyo3(signature = (header_value,))]
-    fn check_apikey_py(&self, header_value: &str) -> PyResult<Option<String>> {
-        self.check_apikey(header_value)
+    fn check_apikey(&self, header_value: &str) -> PyResult<Option<String>> {
+        self._check_apikey(header_value)
     }
 
     #[pyo3(signature = (entity_type, attr_name, value))]

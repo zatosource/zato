@@ -38,6 +38,15 @@ def _fixup_list_fields(data):
             except (json.JSONDecodeError, ValueError):
                 data[key] = []
 
+def _resolve_security_fields(server, data):
+    security_id = data.get('security_id')
+    if security_id:
+        for sec_item in server.config_store.get_list('security'):
+            if sec_item.get('id') == security_id:
+                data['security_name'] = sec_item['name']
+                data['sec_type'] = sec_item.get('sec_type') or sec_item.get('type')
+                break
+
 def _get_entity_type(connection, transport):
     """ Map connection + transport to Rust ConfigStore entity type. """
     if connection == CONNECTION.CHANNEL or connection == 'channel':
@@ -184,15 +193,15 @@ class GetList(_BaseGet):
             sec_name = item.get('security_name')
             if sec_name and sec_name in sec_lookup:
                 sec_def = sec_lookup[sec_name]
-                item.setdefault('security_id', sec_def.get('id'))
-                item.setdefault('sec_type', sec_def.get('sec_type') or sec_def.get('type'))
+                item['security_id'] = sec_def.get('id')
+                item['sec_type'] = sec_def.get('sec_type') or sec_def.get('type')
             else:
                 item.setdefault('security_id', None)
                 item.setdefault('sec_type', None)
 
             svc_name = item.get('service') or item.get('service_name')
-            item.setdefault('service_name', svc_name)
-            item.setdefault('service_id', svc_lookup.get(svc_name, 0) if svc_name else None)
+            item['service_name'] = svc_name
+            item['service_id'] = svc_lookup.get(svc_name) if svc_name else None
 
             for field in ('soap_action', 'soap_version', 'ping_method', 'pool_size',
                           'serialization_type', 'timeout', 'cache_id', 'cache_name', 'cache_type'):
@@ -245,6 +254,7 @@ class Create(AdminService):
         data.setdefault('transport', URL_TYPE.PLAIN_HTTP)
 
         _fixup_list_fields(data)
+        _resolve_security_fields(self.server, data)
 
         name = input.name
         self.server.config_store.set(entity_type, name, data)
@@ -295,6 +305,7 @@ class Edit(AdminService):
         data.setdefault('transport', URL_TYPE.PLAIN_HTTP)
 
         _fixup_list_fields(data)
+        _resolve_security_fields(self.server, data)
 
         name = input.name
         old_name = None

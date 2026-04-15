@@ -15,6 +15,10 @@ pub struct ChannelRest {
     #[serde(default, rename = "security_name", alias = "security")]
     pub security_name: Option<String>,
     #[serde(default)]
+    pub security_id: Option<String>,
+    #[serde(default)]
+    pub sec_type: Option<String>,
+    #[serde(default)]
     pub data_format: Option<String>,
     #[serde(default)]
     pub method: Option<String>,
@@ -30,6 +34,12 @@ pub struct ChannelRest {
     pub url_params_pri: Option<String>,
     #[serde(default)]
     pub params_pri: Option<String>,
+    #[serde(default)]
+    pub cache_id: Option<String>,
+    #[serde(default)]
+    pub cache_name: Option<String>,
+    #[serde(default)]
+    pub cache_type: Option<String>,
     #[serde(default)]
     pub cache_expiry: Option<u32>,
     #[serde(default)]
