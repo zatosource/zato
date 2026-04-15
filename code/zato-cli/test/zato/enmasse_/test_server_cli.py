@@ -92,7 +92,7 @@ def _wait_for_server(host, port, password, timeout=60):
             pass
         time.sleep(0.5)
 
-    raise RuntimeError(f'Server at {host}:{port} did not respond within {timeout}s')
+    raise Exception(f'Server at {host}:{port} did not respond within {timeout}s')
 
 # ################################################################################################################################
 # ################################################################################################################################

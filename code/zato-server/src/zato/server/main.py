@@ -130,8 +130,9 @@ from zato.common.util.open_ import open_r
 # ################################################################################################################################
 # ################################################################################################################################
 
+from bunch import Bunch
+
 if 0:
-    from bunch import Bunch
     from zato.common.sql_pool import PoolStore
     from zato.common.repo import RepoManager
     from zato.common.typing_ import any_, callable_, dictnone, strintnone
@@ -348,7 +349,7 @@ def run(base_dir:'str', start_server:'bool'=True, options:'dictnone'=None) -> 'P
     crypto_manager = ServerCryptoManager(repo_location, secret_key=options['secret_key'], stdin_data=read_stdin_data())
     secrets_config = ConfigObj(os.path.join(repo_location, 'secrets.conf'), use_zato=False)
     server_config = get_config(repo_location, 'server.conf', crypto_manager=crypto_manager, secrets_conf=secrets_config)
-    pickup_config = get_config(repo_location, 'pickup.conf')
+    pickup_config = Bunch()
 
     server_config.main.token = server_config.main.token.encode('utf8')
 

@@ -441,7 +441,8 @@ def start_file_listener_thread(
             )
             observer.start()
             n = len(matching_items)
-            logger.info('File listener started, watching %d %s (%s)', n, 'item' if n == 1 else 'items', observer_type)
+            logger.info('File listener started, watching %d %s (%s), directories: %s',
+                n, 'item' if n == 1 else 'items', observer_type, watch_directories)
 
             # Store observer on the server so it can be stopped later
             server._file_listener_observer = observer

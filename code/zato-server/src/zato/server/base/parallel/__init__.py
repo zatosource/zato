@@ -40,7 +40,6 @@ from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
     spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.env import populate_environment_from_file
-from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
 from zato.common.util.json_ import BasicParser
@@ -673,9 +672,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def set_up_user_config_location(self) -> 'strlist':
-
-        user_conf_location:'str' = self.pickup_config.get('user_conf', {}).get('pickup_from', '')
-        return path_string_list_to_list(self.base_dir, user_conf_location)
+        return []
 
 # ################################################################################################################################
 
@@ -1027,8 +1024,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         try:
             self._file_listener_thread = start_file_listener_thread(self, watch_dirs)
-            if self._file_listener_thread:
-                logger.info('File listener thread started, watching: %s', watch_dirs)
         except Exception:
             logger.warning('File listener could not be started: %s', format_exc())
 

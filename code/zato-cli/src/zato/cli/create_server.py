@@ -160,12 +160,6 @@ sample_key=sample_value
 
 # ################################################################################################################################
 
-pickup_conf = """#[hot-deploy.user.local-dev]
-#pickup_from=/uncomment/this/stanza/to/enable/a/custom/location
-"""
-
-# ################################################################################################################################
-
 demo_zrules_contents = """
 # ################################################################################################################################
 
@@ -490,11 +484,6 @@ class Create(ZatoCommand):
 
             _ = server_conf.write(server_conf_data)
             server_conf.close()
-
-            pickup_conf_loc = os.path.join(self.target_dir, 'config/repo/pickup.conf')
-            pickup_conf_file = open_w(pickup_conf_loc)
-            _ = pickup_conf_file.write(pickup_conf)
-            pickup_conf_file.close()
 
             user_conf_loc = os.path.join(self.target_dir, 'config/repo/user.conf')
             user_conf = open_w(user_conf_loc)
