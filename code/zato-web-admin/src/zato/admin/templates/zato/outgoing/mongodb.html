@@ -100,8 +100,6 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Outgoing MongoDB connections</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
@@ -110,6 +108,7 @@
 
     {% if cluster_id %}
         <div id="markup">
+            <h2 class="zato">Outgoing MongoDB connections</h2>
 
 {% with has_generic="1" generic_type="outconn-mongodb" %}
     {% include "zato/search-form.html" with page_prompt="Show outgoing connections" %}

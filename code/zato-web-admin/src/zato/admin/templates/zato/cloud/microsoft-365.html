@@ -48,8 +48,6 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Microsoft 365 connections</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
@@ -58,6 +56,7 @@
 
     {% if cluster_id %}
         <div id="markup">
+<h2 class="zato">Microsoft 365 connections</h2>
 
 {% with has_generic="1" generic_type="cloud-microsoft-365" %}
     {% include "zato/search-form.html" with page_prompt="Show connections"%}

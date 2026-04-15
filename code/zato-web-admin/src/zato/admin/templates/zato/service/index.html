@@ -65,8 +65,6 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Services</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
@@ -76,6 +74,7 @@
     {% if cluster_id %}
 
         <div id="markup">
+<h2 class="zato">Services</h2>
 
 {% include "zato/search-form.html" with page_prompt="Show services" %}
 

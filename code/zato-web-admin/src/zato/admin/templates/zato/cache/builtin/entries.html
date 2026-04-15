@@ -41,7 +41,6 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ id }}">{{ cache_name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -52,6 +51,7 @@
     {% if cluster_id %}
 
         <div id="markup">
+            <h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ id }}">{{ cache_name }}</a></h2>
 
 {% include "zato/search-form.html" with page_prompt="Show entries"%}
 

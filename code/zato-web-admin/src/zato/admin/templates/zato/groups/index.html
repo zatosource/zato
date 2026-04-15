@@ -44,8 +44,6 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Groups : {{ group_type_name_title }}</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
@@ -53,6 +51,7 @@
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
     {% if cluster_id %}
         <div id="markup">
+<h2 class="zato">Groups : {{ group_type_name_title }}</h2>
         <div class='page_prompt' style="clear:left; padding-top:1rem">
             <a href="javascript:$.fn.zato.groups.create()">Create a new group</a>
         </div>

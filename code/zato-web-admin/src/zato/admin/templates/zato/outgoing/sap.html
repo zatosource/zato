@@ -47,8 +47,6 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Outgoing SAP RFC connections</h2>
-
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
@@ -64,6 +62,7 @@
         </div>
 
         <div id="markup">
+            <h2 class="zato">Outgoing SAP RFC connections</h2>
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
