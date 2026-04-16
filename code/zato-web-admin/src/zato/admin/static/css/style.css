@@ -149,7 +149,9 @@ span.like-a {
     font-size: 11px;
     font-family: sans-serif;
     border: none;
-    text-decoration: none
+    text-decoration: none;
+    background-image: none;
+    padding-bottom: 0
 }
 
 .sf-sub-indicator {
@@ -265,7 +267,6 @@ span.like-a {
 
 #data-table {
     width: 96%;
-    margin-top: 20px;
     margin-left: 2%;
     counter-reset: data_table_counter;
 }
@@ -523,6 +524,17 @@ a:not(.menu-link) {
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
     text-decoration: none;
     font-weight: 400;
+    background-image: repeating-linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.35) 0px,
+        rgba(0, 0, 0, 0.35) 3px,
+        transparent 3px,
+        transparent 6px
+    );
+    background-size: 100% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    padding-bottom: 2px;
 }
 
 a:not(.menu-link):hover {
@@ -539,6 +551,8 @@ a.top,
 a.top:hover {
     color: #fff;
     text-decoration: none;
+    background-image: none;
+    padding-bottom: 0;
 }
 
 .header-link-styled {
@@ -764,10 +778,12 @@ div.page_prompt {
     padding: 4px;
     padding-left: 2%;
     font-size: 12px;
+    margin-bottom: 16px;
 }
 
 div.page_prompt a:not(.common) {
     background-color: #ffc311;
+    background-image: none;
     color: #000;
     text-decoration: none;
     font-weight: 400;
@@ -844,6 +860,8 @@ table.multi-select-table tbody tr:hover {
 .chosen-container a:hover {
     font-weight: 400;
     color: #000 !important;
+    background-image: none;
+    padding-bottom: 0;
     background-color: transparent;
 }
 
@@ -934,7 +952,8 @@ div.action-panel a {
     display: inline-block;
     padding: 3px;
     position: relative;
-    top: 0px
+    top: 0px;
+    background-image: none;
 }
 
 .status-badge {

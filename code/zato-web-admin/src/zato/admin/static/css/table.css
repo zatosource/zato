@@ -40,6 +40,8 @@
 .zato-table th a {
     font-weight: 700;
     color: inherit;
+    background-image: none;
+    padding-bottom: 0;
 }
 
 .zato-table td {
