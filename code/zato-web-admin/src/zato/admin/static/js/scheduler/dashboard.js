@@ -544,8 +544,6 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
                 if (ll_pts[li].val > 0) {
                     var lcx = ll_pts[li].x.toFixed(2);
                     var lcy = ll_pts[li].y.toFixed(1);
-                    svg += '<line x1="' + lcx + '" y1="' + baseline_y.toFixed(1) + '" x2="' + lcx + '" y2="' + lcy + '" ';
-                    svg += 'stroke="' + bar_colors[ll_key] + '" stroke-width="1.5" />';
                     svg += '<circle cx="' + lcx + '" cy="' + lcy + '" r="3" fill="' + bar_colors[ll_key] + '" />';
                 }
             }
