@@ -137,6 +137,43 @@ $.fn.zato.scheduler.dashboard._spark_values = function(key) {
     return values;
 };
 
+$.fn.zato.scheduler.dashboard._rebuild_failures_series = function(timeline) {
+    var dash = $.fn.zato.scheduler.dashboard;
+    var now = Date.now();
+    var window_ms = dash._tile_window_ms;
+    var bucket_count = 60;
+    var bucket_size = window_ms / bucket_count;
+    var window_start = now - window_ms;
+
+    var series = new Array(bucket_count);
+    for (var b = 0; b < bucket_count; b++) {
+        series[b] = {
+            ts: window_start + (b + 1) * bucket_size,
+            value: 0
+        };
+    }
+
+    var total = 0;
+    if (timeline) {
+        for (var r = 0; r < timeline.length; r++) {
+            var record = timeline[r];
+            var iso = record.actual_fire_time_iso;
+            if (!iso) continue;
+            if (record.outcome !== 'error' && record.outcome !== 'timeout') continue;
+            var t_ms = new Date(iso).getTime();
+            if (t_ms < window_start || t_ms > now) continue;
+            var idx = Math.floor((t_ms - window_start) / bucket_size);
+            if (idx < 0) idx = 0;
+            if (idx >= bucket_count) idx = bucket_count - 1;
+            series[idx].value++;
+            total++;
+        }
+    }
+
+    dash._spark_data.failures = series;
+    return total;
+};
+
 $.fn.zato.scheduler.dashboard._seed_spark_buffers = function(data) {
     var dash = $.fn.zato.scheduler.dashboard;
     if (dash._spark_seeded) {
@@ -148,35 +185,11 @@ $.fn.zato.scheduler.dashboard._seed_spark_buffers = function(data) {
     var paused_jobs = data.paused_jobs || 0;
     var in_flight_count = data.in_flight_count || 0;
 
-    var timeline = data.history_timeline || [];
     var now = Date.now();
     var window_ms = dash._tile_window_ms;
     var bucket_count = 60;
     var bucket_size = window_ms / bucket_count;
     var window_start = now - window_ms;
-
-    /* Bucketise failures across the last hour. Each bucket carries the
-       bucket's end timestamp so the hover "Xm ago" math reflects real time. */
-    var failures_series = new Array(bucket_count);
-    for (var b = 0; b < bucket_count; b++) {
-        failures_series[b] = {
-            ts: window_start + (b + 1) * bucket_size,
-            value: 0
-        };
-    }
-    for (var r = 0; r < timeline.length; r++) {
-        var record = timeline[r];
-        var iso = record.actual_fire_time_iso;
-        if (!iso) continue;
-        if (record.outcome !== 'error' && record.outcome !== 'timeout') continue;
-        var t_ms = new Date(iso).getTime();
-        if (t_ms < window_start || t_ms > now) continue;
-        var idx = Math.floor((t_ms - window_start) / bucket_size);
-        if (idx < 0) idx = 0;
-        if (idx >= bucket_count) idx = bucket_count - 1;
-        failures_series[idx].value++;
-    }
-    dash._spark_data.failures = failures_series;
 
     /* State-based metrics have no historical record (they're instantaneous
        snapshots), so seed with a flat baseline spanning the full 1 h window
@@ -1326,19 +1339,7 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
     var in_flight_count = data.in_flight_count || 0;
 
     var outcome_counts = data.outcome_counts || {};
-    var failure_count = (outcome_counts['error'] || 0) + (outcome_counts['timeout'] || 0);
-
-    $('#stat-total-jobs').text(total_jobs);
-    $('#stat-active').text(active_jobs);
-    $('#stat-paused').text(paused_jobs);
-    $('#stat-in-flight').text(in_flight_count);
-    $('#stat-failures').text(failure_count);
-
-    if (failure_count > 0) {
-        $('#stat-failures').css('color', '#ff6b6b');
-    } else {
-        $('#stat-failures').css('color', '#fff');
-    }
+    var failures_lifetime = (outcome_counts['error'] || 0) + (outcome_counts['timeout'] || 0);
 
     $.fn.zato.scheduler.dashboard._seed_spark_buffers(data);
 
@@ -1346,7 +1347,26 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
     $.fn.zato.scheduler.dashboard._push_spark('active', active_jobs);
     $.fn.zato.scheduler.dashboard._push_spark('paused', paused_jobs);
     $.fn.zato.scheduler.dashboard._push_spark('in_flight', in_flight_count);
-    $.fn.zato.scheduler.dashboard._push_spark('failures', failure_count);
+
+    /* Failures are recomputed from the fresh history on every render so the
+       sparkline (last 1 h, bucketed per minute) and the big digit (sum of
+       the last hour) always tell the same story. */
+    var failures_last_hour = $.fn.zato.scheduler.dashboard._rebuild_failures_series(data.history_timeline);
+
+    $('#stat-total-jobs').text(total_jobs);
+    $('#stat-active').text(active_jobs);
+    $('#stat-paused').text(paused_jobs);
+    $('#stat-in-flight').text(in_flight_count);
+    $('#stat-failures').text(failures_last_hour);
+
+    if (failures_last_hour > 0) {
+        $('#stat-failures').css('color', '#ff6b6b');
+    } else {
+        $('#stat-failures').css('color', '#fff');
+    }
+
+    var lifetime_label = failures_lifetime === 1 ? '1 total' : failures_lifetime + ' total';
+    $('#stat-failures-sublabel').text(lifetime_label);
 
     var base_spark = {height: 36, color: '#82ccff', dot_color: '#82ccff', dot_radius: 3.5};
     var base_spark_err = {height: 36, color: '#ff6b6b', dot_color: '#ff6b6b', dot_radius: 3.5};

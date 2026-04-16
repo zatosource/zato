@@ -73,6 +73,17 @@
     margin-bottom: 6px;
 }
 
+.dashboard-tile-sublabel {
+    margin-top: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.35);
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
 .dashboard-tile-row {
     display: flex;
     align-items: center;
