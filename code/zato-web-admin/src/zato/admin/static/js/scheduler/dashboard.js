@@ -1169,17 +1169,42 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
     var viewport_w = $(window).width();
     var viewport_h = $(window).height();
 
-    var left = mouse_event.clientX + 14;
-    var top = mouse_event.clientY + 14;
+    var over_spark = mouse_event.clientY >= rect.top && mouse_event.clientY <= rect.bottom;
+    var left;
+    var top;
+
+    if (over_spark) {
+        // Pointer is over the sparkline: place tooltip above the sparkline,
+        // horizontally centred on the mouse, so it never obscures the chart.
+        var gap = 10;
+        left = mouse_event.clientX - tt_w / 2;
+        top = rect.top - tt_h - gap;
+
+        // If there isn't enough room above the sparkline, drop it below the
+        // sparkline (still clear of the chart body).
+        if (top < margin) {
+            top = rect.bottom + gap;
+        }
+    } else {
+        left = mouse_event.clientX + 14;
+        top = mouse_event.clientY + 14;
+
+        if (left + tt_w + margin > viewport_w) {
+            left = mouse_event.clientX - tt_w - 14;
+        }
+        if (top + tt_h + margin > viewport_h) {
+            top = mouse_event.clientY - tt_h - 14;
+        }
+    }
 
     if (left + tt_w + margin > viewport_w) {
-        left = mouse_event.clientX - tt_w - 14;
+        left = viewport_w - tt_w - margin;
     }
     if (left < margin) {
         left = margin;
     }
     if (top + tt_h + margin > viewport_h) {
-        top = mouse_event.clientY - tt_h - 14;
+        top = viewport_h - tt_h - margin;
     }
     if (top < margin) {
         top = margin;
