@@ -459,14 +459,14 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     for (var gd = 0; gd < visible_keys.length; gd++) {
         var gd_key = visible_keys[gd];
         svg += '<linearGradient id="areaGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
-        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.18"/>';
-        svg += '<stop offset="0.5" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.06"/>';
+        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.10"/>';
+        svg += '<stop offset="0.5" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.03"/>';
         svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.0"/>';
         svg += '</linearGradient>';
     }
     svg += '<linearGradient id="lollipopGrad" x1="0" y1="0" x2="0" y2="1">';
-    svg += '<stop offset="0" stop-color="#9ca3af" stop-opacity="0.15"/>';
-    svg += '<stop offset="0.7" stop-color="#9ca3af" stop-opacity="0.05"/>';
+    svg += '<stop offset="0" stop-color="#9ca3af" stop-opacity="0.06"/>';
+    svg += '<stop offset="0.5" stop-color="#9ca3af" stop-opacity="0.02"/>';
     svg += '<stop offset="1" stop-color="#9ca3af" stop-opacity="0.0"/>';
     svg += '</linearGradient>';
     svg += '</defs>';
@@ -544,6 +544,8 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
                 if (ll_pts[li].val > 0) {
                     var lcx = ll_pts[li].x.toFixed(2);
                     var lcy = ll_pts[li].y.toFixed(1);
+                    svg += '<line x1="' + lcx + '" y1="' + baseline_y.toFixed(1) + '" x2="' + lcx + '" y2="' + lcy + '" ';
+                    svg += 'stroke="#e5e7eb" stroke-width="1" />';
                     svg += '<circle cx="' + lcx + '" cy="' + lcy + '" r="3" fill="' + bar_colors[ll_key] + '" />';
                 }
             }
