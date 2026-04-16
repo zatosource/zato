@@ -92,7 +92,7 @@ macro_rules! dispatch {
             "cache_builtin"       => $self._get_cache_builtin($py, $name),
             "email_smtp"          => $self._get_email_smtp($py, $name),
             "email_imap"          => $self._get_email_imap($py, $name),
-            "scheduler"           => $self._get_scheduler($py, $name),
+            "scheduler"           => $self._get_by_scheduler($py, $name),
             "holiday_calendar"    => $self._get_holiday_calendar($py, $name),
             "generic_connection"  => $self._get_generic_connection($py, $name),
             "pubsub_topic"        => $self._get_pubsub_topic($py, $name),
@@ -154,7 +154,7 @@ macro_rules! dispatch {
             "cache_builtin"       => $self._set_cache_builtin($py, $name, $data),
             "email_smtp"          => $self._set_email_smtp($py, $name, $data),
             "email_imap"          => $self._set_email_imap($py, $name, $data),
-            "scheduler"           => $self._set_scheduler($py, $name, $data),
+            "scheduler"           => $self._set_by_scheduler($py, $name, $data),
             "holiday_calendar"    => $self._set_holiday_calendar($py, $name, $data),
             "generic_connection"  => $self._set_generic_connection($py, $name, $data),
             "pubsub_topic"        => $self._set_pubsub_topic($py, $name, $data),
@@ -185,7 +185,7 @@ macro_rules! dispatch {
             "cache_builtin"       => $self._delete_cache_builtin($name),
             "email_smtp"          => $self._delete_email_smtp($name),
             "email_imap"          => $self._delete_email_imap($name),
-            "scheduler"           => $self._delete_scheduler($name),
+            "scheduler"           => $self._delete_by_scheduler($name),
             "holiday_calendar"    => $self._delete_holiday_calendar($name),
             "generic_connection"  => $self._delete_generic_connection($name),
             "pubsub_topic"        => $self._delete_pubsub_topic($name),
@@ -230,7 +230,7 @@ impl ConfigStore {
     impl_crud!(email_imap, EmailImap,
         _get_email_imap, _get_list_email_imap, _set_email_imap, _delete_email_imap);
     impl_crud!(scheduler, SchedulerJob,
-        _get_scheduler, _get_list_scheduler, _set_scheduler, _delete_scheduler);
+        _get_by_scheduler, _get_list_scheduler, _set_by_scheduler, _delete_by_scheduler);
     impl_crud!(holiday_calendar, HolidayCalendar,
         _get_holiday_calendar, _get_list_holiday_calendar, _set_holiday_calendar, _delete_holiday_calendar);
     impl_crud!(generic_connection, GenericConnection,
@@ -264,7 +264,7 @@ impl ConfigStore {
     impl_attr_value_exists!(cache_builtin,       _attr_exists_cache_builtin);
     impl_attr_value_exists!(email_smtp,          _attr_exists_email_smtp);
     impl_attr_value_exists!(email_imap,          _attr_exists_email_imap);
-    impl_attr_value_exists!(scheduler,           _attr_exists_scheduler);
+    impl_attr_value_exists!(scheduler,           _attr_exists_by_scheduler);
     impl_attr_value_exists!(holiday_calendar,    _attr_exists_holiday_calendar);
     impl_attr_value_exists!(generic_connection,  _attr_exists_generic_connection);
     impl_attr_value_exists!(pubsub_topic,        _attr_exists_pubsub_topic);
@@ -326,7 +326,7 @@ impl ConfigStore {
             "cache_builtin"       => self._attr_exists_cache_builtin(attr_name, value),
             "email_smtp"          => self._attr_exists_email_smtp(attr_name, value),
             "email_imap"          => self._attr_exists_email_imap(attr_name, value),
-            "scheduler"           => self._attr_exists_scheduler(attr_name, value),
+            "scheduler"           => self._attr_exists_by_scheduler(attr_name, value),
             "holiday_calendar"    => self._attr_exists_holiday_calendar(attr_name, value),
             "generic_connection"  => self._attr_exists_generic_connection(attr_name, value),
             "pubsub_topic"        => self._attr_exists_pubsub_topic(attr_name, value),

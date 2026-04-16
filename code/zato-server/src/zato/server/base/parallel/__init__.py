@@ -1054,8 +1054,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             job_id = ctx.get('id', '')
             job_name = ctx.get('name', '')
 
-            logger.info('Scheduler executing job `%s` (id:`%s`)', job_name, job_id)
-
             msg = Bunch({
                 'action': SCHEDULER_MSG.JOB_EXECUTED.value,
                 'name': ctx['name'],
@@ -1074,15 +1072,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 self.worker_store.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
             except Exception:
                 outcome = 'error'
-                logger.warning('Scheduler job `%s` service invocation error: %s', job_name, format_exc())
+                logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
 
             duration_ms = int((_time.monotonic() - _t0) * 1000)
 
             try:
                 scheduler_mark_complete(str(job_id), outcome, duration_ms)
-                logger.info('Scheduler mark_complete OK for `%s`, outcome:`%s`, duration:`%s`ms', job_name, outcome, duration_ms)
+                logger.info('Scheduler job_id=%s; name=%s; outcome=%s; duration=%sms', job_id, job_name, outcome, duration_ms)
             except Exception:
-                logger.warning('Scheduler mark_complete failed for `%s` (id:`%s`): %s', job_name, job_id, format_exc())
+                logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
 
         try:
             scheduler_start(

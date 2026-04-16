@@ -1312,34 +1312,28 @@ class WorkerStore(_WorkerStoreBase):
         _t0 = _time.monotonic()
         outcome = 'executed'
 
-        logger.info('Scheduler worker received job execution msg, name:`%s`', getattr(msg, 'name', '<unknown>'))
+        job_name = getattr(msg, 'name', '')
+        job_id = ''
+        zato_ctx = getattr(msg, 'zato_ctx', None) or {}
+        if isinstance(zato_ctx, dict):
+            job_id = zato_ctx.get('scheduler_job_id', '')
 
         try:
             response = self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
         except Exception:
             outcome = 'error'
             response = None
-            logger.warning('Scheduler job execution error: %s', format_exc())
+            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
 
         duration_ms = int((_time.monotonic() - _t0) * 1000)
-
-        job_id = None
-        zato_ctx = getattr(msg, 'zato_ctx', None) or {}
-        if isinstance(zato_ctx, dict):
-            job_id = zato_ctx.get('scheduler_job_id')
-
-        logger.info('Scheduler job `%s` completed, outcome:`%s`, duration_ms:`%s`, job_id:`%s`',
-            getattr(msg, 'name', '<unknown>'), outcome, duration_ms, job_id)
 
         if job_id:
             try:
                 from zato_scheduler_core import scheduler_mark_complete
                 scheduler_mark_complete(str(job_id), outcome, duration_ms)
-                logger.info('Scheduler mark_complete OK for job `%s` (id:`%s`)', getattr(msg, 'name', '<unknown>'), job_id)
+                logger.info('Scheduler job_id=%s; name=%s; outcome=%s; duration=%sms', job_id, job_name, outcome, duration_ms)
             except Exception:
-                logger.warning('Scheduler mark_complete failed for job `%s`: %s', job_id, format_exc())
-        else:
-            logger.warning('Scheduler job executed but no job_id found in zato_ctx: %s', getattr(msg, 'zato_ctx', None))
+                logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
 
         return response
 

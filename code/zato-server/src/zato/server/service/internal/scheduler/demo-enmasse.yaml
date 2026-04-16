@@ -34,3 +34,11 @@ scheduler:
     seconds: 10
     is_active: true
     extra: '{"action": "purge", "target": "sessions", "max_age_hours": 48}'
+
+  - name: crm.slow-sftp-export
+    service: demo.sleep
+    job_type: interval_based
+    seconds: 2
+    is_active: true
+    max_execution_time_ms: 3000
+    extra: '{"seconds": 10}'
