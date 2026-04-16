@@ -155,6 +155,8 @@ $.fn.zato.scheduler.dashboard._filter_timeline_by_range = function(timeline) {
 
 $.fn.zato.scheduler.dashboard._skip_legend_rebuild = false;
 
+$.fn.zato.scheduler.dashboard._zoom_bucket_count = 0;
+
 $.fn.zato.scheduler.dashboard._redraw_chart_from_cache = function() {
     if ($.fn.zato.scheduler.dashboard._last_timeline) {
         $.fn.zato.scheduler.dashboard._skip_legend_rebuild = true;
@@ -377,7 +379,10 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
         min_time = max_time - time_range;
     }
 
-    var bucket_count = Math.min(60, Math.max(12, Math.floor(chart_width / 16)));
+    var auto_bucket_count = Math.min(60, Math.max(12, Math.floor(chart_width / 16)));
+    var bucket_count = $.fn.zato.scheduler.dashboard._zoom_bucket_count > 0
+        ? Math.min(120, Math.max(4, $.fn.zato.scheduler.dashboard._zoom_bucket_count))
+        : auto_bucket_count;
     var bucket_size = time_range / bucket_count;
     var buckets = [];
     for (var bucket_index = 0; bucket_index < bucket_count; bucket_index++) {
@@ -664,6 +669,21 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
     chart_svg.on('mouseleave.chart', function() {
         overlay.empty();
         tooltip.css('display', 'none');
+    });
+
+    chart_svg.off('wheel.chart').on('wheel.chart', function(event) {
+        event.preventDefault();
+        var current = $.fn.zato.scheduler.dashboard._zoom_bucket_count || bucket_count;
+        var delta = event.originalEvent.deltaY;
+        if (delta < 0) {
+            current = Math.max(4, Math.round(current * 0.8));
+        } else {
+            current = Math.min(120, Math.round(current * 1.25));
+        }
+        $.fn.zato.scheduler.dashboard._zoom_bucket_count = current;
+        $.fn.zato.scheduler.dashboard._skip_legend_rebuild = true;
+        $.fn.zato.scheduler.dashboard.render_bar_chart($.fn.zato.scheduler.dashboard._last_timeline);
+        $.fn.zato.scheduler.dashboard._skip_legend_rebuild = false;
     });
 };
 
