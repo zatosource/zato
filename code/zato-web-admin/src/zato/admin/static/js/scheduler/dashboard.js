@@ -463,12 +463,12 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
         svg += '<stop offset="0.5" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.06"/>';
         svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.0"/>';
         svg += '</linearGradient>';
-        svg += '<linearGradient id="lollipopGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
-        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.08"/>';
-        svg += '<stop offset="0.6" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.02"/>';
-        svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.0"/>';
-        svg += '</linearGradient>';
     }
+    svg += '<linearGradient id="lollipopGrad" x1="0" y1="0" x2="0" y2="1">';
+    svg += '<stop offset="0" stop-color="#9ca3af" stop-opacity="0.15"/>';
+    svg += '<stop offset="0.7" stop-color="#9ca3af" stop-opacity="0.05"/>';
+    svg += '<stop offset="1" stop-color="#9ca3af" stop-opacity="0.0"/>';
+    svg += '</linearGradient>';
     svg += '</defs>';
 
     var grid_line_count = 4;
@@ -538,7 +538,7 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
                 ' L' + lollipop_edge_right.toFixed(1) + ',' + baseline_y.toFixed(1) +
                 ' L' + lollipop_edge_left.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
 
-            svg += '<path d="' + ll_fill + '" fill="url(#areaGrad_' + ll_key + ')" />';
+            svg += '<path d="' + ll_fill + '" fill="url(#lollipopGrad)" />';
 
             for (var li = 0; li < ll_pts.length; li++) {
                 if (ll_pts[li].val > 0) {
