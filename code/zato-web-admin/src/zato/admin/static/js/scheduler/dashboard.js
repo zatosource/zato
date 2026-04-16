@@ -450,21 +450,11 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     svg += '<defs>';
     for (var gd = 0; gd < visible_keys.length; gd++) {
         var gd_key = visible_keys[gd];
-        svg += '<linearGradient id="barGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
-        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.9"/>';
-        svg += '<stop offset="0.6" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.7"/>';
-        svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.5"/>';
-        svg += '</linearGradient>';
         svg += '<linearGradient id="areaGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
         svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.18"/>';
         svg += '<stop offset="0.5" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.06"/>';
         svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.0"/>';
         svg += '</linearGradient>';
-        svg += '<filter id="barGlow_' + gd_key + '" x="-30%" y="-30%" width="160%" height="160%">';
-        svg += '<feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>';
-        svg += '<feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.4 0"/>';
-        svg += '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>';
-        svg += '</filter>';
     }
     svg += '</defs>';
 
@@ -508,10 +498,7 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
             if (val > 0 && $.fn.zato.scheduler.dashboard.show_bars) {
                 svg += '<rect x="' + bar_x.toFixed(2) + '" y="' + bar_y.toFixed(1) + '" ';
                 svg += 'width="' + bar_width.toFixed(2) + '" height="' + bar_h.toFixed(1) + '" ';
-                svg += 'fill="url(#barGrad_' + layer_key + ')" filter="url(#barGlow_' + layer_key + ')" />';
-                svg += '<line x1="' + bar_x.toFixed(2) + '" y1="' + bar_y.toFixed(1) + '" ';
-                svg += 'x2="' + (bar_x + bar_width).toFixed(2) + '" y2="' + bar_y.toFixed(1) + '" ';
-                svg += 'stroke="' + bar_colors[layer_key] + '" stroke-opacity="0.6" stroke-width="1" />';
+                svg += 'fill="' + bar_colors[layer_key] + '" opacity="0.85" />';
             }
         }
     }
