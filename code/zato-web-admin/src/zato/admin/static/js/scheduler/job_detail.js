@@ -124,7 +124,7 @@ $.fn.zato.scheduler.job_detail.render_stats = function(history) {
 };
 
 // ////////////////////////////////////////////////////////////////////////////
-// Render timeline
+// Render timeline (with SVG glow filter)
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
@@ -135,7 +135,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     }
 
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
-    var colors = dashboard.outcome_colors;
+    var bar_colors = dashboard.outcome_bar_colors;
 
     var chart_width = container.width() || 700;
     var chart_height = 60;
@@ -171,9 +171,19 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 
     var svg = '<svg width="' + chart_width + '" height="' + chart_height + '" xmlns="http://www.w3.org/2000/svg">';
 
+    svg += '<defs>';
+    svg += '<filter id="timelineGlow">';
+    svg += '<feGaussianBlur stdDeviation="2" result="blur"/>';
+    svg += '<feMerge>';
+    svg += '<feMergeNode in="blur"/>';
+    svg += '<feMergeNode in="SourceGraphic"/>';
+    svg += '</feMerge>';
+    svg += '</filter>';
+    svg += '</defs>';
+
     svg += '<line x1="' + padding_left + '" y1="' + (padding_top + row_height / 2) + '" ';
     svg += 'x2="' + (chart_width - padding_right) + '" y2="' + (padding_top + row_height / 2) + '" ';
-    svg += 'stroke="#e9ecef" stroke-width="2" />';
+    svg += 'stroke="rgba(0,0,0,0.06)" stroke-width="2" />';
 
     for (var entry_index = 0; entry_index < history.length; entry_index++) {
         var entry = history[entry_index];
@@ -182,7 +192,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 
         var entry_time = new Date(entry_time_string).getTime();
         var entry_x = padding_left + ((entry_time - min_time) / time_range) * draw_width;
-        var entry_color = colors[entry.outcome] || '#ccc';
+        var entry_color = bar_colors[entry.outcome] || '#ccc';
         var entry_duration = parseInt(entry.duration_ms || 0, 10);
         var bar_length = Math.max(4, (entry_duration / time_range) * draw_width);
         bar_length = Math.min(bar_length, draw_width - (entry_x - padding_left));
@@ -193,7 +203,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 
         svg += '<rect x="' + entry_x.toFixed(1) + '" y="' + padding_top + '" ';
         svg += 'width="' + bar_length.toFixed(1) + '" height="' + row_height + '" ';
-        svg += 'fill="' + entry_color + '" opacity="0.85" rx="3">';
+        svg += 'fill="' + entry_color + '" opacity="0.85" rx="3" filter="url(#timelineGlow)">';
         svg += '<title>' + tooltip + '</title>';
         svg += '</rect>';
     }
@@ -237,12 +247,12 @@ $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
         var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
 
         var row = '<tr>';
-        row += '<td style="font-family:monospace;color:#6c757d;white-space:nowrap">' + planned_time + '</td>';
-        row += '<td style="font-family:monospace;color:#6c757d;white-space:nowrap">' + actual_time + '</td>';
-        row += '<td style="font-family:monospace">' + dispatch_latency + '</td>';
-        row += '<td style="font-family:monospace">' + duration + '</td>';
+        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap">' + planned_time + '</td>';
+        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap">' + actual_time + '</td>';
+        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on">' + dispatch_latency + '</td>';
+        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on">' + duration + '</td>';
         row += '<td>' + outcome + '</td>';
-        row += '<td style="font-family:monospace">' + run_number + '</td>';
+        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on">' + run_number + '</td>';
         row += '<td class="scheduler-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
         row += '</tr>';
         table_body.append(row);

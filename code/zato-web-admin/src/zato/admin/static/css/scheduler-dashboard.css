@@ -1,12 +1,17 @@
+/* Foundation */
+
 .scheduler-page {
-    background: #f0f2f5;
+    background: #f4f5f5;
     min-height: calc(100vh - 60px);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 /* Hero metrics strip */
 
 .scheduler-hero {
-    background: #012845;
+    background: linear-gradient(180deg, #01304f 0%, #012845 100%);
     padding: 28px 0;
     position: relative;
 }
@@ -25,38 +30,40 @@
 .scheduler-tile {
     flex: 1;
     background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 10px;
     padding: 18px 20px 14px;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     min-width: 0;
+    box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
+        0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .scheduler-tile-label {
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.5);
     margin-bottom: 6px;
 }
 
 .scheduler-tile-value {
-    font-size: 40px;
-    font-weight: 800;
+    font-size: 36px;
+    font-weight: 700;
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.02em;
     color: #fff;
-    line-height: 1;
+    line-height: 1.1;
     margin-bottom: 10px;
 }
 
 .scheduler-tile-spark {
     height: 28px;
-    filter: drop-shadow(0 0 4px rgba(130, 204, 255, 0.6));
-}
-
-.scheduler-tile-failures .scheduler-tile-spark {
-    filter: drop-shadow(0 0 4px rgba(255, 107, 107, 0.6));
 }
 
 .scheduler-hero-refresh {
@@ -65,6 +72,8 @@
     right: 40px;
     font-size: 11px;
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums lining-nums;
     color: rgba(255, 255, 255, 0.4);
 }
 
@@ -91,10 +100,24 @@
 
 .scheduler-card {
     background: #fff;
-    border: 1px solid #e9ecef;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    border: none;
+    border-radius: 8px;
+    background-clip: padding-box;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.04),
+        0 1px 2px rgba(0, 0, 0, 0.07),
+        0 2px 4px rgba(0, 0, 0, 0.07),
+        0 4px 8px rgba(0, 0, 0, 0.07),
+        0 8px 16px rgba(0, 0, 0, 0.07);
     padding: 24px;
+    transition: box-shadow 200ms cubic-bezier(0.0, 0, 0.2, 1);
+}
+
+.scheduler-card:hover {
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.06),
+        0 4px 8px rgba(0, 0, 0, 0.08),
+        0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .scheduler-card-header {
@@ -105,11 +128,11 @@
 }
 
 .scheduler-card-header h3 {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #6c757d;
+    letter-spacing: 0.04em;
+    color: #73767a;
     margin: 0;
     padding: 0;
 }
@@ -121,24 +144,32 @@
     font-size: 11px;
     font-weight: 700;
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums lining-nums;
     background: #e8f4ff;
     color: #012845;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .scheduler-pill-failures {
-    background: #fff0f0;
-    color: #c0392b;
+    background: rgba(224, 34, 110, 0.12);
+    color: #e0226e;
 }
 
 /* Chart */
 
 .scheduler-chart-body {
     min-height: 180px;
+    position: relative;
 }
 
 .scheduler-chart-body svg {
     display: block;
     width: 100%;
+}
+
+.scheduler-chart-body path:hover {
+    opacity: 1 !important;
 }
 
 .scheduler-chart-legend {
@@ -153,7 +184,7 @@
     align-items: center;
     gap: 6px;
     font-size: 11px;
-    color: #6c757d;
+    color: #6e6e73;
     font-weight: 500;
 }
 
@@ -163,6 +194,36 @@
     border-radius: 50%;
     display: inline-block;
     flex-shrink: 0;
+}
+
+/* Bar chart crosshair */
+
+.scheduler-chart-crosshair {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    height: 100%;
+    border-left: 1px dashed rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+    display: none;
+}
+
+/* Bar chart tooltip */
+
+.scheduler-chart-tooltip {
+    position: fixed;
+    background: #262630;
+    color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    font-size: 12px;
+    padding: 6px 10px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 9999;
+    display: none;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
 }
 
 /* Tables */
@@ -175,13 +236,14 @@
 
 .scheduler-table th {
     text-align: left;
-    padding: 8px 10px;
+    padding: 8px 12px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #adb5bd;
-    border-bottom: 1px solid #e9ecef;
+    letter-spacing: 0.04em;
+    color: #73767a;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+    background: transparent;
 }
 
 .scheduler-th-dot {
@@ -189,13 +251,18 @@
 }
 
 .scheduler-table td {
-    padding: 10px 10px;
-    border-bottom: 1px solid #f0f2f5;
-    color: #212529;
+    padding: 12px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    color: #1a1a1a;
 }
 
 .scheduler-table tbody tr {
     cursor: pointer;
+    transition: background 100ms ease;
+}
+
+.scheduler-table tbody tr:nth-child(even) {
+    background: #fafbfc;
 }
 
 .scheduler-table tbody tr:hover {
@@ -203,7 +270,7 @@
 }
 
 .scheduler-table a {
-    color: #037ac7;
+    color: #0070f3;
     text-decoration: none;
     font-weight: 500;
 }
@@ -219,16 +286,17 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
+    position: relative;
 }
 
 .scheduler-status-ok {
     background: #4caf50;
-    box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
 }
 
 .scheduler-status-failed {
     background: #e53935;
-    box-shadow: 0 0 6px rgba(229, 57, 53, 0.4);
+    box-shadow: 0 0 8px rgba(229, 57, 53, 0.4);
 }
 
 .scheduler-status-paused {
@@ -237,13 +305,24 @@
 
 .scheduler-status-in-flight {
     background: #2196f3;
-    box-shadow: 0 0 6px rgba(33, 150, 243, 0.5);
-    animation: scheduler-pulse 1.2s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(33, 150, 243, 0.5);
 }
 
-@keyframes scheduler-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+.scheduler-status-in-flight::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid #2196f3;
+    animation: scheduler-ring-pulse 2s ease-out infinite;
+}
+
+@keyframes scheduler-ring-pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(2.2); opacity: 0; }
 }
 
 /* Type badge */
@@ -256,15 +335,16 @@
     font-weight: 600;
     background: #e8f4ff;
     color: #012845;
+    box-shadow: inset 0 0 0 1px rgba(1, 40, 69, 0.08);
 }
 
 /* Outcome squares */
 
 .scheduler-outcome-square {
     display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 2px;
+    width: 10px;
+    height: 10px;
+    margin-right: 3px;
     border-radius: 2px;
     vertical-align: middle;
 }
@@ -277,7 +357,6 @@
     border-radius: 4px;
     font-weight: 700;
     font-size: 11px;
-    color: #fff;
     letter-spacing: 0.3px;
 }
 
@@ -291,23 +370,23 @@
 
 .scheduler-failures-table th {
     text-align: left;
-    padding: 8px 10px;
+    padding: 8px 12px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #adb5bd;
-    border-bottom: 1px solid #e9ecef;
+    letter-spacing: 0.04em;
+    color: #73767a;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.08);
 }
 
 .scheduler-failures-table td {
-    padding: 10px 10px;
-    border-bottom: 1px solid #f0f2f5;
-    color: #212529;
+    padding: 12px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    color: #1a1a1a;
 }
 
 .scheduler-failures-table a {
-    color: #037ac7;
+    color: #0070f3;
     text-decoration: none;
     font-weight: 500;
 }
@@ -315,7 +394,7 @@
 .scheduler-error-cell {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     font-size: 11px;
-    color: #888;
+    color: #a0a0a5;
     max-width: 220px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -328,7 +407,7 @@
 .scheduler-all-clear {
     padding: 28px 0;
     text-align: center;
-    color: #4caf50;
+    color: #1b855e;
     font-size: 14px;
     font-weight: 600;
 }
@@ -341,14 +420,14 @@
 .scheduler-no-data {
     padding: 20px 0;
     text-align: center;
-    color: #adb5bd;
+    color: #a0a0a5;
     font-size: 13px;
 }
 
 /* Card split */
 
 .scheduler-card-divider {
-    border-top: 1px solid #e9ecef;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
     margin: 16px 0;
 }
 
@@ -382,6 +461,7 @@
     font-weight: 800;
     color: #fff;
     margin-bottom: 8px;
+    letter-spacing: -0.01em;
 }
 
 .scheduler-detail-name .scheduler-status-dot {
@@ -403,7 +483,7 @@
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03em;
     background: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -437,7 +517,7 @@
 
 .scheduler-config-item {
     font-size: 13px;
-    color: #212529;
+    color: #1a1a1a;
 }
 
 .scheduler-config-label {
@@ -445,13 +525,13 @@
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #adb5bd;
+    letter-spacing: 0.03em;
+    color: #a0a0a5;
     margin-bottom: 2px;
 }
 
 .scheduler-config-item a {
-    color: #037ac7;
+    color: #0070f3;
     text-decoration: none;
     font-weight: 500;
 }
@@ -463,13 +543,16 @@
 .scheduler-config-extra {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     font-size: 12px;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums lining-nums;
     background: #f8f9fa;
     padding: 12px;
     margin: 4px 0 0;
     white-space: pre-wrap;
     word-break: break-all;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
+    border: none;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
     color: #495057;
 }
 
@@ -487,26 +570,29 @@
 
 .scheduler-stat-number {
     font-size: 32px;
-    font-weight: 800;
+    font-weight: 700;
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.02em;
     color: #012845;
     line-height: 1.2;
 }
 
 .scheduler-stat-danger {
-    color: #e53935;
+    color: #e0226e;
 }
 
 .scheduler-stat-warning {
-    color: #ff9800;
+    color: #b35e00;
 }
 
 .scheduler-stat-label {
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #adb5bd;
+    letter-spacing: 0.03em;
+    color: #a0a0a5;
     margin-top: 4px;
 }
 
@@ -528,12 +614,19 @@
     color: rgba(255, 255, 255, 0.8);
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: background 120ms cubic-bezier(0.2, 0.9, 0.4, 1),
+                color 120ms cubic-bezier(0.2, 0.9, 0.4, 1);
 }
 
 .scheduler-action-link:hover {
     background: rgba(255, 255, 255, 0.18);
     color: #fff;
     text-decoration: none;
+}
+
+.scheduler-action-link:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(130, 204, 255, 0.3);
 }
 
 .scheduler-action-execute {
@@ -545,6 +638,35 @@
 .scheduler-action-execute:hover {
     background: rgba(130, 204, 255, 0.2);
     color: #fff;
+}
+
+/* Entrance animations */
+
+@keyframes scheduler-slide-up {
+    from { opacity: 0; transform: translateY(8px) scale(0.99); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.scheduler-page > .scheduler-hero {
+    animation: scheduler-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scheduler-page > .scheduler-section {
+    animation: scheduler-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+}
+
+/* Skeleton loading shimmer */
+
+@keyframes scheduler-skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.scheduler-skeleton {
+    background: linear-gradient(90deg, #eaecee 25%, #f5f6f8 50%, #eaecee 75%);
+    background-size: 200% 100%;
+    animation: scheduler-skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 4px;
 }
 
 /* Responsive */

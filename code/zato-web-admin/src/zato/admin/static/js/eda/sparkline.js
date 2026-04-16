@@ -2,24 +2,47 @@
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
 if (typeof $.fn.zato.eda === 'undefined') { $.fn.zato.eda = {}; }
 
+$.fn.zato.eda._sparkline_counter = 0;
+
 $.fn.zato.eda.sparkline = function(container, data_points, options) {
     options = options || {};
     var w = options.width || 80;
     var h = options.height || 24;
     var color = options.color || '#82ccff';
-    var dot_color = options.dot_color || '#012845';
+    var dot_color = options.dot_color || color;
     var dot_r = options.dot_radius || 2.5;
-    var pad = dot_r + 1;
+    var pad = dot_r + 2;
 
     if (!data_points || data_points.length === 0) {
         $(container).html('');
         return;
     }
 
+    var instance_id = $.fn.zato.eda._sparkline_counter++;
+    var glow_id = 'sparkGlow_' + instance_id;
+    var grad_id = 'sparkArea_' + instance_id;
+
+    var defs = '<defs>';
+    defs += '<filter id="' + glow_id + '">';
+    defs += '<feGaussianBlur stdDeviation="3" result="blur"/>';
+    defs += '<feMerge>';
+    defs += '<feMergeNode in="blur"/>';
+    defs += '<feMergeNode in="blur"/>';
+    defs += '<feMergeNode in="SourceGraphic"/>';
+    defs += '</feMerge>';
+    defs += '</filter>';
+    defs += '<linearGradient id="' + grad_id + '" x1="0" y1="0" x2="0" y2="1">';
+    defs += '<stop offset="0" stop-color="' + color + '" stop-opacity="0.25"/>';
+    defs += '<stop offset="0.3" stop-color="' + color + '" stop-opacity="0.12"/>';
+    defs += '<stop offset="1" stop-color="' + color + '" stop-opacity="0"/>';
+    defs += '</linearGradient>';
+    defs += '</defs>';
+
     var svg = '<svg width="' + w + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg">';
+    svg += defs;
 
     if (data_points.length === 1) {
-        svg += '<circle cx="' + (w / 2) + '" cy="' + (h / 2) + '" r="' + dot_r + '" fill="' + dot_color + '" />';
+        svg += '<circle cx="' + (w / 2) + '" cy="' + (h / 2) + '" r="' + dot_r + '" fill="' + dot_color + '" filter="url(#' + glow_id + ')" />';
         svg += '</svg>';
         $(container).html(svg);
         return;
@@ -32,13 +55,17 @@ $.fn.zato.eda.sparkline = function(container, data_points, options) {
     if (range === 0) {
         var baseline_y = h * 0.6;
         var points = [];
+        var area_points = pad + ',' + h;
         for (var flat_idx = 0; flat_idx < data_points.length; flat_idx++) {
             var flat_x = pad + (flat_idx / (data_points.length - 1)) * (w - 2 * pad);
             points.push(flat_x.toFixed(1) + ',' + baseline_y.toFixed(1));
+            area_points += ' ' + flat_x.toFixed(1) + ',' + baseline_y.toFixed(1);
         }
-        svg += '<polyline fill="none" stroke="' + color + '" stroke-width="1.5" points="' + points.join(' ') + '" />';
+        area_points += ' ' + (w - pad) + ',' + h;
+        svg += '<polygon fill="url(#' + grad_id + ')" points="' + area_points + '" />';
+        svg += '<polyline fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="' + points.join(' ') + '" filter="url(#' + glow_id + ')" />';
         var last_flat_x = (w - pad);
-        svg += '<circle cx="' + last_flat_x.toFixed(1) + '" cy="' + baseline_y.toFixed(1) + '" r="' + dot_r + '" fill="' + dot_color + '" />';
+        svg += '<circle cx="' + last_flat_x.toFixed(1) + '" cy="' + baseline_y.toFixed(1) + '" r="' + dot_r + '" fill="' + dot_color + '" filter="url(#' + glow_id + ')" />';
         svg += '<text x="' + (w / 2) + '" y="' + (baseline_y - 5) + '" text-anchor="middle" font-size="9" fill="' + dot_color + '">' + min_val + '</text>';
         svg += '</svg>';
         $(container).html(svg);
@@ -46,17 +73,21 @@ $.fn.zato.eda.sparkline = function(container, data_points, options) {
     }
 
     var points = [];
+    var area_points = pad + ',' + h;
     for (var idx = 0; idx < data_points.length; idx++) {
         var x = pad + (idx / (data_points.length - 1)) * (w - 2 * pad);
         var y = h - pad - ((data_points[idx] - min_val) / range) * (h - 2 * pad);
         points.push(x.toFixed(1) + ',' + y.toFixed(1));
+        area_points += ' ' + x.toFixed(1) + ',' + y.toFixed(1);
     }
+    area_points += ' ' + (w - pad) + ',' + h;
 
     var last_x = (w - pad);
     var last_y = h - pad - ((data_points[data_points.length - 1] - min_val) / range) * (h - 2 * pad);
 
-    svg += '<polyline fill="none" stroke="' + color + '" stroke-width="1.5" points="' + points.join(' ') + '" />';
-    svg += '<circle cx="' + last_x.toFixed(1) + '" cy="' + last_y.toFixed(1) + '" r="' + dot_r + '" fill="' + dot_color + '" />';
+    svg += '<polygon fill="url(#' + grad_id + ')" points="' + area_points + '" />';
+    svg += '<polyline fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="' + points.join(' ') + '" filter="url(#' + glow_id + ')" />';
+    svg += '<circle cx="' + last_x.toFixed(1) + '" cy="' + last_y.toFixed(1) + '" r="' + dot_r + '" fill="' + dot_color + '" filter="url(#' + glow_id + ')" />';
     svg += '</svg>';
 
     $(container).html(svg);
