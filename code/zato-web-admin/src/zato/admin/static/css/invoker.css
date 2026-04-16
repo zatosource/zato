@@ -552,6 +552,8 @@
     color: #7ab3ef !important;
     cursor: pointer;
     text-decoration: none !important;
+    background-image: none;
+    padding-bottom: 0;
     position: relative;
     display: inline-block;
     font-family: 'Zato_IDE_Font', monospace;
@@ -694,6 +696,8 @@
 .invoker-more-options-toggle a {
     color: #7ab3ef !important;
     text-decoration: none !important;
+    background-image: none;
+    padding-bottom: 0;
     cursor: pointer;
 }
 

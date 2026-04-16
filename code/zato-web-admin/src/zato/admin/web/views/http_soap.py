@@ -381,12 +381,42 @@ def ping(req, id, cluster_id): # type: ignore
     response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
 
     if isinstance(response, HttpResponseServerError):
-        return response
+        return JsonResponse({
+            'is_success': False,
+            'status_code': 0,
+            'status_text': response.content.decode('utf-8', 'replace') if hasattr(response, 'content') else 'Error',
+            'info': response.content.decode('utf-8', 'replace') if hasattr(response, 'content') else '',
+        })
     else:
-        if response.data.is_success:
-            return HttpResponse(response.data.info)
-        else:
-            return HttpResponseServerError(response.data.info)
+        logger.info('Ping response data -> %s', response.data)
+        is_success = response.data.is_success
+        status_code = getattr(response.data, 'status_code', None) or 0
+        status_text = getattr(response.data, 'status_text', None) or ''
+        info = getattr(response.data, 'info', None) or ''
+
+        if is_success and isinstance(is_success, str):
+            is_success = is_success.lower() not in ('false', '0', 'none', '')
+
+        if status_code and isinstance(status_code, str):
+            try:
+                status_code = int(status_code)
+            except (ValueError, TypeError):
+                status_code = 0
+
+        if not status_text and status_code:
+            status_text = str(status_code)
+
+        if not status_text and is_success:
+            status_text = 'OK'
+        elif not status_text:
+            status_text = info[:200] if info else 'Error'
+
+        return JsonResponse({
+            'is_success': bool(is_success),
+            'status_code': status_code,
+            'status_text': status_text,
+            'info': info,
+        })
 
 # ################################################################################################################################
 # ################################################################################################################################
