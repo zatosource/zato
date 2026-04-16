@@ -392,11 +392,19 @@ class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
     input = 'id', '-ping_path'
-    output = 'id', 'is_success', '-info', '-status_code', '-status_text', '-exception_message'
+    output = 'id', 'is_success', '-info', '-status_code', '-status_text', '-exception_message', '-inner_exception_message'
 
     def handle(self):
 
         name = self.request.input.id
+
+        self.response.payload.id = self.request.input.id
+        self.response.payload.is_success = False
+        self.response.payload.status_code = 0
+        self.response.payload.status_text = ''
+        self.response.payload.info = ''
+        self.response.payload.exception_message = ''
+        self.response.payload.inner_exception_message = ''
 
         for entity_type in ('outgoing_rest', 'outgoing_soap'):
             items = self.server.config_store.get_list(entity_type)
@@ -404,31 +412,20 @@ class Ping(AdminService):
                 if str(item.get('id')) == str(name) or item.get('name') == str(name):
                     transport = item.get('transport', 'plain_http')
                     config_dict = getattr(self.outgoing, transport)
-                    self.response.payload.id = self.request.input.id
                     try:
                         response = config_dict.get(item['name']).ping(
                             self.cid, return_response=True, ping_path=self.request.input.ping_path)
-                        is_success = 200 <= response.status_code < 300
+                        self.response.payload.is_success = 200 <= response.status_code < 300
                         self.response.payload.status_code = response.status_code
                         self.response.payload.status_text = '{} {}'.format(response.status_code, response.reason)
                         self.response.payload.info = response.text or ''
                     except Exception as e:
-                        logger.info(
-                            'http-soap.Ping: caught %s; args=%r len(args)=%s str(e)=%r',
-                            type(e).__name__, e.args, len(e.args) if e.args else 0, str(e))
                         msg = e.args[0] if e.args else str(e)
                         if not isinstance(msg, str):
                             msg = str(msg)
-                        logger.info(
-                            'http-soap.Ping: payload exception_message=%r info=%r (same field)',
-                            msg, msg)
-                        self.response.payload.status_code = 0
-                        self.response.payload.status_text = ''
                         self.response.payload.exception_message = msg
+                        self.response.payload.inner_exception_message = getattr(e, 'inner_message', '') or ''
                         self.response.payload.info = msg
-                        is_success = False
-                    finally:
-                        self.response.payload.is_success = is_success
                     return
 
 # ################################################################################################################################

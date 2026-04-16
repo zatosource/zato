@@ -259,7 +259,7 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format('<td style="text-align:center">{0}</td>', friendly_names[job.job_type]);
     row += String.format('<td style="text-align:center">{0}</td>', data.definition_text);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.execute('{0}')\">Execute</a>", job.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.scheduler.execute('{0}', this)\">Execute</a>", job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job.job_type, job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.delete_('{0}');\">Delete</a>", job.id));
     row += String.format("<td class='ignore job_id_{0}'>{0}</td>", job.id);
@@ -332,22 +332,13 @@ $.fn.zato.scheduler.create = function(job_type) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.execute = function(id) {
-
-    var callback = function(data, status) {
-        var success = (status == 'success' || status == 'parsererror');
-        if(success) {
-            msg = 'OK, request submitted';
-        }
-        else {
-            msg = data.responseText;
-        }
-        $.fn.zato.user_message(success, msg);
-    }
-
+$.fn.zato.scheduler.execute = function(id, link_elem) {
     var url = String.format('./execute/{0}/cluster/{1}/', id, $('#cluster_id').val());
-    $.fn.zato.post(url, callback);
-
+    $.fn.zato.action_runner.run({
+        link_elem: link_elem,
+        url: url,
+        details_modal_title: 'Execute response'
+    });
 }
 
 // /////////////////////////////////////////////////////////////////////////////

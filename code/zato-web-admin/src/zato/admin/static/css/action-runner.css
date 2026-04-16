@@ -1,0 +1,30 @@
+/*
+ * action-runner.css
+ *
+ * Styles for the reusable action-runner tippy tooltip.
+ *
+ * The spinner keyframes (zato-spin) live in style.css globally, and the
+ * "Show details" modal reuses the existing .invoker-modal-* classes from
+ * invoker.css, so this file only holds action-runner-specific rules.
+ */
+
+.action-runner-label {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.action-runner-label.is-success {
+    color: #85e89d;
+}
+
+.action-runner-label.is-error {
+    color: #f97583;
+}
+
+.action-runner-details-link {
+    font-size: 12px;
+    margin-top: 2px;
+    display: inline-block;
+}

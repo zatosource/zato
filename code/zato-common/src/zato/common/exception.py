@@ -125,8 +125,9 @@ ClientHTTPError = Reportable
 # ################################################################################################################################
 
 class BackendInvocationError(Reportable):
-    def __init__(self, cid, msg='REST invocation error', needs_msg=False):
+    def __init__(self, cid, msg='REST invocation error', needs_msg=False, inner_message=''):
         super(BackendInvocationError, self).__init__(cid, msg, BAD_REQUEST, needs_msg)
+        self.inner_message = inner_message
 
 # ################################################################################################################################
 
