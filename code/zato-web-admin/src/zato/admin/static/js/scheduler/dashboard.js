@@ -31,6 +31,14 @@ $.fn.zato.scheduler.dashboard.outcome_bar_colors = {
     'missed_catchup': '#1a6fa0'
 };
 
+$.fn.zato.scheduler.dashboard.outcome_bar_tints = {
+    'ok': '#d4edda',
+    'error': '#f5d5d2',
+    'timeout': '#fde8cd',
+    'skipped_concurrent': '#ede5fb',
+    'missed_catchup': '#d1e8f4'
+};
+
 $.fn.zato.scheduler.dashboard.outcome_labels = {
     'ok': 'OK',
     'error': 'Error',
@@ -455,6 +463,11 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
         svg += '<stop offset="0.5" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.06"/>';
         svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.0"/>';
         svg += '</linearGradient>';
+        svg += '<linearGradient id="lollipopGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
+        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.08"/>';
+        svg += '<stop offset="0.6" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.02"/>';
+        svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.0"/>';
+        svg += '</linearGradient>';
     }
     svg += '</defs>';
 
@@ -494,11 +507,47 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
                 y: val > 0 ? bar_y : baseline_y,
                 val: val
             });
+        }
+    }
 
-            if (val > 0 && $.fn.zato.scheduler.dashboard.show_bars) {
-                svg += '<rect x="' + bar_x.toFixed(2) + '" y="' + bar_y.toFixed(1) + '" ';
-                svg += 'width="' + bar_width.toFixed(2) + '" height="' + bar_h.toFixed(1) + '" ';
-                svg += 'fill="' + bar_colors[layer_key] + '" opacity="0.85" />';
+    if ($.fn.zato.scheduler.dashboard.show_bars) {
+        var lollipop_edge_left = padding_left;
+        var lollipop_edge_right = padding_left + draw_width;
+
+        for (var ll = 0; ll < visible_keys.length; ll++) {
+            var ll_key = visible_keys[ll];
+            var ll_pts = layer_points[ll_key];
+
+            var ll_spline_pts = [];
+            ll_spline_pts.push({x: lollipop_edge_left, y: ll_pts[0].y});
+            for (var lp = 0; lp < ll_pts.length; lp++) {
+                ll_spline_pts.push(ll_pts[lp]);
+            }
+            ll_spline_pts.push({x: lollipop_edge_right, y: ll_pts[ll_pts.length - 1].y});
+
+            var ll_path = 'M' + ll_spline_pts[0].x.toFixed(1) + ',' + ll_spline_pts[0].y.toFixed(1);
+            for (var ls = 1; ls < ll_spline_pts.length; ls++) {
+                var ls_prev = ll_spline_pts[ls - 1];
+                var ls_curr = ll_spline_pts[ls];
+                var ls_cpx = (ls_prev.x + ls_curr.x) / 2;
+                ll_path += ' C' + ls_cpx.toFixed(1) + ',' + ls_prev.y.toFixed(1) +
+                           ' ' + ls_cpx.toFixed(1) + ',' + ls_curr.y.toFixed(1) +
+                           ' ' + ls_curr.x.toFixed(1) + ',' + ls_curr.y.toFixed(1);
+            }
+            var ll_fill = ll_path +
+                ' L' + lollipop_edge_right.toFixed(1) + ',' + baseline_y.toFixed(1) +
+                ' L' + lollipop_edge_left.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
+
+            svg += '<path d="' + ll_fill + '" fill="url(#areaGrad_' + ll_key + ')" />';
+
+            for (var li = 0; li < ll_pts.length; li++) {
+                if (ll_pts[li].val > 0) {
+                    var lcx = ll_pts[li].x.toFixed(2);
+                    var lcy = ll_pts[li].y.toFixed(1);
+                    svg += '<line x1="' + lcx + '" y1="' + baseline_y.toFixed(1) + '" x2="' + lcx + '" y2="' + lcy + '" ';
+                    svg += 'stroke="' + bar_colors[ll_key] + '" stroke-width="1.5" />';
+                    svg += '<circle cx="' + lcx + '" cy="' + lcy + '" r="3" fill="' + bar_colors[ll_key] + '" />';
+                }
             }
         }
     }
@@ -889,11 +938,6 @@ $.fn.zato.scheduler.dashboard.execute_job = function(job_id) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.dashboard.update_refresh_indicator = function() {
-    var now = new Date();
-    var hours = ('0' + now.getHours()).slice(-2);
-    var minutes = ('0' + now.getMinutes()).slice(-2);
-    var seconds = ('0' + now.getSeconds()).slice(-2);
-    $('#scheduler-last-refresh').text(hours + ':' + minutes + ':' + seconds);
 };
 
 // ////////////////////////////////////////////////////////////////////////////
