@@ -488,11 +488,9 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
             var bar_h = val > 0 ? Math.max(2, (val / max_stack) * draw_height) : 0;
             var bar_x = padding_left + bi * bucket_slot_width + group_padding + layer * (bar_width + bar_gap);
             var bar_y = baseline_y - bar_h;
-            var center_point_y = val > 0 ? baseline_y - (val / max_stack) * draw_height : baseline_y;
-
             layer_points[layer_key].push({
-                x: padding_left + (bi + 0.5) * bucket_slot_width,
-                y: center_point_y,
+                x: bar_x + bar_width / 2,
+                y: val > 0 ? bar_y + bar_radius : baseline_y,
                 val: val
             });
 
@@ -632,13 +630,12 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
         var band_html = '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" xmlns="http://www.w3.org/2000/svg">';
         band_html += '<rect x="' + band_left.toFixed(1) + '" y="' + padding_top + '" width="' + bucket_width_px.toFixed(1) + '" height="' + draw_height + '" fill="rgba(0,0,0,0.06)" rx="2" />';
 
-        var center_x = padding_left + (bucket_index + 0.5) * bucket_width_px;
         for (var dk = 0; dk < visible_keys.length; dk++) {
             var dk_key = visible_keys[dk];
             var pts = layer_points[dk_key];
             if (pts && pts[bucket_index] && pts[bucket_index].val > 0) {
                 var pt = pts[bucket_index];
-                band_html += '<circle cx="' + center_x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="4.5" fill="#fff" stroke="' + bar_colors[dk_key] + '" stroke-width="2" />';
+                band_html += '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="4.5" fill="#fff" stroke="' + bar_colors[dk_key] + '" stroke-width="2" />';
             }
         }
         band_html += '</svg>';
