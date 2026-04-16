@@ -28,15 +28,24 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HTTPSOAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.http_soap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'validate_tls']);
 
     var _connection = $('input[name="connection"]').val();
     var _transport = $('input[name="transport"]').val();
-    var _entity_type = (_connection === 'channel' ? 'channel' : 'outgoing') + '_' + (_transport === 'plain_http' ? 'rest' : 'soap');
+    var _is_channel = (_connection === 'channel');
+    var _entity_type = (_is_channel ? 'channel' : 'outgoing') + '_' + (_transport === 'plain_http' ? 'rest' : 'soap');
+
+    var _required_fields = ['name', 'service', 'security', 'validate_tls'];
+    if(_is_channel) {
+        _required_fields.splice(1, 0, 'url_path');
+    }
+    $.fn.zato.data_table.setup_forms(_required_fields);
+
     var unique_constraints = [
-        {field: 'name', entity_type: _entity_type, attr_name: 'name'},
-        {field: 'url_path', entity_type: _entity_type, attr_name: 'url_path'}
+        {field: 'name', entity_type: _entity_type, attr_name: 'name'}
     ];
+    if(_is_channel) {
+        unique_constraints.push({field: 'url_path', entity_type: _entity_type, attr_name: 'url_path'});
+    }
     $.each(unique_constraints, function(i, c) {
         $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
         $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);

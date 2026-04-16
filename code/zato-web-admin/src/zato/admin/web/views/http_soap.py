@@ -83,7 +83,7 @@ def _get_edit_create_message(params, prefix=''): # type: ignore
         'name': params[prefix + 'name'],
         'is_active': bool(params.get(prefix + 'is_active')),
         'host': params.get(prefix + 'host'),
-        'url_path': params[prefix + 'url_path'],
+        'url_path': params.get(prefix + 'url_path', '/'),
         'merge_url_params_req': bool(params.get(prefix + 'merge_url_params_req')),
         'match_slash': bool(params.get(prefix + 'match_slash')),
         'http_accept': params.get(prefix + 'http_accept'),
@@ -208,6 +208,10 @@ def index(req): # type: ignore
 
         create_form = CreateForm(_security, cache_list, _soap_versions, req=req)
         edit_form = EditForm(_security, cache_list, _soap_versions, prefix='edit', req=req)
+
+        if connection == 'outgoing':
+            create_form.fields['url_path'].required = False
+            edit_form.fields['url_path'].required = False
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,

@@ -869,8 +869,18 @@ table.multi-select-table tbody tr:hover {
     font-weight: 400;
 }
 
+.chosen-container .chosen-results li.highlighted {
+    background-color: rgba(0, 0, 0, 0.03);
+    background-image: none;
+    color: #000;
+}
+
 .chosen-container .chosen-results li:hover {
     color: #000 !important;
+}
+
+.chosen-container .chosen-results li.result-selected {
+    color: #000;
 }
 
 input[data-zato-validator-required="required"]::placeholder {
