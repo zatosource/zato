@@ -85,7 +85,7 @@ impl From<&str> for OnMissedPolicy {
 }
 
 pub mod outcome {
-    pub const EXECUTED: &str = "executed";
+    pub const EXECUTED: &str = "ok";
     pub const SKIPPED_CONCURRENT: &str = "skipped_concurrent";
     pub const SKIPPED_HOLIDAY: &str = "skipped_holiday";
     pub const TIMEOUT: &str = "timeout";

@@ -32,7 +32,7 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List
+     PubSub, SCHEDULER, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
@@ -1310,7 +1310,7 @@ class WorkerStore(_WorkerStoreBase):
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg:'bunch_', args:'any_'=None) -> 'any_':
         import time as _time
         _t0 = _time.monotonic()
-        outcome = 'executed'
+        outcome = SCHEDULER.OUTCOME.OK
 
         job_name = getattr(msg, 'name', '')
         job_id = ''
@@ -1321,7 +1321,7 @@ class WorkerStore(_WorkerStoreBase):
         try:
             response = self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
         except Exception:
-            outcome = 'error'
+            outcome = SCHEDULER.OUTCOME.ERROR
             response = None
             logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
 

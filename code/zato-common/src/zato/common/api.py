@@ -398,6 +398,14 @@ class CACHE:
 
 class SCHEDULER:
 
+    class OUTCOME:
+        OK = 'ok'
+        ERROR = 'error'
+        TIMEOUT = 'timeout'
+        SKIPPED_CONCURRENT = 'skipped_concurrent'
+        SKIPPED_HOLIDAY = 'skipped_holiday'
+        MISSED_CATCHUP = 'missed_catchup'
+
     InitialSleepTime = 0.1
     EmbeddedIndicator      = 'zato_embedded'
     EmbeddedIndicatorBytes = EmbeddedIndicator.encode('utf8')

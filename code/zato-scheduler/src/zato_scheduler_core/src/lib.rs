@@ -158,7 +158,7 @@ fn scheduler_mark_complete(job_id: &str, outcome: &str, duration_ms: u64) -> PyR
             rj.in_flight_since = None;
             if let Some(last) = rj.history.back_mut() {
                 last.duration_ms = Some(duration_ms);
-                if outcome != "executed" {
+                if outcome != "ok" {
                     last.outcome = outcome.to_string();
                 }
             }

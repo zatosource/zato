@@ -30,7 +30,7 @@ from gevent.lock import RLock
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SERVER_STARTUP, \
+from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SCHEDULER, SERVER_STARTUP, \
     SEC_DEF_TYPE
 from zato.common.audit import audit_pii
 from zato.common.broker_message import HOT_DEPLOY, PUBSUB
@@ -1066,12 +1066,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 },
             })
 
-            outcome = 'executed'
+            outcome = SCHEDULER.OUTCOME.OK
             _t0 = _time.monotonic()
             try:
                 self.worker_store.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
             except Exception:
-                outcome = 'error'
+                outcome = SCHEDULER.OUTCOME.ERROR
                 logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
 
             duration_ms = int((_time.monotonic() - _t0) * 1000)

@@ -8,7 +8,7 @@ $.fn.zato.scheduler.dashboard = {};
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.dashboard.outcome_colors = {
-    'executed': '#1b855e',
+    'ok': '#1b855e',
     'error': '#e0226e',
     'timeout': '#b35e00',
     'skipped_concurrent': '#6a4c93',
@@ -16,7 +16,7 @@ $.fn.zato.scheduler.dashboard.outcome_colors = {
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bg_colors = {
-    'executed': 'rgba(27, 133, 94, 0.12)',
+    'ok': 'rgba(27, 133, 94, 0.12)',
     'error': 'rgba(224, 34, 110, 0.12)',
     'timeout': 'rgba(179, 94, 0, 0.12)',
     'skipped_concurrent': 'rgba(106, 76, 147, 0.12)',
@@ -24,7 +24,7 @@ $.fn.zato.scheduler.dashboard.outcome_bg_colors = {
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bar_colors = {
-    'executed': '#2d8f45',
+    'ok': '#2d8f45',
     'error': '#c0392b',
     'timeout': '#b45309',
     'skipped_concurrent': '#7c3aed',
@@ -32,7 +32,7 @@ $.fn.zato.scheduler.dashboard.outcome_bar_colors = {
 };
 
 $.fn.zato.scheduler.dashboard.outcome_labels = {
-    'executed': 'Executed',
+    'ok': 'OK',
     'error': 'Error',
     'timeout': 'Timeout',
     'skipped_concurrent': 'Skipped (concurrent)',
@@ -324,7 +324,7 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     var padding_top = 12;
     var padding_right = 8;
 
-    var outcome_keys = ['executed', 'error', 'timeout', 'skipped_concurrent', 'missed_catchup'];
+    var outcome_keys = ['ok', 'error', 'timeout', 'skipped_concurrent', 'missed_catchup'];
     var bar_colors = $.fn.zato.scheduler.dashboard.outcome_bar_colors;
     var labels = $.fn.zato.scheduler.dashboard.outcome_labels;
     var hidden_outcomes = $.fn.zato.scheduler.dashboard._get_hidden_outcomes();
@@ -369,7 +369,7 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     for (var timeline_index = 0; timeline_index < filtered.length; timeline_index++) {
         var record = filtered[timeline_index];
         var time = new Date(record.actual_fire_time_iso).getTime();
-        var outcome = record.outcome || 'executed';
+        var outcome = record.outcome || 'ok';
         var target_bucket = Math.floor((time - min_time) / bucket_size);
         if (target_bucket >= bucket_count) {
             target_bucket = bucket_count - 1;
@@ -401,12 +401,11 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
 
     var max_stack = 0;
     for (var ms_index = 0; ms_index < buckets.length; ms_index++) {
-        var stack_total = 0;
         for (var ms_key = 0; ms_key < visible_keys.length; ms_key++) {
-            stack_total += buckets[ms_index][visible_keys[ms_key]];
-        }
-        if (stack_total > max_stack) {
-            max_stack = stack_total;
+            var ms_val = buckets[ms_index][visible_keys[ms_key]];
+            if (ms_val > max_stack) {
+                max_stack = ms_val;
+            }
         }
     }
     if (max_stack === 0) {
@@ -443,29 +442,16 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     }
 
     var layer_points = {};
-    var cumulative_bottoms = [];
-    for (var cb = 0; cb < bucket_count; cb++) {
-        cumulative_bottoms.push(0);
-    }
 
     for (var layer = 0; layer < visible_keys.length; layer++) {
         var layer_key = visible_keys[layer];
         var points_top = [];
-        var points_bottom = [];
 
         for (var bi = 0; bi < bucket_count; bi++) {
             var bx = padding_left + ((bi + 0.5) / bucket_count) * draw_width;
             var val = buckets[bi][layer_key];
-            var bottom_val = cumulative_bottoms[bi];
-            var top_val = bottom_val + val;
-
-            var y_top = baseline_y - (top_val / max_stack) * draw_height;
-            var y_bottom = baseline_y - (bottom_val / max_stack) * draw_height;
-
+            var y_top = baseline_y - (val / max_stack) * draw_height;
             points_top.push({x: bx, y: y_top, val: val});
-            points_bottom.push({x: bx, y: y_bottom});
-
-            cumulative_bottoms[bi] = top_val;
         }
 
         layer_points[layer_key] = points_top;
@@ -480,18 +466,8 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
                          ' ' + curr.x.toFixed(1) + ',' + curr.y.toFixed(1);
         }
 
-        for (var bp = points_bottom.length - 1; bp >= 0; bp--) {
-            if (bp === points_bottom.length - 1) {
-                area_path += ' L' + points_bottom[bp].x.toFixed(1) + ',' + points_bottom[bp].y.toFixed(1);
-            } else {
-                var prev_b = points_bottom[bp + 1];
-                var curr_b = points_bottom[bp];
-                var cp_bx = (prev_b.x + curr_b.x) / 2;
-                area_path += ' C' + cp_bx.toFixed(1) + ',' + prev_b.y.toFixed(1) +
-                             ' ' + cp_bx.toFixed(1) + ',' + curr_b.y.toFixed(1) +
-                             ' ' + curr_b.x.toFixed(1) + ',' + curr_b.y.toFixed(1);
-            }
-        }
+        area_path += ' L' + points_top[points_top.length - 1].x.toFixed(1) + ',' + baseline_y.toFixed(1);
+        area_path += ' L' + points_top[0].x.toFixed(1) + ',' + baseline_y.toFixed(1);
         area_path += ' Z';
 
         svg += '<path d="' + area_path + '" fill="url(#areaGrad_' + layer_key + ')" />';
