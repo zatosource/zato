@@ -1,0 +1,206 @@
+/* Dashboard kit - foundation.
+   Page-level primitives shared by every dashboard: top nav override,
+   hero strip, section wrappers, responsive breakpoints, skeleton
+   shimmer. Nothing in here is specific to scheduler or EDA. */
+
+.dashboard-page {
+    min-height: calc(100vh - 60px);
+}
+
+/* Hide the top nav border-bottom on pages that host a dashboard */
+
+.pure-css-nav {
+    border-bottom: none;
+}
+
+/* Hero metrics strip */
+
+.dashboard-hero {
+    background: linear-gradient(180deg, var(--zato-seablue-light1) 0%, var(--zato-seablue) 100%);
+    padding: 28px 0;
+    position: relative;
+}
+
+.dashboard-hero-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.dashboard-hero-tiles {
+    display: flex;
+    gap: 16px;
+}
+
+/* Sections */
+
+.dashboard-section {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.dashboard-chart-section {
+    margin-top: 28px;
+}
+
+.dashboard-grid-section {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+.dashboard-grid-section .dashboard-card {
+    display: flex;
+    flex-direction: column;
+    max-height: 560px;
+    min-height: 320px;
+}
+
+/* Cards */
+
+.dashboard-card {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    padding: 24px;
+}
+
+.dashboard-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.dashboard-card-header h3 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgb(17, 17, 17);
+    margin: 0;
+    padding: 0;
+}
+
+.dashboard-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums lining-nums;
+    background: #e8f4ff;
+    color: var(--zato-seablue);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-pill-failures {
+    background: rgba(224, 34, 110, 0.12);
+    color: #e0226e;
+}
+
+.dashboard-card-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    margin: 0 -24px -24px;
+    padding: 0 24px 24px;
+}
+
+.dashboard-card-scroll > table {
+    margin: 0;
+}
+
+.dashboard-card-scroll > table thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-card .zato-table {
+    box-shadow: none;
+    border-radius: 0;
+}
+
+.dashboard-th-dot {
+    width: 28px;
+}
+
+.dashboard-no-data {
+    padding: 20px 0;
+    text-align: center;
+    color: #a0a0a5;
+    font-size: 13px;
+}
+
+.dashboard-all-clear {
+    padding: 28px 0;
+    text-align: center;
+    color: #1b855e;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dashboard-all-clear svg {
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.dashboard-error-cell {
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    color: #a0a0a5;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+}
+
+.dashboard-footer {
+    height: 40px;
+}
+
+/* Skeleton loading shimmer */
+
+@keyframes dashboard-skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.dashboard-skeleton {
+    background: linear-gradient(90deg, #eaecee 25%, #f5f6f8 50%, #eaecee 75%);
+    background-size: 200% 100%;
+    animation: dashboard-skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+/* Responsive */
+
+@media (max-width: 960px) {
+    .dashboard-hero-tiles {
+        flex-wrap: wrap;
+    }
+    .dashboard-tile {
+        min-width: 140px;
+    }
+    .dashboard-grid-section {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-grid-section .dashboard-card {
+        max-height: none;
+    }
+    .dashboard-config-grid {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-stat-row {
+        flex-wrap: wrap;
+    }
+}

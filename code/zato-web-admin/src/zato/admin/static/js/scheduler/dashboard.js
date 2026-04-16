@@ -1241,7 +1241,7 @@ $.fn.zato.scheduler.dashboard._tile_hover_specs = [
 $.fn.zato.scheduler.dashboard._clear_tile_hover = function() {
     var specs = $.fn.zato.scheduler.dashboard._tile_hover_specs;
     for (var i = 0; i < specs.length; i++) {
-        $.fn.zato.eda.sparkline_clear_overlay(specs[i].sel);
+        $.fn.zato.dashboard_kit.sparkline.clear_overlay(specs[i].sel);
     }
     $('#dashboard-tile-tooltip').css('display', 'none');
 };
@@ -1267,7 +1267,7 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
     var dash = $.fn.zato.scheduler.dashboard;
     dash._cancel_clear_tile_hover();
     var specs = dash._tile_hover_specs;
-    var registry = $.fn.zato.eda.sparkline_registry();
+    var registry = $.fn.zato.dashboard_kit.sparkline.registry();
     var active_entry = registry[active_sel];
     if (!active_entry) return;
 
@@ -1339,7 +1339,7 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
         if (mapped_index >= 0) {
             val = dash._format_number_full(spec_buffer[mapped_index].value);
             if (entry) {
-                $.fn.zato.eda.sparkline_show_marker(spec.sel, mapped_index, spec.color);
+                $.fn.zato.dashboard_kit.sparkline.show_marker(spec.sel, mapped_index, spec.color);
             }
         } else {
             val = '\u2013';
@@ -1509,7 +1509,7 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
         var spec = tile_specs[tile_i];
         var merged = $.extend({}, spec.opts, {dot_style: spec.dot_style});
         var values = $.fn.zato.scheduler.dashboard._spark_values(spec.key);
-        $.fn.zato.eda.sparkline(spec.sel, values, merged);
+        $.fn.zato.dashboard_kit.sparkline.render(spec.sel, values, merged);
     }
 
     $.fn.zato.scheduler.dashboard._setup_tile_hover();

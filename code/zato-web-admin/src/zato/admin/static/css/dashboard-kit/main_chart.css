@@ -1,0 +1,119 @@
+/* Dashboard kit - main chart.
+   Chart body, legend badges, chart controls (time-range pill, chart
+   type toggle, count pill), crosshair tooltip. */
+
+.dashboard-chart-body {
+    min-height: 180px;
+    position: relative;
+}
+
+.dashboard-chart-body svg {
+    display: block;
+    width: 100%;
+}
+
+.dashboard-chart-legend {
+    display: flex;
+    gap: 8px;
+    padding-top: 14px;
+    flex-wrap: wrap;
+}
+
+/* Legend tags */
+
+.dashboard-legend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 100ms ease, background 100ms ease;
+}
+
+.dashboard-legend-badge:hover {
+    opacity: 0.85;
+}
+
+.dashboard-legend-badge-off {
+    opacity: 0.3;
+    text-decoration: line-through;
+}
+
+.dashboard-legend-badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Chart controls (pill, toggle) */
+
+.dashboard-pill-clickable {
+    cursor: pointer;
+}
+
+.dashboard-pill-clickable:hover {
+    background: #d6eeff;
+}
+
+.dashboard-pill-clickable::after {
+    content: ' \25BE';
+    font-size: 9px;
+    opacity: 0.5;
+}
+
+.dashboard-chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.dashboard-chart-type-toggle {
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    box-sizing: border-box;
+}
+
+.dashboard-chart-type-toggle::after {
+    content: none;
+}
+
+.dashboard-chart-type-toggle svg {
+    display: block;
+}
+
+.dashboard-pill-clickable#dashboard-exec-count {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    box-sizing: border-box;
+}
+
+/* Bar chart tooltip */
+
+.dashboard-chart-tooltip {
+    position: fixed;
+    background: #262630;
+    color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    font-size: 12px;
+    padding: 6px 10px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 9999;
+    display: none;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+}

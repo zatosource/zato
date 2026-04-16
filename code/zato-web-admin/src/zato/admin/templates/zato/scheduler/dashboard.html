@@ -8,7 +8,13 @@
 {% endblock %}
 
 {% block "extra_js" %}
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time_range.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/stat_tile.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/main_chart.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {

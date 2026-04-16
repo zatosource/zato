@@ -10,7 +10,9 @@
 {% block help_icon_id %}eda-publish-help{% endblock %}
 
 {% block extra_page_js %}
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/utils.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/publish.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
