@@ -1242,24 +1242,36 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def import_test_pubsub_enmasse(self):
-
-        import zato.server.service.internal.pubsub
-
-        config_path = os.path.join(os.path.dirname(zato.server.service.internal.pubsub.__file__), 'enmasse.yaml')
-        self.config_store.load_yaml(config_path)
-        self.reload_config()
-        return True
-
-# ################################################################################################################################
-
-    def import_test_scheduler_enmasse(self):
+    def import_demo_scheduler(self):
 
         import zato.server.service.internal.scheduler
 
         config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'demo-enmasse.yaml')
         self.config_store.load_yaml(config_path)
         self.reload_config()
+        return True
+
+# ################################################################################################################################
+
+    def import_demo_eda(self):
+        """ Seeds a demo EDA environment: 7 topics, 8 subscribers with a
+        realistic fan-out, plus a long-running publisher greenlet that
+        produces ~50 msg/min so the EDA dashboard chart has live data.
+        Idempotent: clicking the button twice reloads the YAML but does not
+        stack additional publisher greenlets.
+        """
+
+        import zato.server.service.internal.pubsub
+        from zato.server.base.parallel.demo_eda import start_publisher
+
+        config_path = os.path.join(
+            os.path.dirname(zato.server.service.internal.pubsub.__file__),
+            'demo-eda-enmasse.yaml',
+        )
+        self.config_store.load_yaml(config_path)
+        self.reload_config()
+
+        start_publisher(self)
         return True
 
 # ################################################################################################################################

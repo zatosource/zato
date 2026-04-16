@@ -130,8 +130,6 @@ urlpatterns += [
         login_required(service.enmasse_export), name='service-enmasse-export'), # type: ignore
     url(r'^zato/service/enmasse-import$',
         login_required(service.enmasse_import), name='service-enmasse-import'), # type: ignore
-    url(r'^zato/pubsub/import-test-config$',
-        login_required(service.import_test_config), name='pubsub-import-test-config'), # type: ignore
     url(r'^zato/pubsub/download-openapi$',
         login_required(service.download_openapi), name='pubsub-download-openapi'), # type: ignore
     ]
@@ -243,10 +241,10 @@ urlpatterns += [
     url(r'^zato/scheduler/dashboard/job/(?P<job_id>.*)/$',
         login_required(scheduler_dashboard.job_detail), name='scheduler-job-detail'),
 
-    # Scheduler import test config
+    # Scheduler import demo config
 
-    url(r'^zato/scheduler/import-test-config$',
-        login_required(service.import_test_scheduler_config), name='scheduler-import-test-config'),
+    url(r'^zato/scheduler/import-demo-config$',
+        login_required(service.import_demo_scheduler_config), name='scheduler-import-demo-config'),
     ]
 
 # ################################################################################################################################
@@ -939,6 +937,8 @@ urlpatterns += [
         login_required(eda_dashboard.index), name='eda-dashboard'),
     url(r'^zato/eda/dashboard/poll/$',
         login_required(eda_dashboard.poll), name='eda-dashboard-poll'),
+    url(r'^zato/eda/import-demo-config$',
+        login_required(eda_dashboard.import_demo_config), name='eda-import-demo-config'),
 
     path('zato/eda/topic/<str:topic_name>/',
         login_required(eda_topic_detail.index), name='eda-topic-detail'),

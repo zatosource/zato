@@ -330,26 +330,10 @@ def enmasse_import(req):
 
 # ################################################################################################################################
 
-@method_allowed('GET', 'POST')
-def import_test_config(req):
+def import_demo_scheduler_config(req):
 
     response = req.zato.client.invoke('zato.server.invoker', {
-        'func_name': 'import_test_pubsub_enmasse'
-    })
-
-    response = str(response.data)
-
-    out = HttpResponse()
-    out.content = response
-
-    return out
-
-# ################################################################################################################################
-
-def import_test_scheduler_config(req):
-
-    response = req.zato.client.invoke('zato.server.invoker', {
-        'func_name': 'import_test_scheduler_enmasse'
+        'func_name': 'import_demo_scheduler'
     })
 
     response = str(response.data)

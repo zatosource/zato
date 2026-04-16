@@ -63,7 +63,8 @@
 {% include "zato/search-form.html" with page_prompt="Search"%}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.pubsub.topic.create()">Create a new pub/sub topic</a>
+            <a href="javascript:$.fn.zato.pubsub.topic.create()">Create a new pub/sub topic</a> |
+            <a href="javascript:$.fn.zato.pubsub.import_demo_config()" class="common">Import demo config</a>
         </div>
 
             <table class="zato-table" id="data-table">

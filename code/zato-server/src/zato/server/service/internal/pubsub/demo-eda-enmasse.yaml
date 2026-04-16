@@ -1,0 +1,154 @@
+security:
+  - name: demo_eda.publisher
+    type: basic_auth
+    username: demo.eda.publisher
+    password: demo.eda.publisher.secret
+
+  - name: demo_eda.crm-sync
+    type: basic_auth
+    username: demo.eda.crm-sync
+    password: demo.eda.crm-sync.secret
+
+  - name: demo_eda.audit-tap
+    type: basic_auth
+    username: demo.eda.audit-tap
+    password: demo.eda.audit-tap.secret
+
+  - name: demo_eda.marketing-automation
+    type: basic_auth
+    username: demo.eda.marketing-automation
+    password: demo.eda.marketing-automation.secret
+
+  - name: demo_eda.billing-reports
+    type: basic_auth
+    username: demo.eda.billing-reports
+    password: demo.eda.billing-reports.secret
+
+  - name: demo_eda.reconciliation
+    type: basic_auth
+    username: demo.eda.reconciliation
+    password: demo.eda.reconciliation.secret
+
+  - name: demo_eda.order-fulfillment
+    type: basic_auth
+    username: demo.eda.order-fulfillment
+    password: demo.eda.order-fulfillment.secret
+
+  - name: demo_eda.customer-notifications
+    type: basic_auth
+    username: demo.eda.customer-notifications
+    password: demo.eda.customer-notifications.secret
+
+  - name: demo_eda.compliance-archive
+    type: basic_auth
+    username: demo.eda.compliance-archive
+    password: demo.eda.compliance-archive.secret
+
+pubsub_topic:
+  - name: crm.contacts.updated
+    description: CRM contact record updates
+  - name: crm.leads.created
+    description: CRM new leads
+  - name: billing.invoices.issued
+    description: Invoices issued to customers
+  - name: billing.payments.received
+    description: Payments received from customers
+  - name: orders.created
+    description: Newly created orders
+  - name: orders.fulfilled
+    description: Orders marked fulfilled
+  - name: system.audit.events
+    description: Cross-system audit events
+
+pubsub_permission:
+  - security: demo_eda.publisher
+    pub:
+      - crm.*
+      - billing.*
+      - orders.*
+      - system.*
+
+  - security: demo_eda.crm-sync
+    sub:
+      - crm.contacts.updated
+      - crm.leads.created
+
+  - security: demo_eda.audit-tap
+    sub:
+      - crm.contacts.updated
+      - billing.invoices.issued
+      - orders.created
+      - system.audit.events
+
+  - security: demo_eda.marketing-automation
+    sub:
+      - crm.leads.created
+
+  - security: demo_eda.billing-reports
+    sub:
+      - billing.invoices.issued
+      - billing.payments.received
+
+  - security: demo_eda.reconciliation
+    sub:
+      - billing.payments.received
+
+  - security: demo_eda.order-fulfillment
+    sub:
+      - orders.created
+      - orders.fulfilled
+
+  - security: demo_eda.customer-notifications
+    sub:
+      - orders.fulfilled
+
+  - security: demo_eda.compliance-archive
+    sub:
+      - system.audit.events
+
+pubsub_subscription:
+  - security: demo_eda.crm-sync
+    delivery_type: pull
+    topic_list:
+      - crm.contacts.updated
+      - crm.leads.created
+
+  - security: demo_eda.audit-tap
+    delivery_type: pull
+    topic_list:
+      - crm.contacts.updated
+      - billing.invoices.issued
+      - orders.created
+      - system.audit.events
+
+  - security: demo_eda.marketing-automation
+    delivery_type: pull
+    topic_list:
+      - crm.leads.created
+
+  - security: demo_eda.billing-reports
+    delivery_type: pull
+    topic_list:
+      - billing.invoices.issued
+      - billing.payments.received
+
+  - security: demo_eda.reconciliation
+    delivery_type: pull
+    topic_list:
+      - billing.payments.received
+
+  - security: demo_eda.order-fulfillment
+    delivery_type: pull
+    topic_list:
+      - orders.created
+      - orders.fulfilled
+
+  - security: demo_eda.customer-notifications
+    delivery_type: pull
+    topic_list:
+      - orders.fulfilled
+
+  - security: demo_eda.compliance-archive
+    delivery_type: pull
+    topic_list:
+      - system.audit.events
