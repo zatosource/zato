@@ -130,7 +130,20 @@ $.fn.zato.eda.sparkline = function(container, data_points, options) {
     }
 
     if (!data_points || data_points.length < min_points) {
-        $container.html('');
+        var placeholder_w = options.width || $container[0].clientWidth || 240;
+        if (placeholder_w < 20) {
+            placeholder_w = 240;
+        }
+        var placeholder_y = (h / 2).toFixed(2);
+        var placeholder_svg = '<svg xmlns="http://www.w3.org/2000/svg" ';
+        placeholder_svg += 'width="' + placeholder_w + '" height="' + h + '" ';
+        placeholder_svg += 'viewBox="0 0 ' + placeholder_w + ' ' + h + '">';
+        placeholder_svg += '<line x1="0" y1="' + placeholder_y + '" ';
+        placeholder_svg += 'x2="' + placeholder_w + '" y2="' + placeholder_y + '" ';
+        placeholder_svg += 'stroke="' + color + '" stroke-opacity="0.25" stroke-width="1.25" ';
+        placeholder_svg += 'stroke-dasharray="4,4" stroke-linecap="round"/>';
+        placeholder_svg += '</svg>';
+        $container.html(placeholder_svg);
         if (typeof container === 'string') {
             delete $.fn.zato.eda._sparkline_registry[container];
         }

@@ -80,6 +80,8 @@ $.fn.zato.scheduler.dashboard._update_chart_type_icon = function() {
     }
 };
 
+/* Tile sparklines always show the last 1 hour, independent of the main
+   chart's zoom / time range. Each entry is {ts: ms, value: number}. */
 $.fn.zato.scheduler.dashboard._spark_data = {
     total_jobs: [],
     active: [],
@@ -89,7 +91,7 @@ $.fn.zato.scheduler.dashboard._spark_data = {
 };
 
 $.fn.zato.scheduler.dashboard._spark_seeded = false;
-$.fn.zato.scheduler.dashboard._spark_max_len = 60;
+$.fn.zato.scheduler.dashboard._tile_window_ms = 60 * 60 * 1000;
 $.fn.zato.scheduler.dashboard._poll_interval_ms = 10000;
 
 $.fn.zato.scheduler.dashboard._format_compact_duration = function(seconds) {
@@ -116,19 +118,30 @@ $.fn.zato.scheduler.dashboard._format_ago = function(seconds) {
 };
 
 $.fn.zato.scheduler.dashboard._push_spark = function(key, value) {
-    var data = $.fn.zato.scheduler.dashboard._spark_data[key];
-    data.push(value);
-    if (data.length > $.fn.zato.scheduler.dashboard._spark_max_len) {
+    var dash = $.fn.zato.scheduler.dashboard;
+    var data = dash._spark_data[key];
+    var now = Date.now();
+    data.push({ts: now, value: value});
+    var cutoff = now - dash._tile_window_ms;
+    while (data.length > 0 && data[0].ts < cutoff) {
         data.shift();
     }
 };
 
+$.fn.zato.scheduler.dashboard._spark_values = function(key) {
+    var data = $.fn.zato.scheduler.dashboard._spark_data[key];
+    var values = new Array(data.length);
+    for (var i = 0; i < data.length; i++) {
+        values[i] = data[i].value;
+    }
+    return values;
+};
+
 $.fn.zato.scheduler.dashboard._seed_spark_buffers = function(data) {
-    if ($.fn.zato.scheduler.dashboard._spark_seeded) {
+    var dash = $.fn.zato.scheduler.dashboard;
+    if (dash._spark_seeded) {
         return;
     }
-    var dash = $.fn.zato.scheduler.dashboard;
-    var buckets = 30;
 
     var total_jobs = data.total_jobs || 0;
     var active_jobs = data.active_jobs || 0;
@@ -137,61 +150,55 @@ $.fn.zato.scheduler.dashboard._seed_spark_buffers = function(data) {
 
     var timeline = data.history_timeline || [];
     var now = Date.now();
-    var span_ms = 10 * 60 * 1000;
-    var start = now - span_ms;
-    if (timeline.length > 0) {
-        var earliest = now;
-        for (var t = 0; t < timeline.length; t++) {
-            var iso = timeline[t].actual_fire_time_iso;
-            if (iso) {
-                var ts = new Date(iso).getTime();
-                if (ts < earliest) {
-                    earliest = ts;
-                }
-            }
-        }
-        var hist_span = Math.max(60 * 1000, now - earliest);
-        if (hist_span > span_ms) {
-            span_ms = hist_span;
-            start = now - span_ms;
-        }
-    }
-    var bucket_size = span_ms / buckets;
+    var window_ms = dash._tile_window_ms;
+    var bucket_count = 60;
+    var bucket_size = window_ms / bucket_count;
+    var window_start = now - window_ms;
 
-    var failures = new Array(buckets);
-    var activity = new Array(buckets);
-    for (var b = 0; b < buckets; b++) {
-        failures[b] = 0;
-        activity[b] = 0;
+    /* Bucketise failures across the last hour. Each bucket carries the
+       bucket's end timestamp so the hover "Xm ago" math reflects real time. */
+    var failures_series = new Array(bucket_count);
+    for (var b = 0; b < bucket_count; b++) {
+        failures_series[b] = {
+            ts: window_start + (b + 1) * bucket_size,
+            value: 0
+        };
     }
-
     for (var r = 0; r < timeline.length; r++) {
         var record = timeline[r];
-        var iso2 = record.actual_fire_time_iso;
-        if (!iso2) continue;
-        var t_ms = new Date(iso2).getTime();
-        var idx = Math.floor((t_ms - start) / bucket_size);
-        if (idx < 0 || idx >= buckets) continue;
-        activity[idx]++;
-        if (record.outcome === 'error' || record.outcome === 'timeout') {
-            failures[idx]++;
-        }
+        var iso = record.actual_fire_time_iso;
+        if (!iso) continue;
+        if (record.outcome !== 'error' && record.outcome !== 'timeout') continue;
+        var t_ms = new Date(iso).getTime();
+        if (t_ms < window_start || t_ms > now) continue;
+        var idx = Math.floor((t_ms - window_start) / bucket_size);
+        if (idx < 0) idx = 0;
+        if (idx >= bucket_count) idx = bucket_count - 1;
+        failures_series[idx].value++;
     }
+    dash._spark_data.failures = failures_series;
 
-    dash._spark_data.failures = failures;
-
-    var flat = function(value) {
-        var arr = new Array(buckets);
-        for (var i = 0; i < buckets; i++) {
-            arr[i] = value;
+    /* State-based metrics have no historical record (they're instantaneous
+       snapshots), so seed with a flat baseline spanning the full 1 h window
+       using the current value. The sparkline component places points by
+       index, so we need enough anchors for the visual time-per-pixel to
+       be close to the failures series (60 buckets across the hour). Real
+       polls append to the tail on top of these anchors, producing a curve
+       on the rightmost portion that grows toward the middle as time passes. */
+    var seed_flat = function(value) {
+        var arr = new Array(bucket_count);
+        for (var i = 0; i < bucket_count; i++) {
+            arr[i] = {
+                ts: window_start + (i + 1) * bucket_size,
+                value: value
+            };
         }
         return arr;
     };
-
-    dash._spark_data.total_jobs = flat(total_jobs);
-    dash._spark_data.active = flat(active_jobs);
-    dash._spark_data.paused = flat(paused_jobs);
-    dash._spark_data.in_flight = flat(in_flight_count);
+    dash._spark_data.total_jobs = seed_flat(total_jobs);
+    dash._spark_data.active = seed_flat(active_jobs);
+    dash._spark_data.paused = seed_flat(paused_jobs);
+    dash._spark_data.in_flight = seed_flat(in_flight_count);
 
     dash._spark_seeded = true;
 };
@@ -1160,52 +1167,57 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
         }
     }
 
-    var max_len = 0;
-    for (var s = 0; s < specs.length; s++) {
-        var e = registry[specs[s].sel];
-        if (e && e.data_points.length > max_len) {
-            max_len = e.data_points.length;
+    var active_key = null;
+    for (var ak = 0; ak < specs.length; ak++) {
+        if (specs[ak].sel === active_sel) {
+            active_key = specs[ak].key;
+            break;
         }
     }
+    var active_buffer = active_key ? dash._spark_data[active_key] : null;
+    if (!active_buffer || !active_buffer[nearest_index]) return;
 
-    var poll_ms = dash._poll_interval_ms;
-    var active_n = active_entry.data_points.length;
-    var samples_ago = active_n - 1 - nearest_index;
-    if (samples_ago < 0) samples_ago = 0;
-    var seconds_ago = Math.round(samples_ago * poll_ms / 1000);
-    var span_seconds = Math.round((active_n > 1 ? (active_n - 1) : 0) * poll_ms / 1000);
+    /* Anchor correlation to a real timestamp on the hovered sparkline.
+       Every other tile's sparkline is matched by nearest ts, which is
+       correct regardless of different buffer lengths or sampling cadences. */
+    var target_ts = active_buffer[nearest_index].ts;
 
+    var now_ms = Date.now();
+    var seconds_ago = Math.max(0, Math.round((now_ms - target_ts) / 1000));
     var header_title = dash._format_ago(seconds_ago);
-    var header_subtitle = span_seconds > 0
-        ? 'Last ' + dash._format_compact_duration(span_seconds)
-        : 'Just started';
 
     var tooltip_rows = [];
     tooltip_rows.push('<div class="dashboard-tooltip-header">' +
         '<div class="dashboard-tooltip-title">' + header_title + '</div>' +
-        '<div class="dashboard-tooltip-subtitle">' + header_subtitle + '</div>' +
         '</div>');
+
     for (var s2 = 0; s2 < specs.length; s2++) {
         var spec = specs[s2];
         var entry = registry[spec.sel];
-        if (!entry) continue;
+        var spec_buffer = dash._spark_data[spec.key];
 
-        var entry_n = entry.data_points.length;
-        var mapped_index;
-        if (entry_n === max_len) {
-            mapped_index = nearest_index;
-        } else if (max_len <= 1) {
-            mapped_index = entry_n - 1;
-        } else {
-            var ratio = nearest_index / (max_len - 1);
-            mapped_index = Math.round(ratio * (entry_n - 1));
+        var mapped_index = -1;
+        if (spec_buffer && spec_buffer.length > 0) {
+            var best_d = Infinity;
+            for (var bi = 0; bi < spec_buffer.length; bi++) {
+                var dt = Math.abs(spec_buffer[bi].ts - target_ts);
+                if (dt < best_d) {
+                    best_d = dt;
+                    mapped_index = bi;
+                }
+            }
         }
-        if (mapped_index < 0) mapped_index = 0;
-        if (mapped_index >= entry_n) mapped_index = entry_n - 1;
 
-        $.fn.zato.eda.sparkline_show_marker(spec.sel, mapped_index, spec.color);
+        var val;
+        if (mapped_index >= 0) {
+            val = spec_buffer[mapped_index].value;
+            if (entry) {
+                $.fn.zato.eda.sparkline_show_marker(spec.sel, mapped_index, spec.color);
+            }
+        } else {
+            val = '\u2013';
+        }
 
-        var val = entry.data_points[mapped_index];
         tooltip_rows.push('<div class="dashboard-tile-tooltip-row">' +
             '<span class="dashboard-tile-tooltip-dot" style="background:' + spec.color + '"></span>' +
             '<span class="dashboard-tile-tooltip-label">' + spec.label + '</span>' +
@@ -1215,11 +1227,17 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
 
     var $tooltip = $('#dashboard-tile-tooltip');
     if ($tooltip.length === 0) {
-        $('body').append('<div id="dashboard-tile-tooltip" class="dashboard-tile-tooltip" style="visibility:hidden;display:block;left:0;top:0"></div>');
+        $('body').append('<div id="dashboard-tile-tooltip" class="dashboard-tile-tooltip"></div>');
         $tooltip = $('#dashboard-tile-tooltip');
     }
 
     $tooltip.html(tooltip_rows.join(''));
+
+    /* The tooltip may still be display:none from a previous mouseleave
+       cycle; measurements on a hidden element are unreliable. Make it
+       renderable but invisible so outerWidth/outerHeight return stable
+       values, then place it in a single css() call at the end. */
+    $tooltip.css({display: 'block', visibility: 'hidden', left: '0px', top: '0px'});
 
     var tt_w = $tooltip.outerWidth();
     var tt_h = $tooltip.outerHeight();
@@ -1227,34 +1245,26 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
     var viewport_w = $(window).width();
     var viewport_h = $(window).height();
 
-    var over_spark = mouse_event.clientY >= rect.top && mouse_event.clientY <= rect.bottom;
-    var left;
-    var top;
+    /* Anchor the tooltip to the tile itself (centred above it) rather than
+       to the mouse. This keeps the tooltip rock-steady while the mouse
+       moves around inside the tile, and prevents the viewport clamp from
+       kicking in for tiles that aren't actually near the screen edge. */
+    var $tile = $spark.closest('.dashboard-tile');
+    var tile_rect = $tile.length ? $tile[0].getBoundingClientRect() : rect;
+    var gap = 10;
+    var tile_cx = tile_rect.left + tile_rect.width / 2;
 
-    if (over_spark) {
-        // Pointer is over the sparkline: place tooltip above the sparkline,
-        // horizontally centred on the mouse, so it never obscures the chart.
-        var gap = 10;
-        left = mouse_event.clientX - tt_w / 2;
-        top = rect.top - tt_h - gap;
+    var left = tile_cx - tt_w / 2;
+    var top = tile_rect.top - tt_h - gap;
 
-        // If there isn't enough room above the sparkline, drop it below the
-        // sparkline (still clear of the chart body).
-        if (top < margin) {
-            top = rect.bottom + gap;
-        }
-    } else {
-        left = mouse_event.clientX + 14;
-        top = mouse_event.clientY + 14;
-
-        if (left + tt_w + margin > viewport_w) {
-            left = mouse_event.clientX - tt_w - 14;
-        }
-        if (top + tt_h + margin > viewport_h) {
-            top = mouse_event.clientY - tt_h - 14;
-        }
+    /* If there isn't enough room above the tile, drop the tooltip below it. */
+    if (top < margin) {
+        top = tile_rect.bottom + gap;
     }
 
+    /* Final viewport clamp — only fires when the tile is genuinely close
+       to the screen edge, not when the mouse is moving around inside a
+       centrally-located tile. */
     if (left + tt_w + margin > viewport_w) {
         left = viewport_w - tt_w - margin;
     }
@@ -1268,7 +1278,7 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
         top = margin;
     }
 
-    $tooltip.css({display: 'block', visibility: 'visible', left: left + 'px', top: top + 'px'});
+    $tooltip.css({visibility: 'visible', left: left + 'px', top: top + 'px'});
 };
 
 $.fn.zato.scheduler.dashboard._setup_tile_hover = function() {
@@ -1352,7 +1362,8 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
     for (var tile_i = 0; tile_i < tile_specs.length; tile_i++) {
         var spec = tile_specs[tile_i];
         var merged = $.extend({}, spec.opts, {dot_style: spec.dot_style});
-        $.fn.zato.eda.sparkline(spec.sel, $.fn.zato.scheduler.dashboard._spark_data[spec.key], merged);
+        var values = $.fn.zato.scheduler.dashboard._spark_values(spec.key);
+        $.fn.zato.eda.sparkline(spec.sel, values, merged);
     }
 
     $.fn.zato.scheduler.dashboard._setup_tile_hover();
