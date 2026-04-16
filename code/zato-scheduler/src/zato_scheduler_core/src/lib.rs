@@ -192,19 +192,20 @@ pub fn reload_jobs(
     state: &mut scheduler::SchedulerState,
     new_jobs: std::collections::HashMap<String, zato_server_core::model::SchedulerJob>,
 ) {
+    let new_ids: std::collections::HashSet<String> = new_jobs.values().map(|j| j.id.clone()).collect();
     let old_ids: std::collections::HashSet<String> = state.jobs.keys().cloned().collect();
-    let new_ids: std::collections::HashSet<String> = new_jobs.keys().cloned().collect();
 
     for id in old_ids.difference(&new_ids) {
         state.jobs.remove(id);
     }
 
-    for (id, sj) in &new_jobs {
-        if let Some(existing) = state.jobs.get_mut(id.as_str()) {
+    for (_name, sj) in &new_jobs {
+        let job_id = &sj.id;
+        if let Some(existing) = state.jobs.get_mut(job_id.as_str()) {
             existing.update_from_job(sj);
         } else {
             let rj = RunningJob::from_scheduler_job(sj);
-            state.jobs.insert(id.clone(), rj);
+            state.jobs.insert(job_id.clone(), rj);
         }
     }
 }

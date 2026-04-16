@@ -150,9 +150,9 @@ fn load_jobs_from_config_store(shared: &SchedulerShared, config_store: &PyObject
         match load_from_config_store_py(cs) {
             Ok((jobs, cals)) => {
                 let mut state = shared.state.lock().unwrap();
-                for (id, job) in &jobs {
+                for (_name, job) in &jobs {
                     let rj = RunningJob::from_scheduler_job(job);
-                    state.jobs.insert(id.clone(), rj);
+                    state.jobs.insert(job.id.clone(), rj);
                 }
                 for (name, cal) in cals {
                     let mut cd = CalendarData::new(name.clone());
