@@ -65,10 +65,10 @@ $.fn.zato.scheduler.dashboard._update_chart_type_icon = function() {
     var toggle = $('#scheduler-chart-type-toggle');
     if ($.fn.zato.scheduler.dashboard.show_bars) {
         toggle.html($.fn.zato.scheduler.dashboard._icon_lines);
-        toggle.attr('title', 'Switch to lines');
+        toggle.attr('title', 'Switch to area chart');
     } else {
         toggle.html($.fn.zato.scheduler.dashboard._icon_bars);
-        toggle.attr('title', 'Switch to bars');
+        toggle.attr('title', 'Switch to bar chart');
     }
 };
 
@@ -451,14 +451,20 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     for (var gd = 0; gd < visible_keys.length; gd++) {
         var gd_key = visible_keys[gd];
         svg += '<linearGradient id="barGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
-        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.95"/>';
-        svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.55"/>';
+        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.9"/>';
+        svg += '<stop offset="0.6" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.7"/>';
+        svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.5"/>';
         svg += '</linearGradient>';
         svg += '<linearGradient id="areaGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
         svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.18"/>';
         svg += '<stop offset="0.5" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.06"/>';
         svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.0"/>';
         svg += '</linearGradient>';
+        svg += '<filter id="barGlow_' + gd_key + '" x="-30%" y="-30%" width="160%" height="160%">';
+        svg += '<feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>';
+        svg += '<feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.4 0"/>';
+        svg += '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>';
+        svg += '</filter>';
     }
     svg += '</defs>';
 
@@ -480,7 +486,7 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     var num_visible = visible_keys.length || 1;
     var bar_gap = Math.max(1, group_width * 0.06);
     var bar_width = (group_width - bar_gap * (num_visible - 1)) / num_visible;
-    var bar_radius = Math.min(3, bar_width / 2);
+    var bar_radius = 0;
 
     var layer_points = {};
 
@@ -495,33 +501,47 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
             var bar_y = baseline_y - bar_h;
             layer_points[layer_key].push({
                 x: bar_x + bar_width / 2,
-                y: val > 0 ? bar_y + bar_radius : baseline_y,
+                y: val > 0 ? bar_y : baseline_y,
                 val: val
             });
 
             if (val > 0 && $.fn.zato.scheduler.dashboard.show_bars) {
-                svg += '<path d="' + $.fn.zato.scheduler.dashboard.top_rounded_bar(bar_x, bar_y, bar_width, bar_h, bar_radius) + '" ';
-                svg += 'fill="url(#barGrad_' + layer_key + ')" />';
+                svg += '<rect x="' + bar_x.toFixed(2) + '" y="' + bar_y.toFixed(1) + '" ';
+                svg += 'width="' + bar_width.toFixed(2) + '" height="' + bar_h.toFixed(1) + '" ';
+                svg += 'fill="url(#barGrad_' + layer_key + ')" filter="url(#barGlow_' + layer_key + ')" />';
+                svg += '<line x1="' + bar_x.toFixed(2) + '" y1="' + bar_y.toFixed(1) + '" ';
+                svg += 'x2="' + (bar_x + bar_width).toFixed(2) + '" y2="' + bar_y.toFixed(1) + '" ';
+                svg += 'stroke="' + bar_colors[layer_key] + '" stroke-opacity="0.6" stroke-width="1" />';
             }
         }
     }
 
     if (!$.fn.zato.scheduler.dashboard.show_bars) {
+        var edge_left = padding_left;
+        var edge_right = padding_left + draw_width;
+
         for (var spline_layer = 0; spline_layer < visible_keys.length; spline_layer++) {
             var spline_key = visible_keys[spline_layer];
-            var spline_pts = [];
+            var data_pts = [];
             for (var si = 0; si < bucket_count; si++) {
                 var sx = padding_left + (si + 0.5) * bucket_slot_width;
                 var sv = buckets[si][spline_key];
                 var sy = sv > 0 ? baseline_y - Math.max(2, (sv / max_stack) * draw_height) : baseline_y;
-                spline_pts.push({x: sx, y: sy});
+                data_pts.push({x: sx, y: sy, bucket_index: si});
             }
 
+            var spline_pts = [];
+            spline_pts.push({x: edge_left, y: data_pts[0].y});
+            for (var dp = 0; dp < data_pts.length; dp++) {
+                spline_pts.push(data_pts[dp]);
+            }
+            spline_pts.push({x: edge_right, y: data_pts[data_pts.length - 1].y});
+
             layer_points[spline_key] = [];
-            for (var spi = 0; spi < spline_pts.length; spi++) {
+            for (var spi = 0; spi < bucket_count; spi++) {
                 var hover_val = buckets[spi][spline_key];
                 var hover_y = hover_val > 0 ? baseline_y - (hover_val / max_stack) * draw_height : baseline_y;
-                layer_points[spline_key].push({x: spline_pts[spi].x, y: hover_y, val: hover_val});
+                layer_points[spline_key].push({x: data_pts[spi].x, y: hover_y, val: hover_val});
             }
 
             var area_path = 'M' + spline_pts[0].x.toFixed(1) + ',' + spline_pts[0].y.toFixed(1);
@@ -534,20 +554,24 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
                              ' ' + sp_curr.x.toFixed(1) + ',' + sp_curr.y.toFixed(1);
             }
             var area_fill = area_path +
-                ' L' + spline_pts[spline_pts.length - 1].x.toFixed(1) + ',' + baseline_y.toFixed(1) +
-                ' L' + spline_pts[0].x.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
+                ' L' + edge_right.toFixed(1) + ',' + baseline_y.toFixed(1) +
+                ' L' + edge_left.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
 
             svg += '<path d="' + area_fill + '" fill="url(#areaGrad_' + spline_key + ')" />';
             svg += '<path d="' + area_path + '" fill="none" stroke="' + bar_colors[spline_key] + '" stroke-width="1.5" stroke-opacity="0.6" stroke-linecap="round" stroke-linejoin="round" />';
         }
     }
 
+    var show_seconds = bucket_size < 120000;
     var label_count = Math.min(6, bucket_count);
     var label_step = Math.max(1, Math.floor(bucket_count / label_count));
     for (var label_index = 0; label_index < bucket_count; label_index += label_step) {
         var label_x = padding_left + (label_index + 0.5) * bucket_slot_width;
         var label_date = new Date(buckets[label_index].start);
         var label_text = ('0' + label_date.getHours()).slice(-2) + ':' + ('0' + label_date.getMinutes()).slice(-2);
+        if (show_seconds) {
+            label_text += ':' + ('0' + label_date.getSeconds()).slice(-2);
+        }
         svg += '<text x="' + label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="middle" ';
         svg += 'font-size="10" fill="rgba(0,0,0,0.35)" font-family="Menlo, Consolas, Monaco, monospace">' + label_text + '</text>';
     }
@@ -671,20 +695,6 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
         tooltip.css('display', 'none');
     });
 
-    chart_svg.off('wheel.chart').on('wheel.chart', function(event) {
-        event.preventDefault();
-        var current = $.fn.zato.scheduler.dashboard._zoom_bucket_count || bucket_count;
-        var delta = event.originalEvent.deltaY;
-        if (delta < 0) {
-            current = Math.max(4, Math.round(current * 0.8));
-        } else {
-            current = Math.min(120, Math.round(current * 1.25));
-        }
-        $.fn.zato.scheduler.dashboard._zoom_bucket_count = current;
-        $.fn.zato.scheduler.dashboard._skip_legend_rebuild = true;
-        $.fn.zato.scheduler.dashboard.render_bar_chart($.fn.zato.scheduler.dashboard._last_timeline);
-        $.fn.zato.scheduler.dashboard._skip_legend_rebuild = false;
-    });
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -1029,6 +1039,28 @@ $.fn.zato.scheduler.dashboard.init = function(initial_data) {
     $(document).on('click', function() {
         menu.removeClass('scheduler-time-range-menu-open');
     });
+
+    var chart_container = document.getElementById('scheduler-bar-chart');
+    if (chart_container && !chart_container._zato_wheel_bound) {
+        chart_container._zato_wheel_bound = true;
+        chart_container.addEventListener('wheel', function(event) {
+            event.preventDefault();
+            var current = $.fn.zato.scheduler.dashboard._zoom_bucket_count || 0;
+            if (!current) {
+                var w = chart_container.offsetWidth || 800;
+                current = Math.min(60, Math.max(12, Math.floor(w / 16)));
+            }
+            if (event.deltaY < 0) {
+                current = Math.max(4, Math.round(current * 0.8));
+            } else {
+                current = Math.min(120, Math.round(current * 1.25));
+            }
+            $.fn.zato.scheduler.dashboard._zoom_bucket_count = current;
+            $.fn.zato.scheduler.dashboard._skip_legend_rebuild = true;
+            $.fn.zato.scheduler.dashboard.render_bar_chart($.fn.zato.scheduler.dashboard._last_timeline);
+            $.fn.zato.scheduler.dashboard._skip_legend_rebuild = false;
+        }, {passive: false});
+    }
 
     $.fn.zato.scheduler.dashboard.render(initial_data);
     $('.scheduler-page').css('opacity', '1');
