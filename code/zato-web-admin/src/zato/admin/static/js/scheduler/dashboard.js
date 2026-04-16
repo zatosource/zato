@@ -48,6 +48,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 // Sparkline data buffers
 // ////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.scheduler.dashboard.show_bars = false;
+
 $.fn.zato.scheduler.dashboard._spark_data = {
     total_jobs: [],
     active: [],
@@ -421,10 +423,14 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     svg += '<defs>';
     for (var gd = 0; gd < visible_keys.length; gd++) {
         var gd_key = visible_keys[gd];
+        svg += '<linearGradient id="barGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
+        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.95"/>';
+        svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.55"/>';
+        svg += '</linearGradient>';
         svg += '<linearGradient id="areaGrad_' + gd_key + '" x1="0" y1="0" x2="0" y2="1">';
-        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.35"/>';
-        svg += '<stop offset="0.6" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.12"/>';
-        svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.02"/>';
+        svg += '<stop offset="0" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.18"/>';
+        svg += '<stop offset="0.5" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.06"/>';
+        svg += '<stop offset="1" stop-color="' + bar_colors[gd_key] + '" stop-opacity="0.0"/>';
         svg += '</linearGradient>';
     }
     svg += '</defs>';
@@ -441,54 +447,70 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
         svg += grid_value + '</text>';
     }
 
+    var bucket_slot_width = draw_width / bucket_count;
+    var group_padding = bucket_slot_width * 0.15;
+    var group_width = bucket_slot_width - group_padding * 2;
+    var num_visible = visible_keys.length || 1;
+    var bar_gap = Math.max(1, group_width * 0.06);
+    var bar_width = (group_width - bar_gap * (num_visible - 1)) / num_visible;
+    var bar_radius = Math.min(3, bar_width / 2);
+
     var layer_points = {};
 
     for (var layer = 0; layer < visible_keys.length; layer++) {
         var layer_key = visible_keys[layer];
-        var points_top = [];
+        layer_points[layer_key] = [];
 
         for (var bi = 0; bi < bucket_count; bi++) {
-            var bx = padding_left + ((bi + 0.5) / bucket_count) * draw_width;
             var val = buckets[bi][layer_key];
-            var y_top = baseline_y - (val / max_stack) * draw_height;
-            points_top.push({x: bx, y: y_top, val: val});
+            var bar_h = val > 0 ? Math.max(2, (val / max_stack) * draw_height) : 0;
+            var bar_x = padding_left + bi * bucket_slot_width + group_padding + layer * (bar_width + bar_gap);
+            var bar_y = baseline_y - bar_h;
+
+            layer_points[layer_key].push({
+                x: bar_x + bar_width / 2,
+                y: bar_y,
+                val: val
+            });
+
+            if (val > 0 && $.fn.zato.scheduler.dashboard.show_bars) {
+                svg += '<path d="' + $.fn.zato.scheduler.dashboard.top_rounded_bar(bar_x, bar_y, bar_width, bar_h, bar_radius) + '" ';
+                svg += 'fill="url(#barGrad_' + layer_key + ')" />';
+            }
+        }
+    }
+
+    for (var spline_layer = 0; spline_layer < visible_keys.length; spline_layer++) {
+        var spline_key = visible_keys[spline_layer];
+        var spline_pts = [];
+        for (var si = 0; si < bucket_count; si++) {
+            var sx = padding_left + (si + 0.5) * bucket_slot_width;
+            var sv = buckets[si][spline_key];
+            var sy = sv > 0 ? baseline_y - Math.max(2, (sv / max_stack) * draw_height) : baseline_y;
+            spline_pts.push({x: sx, y: sy});
         }
 
-        layer_points[layer_key] = points_top;
-
-        var area_path = 'M' + points_top[0].x.toFixed(1) + ',' + points_top[0].y.toFixed(1);
-        for (var sp = 1; sp < points_top.length; sp++) {
-            var prev = points_top[sp - 1];
-            var curr = points_top[sp];
-            var cp_x = (prev.x + curr.x) / 2;
-            area_path += ' C' + cp_x.toFixed(1) + ',' + prev.y.toFixed(1) +
-                         ' ' + cp_x.toFixed(1) + ',' + curr.y.toFixed(1) +
-                         ' ' + curr.x.toFixed(1) + ',' + curr.y.toFixed(1);
+        var area_path = 'M' + spline_pts[0].x.toFixed(1) + ',' + spline_pts[0].y.toFixed(1);
+        for (var sp = 1; sp < spline_pts.length; sp++) {
+            var sp_prev = spline_pts[sp - 1];
+            var sp_curr = spline_pts[sp];
+            var sp_cpx = (sp_prev.x + sp_curr.x) / 2;
+            area_path += ' C' + sp_cpx.toFixed(1) + ',' + sp_prev.y.toFixed(1) +
+                         ' ' + sp_cpx.toFixed(1) + ',' + sp_curr.y.toFixed(1) +
+                         ' ' + sp_curr.x.toFixed(1) + ',' + sp_curr.y.toFixed(1);
         }
+        var area_fill = area_path +
+            ' L' + spline_pts[spline_pts.length - 1].x.toFixed(1) + ',' + baseline_y.toFixed(1) +
+            ' L' + spline_pts[0].x.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
 
-        area_path += ' L' + points_top[points_top.length - 1].x.toFixed(1) + ',' + baseline_y.toFixed(1);
-        area_path += ' L' + points_top[0].x.toFixed(1) + ',' + baseline_y.toFixed(1);
-        area_path += ' Z';
-
-        svg += '<path d="' + area_path + '" fill="url(#areaGrad_' + layer_key + ')" />';
-
-        var line_path = 'M' + points_top[0].x.toFixed(1) + ',' + points_top[0].y.toFixed(1);
-        for (var lp = 1; lp < points_top.length; lp++) {
-            var lp_prev = points_top[lp - 1];
-            var lp_curr = points_top[lp];
-            var lp_cpx = (lp_prev.x + lp_curr.x) / 2;
-            line_path += ' C' + lp_cpx.toFixed(1) + ',' + lp_prev.y.toFixed(1) +
-                         ' ' + lp_cpx.toFixed(1) + ',' + lp_curr.y.toFixed(1) +
-                         ' ' + lp_curr.x.toFixed(1) + ',' + lp_curr.y.toFixed(1);
-        }
-
-        svg += '<path d="' + line_path + '" fill="none" stroke="' + bar_colors[layer_key] + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />';
+        svg += '<path d="' + area_fill + '" fill="url(#areaGrad_' + spline_key + ')" />';
+        svg += '<path d="' + area_path + '" fill="none" stroke="' + bar_colors[spline_key] + '" stroke-width="1.5" stroke-opacity="0.6" stroke-linecap="round" stroke-linejoin="round" />';
     }
 
     var label_count = Math.min(6, bucket_count);
     var label_step = Math.max(1, Math.floor(bucket_count / label_count));
     for (var label_index = 0; label_index < bucket_count; label_index += label_step) {
-        var label_x = padding_left + ((label_index + 0.5) / bucket_count) * draw_width;
+        var label_x = padding_left + (label_index + 0.5) * bucket_slot_width;
         var label_date = new Date(buckets[label_index].start);
         var label_text = ('0' + label_date.getHours()).slice(-2) + ':' + ('0' + label_date.getMinutes()).slice(-2);
         svg += '<text x="' + label_x.toFixed(1) + '" y="' + (chart_height - 6) + '" text-anchor="middle" ';
@@ -578,12 +600,13 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
         var band_html = '<svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none" xmlns="http://www.w3.org/2000/svg">';
         band_html += '<rect x="' + band_left.toFixed(1) + '" y="' + padding_top + '" width="' + bucket_width_px.toFixed(1) + '" height="' + draw_height + '" fill="rgba(0,0,0,0.06)" rx="2" />';
 
+        var center_x = padding_left + (bucket_index + 0.5) * bucket_width_px;
         for (var dk = 0; dk < visible_keys.length; dk++) {
             var dk_key = visible_keys[dk];
             var pts = layer_points[dk_key];
-            if (pts && pts[bucket_index]) {
+            if (pts && pts[bucket_index] && pts[bucket_index].val > 0) {
                 var pt = pts[bucket_index];
-                band_html += '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="4.5" fill="#fff" stroke="' + bar_colors[dk_key] + '" stroke-width="2" />';
+                band_html += '<circle cx="' + center_x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="4.5" fill="#fff" stroke="' + bar_colors[dk_key] + '" stroke-width="2" />';
             }
         }
         band_html += '</svg>';
