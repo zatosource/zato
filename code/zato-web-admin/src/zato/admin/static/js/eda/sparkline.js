@@ -42,9 +42,10 @@ $.fn.zato.eda._render_sparkline_svg = function(data_points, opts) {
     var dot_style = opts.dot_style;
     var stroke_width = opts.stroke_width;
 
-    var pad_x = Math.max(3, dot_r + 2.5);
-    var pad_top = Math.max(3, dot_r + 2);
-    var pad_bottom = 1;
+    var halo_extra = 2;
+    var pad_x = Math.max(3, dot_r + halo_extra + 1);
+    var pad_top = Math.max(3, dot_r + halo_extra + 1);
+    var pad_bottom = Math.max(1, dot_r + halo_extra + 1);
 
     var instance_id = $.fn.zato.eda._sparkline_counter++;
     var grad_id = 'sparkArea_' + instance_id;
@@ -214,7 +215,7 @@ $.fn.zato.eda.sparkline_show_marker = function(selector, data_index, marker_colo
     svg += 'stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-dasharray="2,2" ';
     svg += 'vector-effect="non-scaling-stroke"/>';
     svg += '<circle cx="' + px.toFixed(2) + '" cy="' + py.toFixed(2) + '" r="3.5" ';
-    svg += 'fill="' + (marker_color || '#ffffff') + '" stroke="#012845" stroke-width="1.5"/>';
+    svg += 'fill="' + (marker_color || '#ffffff') + '" stroke="#262630" stroke-width="1.5"/>';
     svg += '</svg>';
 
     $overlay.html(svg);

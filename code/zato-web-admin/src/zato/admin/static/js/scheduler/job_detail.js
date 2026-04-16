@@ -13,22 +13,22 @@ $.fn.zato.scheduler.job_detail._dashboard = function() {
 
 $.fn.zato.scheduler.job_detail.render_header = function(job) {
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
-    var container = $('#scheduler-detail-header');
+    var container = $('#dashboard-detail-header');
     var type_label = dashboard.job_type_labels[job.job_type] || job.job_type;
     var status_text = job.is_active ? 'Active' : 'Paused';
 
-    var html = '<div class="scheduler-detail-name">';
+    var html = '<div class="dashboard-detail-name">';
     html += dashboard.status_dot(job) + ' ' + (job.name || 'Unknown job');
     html += '</div>';
-    html += '<div class="scheduler-detail-meta">';
-    html += '<span class="scheduler-detail-badge">' + type_label + '</span>';
-    html += '<span class="scheduler-detail-status">' + status_text + '</span>';
+    html += '<div class="dashboard-detail-meta">';
+    html += '<span class="dashboard-detail-badge">' + type_label + '</span>';
+    html += '<span class="dashboard-detail-status">' + status_text + '</span>';
     var service_name = job.service || job.service_name || '';
     if (service_name) {
-        html += '<span class="scheduler-detail-service">' + service_name + '</span>';
+        html += '<span class="dashboard-detail-service">' + service_name + '</span>';
     }
     if (job.in_flight) {
-        html += '<span class="scheduler-detail-in-flight">In-flight (run #' + job.current_run + ')</span>';
+        html += '<span class="dashboard-detail-in-flight">In-flight (run #' + job.current_run + ')</span>';
     }
     html += '</div>';
     container.html(html);
@@ -39,16 +39,16 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
-    var container = $('#scheduler-detail-config');
+    var container = $('#dashboard-detail-config');
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
-    var html = '<div class="scheduler-config-grid">';
+    var html = '<div class="dashboard-config-grid">';
 
     var config_service = job.service || job.service_name || '';
-    html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Service</span>';
+    html += '<div class="dashboard-config-item"><span class="dashboard-config-label">Service</span>';
     html += '<a href="/zato/service/overview/' + encodeURIComponent(config_service) + '/?cluster=' + cluster_id + '">' + (config_service || '-') + '</a></div>';
 
-    html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Job type</span>' + (job.job_type || '-') + '</div>';
-    html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Start date</span>' + (job.start_date || '-') + '</div>';
+    html += '<div class="dashboard-config-item"><span class="dashboard-config-label">Job type</span>' + (job.job_type || '-') + '</div>';
+    html += '<div class="dashboard-config-item"><span class="dashboard-config-label">Start date</span>' + (job.start_date || '-') + '</div>';
 
     if (job.job_type === 'interval_based') {
         var parts = [];
@@ -57,19 +57,19 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
         if (job.hours) parts.push(job.hours + ' hours');
         if (job.minutes) parts.push(job.minutes + ' minutes');
         if (job.seconds) parts.push(job.seconds + ' seconds');
-        html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Interval</span>' + (parts.join(', ') || '-') + '</div>';
+        html += '<div class="dashboard-config-item"><span class="dashboard-config-label">Interval</span>' + (parts.join(', ') || '-') + '</div>';
     }
 
     if (job.repeats !== null && job.repeats !== undefined) {
-        html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Repeats</span>' + (job.repeats === 0 ? 'Unlimited' : job.repeats) + '</div>';
+        html += '<div class="dashboard-config-item"><span class="dashboard-config-label">Repeats</span>' + (job.repeats === 0 ? 'Unlimited' : job.repeats) + '</div>';
     }
 
     if (job.max_execution_time_ms) {
-        html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Max execution time</span>' + dashboard.format_duration(job.max_execution_time_ms) + '</div>';
+        html += '<div class="dashboard-config-item"><span class="dashboard-config-label">Max execution time</span>' + dashboard.format_duration(job.max_execution_time_ms) + '</div>';
     }
 
     if (job.jitter_ms) {
-        html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Jitter</span>' + job.jitter_ms + ' ms</div>';
+        html += '<div class="dashboard-config-item"><span class="dashboard-config-label">Jitter</span>' + job.jitter_ms + ' ms</div>';
     }
 
     html += '</div>';
@@ -80,8 +80,8 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
             var parsed = JSON.parse(job.extra);
             extra_display = JSON.stringify(parsed, null, 2);
         } catch(e) {}
-        html += '<div class="scheduler-config-item scheduler-config-item-wide"><span class="scheduler-config-label">Extra data</span>';
-        html += '<pre class="scheduler-config-extra">' + extra_display + '</pre></div>';
+        html += '<div class="dashboard-config-item dashboard-config-item-wide"><span class="dashboard-config-label">Extra data</span>';
+        html += '<pre class="dashboard-config-extra">' + extra_display + '</pre></div>';
     }
 
     container.html(html);
@@ -92,7 +92,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_stats = function(history) {
-    var container = $('#scheduler-detail-stats');
+    var container = $('#dashboard-detail-stats');
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
 
     var total_runs = history.length;
@@ -113,11 +113,11 @@ $.fn.zato.scheduler.job_detail.render_stats = function(history) {
 
     var average_duration = duration_count > 0 ? Math.round(total_duration / duration_count) : null;
 
-    var html = '<div class="scheduler-stat-row">';
-    html += '<div class="scheduler-stat"><div class="scheduler-stat-number">' + total_runs + '</div><div class="scheduler-stat-label">Total runs</div></div>';
-    html += '<div class="scheduler-stat"><div class="scheduler-stat-number' + (error_count > 0 ? ' scheduler-stat-danger' : '') + '">' + error_count + '</div><div class="scheduler-stat-label">Errors</div></div>';
-    html += '<div class="scheduler-stat"><div class="scheduler-stat-number' + (timeout_count > 0 ? ' scheduler-stat-warning' : '') + '">' + timeout_count + '</div><div class="scheduler-stat-label">Timeouts</div></div>';
-    html += '<div class="scheduler-stat"><div class="scheduler-stat-number">' + dashboard.format_duration(average_duration) + '</div><div class="scheduler-stat-label">Avg duration</div></div>';
+    var html = '<div class="dashboard-stat-row">';
+    html += '<div class="dashboard-stat"><div class="dashboard-stat-number">' + total_runs + '</div><div class="dashboard-stat-label">Total runs</div></div>';
+    html += '<div class="dashboard-stat"><div class="dashboard-stat-number' + (error_count > 0 ? ' dashboard-stat-danger' : '') + '">' + error_count + '</div><div class="dashboard-stat-label">Errors</div></div>';
+    html += '<div class="dashboard-stat"><div class="dashboard-stat-number' + (timeout_count > 0 ? ' dashboard-stat-warning' : '') + '">' + timeout_count + '</div><div class="dashboard-stat-label">Timeouts</div></div>';
+    html += '<div class="dashboard-stat"><div class="dashboard-stat-number">' + dashboard.format_duration(average_duration) + '</div><div class="dashboard-stat-label">Avg duration</div></div>';
     html += '</div>';
 
     container.html(html);
@@ -128,9 +128,9 @@ $.fn.zato.scheduler.job_detail.render_stats = function(history) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
-    var container = $('#scheduler-timeline');
+    var container = $('#dashboard-timeline');
     if (!history || history.length === 0) {
-        container.html('<div class="scheduler-no-data">No execution history yet</div>');
+        container.html('<div class="dashboard-no-data">No execution history yet</div>');
         return;
     }
 
@@ -154,7 +154,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     }
 
     if (timestamps.length === 0) {
-        container.html('<div class="scheduler-no-data">No execution history yet</div>');
+        container.html('<div class="dashboard-no-data">No execution history yet</div>');
         return;
     }
 
@@ -217,17 +217,17 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
-    var table_body = $('#scheduler-history-table-body');
+    var table_body = $('#dashboard-history-table-body');
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
     table_body.empty();
 
     if (!history || history.length === 0) {
-        table_body.append('<tr><td colspan="7" class="scheduler-no-data">No execution history</td></tr>');
-        $('#scheduler-history-count').text('');
+        table_body.append('<tr><td colspan="7" class="dashboard-no-data">No execution history</td></tr>');
+        $('#dashboard-history-count').text('');
         return;
     }
 
-    $('#scheduler-history-count').text(history.length + ' runs');
+    $('#dashboard-history-count').text(history.length + ' runs');
 
     var sorted = history.slice().sort(function(first, second) {
         return (second.actual_fire_time_iso || '').localeCompare(first.actual_fire_time_iso || '');
@@ -253,7 +253,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
         row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on">' + duration + '</td>';
         row += '<td>' + outcome + '</td>';
         row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on">' + run_number + '</td>';
-        row += '<td class="scheduler-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
+        row += '<td class="dashboard-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
         row += '</tr>';
         table_body.append(row);
     }
@@ -264,10 +264,10 @@ $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_actions = function(job_id, cluster_id) {
-    var container = $('#scheduler-detail-actions');
+    var container = $('#dashboard-detail-actions');
     var html = '';
-    html += '<a class="scheduler-action-link" href="/zato/scheduler/dashboard/?cluster=' + cluster_id + '">Back to dashboard</a>';
-    html += '<a class="scheduler-action-link scheduler-action-execute" href="javascript:$.fn.zato.scheduler.dashboard.execute_job(\'' + job_id + '\')">Execute now</a>';
+    html += '<a class="dashboard-action-link" href="/zato/scheduler/dashboard/?cluster=' + cluster_id + '">Back to dashboard</a>';
+    html += '<a class="dashboard-action-link dashboard-action-execute" href="javascript:$.fn.zato.scheduler.dashboard.execute_job(\'' + job_id + '\')">Execute now</a>';
     container.html(html);
 };
 
@@ -296,5 +296,5 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, history_data, job_id, c
         try { history_data = JSON.parse(history_data); } catch(parse_error) { history_data = []; }
     }
     $.fn.zato.scheduler.job_detail.render(job_data, history_data, job_id, cluster_id);
-    $('.scheduler-page').css('opacity', '1');
+    $('.dashboard-page').css('opacity', '1');
 };

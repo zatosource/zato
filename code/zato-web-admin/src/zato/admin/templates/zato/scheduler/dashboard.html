@@ -4,7 +4,7 @@
 {% block html_title %}Scheduler dashboard{% endblock %}
 
 {% block "extra_css" %}
-<link rel="stylesheet" type="text/css" href="/static/css/scheduler-dashboard.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -19,49 +19,49 @@ $(document).ready(function() {
 
 {% block "content" %}
 
-<div class="scheduler-page" style="opacity:0">
+<div class="dashboard-page" style="opacity:0">
 
-    <div class="scheduler-hero">
-        <div class="scheduler-hero-inner">
-            <div class="scheduler-hero-tiles">
+    <div class="dashboard-hero">
+        <div class="dashboard-hero-inner">
+            <div class="dashboard-hero-tiles">
 
-                <div class="scheduler-tile">
-                    <div class="scheduler-tile-label">Total jobs</div>
-                    <div class="scheduler-tile-row">
-                        <div class="scheduler-tile-value" id="stat-total-jobs">-</div>
-                        <div class="scheduler-tile-spark" id="spark-total-jobs"></div>
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Total jobs</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-total-jobs">-</div>
+                        <div class="dashboard-tile-spark" id="spark-total-jobs"></div>
                     </div>
                 </div>
 
-                <div class="scheduler-tile">
-                    <div class="scheduler-tile-label">Active</div>
-                    <div class="scheduler-tile-row">
-                        <div class="scheduler-tile-value" id="stat-active">-</div>
-                        <div class="scheduler-tile-spark" id="spark-active"></div>
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Active</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-active">-</div>
+                        <div class="dashboard-tile-spark" id="spark-active"></div>
                     </div>
                 </div>
 
-                <div class="scheduler-tile">
-                    <div class="scheduler-tile-label">Paused</div>
-                    <div class="scheduler-tile-row">
-                        <div class="scheduler-tile-value" id="stat-paused">-</div>
-                        <div class="scheduler-tile-spark" id="spark-paused"></div>
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">Paused</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-paused">-</div>
+                        <div class="dashboard-tile-spark" id="spark-paused"></div>
                     </div>
                 </div>
 
-                <div class="scheduler-tile">
-                    <div class="scheduler-tile-label">In-flight</div>
-                    <div class="scheduler-tile-row">
-                        <div class="scheduler-tile-value" id="stat-in-flight">-</div>
-                        <div class="scheduler-tile-spark" id="spark-in-flight"></div>
+                <div class="dashboard-tile">
+                    <div class="dashboard-tile-label">In-flight</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-in-flight">-</div>
+                        <div class="dashboard-tile-spark" id="spark-in-flight"></div>
                     </div>
                 </div>
 
-                <div class="scheduler-tile scheduler-tile-failures">
-                    <div class="scheduler-tile-label">Failures</div>
-                    <div class="scheduler-tile-row">
-                        <div class="scheduler-tile-value" id="stat-failures">-</div>
-                        <div class="scheduler-tile-spark" id="spark-failures"></div>
+                <div class="dashboard-tile dashboard-tile-failures">
+                    <div class="dashboard-tile-label">Failures</div>
+                    <div class="dashboard-tile-row">
+                        <div class="dashboard-tile-value" id="stat-failures">-</div>
+                        <div class="dashboard-tile-spark" id="spark-failures"></div>
                     </div>
                 </div>
 
@@ -69,74 +69,74 @@ $(document).ready(function() {
         </div>
     </div>
 
-    <div class="scheduler-section scheduler-chart-section">
-        <div class="scheduler-card">
-            <div class="scheduler-card-header">
+    <div class="dashboard-section dashboard-chart-section">
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
                 <h3>Run history</h3>
-                <div class="scheduler-chart-controls">
-                <span class="scheduler-pill scheduler-pill-clickable scheduler-chart-type-toggle" id="scheduler-chart-type-toggle" title="Toggle chart style"></span>
-                <div class="scheduler-time-range-wrapper">
-                    <span class="scheduler-pill scheduler-pill-clickable" id="scheduler-exec-count"></span>
-                    <div class="scheduler-time-range-menu" id="scheduler-time-range-menu">
-                        <div class="scheduler-time-range-option" data-minutes="5">Last 5 minutes</div>
-                        <div class="scheduler-time-range-option" data-minutes="15">Last 15 minutes</div>
-                        <div class="scheduler-time-range-option" data-minutes="30">Last 30 minutes</div>
-                        <div class="scheduler-time-range-option" data-minutes="60">Last 1 hour</div>
-                        <div class="scheduler-time-range-option" data-minutes="360">Last 6 hours</div>
-                        <div class="scheduler-time-range-option" data-minutes="1440">Today</div>
-                        <div class="scheduler-time-range-option" data-minutes="2880">Yesterday</div>
-                        <div class="scheduler-time-range-option" data-minutes="10080">This week</div>
-                        <div class="scheduler-time-range-option" data-minutes="43200">This month</div>
-                        <div class="scheduler-time-range-option" data-minutes="525600">This year</div>
-                        <div class="scheduler-time-range-option scheduler-time-range-active" data-minutes="0">All</div>
+                <div class="dashboard-chart-controls">
+                <span class="dashboard-pill dashboard-pill-clickable dashboard-chart-type-toggle" id="dashboard-chart-type-toggle" title="Toggle chart style"></span>
+                <div class="dashboard-time-range-wrapper">
+                    <span class="dashboard-pill dashboard-pill-clickable" id="dashboard-exec-count"></span>
+                    <div class="dashboard-time-range-menu" id="dashboard-time-range-menu">
+                        <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="15">Last 15 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="30">Last 30 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="60">Last 1 hour</div>
+                        <div class="dashboard-time-range-option" data-minutes="360">Last 6 hours</div>
+                        <div class="dashboard-time-range-option" data-minutes="1440">Today</div>
+                        <div class="dashboard-time-range-option" data-minutes="2880">Yesterday</div>
+                        <div class="dashboard-time-range-option" data-minutes="10080">This week</div>
+                        <div class="dashboard-time-range-option" data-minutes="43200">This month</div>
+                        <div class="dashboard-time-range-option" data-minutes="525600">This year</div>
+                        <div class="dashboard-time-range-option dashboard-time-range-active" data-minutes="0">All</div>
                     </div>
                 </div>
                 </div>
             </div>
-            <div id="scheduler-bar-chart" class="scheduler-chart-body"></div>
-            <div class="scheduler-chart-legend" id="scheduler-chart-legend"></div>
+            <div id="dashboard-bar-chart" class="dashboard-chart-body"></div>
+            <div class="dashboard-chart-legend" id="dashboard-chart-legend"></div>
         </div>
     </div>
 
-    <div class="scheduler-section scheduler-grid-section">
+    <div class="dashboard-section dashboard-grid-section">
 
-        <div class="scheduler-card scheduler-card-jobs">
-            <div class="scheduler-card-header">
+        <div class="dashboard-card dashboard-card-jobs">
+            <div class="dashboard-card-header">
                 <h3>Jobs</h3>
-                <span class="scheduler-pill" id="scheduler-jobs-count"></span>
+                <span class="dashboard-pill" id="dashboard-jobs-count"></span>
             </div>
-            <table class="zato-table" id="scheduler-job-table">
+            <table class="zato-table" id="dashboard-job-table">
                 <thead>
                     <tr>
-                        <th class="scheduler-th-dot"></th>
+                        <th class="dashboard-th-dot"></th>
                         <th>Name</th>
                         <th>Type</th>
                         <th>Next fire</th>
                         <th>Recent</th>
                     </tr>
                 </thead>
-                <tbody id="scheduler-job-table-body"></tbody>
+                <tbody id="dashboard-job-table-body"></tbody>
             </table>
         </div>
 
-        <div class="scheduler-card scheduler-card-right">
+        <div class="dashboard-card dashboard-card-right">
 
-            <div class="scheduler-card-split-top">
-                <div class="scheduler-card-header">
+            <div class="dashboard-card-split-top">
+                <div class="dashboard-card-header">
                     <h3>Recent failures</h3>
-                    <span class="scheduler-pill scheduler-pill-failures" id="scheduler-failures-count"></span>
+                    <span class="dashboard-pill dashboard-pill-failures" id="dashboard-failures-count"></span>
                 </div>
-                <div id="scheduler-failures-body"></div>
+                <div id="dashboard-failures-body"></div>
             </div>
 
-            <div class="scheduler-card-divider"></div>
+            <div class="dashboard-card-divider"></div>
 
-            <div class="scheduler-card-split-bottom">
-                <div class="scheduler-card-header">
+            <div class="dashboard-card-split-bottom">
+                <div class="dashboard-card-header">
                     <h3>Upcoming runs</h3>
-                    <span class="scheduler-pill" id="scheduler-upcoming-count"></span>
+                    <span class="dashboard-pill" id="dashboard-upcoming-count"></span>
                 </div>
-                <table class="zato-table" id="scheduler-upcoming-table">
+                <table class="zato-table" id="dashboard-upcoming-table">
                     <thead>
                         <tr>
                             <th>Time</th>
@@ -145,7 +145,7 @@ $(document).ready(function() {
                             <th>Type</th>
                         </tr>
                     </thead>
-                    <tbody id="scheduler-upcoming-table-body"></tbody>
+                    <tbody id="dashboard-upcoming-table-body"></tbody>
                 </table>
             </div>
 
@@ -153,7 +153,7 @@ $(document).ready(function() {
 
     </div>
 
-    <div class="scheduler-footer"></div>
+    <div class="dashboard-footer"></div>
 
 </div>
 

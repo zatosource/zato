@@ -4,7 +4,7 @@
 {% block html_title %}Job detail{% endblock %}
 
 {% block "extra_css" %}
-<link rel="stylesheet" type="text/css" href="/static/css/scheduler-dashboard.css">
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard.css">
 {% endblock %}
 
 {% block "extra_js" %}
@@ -25,51 +25,51 @@ $(document).ready(function() {
 
 {% block "content" %}
 
-<div class="scheduler-page" style="opacity:0">
+<div class="dashboard-page" style="opacity:0">
 
-    <div class="scheduler-hero scheduler-hero-compact">
-        <div class="scheduler-hero-inner">
-            <div id="scheduler-detail-header"></div>
-            <div id="scheduler-detail-actions" class="scheduler-detail-actions"></div>
+    <div class="dashboard-hero dashboard-hero-compact">
+        <div class="dashboard-hero-inner">
+            <div id="dashboard-detail-header"></div>
+            <div id="dashboard-detail-actions" class="dashboard-detail-actions"></div>
         </div>
     </div>
 
-    <div class="scheduler-section" style="margin-top:28px">
-        <div class="scheduler-grid-section">
+    <div class="dashboard-section" style="margin-top:28px">
+        <div class="dashboard-grid-section">
 
-            <div class="scheduler-card">
-                <div class="scheduler-card-header">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
                     <h3>Configuration</h3>
                 </div>
-                <div id="scheduler-detail-config"></div>
+                <div id="dashboard-detail-config"></div>
             </div>
 
-            <div class="scheduler-card">
-                <div class="scheduler-card-header">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
                     <h3>Statistics</h3>
                 </div>
-                <div class="scheduler-detail-stats" id="scheduler-detail-stats"></div>
+                <div class="dashboard-detail-stats" id="dashboard-detail-stats"></div>
             </div>
 
         </div>
     </div>
 
-    <div class="scheduler-section" style="margin-top:20px">
-        <div class="scheduler-card">
-            <div class="scheduler-card-header">
+    <div class="dashboard-section" style="margin-top:20px">
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
                 <h3>Execution timeline</h3>
             </div>
-            <div id="scheduler-timeline" class="scheduler-chart-body" style="min-height:60px"></div>
+            <div id="dashboard-timeline" class="dashboard-chart-body" style="min-height:60px"></div>
         </div>
     </div>
 
-    <div class="scheduler-section" style="margin-top:20px">
-        <div class="scheduler-card">
-            <div class="scheduler-card-header">
+    <div class="dashboard-section" style="margin-top:20px">
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
                 <h3>Execution history</h3>
-                <span class="scheduler-pill" id="scheduler-history-count"></span>
+                <span class="dashboard-pill" id="dashboard-history-count"></span>
             </div>
-            <table class="zato-table" id="scheduler-history-table">
+            <table class="zato-table" id="dashboard-history-table">
                 <thead>
                     <tr>
                         <th>Planned time</th>
@@ -81,12 +81,12 @@ $(document).ready(function() {
                         <th>Error</th>
                     </tr>
                 </thead>
-                <tbody id="scheduler-history-table-body"></tbody>
+                <tbody id="dashboard-history-table-body"></tbody>
             </table>
         </div>
     </div>
 
-    <div class="scheduler-footer"></div>
+    <div class="dashboard-footer"></div>
 
 </div>
 

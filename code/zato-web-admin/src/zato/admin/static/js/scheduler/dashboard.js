@@ -70,7 +70,7 @@ $.fn.zato.scheduler.dashboard._icon_bars = '<svg width="18" height="14" viewBox=
     '</svg>';
 
 $.fn.zato.scheduler.dashboard._update_chart_type_icon = function() {
-    var toggle = $('#scheduler-chart-type-toggle');
+    var toggle = $('#dashboard-chart-type-toggle');
     if ($.fn.zato.scheduler.dashboard.show_bars) {
         toggle.html($.fn.zato.scheduler.dashboard._icon_lines);
         toggle.attr('title', 'Switch to area chart');
@@ -167,7 +167,7 @@ $.fn.zato.scheduler.dashboard._seed_spark_buffers = function(data) {
     dash._spark_data.total_jobs = flat(total_jobs);
     dash._spark_data.active = flat(active_jobs);
     dash._spark_data.paused = flat(paused_jobs);
-    dash._spark_data.in_flight = activity;
+    dash._spark_data.in_flight = flat(in_flight_count);
 
     dash._spark_seeded = true;
 };
@@ -336,15 +336,15 @@ $.fn.zato.scheduler.dashboard.format_local_time = function(iso_string) {
 
 $.fn.zato.scheduler.dashboard.status_dot = function(job) {
     if (job.in_flight) {
-        return '<span class="scheduler-status-dot scheduler-status-in-flight" title="In-flight"></span>';
+        return '<span class="dashboard-status-dot dashboard-status-in-flight" title="In-flight"></span>';
     }
     if (!job.is_active) {
-        return '<span class="scheduler-status-dot scheduler-status-paused" title="Paused"></span>';
+        return '<span class="dashboard-status-dot dashboard-status-paused" title="Paused"></span>';
     }
     if (job.last_outcome === 'error' || job.last_outcome === 'timeout') {
-        return '<span class="scheduler-status-dot scheduler-status-failed" title="Last run failed"></span>';
+        return '<span class="dashboard-status-dot dashboard-status-failed" title="Last run failed"></span>';
     }
-    return '<span class="scheduler-status-dot scheduler-status-ok" title="Active"></span>';
+    return '<span class="dashboard-status-dot dashboard-status-ok" title="Active"></span>';
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -362,7 +362,7 @@ $.fn.zato.scheduler.dashboard.outcome_squares = function(recent_outcomes) {
         var outcome = recent_outcomes[index];
         var color = bar_colors[outcome] || '#ccc';
         var label = labels[outcome] || outcome;
-        html += '<span class="scheduler-outcome-square" style="background:' + color + '" title="' + label + '"></span>';
+        html += '<span class="dashboard-outcome-square" style="background:' + color + '" title="' + label + '"></span>';
     }
     return html;
 };
@@ -378,7 +378,7 @@ $.fn.zato.scheduler.dashboard.outcome_badge = function(outcome) {
     var color = colors[outcome] || '#6e6e73';
     var bg = bg_colors[outcome] || 'rgba(110,110,115,0.12)';
     var label = labels[outcome] || outcome;
-    return '<span class="scheduler-outcome-badge" style="color:' + color + ';background:' + bg + '">' + label + '</span>';
+    return '<span class="dashboard-outcome-badge" style="color:' + color + ';background:' + bg + '">' + label + '</span>';
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -407,13 +407,13 @@ $.fn.zato.scheduler.dashboard.top_rounded_bar = function(x, y, w, h, r) {
 
 $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     $.fn.zato.scheduler.dashboard._last_timeline = timeline;
-    var container = $('#scheduler-bar-chart');
+    var container = $('#dashboard-bar-chart');
     var filtered = $.fn.zato.scheduler.dashboard._filter_timeline_by_range(timeline);
 
     if (!filtered || filtered.length === 0) {
-        container.html('<div class="scheduler-no-data">No execution history yet</div>');
-        $('#scheduler-chart-legend').empty();
-        $('#scheduler-exec-count').text('');
+        container.html('<div class="dashboard-no-data">No execution history yet</div>');
+        $('#dashboard-chart-legend').empty();
+        $('#dashboard-exec-count').text('');
         return;
     }
 
@@ -425,7 +425,7 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     } else {
         range_label = 'All \u00b7 ' + filtered.length + ' runs';
     }
-    $('#scheduler-exec-count').text(range_label);
+    $('#dashboard-exec-count').text(range_label);
 
     var chart_width = container.width() || 800;
     var chart_height = 200;
@@ -448,9 +448,9 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     }
 
     if (timestamps.length === 0) {
-        container.html('<div class="scheduler-no-data">No execution history yet</div>');
-        $('#scheduler-chart-legend').empty();
-        $('#scheduler-exec-count').text('');
+        container.html('<div class="dashboard-no-data">No execution history yet</div>');
+        $('#dashboard-chart-legend').empty();
+        $('#dashboard-exec-count').text('');
         return;
     }
 
@@ -695,7 +695,7 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     $.fn.zato.scheduler.dashboard._setup_chart_interactions(container, buckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height, visible_keys, layer_points, bar_colors);
 
     if (!$.fn.zato.scheduler.dashboard._skip_legend_rebuild) {
-        var legend_container = $('#scheduler-chart-legend');
+        var legend_container = $('#dashboard-chart-legend');
         var outcome_text_colors = $.fn.zato.scheduler.dashboard.outcome_colors;
         var outcome_bg = $.fn.zato.scheduler.dashboard.outcome_bg_colors;
         legend_container.empty();
@@ -705,16 +705,16 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
             var text_color = outcome_text_colors[legend_key] || '#6e6e73';
             var bg_color = outcome_bg[legend_key] || 'rgba(110,110,115,0.12)';
             var dot_color = bar_colors[legend_key];
-            var item = $('<span class="scheduler-legend-badge' + (is_hidden ? ' scheduler-legend-badge-off' : '') + '" data-outcome="' + legend_key + '"></span>');
+            var item = $('<span class="dashboard-legend-badge' + (is_hidden ? ' dashboard-legend-badge-off' : '') + '" data-outcome="' + legend_key + '"></span>');
             item.css({'color': text_color, 'background': bg_color});
-            item.append('<span class="scheduler-legend-badge-dot" style="background:' + dot_color + '"></span>');
+            item.append('<span class="dashboard-legend-badge-dot" style="background:' + dot_color + '"></span>');
             item.append(labels[legend_key]);
             legend_container.append(item);
         }
-        legend_container.off('click.toggle').on('click.toggle', '.scheduler-legend-badge', function() {
+        legend_container.off('click.toggle').on('click.toggle', '.dashboard-legend-badge', function() {
             var el = $(this);
             var key = el.data('outcome');
-            el.toggleClass('scheduler-legend-badge-off');
+            el.toggleClass('dashboard-legend-badge-off');
             var hidden = $.fn.zato.scheduler.dashboard._get_hidden_outcomes();
             if (hidden[key]) {
                 delete hidden[key];
@@ -735,18 +735,18 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
     var chart_svg = container.find('svg');
     var labels = $.fn.zato.scheduler.dashboard.outcome_labels;
 
-    var overlay = container.find('.scheduler-chart-overlay');
+    var overlay = container.find('.dashboard-chart-overlay');
     if (overlay.length === 0) {
         container.css('position', 'relative');
-        container.append('<div class="scheduler-chart-overlay"></div>');
-        overlay = container.find('.scheduler-chart-overlay');
+        container.append('<div class="dashboard-chart-overlay"></div>');
+        overlay = container.find('.dashboard-chart-overlay');
     }
     overlay.css({position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 'pointer-events': 'none'});
 
-    var tooltip = $('#scheduler-chart-tooltip');
+    var tooltip = $('#dashboard-chart-tooltip');
     if (tooltip.length === 0) {
-        $('body').append('<div id="scheduler-chart-tooltip" class="scheduler-chart-tooltip"></div>');
-        tooltip = $('#scheduler-chart-tooltip');
+        $('body').append('<div id="dashboard-chart-tooltip" class="dashboard-chart-tooltip"></div>');
+        tooltip = $('#dashboard-chart-tooltip');
     }
 
     var bucket_width_px = draw_width / bucket_count;
@@ -777,7 +777,9 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
             var pts = layer_points[dk_key];
             if (pts && pts[bucket_index] && pts[bucket_index].val > 0) {
                 var pt = pts[bucket_index];
-                band_html += '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="4.5" fill="#fff" stroke="' + bar_colors[dk_key] + '" stroke-width="2" />';
+                var dot_color_main = bar_colors[dk_key];
+                band_html += '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="5.5" fill="none" stroke="' + dot_color_main + '" stroke-opacity="0.35" stroke-width="1" />';
+                band_html += '<circle cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="3.5" fill="' + dot_color_main + '" />';
             }
         }
         band_html += '</svg>';
@@ -796,11 +798,27 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
         }
 
         tooltip.html(tooltip_lines.join('<br>'));
-        tooltip.css({
-            display: 'block',
-            left: (event.clientX + 14) + 'px',
-            top: (event.clientY - 14) + 'px'
-        });
+        tooltip.css({display: 'block', left: '0px', top: '0px'});
+        var mc_tt_w = tooltip.outerWidth();
+        var mc_tt_h = tooltip.outerHeight();
+        var mc_margin = 8;
+        var mc_viewport_w = $(window).width();
+        var mc_viewport_h = $(window).height();
+        var mc_left = event.clientX + 14;
+        var mc_top = event.clientY - 14;
+        if (mc_left + mc_tt_w + mc_margin > mc_viewport_w) {
+            mc_left = event.clientX - mc_tt_w - 14;
+        }
+        if (mc_left < mc_margin) {
+            mc_left = mc_margin;
+        }
+        if (mc_top + mc_tt_h + mc_margin > mc_viewport_h) {
+            mc_top = mc_viewport_h - mc_tt_h - mc_margin;
+        }
+        if (mc_top < mc_margin) {
+            mc_top = mc_margin;
+        }
+        tooltip.css({left: mc_left + 'px', top: mc_top + 'px'});
     });
 
     chart_svg.on('mouseleave.chart', function() {
@@ -815,18 +833,18 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.dashboard.render_job_table = function(jobs) {
-    var table_body = $('#scheduler-job-table-body');
+    var table_body = $('#dashboard-job-table-body');
     table_body.empty();
 
     if (!jobs || jobs.length === 0) {
-        table_body.append('<tr><td colspan="5" class="scheduler-no-data">No jobs</td></tr>');
-        $('#scheduler-jobs-count').text('');
+        table_body.append('<tr><td colspan="5" class="dashboard-no-data">No jobs</td></tr>');
+        $('#dashboard-jobs-count').text('');
         return;
     }
 
     var cluster_id = $(document).getUrlParam('cluster') || '1';
 
-    $('#scheduler-jobs-count').text(jobs.length);
+    $('#dashboard-jobs-count').text(jobs.length);
 
     jobs.sort(function(first, second) {
         return (first.name || '').localeCompare(second.name || '');
@@ -842,7 +860,7 @@ $.fn.zato.scheduler.dashboard.render_job_table = function(jobs) {
         var row = '<tr data-href="' + detail_url + '">';
         row += '<td>' + $.fn.zato.scheduler.dashboard.status_dot(job) + '</td>';
         row += '<td><a href="' + detail_url + '">' + job.name + '</a></td>';
-        row += '<td><span class="scheduler-type-badge">' + type_label + '</span></td>';
+        row += '<td><span class="dashboard-type-badge">' + type_label + '</span></td>';
         row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_fire_tooltip + '">' + next_fire_text + '</td>';
         row += '<td>' + $.fn.zato.scheduler.dashboard.outcome_squares(job.recent_outcomes) + '</td>';
         row += '</tr>';
@@ -862,14 +880,14 @@ $.fn.zato.scheduler.dashboard.render_job_table = function(jobs) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.dashboard.render_failures = function(timeline) {
-    var container = $('#scheduler-failures-body');
+    var container = $('#dashboard-failures-body');
     container.empty();
 
-    var all_clear_html = '<div class="scheduler-all-clear"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#1b855e" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#1b855e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>All clear</div>';
+    var all_clear_html = '<div class="dashboard-all-clear"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#1b855e" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#1b855e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>All clear</div>';
 
     if (!timeline || timeline.length === 0) {
         container.html(all_clear_html);
-        $('#scheduler-failures-count').text('0');
+        $('#dashboard-failures-count').text('0');
         return;
     }
 
@@ -885,11 +903,11 @@ $.fn.zato.scheduler.dashboard.render_failures = function(timeline) {
 
     if (failures.length === 0) {
         container.html(all_clear_html);
-        $('#scheduler-failures-count').text('0');
+        $('#dashboard-failures-count').text('0');
         return;
     }
 
-    $('#scheduler-failures-count').text(failures.length);
+    $('#dashboard-failures-count').text(failures.length);
 
     var html = '<table class="zato-table"><thead><tr>';
     html += '<th>Time</th><th>Job</th><th>Outcome</th><th>Error</th>';
@@ -907,7 +925,7 @@ $.fn.zato.scheduler.dashboard.render_failures = function(timeline) {
         html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
         html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(failure.job_id) + '/?cluster=' + cluster_id + '">' + (failure.job_name || failure.job_id) + '</a></td>';
         html += '<td>' + $.fn.zato.scheduler.dashboard.outcome_badge(failure.outcome) + '</td>';
-        html += '<td class="scheduler-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
+        html += '<td class="dashboard-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
         html += '</tr>';
     }
 
@@ -920,12 +938,12 @@ $.fn.zato.scheduler.dashboard.render_failures = function(timeline) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.dashboard.render_upcoming_table = function(jobs) {
-    var table_body = $('#scheduler-upcoming-table-body');
+    var table_body = $('#dashboard-upcoming-table-body');
     table_body.empty();
 
     if (!jobs || jobs.length === 0) {
-        table_body.append('<tr><td colspan="4" class="scheduler-no-data">No upcoming runs</td></tr>');
-        $('#scheduler-upcoming-count').text('0');
+        table_body.append('<tr><td colspan="4" class="dashboard-no-data">No upcoming runs</td></tr>');
+        $('#dashboard-upcoming-count').text('0');
         return;
     }
 
@@ -970,9 +988,9 @@ $.fn.zato.scheduler.dashboard.render_upcoming_table = function(jobs) {
     });
 
     var max_upcoming = Math.min(15, upcoming.length);
-    $('#scheduler-upcoming-count').text(upcoming.length);
+    $('#dashboard-upcoming-count').text(upcoming.length);
     if (max_upcoming === 0) {
-        table_body.append('<tr><td colspan="4" class="scheduler-no-data">No upcoming runs</td></tr>');
+        table_body.append('<tr><td colspan="4" class="dashboard-no-data">No upcoming runs</td></tr>');
         return;
     }
 
@@ -985,7 +1003,7 @@ $.fn.zato.scheduler.dashboard.render_upcoming_table = function(jobs) {
         row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
         row += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '">' + entry.name + '</a></td>';
         row += '<td style="color:#6e6e73">' + entry.service + '</td>';
-        row += '<td><span class="scheduler-type-badge">' + entry.type_label + '</span></td>';
+        row += '<td><span class="dashboard-type-badge">' + entry.type_label + '</span></td>';
         row += '</tr>';
         table_body.append(row);
     }
@@ -1038,7 +1056,7 @@ $.fn.zato.scheduler.dashboard._clear_tile_hover = function() {
     for (var i = 0; i < specs.length; i++) {
         $.fn.zato.eda.sparkline_clear_overlay(specs[i].sel);
     }
-    $('#scheduler-tile-tooltip').css('display', 'none');
+    $('#dashboard-tile-tooltip').css('display', 'none');
 };
 
 $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_event) {
@@ -1048,10 +1066,13 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
     var active_entry = registry[active_sel];
     if (!active_entry) return;
 
-    var $container = $(active_sel);
-    var rect = $container[0].getBoundingClientRect();
+    var $spark = $(active_sel);
+    var rect = $spark[0].getBoundingClientRect();
     var mouse_x_px = mouse_event.clientX - rect.left;
     var container_px_w = rect.width;
+
+    if (mouse_x_px < 0) mouse_x_px = 0;
+    if (mouse_x_px > container_px_w) mouse_x_px = container_px_w;
 
     var scale = (container_px_w > 0 && active_entry.pixel_width > 0)
         ? (active_entry.pixel_width / container_px_w) : 1;
@@ -1098,44 +1119,74 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
         $.fn.zato.eda.sparkline_show_marker(spec.sel, mapped_index, spec.color);
 
         var val = entry.data_points[mapped_index];
-        tooltip_rows.push('<div class="scheduler-tile-tooltip-row">' +
-            '<span class="scheduler-tile-tooltip-dot" style="background:' + spec.color + '"></span>' +
-            '<span class="scheduler-tile-tooltip-label">' + spec.label + '</span>' +
-            '<span class="scheduler-tile-tooltip-value">' + val + '</span>' +
+        tooltip_rows.push('<div class="dashboard-tile-tooltip-row">' +
+            '<span class="dashboard-tile-tooltip-dot" style="background:' + spec.color + '"></span>' +
+            '<span class="dashboard-tile-tooltip-label">' + spec.label + '</span>' +
+            '<span class="dashboard-tile-tooltip-value">' + val + '</span>' +
             '</div>');
     }
 
-    var $tooltip = $('#scheduler-tile-tooltip');
+    var $tooltip = $('#dashboard-tile-tooltip');
     if ($tooltip.length === 0) {
-        $('body').append('<div id="scheduler-tile-tooltip" class="scheduler-tile-tooltip"></div>');
-        $tooltip = $('#scheduler-tile-tooltip');
+        $('body').append('<div id="dashboard-tile-tooltip" class="dashboard-tile-tooltip"></div>');
+        $tooltip = $('#dashboard-tile-tooltip');
     }
 
     $tooltip.html(tooltip_rows.join(''));
-    $tooltip.css({
-        display: 'block',
-        left: (mouse_event.clientX + 14) + 'px',
-        top: (mouse_event.clientY + 14) + 'px'
-    });
+    $tooltip.css({display: 'block', left: '0px', top: '0px'});
+
+    var tt_w = $tooltip.outerWidth();
+    var tt_h = $tooltip.outerHeight();
+    var margin = 8;
+    var viewport_w = $(window).width();
+    var viewport_h = $(window).height();
+
+    var left = mouse_event.clientX + 14;
+    var top = mouse_event.clientY + 14;
+
+    if (left + tt_w + margin > viewport_w) {
+        left = mouse_event.clientX - tt_w - 14;
+    }
+    if (left < margin) {
+        left = margin;
+    }
+    if (top + tt_h + margin > viewport_h) {
+        top = mouse_event.clientY - tt_h - 14;
+    }
+    if (top < margin) {
+        top = margin;
+    }
+
+    $tooltip.css({left: left + 'px', top: top + 'px'});
 };
 
 $.fn.zato.scheduler.dashboard._setup_tile_hover = function() {
     var dash = $.fn.zato.scheduler.dashboard;
     if (dash._tile_hover_ready) return;
-    dash._tile_hover_ready = true;
 
     var specs = dash._tile_hover_specs;
+    var bound_any = false;
+
     for (var i = 0; i < specs.length; i++) {
         (function(sel) {
-            var $c = $(sel);
-            $c.css('cursor', 'crosshair');
-            $c.on('mousemove.tilehover', function(event) {
+            var $spark = $(sel);
+            if (!$spark.length) return;
+            var $tile = $spark.closest('.dashboard-tile');
+            if (!$tile.length) return;
+            bound_any = true;
+            $tile.css('cursor', 'crosshair');
+            $tile.off('mousemove.tilehover mouseleave.tilehover');
+            $tile.on('mousemove.tilehover', function(event) {
                 dash._show_tile_hover(sel, event);
             });
-            $c.on('mouseleave.tilehover', function() {
+            $tile.on('mouseleave.tilehover', function() {
                 dash._clear_tile_hover();
             });
         })(specs[i].sel);
+    }
+
+    if (bound_any) {
+        dash._tile_hover_ready = true;
     }
 };
 
@@ -1180,11 +1231,11 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
     var base_spark_err = {height: 36, color: '#ff6b6b', dot_color: '#ff6b6b', dot_radius: 3.5};
 
     var tile_specs = [
-        {sel: '#spark-total-jobs', key: 'total_jobs', opts: base_spark, dot_style: 'filled'},
-        {sel: '#spark-active', key: 'active', opts: base_spark, dot_style: 'hollow'},
+        {sel: '#spark-total-jobs', key: 'total_jobs', opts: base_spark, dot_style: 'filled_halo'},
+        {sel: '#spark-active', key: 'active', opts: base_spark, dot_style: 'filled_halo'},
         {sel: '#spark-paused', key: 'paused', opts: base_spark, dot_style: 'filled_halo'},
-        {sel: '#spark-in-flight', key: 'in_flight', opts: base_spark, dot_style: 'hollow_halo'},
-        {sel: '#spark-failures', key: 'failures', opts: base_spark_err, dot_style: 'filled_white_ring'}
+        {sel: '#spark-in-flight', key: 'in_flight', opts: base_spark, dot_style: 'filled_halo'},
+        {sel: '#spark-failures', key: 'failures', opts: base_spark_err, dot_style: 'filled_halo'}
     ];
 
     for (var tile_i = 0; tile_i < tile_specs.length; tile_i++) {
@@ -1248,7 +1299,7 @@ $.fn.zato.scheduler.dashboard.init = function(initial_data) {
     } catch(e) {}
     $.fn.zato.scheduler.dashboard._update_chart_type_icon();
 
-    $('#scheduler-chart-type-toggle').on('click', function() {
+    $('#dashboard-chart-type-toggle').on('click', function() {
         $.fn.zato.scheduler.dashboard.show_bars = !$.fn.zato.scheduler.dashboard.show_bars;
         try { localStorage.setItem('zato_scheduler_show_bars', String($.fn.zato.scheduler.dashboard.show_bars)); } catch(e) {}
         $.fn.zato.scheduler.dashboard._update_chart_type_icon();
@@ -1257,32 +1308,32 @@ $.fn.zato.scheduler.dashboard.init = function(initial_data) {
 
     $.fn.zato.scheduler.dashboard._time_range_minutes = $.fn.zato.scheduler.dashboard._get_time_range_minutes();
 
-    var menu = $('#scheduler-time-range-menu');
-    var pill = $('#scheduler-exec-count');
+    var menu = $('#dashboard-time-range-menu');
+    var pill = $('#dashboard-exec-count');
     var stored_range = $.fn.zato.scheduler.dashboard._time_range_minutes;
-    menu.find('.scheduler-time-range-option').removeClass('scheduler-time-range-active');
-    menu.find('.scheduler-time-range-option[data-minutes="' + stored_range + '"]').addClass('scheduler-time-range-active');
+    menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
+    menu.find('.dashboard-time-range-option[data-minutes="' + stored_range + '"]').addClass('dashboard-time-range-active');
 
     pill.on('click', function(event) {
         event.stopPropagation();
-        menu.toggleClass('scheduler-time-range-menu-open');
+        menu.toggleClass('dashboard-time-range-menu-open');
     });
 
-    menu.on('click', '.scheduler-time-range-option', function(event) {
+    menu.on('click', '.dashboard-time-range-option', function(event) {
         event.stopPropagation();
         var minutes = parseInt($(this).data('minutes'), 10);
         $.fn.zato.scheduler.dashboard._set_time_range_minutes(minutes);
-        menu.find('.scheduler-time-range-option').removeClass('scheduler-time-range-active');
-        $(this).addClass('scheduler-time-range-active');
-        menu.removeClass('scheduler-time-range-menu-open');
+        menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
+        $(this).addClass('dashboard-time-range-active');
+        menu.removeClass('dashboard-time-range-menu-open');
         $.fn.zato.scheduler.dashboard._redraw_chart_from_cache();
     });
 
     $(document).on('click', function() {
-        menu.removeClass('scheduler-time-range-menu-open');
+        menu.removeClass('dashboard-time-range-menu-open');
     });
 
-    var chart_container = document.getElementById('scheduler-bar-chart');
+    var chart_container = document.getElementById('dashboard-bar-chart');
     if (chart_container && !chart_container._zato_wheel_bound) {
         chart_container._zato_wheel_bound = true;
         chart_container.addEventListener('wheel', function(event) {
@@ -1305,6 +1356,6 @@ $.fn.zato.scheduler.dashboard.init = function(initial_data) {
     }
 
     $.fn.zato.scheduler.dashboard.render(initial_data);
-    $('.scheduler-page').css('opacity', '1');
+    $('.dashboard-page').css('opacity', '1');
     setInterval($.fn.zato.scheduler.dashboard.poll, 10000);
 };
