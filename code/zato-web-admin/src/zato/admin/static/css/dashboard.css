@@ -206,22 +206,96 @@
 .dashboard-grid-section {
     margin-top: 20px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    /* Option D: Jobs on the left (primary), Activity card on the right
+       hosting a tab strip that switches between Recent failures and
+       Upcoming runs. Two columns, equal width. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 20px;
-    /* Align the three columns by giving them the same intrinsic height
-       so the internal scroll containers kick in symmetrically. */
     align-items: stretch;
 }
 
-/* In the three-column layout each card has a fixed overall height and
-   the table / list body scrolls inside. This prevents one column's
-   content (Jobs, typically) from stretching the whole row and leaving
-   the other two with acres of whitespace. */
 .dashboard-grid-section .dashboard-card {
     display: flex;
     flex-direction: column;
     max-height: 560px;
     min-height: 320px;
+}
+
+/* Activity card: tab strip replaces the usual card header. Only the
+   active tab panel is laid out (the inactive one is `hidden`), so the
+   card height is driven by whichever panel is showing. */
+.dashboard-card-activity {
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-card-header-tabs {
+    margin-bottom: 12px;
+    gap: 0;
+}
+
+.dashboard-tabs {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    width: 100%;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    margin: -4px -4px 0;
+    padding: 0 4px;
+}
+
+.dashboard-tab {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 8px 10px 10px;
+    margin-bottom: -1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(17, 17, 17, 0.55);
+    transition: color 150ms ease, border-color 150ms ease;
+}
+
+.dashboard-tab:hover {
+    color: rgba(17, 17, 17, 0.85);
+}
+
+.dashboard-tab:focus {
+    outline: none;
+}
+
+.dashboard-tab:focus-visible {
+    outline: 2px solid rgba(130, 204, 255, 0.55);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.dashboard-tab-active {
+    color: rgb(17, 17, 17);
+    border-bottom-color: rgb(17, 17, 17);
+}
+
+.dashboard-tab-label {
+    line-height: 1;
+}
+
+.dashboard-tab-panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.dashboard-tab-panel[hidden] {
+    display: none;
 }
 
 .dashboard-card-scroll {
@@ -808,21 +882,6 @@
 
 /* Responsive */
 
-/* Three equal columns look cramped below ~1280 px once the sidebar + chrome
-   are accounted for. Collapse to two columns first (Jobs on one row, the
-   two smaller panels on the next), then to one column on phone-class widths. */
-@media (max-width: 1280px) {
-    .dashboard-grid-section {
-        grid-template-columns: 1fr 1fr;
-    }
-    .dashboard-card-jobs {
-        grid-column: 1 / -1;
-    }
-    .dashboard-grid-section .dashboard-card {
-        max-height: 480px;
-    }
-}
-
 @media (max-width: 960px) {
     .dashboard-hero-tiles {
         flex-wrap: wrap;
@@ -832,9 +891,6 @@
     }
     .dashboard-grid-section {
         grid-template-columns: 1fr;
-    }
-    .dashboard-card-jobs {
-        grid-column: auto;
     }
     .dashboard-grid-section .dashboard-card {
         max-height: none;

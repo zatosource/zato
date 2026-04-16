@@ -1479,6 +1479,16 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
     $.fn.zato.scheduler.dashboard.render_failures(data.history_timeline);
     $.fn.zato.scheduler.dashboard.render_upcoming_table(data.jobs);
 
+    var timeline = data.history_timeline || [];
+    var failures_total = 0;
+    for (var fi = 0; fi < timeline.length; fi++) {
+        var oc = timeline[fi].outcome;
+        if (oc === 'error' || oc === 'timeout') failures_total++;
+    }
+    if (typeof $.fn.zato.scheduler.dashboard._auto_activate_activity_tab === 'function') {
+        $.fn.zato.scheduler.dashboard._auto_activate_activity_tab(failures_total);
+    }
+
     $.fn.zato.scheduler.dashboard.update_refresh_indicator();
 };
 
@@ -1583,7 +1593,60 @@ $.fn.zato.scheduler.dashboard.init = function(initial_data) {
         }, {passive: false});
     }
 
+    /* Activity card tabs. The selected tab persists across polls via a
+       module-level flag so a refresh doesn't jump the user back to
+       "failures". On first load we look at localStorage, defaulting to
+       "failures" because that's what you want to see if anything is on
+       fire; `_auto_activate_activity_tab` on the first render will flip
+       to "upcoming" if there's nothing to worry about. */
+    try {
+        var stored_tab = localStorage.getItem('zato_scheduler_activity_tab');
+        if (stored_tab === 'failures' || stored_tab === 'upcoming') {
+            $.fn.zato.scheduler.dashboard._activity_tab = stored_tab;
+        }
+    } catch(e) {}
+    if (!$.fn.zato.scheduler.dashboard._activity_tab) {
+        $.fn.zato.scheduler.dashboard._activity_tab = 'failures';
+    }
+    $.fn.zato.scheduler.dashboard._activity_tab_user_chose = false;
+
+    $(document).on('click', '.dashboard-tab', function() {
+        var tab = $(this).data('tab');
+        $.fn.zato.scheduler.dashboard._activity_tab = tab;
+        $.fn.zato.scheduler.dashboard._activity_tab_user_chose = true;
+        try { localStorage.setItem('zato_scheduler_activity_tab', tab); } catch(e) {}
+        $.fn.zato.scheduler.dashboard._apply_activity_tab();
+    });
+
+    $.fn.zato.scheduler.dashboard._apply_activity_tab();
+
     $.fn.zato.scheduler.dashboard.render(initial_data);
     $('.dashboard-page').css('opacity', '1');
     setInterval($.fn.zato.scheduler.dashboard.poll, $.fn.zato.scheduler.dashboard._poll_interval_ms);
+};
+
+$.fn.zato.scheduler.dashboard._apply_activity_tab = function() {
+    var tab = $.fn.zato.scheduler.dashboard._activity_tab || 'failures';
+    $('.dashboard-tab').each(function() {
+        var is_active = $(this).data('tab') === tab;
+        $(this).toggleClass('dashboard-tab-active', is_active);
+        $(this).attr('aria-selected', is_active ? 'true' : 'false');
+    });
+    $('#dashboard-tab-panel-failures').prop('hidden', tab !== 'failures');
+    $('#dashboard-tab-panel-upcoming').prop('hidden', tab !== 'upcoming');
+};
+
+$.fn.zato.scheduler.dashboard._auto_activate_activity_tab = function(failures_count) {
+    /* On the very first render, if the user hasn't picked a tab yet and
+       there are no failures, jump to Upcoming runs so the right column
+       actually shows something. Any later click (user choice) locks the
+       selection. */
+    var dash = $.fn.zato.scheduler.dashboard;
+    if (dash._activity_tab_seeded) return;
+    dash._activity_tab_seeded = true;
+    if (dash._activity_tab_user_chose) return;
+    if (dash._activity_tab === 'failures' && failures_count === 0) {
+        dash._activity_tab = 'upcoming';
+        dash._apply_activity_tab();
+    }
 };
