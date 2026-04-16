@@ -313,7 +313,7 @@ def index(req):
                 job.name = name
                 job.is_active = is_active
                 job.job_type = job_type
-                job.start_date = from_utc_to_user(start_date+'+00:00', req.zato.user_profile)
+                job.start_date = from_utc_to_user(start_date+'+00:00', req.zato.user_profile) if start_date else ''
                 job.extra = extra
                 job.service_name = service_name
                 job.job_type_friendly = job_type_friendly

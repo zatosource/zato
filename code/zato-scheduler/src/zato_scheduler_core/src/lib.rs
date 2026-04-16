@@ -248,6 +248,31 @@ fn scheduler_get_all_history(py: Python<'_>) -> PyResult<Py<PyDict>> {
     history::all_history_to_py_dict(py, &state.jobs)
 }
 
+#[pyfunction]
+#[pyo3(signature = ())]
+fn scheduler_get_job_summaries(py: Python<'_>) -> PyResult<Py<PyList>> {
+    let shared = get_shared()?;
+    let state = shared.state.lock().unwrap();
+    let list = PyList::empty(py);
+    for (id, rj) in &state.jobs {
+        let d = PyDict::new(py);
+        d.set_item("id", id.as_str())?;
+        d.set_item("name", rj.name.as_str())?;
+        d.set_item("is_active", rj.is_active)?;
+        d.set_item("service", rj.service.as_ref())?;
+        d.set_item("job_type", rj.job_type.as_str())?;
+        d.set_item("in_flight", rj.in_flight)?;
+        d.set_item("current_run", rj.current_run)?;
+        d.set_item("interval_ms", rj.interval_ms)?;
+        match rj.next_fire_utc {
+            Some(dt) => d.set_item("next_fire_utc", dt.to_rfc3339())?,
+            None => d.set_item("next_fire_utc", py.None())?,
+        }
+        list.append(d)?;
+    }
+    Ok(list.unbind())
+}
+
 fn dict_to_scheduler_job(job_id: &str, d: &Bound<'_, PyDict>) -> PyResult<zato_server_core::model::SchedulerJob> {
     let get_str = |key: &str| -> String {
         d.get_item(key).ok().flatten().and_then(|v| v.extract::<String>().ok()).unwrap_or_default()
@@ -299,5 +324,6 @@ fn zato_scheduler_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(scheduler_reload, m)?)?;
     m.add_function(wrap_pyfunction!(scheduler_get_history, m)?)?;
     m.add_function(wrap_pyfunction!(scheduler_get_all_history, m)?)?;
+    m.add_function(wrap_pyfunction!(scheduler_get_job_summaries, m)?)?;
     Ok(())
 }

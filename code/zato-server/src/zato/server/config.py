@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging as _logging
 from copy import deepcopy
 from logging import getLogger
 from threading import RLock
@@ -33,6 +34,12 @@ if 0:
 # ################################################################################################################################
 
 logger = getLogger(__name__)
+
+def _rest_log_write(msg):
+    with open('/tmp/rest.txt', 'a') as _f:
+        from datetime import datetime
+        _f.write(datetime.now().isoformat() + ' ' + msg + '\n')
+        _f.flush()
 
 # ################################################################################################################################
 
@@ -70,8 +77,12 @@ class ConfigDict:
         """
         item = Bunch({'config': Bunch(raw_dict)})
         if key and key in self._runtime:
+            runtime_keys = list(self._runtime[key].keys())
+            _rest_log_write('_wrap_item: entity=%s key=%s, merging runtime attrs=%s' % (self._entity_type, key, runtime_keys))
             for attr_name, attr_value in self._runtime[key].items():
                 item[attr_name] = attr_value
+        else:
+            _rest_log_write('_wrap_item: entity=%s key=%s, no runtime attrs (all runtime keys=%s)' % (self._entity_type, key, list(self._runtime.keys())))
         return item
 
     def _unwrap_item(self, key, value):
@@ -80,8 +91,11 @@ class ConfigDict:
         """
         runtime_attrs = {}
 
+        _rest_log_write('_unwrap_item: entity=%s key=%s, value type=%s, isinstance(dict)=%s' % (self._entity_type, key, type(value).__name__, isinstance(value, dict)))
         if isinstance(value, dict):
             config = value.get('config')
+            all_keys = list(value.keys())
+            _rest_log_write('_unwrap_item: entity=%s key=%s, value dict keys=%s, has config=%s' % (self._entity_type, key, all_keys, config is not None))
             for attr_name, attr_value in value.items():
                 if attr_name != 'config':
                     runtime_attrs[attr_name] = attr_value
@@ -90,7 +104,11 @@ class ConfigDict:
             raw = dict(value) if isinstance(value, dict) else value
 
         if runtime_attrs:
+            _rest_log_write('_unwrap_item: entity=%s key=%s, storing runtime attrs=%s' % (self._entity_type, key, list(runtime_attrs.keys())))
             self._runtime[key] = runtime_attrs
+        else:
+            _rest_log_write('_unwrap_item: entity=%s key=%s, NO runtime attrs found' % (self._entity_type, key))
+        _rest_log_write('_unwrap_item: entity=%s key=%s, self id=%s, _runtime keys after=%s' % (self._entity_type, key, id(self), list(self._runtime.keys())))
         return raw
 
     def _get_all_items_from_rust(self):

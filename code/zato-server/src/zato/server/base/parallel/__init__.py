@@ -1155,6 +1155,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
         self.broker_client.publish_to_pubsub(pubsub_msg)
 
+        if getattr(self, '_scheduler_started', False):
+            from zato_scheduler_core import scheduler_reload
+            scheduler_reload()
+
         logger.info('Config loaded OK')
 
 # ################################################################################################################################
@@ -1221,6 +1225,17 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         import zato.server.service.internal.pubsub
 
         config_path = os.path.join(os.path.dirname(zato.server.service.internal.pubsub.__file__), 'enmasse.yaml')
+        self.config_store.load_yaml(config_path)
+        self.reload_config()
+        return True
+
+# ################################################################################################################################
+
+    def import_test_scheduler_enmasse(self):
+
+        import zato.server.service.internal.scheduler
+
+        config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'enmasse.yaml')
         self.config_store.load_yaml(config_path)
         self.reload_config()
         return True

@@ -371,31 +371,14 @@ $.fn.zato.invoker.save_to_history = function(key, request_text, response_text) {
 
     let history = $.fn.zato.invoker.get_history(key);
 
-    if (history.length > 0) {
-        let first_text = typeof history[0] === 'string' ? history[0] : history[0].text;
-        if (first_text === request_text) {
-            if (typeof history[0] === 'object') {
-                history[0].timestamp = Date.now();
-                history[0].response = response_text || '';
-                localStorage.setItem(key, JSON.stringify(history));
-            }
-            return history;
-        }
-    }
-
-    history = history.filter(function(item) {
-        let text = typeof item === 'string' ? item : item.text;
-        return text !== request_text;
-    });
-
     history.unshift({
         text: request_text,
         response: response_text || '',
         timestamp: Date.now()
     });
 
-    if (history.length > 100) {
-        history = history.slice(0, 100);
+    if (history.length > 200) {
+        history = history.slice(0, 200);
     }
 
     localStorage.setItem(key, JSON.stringify(history));
@@ -585,7 +568,7 @@ $.fn.zato.invoker._toggle_response_detail = function(wrapper, index, item) {
     if (!response || response.trim() === '' || response.trim() === '(None)') {
         content.text('(No response)');
     } else {
-        content.text(response);
+        $.fn.zato.invoker._render_highlighted_response(content, response);
     }
 
     detail.append(header, content);
@@ -679,7 +662,7 @@ $.fn.zato.invoker.render_overlay_html = function() {
         +       '<div class="invoker-modal-buttons">'
         +         '<input type="button" id="invoker-modal-invoke-btn" class="invoker-btn-primary" value="Invoke" />'
         +         '<input type="button" id="invoker-modal-history-btn" value="History" />'
-        +         '<input type="button" id="invoker-modal-format-btn" value="Format JSON" />'
+        +         '<input type="button" id="invoker-modal-format-btn" value="Format response" />'
         +         '<div class="invoker-more-options-toggle">'
         +           '<a href="javascript:$.fn.zato.invoker.toggle_more_options()">More options</a>'
         +         '</div>'
@@ -706,14 +689,22 @@ $.fn.zato.invoker.render_overlay_html = function() {
         +         '</div>'
         +       '</div>'
         +       '<div class="invoker-modal-status" id="invoker-modal-status"></div>'
-        +       '<div class="invoker-modal-response-label">Response</div>'
-        +       '<textarea id="invoker-modal-response" class="invoker-modal-response-textarea" readonly></textarea>'
+        +       '<div class="invoker-modal-response-header">'
+        +         '<span class="invoker-modal-response-label">Response</span>'
+        +         '<span>|</span>'
+        +         '<a class="invoker-modal-response-copy" id="invoker-modal-copy-btn" href="javascript:void(0)">Copy</a>'
+        +       '</div>'
+        +       '<div class="invoker-modal-response-wrap">'
+        +         '<div id="invoker-modal-response-gutter" class="invoker-modal-response-gutter"></div>'
+        +         '<pre id="invoker-modal-response" class="invoker-modal-response-pre" contenteditable="true" spellcheck="false"></pre>'
+        +       '</div>'
         +     '</div>'
         +   '</div>'
         + '</div>';
 
     $("body").append(html);
     $.fn.zato.invoker._bind_modal_events();
+    $.fn.zato.invoker._make_draggable(".invoker-modal-header", ".invoker-modal-content");
 
     let history_html = ''
         + '<div id="invoker-modal-history-overlay" class="invoker-history-overlay hidden">'
@@ -732,6 +723,7 @@ $.fn.zato.invoker.render_overlay_html = function() {
 
     $("body").append(history_html);
     $.fn.zato.invoker._bind_history_events();
+    $.fn.zato.invoker._make_draggable(".invoker-history-overlay-header", ".invoker-history-overlay-content");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -741,7 +733,9 @@ $.fn.zato.invoker._bind_modal_events = function() {
     $(".invoker-modal-backdrop").on("click", $.fn.zato.invoker.close_overlay);
     $("#invoker-modal-invoke-btn").on("click", $.fn.zato.invoker._on_modal_invoke);
     $("#invoker-modal-history-btn").on("click", $.fn.zato.invoker._open_modal_history);
-    $("#invoker-modal-format-btn").on("click", $.fn.zato.invoker._on_format_json);
+    $("#invoker-modal-format-btn").on("click", $.fn.zato.invoker._on_format_response);
+    $("#invoker-modal-copy-btn").on("click", $.fn.zato.invoker._on_copy_response);
+
 
     $("#invoker-modal-request").on("keydown", function(e) {
         let is_ctrl = e.ctrlKey || e.metaKey;
@@ -847,13 +841,42 @@ $.fn.zato.invoker.open_overlay = function(config) {
     window.zato_invoker_history_index = -1;
 
     $("#invoker-modal-title").text("Invoke: " + config.name);
-    $("#invoker-modal-request").val("");
-    $("#invoker-modal-response").val("");
-    $("#invoker-modal-status").text("");
-    $("#invoker-modal-method").val("POST");
-    $("#invoker-modal-query-params").val("");
-    $("#invoker-modal-path-params").val("");
-    $("#invoker-more-options").addClass("hidden");
+
+    let saved = $.fn.zato.invoker._load_overlay_state(config.history_key);
+    let content = $(".invoker-modal-content");
+
+    if (saved.width && saved.height) {
+        content.css({"width": saved.width, "height": saved.height});
+    } else {
+        content.css({"width": "", "height": ""});
+    }
+
+    if (saved.left && saved.top) {
+        content.css({"position": "fixed", "left": saved.left, "top": saved.top, "margin": "0", "transform": "none"});
+    } else {
+        content.css({"position": "", "left": "", "top": "", "margin": "", "transform": ""});
+    }
+
+    $("#invoker-modal-request").val(saved.request || '');
+    $("#invoker-modal-method").val(saved.method || 'POST');
+    $("#invoker-modal-query-params").val(saved.query_params || '');
+    $("#invoker-modal-path-params").val(saved.path_params || '');
+    $("#invoker-modal-status").text(saved.status || '');
+
+    if (saved.response_raw) {
+        let pre = $("#invoker-modal-response");
+        pre.data("raw-response", saved.response_raw);
+        $.fn.zato.invoker._render_highlighted_response(pre, saved.response_raw);
+    } else {
+        $("#invoker-modal-response").text("").removeData("raw-response");
+        $("#invoker-modal-response-gutter").text("");
+    }
+
+    if (saved.more_options_open) {
+        $("#invoker-more-options").removeClass("hidden");
+    } else {
+        $("#invoker-more-options").addClass("hidden");
+    }
 
     $("#invoker-modal-overlay").removeClass("hidden");
     $("#invoker-modal-request").focus();
@@ -862,8 +885,45 @@ $.fn.zato.invoker.open_overlay = function(config) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.invoker.close_overlay = function() {
+    let config = $.fn.zato.invoker._modal_config;
+    if (config) {
+        $.fn.zato.invoker._save_overlay_state(config.history_key);
+    }
     $("#invoker-modal-overlay").addClass("hidden");
     $.fn.zato.invoker._modal_config = null;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._save_overlay_state = function(history_key) {
+    let content = $(".invoker-modal-content");
+    let rect = content[0].getBoundingClientRect();
+    let state = {
+        width: content[0].style.width || (rect.width + 'px'),
+        height: content[0].style.height || (rect.height + 'px'),
+        left: content[0].style.left || '',
+        top: content[0].style.top || '',
+        request: $("#invoker-modal-request").val() || '',
+        method: $("#invoker-modal-method").val() || 'POST',
+        query_params: $("#invoker-modal-query-params").val() || '',
+        path_params: $("#invoker-modal-path-params").val() || '',
+        response_raw: $("#invoker-modal-response").data("raw-response") || '',
+        status: $("#invoker-modal-status").text() || '',
+        more_options_open: !$("#invoker-more-options").hasClass("hidden")
+    };
+    localStorage.setItem('zato_invoker_state_' + history_key, JSON.stringify(state));
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._load_overlay_state = function(history_key) {
+    let raw = localStorage.getItem('zato_invoker_state_' + history_key);
+    if (raw) {
+        try {
+            return JSON.parse(raw);
+        } catch (e) {}
+    }
+    return {};
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -908,7 +968,8 @@ $.fn.zato.invoker._on_modal_invoke = function() {
 
 $.fn.zato.invoker._set_modal_invoking = function() {
     $("#invoker-modal-status").text("Invoking ...").addClass("invoker-blinking");
-    $("#invoker-modal-response").val("");
+    $("#invoker-modal-response").text("").removeData("raw-response");
+    $("#invoker-modal-response-gutter").text("");
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -955,8 +1016,9 @@ $.fn.zato.invoker._on_modal_invoke_error = function(jq_xhr, request_text) {
 $.fn.zato.invoker._set_modal_result = function(status, response_text, request_text) {
     $("#invoker-modal-status").text(status).removeClass("invoker-blinking");
 
-    let formatted = $.fn.zato.invoker.format_json(response_text);
-    $("#invoker-modal-response").val(formatted);
+    let pre = $("#invoker-modal-response");
+    pre.data("raw-response", response_text);
+    $.fn.zato.invoker._render_highlighted_response(pre, response_text);
 
     let config = $.fn.zato.invoker._modal_config;
     if (config) {
@@ -966,9 +1028,268 @@ $.fn.zato.invoker._set_modal_result = function(status, response_text, request_te
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker._on_format_json = function() {
-    let textarea = $("#invoker-modal-request");
-    textarea.val($.fn.zato.invoker.format_json(textarea.val()));
+$.fn.zato.invoker._on_format_response = function() {
+    let pre = $("#invoker-modal-response");
+    let raw = pre.data("raw-response") || pre.text() || '';
+    let formatted = $.fn.zato.invoker._format_response_text(raw);
+    pre.data("raw-response", formatted);
+    $.fn.zato.invoker._render_highlighted_response(pre, formatted);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._format_response_text = function(text) {
+    if (!text || typeof text !== 'string') {
+        return text || '';
+    }
+    let trimmed = text.trim();
+
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+            return JSON.stringify(JSON.parse(trimmed), null, 2);
+        } catch (e) {}
+    }
+
+    if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
+        return $.fn.zato.invoker._format_xml(trimmed);
+    }
+
+    return text;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._format_xml = function(xml_text) {
+    let indent = 0;
+    let lines = [];
+    let tokens = xml_text.replace(/>\s*</g, '>\n<').split('\n');
+
+    for (let i = 0; i < tokens.length; i++) {
+        let token = tokens[i].trim();
+        if (!token) {
+            continue;
+        }
+        let is_closing = token.startsWith('</');
+        let is_self_closing = token.endsWith('/>') || token.startsWith('<?');
+
+        if (is_closing) {
+            indent = Math.max(0, indent - 1);
+        }
+
+        lines.push('  '.repeat(indent) + token);
+
+        if (!is_closing && !is_self_closing) {
+            indent++;
+        }
+    }
+
+    return lines.join('\n');
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._detect_content_type = function(text) {
+    if (!text || typeof text !== 'string') {
+        return 'plain';
+    }
+    let trimmed = text.trim();
+
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try {
+            JSON.parse(trimmed);
+            return 'json';
+        } catch (e) {}
+    }
+
+    if (trimmed.startsWith('<') && trimmed.indexOf('>') !== -1) {
+        return 'xml';
+    }
+
+    return 'plain';
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._render_highlighted_response = function(pre_elem, text) {
+    if (!text) {
+        pre_elem.html('');
+        $.fn.zato.invoker._update_line_numbers(pre_elem);
+        return;
+    }
+
+    let content_type = $.fn.zato.invoker._detect_content_type(text);
+
+    if (content_type === 'json') {
+        pre_elem.html($.fn.zato.invoker._highlight_json(text));
+    } else if (content_type === 'xml') {
+        pre_elem.html($.fn.zato.invoker._highlight_xml(text));
+    } else {
+        pre_elem.text(text);
+    }
+
+    $.fn.zato.invoker._update_line_numbers(pre_elem);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._update_line_numbers = function(pre_elem) {
+    let gutter = pre_elem.siblings(".invoker-modal-response-gutter");
+    if (gutter.length === 0) {
+        gutter = pre_elem.parent().find(".invoker-modal-response-gutter");
+    }
+    if (gutter.length === 0) {
+        return;
+    }
+
+    let rendered_text = pre_elem.text();
+    if (!rendered_text) {
+        gutter.html('');
+        return;
+    }
+
+    let line_count = rendered_text.split('\n').length;
+    let lines = [];
+    for (let i = 1; i <= line_count; i++) {
+        lines.push(i + ' ');
+    }
+    gutter.text(lines.join('\n'));
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._escape_html = function(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._highlight_json = function(text) {
+    let escaped = $.fn.zato.invoker._escape_html(text);
+
+    escaped = escaped.replace(
+        /(&quot;(?:[^&]|&(?!quot;))*?&quot;)\s*:/g,
+        '<span class="invoker-syn-key">$1</span>:'
+    );
+
+    escaped = escaped.replace(
+        /:\s*(&quot;(?:[^&]|&(?!quot;))*?&quot;)/g,
+        ': <span class="invoker-syn-str">$1</span>'
+    );
+
+    escaped = escaped.replace(
+        /(?<![&\w])(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?![&\w])/g,
+        '<span class="invoker-syn-num">$1</span>'
+    );
+
+    escaped = escaped.replace(
+        /\b(true|false)\b/g,
+        '<span class="invoker-syn-bool">$1</span>'
+    );
+
+    escaped = escaped.replace(
+        /\bnull\b/g,
+        '<span class="invoker-syn-null">null</span>'
+    );
+
+    return escaped;
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._highlight_xml = function(text) {
+    let esc = $.fn.zato.invoker._escape_html;
+
+    return esc(text)
+        .replace(
+            /(&lt;\/?)([\w:.-]+)/g,
+            '$1<span class="invoker-syn-tag">$2</span>'
+        )
+        .replace(
+            /([\w:.-]+)(=)(&quot;)(.*?)(&quot;)/g,
+            '<span class="invoker-syn-attr">$1</span>$2<span class="invoker-syn-aval">$3$4$5</span>'
+        )
+        .replace(
+            /(&lt;!--)([\s\S]*?)(--&gt;)/g,
+            '<span class="invoker-syn-comment">$1$2$3</span>'
+        )
+        .replace(
+            /(&lt;!\[CDATA\[)([\s\S]*?)(\]\]&gt;)/g,
+            '<span class="invoker-syn-cdata">$1$2$3</span>'
+        );
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._on_copy_response = function() {
+    let pre = $("#invoker-modal-response");
+    let raw = pre.data("raw-response") || pre.text() || '';
+    if (!raw.trim()) {
+        return;
+    }
+
+    let link = $("#invoker-modal-copy-btn");
+    navigator.clipboard.writeText(raw).then(function() {
+        $.fn.zato.invoker._show_copied_tooltip(link);
+    }).catch(function() {});
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._show_copied_tooltip = function(anchor_elem) {
+    let offset = anchor_elem.offset();
+    let tooltip = $('<span class="invoker-copied-tooltip">Copied to clipboard</span>');
+    tooltip.css({
+        "position": "fixed",
+        "top": (offset.top - $(window).scrollTop() + anchor_elem.outerHeight() / 2 - 10) + "px",
+        "left": (offset.left + anchor_elem.outerWidth() + 8) + "px"
+    });
+    $("body").append(tooltip);
+    setTimeout(function() {
+        tooltip.remove();
+    }, 600);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+$.fn.zato.invoker._make_draggable = function(header_selector, content_selector) {
+    let is_dragging = false;
+    let offset_x = 0;
+    let offset_y = 0;
+
+    $(header_selector).on("mousedown", function(e) {
+        if ($(e.target).is("button, input, a")) {
+            return;
+        }
+        is_dragging = true;
+        let content = $(content_selector);
+        let rect = content[0].getBoundingClientRect();
+        offset_x = e.clientX - rect.left;
+        offset_y = e.clientY - rect.top;
+
+        content.css("position", "fixed");
+        content.css("margin", "0");
+        content.css("left", rect.left + "px");
+        content.css("top", rect.top + "px");
+        content.css("transform", "none");
+        e.preventDefault();
+    });
+
+    $(document).on("mousemove", function(e) {
+        if (!is_dragging) {
+            return;
+        }
+        let content = $(content_selector);
+        content.css("left", (e.clientX - offset_x) + "px");
+        content.css("top", (e.clientY - offset_y) + "px");
+    });
+
+    $(document).on("mouseup", function() {
+        is_dragging = false;
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1003,6 +1324,7 @@ $.fn.zato.invoker._open_modal_history = function() {
         $.fn.zato.invoker._get_modal_history_callbacks()
     );
 
+    $(".invoker-history-overlay-content").css({"position": "", "left": "", "top": "", "margin": "", "transform": ""});
     $("#invoker-modal-history-overlay").removeClass("hidden");
     $("#invoker-modal-history-search").val("").focus();
 }

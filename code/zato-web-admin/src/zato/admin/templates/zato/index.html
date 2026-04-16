@@ -421,7 +421,13 @@
                                 </ul>
                             </li>
 
-                            <li class="first-level"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Scheduler</a></li>
+                            <li class="first-level">
+                                <a class="menu-link" href="#">Scheduler &darr;</a>
+                                <ul>
+                                    <li class="child"><a class="menu-link" href="{% url "scheduler" %}?cluster={{ cluster_id|default:"1" }}">Config</a></li>
+                                    <li class="child"><a class="menu-link" href="{% url "scheduler-dashboard" %}?cluster={{ cluster_id|default:"1" }}">Dashboard</a></li>
+                                </ul>
+                            </li>
 
                             <li class="first-level">
                                 <a class="menu-link" href="#">Monitoring &darr;</a>

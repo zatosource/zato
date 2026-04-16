@@ -55,6 +55,7 @@ from zato.admin.web.views.eda import topic_detail as eda_topic_detail
 from zato.admin.web.views.eda import queue_detail as eda_queue_detail
 from zato.admin.web.views.eda import messages as eda_messages
 from zato.admin.web.views.eda import publish as eda_publish
+from zato.admin.web.views import scheduler_dashboard
 from zato.admin.web.views.check_attr import check_attr_exists
 
 urlpatterns = [
@@ -232,6 +233,20 @@ urlpatterns += [
     url(r'^zato/scheduler/get-definition/(?P<start_date>.*)/(?P<repeat>.*)/' + \
         '(?P<weeks>.*)/(?P<days>.*)/(?P<hours>.*)/(?P<minutes>.*)/(?P<seconds>.*)/$',
         login_required(scheduler.get_definition), name='scheduler-job-get-definition'),
+
+    # Scheduler dashboard
+
+    url(r'^zato/scheduler/dashboard/$',
+        login_required(scheduler_dashboard.index), name='scheduler-dashboard'),
+    url(r'^zato/scheduler/dashboard/poll/$',
+        login_required(scheduler_dashboard.poll), name='scheduler-dashboard-poll'),
+    url(r'^zato/scheduler/dashboard/job/(?P<job_id>.*)/$',
+        login_required(scheduler_dashboard.job_detail), name='scheduler-job-detail'),
+
+    # Scheduler import test config
+
+    url(r'^zato/scheduler/import-test-config$',
+        login_required(service.import_test_scheduler_config), name='scheduler-import-test-config'),
     ]
 
 # ################################################################################################################################

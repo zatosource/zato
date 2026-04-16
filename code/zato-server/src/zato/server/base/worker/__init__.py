@@ -71,6 +71,12 @@ from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 
 logger = logging.getLogger(__name__)
 
+def _rest_log_write(msg):
+    with open('/tmp/rest.txt', 'a') as _f:
+        from datetime import datetime
+        _f.write(datetime.now().isoformat() + ' ' + msg + '\n')
+        _f.flush()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -561,6 +567,17 @@ class WorkerStore(_WorkerStoreBase):
 
             # To make the API consistent with that of SQL connection pools
             config_data.ping = wrapper.ping
+
+            # Write back so that ConfigDict persists runtime attrs (.conn, .ping)
+            name = config_data.config.get('name', '')
+            _rest_log_write('init_http_soap: name=%s, config_dict type=%s, id=%s, delegates=%s' % (
+                name, type(config_dict).__name__, id(config_dict), config_dict._delegates_to_rust))
+            _rest_log_write('init_http_soap: config_data keys before write-back=%s' % (list(config_data.keys()),))
+            if name:
+                config_dict[name] = config_data
+                _rest_log_write('init_http_soap: after write-back, _runtime keys=%s' % (list(config_dict._runtime.keys()),))
+                _rest_log_write('init_http_soap: _runtime[%s] keys=%s' % (
+                    name, list(config_dict._runtime[name].keys()) if name in config_dict._runtime else 'MISSING'))
 
             # Store ID -> name mapping
             config_dict.set_key_id_data(config_data.config)
@@ -1476,16 +1493,27 @@ class WorkerStore(_WorkerStoreBase):
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
 
+        _rest_log_write('OUTGOING_CREATE_EDIT: name=%s, transport=%s' % (msg['name'], msg.get('transport')))
+
         # .. delete the connection if it exists ..
         self._delete_config_close_wrapper_http_soap(del_name, msg['transport'], logger.debug)
 
         # .. and create a new one
         wrapper = self._http_soap_wrapper_from_config(msg, has_sec_config=False)
         config_dict = getattr(self.worker_config, 'out_' + msg['transport'])
-        config_dict[msg['name']] = Bunch()
-        config_dict[msg['name']].config = msg
-        config_dict[msg['name']].conn = wrapper
-        config_dict[msg['name']].ping = wrapper.ping # (just like in self.init_http)
+
+        _rest_log_write('OUTGOING_CREATE_EDIT: config_dict id=%s, delegates=%s' % (id(config_dict), config_dict._delegates_to_rust))
+
+        item = Bunch()
+        item.config = msg
+        item.conn = wrapper
+        item.ping = wrapper.ping
+
+        _rest_log_write('OUTGOING_CREATE_EDIT: item keys before write=%s' % (list(item.keys()),))
+        config_dict[msg['name']] = item
+        _rest_log_write('OUTGOING_CREATE_EDIT: after write, _runtime keys=%s' % (list(config_dict._runtime.keys()),))
+        _rest_log_write('OUTGOING_CREATE_EDIT: _runtime[%s]=%s' % (
+            msg['name'], list(config_dict._runtime[msg['name']].keys()) if msg['name'] in config_dict._runtime else 'MISSING'))
 
         # Store mapping of ID -> name
         config_dict.set_key_id_data(msg)
@@ -1682,10 +1710,9 @@ class WorkerStore(_WorkerStoreBase):
         wrapper.build_queue()
 
         item = Bunch()
-
+        item.config = msg
+        item.conn = wrapper
         config_dict[msg['name']] = item
-        config_dict[msg['name']].config = msg
-        config_dict[msg['name']].conn = wrapper
 
         return item
 

@@ -20,6 +20,12 @@ from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
 
+def _rest_log_write(msg):
+    with open('/tmp/rest.txt', 'a') as _f:
+        from datetime import datetime
+        _f.write(datetime.now().isoformat() + ' ' + msg + '\n')
+        _f.flush()
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -269,6 +275,15 @@ class Create(AdminService):
         self.response.payload.name = name
         self.response.payload.url_path = input.url_path
 
+        if connection == 'outgoing':
+            self._notify_worker_outconn_created(stored)
+
+    def _notify_worker_outconn_created(self, config):
+        from zato.bunch import Bunch
+        msg = Bunch(config)
+        msg.setdefault('transport', URL_TYPE.PLAIN_HTTP)
+        self.server.worker_store.on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(msg)
+
 # ################################################################################################################################
 
 class Edit(AdminService):
@@ -326,6 +341,17 @@ class Edit(AdminService):
         stored = self.server.config_store.get(entity_type, name)
         self.response.payload.id = stored['id']
         self.response.payload.name = name
+
+        if connection == 'outgoing':
+            self._notify_worker_outconn_edited(stored, old_name)
+
+    def _notify_worker_outconn_edited(self, config, old_name):
+        from zato.bunch import Bunch
+        msg = Bunch(config)
+        msg.setdefault('transport', URL_TYPE.PLAIN_HTTP)
+        if old_name:
+            msg['old_name'] = old_name
+        self.server.worker_store.on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(msg)
 
 # ################################################################################################################################
 
@@ -605,7 +631,18 @@ class InvokeOutconn(AdminService):
         return params
 
     def _invoke_outconn(self, outconn_name, method, payload, params):
-        config_item = self.outgoing.plain_http.get(outconn_name)
+        config_dict = self.outgoing.plain_http
+        _rest_log_write('invoke_outconn: outconn_name=%s' % outconn_name)
+        _rest_log_write('invoke_outconn: config_dict type=%s, id=%s' % (type(config_dict).__name__, id(config_dict)))
+        _rest_log_write('invoke_outconn: config_dict._delegates_to_rust=%s' % config_dict._delegates_to_rust)
+        _rest_log_write('invoke_outconn: config_dict._runtime keys=%s' % (list(config_dict._runtime.keys()),))
+        _rest_log_write('invoke_outconn: config_dict._runtime[%s]=%s' % (
+            outconn_name, list(config_dict._runtime[outconn_name].keys()) if outconn_name in config_dict._runtime else 'MISSING'))
+
+        config_item = config_dict.get(outconn_name)
+        _rest_log_write('invoke_outconn: config_item type=%s' % (type(config_item).__name__ if config_item else 'None'))
+        if config_item:
+            _rest_log_write('invoke_outconn: config_item keys=%s' % (list(config_item.keys()),))
         if not config_item:
             raise Exception('Outgoing REST connection wrapper `{}` not found'.format(outconn_name))
 

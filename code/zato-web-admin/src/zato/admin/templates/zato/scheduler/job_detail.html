@@ -1,0 +1,96 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Job detail{% endblock %}
+
+{% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/scheduler-dashboard.css">
+{% endblock %}
+
+{% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/job_detail.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.scheduler.job_detail.init(
+        {{ job_data|safe }},
+        {{ history_data|safe }},
+        '{{ job_id }}',
+        '{{ cluster_id }}'
+    );
+});
+</script>
+{% endblock %}
+
+{% block "content" %}
+
+<div class="scheduler-page">
+
+    <div class="scheduler-hero scheduler-hero-compact">
+        <div class="scheduler-hero-inner">
+            <div id="scheduler-detail-header"></div>
+        </div>
+    </div>
+
+    <div class="scheduler-section" style="margin-top:28px">
+        <div class="scheduler-grid-section">
+
+            <div class="scheduler-card">
+                <div class="scheduler-card-header">
+                    <h3>Configuration</h3>
+                </div>
+                <div id="scheduler-detail-config"></div>
+            </div>
+
+            <div class="scheduler-card">
+                <div class="scheduler-card-header">
+                    <h3>Statistics</h3>
+                </div>
+                <div class="scheduler-detail-stats" id="scheduler-detail-stats"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="scheduler-section" style="margin-top:20px">
+        <div class="scheduler-card">
+            <div class="scheduler-card-header">
+                <h3>Execution timeline</h3>
+            </div>
+            <div id="scheduler-timeline" class="scheduler-chart-body" style="min-height:60px"></div>
+        </div>
+    </div>
+
+    <div class="scheduler-section" style="margin-top:20px">
+        <div class="scheduler-card">
+            <div class="scheduler-card-header">
+                <h3>Execution history</h3>
+                <span class="scheduler-pill" id="scheduler-history-count"></span>
+            </div>
+            <table class="scheduler-table" id="scheduler-history-table">
+                <thead>
+                    <tr>
+                        <th>Planned time</th>
+                        <th>Actual time</th>
+                        <th>Latency</th>
+                        <th>Duration</th>
+                        <th>Outcome</th>
+                        <th>Run</th>
+                        <th>Error</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduler-history-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="scheduler-section" style="margin-top:20px">
+        <div id="scheduler-detail-actions" class="scheduler-detail-actions"></div>
+    </div>
+
+    <div class="scheduler-footer"></div>
+
+</div>
+
+{% endblock %}

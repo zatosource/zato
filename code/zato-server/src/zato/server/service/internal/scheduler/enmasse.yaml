@@ -1,0 +1,36 @@
+scheduler:
+
+  - name: crm.sync-contacts
+    service: demo.input-logger
+    job_type: interval_based
+    seconds: 3
+    is_active: true
+    extra: '{"source": "crm", "object_type": "contact", "direction": "inbound"}'
+
+  - name: crm.sync-accounts
+    service: demo.input-logger
+    job_type: interval_based
+    minutes: 5
+    is_active: true
+    extra: '{"source": "crm", "object_type": "account", "direction": "inbound", "batch_size": 200}'
+
+  - name: crm.push-cases
+    service: demo.input-logger
+    job_type: interval_based
+    minutes: 15
+    is_active: true
+    extra: '{"source": "crm", "object_type": "case", "direction": "outbound", "priority": "normal"}'
+
+  - name: crm.reconcile-invoices
+    service: demo.input-logger
+    job_type: interval_based
+    hours: 1
+    is_active: true
+    extra: '{"source": "billing", "object_type": "invoice", "direction": "bidirectional"}'
+
+  - name: crm.purge-stale-sessions
+    service: demo.input-logger
+    job_type: interval_based
+    hours: 6
+    is_active: true
+    extra: '{"action": "purge", "target": "sessions", "max_age_hours": 48}'

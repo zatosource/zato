@@ -1,0 +1,563 @@
+.scheduler-page {
+    background: #f0f2f5;
+    min-height: calc(100vh - 60px);
+}
+
+/* Hero metrics strip */
+
+.scheduler-hero {
+    background: #012845;
+    padding: 28px 0;
+    position: relative;
+}
+
+.scheduler-hero-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.scheduler-hero-tiles {
+    display: flex;
+    gap: 16px;
+}
+
+.scheduler-tile {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 18px 20px 14px;
+    backdrop-filter: blur(8px);
+    min-width: 0;
+}
+
+.scheduler-tile-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 6px;
+}
+
+.scheduler-tile-value {
+    font-size: 40px;
+    font-weight: 800;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 10px;
+}
+
+.scheduler-tile-spark {
+    height: 28px;
+    filter: drop-shadow(0 0 4px rgba(130, 204, 255, 0.6));
+}
+
+.scheduler-tile-failures .scheduler-tile-spark {
+    filter: drop-shadow(0 0 4px rgba(255, 107, 107, 0.6));
+}
+
+.scheduler-hero-refresh {
+    position: absolute;
+    top: 12px;
+    right: 40px;
+    font-size: 11px;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Sections */
+
+.scheduler-section {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}
+
+.scheduler-chart-section {
+    margin-top: 28px;
+}
+
+.scheduler-grid-section {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* Cards */
+
+.scheduler-card {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    padding: 24px;
+}
+
+.scheduler-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.scheduler-card-header h3 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6c757d;
+    margin: 0;
+    padding: 0;
+}
+
+.scheduler-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    background: #e8f4ff;
+    color: #012845;
+}
+
+.scheduler-pill-failures {
+    background: #fff0f0;
+    color: #c0392b;
+}
+
+/* Chart */
+
+.scheduler-chart-body {
+    min-height: 180px;
+}
+
+.scheduler-chart-body svg {
+    display: block;
+    width: 100%;
+}
+
+.scheduler-chart-legend {
+    display: flex;
+    gap: 18px;
+    padding-top: 12px;
+    flex-wrap: wrap;
+}
+
+.scheduler-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.scheduler-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+/* Tables */
+
+.scheduler-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.scheduler-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #adb5bd;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.scheduler-th-dot {
+    width: 28px;
+}
+
+.scheduler-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid #f0f2f5;
+    color: #212529;
+}
+
+.scheduler-table tbody tr {
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.scheduler-table tbody tr:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: #f8f9fb;
+}
+
+.scheduler-table a {
+    color: #037ac7;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.scheduler-table a:hover {
+    text-decoration: none;
+}
+
+/* Status dots */
+
+.scheduler-status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.scheduler-status-ok {
+    background: #4caf50;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+}
+
+.scheduler-status-failed {
+    background: #e53935;
+    box-shadow: 0 0 6px rgba(229, 57, 53, 0.4);
+}
+
+.scheduler-status-paused {
+    background: #9e9e9e;
+}
+
+.scheduler-status-in-flight {
+    background: #2196f3;
+    box-shadow: 0 0 6px rgba(33, 150, 243, 0.5);
+    animation: scheduler-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes scheduler-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* Type badge */
+
+.scheduler-type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #e8f4ff;
+    color: #012845;
+}
+
+/* Outcome squares */
+
+.scheduler-outcome-square {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 2px;
+    border-radius: 2px;
+    vertical-align: middle;
+}
+
+/* Outcome badge */
+
+.scheduler-outcome-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 11px;
+    color: #fff;
+    letter-spacing: 0.3px;
+}
+
+/* Failures body */
+
+.scheduler-failures-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.scheduler-failures-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #adb5bd;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.scheduler-failures-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid #f0f2f5;
+    color: #212529;
+}
+
+.scheduler-failures-table a {
+    color: #037ac7;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.scheduler-error-cell {
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-size: 11px;
+    color: #888;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+}
+
+/* All clear empty state */
+
+.scheduler-all-clear {
+    padding: 28px 0;
+    text-align: center;
+    color: #4caf50;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.scheduler-all-clear svg {
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.scheduler-no-data {
+    padding: 20px 0;
+    text-align: center;
+    color: #adb5bd;
+    font-size: 13px;
+}
+
+/* Card split */
+
+.scheduler-card-divider {
+    border-top: 1px solid #e9ecef;
+    margin: 16px 0;
+}
+
+.scheduler-card-right {
+    display: flex;
+    flex-direction: column;
+}
+
+.scheduler-card-split-top {
+    flex: 1;
+}
+
+.scheduler-card-split-bottom {
+    flex: 1;
+}
+
+/* Footer */
+
+.scheduler-footer {
+    height: 40px;
+}
+
+/* Job detail - hero compact variant */
+
+.scheduler-hero-compact {
+    padding: 22px 0;
+}
+
+.scheduler-detail-name {
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.scheduler-detail-name .scheduler-status-dot {
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+.scheduler-detail-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.scheduler-detail-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.scheduler-detail-status {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+}
+
+.scheduler-detail-service {
+    font-size: 13px;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    color: #82ccff;
+}
+
+.scheduler-detail-in-flight {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64b5f6;
+}
+
+/* Job detail - config grid */
+
+.scheduler-config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 32px;
+}
+
+.scheduler-config-item {
+    font-size: 13px;
+    color: #212529;
+}
+
+.scheduler-config-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #adb5bd;
+    margin-bottom: 2px;
+}
+
+.scheduler-config-item a {
+    color: #037ac7;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.scheduler-config-extra {
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    background: #f8f9fa;
+    padding: 12px;
+    margin: 12px 0 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    color: #495057;
+}
+
+/* Job detail - stats row */
+
+.scheduler-stat-row {
+    display: flex;
+    gap: 24px;
+}
+
+.scheduler-stat {
+    flex: 1;
+    text-align: center;
+}
+
+.scheduler-stat-number {
+    font-size: 32px;
+    font-weight: 800;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    color: #012845;
+    line-height: 1.2;
+}
+
+.scheduler-stat-danger {
+    color: #e53935;
+}
+
+.scheduler-stat-warning {
+    color: #ff9800;
+}
+
+.scheduler-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #adb5bd;
+    margin-top: 4px;
+}
+
+/* Job detail - actions */
+
+.scheduler-detail-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.scheduler-action-link {
+    display: inline-block;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    color: #012845;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.15s, transform 0.1s;
+}
+
+.scheduler-action-link:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+.scheduler-action-execute {
+    background: #012845;
+    color: #fff;
+    border-color: #012845;
+}
+
+/* Responsive */
+
+@media (max-width: 960px) {
+    .scheduler-hero-tiles {
+        flex-wrap: wrap;
+    }
+    .scheduler-tile {
+        min-width: 140px;
+    }
+    .scheduler-grid-section {
+        grid-template-columns: 1fr;
+    }
+    .scheduler-config-grid {
+        grid-template-columns: 1fr;
+    }
+    .scheduler-stat-row {
+        flex-wrap: wrap;
+    }
+}

@@ -481,3 +481,111 @@ class HolidayCalendarDelete(_HolidayCalendarAdmin):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+class GetCurrentState(_SchedulerAdmin):
+    """ Returns the current state of all scheduler jobs and their execution history.
+    """
+    name = _service_name_prefix + 'get-current-state'
+
+    def handle(self):
+        try:
+            from zato_scheduler_core import scheduler_get_all_history, scheduler_get_job_summaries
+
+            store_jobs = self.server.config_store.get_list(_entity_type)
+
+            runtime_by_id = {}
+            for s in scheduler_get_job_summaries():
+                runtime_by_id[s['id']] = s
+
+            all_history = scheduler_get_all_history()
+
+            total_jobs = len(store_jobs)
+            active_jobs = 0
+            paused_jobs = 0
+            in_flight_count = 0
+
+            jobs = []
+
+            for item in store_jobs:
+                job_id = str(item.get('id', ''))
+                is_active = item.get('is_active', False)
+                job_type = item.get('job_type', '')
+                service = item.get('service') or item.get('service_name') or ''
+                name = item.get('name', '')
+
+                if is_active:
+                    active_jobs += 1
+                else:
+                    paused_jobs += 1
+
+                runtime = runtime_by_id.get(job_id, {})
+                in_flight = runtime.get('in_flight', False)
+                if in_flight:
+                    in_flight_count += 1
+
+                history = all_history.get(job_id, [])
+
+                last_outcome = None
+                last_duration_ms = None
+                recent_outcomes = []
+
+                if history:
+                    last_record = history[-1]
+                    last_outcome = last_record.get('outcome')
+                    last_duration_ms = last_record.get('duration_ms')
+
+                    start_idx = max(0, len(history) - 10)
+                    for rec in history[start_idx:]:
+                        recent_outcomes.append(rec.get('outcome', ''))
+
+                jobs.append({
+                    'id': job_id,
+                    'name': name,
+                    'is_active': is_active,
+                    'job_type': job_type,
+                    'service': service,
+                    'next_fire_utc': runtime.get('next_fire_utc'),
+                    'in_flight': in_flight,
+                    'current_run': runtime.get('current_run', 0),
+                    'interval_ms': runtime.get('interval_ms', 0),
+                    'last_outcome': last_outcome,
+                    'last_duration_ms': last_duration_ms,
+                    'recent_outcomes': recent_outcomes,
+                })
+
+            outcome_counts = {}
+            history_timeline = []
+
+            for job_id, records in all_history.items():
+                job_name = ''
+                for item in store_jobs:
+                    if str(item.get('id', '')) == job_id:
+                        job_name = item.get('name', '')
+                        break
+
+                for rec in records:
+                    outcome = rec.get('outcome', '')
+                    outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+                    entry = dict(rec)
+                    entry['job_id'] = job_id
+                    entry['job_name'] = job_name
+                    history_timeline.append(entry)
+
+            history_timeline.sort(key=lambda x: x.get('actual_fire_time_iso', ''), reverse=True)
+
+            self.response.payload = {
+                'total_jobs': total_jobs,
+                'active_jobs': active_jobs,
+                'paused_jobs': paused_jobs,
+                'in_flight_count': in_flight_count,
+                'outcome_counts': outcome_counts,
+                'jobs': jobs,
+                'history_timeline': history_timeline,
+            }
+
+        except Exception:
+            self.logger.error('Could not get current state, e:`%s`', format_exc())
+            raise
+
+# ################################################################################################################################
+# ################################################################################################################################

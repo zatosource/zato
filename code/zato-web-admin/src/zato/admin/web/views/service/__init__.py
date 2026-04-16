@@ -346,6 +346,21 @@ def import_test_config(req):
 
 # ################################################################################################################################
 
+def import_test_scheduler_config(req):
+
+    response = req.zato.client.invoke('zato.server.invoker', {
+        'func_name': 'import_test_scheduler_enmasse'
+    })
+
+    response = str(response.data)
+
+    out = HttpResponse()
+    out.content = response
+
+    return out
+
+# ################################################################################################################################
+
 @method_allowed('GET', 'POST')
 def download_openapi(req):
 

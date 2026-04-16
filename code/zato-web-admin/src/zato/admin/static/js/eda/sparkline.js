@@ -29,19 +29,31 @@ $.fn.zato.eda.sparkline = function(container, data_points, options) {
     var max_val = Math.max.apply(null, data_points);
     var range = max_val - min_val;
 
+    if (range === 0) {
+        var baseline_y = h * 0.6;
+        var points = [];
+        for (var flat_idx = 0; flat_idx < data_points.length; flat_idx++) {
+            var flat_x = pad + (flat_idx / (data_points.length - 1)) * (w - 2 * pad);
+            points.push(flat_x.toFixed(1) + ',' + baseline_y.toFixed(1));
+        }
+        svg += '<polyline fill="none" stroke="' + color + '" stroke-width="1.5" points="' + points.join(' ') + '" />';
+        var last_flat_x = (w - pad);
+        svg += '<circle cx="' + last_flat_x.toFixed(1) + '" cy="' + baseline_y.toFixed(1) + '" r="' + dot_r + '" fill="' + dot_color + '" />';
+        svg += '<text x="' + (w / 2) + '" y="' + (baseline_y - 5) + '" text-anchor="middle" font-size="9" fill="' + dot_color + '">' + min_val + '</text>';
+        svg += '</svg>';
+        $(container).html(svg);
+        return;
+    }
+
     var points = [];
     for (var idx = 0; idx < data_points.length; idx++) {
         var x = pad + (idx / (data_points.length - 1)) * (w - 2 * pad);
-        var y = range === 0
-            ? h / 2
-            : h - pad - ((data_points[idx] - min_val) / range) * (h - 2 * pad);
+        var y = h - pad - ((data_points[idx] - min_val) / range) * (h - 2 * pad);
         points.push(x.toFixed(1) + ',' + y.toFixed(1));
     }
 
     var last_x = (w - pad);
-    var last_y = range === 0
-        ? h / 2
-        : h - pad - ((data_points[data_points.length - 1] - min_val) / range) * (h - 2 * pad);
+    var last_y = h - pad - ((data_points[data_points.length - 1] - min_val) / range) * (h - 2 * pad);
 
     svg += '<polyline fill="none" stroke="' + color + '" stroke-width="1.5" points="' + points.join(' ') + '" />';
     svg += '<circle cx="' + last_x.toFixed(1) + '" cy="' + last_y.toFixed(1) + '" r="' + dot_r + '" fill="' + dot_color + '" />';

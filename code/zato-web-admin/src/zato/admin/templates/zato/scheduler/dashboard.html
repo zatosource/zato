@@ -1,0 +1,132 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block html_title %}Scheduler dashboard{% endblock %}
+
+{% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/scheduler-dashboard.css">
+{% endblock %}
+
+{% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+    $.fn.zato.scheduler.dashboard.init({{ dashboard_data|safe }});
+});
+</script>
+{% endblock %}
+
+{% block "content" %}
+
+<div class="scheduler-page">
+
+    <div class="scheduler-hero">
+        <div class="scheduler-hero-inner">
+            <div class="scheduler-hero-tiles">
+
+                <div class="scheduler-tile">
+                    <div class="scheduler-tile-label">Total jobs</div>
+                    <div class="scheduler-tile-value" id="stat-total-jobs">-</div>
+                    <div class="scheduler-tile-spark" id="spark-total-jobs"></div>
+                </div>
+
+                <div class="scheduler-tile">
+                    <div class="scheduler-tile-label">Active</div>
+                    <div class="scheduler-tile-value" id="stat-active">-</div>
+                    <div class="scheduler-tile-spark" id="spark-active"></div>
+                </div>
+
+                <div class="scheduler-tile">
+                    <div class="scheduler-tile-label">Paused</div>
+                    <div class="scheduler-tile-value" id="stat-paused">-</div>
+                    <div class="scheduler-tile-spark" id="spark-paused"></div>
+                </div>
+
+                <div class="scheduler-tile">
+                    <div class="scheduler-tile-label">In-flight</div>
+                    <div class="scheduler-tile-value" id="stat-in-flight">-</div>
+                    <div class="scheduler-tile-spark" id="spark-in-flight"></div>
+                </div>
+
+                <div class="scheduler-tile scheduler-tile-failures">
+                    <div class="scheduler-tile-label">Failures</div>
+                    <div class="scheduler-tile-value" id="stat-failures">-</div>
+                    <div class="scheduler-tile-spark" id="spark-failures"></div>
+                </div>
+
+            </div>
+            <div class="scheduler-hero-refresh" id="scheduler-last-refresh"></div>
+        </div>
+    </div>
+
+    <div class="scheduler-section scheduler-chart-section">
+        <div class="scheduler-card">
+            <div class="scheduler-card-header">
+                <h3>Run history</h3>
+                <span class="scheduler-pill" id="scheduler-exec-count"></span>
+            </div>
+            <div id="scheduler-bar-chart" class="scheduler-chart-body"></div>
+            <div class="scheduler-chart-legend" id="scheduler-chart-legend"></div>
+        </div>
+    </div>
+
+    <div class="scheduler-section scheduler-grid-section">
+
+        <div class="scheduler-card scheduler-card-jobs">
+            <div class="scheduler-card-header">
+                <h3>Jobs</h3>
+                <span class="scheduler-pill" id="scheduler-jobs-count"></span>
+            </div>
+            <table class="scheduler-table" id="scheduler-job-table">
+                <thead>
+                    <tr>
+                        <th class="scheduler-th-dot"></th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Next fire</th>
+                        <th>Recent</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduler-job-table-body"></tbody>
+            </table>
+        </div>
+
+        <div class="scheduler-card scheduler-card-right">
+
+            <div class="scheduler-card-split-top">
+                <div class="scheduler-card-header">
+                    <h3>Recent failures</h3>
+                    <span class="scheduler-pill scheduler-pill-failures" id="scheduler-failures-count"></span>
+                </div>
+                <div id="scheduler-failures-body"></div>
+            </div>
+
+            <div class="scheduler-card-divider"></div>
+
+            <div class="scheduler-card-split-bottom">
+                <div class="scheduler-card-header">
+                    <h3>Upcoming runs</h3>
+                </div>
+                <table class="scheduler-table" id="scheduler-upcoming-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Job</th>
+                            <th>Service</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduler-upcoming-table-body"></tbody>
+                </table>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="scheduler-footer"></div>
+
+</div>
+
+{% endblock %}
