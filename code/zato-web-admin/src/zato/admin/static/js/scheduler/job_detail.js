@@ -27,8 +27,8 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
     if (service_name) {
         html += '<span class="dashboard-detail-service">' + service_name + '</span>';
     }
-    if (job.in_flight) {
-        html += '<span class="dashboard-detail-in-flight">In-flight (run #' + job.current_run + ')</span>';
+    if (job.is_running) {
+        html += '<span class="dashboard-detail-running">Running (run #' + job.current_run + ')</span>';
     }
     html += '</div>';
     container.html(html);

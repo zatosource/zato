@@ -118,7 +118,7 @@ def job_detail(req, job_id):
             for entry in state_data.get('jobs', []):
                 if str(entry.get('id')) == str(job_id) or entry.get('name') == job_name:
                     job_data['next_fire_utc'] = entry.get('next_fire_utc')
-                    job_data['in_flight'] = entry.get('in_flight')
+                    job_data['is_running'] = entry.get('is_running')
                     job_data['current_run'] = entry.get('current_run')
                     job_data['interval_ms'] = entry.get('interval_ms')
                     job_data['recent_outcomes'] = entry.get('recent_outcomes', [])

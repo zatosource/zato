@@ -526,7 +526,7 @@ class GetCurrentState(_SchedulerAdmin):
                     paused_jobs += 1
 
                 runtime = runtime_by_id.get(job_id) or runtime_by_name.get(name, {})
-                in_flight = runtime.get('in_flight', False)
+                is_running = runtime.get('in_flight', False)
 
                 history = all_history.get(job_id, []) or history_by_name.get(name, [])
 
@@ -550,7 +550,7 @@ class GetCurrentState(_SchedulerAdmin):
                     'job_type': job_type,
                     'service': service,
                     'next_fire_utc': runtime.get('next_fire_utc'),
-                    'in_flight': in_flight,
+                    'is_running': is_running,
                     'current_run': runtime.get('current_run', 0),
                     'interval_ms': runtime.get('interval_ms', 0),
                     'last_outcome': last_outcome,
@@ -560,18 +560,12 @@ class GetCurrentState(_SchedulerAdmin):
 
             outcome_counts = {}
             history_timeline = []
-            in_flight_count = 0
             total_executions = 0
 
             # A history record represents an "execution" (as opposed to a
             # scheduler-internal skip) when its outcome is one of these.
             # Rust sets outcome = "ok" on dispatch and updates it to
-            # "error"/"timeout" on completion if it failed. `duration_ms`
-            # is None until the completion callback fills it in, so a
-            # record with outcome=="ok" and duration_ms is None is one
-            # that is currently running. error/timeout always have
-            # duration_ms set because they are written by the completion
-            # path.
+            # "error"/"timeout" on completion if it failed.
             execution_outcomes = {'ok', 'error', 'timeout'}
 
             for job_id, records in all_history.items():
@@ -590,9 +584,6 @@ class GetCurrentState(_SchedulerAdmin):
 
                     if outcome in execution_outcomes:
                         total_executions += 1
-                        duration_ms = rec.get('duration_ms')
-                        if outcome == 'ok' and duration_ms is None:
-                            in_flight_count += 1
 
                     entry = dict(rec)
                     entry['job_id'] = job_id
@@ -605,7 +596,6 @@ class GetCurrentState(_SchedulerAdmin):
                 'total_jobs': total_jobs,
                 'active_jobs': active_jobs,
                 'paused_jobs': paused_jobs,
-                'in_flight_count': in_flight_count,
                 'total_executions': total_executions,
                 'outcome_counts': outcome_counts,
                 'jobs': jobs,

@@ -49,17 +49,17 @@ $(document).ready(function() {
                     </div>
                 </div>
 
-                <div class="dashboard-tile dashboard-tile-in-flight">
-                    <div class="dashboard-tile-label">In-flight</div>
+                <div class="dashboard-tile dashboard-tile-runs">
+                    <div class="dashboard-tile-label">Runs in last hour</div>
                     <div class="dashboard-tile-row">
-                        <div class="dashboard-tile-value" id="stat-in-flight">-</div>
-                        <div class="dashboard-tile-spark" id="spark-in-flight"></div>
+                        <div class="dashboard-tile-value" id="stat-runs">-</div>
+                        <div class="dashboard-tile-spark" id="spark-runs"></div>
                     </div>
-                    <div class="dashboard-tile-sublabel" id="stat-in-flight-sublabel"></div>
+                    <div class="dashboard-tile-sublabel" id="stat-runs-sublabel"></div>
                 </div>
 
                 <div class="dashboard-tile dashboard-tile-failures">
-                    <div class="dashboard-tile-label">Failures</div>
+                    <div class="dashboard-tile-label">Failures in last hour</div>
                     <div class="dashboard-tile-row">
                         <div class="dashboard-tile-value" id="stat-failures">-</div>
                         <div class="dashboard-tile-spark" id="spark-failures"></div>
@@ -113,7 +113,7 @@ $(document).ready(function() {
                         <tr>
                             <th class="dashboard-th-dot"></th>
                             <th>Name</th>
-                            <th>Type</th>
+                            <th>Service</th>
                             <th>Next fire</th>
                             <th>Recent</th>
                         </tr>
@@ -164,7 +164,6 @@ $(document).ready(function() {
                                 <th>Time</th>
                                 <th>Job</th>
                                 <th>Service</th>
-                                <th>Type</th>
                             </tr>
                         </thead>
                         <tbody id="dashboard-upcoming-table-body"></tbody>
