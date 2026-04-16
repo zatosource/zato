@@ -1,11 +1,7 @@
 /* Foundation */
 
 .scheduler-page {
-    background: #f4f5f5;
     min-height: calc(100vh - 60px);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
 }
 
 /* Hero metrics strip */
@@ -287,7 +283,7 @@
 }
 
 .scheduler-time-range-active {
-    color: #006fbf;
+    color: var(--zato-link-hover);
     font-weight: 700;
     background: rgba(0, 111, 191, 0.06);
 }
@@ -311,6 +307,11 @@
 }
 
 /* Dashboard-specific table overrides */
+
+.scheduler-card .zato-table {
+    box-shadow: none;
+    border-radius: 0;
+}
 
 .scheduler-th-dot {
     width: 28px;

@@ -3,6 +3,7 @@
     --zato-seablue-light1: #063c65;
     --zato-seablue-light2: #14578a;
     --zato-seablue-light3: #2f81bf;
+    --zato-link-hover: #006fbf;
 }
 
 html,
@@ -80,7 +81,10 @@ html {
 
 body {
     color: black;
-    background: #fff
+    background: #f4f5f5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 ol,
@@ -518,15 +522,11 @@ a:not(.menu-link) {
     color: rgb(17, 17, 17);
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
     text-decoration: none;
-    font-weight: 600;
-}
-
-a.common {
     font-weight: 400;
 }
 
 a:not(.menu-link):hover {
-    color: #006fbf !important;
+    color: var(--zato-link-hover) !important;
     background-color: transparent;
     text-decoration: none;
 }
@@ -766,7 +766,7 @@ div.page_prompt {
     font-size: 12px;
 }
 
-div.page_prompt a {
+div.page_prompt a:not(.common) {
     background-color: #ffc311;
     color: #000;
     text-decoration: none;
@@ -779,9 +779,13 @@ div.page_prompt a {
     box-shadow: 2px 2px 2px #d3d3d3;
 }
 
-div.page_prompt a:hover {
+div.page_prompt a:not(.common):hover {
     background-color: #ffc311;
     color: #000 !important;
+}
+
+div.page_prompt a.common:hover {
+    color: var(--zato-link-hover) !important;
 }
 
 div.page_prompt a.current {
@@ -815,7 +819,7 @@ div.page_prompt a.current {
 }
 
 .form-data tr td a:hover {
-    color: #000 !important;
+    color: var(--zato-link-hover) !important;
 }
 
 .multirow-button {
