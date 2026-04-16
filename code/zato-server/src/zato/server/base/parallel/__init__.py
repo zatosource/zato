@@ -23,6 +23,7 @@ from uuid import uuid4
 from bunch import bunchify
 
 # gevent
+import gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
 
@@ -1039,26 +1040,49 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         self._scheduler_started = False
 
+        _main_hub = gevent.get_hub()
+
         def _scheduler_run_cb(spawn_fn, on_job_executed_cb, ctx_json):
-            spawn_fn(on_job_executed_cb, ctx_json)
+            _main_hub.loop.run_callback(spawn, on_job_executed_cb, ctx_json)
 
         def _on_job_executed(ctx_json):
+            import time as _time
+            from bunch import Bunch
+            from zato_scheduler_core import scheduler_mark_complete
+
+            ctx = json_loads(ctx_json)
+            job_id = ctx.get('id', '')
+            job_name = ctx.get('name', '')
+
+            logger.info('Scheduler executing job `%s` (id:`%s`)', job_name, job_id)
+
+            msg = Bunch({
+                'action': SCHEDULER_MSG.JOB_EXECUTED.value,
+                'name': ctx['name'],
+                'service': ctx['service'],
+                'payload': ctx.get('extra') or '',
+                'cid': new_cid_server(),
+                'job_type': ctx['job_type'],
+                'zato_ctx': {
+                    'scheduler_job_id': ctx['id'],
+                },
+            })
+
+            outcome = 'executed'
+            _t0 = _time.monotonic()
             try:
-                ctx = json_loads(ctx_json)
-                msg = {
-                    'action': SCHEDULER_MSG.JOB_EXECUTED.value,
-                    'name': ctx['name'],
-                    'service': ctx['service'],
-                    'payload': ctx.get('extra') or '',
-                    'cid': new_cid_server(),
-                    'job_type': ctx['job_type'],
-                    'zato_ctx': {
-                        'scheduler_job_id': ctx['id'],
-                    },
-                }
-                self.broker_client.invoke_async(msg)
+                self.worker_store.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
             except Exception:
-                logger.warning('Scheduler dispatch error: %s', format_exc())
+                outcome = 'error'
+                logger.warning('Scheduler job `%s` service invocation error: %s', job_name, format_exc())
+
+            duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+            try:
+                scheduler_mark_complete(str(job_id), outcome, duration_ms)
+                logger.info('Scheduler mark_complete OK for `%s`, outcome:`%s`, duration:`%s`ms', job_name, outcome, duration_ms)
+            except Exception:
+                logger.warning('Scheduler mark_complete failed for `%s` (id:`%s`): %s', job_name, job_id, format_exc())
 
         try:
             scheduler_start(

@@ -1311,11 +1311,15 @@ class WorkerStore(_WorkerStoreBase):
         import time as _time
         _t0 = _time.monotonic()
         outcome = 'executed'
+
+        logger.info('Scheduler worker received job execution msg, name:`%s`', getattr(msg, 'name', '<unknown>'))
+
         try:
             response = self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
         except Exception:
             outcome = 'error'
             response = None
+            logger.warning('Scheduler job execution error: %s', format_exc())
 
         duration_ms = int((_time.monotonic() - _t0) * 1000)
 
@@ -1324,12 +1328,18 @@ class WorkerStore(_WorkerStoreBase):
         if isinstance(zato_ctx, dict):
             job_id = zato_ctx.get('scheduler_job_id')
 
+        logger.info('Scheduler job `%s` completed, outcome:`%s`, duration_ms:`%s`, job_id:`%s`',
+            getattr(msg, 'name', '<unknown>'), outcome, duration_ms, job_id)
+
         if job_id:
             try:
                 from zato_scheduler_core import scheduler_mark_complete
                 scheduler_mark_complete(str(job_id), outcome, duration_ms)
+                logger.info('Scheduler mark_complete OK for job `%s` (id:`%s`)', getattr(msg, 'name', '<unknown>'), job_id)
             except Exception:
-                pass
+                logger.warning('Scheduler mark_complete failed for job `%s`: %s', job_id, format_exc())
+        else:
+            logger.warning('Scheduler job executed but no job_id found in zato_ctx: %s', getattr(msg, 'zato_ctx', None))
 
         return response
 
