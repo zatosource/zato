@@ -79,6 +79,54 @@
     height: 100%;
 }
 
+.scheduler-tile-tooltip {
+    position: fixed;
+    background: #012845;
+    color: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+    padding: 8px 10px;
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    min-width: 140px;
+}
+
+.scheduler-tile-tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+    white-space: nowrap;
+}
+
+.scheduler-tile-tooltip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.scheduler-tile-tooltip-label {
+    color: rgba(255, 255, 255, 0.65);
+    flex: 1;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.scheduler-tile-tooltip-value {
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
 
 /* Sections */
 

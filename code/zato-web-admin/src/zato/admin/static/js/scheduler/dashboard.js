@@ -1020,6 +1020,126 @@ $.fn.zato.scheduler.dashboard.update_refresh_indicator = function() {
 };
 
 // ////////////////////////////////////////////////////////////////////////////
+// Correlated tile hover
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.dashboard._tile_hover_ready = false;
+
+$.fn.zato.scheduler.dashboard._tile_hover_specs = [
+    {sel: '#spark-total-jobs', key: 'total_jobs', label: 'Total jobs', color: '#82ccff'},
+    {sel: '#spark-active', key: 'active', label: 'Active', color: '#82ccff'},
+    {sel: '#spark-paused', key: 'paused', label: 'Paused', color: '#82ccff'},
+    {sel: '#spark-in-flight', key: 'in_flight', label: 'In-flight', color: '#82ccff'},
+    {sel: '#spark-failures', key: 'failures', label: 'Failures', color: '#ff6b6b'}
+];
+
+$.fn.zato.scheduler.dashboard._clear_tile_hover = function() {
+    var specs = $.fn.zato.scheduler.dashboard._tile_hover_specs;
+    for (var i = 0; i < specs.length; i++) {
+        $.fn.zato.eda.sparkline_clear_overlay(specs[i].sel);
+    }
+    $('#scheduler-tile-tooltip').css('display', 'none');
+};
+
+$.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_event) {
+    var dash = $.fn.zato.scheduler.dashboard;
+    var specs = dash._tile_hover_specs;
+    var registry = $.fn.zato.eda.sparkline_registry();
+    var active_entry = registry[active_sel];
+    if (!active_entry) return;
+
+    var $container = $(active_sel);
+    var rect = $container[0].getBoundingClientRect();
+    var mouse_x_px = mouse_event.clientX - rect.left;
+    var container_px_w = rect.width;
+
+    var scale = (container_px_w > 0 && active_entry.pixel_width > 0)
+        ? (active_entry.pixel_width / container_px_w) : 1;
+    var logical_x = mouse_x_px * scale;
+
+    var n = active_entry.data_points.length;
+    var nearest_index = 0;
+    var nearest_d = Infinity;
+    for (var i = 0; i < n; i++) {
+        var d = Math.abs(active_entry.xs[i] - logical_x);
+        if (d < nearest_d) {
+            nearest_d = d;
+            nearest_index = i;
+        }
+    }
+
+    var max_len = 0;
+    for (var s = 0; s < specs.length; s++) {
+        var e = registry[specs[s].sel];
+        if (e && e.data_points.length > max_len) {
+            max_len = e.data_points.length;
+        }
+    }
+
+    var tooltip_rows = [];
+    for (var s2 = 0; s2 < specs.length; s2++) {
+        var spec = specs[s2];
+        var entry = registry[spec.sel];
+        if (!entry) continue;
+
+        var entry_n = entry.data_points.length;
+        var mapped_index;
+        if (entry_n === max_len) {
+            mapped_index = nearest_index;
+        } else if (max_len <= 1) {
+            mapped_index = entry_n - 1;
+        } else {
+            var ratio = nearest_index / (max_len - 1);
+            mapped_index = Math.round(ratio * (entry_n - 1));
+        }
+        if (mapped_index < 0) mapped_index = 0;
+        if (mapped_index >= entry_n) mapped_index = entry_n - 1;
+
+        $.fn.zato.eda.sparkline_show_marker(spec.sel, mapped_index, spec.color);
+
+        var val = entry.data_points[mapped_index];
+        tooltip_rows.push('<div class="scheduler-tile-tooltip-row">' +
+            '<span class="scheduler-tile-tooltip-dot" style="background:' + spec.color + '"></span>' +
+            '<span class="scheduler-tile-tooltip-label">' + spec.label + '</span>' +
+            '<span class="scheduler-tile-tooltip-value">' + val + '</span>' +
+            '</div>');
+    }
+
+    var $tooltip = $('#scheduler-tile-tooltip');
+    if ($tooltip.length === 0) {
+        $('body').append('<div id="scheduler-tile-tooltip" class="scheduler-tile-tooltip"></div>');
+        $tooltip = $('#scheduler-tile-tooltip');
+    }
+
+    $tooltip.html(tooltip_rows.join(''));
+    $tooltip.css({
+        display: 'block',
+        left: (mouse_event.clientX + 14) + 'px',
+        top: (mouse_event.clientY + 14) + 'px'
+    });
+};
+
+$.fn.zato.scheduler.dashboard._setup_tile_hover = function() {
+    var dash = $.fn.zato.scheduler.dashboard;
+    if (dash._tile_hover_ready) return;
+    dash._tile_hover_ready = true;
+
+    var specs = dash._tile_hover_specs;
+    for (var i = 0; i < specs.length; i++) {
+        (function(sel) {
+            var $c = $(sel);
+            $c.css('cursor', 'crosshair');
+            $c.on('mousemove.tilehover', function(event) {
+                dash._show_tile_hover(sel, event);
+            });
+            $c.on('mouseleave.tilehover', function() {
+                dash._clear_tile_hover();
+            });
+        })(specs[i].sel);
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////////
 // Main render
 // ////////////////////////////////////////////////////////////////////////////
 
@@ -1056,14 +1176,24 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
     $.fn.zato.scheduler.dashboard._push_spark('in_flight', in_flight_count);
     $.fn.zato.scheduler.dashboard._push_spark('failures', failure_count);
 
-    var spark_options = {height: 36, color: '#82ccff', dot_color: '#82ccff', dot_radius: 2};
-    var spark_options_failures = {height: 36, color: '#ff6b6b', dot_color: '#ff6b6b', dot_radius: 2};
+    var base_spark = {height: 36, color: '#82ccff', dot_color: '#82ccff', dot_radius: 3.5};
+    var base_spark_err = {height: 36, color: '#ff6b6b', dot_color: '#ff6b6b', dot_radius: 3.5};
 
-    $.fn.zato.eda.sparkline('#spark-total-jobs', $.fn.zato.scheduler.dashboard._spark_data.total_jobs, spark_options);
-    $.fn.zato.eda.sparkline('#spark-active', $.fn.zato.scheduler.dashboard._spark_data.active, spark_options);
-    $.fn.zato.eda.sparkline('#spark-paused', $.fn.zato.scheduler.dashboard._spark_data.paused, spark_options);
-    $.fn.zato.eda.sparkline('#spark-in-flight', $.fn.zato.scheduler.dashboard._spark_data.in_flight, spark_options);
-    $.fn.zato.eda.sparkline('#spark-failures', $.fn.zato.scheduler.dashboard._spark_data.failures, spark_options_failures);
+    var tile_specs = [
+        {sel: '#spark-total-jobs', key: 'total_jobs', opts: base_spark, dot_style: 'filled'},
+        {sel: '#spark-active', key: 'active', opts: base_spark, dot_style: 'hollow'},
+        {sel: '#spark-paused', key: 'paused', opts: base_spark, dot_style: 'filled_halo'},
+        {sel: '#spark-in-flight', key: 'in_flight', opts: base_spark, dot_style: 'hollow_halo'},
+        {sel: '#spark-failures', key: 'failures', opts: base_spark_err, dot_style: 'filled_white_ring'}
+    ];
+
+    for (var tile_i = 0; tile_i < tile_specs.length; tile_i++) {
+        var spec = tile_specs[tile_i];
+        var merged = $.extend({}, spec.opts, {dot_style: spec.dot_style});
+        $.fn.zato.eda.sparkline(spec.sel, $.fn.zato.scheduler.dashboard._spark_data[spec.key], merged);
+    }
+
+    $.fn.zato.scheduler.dashboard._setup_tile_hover();
 
     $.fn.zato.scheduler.dashboard.render_bar_chart(data.history_timeline);
     $.fn.zato.scheduler.dashboard.render_job_table(data.jobs);
