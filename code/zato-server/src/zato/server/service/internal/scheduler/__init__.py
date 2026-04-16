@@ -510,7 +510,6 @@ class GetCurrentState(_SchedulerAdmin):
             total_jobs = len(store_jobs)
             active_jobs = 0
             paused_jobs = 0
-            in_flight_count = 0
 
             jobs = []
 
@@ -528,8 +527,6 @@ class GetCurrentState(_SchedulerAdmin):
 
                 runtime = runtime_by_id.get(job_id) or runtime_by_name.get(name, {})
                 in_flight = runtime.get('in_flight', False)
-                if in_flight:
-                    in_flight_count += 1
 
                 history = all_history.get(job_id, []) or history_by_name.get(name, [])
 
@@ -563,6 +560,19 @@ class GetCurrentState(_SchedulerAdmin):
 
             outcome_counts = {}
             history_timeline = []
+            in_flight_count = 0
+            total_executions = 0
+
+            # A history record represents an "execution" (as opposed to a
+            # scheduler-internal skip) when its outcome is one of these.
+            # Rust sets outcome = "ok" on dispatch and updates it to
+            # "error"/"timeout" on completion if it failed. `duration_ms`
+            # is None until the completion callback fills it in, so a
+            # record with outcome=="ok" and duration_ms is None is one
+            # that is currently running. error/timeout always have
+            # duration_ms set because they are written by the completion
+            # path.
+            execution_outcomes = {'ok', 'error', 'timeout'}
 
             for job_id, records in all_history.items():
                 job_name = ''
@@ -577,6 +587,13 @@ class GetCurrentState(_SchedulerAdmin):
                 for rec in records:
                     outcome = rec.get('outcome', '')
                     outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+
+                    if outcome in execution_outcomes:
+                        total_executions += 1
+                        duration_ms = rec.get('duration_ms')
+                        if outcome == 'ok' and duration_ms is None:
+                            in_flight_count += 1
+
                     entry = dict(rec)
                     entry['job_id'] = job_id
                     entry['job_name'] = job_name
@@ -589,6 +606,7 @@ class GetCurrentState(_SchedulerAdmin):
                 'active_jobs': active_jobs,
                 'paused_jobs': paused_jobs,
                 'in_flight_count': in_flight_count,
+                'total_executions': total_executions,
                 'outcome_counts': outcome_counts,
                 'jobs': jobs,
                 'history_timeline': history_timeline,

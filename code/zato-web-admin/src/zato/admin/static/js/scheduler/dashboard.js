@@ -94,6 +94,24 @@ $.fn.zato.scheduler.dashboard._spark_seeded = false;
 $.fn.zato.scheduler.dashboard._tile_window_ms = 60 * 60 * 1000;
 $.fn.zato.scheduler.dashboard._poll_interval_ms = 10000;
 
+/* Thousands-separated rendering for tile digits. Matches Python's
+   django.contrib.humanize intcomma / humanize.intcomma semantics
+   (28937423 -> "28,937,423") using the browser's locale. Falls back to
+   a manual regex for very old runtimes. */
+$.fn.zato.scheduler.dashboard._format_number = function(n) {
+    if (n === null || n === undefined) return '-';
+    var num = Number(n);
+    if (!isFinite(num)) return String(n);
+    try {
+        return num.toLocaleString('en-US');
+    } catch(e) {
+        var s = String(Math.trunc(num));
+        var sign = '';
+        if (s.charAt(0) === '-') { sign = '-'; s = s.substring(1); }
+        return sign + s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+};
+
 $.fn.zato.scheduler.dashboard._format_compact_duration = function(seconds) {
     if (seconds <= 0) return '0s';
     if (seconds < 60) return seconds + 's';
@@ -126,6 +144,50 @@ $.fn.zato.scheduler.dashboard._push_spark = function(key, value) {
     while (data.length > 0 && data[0].ts < cutoff) {
         data.shift();
     }
+};
+
+/* In-flight is special: at 10 s poll cadence the raw value flickers between
+   0 and 1 because most jobs finish in milliseconds. Instead we keep a
+   fixed 60-bucket series over the last hour where each bucket holds the
+   PEAK concurrent in-flight count observed during that minute. Short
+   overlaps still register (they aren't averaged away), but the tile no
+   longer looks empty just because the poll missed the brief moment the
+   job was running. */
+$.fn.zato.scheduler.dashboard._update_in_flight_peak = function(current_value) {
+    var dash = $.fn.zato.scheduler.dashboard;
+    var series = dash._spark_data.in_flight;
+    var bucket_count = 60;
+    var bucket_size = dash._tile_window_ms / bucket_count;
+    var now = Date.now();
+
+    /* Align bucket ts to absolute 1-minute marks so the same wall-clock
+       minute always maps to the same bucket, making slides reproducible.
+       Bucket i ends at `current_minute_end - (bucket_count - 1 - i) * size`. */
+    var current_minute_end = Math.ceil(now / bucket_size) * bucket_size;
+
+    var prev_by_ts = {};
+    if (series && series.length) {
+        for (var p = 0; p < series.length; p++) {
+            prev_by_ts[series[p].ts] = series[p].value;
+        }
+    }
+    var new_series = new Array(bucket_count);
+    for (var i = 0; i < bucket_count; i++) {
+        var bucket_ts = current_minute_end - (bucket_count - 1 - i) * bucket_size;
+        new_series[i] = {
+            ts: bucket_ts,
+            value: prev_by_ts.hasOwnProperty(bucket_ts) ? prev_by_ts[bucket_ts] : 0
+        };
+    }
+
+    if (current_value > 0) {
+        var last_idx = bucket_count - 1;
+        if (current_value > new_series[last_idx].value) {
+            new_series[last_idx].value = current_value;
+        }
+    }
+
+    dash._spark_data.in_flight = new_series;
 };
 
 $.fn.zato.scheduler.dashboard._spark_values = function(key) {
@@ -211,7 +273,23 @@ $.fn.zato.scheduler.dashboard._seed_spark_buffers = function(data) {
     dash._spark_data.total_jobs = seed_flat(total_jobs);
     dash._spark_data.active = seed_flat(active_jobs);
     dash._spark_data.paused = seed_flat(paused_jobs);
-    dash._spark_data.in_flight = seed_flat(in_flight_count);
+
+    /* In-flight series is peak-per-minute across the hour; seeded to zero
+       since we have no historical record of concurrency. Bucket timestamps
+       are aligned to absolute minute marks so that `_update_in_flight_peak`
+       can preserve values across polls (same minute -> same bucket). */
+    var in_flight_series = new Array(bucket_count);
+    var current_minute_end = Math.ceil(now / bucket_size) * bucket_size;
+    for (var ifi = 0; ifi < bucket_count; ifi++) {
+        in_flight_series[ifi] = {
+            ts: current_minute_end - (bucket_count - 1 - ifi) * bucket_size,
+            value: 0
+        };
+    }
+    if (in_flight_count > 0) {
+        in_flight_series[bucket_count - 1].value = in_flight_count;
+    }
+    dash._spark_data.in_flight = in_flight_series;
 
     dash._spark_seeded = true;
 };
@@ -467,10 +545,11 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     var range_minutes = $.fn.zato.scheduler.dashboard._time_range_minutes;
     var range_names = {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today', 2880: 'Yesterday', 10080: 'This week', 43200: 'This month', 525600: 'This year'};
     var range_label;
+    var filtered_count_label = $.fn.zato.scheduler.dashboard._format_number(filtered.length) + ' runs';
     if (range_minutes > 0 && range_names[range_minutes]) {
-        range_label = range_names[range_minutes] + ' \u00b7 ' + filtered.length + ' runs';
+        range_label = range_names[range_minutes] + ' \u00b7 ' + filtered_count_label;
     } else {
-        range_label = 'All \u00b7 ' + filtered.length + ' runs';
+        range_label = 'All \u00b7 ' + filtered_count_label;
     }
     $('#dashboard-exec-count').text(range_label);
 
@@ -855,7 +934,9 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
         for (var tk = 0; tk < visible_keys.length; tk++) {
             total_runs += (bucket[visible_keys[tk]] || 0);
         }
-        var runs_label = total_runs === 1 ? '1 run' : total_runs + ' runs';
+        var runs_label = total_runs === 1
+            ? '1 run'
+            : $.fn.zato.scheduler.dashboard._format_number(total_runs) + ' runs';
 
         var tooltip_html = '<div class="dashboard-tooltip-header">' +
             '<div class="dashboard-tooltip-title">' + time_label + '</div>' +
@@ -866,7 +947,7 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
         for (var key_index = 0; key_index < visible_keys.length; key_index++) {
             var key = visible_keys[key_index];
             var count = bucket[key] || 0;
-            body_lines.push('<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + bar_colors[key] + ';margin-right:5px;vertical-align:middle"></span>' + (labels[key] || key) + ': <b>' + count + '</b>');
+            body_lines.push('<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + bar_colors[key] + ';margin-right:5px;vertical-align:middle"></span>' + (labels[key] || key) + ': <b>' + $.fn.zato.scheduler.dashboard._format_number(count) + '</b>');
         }
         tooltip_html += body_lines.join('<br>');
 
@@ -917,7 +998,7 @@ $.fn.zato.scheduler.dashboard.render_job_table = function(jobs) {
 
     var cluster_id = $(document).getUrlParam('cluster') || '1';
 
-    $('#dashboard-jobs-count').text(jobs.length);
+    $('#dashboard-jobs-count').text($.fn.zato.scheduler.dashboard._format_number(jobs.length));
 
     jobs.sort(function(first, second) {
         return (first.name || '').localeCompare(second.name || '');
@@ -980,7 +1061,7 @@ $.fn.zato.scheduler.dashboard.render_failures = function(timeline) {
         return;
     }
 
-    $('#dashboard-failures-count').text(failures.length);
+    $('#dashboard-failures-count').text($.fn.zato.scheduler.dashboard._format_number(failures.length));
 
     var html = '<table class="zato-table"><thead><tr>';
     html += '<th>Time</th><th>Job</th><th>Outcome</th><th>Error</th>';
@@ -1223,7 +1304,7 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
 
         var val;
         if (mapped_index >= 0) {
-            val = spec_buffer[mapped_index].value;
+            val = dash._format_number(spec_buffer[mapped_index].value);
             if (entry) {
                 $.fn.zato.eda.sparkline_show_marker(spec.sel, mapped_index, spec.color);
             }
@@ -1337,27 +1418,30 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
     var active_jobs = data.active_jobs || 0;
     var paused_jobs = data.paused_jobs || 0;
     var in_flight_count = data.in_flight_count || 0;
+    var total_executions = data.total_executions || 0;
 
     var outcome_counts = data.outcome_counts || {};
     var failures_lifetime = (outcome_counts['error'] || 0) + (outcome_counts['timeout'] || 0);
+
+    var fmt = $.fn.zato.scheduler.dashboard._format_number;
 
     $.fn.zato.scheduler.dashboard._seed_spark_buffers(data);
 
     $.fn.zato.scheduler.dashboard._push_spark('total_jobs', total_jobs);
     $.fn.zato.scheduler.dashboard._push_spark('active', active_jobs);
     $.fn.zato.scheduler.dashboard._push_spark('paused', paused_jobs);
-    $.fn.zato.scheduler.dashboard._push_spark('in_flight', in_flight_count);
+    $.fn.zato.scheduler.dashboard._update_in_flight_peak(in_flight_count);
 
     /* Failures are recomputed from the fresh history on every render so the
        sparkline (last 1 h, bucketed per minute) and the big digit (sum of
        the last hour) always tell the same story. */
     var failures_last_hour = $.fn.zato.scheduler.dashboard._rebuild_failures_series(data.history_timeline);
 
-    $('#stat-total-jobs').text(total_jobs);
-    $('#stat-active').text(active_jobs);
-    $('#stat-paused').text(paused_jobs);
-    $('#stat-in-flight').text(in_flight_count);
-    $('#stat-failures').text(failures_last_hour);
+    $('#stat-total-jobs').text(fmt(total_jobs));
+    $('#stat-active').text(fmt(active_jobs));
+    $('#stat-paused').text(fmt(paused_jobs));
+    $('#stat-in-flight').text(fmt(in_flight_count));
+    $('#stat-failures').text(fmt(failures_last_hour));
 
     if (failures_last_hour > 0) {
         $('#stat-failures').css('color', '#ff6b6b');
@@ -1365,8 +1449,8 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
         $('#stat-failures').css('color', '#fff');
     }
 
-    var lifetime_label = failures_lifetime === 1 ? '1 total' : failures_lifetime + ' total';
-    $('#stat-failures-sublabel').text(lifetime_label);
+    $('#stat-in-flight-sublabel').text(fmt(total_executions) + ' total');
+    $('#stat-failures-sublabel').text(fmt(failures_lifetime) + ' total');
 
     var base_spark = {height: 36, color: '#82ccff', dot_color: '#82ccff', dot_radius: 3.5};
     var base_spark_err = {height: 36, color: '#ff6b6b', dot_color: '#ff6b6b', dot_radius: 3.5};
