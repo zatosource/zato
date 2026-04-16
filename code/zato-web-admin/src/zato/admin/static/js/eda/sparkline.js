@@ -66,7 +66,6 @@ $.fn.zato.eda.sparkline = function(container, data_points, options) {
         svg += '<polyline fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="' + points.join(' ') + '" filter="url(#' + glow_id + ')" />';
         var last_flat_x = (w - pad);
         svg += '<circle cx="' + last_flat_x.toFixed(1) + '" cy="' + baseline_y.toFixed(1) + '" r="' + dot_r + '" fill="' + dot_color + '" filter="url(#' + glow_id + ')" />';
-        svg += '<text x="' + (w / 2) + '" y="' + (baseline_y - 5) + '" text-anchor="middle" font-size="9" fill="' + dot_color + '">' + min_val + '</text>';
         svg += '</svg>';
         $(container).html(svg);
         return;

@@ -180,18 +180,31 @@
 }
 
 .scheduler-legend-item {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     font-size: 11px;
-    color: #6e6e73;
-    font-weight: 500;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 120ms ease, background 120ms ease;
+}
+
+.scheduler-legend-item-off {
+    opacity: 0.35;
+    text-decoration: line-through;
+}
+
+.scheduler-legend-item:hover {
+    background: rgba(0, 0, 0, 0.04);
 }
 
 .scheduler-legend-dot {
     width: 10px;
     height: 10px;
-    border-radius: 50%;
+    border-radius: 3px;
     display: inline-block;
     flex-shrink: 0;
 }
@@ -311,10 +324,12 @@
 .scheduler-status-in-flight::after {
     content: '';
     position: absolute;
-    top: -2px;
-    left: -2px;
-    width: 14px;
-    height: 14px;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    margin-top: -5px;
+    margin-left: -5px;
     border-radius: 50%;
     border: 1.5px solid #2196f3;
     animation: scheduler-ring-pulse 2s ease-out infinite;
@@ -640,20 +655,6 @@
     color: #fff;
 }
 
-/* Entrance animations */
-
-@keyframes scheduler-slide-up {
-    from { opacity: 0; transform: translateY(8px) scale(0.99); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.scheduler-page > .scheduler-hero {
-    animation: scheduler-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.scheduler-page > .scheduler-section {
-    animation: scheduler-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
-}
 
 /* Skeleton loading shimmer */
 

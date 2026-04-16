@@ -11,27 +11,24 @@ $.fn.zato.scheduler.dashboard.outcome_colors = {
     'executed': '#1b855e',
     'error': '#e0226e',
     'timeout': '#b35e00',
-    'skipped_concurrent': '#546e7a',
-    'skipped_holiday': '#3f51b5',
-    'missed_catchup': '#e65100'
+    'skipped_concurrent': '#6a4c93',
+    'missed_catchup': '#0077b6'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bg_colors = {
     'executed': 'rgba(27, 133, 94, 0.12)',
     'error': 'rgba(224, 34, 110, 0.12)',
     'timeout': 'rgba(179, 94, 0, 0.12)',
-    'skipped_concurrent': 'rgba(84, 110, 122, 0.12)',
-    'skipped_holiday': 'rgba(63, 81, 181, 0.12)',
-    'missed_catchup': 'rgba(230, 81, 0, 0.12)'
+    'skipped_concurrent': 'rgba(106, 76, 147, 0.12)',
+    'missed_catchup': 'rgba(0, 119, 182, 0.12)'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bar_colors = {
     'executed': '#4caf50',
     'error': '#e53935',
     'timeout': '#ff9800',
-    'skipped_concurrent': '#78909c',
-    'skipped_holiday': '#5c6bc0',
-    'missed_catchup': '#ffc107'
+    'skipped_concurrent': '#9575cd',
+    'missed_catchup': '#29b6f6'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_labels = {
@@ -39,7 +36,6 @@ $.fn.zato.scheduler.dashboard.outcome_labels = {
     'error': 'Error',
     'timeout': 'Timeout',
     'skipped_concurrent': 'Skipped (concurrent)',
-    'skipped_holiday': 'Skipped (holiday)',
     'missed_catchup': 'Missed catchup'
 };
 
@@ -65,6 +61,44 @@ $.fn.zato.scheduler.dashboard._push_spark = function(key, value) {
     data.push(value);
     if (data.length > 60) {
         data.shift();
+    }
+};
+
+// ////////////////////////////////////////////////////////////////////////////
+// Legend toggle persistence
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.dashboard._get_hidden_outcomes = function() {
+    try {
+        var stored = localStorage.getItem('zato_scheduler_hidden_outcomes');
+        return stored ? JSON.parse(stored) : {};
+    } catch(e) {
+        return {};
+    }
+};
+
+$.fn.zato.scheduler.dashboard._set_hidden_outcomes = function(hidden) {
+    try {
+        localStorage.setItem('zato_scheduler_hidden_outcomes', JSON.stringify(hidden));
+    } catch(e) {}
+};
+
+$.fn.zato.scheduler.dashboard._toggle_outcome = function(key) {
+    var hidden = $.fn.zato.scheduler.dashboard._get_hidden_outcomes();
+    if (hidden[key]) {
+        delete hidden[key];
+    } else {
+        hidden[key] = true;
+    }
+    $.fn.zato.scheduler.dashboard._set_hidden_outcomes(hidden);
+    $.fn.zato.scheduler.dashboard._redraw_chart_from_cache();
+};
+
+$.fn.zato.scheduler.dashboard._last_timeline = null;
+
+$.fn.zato.scheduler.dashboard._redraw_chart_from_cache = function() {
+    if ($.fn.zato.scheduler.dashboard._last_timeline) {
+        $.fn.zato.scheduler.dashboard.render_bar_chart($.fn.zato.scheduler.dashboard._last_timeline);
     }
 };
 
@@ -225,6 +259,7 @@ $.fn.zato.scheduler.dashboard.top_rounded_bar = function(x, y, w, h, r) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
+    $.fn.zato.scheduler.dashboard._last_timeline = timeline;
     var container = $('#scheduler-bar-chart');
     if (!timeline || timeline.length === 0) {
         container.html('<div class="scheduler-no-data">No execution history yet</div>');
@@ -240,9 +275,10 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     var padding_top = 8;
     var padding_right = 8;
 
-    var outcome_keys = ['executed', 'error', 'timeout', 'skipped_concurrent', 'skipped_holiday', 'missed_catchup'];
+    var outcome_keys = ['executed', 'error', 'timeout', 'skipped_concurrent', 'missed_catchup'];
     var bar_colors = $.fn.zato.scheduler.dashboard.outcome_bar_colors;
     var labels = $.fn.zato.scheduler.dashboard.outcome_labels;
+    var hidden_outcomes = $.fn.zato.scheduler.dashboard._get_hidden_outcomes();
 
     var timestamps = [];
     for (var record_index = 0; record_index < timeline.length; record_index++) {
@@ -259,10 +295,10 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
         return;
     }
 
-    $('#scheduler-exec-count').text(timeline.length + ' runs');
+    $('#scheduler-exec-count').text('last ' + timeline.length + ' runs');
 
     var min_time = Math.min.apply(null, timestamps);
-    var max_time = Math.max.apply(null, timestamps);
+    var max_time = Date.now();
     var time_range = max_time - min_time;
 
     if (time_range === 0) {
@@ -303,7 +339,9 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     for (var total_index = 0; total_index < buckets.length; total_index++) {
         var total = 0;
         for (var total_key_index = 0; total_key_index < outcome_keys.length; total_key_index++) {
-            total += buckets[total_index][outcome_keys[total_key_index]];
+            if (!hidden_outcomes[outcome_keys[total_key_index]]) {
+                total += buckets[total_index][outcome_keys[total_key_index]];
+            }
         }
         if (total > max_bucket_total) {
             max_bucket_total = total;
@@ -338,7 +376,9 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
 
         var bucket_total = 0;
         for (var bt_index = 0; bt_index < outcome_keys.length; bt_index++) {
-            bucket_total += buckets[bar_index][outcome_keys[bt_index]];
+            if (!hidden_outcomes[outcome_keys[bt_index]]) {
+                bucket_total += buckets[bar_index][outcome_keys[bt_index]];
+            }
         }
 
         var bucket_start_label = $.fn.zato.scheduler.dashboard.format_local_time(new Date(buckets[bar_index].start).toISOString());
@@ -346,6 +386,9 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
 
         for (var stack_index = 0; stack_index < outcome_keys.length; stack_index++) {
             var outcome_key = outcome_keys[stack_index];
+            if (hidden_outcomes[outcome_key]) {
+                continue;
+            }
             var count = buckets[bar_index][outcome_key];
             if (count === 0) {
                 continue;
@@ -396,15 +439,20 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
 
     $.fn.zato.scheduler.dashboard._setup_chart_interactions(container, buckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height);
 
-    var legend_html = '';
+    var legend_container = $('#scheduler-chart-legend');
+    legend_container.empty();
     for (var legend_index = 0; legend_index < outcome_keys.length; legend_index++) {
         var legend_key = outcome_keys[legend_index];
-        legend_html += '<span class="scheduler-legend-item">';
-        legend_html += '<span class="scheduler-legend-dot" style="background:' + bar_colors[legend_key] + '"></span>';
-        legend_html += labels[legend_key];
-        legend_html += '</span>';
+        var is_hidden = !!hidden_outcomes[legend_key];
+        var item = $('<span class="scheduler-legend-item' + (is_hidden ? ' scheduler-legend-item-off' : '') + '" data-outcome="' + legend_key + '"></span>');
+        item.append('<span class="scheduler-legend-dot" style="background:' + bar_colors[legend_key] + '"></span>');
+        item.append(labels[legend_key]);
+        legend_container.append(item);
     }
-    $('#scheduler-chart-legend').html(legend_html);
+    legend_container.off('click.toggle').on('click.toggle', '.scheduler-legend-item', function() {
+        var key = $(this).data('outcome');
+        $.fn.zato.scheduler.dashboard._toggle_outcome(key);
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -426,7 +474,7 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
         tooltip = $('#scheduler-chart-tooltip');
     }
 
-    var outcome_keys = ['executed', 'error', 'timeout', 'skipped_concurrent', 'skipped_holiday', 'missed_catchup'];
+    var outcome_keys = ['executed', 'error', 'timeout', 'skipped_concurrent', 'missed_catchup'];
     var labels = $.fn.zato.scheduler.dashboard.outcome_labels;
 
     chart_svg.off('mousemove.crosshair mouseleave.crosshair');

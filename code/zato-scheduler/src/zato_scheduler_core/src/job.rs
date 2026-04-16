@@ -13,7 +13,7 @@ use zato_server_core::model::SchedulerJob;
 use crate::types::{JobId, JobType, OnMissedPolicy, ServiceName};
 
 pub const DEFAULT_MAX_EXECUTION_TIME_MS: u64 = 3_600_000;
-pub const DEFAULT_MAX_HISTORY: usize = 100;
+pub const DEFAULT_MAX_HISTORY: usize = 500;
 
 pub const MIN_MAX_EXECUTION_TIME_MS: u64 = 1_000;
 pub const MAX_MAX_EXECUTION_TIME_MS: u64 = 86_400_000;
