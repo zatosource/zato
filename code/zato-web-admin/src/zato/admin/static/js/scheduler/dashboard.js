@@ -545,7 +545,9 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     var range_minutes = $.fn.zato.scheduler.dashboard._time_range_minutes;
     var range_names = {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today', 2880: 'Yesterday', 10080: 'This week', 43200: 'This month', 525600: 'This year'};
     var range_label;
-    var filtered_count_label = $.fn.zato.scheduler.dashboard._format_number(filtered.length) + ' runs';
+    var filtered_count_label = filtered.length === 1
+        ? '1 run'
+        : $.fn.zato.scheduler.dashboard._format_number(filtered.length) + ' runs';
     if (range_minutes > 0 && range_names[range_minutes]) {
         range_label = range_names[range_minutes] + ' \u00b7 ' + filtered_count_label;
     } else {
