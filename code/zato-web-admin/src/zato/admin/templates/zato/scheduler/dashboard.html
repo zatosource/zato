@@ -19,7 +19,7 @@ $(document).ready(function() {
 
 {% block "content" %}
 
-<div class="scheduler-page">
+<div class="scheduler-page" style="opacity:0">
 
     <div class="scheduler-hero">
         <div class="scheduler-hero-inner">
@@ -64,7 +64,22 @@ $(document).ready(function() {
         <div class="scheduler-card">
             <div class="scheduler-card-header">
                 <h3>Run history</h3>
-                <span class="scheduler-pill" id="scheduler-exec-count"></span>
+                <div class="scheduler-time-range-wrapper">
+                    <span class="scheduler-pill scheduler-pill-clickable" id="scheduler-exec-count"></span>
+                    <div class="scheduler-time-range-menu" id="scheduler-time-range-menu">
+                        <div class="scheduler-time-range-option" data-minutes="5">Last 5 minutes</div>
+                        <div class="scheduler-time-range-option" data-minutes="15">Last 15 minutes</div>
+                        <div class="scheduler-time-range-option" data-minutes="30">Last 30 minutes</div>
+                        <div class="scheduler-time-range-option" data-minutes="60">Last 1 hour</div>
+                        <div class="scheduler-time-range-option" data-minutes="360">Last 6 hours</div>
+                        <div class="scheduler-time-range-option" data-minutes="1440">Today</div>
+                        <div class="scheduler-time-range-option" data-minutes="2880">Yesterday</div>
+                        <div class="scheduler-time-range-option" data-minutes="10080">This week</div>
+                        <div class="scheduler-time-range-option" data-minutes="43200">This month</div>
+                        <div class="scheduler-time-range-option" data-minutes="525600">This year</div>
+                        <div class="scheduler-time-range-option scheduler-time-range-active" data-minutes="0">All</div>
+                    </div>
+                </div>
             </div>
             <div id="scheduler-bar-chart" class="scheduler-chart-body"></div>
             <div class="scheduler-chart-legend" id="scheduler-chart-legend"></div>

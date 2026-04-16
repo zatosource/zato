@@ -296,4 +296,5 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, history_data, job_id, c
         try { history_data = JSON.parse(history_data); } catch(parse_error) { history_data = []; }
     }
     $.fn.zato.scheduler.job_detail.render(job_data, history_data, job_id, cluster_id);
+    $('.scheduler-page').css('opacity', '1');
 };

@@ -168,57 +168,112 @@
     width: 100%;
 }
 
-.scheduler-chart-body path:hover {
-    opacity: 1 !important;
-}
-
 .scheduler-chart-legend {
     display: flex;
-    gap: 18px;
-    padding-top: 12px;
+    gap: 8px;
+    padding-top: 14px;
     flex-wrap: wrap;
 }
 
-.scheduler-legend-item {
+/* Legend badges */
+
+.scheduler-legend-badge {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     font-size: 11px;
     font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1.5px solid #d0d0d0;
     cursor: pointer;
     user-select: none;
-    transition: opacity 120ms ease, background 120ms ease;
+    color: #6e6e73;
+    background: linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0) 100%);
+    transition: all 120ms ease;
 }
 
-.scheduler-legend-item-off {
-    opacity: 0.35;
+.scheduler-legend-badge:hover {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.scheduler-legend-badge-off {
+    opacity: 0.4;
     text-decoration: line-through;
+    border-color: #d8d8d8;
+    background: transparent;
+    color: #a0a0a5;
 }
 
-.scheduler-legend-item:hover {
-    background: rgba(0, 0, 0, 0.04);
+.scheduler-legend-badge-off .scheduler-legend-badge-dot {
+    opacity: 0.3;
 }
 
-.scheduler-legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
+.scheduler-legend-badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
     display: inline-block;
     flex-shrink: 0;
 }
 
-/* Bar chart crosshair */
+/* Time range picker */
 
-.scheduler-chart-crosshair {
-    position: absolute;
-    top: 0;
-    width: 1px;
-    height: 100%;
-    border-left: 1px dashed rgba(0, 0, 0, 0.15);
-    pointer-events: none;
+.scheduler-time-range-wrapper {
+    position: relative;
+}
+
+.scheduler-pill-clickable {
+    cursor: pointer;
+}
+
+.scheduler-pill-clickable:hover {
+    background: #d6eeff;
+}
+
+.scheduler-pill-clickable::after {
+    content: ' \25BE';
+    font-size: 9px;
+    opacity: 0.5;
+}
+
+.scheduler-time-range-menu {
     display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 4px);
+    background: #fff;
+    border-radius: 8px;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.06),
+        0 4px 12px rgba(0, 0, 0, 0.12);
+    padding: 4px 0;
+    z-index: 100;
+    min-width: 160px;
+}
+
+.scheduler-time-range-menu-open {
+    display: block;
+}
+
+.scheduler-time-range-option {
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1a1a1a;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 80ms ease;
+}
+
+.scheduler-time-range-option:hover {
+    background: #f0f4f8;
+}
+
+.scheduler-time-range-active {
+    color: #0070f3;
+    font-weight: 700;
+    background: rgba(0, 112, 243, 0.06);
 }
 
 /* Bar chart tooltip */
@@ -324,14 +379,14 @@
 .scheduler-status-in-flight::after {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 0;
+    left: 0;
     width: 10px;
     height: 10px;
-    margin-top: -5px;
-    margin-left: -5px;
     border-radius: 50%;
     border: 1.5px solid #2196f3;
+    box-sizing: border-box;
+    transform-origin: center center;
     animation: scheduler-ring-pulse 2s ease-out infinite;
 }
 
