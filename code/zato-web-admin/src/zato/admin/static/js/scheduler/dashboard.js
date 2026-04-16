@@ -279,18 +279,21 @@ $.fn.zato.scheduler.dashboard.relative_time_future = function(iso_string) {
     var diff_seconds = Math.floor((target - now) / 1000);
 
     if (diff_seconds < 0) {
-        return 'overdue';
+        return 'Overdue';
+    }
+    if (diff_seconds === 0) {
+        return 'Now';
     }
     if (diff_seconds < 60) {
-        return 'in ' + diff_seconds + 's';
+        return 'In ' + diff_seconds + 's';
     }
     if (diff_seconds < 3600) {
-        return 'in ' + Math.floor(diff_seconds / 60) + 'm';
+        return 'In ' + Math.floor(diff_seconds / 60) + 'm';
     }
     if (diff_seconds < 86400) {
-        return 'in ' + Math.floor(diff_seconds / 3600) + 'h';
+        return 'In ' + Math.floor(diff_seconds / 3600) + 'h';
     }
-    return 'in ' + Math.floor(diff_seconds / 86400) + 'd';
+    return 'In ' + Math.floor(diff_seconds / 86400) + 'd';
 };
 
 $.fn.zato.scheduler.dashboard.relative_time_past = function(iso_string) {
@@ -672,6 +675,14 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
 
             svg += '<path d="' + area_fill + '" fill="url(#areaGrad_' + spline_key + ')" />';
             svg += '<path d="' + area_path + '" fill="none" stroke="' + bar_colors[spline_key] + '" stroke-width="1.5" stroke-opacity="0.6" stroke-linecap="round" stroke-linejoin="round" />';
+
+            var tip_cx = edge_right;
+            var tip_cy = data_pts[data_pts.length - 1].y;
+            var tip_color = bar_colors[spline_key];
+            svg += '<circle cx="' + tip_cx.toFixed(2) + '" cy="' + tip_cy.toFixed(2) + '" r="5.5" ';
+            svg += 'fill="none" stroke="' + tip_color + '" stroke-opacity="0.35" stroke-width="1"/>';
+            svg += '<circle cx="' + tip_cx.toFixed(2) + '" cy="' + tip_cy.toFixed(2) + '" r="3.5" ';
+            svg += 'fill="' + tip_color + '"/>';
         }
     }
 
@@ -1059,8 +1070,26 @@ $.fn.zato.scheduler.dashboard._clear_tile_hover = function() {
     $('#dashboard-tile-tooltip').css('display', 'none');
 };
 
+$.fn.zato.scheduler.dashboard._schedule_clear_tile_hover = function() {
+    var dash = $.fn.zato.scheduler.dashboard;
+    dash._cancel_clear_tile_hover();
+    dash._tile_hover_clear_timer = setTimeout(function() {
+        dash._tile_hover_clear_timer = null;
+        dash._clear_tile_hover();
+    }, 80);
+};
+
+$.fn.zato.scheduler.dashboard._cancel_clear_tile_hover = function() {
+    var dash = $.fn.zato.scheduler.dashboard;
+    if (dash._tile_hover_clear_timer) {
+        clearTimeout(dash._tile_hover_clear_timer);
+        dash._tile_hover_clear_timer = null;
+    }
+};
+
 $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_event) {
     var dash = $.fn.zato.scheduler.dashboard;
+    dash._cancel_clear_tile_hover();
     var specs = dash._tile_hover_specs;
     var registry = $.fn.zato.eda.sparkline_registry();
     var active_entry = registry[active_sel];
@@ -1128,12 +1157,11 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
 
     var $tooltip = $('#dashboard-tile-tooltip');
     if ($tooltip.length === 0) {
-        $('body').append('<div id="dashboard-tile-tooltip" class="dashboard-tile-tooltip"></div>');
+        $('body').append('<div id="dashboard-tile-tooltip" class="dashboard-tile-tooltip" style="visibility:hidden;display:block;left:0;top:0"></div>');
         $tooltip = $('#dashboard-tile-tooltip');
     }
 
     $tooltip.html(tooltip_rows.join(''));
-    $tooltip.css({display: 'block', left: '0px', top: '0px'});
 
     var tt_w = $tooltip.outerWidth();
     var tt_h = $tooltip.outerHeight();
@@ -1157,7 +1185,7 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
         top = margin;
     }
 
-    $tooltip.css({left: left + 'px', top: top + 'px'});
+    $tooltip.css({display: 'block', visibility: 'visible', left: left + 'px', top: top + 'px'});
 };
 
 $.fn.zato.scheduler.dashboard._setup_tile_hover = function() {
@@ -1180,7 +1208,7 @@ $.fn.zato.scheduler.dashboard._setup_tile_hover = function() {
                 dash._show_tile_hover(sel, event);
             });
             $tile.on('mouseleave.tilehover', function() {
-                dash._clear_tile_hover();
+                dash._schedule_clear_tile_hover();
             });
         })(specs[i].sel);
     }
