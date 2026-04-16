@@ -437,11 +437,19 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     }
 
     var max_stack = 0;
-    for (var ms_index = 0; ms_index < buckets.length; ms_index++) {
-        for (var ms_key = 0; ms_key < visible_keys.length; ms_key++) {
-            var ms_val = buckets[ms_index][visible_keys[ms_key]];
-            if (ms_val > max_stack) {
-                max_stack = ms_val;
+    if ($.fn.zato.scheduler.dashboard.show_bars) {
+        for (var ms_index = 0; ms_index < buckets.length; ms_index++) {
+            var ms_sum = 0;
+            for (var ms_key = 0; ms_key < visible_keys.length; ms_key++) {
+                ms_sum += (buckets[ms_index][visible_keys[ms_key]] || 0);
+            }
+            if (ms_sum > max_stack) max_stack = ms_sum;
+        }
+    } else {
+        for (var ms_index = 0; ms_index < buckets.length; ms_index++) {
+            for (var ms_key = 0; ms_key < visible_keys.length; ms_key++) {
+                var ms_val = buckets[ms_index][visible_keys[ms_key]];
+                if (ms_val > max_stack) max_stack = ms_val;
             }
         }
     }
@@ -511,43 +519,36 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     }
 
     if ($.fn.zato.scheduler.dashboard.show_bars) {
-        var lollipop_edge_left = padding_left;
-        var lollipop_edge_right = padding_left + draw_width;
+        var sb_inset = Math.max(1, bucket_slot_width * 0.1);
+        var sb_w = bucket_slot_width - sb_inset * 2;
+        var sb_sep = 1.5;
 
-        for (var ll = 0; ll < visible_keys.length; ll++) {
-            var ll_key = visible_keys[ll];
-            var ll_pts = layer_points[ll_key];
+        for (var sk = 0; sk < visible_keys.length; sk++) {
+            layer_points[visible_keys[sk]] = [];
+        }
 
-            var ll_spline_pts = [];
-            ll_spline_pts.push({x: lollipop_edge_left, y: ll_pts[0].y});
-            for (var lp = 0; lp < ll_pts.length; lp++) {
-                ll_spline_pts.push(ll_pts[lp]);
-            }
-            ll_spline_pts.push({x: lollipop_edge_right, y: ll_pts[ll_pts.length - 1].y});
+        for (var sbi = 0; sbi < bucket_count; sbi++) {
+            var sb_x = padding_left + sbi * bucket_slot_width + sb_inset;
+            var sb_cursor_y = baseline_y;
 
-            var ll_path = 'M' + ll_spline_pts[0].x.toFixed(1) + ',' + ll_spline_pts[0].y.toFixed(1);
-            for (var ls = 1; ls < ll_spline_pts.length; ls++) {
-                var ls_prev = ll_spline_pts[ls - 1];
-                var ls_curr = ll_spline_pts[ls];
-                var ls_cpx = (ls_prev.x + ls_curr.x) / 2;
-                ll_path += ' C' + ls_cpx.toFixed(1) + ',' + ls_prev.y.toFixed(1) +
-                           ' ' + ls_cpx.toFixed(1) + ',' + ls_curr.y.toFixed(1) +
-                           ' ' + ls_curr.x.toFixed(1) + ',' + ls_curr.y.toFixed(1);
-            }
-            var ll_fill = ll_path +
-                ' L' + lollipop_edge_right.toFixed(1) + ',' + baseline_y.toFixed(1) +
-                ' L' + lollipop_edge_left.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
+            for (var sk2 = 0; sk2 < visible_keys.length; sk2++) {
+                var sk_key = visible_keys[sk2];
+                var sk_val = buckets[sbi][sk_key] || 0;
+                var sk_h = sk_val > 0 ? Math.max(2, (sk_val / max_stack) * draw_height) : 0;
 
-            svg += '<path d="' + ll_fill + '" fill="url(#lollipopGrad)" />';
-
-            for (var li = 0; li < ll_pts.length; li++) {
-                if (ll_pts[li].val > 0) {
-                    var lcx = ll_pts[li].x.toFixed(2);
-                    var lcy = ll_pts[li].y.toFixed(1);
-                    svg += '<line x1="' + lcx + '" y1="' + baseline_y.toFixed(1) + '" x2="' + lcx + '" y2="' + lcy + '" ';
-                    svg += 'stroke="#e5e7eb" stroke-width="1" />';
-                    svg += '<circle cx="' + lcx + '" cy="' + lcy + '" r="3" fill="' + bar_colors[ll_key] + '" />';
+                if (sk_val > 0) {
+                    var seg_y = sb_cursor_y - sk_h;
+                    svg += '<rect x="' + sb_x.toFixed(1) + '" y="' + seg_y.toFixed(1) + '" ';
+                    svg += 'width="' + sb_w.toFixed(1) + '" height="' + sk_h.toFixed(1) + '" ';
+                    svg += 'fill="' + bar_colors[sk_key] + '" />';
+                    sb_cursor_y = seg_y - sb_sep;
                 }
+
+                layer_points[sk_key].push({
+                    x: sb_x + sb_w / 2,
+                    y: sk_val > 0 ? sb_cursor_y + sb_sep : baseline_y,
+                    val: sk_val
+                });
             }
         }
     }
