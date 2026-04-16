@@ -90,6 +90,30 @@ $.fn.zato.scheduler.dashboard._spark_data = {
 
 $.fn.zato.scheduler.dashboard._spark_seeded = false;
 $.fn.zato.scheduler.dashboard._spark_max_len = 60;
+$.fn.zato.scheduler.dashboard._poll_interval_ms = 10000;
+
+$.fn.zato.scheduler.dashboard._format_compact_duration = function(seconds) {
+    if (seconds <= 0) return '0s';
+    if (seconds < 60) return seconds + 's';
+    if (seconds < 3600) {
+        var mins = Math.floor(seconds / 60);
+        var rem_s = seconds % 60;
+        return rem_s > 0 ? mins + 'm ' + rem_s + 's' : mins + 'm';
+    }
+    if (seconds < 86400) {
+        var hours = Math.floor(seconds / 3600);
+        var rem_m = Math.floor((seconds % 3600) / 60);
+        return rem_m > 0 ? hours + 'h ' + rem_m + 'm' : hours + 'h';
+    }
+    var days = Math.floor(seconds / 86400);
+    var rem_h = Math.floor((seconds % 86400) / 3600);
+    return rem_h > 0 ? days + 'd ' + rem_h + 'h' : days + 'd';
+};
+
+$.fn.zato.scheduler.dashboard._format_ago = function(seconds) {
+    if (seconds <= 0) return 'Now';
+    return $.fn.zato.scheduler.dashboard._format_compact_duration(seconds) + ' ago';
+};
 
 $.fn.zato.scheduler.dashboard._push_spark = function(key, value) {
     var data = $.fn.zato.scheduler.dashboard._spark_data[key];
@@ -797,18 +821,36 @@ $.fn.zato.scheduler.dashboard._setup_chart_interactions = function(container, bu
         overlay.html(band_html);
 
         var bucket = buckets[bucket_index];
-        var tooltip_lines = [];
         var time_start = new Date(bucket.start);
-        var time_label = ('0' + time_start.getHours()).slice(-2) + ':' + ('0' + time_start.getMinutes()).slice(-2) + ':' + ('0' + time_start.getSeconds()).slice(-2);
-        tooltip_lines.push('<span style="font-weight:700">' + time_label + '</span>');
+        var time_end = new Date(bucket.end);
+        var fmt_time = function(d) {
+            return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
+        };
+        var bucket_span_s = Math.round((bucket.end - bucket.start) / 1000);
+        var time_label = bucket_span_s >= 1
+            ? fmt_time(time_start) + ' \u2192 ' + fmt_time(time_end)
+            : fmt_time(time_start);
 
+        var total_runs = 0;
+        for (var tk = 0; tk < visible_keys.length; tk++) {
+            total_runs += (bucket[visible_keys[tk]] || 0);
+        }
+        var runs_label = total_runs === 1 ? '1 run' : total_runs + ' runs';
+
+        var tooltip_html = '<div class="dashboard-tooltip-header">' +
+            '<div class="dashboard-tooltip-title">' + time_label + '</div>' +
+            '<div class="dashboard-tooltip-subtitle">' + runs_label + '</div>' +
+            '</div>';
+
+        var body_lines = [];
         for (var key_index = 0; key_index < visible_keys.length; key_index++) {
             var key = visible_keys[key_index];
             var count = bucket[key] || 0;
-            tooltip_lines.push('<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + bar_colors[key] + ';margin-right:5px"></span>' + (labels[key] || key) + ': <b>' + count + '</b>');
+            body_lines.push('<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + bar_colors[key] + ';margin-right:5px;vertical-align:middle"></span>' + (labels[key] || key) + ': <b>' + count + '</b>');
         }
+        tooltip_html += body_lines.join('<br>');
 
-        tooltip.html(tooltip_lines.join('<br>'));
+        tooltip.html(tooltip_html);
         tooltip.css({display: 'block', left: '0px', top: '0px'});
         var mc_tt_w = tooltip.outerWidth();
         var mc_tt_h = tooltip.outerHeight();
@@ -1126,7 +1168,23 @@ $.fn.zato.scheduler.dashboard._show_tile_hover = function(active_sel, mouse_even
         }
     }
 
+    var poll_ms = dash._poll_interval_ms;
+    var active_n = active_entry.data_points.length;
+    var samples_ago = active_n - 1 - nearest_index;
+    if (samples_ago < 0) samples_ago = 0;
+    var seconds_ago = Math.round(samples_ago * poll_ms / 1000);
+    var span_seconds = Math.round((active_n > 1 ? (active_n - 1) : 0) * poll_ms / 1000);
+
+    var header_title = dash._format_ago(seconds_ago);
+    var header_subtitle = span_seconds > 0
+        ? 'Last ' + dash._format_compact_duration(span_seconds)
+        : 'Just started';
+
     var tooltip_rows = [];
+    tooltip_rows.push('<div class="dashboard-tooltip-header">' +
+        '<div class="dashboard-tooltip-title">' + header_title + '</div>' +
+        '<div class="dashboard-tooltip-subtitle">' + header_subtitle + '</div>' +
+        '</div>');
     for (var s2 = 0; s2 < specs.length; s2++) {
         var spec = specs[s2];
         var entry = registry[spec.sel];
@@ -1410,5 +1468,5 @@ $.fn.zato.scheduler.dashboard.init = function(initial_data) {
 
     $.fn.zato.scheduler.dashboard.render(initial_data);
     $('.dashboard-page').css('opacity', '1');
-    setInterval($.fn.zato.scheduler.dashboard.poll, 10000);
+    setInterval($.fn.zato.scheduler.dashboard.poll, $.fn.zato.scheduler.dashboard._poll_interval_ms);
 };

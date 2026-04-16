@@ -155,6 +155,30 @@
     margin-left: 10px;
 }
 
+/* Shared tooltip header (used by both tile tooltip and main chart tooltip) */
+
+.dashboard-tooltip-header {
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dashboard-tooltip-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.01em;
+}
+
+.dashboard-tooltip-subtitle {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+}
+
 
 /* Sections */
 
