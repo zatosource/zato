@@ -100,24 +100,9 @@ def job_detail(req, job_id):
             if isinstance(raw, str):
                 job_data = json.loads(raw) if raw else {}
             else:
-                job_data = raw if raw else {}
+                job_data = dict(raw) if raw else {}
     except Exception as e:
         logger.error('Scheduler job detail error: %s', e)
-
-    try:
-        response = req.zato.client.invoke('zato.scheduler.job.get-history', {
-            'id': job_id,
-        })
-        if response.ok:
-            raw = response.data
-            if isinstance(raw, str):
-                history_data = json.loads(raw) if raw else []
-            elif isinstance(raw, list):
-                history_data = raw
-            else:
-                history_data = list(raw) if raw else []
-    except Exception as e:
-        logger.error('Scheduler job history error: %s', e)
 
     try:
         state_response = req.zato.client.invoke('zato.scheduler.job.get-current-state', {})
@@ -128,31 +113,31 @@ def job_detail(req, job_id):
             else:
                 state_data = raw or {}
 
-            for j in state_data.get('jobs', []):
-                if str(j.get('id')) == str(job_id):
-                    job_data['next_fire_utc'] = j.get('next_fire_utc')
-                    job_data['in_flight'] = j.get('in_flight')
-                    job_data['current_run'] = j.get('current_run')
-                    job_data['interval_ms'] = j.get('interval_ms')
+            job_name = job_data.get('name', '')
+
+            for entry in state_data.get('jobs', []):
+                if str(entry.get('id')) == str(job_id) or entry.get('name') == job_name:
+                    job_data['next_fire_utc'] = entry.get('next_fire_utc')
+                    job_data['in_flight'] = entry.get('in_flight')
+                    job_data['current_run'] = entry.get('current_run')
+                    job_data['interval_ms'] = entry.get('interval_ms')
+                    job_data['recent_outcomes'] = entry.get('recent_outcomes', [])
+                    job_data['last_outcome'] = entry.get('last_outcome')
+                    job_data['last_duration_ms'] = entry.get('last_duration_ms')
                     break
+
+            for entry in state_data.get('history_timeline', []):
+                if str(entry.get('job_id')) == str(job_id) or entry.get('job_name') == job_name:
+                    history_data.append(entry)
+
     except Exception as e:
         logger.error('Scheduler job state error: %s', e)
-
-    if isinstance(job_data, dict):
-        job_json = json.dumps(job_data)
-    else:
-        job_json = json.dumps({})
-
-    if isinstance(history_data, list):
-        history_json = json.dumps(history_data)
-    else:
-        history_json = json.dumps([])
 
     return TemplateResponse(req, 'zato/scheduler/job_detail.html', {
         'cluster_id': cluster_id,
         'job_id': job_id,
-        'job_data': job_json,
-        'history_data': history_json,
+        'job_data': json.dumps(job_data if isinstance(job_data, dict) else {}),
+        'history_data': json.dumps(history_data if isinstance(history_data, list) else []),
         'zato_clusters': True,
         'zato_template_name': 'zato/scheduler/job_detail.html',
     })

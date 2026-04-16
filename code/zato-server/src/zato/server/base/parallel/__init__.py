@@ -1235,7 +1235,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         import zato.server.service.internal.scheduler
 
-        config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'enmasse.yaml')
+        config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'demo-enmasse.yaml')
         self.config_store.load_yaml(config_path)
         self.reload_config()
         return True

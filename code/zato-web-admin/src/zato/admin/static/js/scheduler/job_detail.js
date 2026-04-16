@@ -23,8 +23,9 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
     html += '<div class="scheduler-detail-meta">';
     html += '<span class="scheduler-detail-badge">' + type_label + '</span>';
     html += '<span class="scheduler-detail-status">' + status_text + '</span>';
-    if (job.service) {
-        html += '<span class="scheduler-detail-service">' + job.service + '</span>';
+    var service_name = job.service || job.service_name || '';
+    if (service_name) {
+        html += '<span class="scheduler-detail-service">' + service_name + '</span>';
     }
     if (job.in_flight) {
         html += '<span class="scheduler-detail-in-flight">In-flight (run #' + job.current_run + ')</span>';
@@ -42,8 +43,9 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
     var html = '<div class="scheduler-config-grid">';
 
+    var config_service = job.service || job.service_name || '';
     html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Service</span>';
-    html += '<a href="/zato/service/overview/' + encodeURIComponent(job.service || '') + '/?cluster=' + cluster_id + '">' + (job.service || '-') + '</a></div>';
+    html += '<a href="/zato/service/overview/' + encodeURIComponent(config_service) + '/?cluster=' + cluster_id + '">' + (config_service || '-') + '</a></div>';
 
     html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Job type</span>' + (job.job_type || '-') + '</div>';
     html += '<div class="scheduler-config-item"><span class="scheduler-config-label">Start date</span>' + (job.start_date || '-') + '</div>';
@@ -73,7 +75,13 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     html += '</div>';
 
     if (job.extra) {
-        html += '<pre class="scheduler-config-extra">' + job.extra + '</pre>';
+        var extra_display = job.extra;
+        try {
+            var parsed = JSON.parse(job.extra);
+            extra_display = JSON.stringify(parsed, null, 2);
+        } catch(e) {}
+        html += '<div class="scheduler-config-item scheduler-config-item-wide"><span class="scheduler-config-label">Extra data</span>';
+        html += '<pre class="scheduler-config-extra">' + extra_display + '</pre></div>';
     }
 
     container.html(html);

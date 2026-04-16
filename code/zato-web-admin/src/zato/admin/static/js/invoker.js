@@ -1088,46 +1088,31 @@ $.fn.zato.invoker._format_xml = function(xml_text) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.invoker._detect_content_type = function(text) {
-    if (!text || typeof text !== 'string') {
-        return 'plain';
-    }
-    let trimmed = text.trim();
-
-    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-        try {
-            JSON.parse(trimmed);
-            return 'json';
-        } catch (e) {}
-    }
-
-    if (trimmed.startsWith('<') && trimmed.indexOf('>') !== -1) {
-        return 'xml';
-    }
-
-    return 'plain';
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
 $.fn.zato.invoker._render_highlighted_response = function(pre_elem, text) {
     if (!text) {
         pre_elem.html('');
+        pre_elem.removeClass('invoker-pygments');
         $.fn.zato.invoker._update_line_numbers(pre_elem);
         return;
     }
 
-    let content_type = $.fn.zato.invoker._detect_content_type(text);
-
-    if (content_type === 'json') {
-        pre_elem.html($.fn.zato.invoker._highlight_json(text));
-    } else if (content_type === 'xml') {
-        pre_elem.html($.fn.zato.invoker._highlight_xml(text));
-    } else {
-        pre_elem.text(text);
-    }
-
+    pre_elem.text(text);
+    pre_elem.removeClass('invoker-pygments');
     $.fn.zato.invoker._update_line_numbers(pre_elem);
+
+    $.ajax({
+        type: 'POST',
+        url: '/zato/http-soap/highlight/',
+        data: {text: text},
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        success: function(data) {
+            if (data.html) {
+                pre_elem.html(data.html);
+                pre_elem.addClass('invoker-pygments');
+                $.fn.zato.invoker._update_line_numbers(pre_elem);
+            }
+        }
+    });
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1153,73 +1138,6 @@ $.fn.zato.invoker._update_line_numbers = function(pre_elem) {
         lines.push(i + ' ');
     }
     gutter.text(lines.join('\n'));
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-$.fn.zato.invoker._escape_html = function(text) {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-$.fn.zato.invoker._highlight_json = function(text) {
-    let escaped = $.fn.zato.invoker._escape_html(text);
-
-    escaped = escaped.replace(
-        /(&quot;(?:[^&]|&(?!quot;))*?&quot;)\s*:/g,
-        '<span class="invoker-syn-key">$1</span>:'
-    );
-
-    escaped = escaped.replace(
-        /:\s*(&quot;(?:[^&]|&(?!quot;))*?&quot;)/g,
-        ': <span class="invoker-syn-str">$1</span>'
-    );
-
-    escaped = escaped.replace(
-        /(?<![&\w])(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?![&\w])/g,
-        '<span class="invoker-syn-num">$1</span>'
-    );
-
-    escaped = escaped.replace(
-        /\b(true|false)\b/g,
-        '<span class="invoker-syn-bool">$1</span>'
-    );
-
-    escaped = escaped.replace(
-        /\bnull\b/g,
-        '<span class="invoker-syn-null">null</span>'
-    );
-
-    return escaped;
-}
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-$.fn.zato.invoker._highlight_xml = function(text) {
-    let esc = $.fn.zato.invoker._escape_html;
-
-    return esc(text)
-        .replace(
-            /(&lt;\/?)([\w:.-]+)/g,
-            '$1<span class="invoker-syn-tag">$2</span>'
-        )
-        .replace(
-            /([\w:.-]+)(=)(&quot;)(.*?)(&quot;)/g,
-            '<span class="invoker-syn-attr">$1</span>$2<span class="invoker-syn-aval">$3$4$5</span>'
-        )
-        .replace(
-            /(&lt;!--)([\s\S]*?)(--&gt;)/g,
-            '<span class="invoker-syn-comment">$1$2$3</span>'
-        )
-        .replace(
-            /(&lt;!\[CDATA\[)([\s\S]*?)(\]\]&gt;)/g,
-            '<span class="invoker-syn-cdata">$1$2$3</span>'
-        );
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

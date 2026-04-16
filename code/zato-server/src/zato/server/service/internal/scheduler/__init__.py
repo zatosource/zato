@@ -494,10 +494,18 @@ class GetCurrentState(_SchedulerAdmin):
             store_jobs = self.server.config_store.get_list(_entity_type)
 
             runtime_by_id = {}
+            runtime_by_name = {}
             for s in scheduler_get_job_summaries():
                 runtime_by_id[s['id']] = s
+                runtime_by_name[s['name']] = s
 
             all_history = scheduler_get_all_history()
+
+            history_by_name = {}
+            for summary in runtime_by_name.values():
+                summary_id = summary['id']
+                if summary_id in all_history:
+                    history_by_name[summary['name']] = all_history[summary_id]
 
             total_jobs = len(store_jobs)
             active_jobs = 0
@@ -518,12 +526,12 @@ class GetCurrentState(_SchedulerAdmin):
                 else:
                     paused_jobs += 1
 
-                runtime = runtime_by_id.get(job_id, {})
+                runtime = runtime_by_id.get(job_id) or runtime_by_name.get(name, {})
                 in_flight = runtime.get('in_flight', False)
                 if in_flight:
                     in_flight_count += 1
 
-                history = all_history.get(job_id, [])
+                history = all_history.get(job_id, []) or history_by_name.get(name, [])
 
                 last_outcome = None
                 last_duration_ms = None
@@ -562,6 +570,9 @@ class GetCurrentState(_SchedulerAdmin):
                     if str(item.get('id', '')) == job_id:
                         job_name = item.get('name', '')
                         break
+                if not job_name:
+                    summary = runtime_by_id.get(job_id, {})
+                    job_name = summary.get('name', '')
 
                 for rec in records:
                     outcome = rec.get('outcome', '')
