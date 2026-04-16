@@ -46,6 +46,12 @@
     margin-bottom: 6px;
 }
 
+.scheduler-tile-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
 .scheduler-tile-value {
     font-size: 36px;
     font-weight: 700;
@@ -55,11 +61,22 @@
     letter-spacing: -0.02em;
     color: #fff;
     line-height: 1.1;
-    margin-bottom: 10px;
+    flex-shrink: 0;
 }
 
 .scheduler-tile-spark {
-    height: 28px;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.scheduler-tile-spark svg {
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
 

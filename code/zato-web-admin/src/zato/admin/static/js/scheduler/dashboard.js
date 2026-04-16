@@ -88,12 +88,88 @@ $.fn.zato.scheduler.dashboard._spark_data = {
     failures: []
 };
 
+$.fn.zato.scheduler.dashboard._spark_seeded = false;
+$.fn.zato.scheduler.dashboard._spark_max_len = 60;
+
 $.fn.zato.scheduler.dashboard._push_spark = function(key, value) {
     var data = $.fn.zato.scheduler.dashboard._spark_data[key];
     data.push(value);
-    if (data.length > 60) {
+    if (data.length > $.fn.zato.scheduler.dashboard._spark_max_len) {
         data.shift();
     }
+};
+
+$.fn.zato.scheduler.dashboard._seed_spark_buffers = function(data) {
+    if ($.fn.zato.scheduler.dashboard._spark_seeded) {
+        return;
+    }
+    var dash = $.fn.zato.scheduler.dashboard;
+    var buckets = 30;
+
+    var total_jobs = data.total_jobs || 0;
+    var active_jobs = data.active_jobs || 0;
+    var paused_jobs = data.paused_jobs || 0;
+    var in_flight_count = data.in_flight_count || 0;
+
+    var timeline = data.history_timeline || [];
+    var now = Date.now();
+    var span_ms = 10 * 60 * 1000;
+    var start = now - span_ms;
+    if (timeline.length > 0) {
+        var earliest = now;
+        for (var t = 0; t < timeline.length; t++) {
+            var iso = timeline[t].actual_fire_time_iso;
+            if (iso) {
+                var ts = new Date(iso).getTime();
+                if (ts < earliest) {
+                    earliest = ts;
+                }
+            }
+        }
+        var hist_span = Math.max(60 * 1000, now - earliest);
+        if (hist_span > span_ms) {
+            span_ms = hist_span;
+            start = now - span_ms;
+        }
+    }
+    var bucket_size = span_ms / buckets;
+
+    var failures = new Array(buckets);
+    var activity = new Array(buckets);
+    for (var b = 0; b < buckets; b++) {
+        failures[b] = 0;
+        activity[b] = 0;
+    }
+
+    for (var r = 0; r < timeline.length; r++) {
+        var record = timeline[r];
+        var iso2 = record.actual_fire_time_iso;
+        if (!iso2) continue;
+        var t_ms = new Date(iso2).getTime();
+        var idx = Math.floor((t_ms - start) / bucket_size);
+        if (idx < 0 || idx >= buckets) continue;
+        activity[idx]++;
+        if (record.outcome === 'error' || record.outcome === 'timeout') {
+            failures[idx]++;
+        }
+    }
+
+    dash._spark_data.failures = failures;
+
+    var flat = function(value) {
+        var arr = new Array(buckets);
+        for (var i = 0; i < buckets; i++) {
+            arr[i] = value;
+        }
+        return arr;
+    };
+
+    dash._spark_data.total_jobs = flat(total_jobs);
+    dash._spark_data.active = flat(active_jobs);
+    dash._spark_data.paused = flat(paused_jobs);
+    dash._spark_data.in_flight = activity;
+
+    dash._spark_seeded = true;
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -972,14 +1048,16 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
         $('#stat-failures').css('color', '#fff');
     }
 
+    $.fn.zato.scheduler.dashboard._seed_spark_buffers(data);
+
     $.fn.zato.scheduler.dashboard._push_spark('total_jobs', total_jobs);
     $.fn.zato.scheduler.dashboard._push_spark('active', active_jobs);
     $.fn.zato.scheduler.dashboard._push_spark('paused', paused_jobs);
     $.fn.zato.scheduler.dashboard._push_spark('in_flight', in_flight_count);
     $.fn.zato.scheduler.dashboard._push_spark('failures', failure_count);
 
-    var spark_options = {width: 100, height: 28, color: '#82ccff', dot_color: '#82ccff', dot_radius: 2.5};
-    var spark_options_failures = {width: 100, height: 28, color: '#ff6b6b', dot_color: '#ff6b6b', dot_radius: 2.5};
+    var spark_options = {height: 36, color: '#82ccff', dot_color: '#82ccff', dot_radius: 2};
+    var spark_options_failures = {height: 36, color: '#ff6b6b', dot_color: '#ff6b6b', dot_radius: 2};
 
     $.fn.zato.eda.sparkline('#spark-total-jobs', $.fn.zato.scheduler.dashboard._spark_data.total_jobs, spark_options);
     $.fn.zato.eda.sparkline('#spark-active', $.fn.zato.scheduler.dashboard._spark_data.active, spark_options);
