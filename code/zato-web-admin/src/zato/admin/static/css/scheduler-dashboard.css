@@ -175,38 +175,30 @@
     flex-wrap: wrap;
 }
 
-/* Legend badges */
+/* Legend tags */
 
 .scheduler-legend-badge {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     font-size: 11px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 6px;
-    border: 1.5px solid #d0d0d0;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 3px 8px;
+    border-radius: 3px;
     cursor: pointer;
     user-select: none;
-    color: #6e6e73;
-    background: linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0) 100%);
-    transition: all 120ms ease;
+    transition: opacity 100ms ease, background 100ms ease;
 }
 
 .scheduler-legend-badge:hover {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    opacity: 0.85;
 }
 
 .scheduler-legend-badge-off {
-    opacity: 0.4;
-    text-decoration: line-through;
-    border-color: #d8d8d8;
-    background: transparent;
-    color: #a0a0a5;
-}
-
-.scheduler-legend-badge-off .scheduler-legend-badge-dot {
     opacity: 0.3;
+    text-decoration: line-through;
 }
 
 .scheduler-legend-badge-dot {

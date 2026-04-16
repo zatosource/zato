@@ -24,11 +24,11 @@ $.fn.zato.scheduler.dashboard.outcome_bg_colors = {
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bar_colors = {
-    'executed': '#4caf50',
-    'error': '#e53935',
-    'timeout': '#ff9800',
-    'skipped_concurrent': '#9575cd',
-    'missed_catchup': '#29b6f6'
+    'executed': '#2d8f45',
+    'error': '#c0392b',
+    'timeout': '#b45309',
+    'skipped_concurrent': '#7c3aed',
+    'missed_catchup': '#1a6fa0'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_labels = {
@@ -129,9 +129,13 @@ $.fn.zato.scheduler.dashboard._filter_timeline_by_range = function(timeline) {
     return filtered;
 };
 
+$.fn.zato.scheduler.dashboard._skip_legend_rebuild = false;
+
 $.fn.zato.scheduler.dashboard._redraw_chart_from_cache = function() {
     if ($.fn.zato.scheduler.dashboard._last_timeline) {
+        $.fn.zato.scheduler.dashboard._skip_legend_rebuild = true;
         $.fn.zato.scheduler.dashboard.render_bar_chart($.fn.zato.scheduler.dashboard._last_timeline);
+        $.fn.zato.scheduler.dashboard._skip_legend_rebuild = false;
     }
 };
 
@@ -304,7 +308,13 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     }
 
     var range_minutes = $.fn.zato.scheduler.dashboard._time_range_minutes;
-    var range_label = range_minutes > 0 ? 'Last ' + filtered.length + ' runs' : 'Last ' + filtered.length + ' runs';
+    var range_names = {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today', 2880: 'Yesterday', 10080: 'This week', 43200: 'This month', 525600: 'This year'};
+    var range_label;
+    if (range_minutes > 0 && range_names[range_minutes]) {
+        range_label = range_names[range_minutes] + ' \u00b7 ' + filtered.length + ' runs';
+    } else {
+        range_label = 'All \u00b7 ' + filtered.length + ' runs';
+    }
     $('#scheduler-exec-count').text(range_label);
 
     var chart_width = container.width() || 800;
@@ -514,24 +524,37 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
 
     $.fn.zato.scheduler.dashboard._setup_chart_interactions(container, buckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height, visible_keys, layer_points, bar_colors);
 
-    var legend_container = $('#scheduler-chart-legend');
-    legend_container.empty();
-    for (var legend_index = 0; legend_index < outcome_keys.length; legend_index++) {
-        var legend_key = outcome_keys[legend_index];
-        var is_hidden = !!hidden_outcomes[legend_key];
-        var color = bar_colors[legend_key];
-        var item = $('<span class="scheduler-legend-badge' + (is_hidden ? ' scheduler-legend-badge-off' : '') + '" data-outcome="' + legend_key + '"></span>');
-        if (!is_hidden) {
-            item.css({'border-color': color, 'background': 'linear-gradient(180deg, ' + color + '22 0%, ' + color + '08 100%)', 'color': color});
+    if (!$.fn.zato.scheduler.dashboard._skip_legend_rebuild) {
+        var legend_container = $('#scheduler-chart-legend');
+        var outcome_text_colors = $.fn.zato.scheduler.dashboard.outcome_colors;
+        var outcome_bg = $.fn.zato.scheduler.dashboard.outcome_bg_colors;
+        legend_container.empty();
+        for (var legend_index = 0; legend_index < outcome_keys.length; legend_index++) {
+            var legend_key = outcome_keys[legend_index];
+            var is_hidden = !!hidden_outcomes[legend_key];
+            var text_color = outcome_text_colors[legend_key] || '#6e6e73';
+            var bg_color = outcome_bg[legend_key] || 'rgba(110,110,115,0.12)';
+            var dot_color = bar_colors[legend_key];
+            var item = $('<span class="scheduler-legend-badge' + (is_hidden ? ' scheduler-legend-badge-off' : '') + '" data-outcome="' + legend_key + '"></span>');
+            item.css({'color': text_color, 'background': bg_color});
+            item.append('<span class="scheduler-legend-badge-dot" style="background:' + dot_color + '"></span>');
+            item.append(labels[legend_key]);
+            legend_container.append(item);
         }
-        item.append('<span class="scheduler-legend-badge-dot" style="background:' + color + '"></span>');
-        item.append(labels[legend_key]);
-        legend_container.append(item);
+        legend_container.off('click.toggle').on('click.toggle', '.scheduler-legend-badge', function() {
+            var el = $(this);
+            var key = el.data('outcome');
+            el.toggleClass('scheduler-legend-badge-off');
+            var hidden = $.fn.zato.scheduler.dashboard._get_hidden_outcomes();
+            if (hidden[key]) {
+                delete hidden[key];
+            } else {
+                hidden[key] = true;
+            }
+            $.fn.zato.scheduler.dashboard._set_hidden_outcomes(hidden);
+            $.fn.zato.scheduler.dashboard._redraw_chart_from_cache();
+        });
     }
-    legend_container.off('click.toggle').on('click.toggle', '.scheduler-legend-badge', function() {
-        var key = $(this).data('outcome');
-        $.fn.zato.scheduler.dashboard._toggle_outcome(key);
-    });
 };
 
 // ////////////////////////////////////////////////////////////////////////////
