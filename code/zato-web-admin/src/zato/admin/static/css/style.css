@@ -257,57 +257,23 @@ span.like-a {
     padding-left: 30px
 }
 
+/* #data-table layout — visual styling comes from .zato-table */
+
 #data-table {
     width: 96%;
-    margin-top: 12px;
+    margin-top: 20px;
     margin-left: 2%;
-    border-collapse: separate;
-    border-spacing: 0;
-    border-radius: 4px;
-    overflow: hidden;
-    font-size: 0.85rem;
-    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
-    border: none;
-    counter-reset: data_table_counter
+    counter-reset: data_table_counter;
 }
-
-#data-table a {
-    color: #037ac7;
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 0.8rem;
-    font-family: monospace;
-    letter-spacing: 0.02rem;
-    padding-top: 0.6rem;
-    padding-bottom: 0.6rem;
-}
-
-#data-table tr.odd {
-    background-color: #f8f9fa
-}
-
-#data-table tr.even {
-    background-color: #fff
-}
-
-/* Conditional hover effect - only apply if table has 3+ rows - DISABLED to always use lighter hover effect
-#data-table tbody tr:nth-child(1):hover:nth-last-child(n+3),
-#data-table tbody tr:nth-child(2):hover:nth-last-child(n+2),
-#data-table tbody tr:nth-child(3) ~ tr:hover,
-#data-table tbody tr:nth-child(3):hover {
-    background-color: var(--zato-seablue-light2) !important;
-    color: #fff !important;
-}
-*/
 
 
 #data-table tr.updated {
-    background-color: rgba(255, 243, 205, 0.7)
+    background-color: rgba(255, 243, 205, 0.7);
 }
 
 #data-table tr.attention td,
 #data-table tr.updated td {
-    border-bottom: 1px solid rgba(169, 162, 68, 0.5)
+    border-bottom: 1px solid rgba(169, 162, 68, 0.5);
 }
 
 @keyframes zatoBounce {
@@ -325,45 +291,28 @@ tr.zato-row-bounce {
     transform-origin: center center;
 }
 
-#data-table td,
 #data-table th {
-    padding: 10px;
-    border-bottom: 1px solid rgba(6, 60, 101, 0.12)
-}
-
-#data-table th {
-    background: var(--zato-seablue);
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 500;
     white-space: nowrap;
-    position: relative
+    position: relative;
 }
 
 #data-table th.header:not(.ignore):nth-child(n+3):hover {
-    background: var(--zato-seablue-light1);
-    cursor: pointer
+    background: rgba(0, 0, 0, 0.04);
+    cursor: pointer;
 }
 
 #data-table th a {
-    color: white;
     display: block;
     position: relative;
-    padding-right: 15px
+    padding-right: 15px;
 }
 
 #data-table th a:after {
     content: '';
-    display: none
+    display: none;
 }
 
-#data-table td {
-    vertical-align: middle !important
-}
-
-/* Center cells in columns whose headers contain specific text */
-
-/* Align columns by thead header text */
+/* Column alignment */
 #data-table tr th:has(a[href='#']:contains('Active')) ~ td:nth-child(4),
 #data-table tr td:nth-child(4) {
     text-align: center;
@@ -374,34 +323,24 @@ tr.zato-row-bounce {
     text-align: center;
 }
 
-/* This is the flexible approach that works with any header text */
-/* Add more rules following this pattern for other headers */
-
-/* Helper attribute to store aligned column info */
 #data-table[data-center-columns="Active,Internal"] tr td:nth-child(4),
 #data-table[data-center-columns="Active,Internal"] tr td:nth-child(6) {
     text-align: center;
 }
 
 #data-table td.inline_header {
-    background: rgba(6, 60, 101, 0.05)
+    background: rgba(6, 60, 101, 0.05);
 }
 
 #data-table td.numbering {
     position: relative;
-    text-align: center
+    text-align: center;
 }
 
 #data-table td.numbering:before {
     content: counter(data_table_counter);
     counter-increment: data_table_counter;
-    color: #333;
-    font-size: 0.85rem;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-weight: 500
+    font-weight: 500;
 }
 
 #data-table td.impexp,
@@ -576,15 +515,19 @@ div.prompt form {
 }
 
 a:not(.menu-link) {
-    color: #000;
-    font-family: arial, helvetica, clean, sans-serif;
-    text-decoration: underline;
-    padding: 3px;
+    color: rgb(17, 17, 17);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+a.common {
+    font-weight: 400;
 }
 
 a:not(.menu-link):hover {
-    color: #fff !important;
-    background-color: var(--zato-seablue-light3);
+    color: #006fbf !important;
+    background-color: transparent;
     text-decoration: none;
 }
 
@@ -827,12 +770,13 @@ div.page_prompt a {
     background-color: #ffc311;
     color: #000;
     text-decoration: none;
+    font-weight: 400;
     padding-left: 4px !important;
     padding-right: 4px !important;
     padding-top: 6px !important;
     padding-bottom: 6px !important;
     border-radius: 5px;
-    box-shadow: 2px 2px 2px #d3d3d3
+    box-shadow: 2px 2px 2px #d3d3d3;
 }
 
 div.page_prompt a:hover {
@@ -867,6 +811,11 @@ div.page_prompt a.current {
 
 .form-data tr td a {
     color: #000;
+    font-weight: 400;
+}
+
+.form-data tr td a:hover {
+    color: #000 !important;
 }
 
 .multirow-button {
@@ -875,14 +824,8 @@ div.page_prompt a.current {
     margin-left: 2px;
 }
 
-/* Apply hover effects only to actual data tables (those with classes odd/even on rows) */
-#data-table tbody tr.odd:hover,
-#data-table tbody tr.even:hover,
-table.multi-select-table tbody tr:hover
-{
-    background-color: rgb(211, 229, 238);
-    border-top:1px solid #222 !important;
-    border-bottom:1px solid #222 !important;
+table.multi-select-table tbody tr:hover {
+    background: rgba(0, 0, 0, 0.03);
 }
 
 .ui-icon {
@@ -891,6 +834,21 @@ table.multi-select-table tbody tr:hover
 
 .chosen-container {
     min-width:100%;
+}
+
+.chosen-container a,
+.chosen-container a:hover {
+    font-weight: 400;
+    color: #000 !important;
+    background-color: transparent;
+}
+
+.chosen-container .chosen-results li {
+    font-weight: 400;
+}
+
+.chosen-container .chosen-results li:hover {
+    color: #000 !important;
 }
 
 input[data-zato-validator-required="required"]::placeholder {

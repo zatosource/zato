@@ -1,0 +1,45 @@
+/* Common table styles — single source of truth for every table in the app */
+
+.zato-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: none;
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    line-height: 20px;
+    color: rgb(64, 64, 64);
+    background: transparent;
+}
+
+.zato-table th {
+    text-align: left;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgb(17, 17, 17);
+    border: none;
+    background: transparent;
+    box-shadow: rgb(219, 222, 212) 0px -1px 0px 0px inset;
+    height: 34px;
+    vertical-align: middle;
+    line-height: 19px;
+}
+
+.zato-table td {
+    padding: 8px;
+    border: none;
+    color: rgb(64, 64, 64);
+    vertical-align: middle;
+    line-height: 20px;
+}
+
+.zato-table tbody tr {
+    background: transparent;
+    transition: background 100ms ease;
+}
+
+.zato-table tbody tr:hover {
+    background: rgba(0, 0, 0, 0.03);
+}

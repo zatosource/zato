@@ -66,7 +66,7 @@
             <a href="javascript:$.fn.zato.cache.builtin.create()">Create a new cache</a>
         </div>
 
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
@@ -97,7 +97,7 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td><a href="{% url "cache-builtin-get-entries" item.id %}?cluster=1">{{ item.name }}</a></td>

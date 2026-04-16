@@ -815,7 +815,7 @@ $.fn.zato.scheduler.dashboard.render_failures = function(timeline) {
 
     $('#scheduler-failures-count').text(failures.length);
 
-    var html = '<table class="scheduler-failures-table"><thead><tr>';
+    var html = '<table class="zato-table"><thead><tr>';
     html += '<th>Time</th><th>Job</th><th>Outcome</th><th>Error</th>';
     html += '</tr></thead><tbody>';
 

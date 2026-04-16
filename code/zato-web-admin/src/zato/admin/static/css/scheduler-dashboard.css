@@ -310,65 +310,12 @@
     font-feature-settings: 'tnum' on, 'lnum' on;
 }
 
-/* Tables */
-
-.scheduler-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    line-height: 20px;
-    color: rgb(64, 64, 64);
-}
-
-.scheduler-table th {
-    text-align: left;
-    padding: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: rgb(17, 17, 17);
-    border: none;
-    background: transparent;
-    height: 34px;
-    vertical-align: middle;
-    line-height: 19px;
-}
+/* Dashboard-specific table overrides */
 
 .scheduler-th-dot {
     width: 28px;
 }
 
-.scheduler-table td {
-    padding: 5px 8px;
-    border: none;
-    border-bottom: 1px solid rgb(219, 222, 212);
-    color: rgb(64, 64, 64);
-    vertical-align: middle;
-    line-height: 20px;
-}
-
-.scheduler-table tbody tr {
-    cursor: pointer;
-    transition: all 100ms ease;
-    background: transparent;
-}
-
-.scheduler-table tbody tr:hover {
-    background: rgba(0, 0, 0, 0.03);
-}
-
-.scheduler-table a {
-    color: rgb(17, 17, 17);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.scheduler-table a:hover {
-    color: #006fbf;
-    text-decoration: none;
-}
 
 /* Status dots */
 
@@ -455,49 +402,6 @@
 
 /* Failures body */
 
-.scheduler-failures-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    line-height: 20px;
-    color: rgb(64, 64, 64);
-}
-
-.scheduler-failures-table th {
-    text-align: left;
-    padding: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: rgb(17, 17, 17);
-    border: none;
-    background: transparent;
-    height: 34px;
-    vertical-align: middle;
-    line-height: 19px;
-}
-
-.scheduler-failures-table td {
-    padding: 5px 8px;
-    border: none;
-    border-bottom: 1px solid rgb(219, 222, 212);
-    color: rgb(64, 64, 64);
-    vertical-align: middle;
-    line-height: 20px;
-}
-
-.scheduler-failures-table a {
-    color: rgb(17, 17, 17);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.scheduler-failures-table a:hover {
-    color: #006fbf;
-    text-decoration: none;
-}
 
 .scheduler-error-cell {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
@@ -638,15 +542,6 @@
     margin-bottom: 2px;
 }
 
-.scheduler-config-item a {
-    color: rgb(17, 17, 17);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.scheduler-config-item a:hover {
-    color: #006fbf;
-}
 
 .scheduler-config-item-wide {
     grid-column: 1 / -1;

@@ -85,7 +85,7 @@
             <a href="javascript:$.fn.zato.email.imap.create()">Create a new IMAP connection</a>
         </div>
 
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
 
@@ -136,7 +136,7 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr id='tr_{{ item.id }}'>
 
                         {% comment %} 1 {% endcomment %}
                         <td class='numbering'>&nbsp;</td>

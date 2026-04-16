@@ -87,7 +87,7 @@
             <a href="javascript:$.fn.zato.scheduler.import_test_config()" class="common">Import test config</a>
     </div>
 
-            <table id="data-table">
+            <table class="zato-table" id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
@@ -116,7 +116,7 @@
                 <tbody>
                 {% if items %}
                 {% for job in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ job.id }}'>
+                    <tr id='tr_{{ job.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ job.name }}</td>
