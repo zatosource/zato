@@ -6,6 +6,10 @@
     --zato-link-hover: #006fbf;
 }
 
+@keyframes zato-spin {
+    to { transform: rotate(360deg); }
+}
+
 html,
 body,
 applet,

@@ -71,7 +71,7 @@ $.fn.zato.cloud.microsoft_365.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cloud.microsoft_365.delete_('{0}');\">Delete</a>", item.id));
 
     // 3
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.ping('{0}');\">Ping</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.data_table.ping('{0}', this)\">Ping</a>", item.id));
     row += String.format("<td class='ignore'>{0}</td>", item.secret_value);
     row += String.format("<td class='ignore'>{0}</td>", item.scopes);
 

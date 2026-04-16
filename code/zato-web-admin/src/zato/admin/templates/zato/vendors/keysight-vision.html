@@ -114,7 +114,7 @@
                         <td><a href="javascript:$.fn.zato.vendors.keysight.vision.delete_('{{ item.id }}')">Delete</a></td>
 
                         {% comment %} 4 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
 

@@ -1216,15 +1216,68 @@ $.fn.zato.data_table.topic_text = function(topic, cluster_id) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-$.fn.zato.data_table.ping = function(id) {
+$.fn.zato.data_table.ping = function(id, link_elem) {
+
+    var use_tippy = link_elem && (typeof tippy !== 'undefined');
+
+    if(!use_tippy) {
+        var callback = function(data, status) {
+            var success = status == 'success';
+            $.fn.zato.user_message(success, data.responseText);
+        }
+        var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+        $.fn.zato.post(url, callback, '', 'text');
+        return;
+    }
+
+    var spinner_svg = '<svg width="16" height="16" viewBox="0 0 16 16" style="animation:zato-spin .6s linear infinite;vertical-align:middle">' +
+        '<circle cx="8" cy="8" r="6" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="2"/>' +
+        '<path d="M8 2a6 6 0 0 1 6 6" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/></svg>';
+
+    var check_svg = '<svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px">' +
+        '<circle cx="7" cy="7" r="7" fill="#22863a"/>' +
+        '<path d="M4 7.2l2 2 4-4.4" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    var error_svg = '<svg width="14" height="14" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px">' +
+        '<circle cx="7" cy="7" r="7" fill="#cb2431"/>' +
+        '<path d="M4.5 4.5l5 5M9.5 4.5l-5 5" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+    if(link_elem._tippy) {
+        link_elem._tippy.destroy();
+    }
+
+    var instance = tippy(link_elem, {
+        content: spinner_svg,
+        allowHTML: true,
+        placement: 'top',
+        trigger: 'manual',
+        arrow: true,
+        theme: 'light-border',
+        animation: 'fade',
+        duration: [50, 50],
+        hideOnClick: false,
+        interactive: true,
+        appendTo: document.body,
+    });
+
+    instance.show();
 
     var callback = function(data, status) {
-        var success = status == 'success';
-        $.fn.zato.user_message(success, data.responseText);
+        var success = (status == 'success');
+        var text = (data.responseText || 'No response').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var icon = success ? check_svg : error_svg;
+        var color = success ? '#22863a' : '#cb2431';
+        var html = '<span style="white-space:nowrap;font-size:13px;color:' + color + '">' + icon + text + '</span>';
+
+        instance.setContent(html);
+
+        setTimeout(function() {
+            instance.hide();
+        }, 3000);
     }
 
     var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
-    $.fn.zato.post(url, callback, '', 'text');
+    $.fn.zato.post(url, callback, '', 'text', true);
 
 }
 

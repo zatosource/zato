@@ -112,7 +112,7 @@
                         <td><a href="javascript:$.fn.zato.cloud.microsoft_365.delete_('{{ item.id }}')">Delete</a></td>
 
                         {% comment %} 3 {% endcomment %}
-                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
                         <td class='ignore'>{{ item.secret_value }}</td>
                         <td class='ignore'>{{ item.scopes }}</td>
 

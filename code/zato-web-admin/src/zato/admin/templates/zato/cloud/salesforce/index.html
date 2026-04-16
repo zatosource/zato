@@ -119,7 +119,7 @@
                         {% comment %} 3 {% endcomment %}
                         <td><a href="javascript:$.fn.zato.cloud.salesforce.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cloud.salesforce.delete_('{{ item.id }}')">Delete</a></td>
-                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
 
                         {% comment %} 4 {% endcomment %}

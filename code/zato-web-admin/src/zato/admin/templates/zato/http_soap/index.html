@@ -426,7 +426,7 @@
 
                         <!-- 33 -->
                         {% if connection == 'outgoing' %}
-                            <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                            <td><a href="javascript:void(0)" onclick="$.fn.zato.data_table.ping('{{ item.id }}', this)" class="ping-link">Ping</a></td>
                         {% endif %}
 
                         <!-- Invoke -->
