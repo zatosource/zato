@@ -849,6 +849,7 @@ $.fn.zato.scheduler.dashboard.render_upcoming_table = function(jobs) {
 
     if (!jobs || jobs.length === 0) {
         table_body.append('<tr><td colspan="4" class="scheduler-no-data">No upcoming runs</td></tr>');
+        $('#scheduler-upcoming-count').text('0');
         return;
     }
 
@@ -893,6 +894,7 @@ $.fn.zato.scheduler.dashboard.render_upcoming_table = function(jobs) {
     });
 
     var max_upcoming = Math.min(15, upcoming.length);
+    $('#scheduler-upcoming-count').text(upcoming.length);
     if (max_upcoming === 0) {
         table_body.append('<tr><td colspan="4" class="scheduler-no-data">No upcoming runs</td></tr>');
         return;

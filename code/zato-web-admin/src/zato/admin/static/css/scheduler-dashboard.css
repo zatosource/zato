@@ -113,7 +113,8 @@
 .scheduler-card-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 8px;
     margin-bottom: 16px;
 }
 
@@ -122,7 +123,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #73767a;
+    color: rgb(17, 17, 17);
     margin: 0;
     padding: 0;
 }
@@ -225,6 +226,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    margin-left: auto;
 }
 
 .scheduler-chart-type-toggle {
@@ -285,9 +287,9 @@
 }
 
 .scheduler-time-range-active {
-    color: #0070f3;
+    color: #006fbf;
     font-weight: 700;
-    background: rgba(0, 112, 243, 0.06);
+    background: rgba(0, 111, 191, 0.06);
 }
 
 /* Bar chart tooltip */
@@ -314,18 +316,24 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    line-height: 20px;
+    color: rgb(64, 64, 64);
 }
 
 .scheduler-table th {
     text-align: left;
-    padding: 8px 12px;
-    font-size: 11px;
-    font-weight: 600;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #73767a;
-    border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+    letter-spacing: 0.5px;
+    color: rgb(17, 17, 17);
+    border: none;
     background: transparent;
+    height: 34px;
+    vertical-align: middle;
+    line-height: 19px;
 }
 
 .scheduler-th-dot {
@@ -333,31 +341,32 @@
 }
 
 .scheduler-table td {
-    padding: 12px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-    color: #1a1a1a;
+    padding: 5px 8px;
+    border: none;
+    border-bottom: 1px solid rgb(219, 222, 212);
+    color: rgb(64, 64, 64);
+    vertical-align: middle;
+    line-height: 20px;
 }
 
 .scheduler-table tbody tr {
     cursor: pointer;
-    transition: background 100ms ease;
-}
-
-.scheduler-table tbody tr:nth-child(even) {
-    background: #fafbfc;
+    transition: all 100ms ease;
+    background: transparent;
 }
 
 .scheduler-table tbody tr:hover {
-    background: #f8f9fb;
+    background: rgba(0, 0, 0, 0.03);
 }
 
 .scheduler-table a {
-    color: #0070f3;
+    color: rgb(17, 17, 17);
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .scheduler-table a:hover {
+    color: #006fbf;
     text-decoration: none;
 }
 
@@ -450,29 +459,44 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    line-height: 20px;
+    color: rgb(64, 64, 64);
 }
 
 .scheduler-failures-table th {
     text-align: left;
-    padding: 8px 12px;
-    font-size: 11px;
-    font-weight: 600;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #73767a;
-    border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+    letter-spacing: 0.5px;
+    color: rgb(17, 17, 17);
+    border: none;
+    background: transparent;
+    height: 34px;
+    vertical-align: middle;
+    line-height: 19px;
 }
 
 .scheduler-failures-table td {
-    padding: 12px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-    color: #1a1a1a;
+    padding: 5px 8px;
+    border: none;
+    border-bottom: 1px solid rgb(219, 222, 212);
+    color: rgb(64, 64, 64);
+    vertical-align: middle;
+    line-height: 20px;
 }
 
 .scheduler-failures-table a {
-    color: #0070f3;
+    color: rgb(17, 17, 17);
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
+}
+
+.scheduler-failures-table a:hover {
+    color: #006fbf;
+    text-decoration: none;
 }
 
 .scheduler-error-cell {
@@ -615,9 +639,13 @@
 }
 
 .scheduler-config-item a {
-    color: #0070f3;
+    color: rgb(17, 17, 17);
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
+}
+
+.scheduler-config-item a:hover {
+    color: #006fbf;
 }
 
 .scheduler-config-item-wide {
