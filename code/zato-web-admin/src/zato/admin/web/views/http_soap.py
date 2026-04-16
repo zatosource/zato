@@ -381,18 +381,36 @@ def ping(req, id, cluster_id): # type: ignore
     response = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{}`')
 
     if isinstance(response, HttpResponseServerError):
+        err = response.content.decode('utf-8', 'replace') if hasattr(response, 'content') else 'Error'
+        logger.info('http_soap.ping view: id_only_service returned 500 body=%r', err)
         return JsonResponse({
             'is_success': False,
             'status_code': 0,
-            'status_text': response.content.decode('utf-8', 'replace') if hasattr(response, 'content') else 'Error',
-            'info': response.content.decode('utf-8', 'replace') if hasattr(response, 'content') else '',
+            'status_text': '',
+            'exception_message': err,
+            'info': err,
         })
     else:
-        logger.info('Ping response data -> %s', response.data)
+        raw = response.data
+        try:
+            _keys = sorted(list(raw.keys()))  # type: ignore
+        except Exception:
+            _keys = repr(type(raw))
+        logger.info(
+            'http_soap.ping view: raw response.data keys=%s is_success=%r status_code=%r status_text=%r '
+            'exception_message=%r info_len=%s',
+            _keys,
+            getattr(raw, 'is_success', None),
+            getattr(raw, 'status_code', None),
+            getattr(raw, 'status_text', None),
+            getattr(raw, 'exception_message', None),
+            len(getattr(raw, 'info', '') or ''))
+
         is_success = response.data.is_success
         status_code = getattr(response.data, 'status_code', None) or 0
         status_text = getattr(response.data, 'status_text', None) or ''
         info = getattr(response.data, 'info', None) or ''
+        exception_message = getattr(response.data, 'exception_message', None) or ''
 
         if is_success and isinstance(is_success, str):
             is_success = is_success.lower() not in ('false', '0', 'none', '')
@@ -403,20 +421,27 @@ def ping(req, id, cluster_id): # type: ignore
             except (ValueError, TypeError):
                 status_code = 0
 
-        if not status_text and status_code:
+        if not status_text and status_code and not exception_message:
             status_text = str(status_code)
 
         if not status_text and is_success:
             status_text = 'OK'
-        elif not status_text:
+        elif not status_text and not exception_message:
             status_text = info[:200] if info else 'Error'
 
-        return JsonResponse({
+        payload = {
             'is_success': bool(is_success),
             'status_code': status_code,
             'status_text': status_text,
+            'exception_message': exception_message,
             'info': info,
-        })
+        }
+        logger.info(
+            'http_soap.ping view: JsonResponse exception_message=%r status_text=%r info_first_120=%r',
+            exception_message,
+            status_text,
+            (info or '')[:120])
+        return JsonResponse(payload)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -392,7 +392,7 @@ class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
     input = 'id', '-ping_path'
-    output = 'id', 'is_success', '-info', '-status_code', '-status_text'
+    output = 'id', 'is_success', '-info', '-status_code', '-status_text', '-exception_message'
 
     def handle(self):
 
@@ -413,16 +413,19 @@ class Ping(AdminService):
                         self.response.payload.status_text = '{} {}'.format(response.status_code, response.reason)
                         self.response.payload.info = response.text or ''
                     except Exception as e:
-                        root = e
-                        while root.__cause__ or root.__context__:
-                            root = root.__cause__ or root.__context__
-                        short_msg = str(root.args[0]) if root.args else str(root)
-                        if ': ' in short_msg:
-                            short_msg = short_msg.rsplit(': ', 1)[-1]
-                        full_msg = str(e.args[0]) if e.args else str(e)
+                        logger.info(
+                            'http-soap.Ping: caught %s; args=%r len(args)=%s str(e)=%r',
+                            type(e).__name__, e.args, len(e.args) if e.args else 0, str(e))
+                        msg = e.args[0] if e.args else str(e)
+                        if not isinstance(msg, str):
+                            msg = str(msg)
+                        logger.info(
+                            'http-soap.Ping: payload exception_message=%r info=%r (same field)',
+                            msg, msg)
                         self.response.payload.status_code = 0
-                        self.response.payload.status_text = short_msg.rstrip(")'\"")
-                        self.response.payload.info = full_msg
+                        self.response.payload.status_text = ''
+                        self.response.payload.exception_message = msg
+                        self.response.payload.info = msg
                         is_success = False
                     finally:
                         self.response.payload.is_success = is_success

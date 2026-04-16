@@ -1274,11 +1274,16 @@ $.fn.zato.data_table.ping = function(id, link_elem) {
         try {
             result = JSON.parse(jqXHR.responseText);
         } catch(e) {
-            result = {is_success: (textStatus == 'success'), status_text: jqXHR.responseText || 'No response', info: jqXHR.responseText || ''};
+            result = {
+                is_success: (textStatus == 'success'),
+                status_text: '',
+                exception_message: jqXHR.responseText || '',
+                info: jqXHR.responseText || ''
+            };
         }
 
         var success = result.is_success;
-        var status_label = (result.status_text || 'No response').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var status_label = (result.exception_message || result.status_text || 'No response').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         var icon = success ? check_svg : error_svg;
         var color = success ? '#85e89d' : '#f97583';
 
@@ -1289,13 +1294,13 @@ $.fn.zato.data_table.ping = function(id, link_elem) {
         } else {
             var details_id = 'ping-details-' + id + '-' + Date.now();
             var html = '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:' + color + '">' + icon + status_label + '</span>' +
-                '<br><a href="javascript:void(0)" style="font-size:12px;margin-top:2px;display:inline-block;color:#ccc;background-image:none" ' +
+                '<br><a href="javascript:void(0)" style="font-size:12px;margin-top:2px;display:inline-block" ' +
                 'onclick="$.fn.zato.data_table.ping_show_details(\'' + details_id + '\')">Show details</a>';
             instance.setContent(html);
 
             $.fn.zato.data_table._ping_details = $.fn.zato.data_table._ping_details || {};
             $.fn.zato.data_table._ping_details[details_id] = {
-                status_text: result.status_text || '',
+                status_text: result.exception_message || result.status_text || '',
                 info: result.info || '',
                 instance: instance
             };

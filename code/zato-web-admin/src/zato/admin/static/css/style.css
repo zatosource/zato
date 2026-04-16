@@ -4,6 +4,7 @@
     --zato-seablue-light2: #14578a;
     --zato-seablue-light3: #2f81bf;
     --zato-link-hover: #006fbf;
+    --zato-link-dash: rgba(0, 0, 0, 0.35);
 }
 
 @keyframes zato-spin {
@@ -530,8 +531,8 @@ a:not(.menu-link) {
     font-weight: 400;
     background-image: repeating-linear-gradient(
         90deg,
-        rgba(0, 0, 0, 0.35) 0px,
-        rgba(0, 0, 0, 0.35) 3px,
+        var(--zato-link-dash) 0px,
+        var(--zato-link-dash) 3px,
         transparent 3px,
         transparent 6px
     );
@@ -545,6 +546,20 @@ a:not(.menu-link):hover {
     color: var(--zato-link-hover) !important;
     background-color: transparent;
     text-decoration: none;
+}
+
+/* Default (dark) Tippy tooltips: light link text + dashed underline via same variable */
+.tippy-box .tippy-content {
+    --zato-link-dash: rgba(255, 255, 255, 0.38);
+}
+
+.tippy-box .tippy-content a:not(.menu-link) {
+    color: #e8e8e8;
+}
+
+.tippy-box .tippy-content a:not(.menu-link):hover {
+    color: #fff !important;
+    --zato-link-dash: rgba(255, 255, 255, 0.85);
 }
 
 th.header a:hover {
