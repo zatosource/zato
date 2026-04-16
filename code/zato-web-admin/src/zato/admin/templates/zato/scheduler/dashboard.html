@@ -107,37 +107,36 @@ $(document).ready(function() {
                 <h3>Jobs</h3>
                 <span class="dashboard-pill" id="dashboard-jobs-count"></span>
             </div>
-            <table class="zato-table" id="dashboard-job-table">
-                <thead>
-                    <tr>
-                        <th class="dashboard-th-dot"></th>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Next fire</th>
-                        <th>Recent</th>
-                    </tr>
-                </thead>
-                <tbody id="dashboard-job-table-body"></tbody>
-            </table>
+            <div class="dashboard-card-scroll">
+                <table class="zato-table" id="dashboard-job-table">
+                    <thead>
+                        <tr>
+                            <th class="dashboard-th-dot"></th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Next fire</th>
+                            <th>Recent</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboard-job-table-body"></tbody>
+                </table>
+            </div>
         </div>
 
-        <div class="dashboard-card dashboard-card-right">
-
-            <div class="dashboard-card-split-top">
-                <div class="dashboard-card-header">
-                    <h3>Recent failures</h3>
-                    <span class="dashboard-pill dashboard-pill-failures" id="dashboard-failures-count"></span>
-                </div>
-                <div id="dashboard-failures-body"></div>
+        <div class="dashboard-card dashboard-card-failures">
+            <div class="dashboard-card-header">
+                <h3>Recent failures</h3>
+                <span class="dashboard-pill dashboard-pill-failures" id="dashboard-failures-count"></span>
             </div>
+            <div class="dashboard-card-scroll" id="dashboard-failures-body"></div>
+        </div>
 
-            <div class="dashboard-card-divider"></div>
-
-            <div class="dashboard-card-split-bottom">
-                <div class="dashboard-card-header">
-                    <h3>Upcoming runs</h3>
-                    <span class="dashboard-pill" id="dashboard-upcoming-count"></span>
-                </div>
+        <div class="dashboard-card dashboard-card-upcoming">
+            <div class="dashboard-card-header">
+                <h3>Upcoming runs</h3>
+                <span class="dashboard-pill" id="dashboard-upcoming-count"></span>
+            </div>
+            <div class="dashboard-card-scroll">
                 <table class="zato-table" id="dashboard-upcoming-table">
                     <thead>
                         <tr>
@@ -150,7 +149,6 @@ $(document).ready(function() {
                     <tbody id="dashboard-upcoming-table-body"></tbody>
                 </table>
             </div>
-
         </div>
 
     </div>
