@@ -64,6 +64,8 @@ $(document).ready(function() {
         <div class="scheduler-card">
             <div class="scheduler-card-header">
                 <h3>Run history</h3>
+                <div class="scheduler-chart-controls">
+                <span class="scheduler-pill scheduler-pill-clickable scheduler-chart-type-toggle" id="scheduler-chart-type-toggle" title="Toggle chart style"></span>
                 <div class="scheduler-time-range-wrapper">
                     <span class="scheduler-pill scheduler-pill-clickable" id="scheduler-exec-count"></span>
                     <div class="scheduler-time-range-menu" id="scheduler-time-range-menu">
@@ -79,6 +81,7 @@ $(document).ready(function() {
                         <div class="scheduler-time-range-option" data-minutes="525600">This year</div>
                         <div class="scheduler-time-range-option scheduler-time-range-active" data-minutes="0">All</div>
                     </div>
+                </div>
                 </div>
             </div>
             <div id="scheduler-bar-chart" class="scheduler-chart-body"></div>

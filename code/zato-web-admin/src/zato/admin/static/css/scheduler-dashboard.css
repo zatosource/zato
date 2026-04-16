@@ -213,6 +213,8 @@
 
 .scheduler-time-range-wrapper {
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .scheduler-pill-clickable {
@@ -227,6 +229,36 @@
     content: ' \25BE';
     font-size: 9px;
     opacity: 0.5;
+}
+
+.scheduler-chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.scheduler-chart-type-toggle {
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    box-sizing: border-box;
+}
+
+.scheduler-chart-type-toggle::after {
+    content: none;
+}
+
+.scheduler-chart-type-toggle svg {
+    display: block;
+}
+
+.scheduler-pill-clickable#scheduler-exec-count {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    box-sizing: border-box;
 }
 
 .scheduler-time-range-menu {

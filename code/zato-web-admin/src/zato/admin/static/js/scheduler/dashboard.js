@@ -50,6 +50,28 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
 $.fn.zato.scheduler.dashboard.show_bars = false;
 
+$.fn.zato.scheduler.dashboard._icon_lines = '<svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M1 12C3 8 5.5 2 9 4C12.5 6 14 10 17 1" stroke="#012845" stroke-width="1.8" stroke-linecap="round"/>' +
+    '</svg>';
+
+$.fn.zato.scheduler.dashboard._icon_bars = '<svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<rect x="1" y="6" width="3" height="8" rx="1" fill="#012845" fill-opacity="0.85"/>' +
+    '<rect x="5.5" y="2" width="3" height="12" rx="1" fill="#012845" fill-opacity="0.85"/>' +
+    '<rect x="10" y="8" width="3" height="6" rx="1" fill="#012845" fill-opacity="0.85"/>' +
+    '<rect x="14.5" y="4" width="3" height="10" rx="1" fill="#012845" fill-opacity="0.85"/>' +
+    '</svg>';
+
+$.fn.zato.scheduler.dashboard._update_chart_type_icon = function() {
+    var toggle = $('#scheduler-chart-type-toggle');
+    if ($.fn.zato.scheduler.dashboard.show_bars) {
+        toggle.html($.fn.zato.scheduler.dashboard._icon_lines);
+        toggle.attr('title', 'Switch to lines');
+    } else {
+        toggle.html($.fn.zato.scheduler.dashboard._icon_bars);
+        toggle.attr('title', 'Switch to bars');
+    }
+};
+
 $.fn.zato.scheduler.dashboard._spark_data = {
     total_jobs: [],
     active: [],
@@ -466,10 +488,11 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
             var bar_h = val > 0 ? Math.max(2, (val / max_stack) * draw_height) : 0;
             var bar_x = padding_left + bi * bucket_slot_width + group_padding + layer * (bar_width + bar_gap);
             var bar_y = baseline_y - bar_h;
+            var center_point_y = val > 0 ? baseline_y - (val / max_stack) * draw_height : baseline_y;
 
             layer_points[layer_key].push({
-                x: bar_x + bar_width / 2,
-                y: bar_y,
+                x: padding_left + (bi + 0.5) * bucket_slot_width,
+                y: center_point_y,
                 val: val
             });
 
@@ -480,31 +503,40 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
         }
     }
 
-    for (var spline_layer = 0; spline_layer < visible_keys.length; spline_layer++) {
-        var spline_key = visible_keys[spline_layer];
-        var spline_pts = [];
-        for (var si = 0; si < bucket_count; si++) {
-            var sx = padding_left + (si + 0.5) * bucket_slot_width;
-            var sv = buckets[si][spline_key];
-            var sy = sv > 0 ? baseline_y - Math.max(2, (sv / max_stack) * draw_height) : baseline_y;
-            spline_pts.push({x: sx, y: sy});
-        }
+    if (!$.fn.zato.scheduler.dashboard.show_bars) {
+        for (var spline_layer = 0; spline_layer < visible_keys.length; spline_layer++) {
+            var spline_key = visible_keys[spline_layer];
+            var spline_pts = [];
+            for (var si = 0; si < bucket_count; si++) {
+                var sx = padding_left + (si + 0.5) * bucket_slot_width;
+                var sv = buckets[si][spline_key];
+                var sy = sv > 0 ? baseline_y - Math.max(2, (sv / max_stack) * draw_height) : baseline_y;
+                spline_pts.push({x: sx, y: sy});
+            }
 
-        var area_path = 'M' + spline_pts[0].x.toFixed(1) + ',' + spline_pts[0].y.toFixed(1);
-        for (var sp = 1; sp < spline_pts.length; sp++) {
-            var sp_prev = spline_pts[sp - 1];
-            var sp_curr = spline_pts[sp];
-            var sp_cpx = (sp_prev.x + sp_curr.x) / 2;
-            area_path += ' C' + sp_cpx.toFixed(1) + ',' + sp_prev.y.toFixed(1) +
-                         ' ' + sp_cpx.toFixed(1) + ',' + sp_curr.y.toFixed(1) +
-                         ' ' + sp_curr.x.toFixed(1) + ',' + sp_curr.y.toFixed(1);
-        }
-        var area_fill = area_path +
-            ' L' + spline_pts[spline_pts.length - 1].x.toFixed(1) + ',' + baseline_y.toFixed(1) +
-            ' L' + spline_pts[0].x.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
+            layer_points[spline_key] = [];
+            for (var spi = 0; spi < spline_pts.length; spi++) {
+                var hover_val = buckets[spi][spline_key];
+                var hover_y = hover_val > 0 ? baseline_y - (hover_val / max_stack) * draw_height : baseline_y;
+                layer_points[spline_key].push({x: spline_pts[spi].x, y: hover_y, val: hover_val});
+            }
 
-        svg += '<path d="' + area_fill + '" fill="url(#areaGrad_' + spline_key + ')" />';
-        svg += '<path d="' + area_path + '" fill="none" stroke="' + bar_colors[spline_key] + '" stroke-width="1.5" stroke-opacity="0.6" stroke-linecap="round" stroke-linejoin="round" />';
+            var area_path = 'M' + spline_pts[0].x.toFixed(1) + ',' + spline_pts[0].y.toFixed(1);
+            for (var sp = 1; sp < spline_pts.length; sp++) {
+                var sp_prev = spline_pts[sp - 1];
+                var sp_curr = spline_pts[sp];
+                var sp_cpx = (sp_prev.x + sp_curr.x) / 2;
+                area_path += ' C' + sp_cpx.toFixed(1) + ',' + sp_prev.y.toFixed(1) +
+                             ' ' + sp_cpx.toFixed(1) + ',' + sp_curr.y.toFixed(1) +
+                             ' ' + sp_curr.x.toFixed(1) + ',' + sp_curr.y.toFixed(1);
+            }
+            var area_fill = area_path +
+                ' L' + spline_pts[spline_pts.length - 1].x.toFixed(1) + ',' + baseline_y.toFixed(1) +
+                ' L' + spline_pts[0].x.toFixed(1) + ',' + baseline_y.toFixed(1) + ' Z';
+
+            svg += '<path d="' + area_fill + '" fill="url(#areaGrad_' + spline_key + ')" />';
+            svg += '<path d="' + area_path + '" fill="none" stroke="' + bar_colors[spline_key] + '" stroke-width="1.5" stroke-opacity="0.6" stroke-linecap="round" stroke-linejoin="round" />';
+        }
     }
 
     var label_count = Math.min(6, bucket_count);
@@ -938,6 +970,21 @@ $.fn.zato.scheduler.dashboard.init = function(initial_data) {
             initial_data = {};
         }
     }
+
+    try {
+        var stored_bars = localStorage.getItem('zato_scheduler_show_bars');
+        if (stored_bars === 'true') {
+            $.fn.zato.scheduler.dashboard.show_bars = true;
+        }
+    } catch(e) {}
+    $.fn.zato.scheduler.dashboard._update_chart_type_icon();
+
+    $('#scheduler-chart-type-toggle').on('click', function() {
+        $.fn.zato.scheduler.dashboard.show_bars = !$.fn.zato.scheduler.dashboard.show_bars;
+        try { localStorage.setItem('zato_scheduler_show_bars', String($.fn.zato.scheduler.dashboard.show_bars)); } catch(e) {}
+        $.fn.zato.scheduler.dashboard._update_chart_type_icon();
+        $.fn.zato.scheduler.dashboard._redraw_chart_from_cache();
+    });
 
     $.fn.zato.scheduler.dashboard._time_range_minutes = $.fn.zato.scheduler.dashboard._get_time_range_minutes();
 
