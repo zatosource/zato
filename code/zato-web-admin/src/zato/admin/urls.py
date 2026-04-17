@@ -47,7 +47,6 @@ from zato.admin.web.views.monitoring import dashboard as monitoring_dashboard
 from zato.admin.web.views.monitoring.wizard import health as monitoring_wizard_health
 from zato.admin.web.views.vendors import keysight_vision
 from zato.admin.web.views.pubsub import topic
-from zato.admin.web.views.pubsub import client
 from zato.admin.web.views.pubsub import permission
 from zato.admin.web.views.pubsub import subscription
 from zato.admin.web.views.eda import dashboard as eda_dashboard
@@ -874,19 +873,6 @@ urlpatterns += [
     url(r'^zato/pubsub/topic/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(topic.Delete()), name=topic.Delete.url_name),
     url(r'^zato/pubsub/topic/get-matches/$', login_required(topic.get_matches), name='pubsub-topic-get-matches'),
-
-    # PubSub Client Assignments
-
-    url(r'^zato/pubsub/client/$',
-        login_required(client.Index()), name=client.Index.url_name),
-    url(r'^zato/pubsub/client/create/$',
-        login_required(client.Create()), name=client.Create.url_name),
-    url(r'^zato/pubsub/client/edit/$',
-        login_required(client.Edit()), name=client.Edit.url_name),
-    url(r'^zato/pubsub/client/get-security-definitions/$',
-        login_required(client.GetSecurityDefinitions.as_view()), name=client.GetSecurityDefinitions.url_name),
-    url(r'^zato/pubsub/client/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(client.Delete()), name=client.Delete.url_name),
 
     # PubSub Permissions
 

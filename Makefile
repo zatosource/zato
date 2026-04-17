@@ -1,28 +1,37 @@
-.PHONY: build install clean server-build scheduler-build sio-build \
-	server-clean scheduler-clean sio-clean \
-	server-install scheduler-install sio-install \
+.PHONY: build install clean server-build scheduler-build sio-build common-core-build \
+	server-clean scheduler-clean sio-clean common-core-clean \
+	server-install scheduler-install sio-install common-core-install \
 	ruff qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard
 
 MAKEFLAGS += --silent
 
+ZATO_RUST := $(CURDIR)/code/zato-rust
+
 default: build
 
-build: server-build scheduler-build sio-build
+build: common-core-build server-build scheduler-build sio-build
 
 server-build:
 	. $(HOME)/.cargo/env && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
-	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-server/src/zato_server_core/Cargo.toml
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_server_core/Cargo.toml
 
 scheduler-build:
 	. $(HOME)/.cargo/env && \
 	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
-	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(CURDIR)/code/zato-scheduler/src/zato_scheduler_core/Cargo.toml
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_scheduler_core/Cargo.toml
 
 sio-build:
-	cd $(CURDIR)/code/zato-common && $(MAKE) build
+	. $(HOME)/.cargo/env && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_sio/Cargo.toml
+
+common-core-build:
+	. $(HOME)/.cargo/env && \
+	VIRTUAL_ENV=$(CURDIR)/code PATH=$(CURDIR)/code/bin:$$PATH \
+	$(CURDIR)/code/bin/maturin develop --release --manifest-path $(ZATO_RUST)/zato_common_core/Cargo.toml
 
 install:
 ifeq ($(strip $(PKG)),)
@@ -35,19 +44,24 @@ clean:
 	$(CURDIR)/code/clean.sh
 
 server-clean:
-	rm -rf $(CURDIR)/code/zato-server/src/zato_server_core/target
+	rm -rf $(ZATO_RUST)/zato_server_core/target
 
 scheduler-clean:
-	rm -rf $(CURDIR)/code/zato-scheduler/src/zato_scheduler_core/target
+	rm -rf $(ZATO_RUST)/zato_scheduler_core/target
 
 sio-clean:
-	rm -rf $(CURDIR)/code/zato-common/src/zato_sio/target
+	rm -rf $(ZATO_RUST)/zato_sio/target
+
+common-core-clean:
+	rm -rf $(ZATO_RUST)/zato_common_core/target
 
 server-install: server-build
 
 scheduler-install: scheduler-build
 
 sio-install: sio-build
+
+common-core-install: common-core-build
 
 qa-reqs-install:
 	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python -r $(CURDIR)/code/qa-requirements.txt

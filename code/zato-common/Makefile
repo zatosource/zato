@@ -1,7 +1,7 @@
 .PHONY: default build test clippy ruff
 MAKEFLAGS += --silent
 
-CRATE_DIR = $(CURDIR)/src/zato_sio
+CRATE_DIR = $(CURDIR)/../zato-rust/zato_sio
 PY = $(CURDIR)/../bin/python
 export VIRTUAL_ENV = $(CURDIR)/..
 

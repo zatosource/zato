@@ -73,6 +73,8 @@ class GetList(AdminService):
 
     def handle(self):
         items = self.server.config_store.get_list('pubsub_permission')
+        for item in items:
+            item['name'] = item['security']
         self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################

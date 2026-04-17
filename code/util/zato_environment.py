@@ -203,7 +203,7 @@ class EnvironmentManager:
             # These are always in the same location
             uv_bin = os.path.join(self.base_dir, 'support-linux', 'bin', 'uv')
             python_path = os.path.abspath(os.path.join(self.bin_dir, 'python'))
-            self.pip_command = f'{uv_bin} pip -q'
+            self.pip_command = f'{uv_bin} pip -v'
             self.python_command = python_path
             self.code_dir = self.base_dir
             self.zato_reqs_path = os.path.join(self.base_dir, 'requirements.txt')
@@ -477,7 +477,6 @@ class EnvironmentManager:
                 'zato-cli',
                 'zato-client',
                 'zato-distlock',
-                'zato-hl7',
                 'zato-openapi',
                 'zato-server',
                 'zato-web-admin',
