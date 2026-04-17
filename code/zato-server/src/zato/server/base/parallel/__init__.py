@@ -1255,14 +1255,16 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def import_demo_eda(self):
         """ Seeds a demo EDA environment: 7 topics, 8 subscribers with a
-        realistic fan-out, plus a long-running publisher greenlet that
-        produces ~50 msg/min so the EDA dashboard chart has live data.
-        Idempotent: clicking the button twice reloads the YAML but does not
-        stack additional publisher greenlets.
+        realistic fan-out, plus long-running publisher AND consumer
+        greenlets. Publishers produce ~50 msg/min; consumers pull and
+        ack ~70% of what they read so the dashboard's "Queue depth"
+        and "Deliveries" tiles both move and queues stay non-empty.
+        Idempotent: clicking the button twice reloads the YAML but
+        does not stack additional greenlets.
         """
 
         import zato.server.service.internal.pubsub
-        from zato.server.base.parallel.demo_eda import start_publisher
+        from zato.server.base.parallel.demo_eda import start_publisher, start_consumer
 
         config_path = os.path.join(
             os.path.dirname(zato.server.service.internal.pubsub.__file__),
@@ -1272,6 +1274,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.reload_config()
 
         start_publisher(self)
+        start_consumer(self)
         return True
 
 # ################################################################################################################################

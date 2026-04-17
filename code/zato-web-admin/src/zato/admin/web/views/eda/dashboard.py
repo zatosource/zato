@@ -96,3 +96,41 @@ def import_demo_config(req):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@method_allowed('POST')
+def recent_messages(req):
+    """ Polled by the dashboard's "Recent messages" tab. Returns the
+    latest N messages across all topics; no topic filter is applied
+    here because the dashboard cares about the global firehose, not
+    one stream. The per-topic detail page is what consumes the
+    filtered view via /eda/messages/.
+    """
+
+    try:
+        limit = int(req.POST.get('limit') or 25)
+    except (TypeError, ValueError):
+        limit = 25
+
+    try:
+        response = req.zato.client.invoke('zato.broker.message.get-list', {
+            'offset': 0,
+            'limit': limit,
+        })
+        if response.ok:
+            raw = response.data
+            if isinstance(raw, str):
+                return HttpResponse(raw, content_type='application/json')
+            return HttpResponse(json.dumps(raw), content_type='application/json')
+        return HttpResponse(
+            json.dumps({'messages': [], 'total': 0}),
+            content_type='application/json',
+        )
+    except Exception as e:
+        logger.error('EDA recent messages poll error: %s', e)
+        return HttpResponse(
+            json.dumps({'messages': [], 'total': 0, 'error': str(e)}),
+            content_type='application/json',
+        )
+
+# ################################################################################################################################
+# ################################################################################################################################

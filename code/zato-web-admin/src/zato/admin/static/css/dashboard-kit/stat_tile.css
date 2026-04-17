@@ -5,12 +5,16 @@
 
 .dashboard-tile {
     flex: 1;
-    background: rgba(255, 255, 255, 0.06);
+    /* Tile body is rendered against its own navy backdrop so the velvet
+       box-shadow reads identically regardless of what colour the hero
+       strip behind it uses. The 0.06 white wash on top reproduces the
+       previous "glass over navy" look. */
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06)),
+        linear-gradient(180deg, var(--zato-seablue-light1) 0%, var(--zato-seablue) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     padding: 18px 20px 14px;
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
     min-width: 0;
     /* Velvet: diffuse, layered shadow in the hero's own navy palette,
        with a soft top highlight (pile catching light) and a deeper

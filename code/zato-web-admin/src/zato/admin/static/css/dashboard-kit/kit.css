@@ -16,7 +16,7 @@
 /* Hero metrics strip */
 
 .dashboard-hero {
-    background: linear-gradient(180deg, var(--zato-seablue-light1) 0%, var(--zato-seablue) 100%);
+    background: #000;
     padding: 28px 0;
     position: relative;
 }

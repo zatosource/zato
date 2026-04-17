@@ -937,6 +937,8 @@ urlpatterns += [
         login_required(eda_dashboard.index), name='eda-dashboard'),
     url(r'^zato/eda/dashboard/poll/$',
         login_required(eda_dashboard.poll), name='eda-dashboard-poll'),
+    url(r'^zato/eda/dashboard/recent-messages/$',
+        login_required(eda_dashboard.recent_messages), name='eda-dashboard-recent-messages'),
     url(r'^zato/eda/import-demo-config$',
         login_required(eda_dashboard.import_demo_config), name='eda-import-demo-config'),
 
