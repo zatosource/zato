@@ -71,46 +71,5 @@ extraPaths = [
     "./zato-distlock/src",
     "./zato-hl7/src",
     "./zato-server/src",
-    "./zato-testing/src",
     "./zato-web-admin/src",
 ]
-
-[tool.ruff]
-line-length = 160
-target-version = "py310"
-
-[tool.ruff.lint]
-select = [
-    "B",
-    "C4",
-    "E",
-    "F",
-    "W",
-]
-
-ignore = [
-    "B008",
-    "B012",
-    "E112",
-    "E115",
-    "E221",
-    "E225",
-    "E226",
-    "E231",
-    "E241",
-    "E251",
-    "E252",
-    "E261",
-    "E272",
-    "E302",
-    "E305",
-    "E401",
-    "E402",
-    "E501",
-    "E502",
-    "E713",
-    "F403",
-]
-
-[tool.ruff.lint.per-file-ignores]
-"test_*.py" = ["E501"]

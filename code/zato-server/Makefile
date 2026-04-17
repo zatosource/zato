@@ -1,5 +1,5 @@
 
-.PHONY: build test fuzzy flake8 static-check
+.PHONY: build test fuzzy ruff
 
 MAKEFLAGS += --silent
 
@@ -45,9 +45,6 @@ fuzzy:
 	echo "=== Running cargo-mutants in $(Zato_Package_Name) ==="
 	. $$HOME/.cargo/env && cd $(Zato_Core_Dir) && cargo mutants --no-shuffle $(MUTANT_FILES) --exclude-re $(MUTANT_EXCLUDES)
 
-flake8:
-	echo "Running flake8 checks in $(Zato_Package_Name)"
-	$(Zato_Python_Dir)/flake8 --config=$(CURDIR)/../tox.ini $(CURDIR)/
-
-static-check:
-	$(MAKE) flake8
+ruff:
+	echo "Running ruff in $(Zato_Package_Name)"
+	$(Zato_Python_Dir)/ruff check $(CURDIR)/

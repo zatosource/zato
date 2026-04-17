@@ -1,4 +1,4 @@
-.PHONY: default build test static-check
+.PHONY: default build test clippy ruff
 MAKEFLAGS += --silent
 
 CRATE_DIR = $(CURDIR)/src/zato_sio
@@ -16,5 +16,8 @@ test:
 	. $$HOME/.cargo/env && cd $(CRATE_DIR) && cargo clippy -- -D warnings
 	. $$HOME/.cargo/env && cd $(CRATE_DIR) && cargo test
 
-static-check:
+clippy:
 	. $$HOME/.cargo/env && cd $(CRATE_DIR) && cargo clippy -- -D warnings
+
+ruff:
+	$(CURDIR)/../bin/ruff check $(CURDIR)/

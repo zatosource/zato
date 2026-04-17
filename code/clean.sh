@@ -60,7 +60,6 @@ rm -rf ./zato-common/build
 rm -rf ./zato-cy/build
 rm -rf ./zato-distlock/build
 rm -rf ./zato-server/build
-rm -rf ./zato-testing/build
 rm -rf ./zato-web-admin/build
 
 find . -name \*~ -delete

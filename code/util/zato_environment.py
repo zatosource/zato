@@ -481,7 +481,6 @@ class EnvironmentManager:
                 'zato-openapi',
                 'zato-server',
                 'zato-web-admin',
-                'zato-testing',
             ])
 
         non_editable_packages.append('zato-cy')

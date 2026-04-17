@@ -47,8 +47,7 @@ function pip_install() {
         -e $CURDIR/zato-cy          \
         -e $CURDIR/zato-distlock    \
         -e $CURDIR/zato-server      \
-        -e $CURDIR/zato-web-admin   \
-        -e $CURDIR/zato-testing
+        -e $CURDIR/zato-web-admin
 
     # Delete packages no longer needed
     $uv_bin pip uninstall \

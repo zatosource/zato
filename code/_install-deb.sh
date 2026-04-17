@@ -62,7 +62,7 @@ echo Adding support-linux to Python path
 SITE_PACKAGES=$($CURDIR/bin/python -c "import site; print(site.getsitepackages()[0])")
 echo "$CURDIR/support-linux" > "$SITE_PACKAGES/zato_hl7v2.pth"
 
-mkdir -p "$CURDIR/zatolibs"
-cp "$CURDIR/zatolibs.pth" "$SITE_PACKAGES/zatolibs.pth"
+mkdir -p "$CURDIR/zato-libs"
+cp "$CURDIR/zato-libs.pth" "$SITE_PACKAGES/zato-libs.pth"
 
 echo ⭐ Successfully installed `zato --version`
