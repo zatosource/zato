@@ -84,7 +84,7 @@ if 0:
     from bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
     from zato.broker.broker import BrokerCoreAPI
-    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
+    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, dictnone, strdict, strnone, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     from zato.server.config import ConfigStore
@@ -1032,6 +1032,7 @@ class WorkerStore(_WorkerStoreBase):
         """ Creates a new HTTP Basic Auth security definition
         """
         dispatcher.notify(broker_message.SECURITY.BASIC_AUTH_CREATE.value, msg)
+        self._push_basic_auth_to_broker(msg)
 
 # ################################################################################################################################
 
@@ -1049,6 +1050,8 @@ class WorkerStore(_WorkerStoreBase):
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
 
+        self._push_basic_auth_to_broker(msg)
+
 # ################################################################################################################################
 
     def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
@@ -1060,6 +1063,10 @@ class WorkerStore(_WorkerStoreBase):
         # .. update security groups.
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.on_basic_auth_deleted(msg.id)
+
+        user_id = msg.id
+        with self.server.auth_update_lock(user_id):
+            self.server.broker_client.remove_credentials(user_id)
 
 # ################################################################################################################################
 
@@ -1076,6 +1083,26 @@ class WorkerStore(_WorkerStoreBase):
             # .. and update security groups.
             for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
                 security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
+
+            user_id = sec_def['id']
+            with self.server.auth_update_lock(user_id):
+                self.server.broker_client.set_credentials(
+                    user_id, sec_def['username'], sec_def['password'])
+
+# ################################################################################################################################
+
+    def _push_basic_auth_to_broker(self, msg:'bunch_') -> 'None':
+        """ Push a Basic Auth create/edit/password-change to the broker.
+        """
+        with self.server.auth_update_lock(msg.id):
+            self.server.broker_client.apply_auth_delta({
+                'cred_upserts': [{
+                    'user_id':  msg.id,
+                    'username': msg.username,
+                    'method':   'basic_auth',
+                    'password': msg.password,
+                }],
+            })
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1831,13 +1858,47 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
-        pass
+        self._push_pubsub_permission_to_broker(msg)
 
     def on_broker_msg_PUBSUB_PERMISSION_EDIT(self, msg:'bunch_') -> 'None':
-        pass
+        self._push_pubsub_permission_to_broker(msg)
 
     def on_broker_msg_PUBSUB_PERMISSION_DELETE(self, msg:'bunch_') -> 'None':
-        pass
+        self._push_pubsub_permission_to_broker(msg)
+
+    def _push_pubsub_permission_to_broker(self, msg:'bunch_') -> 'None':
+        """ Recompute the merged ACL for `msg.security` and push the
+        result to the broker's Rust auth store, keyed on `user_id`.
+        """
+        sec_name = msg.security
+
+        sec_def = self.basic_auth_get(sec_name)
+        if sec_def is None:
+            sec_item = self.server.config_store.get('security', sec_name)
+            if sec_item is None:
+                raise Exception('No user_id for sec name `{}`; cannot push ACL'.format(sec_name))
+            user_id = sec_item['id']
+        else:
+            sec_config = sec_def['config']
+            user_id = sec_config['id']
+
+        pub_patterns:'anylist' = []
+        sub_patterns:'anylist' = []
+        for perm_row in self.server.config_store.get_list('pubsub_permission'):
+            if perm_row['security'] != sec_name:
+                continue
+            for pub_item in perm_row['pub'] or []:
+                if pub_item and pub_item not in pub_patterns:
+                    pub_patterns.append(pub_item)
+            for sub_item in perm_row['sub'] or []:
+                if sub_item and sub_item not in sub_patterns:
+                    sub_patterns.append(sub_item)
+
+        with self.server.auth_update_lock(user_id):
+            if pub_patterns or sub_patterns:
+                self.server.broker_client.set_acl(user_id, pub_patterns, sub_patterns)
+            else:
+                self.server.broker_client.remove_acl(user_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

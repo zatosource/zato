@@ -49,6 +49,8 @@ class Create(AdminService):
 
         password = uuid4().hex
 
+        # ConfigStore allocates the id on `set`, so we set first, then
+        # push under the per-user_id lock and roll back on broker reject.
         self.server.config_store.set('security', input.name, {
             'type': 'basic_auth',
             'name': input.name,
@@ -59,9 +61,18 @@ class Create(AdminService):
         })
 
         item = self.server.config_store.get('security', input.name)
+        user_id = item['id']
 
-        self.response.payload.id = item['id']
-        self.response.payload.name = item['name']
+        with self.server.auth_update_lock(user_id):
+            try:
+                self.server.broker_client.set_credentials(
+                    user_id, input.username, password)
+            except Exception:
+                self.server.config_store.delete('security', input.name)
+                raise
+
+            self.response.payload.id = user_id
+            self.response.payload.name = item['name']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -80,21 +91,35 @@ class Edit(AdminService):
         if not existing:
             raise Exception('HTTP Basic Auth definition `{}` not found'.format(old_name))
 
-        existing['name'] = input.name
-        existing['is_active'] = input.is_active
-        existing['username'] = input.username
-        existing['realm'] = input.realm or ''
-        existing['type'] = 'basic_auth'
+        user_id = existing['id']
 
-        if old_name != input.name:
-            self.server.config_store.delete('security', old_name)
+        with self.server.auth_update_lock(user_id):
+            password = existing['password']
 
-        self.server.config_store.set('security', input.name, existing)
+            self.server.broker_client.apply_auth_delta({
+                'cred_upserts': [{
+                    'user_id':  user_id,
+                    'username': input.username,
+                    'method':   'basic_auth',
+                    'password': password,
+                }],
+            })
 
-        item = self.server.config_store.get('security', input.name)
+            existing['name'] = input.name
+            existing['is_active'] = input.is_active
+            existing['username'] = input.username
+            existing['realm'] = input.realm or ''
+            existing['type'] = 'basic_auth'
 
-        self.response.payload.id = item['id']
-        self.response.payload.name = item['name']
+            if old_name != input.name:
+                self.server.config_store.delete('security', old_name)
+
+            self.server.config_store.set('security', input.name, existing)
+
+            item = self.server.config_store.get('security', input.name)
+
+            self.response.payload.id = item['id']
+            self.response.payload.name = item['name']
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -129,10 +154,16 @@ class ChangePassword(AdminService):
         if not existing:
             raise Exception('HTTP Basic Auth definition `{}` not found'.format(name))
 
-        existing['password'] = password1
-        self.server.config_store.set('security', name, existing)
+        user_id = existing['id']
 
-        self.response.payload.id = existing['id']
+        with self.server.auth_update_lock(user_id):
+            self.server.broker_client.set_credentials(
+                user_id, existing['username'], password1)
+
+            existing['password'] = password1
+            self.server.config_store.set('security', name, existing)
+
+            self.response.payload.id = user_id
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,17 +173,20 @@ class Delete(AdminService):
     input = 'id',
 
     def handle(self):
-        items = self.server.config_store.get_list('security')
         target_name = None
-        for item in items:
-            if item.get('id') == self.request.input.id:
+        target_user_id = None
+        for item in self.server.config_store.get_list('security'):
+            if item['id'] == self.request.input.id:
                 target_name = item['name']
+                target_user_id = item['id']
                 break
 
-        if not target_name:
+        if target_name is None:
             raise Exception('HTTP Basic Auth definition with id `{}` not found'.format(self.request.input.id))
 
-        self.server.config_store.delete('security', target_name)
+        with self.server.auth_update_lock(target_user_id):
+            self.server.broker_client.remove_credentials(target_user_id)
+            self.server.config_store.delete('security', target_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

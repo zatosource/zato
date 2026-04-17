@@ -29,10 +29,12 @@ logger = getLogger(__name__)
 
 if 0:
     from typing import Pattern
-    from zato.common.typing_ import anydict, strlist
+    from zato.common.typing_ import anydict, strlist, strlistdict, tuple_
 
-    anydict = anydict
-    strlist = strlist
+    anydict     = anydict
+    strlist     = strlist
+    strlistdict = strlistdict
+    tuple_      = tuple_
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -347,6 +349,22 @@ class PatternMatcher:
         pattern_info.is_sub = is_sub
         pattern_info.has_wildcards = '*' in pattern
         return pattern_info
+
+# ################################################################################################################################
+
+    def snapshot_patterns_per_username(self) -> 'tuple_[strlistdict, strlistdict]':
+        """ Return two dicts: pub patterns per matcher-level `client_id`
+        and sub patterns per matcher-level `client_id`. The matcher's
+        `client_id` is the sec-def name; callers translate it to the
+        stable `user_id` before pushing deltas to the Rust broker.
+        """
+        pub_by_user:'strlistdict' = {}
+        sub_by_user:'strlistdict' = {}
+        with self._lock:
+            for client_id, client_permissions in self._clients.items():
+                pub_by_user[client_id] = [p.pattern for p in client_permissions.pub_patterns]
+                sub_by_user[client_id] = [p.pattern for p in client_permissions.sub_patterns]
+        return pub_by_user, sub_by_user
 
 # ################################################################################################################################
 

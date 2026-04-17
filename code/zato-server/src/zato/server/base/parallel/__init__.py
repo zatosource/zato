@@ -73,7 +73,7 @@ if 0:
     from zato.common.pubsub.subscriptions_store import SubscriptionsStore
     from zato.common.rules.api import RulesManager
     from zato.common.typing_ import any_, anydict, anylist, anyset, callable_, intset, strdict, strbytes, \
-        strlist, strorlistnone, strnone, strorlist, strset
+        strlist, strorlistnone, strnone, strorlist, strset, strstrdict
     from zato.distlock import LockManager
     from zato.server.base.worker import WorkerStore
     from zato.server.connection.cache import Cache, CacheAPI
@@ -195,6 +195,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.default_error_message = ''
         self.time_util = TimeUtil()
         self.preferred_address = ''
+
+        # Per-user_id lock registry for serialising auth updates (basic
+        # auth Create/Edit/ChangePassword/Delete and pub/sub permission
+        # Create/Edit/Delete). Each lock is a gevent RLock since this
+        # server is gevent-based and admin services run as greenlets.
+        # The key is the stable `user_id` (security-definition id), not
+        # the mutable wire-level username.
+        self._auth_update_locks:'anydict' = {}
+        self._auth_update_registry_lock = RLock()
         self.crypto_use_tls = False
         self.pid = -1
         self.sync_internal = False
@@ -927,15 +936,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Initialize the pub/sub backend using the broker client
         self.pubsub_backend = PubSubBackend(self.broker_client)
 
-        # Register auth callbacks so the broker's Rust HTTP server
-        # can validate credentials and permissions through the Zato security layer.
-        self.broker_client.set_auth_callbacks(
-            self._check_broker_credentials,
-            self._check_broker_permission,
-        )
-
-        # Pre-load all Basic Auth credentials into Rust for GIL-free checking.
-        self._push_broker_credentials()
+        # Push the full authoritative auth state (credentials and ACLs) to
+        # the broker's Rust-side store as a single atomic delta. The broker
+        # does all auth and permission checking in Rust; there are no
+        # callbacks from Rust into Python on the request path.
+        self._push_auth_initial()
 
         # Let the worker know the broker client is ready
         self.worker_store.set_broker_client(self.broker_client)
@@ -1602,38 +1607,72 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
-    def _check_broker_credentials(self, username:'str', password:'str') -> 'bool':
-        """ Auth callback invoked by the Rust HTTP server for each request with Basic Auth. """
-        try:
-            result = self.worker_store.basic_auth_get(username)
-            if result:
-                return result.config.password
-            return False
-        except Exception:
-            return False
+    def auth_update_lock(self, user_id:'str') -> 'any_':
+        """ Per-user_id RLock that serialises Basic Auth and pub/sub
+        permission admin mutations against the broker push.
+        """
+        with self._auth_update_registry_lock:
+            lock = self._auth_update_locks.get(user_id)
+            if lock is None:
+                lock = RLock()
+                self._auth_update_locks[user_id] = lock
+            return lock
+
+    def sec_user_id(self, sec_name:'str') -> 'strnone':
+        """ Resolve a Basic Auth security-definition name to its
+        `user_id`. Returns `None` only if the name is unknown.
+        """
+        basic_auth_config = self.worker_store.request_dispatcher.url_data.basic_auth_config
+        entry = basic_auth_config.get(sec_name)
+        if entry is None:
+            return None
+        sec_config = entry.config
+        return sec_config['id']
 
 # ################################################################################################################################
 
-    def _push_broker_credentials(self) -> 'None':
-        """ Push all known Basic Auth credentials into the Rust-side store
-        so that check_credentials can run without acquiring the GIL. """
-        try:
-            ba_config = self.worker_store.request_dispatcher.url_data.basic_auth_config
-            for name in ba_config:
-                entry = ba_config[name]
-                password = entry.config.password
-                self.broker_client.set_credentials(name, password)
-        except Exception:
-            logger.warning('Could not push broker credentials to Rust store')
+    def _push_auth_initial(self) -> 'None':
+        """ Replay the entire auth state from `ConfigStore` into the
+        broker's Rust-side auth store as a single atomic delta. Called
+        once at server boot and again after any enmasse import that
+        mutates credentials or pub/sub permissions.
 
-# ################################################################################################################################
+        Every entry is keyed on the stable `user_id` (the sec-def
+        integer id rendered as string). The wire-level `username` is
+        carried on each cred_upsert as a separate field.
+        """
+        cred_upserts:'anylist' = []
+        acl_upserts:'anylist' = []
+        name_to_user_id:'strstrdict' = {}
 
-    def _check_broker_permission(self, username:'str', topic_name:'str', action:'str') -> 'bool':
-        """ Permission callback invoked by the Rust HTTP server on pub/sub endpoints. """
-        try:
-            return self.pubsub_pattern_matcher.is_allowed(username, topic_name, action)
-        except Exception:
-            return False
+        basic_auth_config = self.worker_store.request_dispatcher.url_data.basic_auth_config
+        for sec_name in basic_auth_config:
+            sec_config = basic_auth_config[sec_name].config
+            user_id = sec_config['id']
+            name_to_user_id[sec_name] = user_id
+            cred_upserts.append({
+                'user_id':  user_id,
+                'username': sec_name,
+                'method':   'basic_auth',
+                'password': sec_config.password,
+            })
+
+        matcher = self.pubsub_pattern_matcher
+        if matcher is not None:
+            pub_by_user, sub_by_user = matcher.snapshot_patterns_per_username()
+            for sec_name in set(pub_by_user) | set(sub_by_user):
+                user_id = name_to_user_id[sec_name]
+                acl_upserts.append({
+                    'user_id': user_id,
+                    'pub': list(pub_by_user.get(sec_name, [])),
+                    'sub': list(sub_by_user.get(sec_name, [])),
+                })
+
+        self.broker_client.apply_auth_delta({
+            'clear_all': True,
+            'cred_upserts': cred_upserts,
+            'acl_upserts': acl_upserts,
+        })
 
 # ################################################################################################################################
 
