@@ -1,4 +1,7 @@
-.PHONY: build install server-build scheduler-build sio-build static-check qa-reqs-install unify \
+.PHONY: build install clean server-build scheduler-build sio-build \
+	server-clean scheduler-clean sio-clean \
+	server-install scheduler-install sio-install \
+	static-check qa-reqs-install unify \
 	update cron-update stop-server restart-server restart-server-with-scheduler \
 	stop-dashboard restart-dashboard generate-enmasse run-producers run-consumers prometheus grafana
 
@@ -21,8 +24,32 @@ scheduler-build:
 sio-build:
 	cd $(CURDIR)/code/zato-common && $(MAKE) build
 
+INSTALL_ARGS := $(filter-out install,$(MAKECMDGOALS))
+
 install:
-	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(filter-out $@,$(MAKECMDGOALS))
+ifeq ($(strip $(INSTALL_ARGS)),)
+	$(CURDIR)/code/install.sh
+else
+	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python $(INSTALL_ARGS)
+endif
+
+clean:
+	$(CURDIR)/code/clean.sh
+
+server-clean:
+	rm -rf $(CURDIR)/code/zato-server/src/zato_server_core/target
+
+scheduler-clean:
+	rm -rf $(CURDIR)/code/zato-scheduler/src/zato_scheduler_core/target
+
+sio-clean:
+	rm -rf $(CURDIR)/code/zato-common/src/zato_sio/target
+
+server-install: server-build
+
+scheduler-install: scheduler-build
+
+sio-install: sio-build
 
 qa-reqs-install:
 	$(CURDIR)/code/support-linux/bin/uv pip install --upgrade --python $(CURDIR)/code/bin/python -r $(CURDIR)/code/qa-requirements.txt
