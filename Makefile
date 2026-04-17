@@ -58,11 +58,13 @@ qa-reqs-install:
 	cp -v $(CURDIR)/code/patches/requests/* $(CURDIR)/code/eggs/requests/
 	sudo snap install k6
 
+SITE_PACKAGES := $(shell $(CURDIR)/code/bin/python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])" 2>/dev/null)
+
 unify:
-	mkdir -p $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2
-	printf 'def detect_encoding(readline):\n    return ("utf-8", [])\n' > $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2/tokenize.py
-	touch $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/__init__.py
-	touch $(CURDIR)/code/lib/python3.12/site-packages/lib2to3/pgen2/__init__.py
+	mkdir -p $(SITE_PACKAGES)/lib2to3/pgen2
+	printf 'def detect_encoding(readline):\n    return ("utf-8", [])\n' > $(SITE_PACKAGES)/lib2to3/pgen2/tokenize.py
+	touch $(SITE_PACKAGES)/lib2to3/__init__.py
+	touch $(SITE_PACKAGES)/lib2to3/pgen2/__init__.py
 	python3 $(CURDIR)/code/util/unify.py
 
 static-check:
