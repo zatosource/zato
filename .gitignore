@@ -23,6 +23,7 @@ code/extlib
 code/get-pip.py
 code/include/*
 code/lib/*
+code/zatolibs/
 code/lib64
 code/local/*
 code/man/*
