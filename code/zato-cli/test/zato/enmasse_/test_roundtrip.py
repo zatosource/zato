@@ -15,7 +15,7 @@ from unittest import TestCase, main
 # Zato
 from zato.common.enmasse_.exporter import EnmasseExporter
 from zato.common.enmasse_.importer import EnmasseImporter
-from zato_server_core import ConfigStore
+from zato.common.config.manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -102,10 +102,10 @@ def _normalize_for_comparison(data, skip_fields=None):
 class TestEnmasseRoundtrip(TestCase):
 
     def _do_import_export(self, yaml_string):
-        """ Import a YAML string into a fresh ConfigStore via EnmasseImporter,
+        """ Import a YAML string into a fresh ConfigManager via EnmasseImporter,
         then export it back via EnmasseExporter. Returns (config_store, exported_dict, exported_yaml).
         """
-        config_store = ConfigStore()
+        config_store = ConfigManager()
         importer = EnmasseImporter(config_store)
         importer.import_(yaml_string)
 

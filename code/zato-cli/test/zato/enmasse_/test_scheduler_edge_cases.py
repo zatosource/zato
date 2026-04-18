@@ -14,7 +14,7 @@ from unittest import TestCase, main
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
 from zato.common.enmasse_.exporter import EnmasseExporter
 from zato.common.enmasse_.importer import EnmasseImporter
-from zato_server_core import ConfigStore
+from zato.common.config.manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,7 +31,7 @@ class TestSchedulerEdgeCasesMissingFields(TestCase):
 scheduler:
   - name: edge.minimal.1
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
 
         exported = store.export_to_dict()
@@ -53,7 +53,7 @@ scheduler:
     job_type: interval_based
     minutes: 5
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
         exported = store.export_to_dict()
         job = {item['name']: item for item in exported['scheduler']}['edge.no_service.1']
@@ -68,7 +68,7 @@ scheduler:
     service: demo.ping
     minutes: 10
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
         exported = store.export_to_dict()
         job = {item['name']: item for item in exported['scheduler']}['edge.no_job_type.1']
@@ -83,7 +83,7 @@ scheduler:
     service: demo.ping
     job_type: interval_based
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
         exported = store.export_to_dict()
         job = {item['name']: item for item in exported['scheduler']}['edge.no_intervals.1']
@@ -111,7 +111,7 @@ scheduler:
     job_type: one_time
     hours: 99
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
         exported = store.export_to_dict()
         jobs = [item for item in exported['scheduler'] if item['name'] == 'edge.dup.1']
@@ -136,7 +136,7 @@ scheduler:
     extra:
       nested_key: nested_value
 """
-        store = ConfigStore()
+        store = ConfigManager()
         with self.assertRaises(ValueError):
             EnmasseImporter(store).import_(yaml_str)
 
@@ -151,7 +151,7 @@ scheduler:
     job_type: interval_based
     seconds: 60
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
         exported = store.export_to_dict()
         names = [item['name'] for item in exported.get('scheduler', [])]
@@ -164,7 +164,7 @@ scheduler:
         yaml_str = """
 scheduler:
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
         exported = store.export_to_dict()
         self.assertEqual(len(exported.get('scheduler', [])), 0)
@@ -175,7 +175,7 @@ scheduler:
         yaml_str = """
 scheduler: []
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
         exported = store.export_to_dict()
         self.assertEqual(len(exported.get('scheduler', [])), 0)
@@ -191,7 +191,7 @@ scheduler:
     job_type: invalid
     seconds: 30
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
         exported = store.export_to_dict()
         job = {item['name']: item for item in exported['scheduler']}['edge.unknown_type.1']
@@ -244,7 +244,7 @@ class TestSchedulerEdgeCasesExportRoundTrip(TestCase):
     """
 
     def test_export_empty_store(self):
-        store = ConfigStore()
+        store = ConfigManager()
         exporter = EnmasseExporter(store)
         exported = exporter.export_to_dict()
         self.assertEqual(len(exported.get('scheduler', [])), 0)
@@ -262,7 +262,7 @@ class TestSchedulerEdgeCasesExportRoundTrip(TestCase):
             })
 
         yaml_str = yaml.dump({'scheduler': jobs})
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
 
         exporter = EnmasseExporter(store)
@@ -283,7 +283,7 @@ scheduler:
     is_active: false
     hours: 1
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
 
         exported = EnmasseExporter(store).export_to_dict()
@@ -304,7 +304,7 @@ scheduler:
     minutes: 4
     seconds: 5
 """
-        store = ConfigStore()
+        store = ConfigManager()
         EnmasseImporter(store).import_(yaml_str)
 
         exported = EnmasseExporter(store).export_to_dict()

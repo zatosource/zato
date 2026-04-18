@@ -15,7 +15,7 @@ from zato.common.enmasse_.exporter import EnmasseExporter
 from zato.common.enmasse_.importer import EnmasseImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.test.enmasse_._template_scheduler_01 import template_scheduler_01
-from zato_server_core import ConfigStore
+from zato.common.config.manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,7 +25,7 @@ class TestEnmasseSchedulerExporter(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigStore()
+        self.config_store = ConfigManager()
         self.config_store.load_yaml_string(template_complex_01)
 
 # ################################################################################################################################
@@ -70,7 +70,7 @@ class TestEnmasseSchedulerExporterExtended(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigStore()
+        self.config_store = ConfigManager()
         importer = EnmasseImporter(self.config_store)
         importer.import_(template_scheduler_01)
 

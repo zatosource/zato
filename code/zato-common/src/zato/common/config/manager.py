@@ -15,6 +15,9 @@ from threading import RLock
 # PyYAML
 import yaml
 
+# Zato
+from zato.common.config.constants import All_Sections, Key_By_Security
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -25,65 +28,6 @@ if 0:
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-# YAML sections whose items are keyed by 'id' rather than 'name'.
-_key_by_id = frozenset(['pubsub_permission', 'pubsub_subscription'])
-
-# YAML section aliases - the YAML file uses these names,
-# .. but the internal store uses the target names.
-_yaml_to_internal = {
-    'cache':            'cache_builtin',
-    'sql':              'outgoing_sql',
-    'odoo':             'outgoing_odoo',
-    'outconn_sql':      'outgoing_sql',
-    'outconn_soap':     'outgoing_soap',
-    'outgoing_ldap':    'generic_connection',
-    'ldap':             'generic_connection',
-    'confluence':       'generic_connection',
-    'jira':             'generic_connection',
-    'microsoft_365':    'generic_connection',
-    'zato_generic_connection': 'generic_connection',
-}
-
-# For generic_connection sub-types, the default 'type_' to set.
-_generic_connection_type_defaults = {
-    'ldap':             'outconn-ldap',
-    'outgoing_ldap':    'outconn-ldap',
-    'confluence':       'cloud-confluence',
-    'jira':             'cloud-jira',
-    'microsoft_365':    'cloud-microsoft-365',
-}
-
-# All valid internal section names.
-_all_sections = frozenset([
-    'security',
-    'groups',
-    'channel_rest',
-    'channel_soap',
-    'channel_amqp',
-    'channel_openapi',
-    'outgoing_rest',
-    'outgoing_soap',
-    'outgoing_amqp',
-    'outgoing_ftp',
-    'outgoing_sql',
-    'outgoing_odoo',
-    'outgoing_sap',
-    'cache_builtin',
-    'email_smtp',
-    'email_imap',
-    'scheduler',
-    'holiday_calendar',
-    'generic_connection',
-    'pubsub_topic',
-    'pubsub_permission',
-    'pubsub_subscription',
-    'elastic_search',
-    'service',
-])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -100,7 +44,7 @@ class ConfigManager:
         # section_name -> {key -> dict},
         # populated by load_yaml / load_yaml_string.
         self._store:'dict[str, dict[str, anydict]]' = {}
-        for section in _all_sections:
+        for section in All_Sections:
             self._store[section] = {}
 
         # Paths of all YAML files loaded, in order.
@@ -109,52 +53,42 @@ class ConfigManager:
 # ################################################################################################################################
 
     def _key_field(self, section:'str') -> 'str':
-        if section in _key_by_id:
-            return 'id'
+        if section in Key_By_Security:
+            return 'security'
         return 'name'
 
 # ################################################################################################################################
 
-    def _resolve_section(self, yaml_key:'str') -> 'str':
-        return _yaml_to_internal.get(yaml_key, yaml_key)
-
-# ################################################################################################################################
-
     def _apply_yaml_data(self, data:'anydict') -> 'None':
-        """ Merge parsed YAML data into the in-memory store.
+        """ Merge parsed YAML data into the store.
         Must be called under self.lock.
         """
-        for yaml_key, items in data.items():
+        for section, items in data.items():
             if not isinstance(items, list):
                 continue
 
-            section = self._resolve_section(yaml_key)
-            if section not in _all_sections:
-                logger.warning('Ignoring unknown YAML section: %s', yaml_key)
+            if section not in All_Sections:
+                logger.warning('Ignoring unknown YAML section: %s', section)
                 continue
 
             key_field = self._key_field(section)
-            store = self._store[section]
-            default_type = _generic_connection_type_defaults.get(yaml_key, '')
+            section_store = self._store[section]
 
             for item in items:
                 if not isinstance(item, dict):
                     continue
 
-                if default_type:
-                    item.setdefault('type_', default_type)
-
-                key = item.get(key_field, '')
+                key = str(item.get(key_field, ''))
                 if not key:
                     logger.warning('Skipping item without %s in section %s', key_field, section)
                     continue
 
-                store[key] = item
+                section_store[key] = item
 
 # ################################################################################################################################
 
     def load_yaml(self, path:'str') -> 'None':
-        """ Load a YAML file from disk and merge into the in-memory store.
+        """ Load a YAML file from disk and merge into the store.
         """
         with self.lock:
             expanded_path = os.path.expandvars(path)
@@ -167,7 +101,7 @@ class ConfigManager:
 # ################################################################################################################################
 
     def load_yaml_string(self, yaml_string:'str') -> 'None':
-        """ Parse a YAML string and merge into the in-memory store.
+        """ Parse a YAML string and merge into the store.
         """
         with self.lock:
             expanded = os.path.expandvars(yaml_string)
@@ -232,10 +166,14 @@ class ConfigManager:
 # ################################################################################################################################
 
     def export_to_dict(self) -> 'anydict':
-        """ Return a dict copy of all runtime objects.
+        """ Return all runtime objects as {section: [list of items]}.
         """
         with self.lock:
-            return deepcopy(self._store)
+            out:'anydict' = {}
+            for section, section_store in self._store.items():
+                if section_store:
+                    out[section] = [deepcopy(item) for item in section_store.values()]
+            return out
 
 # ################################################################################################################################
 # ################################################################################################################################

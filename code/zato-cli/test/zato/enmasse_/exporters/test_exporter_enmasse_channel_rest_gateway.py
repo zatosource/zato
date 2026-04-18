@@ -13,7 +13,7 @@ import yaml
 # Zato
 from zato.common.enmasse_.exporter import EnmasseExporter
 from zato.common.test.enmasse_._template_rest_gateway import template_rest_gateway
-from zato_server_core import ConfigStore
+from zato.common.config.manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -21,7 +21,7 @@ from zato_server_core import ConfigStore
 class TestEnmasseChannelRESTGatewayExporter(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigStore()
+        self.config_store = ConfigManager()
         self.config_store.load_yaml_string(template_rest_gateway)
 
     def test_rest_channel_gateway_export(self):

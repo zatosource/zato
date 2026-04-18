@@ -15,7 +15,7 @@ from zato.common.enmasse_.exporter import EnmasseExporter
 from zato.common.enmasse_.importer import EnmasseImporter
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
 from zato.common.test.enmasse_._template_scheduler_01 import template_scheduler_01
-from zato_server_core import ConfigStore
+from zato.common.config.manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -25,7 +25,7 @@ class TestSchedulerRoundTripComplex(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigStore()
+        self.config_store = ConfigManager()
         importer = EnmasseImporter(self.config_store)
         importer.import_(template_complex_01)
 
@@ -79,7 +79,7 @@ class TestSchedulerRoundTripComplex(TestCase):
         exporter1 = EnmasseExporter(self.config_store)
         yaml_str = exporter1.export()
 
-        config_store2 = ConfigStore()
+        config_store2 = ConfigManager()
         importer2 = EnmasseImporter(config_store2)
         importer2.import_(yaml_str)
 
@@ -107,7 +107,7 @@ class TestSchedulerRoundTripExtended(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigStore()
+        self.config_store = ConfigManager()
         importer = EnmasseImporter(self.config_store)
         importer.import_(template_scheduler_01)
 
@@ -187,7 +187,7 @@ class TestSchedulerRoundTripExtended(TestCase):
         """ Export -> re-import -> export; verify scheduler section is stable. """
         yaml_str = EnmasseExporter(self.config_store).export()
 
-        store2 = ConfigStore()
+        store2 = ConfigManager()
         EnmasseImporter(store2).import_(yaml_str)
 
         exported2 = EnmasseExporter(store2).export_to_dict()
