@@ -867,12 +867,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Some parts of the worker store's configuration are required during the deployment of services
         # which is why we are doing it here, before worker_store.init() is called.
+        self.set_up_config(server) # type: ignore
+        self.worker_store.early_init()
 
         locally_deployed = self._after_init_common(server) # type: ignore
 
-        # Now that services are deployed, we can resolve service_impl_name for channels.
-        self.set_up_config(server) # type: ignore
-        self.worker_store.early_init()
+        # Now that services are deployed, resolve service_impl_name for HTTP channels.
+        for hs_item in self.config.http_soap:
+            service_name = hs_item.get('service_name') or hs_item.get('service') or ''
+            hs_item['service_impl_name'] = self.service_store.name_to_impl_name[service_name]
 
         # Broker construction - start it in a greenlet so the Rust-heavy __init__
         # (fs_init, fs_start_http_server) overlaps with the Python setup below.
