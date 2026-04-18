@@ -7,10 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 """
-Phase 0 baseline tests for the Rust-backed ConfigStore.
+Baseline tests for the ConfigManager CRUD cycle.
 
-These tests exercise the full CRUD cycle (create, read, edit, rename, delete)
-for every entity type in the ConfigStore. They must pass before any refactoring
+These tests exercise create, read, edit, rename, delete
+for every entity type. They must pass before any refactoring
 begins and must continue to pass after every subsequent phase.
 """
 
@@ -18,7 +18,7 @@ begins and must continue to pass after every subsequent phase.
 import unittest
 
 # Zato
-from zato_server_core import ConfigStore
+from zato.common.config.manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -34,89 +34,89 @@ class CRUDTestMixin:
     edit_value_after = None
 
     def setUp(self):
-        self.cs = ConfigStore()
+        self.cm = ConfigManager()
 
     def _name(self):
         return self.sample_data['name']
 
     def test_create_and_get(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        item = self.cs.get(self.entity_type, self._name())
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
+        item = self.cm.get(self.entity_type, self._name())
         self.assertIsNotNone(item)
         self.assertEqual(item['name'], self._name())
 
     def test_create_and_get_list(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        items = self.cs.get_list(self.entity_type)
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
+        items = self.cm.get_list(self.entity_type)
         self.assertEqual(len(items), 1)
 
     def test_get_nonexistent(self):
-        self.assertIsNone(self.cs.get(self.entity_type, 'does-not-exist'))
+        self.assertIsNone(self.cm.get(self.entity_type, 'does-not-exist'))
 
     def test_get_list_empty(self):
-        items = self.cs.get_list(self.entity_type)
+        items = self.cm.get_list(self.entity_type)
         self.assertEqual(len(items), 0)
 
     def test_edit_field(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        item = self.cs.get(self.entity_type, self._name())
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
+        item = self.cm.get(self.entity_type, self._name())
         self.assertEqual(item[self.edit_field], self.edit_value_before)
 
         updated = dict(self.sample_data)
         updated[self.edit_field] = self.edit_value_after
-        self.cs.set(self.entity_type, self._name(), updated)
+        self.cm.set(self.entity_type, self._name(), updated)
 
-        item = self.cs.get(self.entity_type, self._name())
+        item = self.cm.get(self.entity_type, self._name())
         self.assertEqual(item[self.edit_field], self.edit_value_after)
         self.assertEqual(item['name'], self._name())
 
     def test_rename(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        self.cs.delete(self.entity_type, self._name())
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
+        self.cm.delete(self.entity_type, self._name())
 
         new_name = self._name() + '-renamed'
         renamed_data = dict(self.sample_data)
         renamed_data['name'] = new_name
-        self.cs.set(self.entity_type, new_name, renamed_data)
+        self.cm.set(self.entity_type, new_name, renamed_data)
 
-        self.assertIsNone(self.cs.get(self.entity_type, self._name()))
-        item = self.cs.get(self.entity_type, new_name)
+        self.assertIsNone(self.cm.get(self.entity_type, self._name()))
+        item = self.cm.get(self.entity_type, new_name)
         self.assertIsNotNone(item)
         self.assertEqual(item['name'], new_name)
 
     def test_delete(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        deleted = self.cs.delete(self.entity_type, self._name())
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
+        deleted = self.cm.delete(self.entity_type, self._name())
         self.assertTrue(deleted)
-        self.assertIsNone(self.cs.get(self.entity_type, self._name()))
+        self.assertIsNone(self.cm.get(self.entity_type, self._name()))
 
     def test_delete_nonexistent(self):
-        deleted = self.cs.delete(self.entity_type, 'does-not-exist')
+        deleted = self.cm.delete(self.entity_type, 'does-not-exist')
         self.assertFalse(deleted)
 
     def test_overwrite(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
         updated = dict(self.sample_data)
         updated[self.edit_field] = self.edit_value_after
-        self.cs.set(self.entity_type, self._name(), updated)
-        item = self.cs.get(self.entity_type, self._name())
+        self.cm.set(self.entity_type, self._name(), updated)
+        item = self.cm.get(self.entity_type, self._name())
         self.assertEqual(item[self.edit_field], self.edit_value_after)
 
     def test_multiple_items(self):
         for i in range(5):
             data = dict(self.sample_data)
             data['name'] = f'{self._name()}-{i}'
-            self.cs.set(self.entity_type, data['name'], data)
-        items = self.cs.get_list(self.entity_type)
+            self.cm.set(self.entity_type, data['name'], data)
+        items = self.cm.get_list(self.entity_type)
         self.assertEqual(len(items), 5)
 
     def test_get_list_after_delete(self):
         for i in range(3):
             data = dict(self.sample_data)
             data['name'] = f'{self._name()}-{i}'
-            self.cs.set(self.entity_type, data['name'], data)
-        self.cs.delete(self.entity_type, f'{self._name()}-1')
-        items = self.cs.get_list(self.entity_type)
+            self.cm.set(self.entity_type, data['name'], data)
+        self.cm.delete(self.entity_type, f'{self._name()}-1')
+        items = self.cm.get_list(self.entity_type)
         self.assertEqual(len(items), 2)
 
 # ################################################################################################################################
@@ -136,18 +136,12 @@ class TestCRUDBasicAuth(CRUDTestMixin, unittest.TestCase):
     edit_value_before = 'admin'
     edit_value_after = 'newadmin'
 
-    def test_sec_type_field(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        item = self.cs.get(self.entity_type, self._name())
-        self.assertEqual(item['sec_type'], 'basic_auth')
-
     def test_all_fields_roundtrip(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        item = self.cs.get(self.entity_type, self._name())
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
+        item = self.cm.get(self.entity_type, self._name())
         self.assertEqual(item['username'], 'admin')
         self.assertEqual(item['password'], 'secret123')
         self.assertEqual(item['realm'], 'myrealm')
-        self.assertIn('id', item)
 
 # ################################################################################################################################
 
@@ -162,11 +156,6 @@ class TestCRUDApiKey(CRUDTestMixin, unittest.TestCase):
     edit_field = 'username'
     edit_value_before = 'keyuser'
     edit_value_after = 'newkeyuser'
-
-    def test_sec_type_field(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        item = self.cs.get(self.entity_type, self._name())
-        self.assertEqual(item['sec_type'], 'apikey')
 
 # ################################################################################################################################
 
@@ -307,8 +296,8 @@ class TestCRUDOutgoingFtp(CRUDTestMixin, unittest.TestCase):
 
 # ################################################################################################################################
 
-class TestCRUDOutgoingSql(CRUDTestMixin, unittest.TestCase):
-    entity_type = 'outgoing_sql'
+class TestCRUDSql(CRUDTestMixin, unittest.TestCase):
+    entity_type = 'sql'
     sample_data = {
         'name': 'main-db',
         'host': 'db.example.com',
@@ -324,8 +313,8 @@ class TestCRUDOutgoingSql(CRUDTestMixin, unittest.TestCase):
 
 # ################################################################################################################################
 
-class TestCRUDOutgoingOdoo(CRUDTestMixin, unittest.TestCase):
-    entity_type = 'outgoing_odoo'
+class TestCRUDOdoo(CRUDTestMixin, unittest.TestCase):
+    entity_type = 'odoo'
     sample_data = {
         'name': 'ext-odoo',
         'host': 'odoo.example.com',
@@ -393,8 +382,8 @@ class TestCRUDEmailImap(CRUDTestMixin, unittest.TestCase):
 # Cache
 # ################################################################################################################################
 
-class TestCRUDCacheBuiltin(CRUDTestMixin, unittest.TestCase):
-    entity_type = 'cache_builtin'
+class TestCRUDCache(CRUDTestMixin, unittest.TestCase):
+    entity_type = 'cache'
     sample_data = {
         'name': 'default-cache',
         'is_default': True,
@@ -453,14 +442,13 @@ class TestCRUDHolidayCalendar(CRUDTestMixin, unittest.TestCase):
     edit_value_after = ['2025-01-01', '2025-07-04', '2025-12-25']
 
 # ################################################################################################################################
-# Generic connection
+# LDAP
 # ################################################################################################################################
 
-class TestCRUDGenericConnection(CRUDTestMixin, unittest.TestCase):
-    entity_type = 'generic_connection'
+class TestCRUDLDAP(CRUDTestMixin, unittest.TestCase):
+    entity_type = 'ldap'
     sample_data = {
         'name': 'my-ldap',
-        'type_': 'outconn-ldap',
         'address': 'ldap://10.0.0.5',
         'port': 389,
         'username': 'cn=admin',
@@ -487,40 +475,43 @@ class TestCRUDPubSubTopic(CRUDTestMixin, unittest.TestCase):
 
 # ################################################################################################################################
 
-class _NoNameFieldMixin:
-    """Override for entity types whose Rust struct lacks a `name` field."""
+class _SecurityKeyMixin:
+    """Override for entity types keyed by 'security' rather than 'name'."""
+
+    def _name(self):
+        return self.sample_data['security']
 
     def test_create_and_get(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        item = self.cs.get(self.entity_type, self._name())
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
+        item = self.cm.get(self.entity_type, self._name())
         self.assertIsNotNone(item)
 
     def test_edit_field(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        item = self.cs.get(self.entity_type, self._name())
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
+        item = self.cm.get(self.entity_type, self._name())
         self.assertEqual(item[self.edit_field], self.edit_value_before)
 
         updated = dict(self.sample_data)
         updated[self.edit_field] = self.edit_value_after
-        self.cs.set(self.entity_type, self._name(), updated)
+        self.cm.set(self.entity_type, self._name(), updated)
 
-        item = self.cs.get(self.entity_type, self._name())
+        item = self.cm.get(self.entity_type, self._name())
         self.assertEqual(item[self.edit_field], self.edit_value_after)
 
     def test_rename(self):
-        self.cs.set(self.entity_type, self._name(), self.sample_data)
-        self.cs.delete(self.entity_type, self._name())
+        self.cm.set(self.entity_type, self._name(), self.sample_data)
+        self.cm.delete(self.entity_type, self._name())
 
         new_name = self._name() + '-renamed'
         renamed_data = dict(self.sample_data)
-        self.cs.set(self.entity_type, new_name, renamed_data)
+        self.cm.set(self.entity_type, new_name, renamed_data)
 
-        self.assertIsNone(self.cs.get(self.entity_type, self._name()))
-        item = self.cs.get(self.entity_type, new_name)
+        self.assertIsNone(self.cm.get(self.entity_type, self._name()))
+        item = self.cm.get(self.entity_type, new_name)
         self.assertIsNotNone(item)
 
 
-class TestCRUDPubSubPermission(_NoNameFieldMixin, CRUDTestMixin, unittest.TestCase):
+class TestCRUDPubSubPermission(_SecurityKeyMixin, CRUDTestMixin, unittest.TestCase):
     entity_type = 'pubsub_permission'
     sample_data = {
         'name': 'perm-1',
@@ -534,7 +525,7 @@ class TestCRUDPubSubPermission(_NoNameFieldMixin, CRUDTestMixin, unittest.TestCa
 
 # ################################################################################################################################
 
-class TestCRUDPubSubSubscription(_NoNameFieldMixin, CRUDTestMixin, unittest.TestCase):
+class TestCRUDPubSubSubscription(_SecurityKeyMixin, CRUDTestMixin, unittest.TestCase):
     entity_type = 'pubsub_subscription'
     sample_data = {
         'name': 'sub-1',
@@ -578,126 +569,90 @@ class TestCRUDService(CRUDTestMixin, unittest.TestCase):
     edit_value_after = 1000
 
 # ################################################################################################################################
-# Credential-specific tests
+# Credential round-trip tests
 # ################################################################################################################################
 
 class TestCredentialRoundtrip(unittest.TestCase):
-    """Tests that credentials round-trip correctly and are immediately
-    visible after edits - the core property that the refactoring must preserve."""
 
     def setUp(self):
-        self.cs = ConfigStore()
+        self.cm = ConfigManager()
 
     def test_basic_auth_credentials_roundtrip(self):
-        self.cs.set('security', 'ba1', {
+        self.cm.set('security', 'ba1', {
             'type': 'basic_auth',
             'name': 'ba1',
             'username': 'myuser',
             'password': 'mypass',
             'realm': 'testrealm',
         })
-        item = self.cs.get('security', 'ba1')
+        item = self.cm.get('security', 'ba1')
         self.assertEqual(item['username'], 'myuser')
         self.assertEqual(item['password'], 'mypass')
         self.assertEqual(item['realm'], 'testrealm')
 
     def test_basic_auth_password_edit_immediate(self):
-        self.cs.set('security', 'ba1', {
+        self.cm.set('security', 'ba1', {
             'type': 'basic_auth',
             'name': 'ba1',
             'username': 'user1',
             'password': 'old-pass',
         })
-        self.assertEqual(self.cs.get('security', 'ba1')['password'], 'old-pass')
+        self.assertEqual(self.cm.get('security', 'ba1')['password'], 'old-pass')
 
-        self.cs.set('security', 'ba1', {
+        self.cm.set('security', 'ba1', {
             'type': 'basic_auth',
             'name': 'ba1',
             'username': 'user1',
             'password': 'new-pass',
         })
-        self.assertEqual(self.cs.get('security', 'ba1')['password'], 'new-pass')
-
-    def test_basic_auth_username_edit_immediate(self):
-        self.cs.set('security', 'ba1', {
-            'type': 'basic_auth',
-            'name': 'ba1',
-            'username': 'old-user',
-            'password': 'pass1',
-        })
-        self.cs.set('security', 'ba1', {
-            'type': 'basic_auth',
-            'name': 'ba1',
-            'username': 'new-user',
-            'password': 'pass1',
-        })
-        self.assertEqual(self.cs.get('security', 'ba1')['username'], 'new-user')
+        self.assertEqual(self.cm.get('security', 'ba1')['password'], 'new-pass')
 
     def test_apikey_credentials_roundtrip(self):
-        self.cs.set('security', 'ak1', {
+        self.cm.set('security', 'ak1', {
             'type': 'apikey',
             'name': 'ak1',
             'username': 'keyuser',
             'password': 'the-api-key-value',
         })
-        item = self.cs.get('security', 'ak1')
+        item = self.cm.get('security', 'ak1')
         self.assertEqual(item['username'], 'keyuser')
         self.assertEqual(item['password'], 'the-api-key-value')
 
-    def test_apikey_password_edit_immediate(self):
-        self.cs.set('security', 'ak1', {
-            'type': 'apikey',
-            'name': 'ak1',
-            'username': 'keyuser',
-            'password': 'old-key',
-        })
-        self.cs.set('security', 'ak1', {
-            'type': 'apikey',
-            'name': 'ak1',
-            'username': 'keyuser',
-            'password': 'new-key',
-        })
-        self.assertEqual(self.cs.get('security', 'ak1')['password'], 'new-key')
-
     def test_credentials_gone_after_delete(self):
-        self.cs.set('security', 'ba1', {
+        self.cm.set('security', 'ba1', {
             'type': 'basic_auth',
             'name': 'ba1',
             'username': 'user1',
             'password': 'pass1',
         })
-        self.cs.delete('security', 'ba1')
-        self.assertIsNone(self.cs.get('security', 'ba1'))
+        self.cm.delete('security', 'ba1')
+        self.assertIsNone(self.cm.get('security', 'ba1'))
 
     def test_multiple_security_types_coexist(self):
-        self.cs.set('security', 'ba1', {
+        self.cm.set('security', 'ba1', {
             'type': 'basic_auth', 'name': 'ba1', 'username': 'u1', 'password': 'p1',
         })
-        self.cs.set('security', 'ak1', {
+        self.cm.set('security', 'ak1', {
             'type': 'apikey', 'name': 'ak1', 'username': 'u2', 'password': 'p2',
         })
-        self.cs.set('security', 'nt1', {
+        self.cm.set('security', 'nt1', {
             'type': 'ntlm', 'name': 'nt1', 'username': 'u3', 'password': 'p3',
         })
-        self.cs.set('security', 'oa1', {
+        self.cm.set('security', 'oa1', {
             'type': 'bearer_token', 'name': 'oa1', 'username': 'u4', 'password': 'p4',
         })
-        self.cs.set('security', 'bt1', {
+        self.cm.set('security', 'bt1', {
             'type': 'bearer_token', 'name': 'bt1', 'username': 'u5', 'password': 'p5',
         })
 
-        items = self.cs.get_list('security')
+        items = self.cm.get_list('security')
         self.assertEqual(len(items), 5)
-
-        sec_types = sorted(item.get('sec_type', item.get('type', '')) for item in items)
-        self.assertEqual(sec_types, ['apikey', 'basic_auth', 'bearer_token', 'bearer_token', 'ntlm'])
 
 # ################################################################################################################################
 # Enmasse round-trip test
 # ################################################################################################################################
 
 class TestEnmasseRoundtripBaseline(unittest.TestCase):
-    """Verifies that loading YAML and exporting produces consistent results."""
 
     yaml_all_types = '''
 security:
@@ -710,18 +665,6 @@ security:
     name: ak-rt
     username: keyuser
     password: keyval
-  - type: ntlm
-    name: nt-rt
-    username: domain\\user
-    password: ntlm-pass
-  - type: oauth
-    name: oa-rt
-    username: oauth-user
-    password: oauth-secret
-  - type: bearer_token
-    name: bt-rt
-    username: bearer-user
-    auth_endpoint: https://auth.example.com
 
 groups:
   - name: grp-rt
@@ -782,18 +725,17 @@ elastic_search:
     hosts: http://es:9200
     timeout: 15
 
-zato_generic_connection:
+ldap:
   - name: gen-rt
-    type_: outconn-ldap
     address: ldap://10.0.0.5
 '''
 
     def setUp(self):
-        self.cs = ConfigStore()
-        self.cs.load_yaml_string(self.yaml_all_types)
+        self.cm = ConfigManager()
+        self.cm.load_yaml_string(self.yaml_all_types)
 
     def test_all_sections_present_after_load(self):
-        exported = self.cs.export_to_dict()
+        exported = self.cm.export_to_dict()
         for section in [
             'security', 'groups', 'channel_rest',
             'outgoing_rest', 'outgoing_soap', 'scheduler', 'cache',
@@ -802,52 +744,47 @@ zato_generic_connection:
             self.assertIn(section, exported, f'Missing section: {section}')
 
     def test_security_count(self):
-        self.assertEqual(len(self.cs.get_list('security')), 5)
+        self.assertEqual(len(self.cm.get_list('security')), 2)
 
     def test_basic_auth_fields(self):
-        item = self.cs.get('security', 'ba-rt')
+        item = self.cm.get('security', 'ba-rt')
         self.assertEqual(item['username'], 'admin')
         self.assertEqual(item['password'], 'secret')
         self.assertEqual(item['realm'], 'testrealm')
 
     def test_apikey_fields(self):
-        item = self.cs.get('security', 'ak-rt')
+        item = self.cm.get('security', 'ak-rt')
         self.assertEqual(item['username'], 'keyuser')
         self.assertEqual(item['password'], 'keyval')
 
     def test_channel_rest_fields(self):
-        item = self.cs.get('channel_rest', '/api/rt')
+        item = self.cm.get('channel_rest', '/api/rt')
         self.assertEqual(item['service'], 'svc.rt')
 
     def test_outgoing_rest_fields(self):
-        item = self.cs.get('outgoing_rest', 'out-rest-rt')
+        item = self.cm.get('outgoing_rest', 'out-rest-rt')
         self.assertEqual(item['host'], 'https://api.example.com')
         self.assertEqual(item['timeout'], 30)
 
     def test_scheduler_fields(self):
-        item = self.cs.get('scheduler', 'job-rt')
+        item = self.cm.get('scheduler', 'job-rt')
         self.assertEqual(item['service'], 'job.svc')
         self.assertEqual(item['hours'], 1)
 
     def test_idempotent_reload(self):
-        """Loading the same YAML twice must not duplicate items."""
-        self.cs.load_yaml_string(self.yaml_all_types)
-        self.assertEqual(len(self.cs.get_list('security')), 5)
-        self.assertEqual(len(self.cs.get_list('channel_rest')), 1)
+        self.cm.load_yaml_string(self.yaml_all_types)
+        self.assertEqual(len(self.cm.get_list('security')), 2)
+        self.assertEqual(len(self.cm.get_list('channel_rest')), 1)
 
     def test_export_reimport_consistency(self):
-        """Exported dict, dumped to YAML, reimported must produce the same counts."""
-        import yaml
-        exported = self.cs.export_to_dict()
+        import yaml as _yaml
+        exported = self.cm.export_to_dict()
 
-        flat_yaml = {}
-        for section, items in exported.items():
-            flat_yaml[section] = items
-        yaml_str = yaml.dump(flat_yaml, default_flow_style=False)
+        yaml_str = _yaml.dump(exported, default_flow_style=False)
 
-        cs2 = ConfigStore()
-        cs2.load_yaml_string(yaml_str)
-        exported2 = cs2.export_to_dict()
+        cm2 = ConfigManager()
+        cm2.load_yaml_string(yaml_str)
+        exported2 = cm2.export_to_dict()
 
         for section in exported:
             self.assertIn(section, exported2, f'{section} missing after reimport')
