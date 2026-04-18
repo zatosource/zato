@@ -7,3 +7,25 @@
 {% block textarea_page_js %}
 <script type="text/javascript" src="/static/js/python-packages.js" nonce="{{ CSP_NONCE }}"></script>
 {% endblock %}
+
+{% block buttons %}
+<div class="button-container">
+    <div class="button-left-options">
+        <span class="toggle-label" id="allow-delete-label">Allow delete</span>
+        <label class="toggle-switch">
+            <input type="checkbox" id="allow-delete-toggle">
+            <span class="toggle-slider"></span>
+        </label>
+    </div>
+    <div class="button-wrapper">
+        <img src="/static/gfx/spinner.svg" class="button-spinner">
+        <span class="status-message test-success">OK</span>
+        <button class="secondary-button" id="check-button">
+            {{ page_config.check_button_label }}
+        </button>
+    </div>
+    <button class="action-button" id="update-button">
+        {{ page_config.action_button_label }}
+    </button>
+</div>
+{% endblock %}

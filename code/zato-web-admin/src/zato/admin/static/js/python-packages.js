@@ -12,17 +12,26 @@ $.fn.zato.python_packages.countPackages = function(requirements) {
     return count;
 };
 
-$.fn.zato.python_packages.showTestResults = function(results) {
+$.fn.zato.python_packages.showTestResults = function(results, response) {
     var existingResults = $('.test-results');
     if (existingResults.length) {
         existingResults.remove();
     }
 
+    var deleteCount = response && response.delete_count ? response.delete_count : 0;
+
     var html = '<div class="test-results">';
     for (var i = 0; i < results.length; i++) {
         var result = results[i];
         var statusClass = result.status;
-        var statusText = result.status === 'ok' ? 'OK' : result.status.charAt(0).toUpperCase() + result.status.slice(1);
+        var statusText;
+        if (result.status === 'ok') {
+            statusText = 'OK';
+        } else if (result.status === 'delete') {
+            statusText = 'Delete';
+        } else {
+            statusText = result.status.charAt(0).toUpperCase() + result.status.slice(1);
+        }
         html += '<div class="result-item">';
         html += '<span class="result-package">' + result.package + '</span>';
         html += '<span class="result-status-cell"><span class="result-status ' + statusClass + '">' + statusText + '</span></span>';
@@ -53,14 +62,27 @@ $(document).ready(function() {
     config.restartCompletedText = 'All components restarted';
 
     config.buildTestPayload = function() {
-        return { requirements: $('#requirements').val() };
+        return {
+            requirements: $('#requirements').val(),
+            allow_delete: $('#allow-delete-toggle').is(':checked')
+        };
     };
 
     config.buildSavePayload = function() {
-        return { requirements: $('#requirements').val() };
+        return {
+            requirements: $('#requirements').val(),
+            allow_delete: $('#allow-delete-toggle').is(':checked')
+        };
     };
 
     config.showTestResults = $.fn.zato.python_packages.showTestResults;
+
+    config.getKeyFromLine = function(lineText) {
+        var trimmed = lineText.trim();
+        if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('-')) return null;
+        var match = trimmed.match(/^([a-zA-Z0-9_-]+)/);
+        return match ? match[1] : null;
+    };
 
     var packageCount = 0;
 
@@ -98,4 +120,10 @@ $(document).ready(function() {
         'After installation, all Zato components will be <strong>restarted</strong> to load the new packages.';
 
     $.fn.zato.textarea_settings.init(config);
+    $.fn.zato.textarea_settings.setupHoverMatching(config);
+
+    $('#allow-delete-label').on('click', function() {
+        var toggle = $('#allow-delete-toggle');
+        toggle.prop('checked', !toggle.prop('checked'));
+    });
 });
