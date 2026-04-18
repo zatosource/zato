@@ -206,7 +206,7 @@ class SEC_DEF_TYPE:
     APIKEY = 'apikey'
     BASIC_AUTH = 'basic_auth'
     NTLM = 'ntlm'
-    OAUTH = 'oauth'
+    OAUTH = 'bearer_token'
 
 Sec_Def_Type = SEC_DEF_TYPE
 
@@ -536,7 +536,6 @@ class BROKER:
 class MISC:
     DEFAULT_HTTP_METHOD = ''
     DEFAULT_HTTP_TIMEOUT = 10
-    OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
     DefaultAdminInvokeChannel = 'admin.invoke.json'

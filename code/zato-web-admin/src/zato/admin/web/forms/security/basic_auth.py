@@ -17,6 +17,11 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:90%'}))
     realm = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:90%'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:90%'}))
 
-class EditForm(CreateForm):
+class EditForm(forms.Form):
+    id = forms.CharField(widget=forms.HiddenInput())
+    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:90%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:90%'}))
+    realm = forms.CharField(required=False, widget=forms.TextInput(attrs={'style':'width:90%'}))

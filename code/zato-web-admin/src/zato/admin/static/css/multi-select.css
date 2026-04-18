@@ -291,7 +291,7 @@ label.toggle:hover {
     border: 1px solid rgba(140, 82, 10, 0.22);
 }
 
-.security-badge-type[data-security-type="oauth"] {
+.security-badge-type[data-security-type="bearer_token"] {
     background: rgba(100, 40, 150, 0.08);
     color: #5c2d91;
     border: 1px solid rgba(100, 40, 150, 0.22);

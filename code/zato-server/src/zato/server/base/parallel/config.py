@@ -47,7 +47,7 @@ class ConfigLoader:
         self.config.ntlm = ConfigDict(
             'ntlm', config_store=self.config_store, entity_type='security', sec_type_filter='ntlm')
         self.config.oauth = ConfigDict(
-            'oauth', config_store=self.config_store, entity_type='security', sec_type_filter='oauth')
+            'oauth', config_store=self.config_store, entity_type='security', sec_type_filter='bearer_token')
 
 # ################################################################################################################################
 

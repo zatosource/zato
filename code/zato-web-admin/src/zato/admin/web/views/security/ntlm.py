@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import loads
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
@@ -53,6 +54,19 @@ class _CreateEdit(CreateEdit):
 class Create(_CreateEdit):
     url_name = 'security-ntlm-create'
     service_name = 'zato.security.ntlm.create'
+
+    def __call__(self, req, *args, **kwargs):
+        response = super().__call__(req, *args, **kwargs)
+        if response.status_code == 200:
+            data = loads(response.content)
+            password = req.POST.get('password', '')
+            if password:
+                req.zato.client.invoke('zato.security.ntlm.change-password', {
+                    'id': data['id'],
+                    'password1': password,
+                    'password2': password,
+                })
+        return response
 
 class Edit(_CreateEdit):
     url_name = 'security-ntlm-edit'

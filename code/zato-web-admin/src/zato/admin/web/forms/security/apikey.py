@@ -20,6 +20,13 @@ class CreateForm(forms.Form):
         attrs={'class':'required', 'style':'width:100%', 'disabled':True}),
         initial=API_Key.Default_Header,
     )
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'style':'width:100%'}))
 
-class EditForm(CreateForm):
+class EditForm(forms.Form):
+    id = forms.CharField(widget=forms.HiddenInput())
+    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    username = forms.CharField(widget=forms.TextInput(
+        attrs={'class':'required', 'style':'width:100%', 'disabled':True}),
+        initial=API_Key.Default_Header,
+    )

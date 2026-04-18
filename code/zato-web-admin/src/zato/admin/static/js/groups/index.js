@@ -50,7 +50,7 @@ $.fn.zato.groups.badge_picker.init = function(action, data) {
     assigned_body.empty();
 
     // Sort order for security types
-    var type_order = { 'basic_auth': 0, 'apikey': 1, 'ntlm': 2, 'oauth': 3 };
+    var type_order = { 'basic_auth': 0, 'apikey': 1, 'ntlm': 2, 'bearer_token': 3 };
     var sort_fn = function(a, b) {
         var oa = type_order[a.sec_type] !== undefined ? type_order[a.sec_type] : 99;
         var ob = type_order[b.sec_type] !== undefined ? type_order[b.sec_type] : 99;

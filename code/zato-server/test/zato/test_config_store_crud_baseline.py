@@ -184,23 +184,6 @@ class TestCRUDNtlm(CRUDTestMixin, unittest.TestCase):
 
 # ################################################################################################################################
 
-class TestCRUDOAuth(CRUDTestMixin, unittest.TestCase):
-    entity_type = 'security'
-    sample_data = {
-        'type': 'oauth',
-        'name': 'test-oauth',
-        'username': 'oauth-user',
-        'password': 'oauth-secret',
-        'proto_version': '1.0',
-        'sig_method': 'HMAC-SHA256',
-        'max_nonce_log': 100,
-    }
-    edit_field = 'username'
-    edit_value_before = 'oauth-user'
-    edit_value_after = 'new-oauth-user'
-
-# ################################################################################################################################
-
 class TestCRUDBearerToken(CRUDTestMixin, unittest.TestCase):
     entity_type = 'security'
     sample_data = {
@@ -697,7 +680,7 @@ class TestCredentialRoundtrip(unittest.TestCase):
             'type': 'ntlm', 'name': 'nt1', 'username': 'u3', 'password': 'p3',
         })
         self.cs.set('security', 'oa1', {
-            'type': 'oauth', 'name': 'oa1', 'username': 'u4', 'password': 'p4',
+            'type': 'bearer_token', 'name': 'oa1', 'username': 'u4', 'password': 'p4',
         })
         self.cs.set('security', 'bt1', {
             'type': 'bearer_token', 'name': 'bt1', 'username': 'u5', 'password': 'p5',
@@ -707,7 +690,7 @@ class TestCredentialRoundtrip(unittest.TestCase):
         self.assertEqual(len(items), 5)
 
         sec_types = sorted(item.get('sec_type', item.get('type', '')) for item in items)
-        self.assertEqual(sec_types, ['apikey', 'basic_auth', 'bearer_token', 'ntlm', 'oauth'])
+        self.assertEqual(sec_types, ['apikey', 'basic_auth', 'bearer_token', 'bearer_token', 'ntlm'])
 
 # ################################################################################################################################
 # Enmasse round-trip test

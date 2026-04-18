@@ -25,7 +25,7 @@ if 0:
 def _is_oauth(item):
     st = item.get('sec_type')
     t = item.get('type')
-    return st in ('oauth', 'bearer_token') or t in ('oauth', 'bearer_token')
+    return st == 'bearer_token' or t == 'bearer_token'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -60,7 +60,7 @@ class Create(AdminService):
             raise Exception('Bearer token definition `{}` already exists'.format(name))
 
         self.server.config_store.set('security', name, {
-            'type': 'oauth',
+            'type': 'bearer_token',
             'name': name,
             'is_active': input.is_active,
             'username': input.username,
@@ -123,7 +123,7 @@ class Edit(AdminService):
         existing['auth_server_url'] = input.get('auth_server_url', '')
         existing['scopes'] = input.get('scopes', '')
         existing['extra_fields'] = input.get('extra_fields', '')
-        existing['type'] = 'oauth'
+        existing['type'] = 'bearer_token'
 
         self.server.config_store.set('security', name, existing)
 
@@ -171,7 +171,7 @@ class ChangePassword(AdminService):
             raise Exception('Bearer token definition not found')
 
         existing['password'] = password1
-        existing['type'] = 'oauth'
+        existing['type'] = 'bearer_token'
         self.server.config_store.set('security', name, existing)
 
         self.response.payload.id = existing['id']
