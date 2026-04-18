@@ -277,7 +277,7 @@
 
             '_numbering',
             '_selection',
-            'sec_name',
+            'security',
 
             'sub_key',
             '_is_delivery_active',
@@ -287,6 +287,7 @@
             'topic_link_list',
             '_edit',
 
+            '_queue',
             '_delete',
             'id',
             'is_delivery_active',
@@ -322,7 +323,8 @@
 {% include "zato/search-form.html" with page_prompt="Search"%}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.pubsub.subscription.create()">Create a new pub/sub subscription</a>
+            <a href="javascript:$.fn.zato.pubsub.subscription.create()">Create a new pub/sub subscription</a> |
+            <a href="javascript:$.fn.zato.eda.import_demo_config()" class="common">Import demo config</a>
         </div>
 
             <table class="zato-table" id="data-table">
@@ -338,8 +340,9 @@
                         <th style="text-align:center"><a href="#">Publications</a></th>
 
                         <th style="text-align:center">Delivery type</th>
-                        <th style="text-align:center">Topics</th>
+                        <th>Topics</th>
                         <th style="text-align:center">Edit</th>
+                        <th style="text-align:center">Queue</th>
 
                         <th style="text-align:center">Delete</th>
                         <th class='ignore'>&nbsp;</th>
@@ -365,7 +368,7 @@
 
                         <td class='numbering'>&nbsp;</td>
                         <td class='impexp'><input type='checkbox' /></td>
-                        <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.sec_name|urlencode }}">{{ item.sec_name }}</a></td>
+                        <td><a href="/zato/security/basic-auth/?cluster={{ cluster_id }}&amp;query={{ item.security|urlencode }}">{{ item.security }}</a></td>
 
                         <td>{{ item.sub_key }}</td>
                         <td style="text-align:center">{{ item.is_delivery_active|yesno:"Enabled,Disabled" }}</td>
@@ -382,7 +385,7 @@
                                 Push
                             {% endif %}
                         </td>
-                        <td style="text-align:center">{{ item.topic_link_list|safe }}</td>
+                        <td>{{ item.topic_link_list|safe }}</td>
                         <td style="text-align:center"><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
                         <td style="text-align:center"><a href="{% url 'eda-dashboard' %}?cluster={{ cluster_id|default:'1' }}">Queue</a></td>
 

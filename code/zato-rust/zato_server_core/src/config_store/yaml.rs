@@ -102,8 +102,10 @@ impl ConfigStore {
         load_into(&self.outgoing_odoo, config.odoo, |o| o.name.clone())?;
         load_into(&self.elastic_search, config.elastic_search, |e| e.name.clone())?;
         load_into(&self.pubsub_topic, config.pubsub_topic, |t| t.name.clone())?;
+
         load_into(&self.pubsub_permission, config.pubsub_permission, |p| p.id.clone())?;
         load_into(&self.pubsub_subscription, config.pubsub_subscription, |s| s.id.clone())?;
+
         load_into(&self.channel_openapi, config.channel_openapi, |c| c.name.clone())?;
 
         Ok(())

@@ -13,32 +13,32 @@ from zato_server_core import next_id
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_sec_name_by_id(server, sec_base_id):
+def _get_security_by_id(server, sec_base_id):
     """ Look up security definition name from its ID via the config store.
     """
     for item in server.config_store.get_list('security'):
-        if item.get('id') == sec_base_id:
+        if item['id'] == sec_base_id:
             return item['name']
     raise Exception('Security definition with id `{}` not found'.format(sec_base_id))
 
-def _sec_user_id(server, sec_name):
-    """ Resolve a sec-def name to its `user_id`. Raises if unknown.
+def _get_user_id(server, security):
+    """ Resolve a security definition name to its user_id. Raises if unknown.
     """
-    item = server.config_store.get('security', sec_name)
+    item = server.config_store.get('security', security)
     if item is not None:
         return item['id']
-    resolved = server.sec_user_id(sec_name)
+    resolved = server.sec_user_id(security)
     if resolved is None:
-        raise Exception('Cannot resolve user_id for sec-def `{}`'.format(sec_name))
+        raise Exception('Cannot resolve user_id for security definition `{}`'.format(security))
     return resolved
 
-def _merged_acl_for_user(server, sec_name, extra_row=None, exclude_perm_id=None):
-    """ Merged pub/sub pattern lists for `sec_name` as they would look
+def _merged_acl_for_user(server, security, extra_row=None, exclude_perm_id=None):
+    """ Merged pub/sub pattern lists for a security definition as they would look
     after `extra_row` is added and `exclude_perm_id` is removed.
     """
     rows = []
     for perm_row in server.config_store.get_list('pubsub_permission'):
-        if perm_row['security'] != sec_name:
+        if perm_row['security'] != security:
             continue
         if exclude_perm_id is not None and perm_row['id'] == exclude_perm_id:
             continue
@@ -49,10 +49,10 @@ def _merged_acl_for_user(server, sec_name, extra_row=None, exclude_perm_id=None)
     pub_patterns = []
     sub_patterns = []
     for row in rows:
-        for pub_item in row['pub'] or []:
+        for pub_item in row['pub_topics']:
             if pub_item and pub_item not in pub_patterns:
                 pub_patterns.append(pub_item)
-        for sub_item in row['sub'] or []:
+        for sub_item in row['sub_topics']:
             if sub_item and sub_item not in sub_patterns:
                 sub_patterns.append(sub_item)
     return pub_patterns, sub_patterns
@@ -73,8 +73,40 @@ class GetList(AdminService):
 
     def handle(self):
         items = self.server.config_store.get_list('pubsub_permission')
+
+        subscriptions = self.server.config_store.get_list('pubsub_subscription')
+
         for item in items:
             item['name'] = item['security']
+
+            pub_topics = item['pub_topics']
+            sub_topics = item['sub_topics']
+
+            pattern_lines = []
+            for pub_item in pub_topics:
+                pattern_lines.append('pub={}'.format(pub_item))
+            for sub_item in sub_topics:
+                pattern_lines.append('sub={}'.format(sub_item))
+            item['pattern'] = '\n'.join(pattern_lines)
+
+            has_pub = len(pub_topics) > 0
+            has_sub = len(sub_topics) > 0
+            if has_pub and has_sub:
+                item['access_type'] = 'publisher-subscriber'
+            elif has_pub:
+                item['access_type'] = 'publisher'
+            elif has_sub:
+                item['access_type'] = 'subscriber'
+            else:
+                item['access_type'] = ''
+
+            security = item['security']
+            count = 0
+            for subscription in subscriptions:
+                if subscription['security'] == security:
+                    count += 1
+            item['subscription_count'] = count
+
         self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
@@ -83,43 +115,43 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub permission.
     """
-    input = 'sec_base_id', '-pub', '-sub', '-cluster_id'
+    input = 'sec_base_id', '-pub_topics', '-sub_topics', '-cluster_id'
     output = 'id', 'security'
 
     def handle(self):
         input = self.request.input
 
         sec_base_id = input.sec_base_id
-        sec_name = _get_sec_name_by_id(self.server, sec_base_id)
+        security = _get_security_by_id(self.server, sec_base_id)
 
-        pub = input.get('pub') or []
-        sub = input.get('sub') or []
+        pub_topics = input.get('pub_topics') or []
+        sub_topics = input.get('sub_topics') or []
 
-        if isinstance(pub, str):
-            pub = [t.strip() for t in pub.split(',') if t.strip()]
-        if isinstance(sub, str):
-            sub = [t.strip() for t in sub.split(',') if t.strip()]
+        if isinstance(pub_topics, str):
+            pub_topics = [item.strip() for item in pub_topics.split(',') if item.strip()]
+        if isinstance(sub_topics, str):
+            sub_topics = [item.strip() for item in sub_topics.split(',') if item.strip()]
 
         data = {
-            'security': sec_name,
+            'security': security,
             'sec_base_id': sec_base_id,
-            'pub': pub,
-            'sub': sub,
+            'pub_topics': pub_topics,
+            'sub_topics': sub_topics,
         }
 
-        user_id = _sec_user_id(self.server, sec_name)
+        user_id = _get_user_id(self.server, security)
 
         with self.server.auth_update_lock(user_id):
             perm_id = next_id()
             data['id'] = perm_id
 
-            new_pub, new_sub = _merged_acl_for_user(self.server, sec_name, extra_row=data)
+            new_pub, new_sub = _merged_acl_for_user(self.server, security, extra_row=data)
             _push_acl(self.server, user_id, new_pub, new_sub)
 
             self.server.config_store.set('pubsub_permission', perm_id, data)
 
         self.response.payload.id = perm_id
-        self.response.payload.security = sec_name
+        self.response.payload.security = security
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -127,7 +159,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing pub/sub permission.
     """
-    input = 'id', 'sec_base_id', '-pub', '-sub', '-cluster_id'
+    input = 'id', 'sec_base_id', '-pub_topics', '-sub_topics', '-cluster_id'
     output = 'id', 'security'
 
     def handle(self):
@@ -135,29 +167,29 @@ class Edit(AdminService):
 
         perm_id = input.id
         sec_base_id = input.sec_base_id
-        sec_name = _get_sec_name_by_id(self.server, sec_base_id)
+        security = _get_security_by_id(self.server, sec_base_id)
 
-        pub = input.get('pub') or []
-        sub = input.get('sub') or []
+        pub_topics = input.get('pub_topics') or []
+        sub_topics = input.get('sub_topics') or []
 
-        if isinstance(pub, str):
-            pub = [pattern.strip() for pattern in pub.split(',') if pattern.strip()]
-        if isinstance(sub, str):
-            sub = [pattern.strip() for pattern in sub.split(',') if pattern.strip()]
+        if isinstance(pub_topics, str):
+            pub_topics = [item.strip() for item in pub_topics.split(',') if item.strip()]
+        if isinstance(sub_topics, str):
+            sub_topics = [item.strip() for item in sub_topics.split(',') if item.strip()]
 
-        user_id = _sec_user_id(self.server, sec_name)
+        user_id = _get_user_id(self.server, security)
 
         with self.server.auth_update_lock(user_id):
             data = {
                 'id': perm_id,
-                'security': sec_name,
+                'security': security,
                 'sec_base_id': sec_base_id,
-                'pub': pub,
-                'sub': sub,
+                'pub_topics': pub_topics,
+                'sub_topics': sub_topics,
             }
 
             new_pub, new_sub = _merged_acl_for_user(
-                self.server, sec_name, extra_row=data, exclude_perm_id=perm_id,
+                self.server, security, extra_row=data, exclude_perm_id=perm_id,
             )
             _push_acl(self.server, user_id, new_pub, new_sub)
 
@@ -165,7 +197,7 @@ class Edit(AdminService):
             self.server.config_store.set('pubsub_permission', perm_id, data)
 
         self.response.payload.id = perm_id
-        self.response.payload.security = sec_name
+        self.response.payload.security = security
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -181,12 +213,12 @@ class Delete(AdminService):
         if existing is None:
             return
 
-        sec_name = existing['security']
-        user_id = _sec_user_id(self.server, sec_name)
+        security = existing['security']
+        user_id = _get_user_id(self.server, security)
 
         with self.server.auth_update_lock(user_id):
             new_pub, new_sub = _merged_acl_for_user(
-                self.server, sec_name, exclude_perm_id=perm_id,
+                self.server, security, exclude_perm_id=perm_id,
             )
             _push_acl(self.server, user_id, new_pub, new_sub)
 

@@ -1113,21 +1113,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         permissions = self.config_store.get_list('pubsub_permission')
 
         client_permissions = {}
-        username_to_sec_name = {}
 
         for perm in permissions:
-            security = perm.get('security', '')
+            security = perm['security']
 
             if security not in client_permissions:
                 client_permissions[security] = []
-                username_to_sec_name[security] = security
 
-            for topic in perm.get('pub_topics', []):
+            for topic in perm['pub_topics']:
                 client_permissions[security].append({
                     'pattern': topic,
                     'access_type': PubSub.API_Client.Publisher
                 })
-            for topic in perm.get('sub_topics', []):
+            for topic in perm['sub_topics']:
                 client_permissions[security].append({
                     'pattern': topic,
                     'access_type': PubSub.API_Client.Subscriber
@@ -1135,14 +1133,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         log_admin_info(f'Loading pub/sub config -> {len(client_permissions)} permission(s)')
 
-        for username, perms in client_permissions.items():
-            self.pubsub_pattern_matcher.add_client(username, perms)
+        for security, perms in client_permissions.items():
+            self.pubsub_pattern_matcher.add_client(security, perms)
+            self.pubsub_subscriptions.register_user(security, security)
 
-            sec_name = username_to_sec_name.get(username)
-            if sec_name:
-                self.pubsub_subscriptions.register_user(username, sec_name)
-
-            log_admin_info(f'Loaded permission -> user:{username}, rules:{len(perms)}')
+            log_admin_info(f'Loaded permission -> security:{security}, rules:{len(perms)}')
 
         # Load subscriptions
         subscriptions = self.config_store.get_list('pubsub_subscription')
@@ -1249,9 +1244,20 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def import_demo_scheduler(self):
 
+        import yaml
         import zato.server.service.internal.scheduler
 
         config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'demo-enmasse.yaml')
+
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        existing_jobs = {item.get('name') for item in self.config_store.get_list('scheduler')}
+
+        for job in config.get('scheduler', []):
+            if job['name'] in existing_jobs:
+                return 'Demo scheduler config already imported'
+
         self.config_store.load_yaml(config_path)
         self.reload_config()
         return True
@@ -1259,15 +1265,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def import_demo_eda(self):
-        """ Seeds a demo EDA environment: 7 topics, 8 subscribers with a
-        realistic fan-out, plus long-running publisher AND consumer
-        greenlets. Publishers produce ~50 msg/min; consumers pull and
-        ack ~70% of what they read so the dashboard's "Queue depth"
-        and "Deliveries" tiles both move and queues stay non-empty.
-        Idempotent: clicking the button twice reloads the YAML but
-        does not stack additional greenlets.
+        """ Seeds a demo EDA environment with topics, permissions, subscriptions
+        and long-running publisher/consumer greenlets.
+        Idempotent: checks for existing objects before importing.
         """
 
+        import yaml
         import zato.server.service.internal.pubsub
         from zato.server.base.parallel.demo_eda import start_publisher, start_consumer
 
@@ -1275,6 +1278,44 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             os.path.dirname(zato.server.service.internal.pubsub.__file__),
             'demo-eda-enmasse.yaml',
         )
+
+        # Check if any of the demo objects already exist
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        existing_security = {item.get('name') for item in self.config_store.get_list('security')}
+        existing_topics = {item.get('name') for item in self.config_store.get_list('pubsub_topic')}
+        existing_permissions = {item.get('security') for item in self.config_store.get_list('pubsub_permission')}
+        existing_subscriptions = {item.get('security') for item in self.config_store.get_list('pubsub_subscription')}
+
+        has_duplicates = False
+
+        for sec in config.get('security', []):
+            if sec['name'] in existing_security:
+                has_duplicates = True
+                break
+
+        if not has_duplicates:
+            for topic in config.get('pubsub_topic', []):
+                if topic['name'] in existing_topics:
+                    has_duplicates = True
+                    break
+
+        if not has_duplicates:
+            for perm in config.get('pubsub_permission', []):
+                if perm['security'] in existing_permissions:
+                    has_duplicates = True
+                    break
+
+        if not has_duplicates:
+            for sub in config.get('pubsub_subscription', []):
+                if sub['security'] in existing_subscriptions:
+                    has_duplicates = True
+                    break
+
+        if has_duplicates:
+            return 'Demo config already imported'
+
         self.config_store.load_yaml(config_path)
         self.reload_config()
 

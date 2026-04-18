@@ -19,9 +19,9 @@ pub struct PubSubPermission {
     pub security: String,
     #[serde(default)]
     pub sec_base_id: String,
-    #[serde(rename = "pub", default)]
+    #[serde(alias = "pub", default)]
     pub pub_topics: Vec<String>,
-    #[serde(rename = "sub", default)]
+    #[serde(alias = "sub", default)]
     pub sub_topics: Vec<String>,
 }
 
@@ -35,8 +35,6 @@ pub struct PubSubSubscription {
     pub sub_key: String,
     #[serde(default)]
     pub sec_base_id: String,
-    #[serde(default)]
-    pub sec_name: String,
     #[serde(default)]
     pub username: String,
     #[serde(default)]

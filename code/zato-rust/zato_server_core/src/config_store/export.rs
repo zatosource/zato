@@ -39,7 +39,28 @@ impl ConfigStore {
         export_section!("odoo", outgoing_odoo);
         export_section!("elastic_search", elastic_search);
         export_section!("pubsub_topic", pubsub_topic);
-        export_section!("pubsub_permission", pubsub_permission);
+
+        {
+            let store = self.pubsub_permission.read().map_err(lock_err)?;
+            if !store.is_empty() {
+                let list = PyList::empty(py);
+                for item in store.values() {
+                    let d = struct_to_pydict(py, item)?;
+                    let bound = d.bind(py);
+                    if let Some(val) = bound.get_item("pub_topics")? {
+                        let _ = bound.del_item("pub_topics");
+                        let _ = bound.set_item("pub", val);
+                    }
+                    if let Some(val) = bound.get_item("sub_topics")? {
+                        let _ = bound.del_item("sub_topics");
+                        let _ = bound.set_item("sub", val);
+                    }
+                    let _ = list.append(bound);
+                }
+                let _ = out.set_item("pubsub_permission", list);
+            }
+        }
+
         export_section!("pubsub_subscription", pubsub_subscription);
         export_section!("channel_openapi", channel_openapi);
 

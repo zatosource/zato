@@ -115,15 +115,15 @@ def _get_sec_by_id(server, sec_base_id):
 
 # ################################################################################################################################
 
-def _find_security(server, username=None, sec_name=None):
-    """ Look up security definition by username or sec_name via the config store.
+def _find_security(server, username=None, security=None):
+    """ Look up security definition by username or security name via the config store.
     """
     for item in server.config_store.get_list('security'):
-        if username and item.get('username') == username:
+        if username and item['username'] == username:
             return item
-        if sec_name and item.get('name') == sec_name:
+        if security and item['name'] == security:
             return item
-    lookup = 'username={}'.format(username) if username else 'sec_name={}'.format(sec_name)
+    lookup = 'username={}'.format(username) if username else 'security={}'.format(security)
     raise Exception('Security definition not found: {}'.format(lookup))
 
 # ################################################################################################################################
@@ -138,23 +138,29 @@ def _topic_exists(server, topic_name):
 
 # ################################################################################################################################
 
-def _check_permission(server, sec_name, topic_name):
+def _check_permission(server, security, topic_name):
     """ Check whether a security definition has permission for a topic using config store permissions.
     Returns True if allowed, False otherwise.
     """
     for perm in server.config_store.get_list('pubsub_permission'):
-        perm_sec = perm.get('security') or perm.get('name')
-        if perm_sec != sec_name:
+        if perm['security'] != security:
             continue
 
-        pattern_lines = (perm.get('pattern') or '').splitlines()
-        access_type = perm.get('access_type', 'subscriber')
-        permissions_list = [{'pattern': p.strip(), 'access_type': access_type} for p in pattern_lines if p.strip()]
+        pub_topics = perm['pub_topics']
+        sub_topics = perm['sub_topics']
+
+        pattern_lines = []
+        for pub_item in pub_topics:
+            pattern_lines.append('pub={}'.format(pub_item))
+        for sub_item in sub_topics:
+            pattern_lines.append('sub={}'.format(sub_item))
+
+        permissions_list = [{'pattern': line, 'access_type': 'subscriber'} for line in pattern_lines]
 
         if permissions_list:
             matcher = PatternMatcher()
-            matcher.add_client(sec_name, permissions_list)
-            result = matcher.evaluate(sec_name, topic_name, 'subscribe')
+            matcher.add_client(security, permissions_list)
+            result = matcher.evaluate(security, topic_name, 'subscribe')
             if result.is_ok:
                 return True
 
@@ -168,7 +174,7 @@ class GetList(AdminService):
     """
     input = 'cluster_id', '-needs_password'
     output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', AsIs('topic_link_list'), 'sec_base_id', \
-        'sec_name', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
+        'security', 'username', 'delivery_type', 'push_type', 'rest_push_endpoint_id', 'push_service_name', \
         '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password'
 
     def handle(self):
@@ -176,32 +182,26 @@ class GetList(AdminService):
 
         sec_by_name = {}
         for sec in self.server.config_store.get_list('security'):
-            sec_by_name[sec.get('name')] = sec
+            sec_by_name[sec['name']] = sec
 
         out = []
         for item in items:
 
-            sec_name = item.get('sec_name') or item.get('security') or ''
-            sec_def = sec_by_name.get(sec_name, {})
+            security = item['security']
+            sec_def = sec_by_name[security]
 
-            topic_list = item.get('topic_list') or item.get('topic_name_list') or []
             topic_link_list = []
-            for t in topic_list:
-                topic_name = t if isinstance(t, str) else t.get('topic_name', '')
+            for topic_name in item['topic_list']:
                 topic_link_list.append(get_topic_link(topic_name, True, True))
 
             enriched = dict(item)
-            enriched.setdefault('sub_key', item.get('sub_key', ''))
-            enriched.setdefault('is_delivery_active', item.get('is_delivery_active', True))
-            enriched.setdefault('is_pub_active', item.get('is_pub_active', True))
-            enriched.setdefault('created', item.get('created', ''))
-            enriched.setdefault('sec_base_id', sec_def.get('id', 0))
-            enriched.setdefault('sec_name', sec_name)
-            enriched.setdefault('username', sec_def.get('username', ''))
-            enriched.setdefault('push_type', item.get('push_type', ''))
-            enriched.setdefault('rest_push_endpoint_id', item.get('rest_push_endpoint_id') or item.get('push_rest_endpoint') or '')
-            enriched['topic_link_list'] = topic_link_list
-            enriched['topic_name_list'] = [t if isinstance(t, str) else t.get('topic_name', '') for t in topic_list]
+            enriched['sec_base_id'] = sec_def['id']
+            enriched['username'] = sec_def['username']
+            enriched['rest_push_endpoint_id'] = item['push_rest_endpoint']
+            enriched['rest_push_endpoint_name'] = ''
+            enriched['push_service_name'] = item['push_service']
+            enriched['topic_link_list'] = ', '.join(topic_link_list)
+            enriched['topic_name_list'] = item['topic_list']
 
             out.append(enriched)
 
@@ -215,7 +215,7 @@ class Create(AdminService):
     """
     input = 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
         '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
-    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'sec_name', 'delivery_type', \
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'created', 'security', 'delivery_type', \
         AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
     def handle(self):
@@ -226,10 +226,9 @@ class Create(AdminService):
         topic_objects_list = _build_topic_objects_list(topic_data_list=topic_data_list)
 
         sec_def = _get_sec_by_id(self.server, input.sec_base_id)
-        sec_name = sec_def['name']
-        username = sec_def.get('username', '')
+        security = sec_def['name']
 
-        sub_key = input.sub_key or new_sub_key(sec_name)
+        sub_key = input.sub_key or new_sub_key(security)
         created = str(utcnow())
 
         topic_link_list = []
@@ -246,14 +245,13 @@ class Create(AdminService):
             'is_pub_active': input.is_pub_active,
             'created': created,
             'sec_base_id': input.sec_base_id,
-            'sec_name': sec_name,
-            'username': username,
-            'security': sec_name,
+            'username': sec_def['username'],
+            'security': security,
             'delivery_type': input.delivery_type,
             'push_type': input.get('push_type') or '',
-            'rest_push_endpoint_id': input.get('rest_push_endpoint_id'),
-            'push_service_name': input.get('push_service_name') or '',
-            'topic_name_list': topic_objects_list,
+            'push_rest_endpoint': input.get('rest_push_endpoint_id') or '',
+            'push_service': input.get('push_service_name') or '',
+            'topic_list': [t['topic_name'] for t in topic_objects_list],
             'topic_link_list': ', '.join(sorted(topic_link_list)),
         }
 
@@ -264,7 +262,7 @@ class Create(AdminService):
         self.response.payload.is_delivery_active = input.is_delivery_active
         self.response.payload.is_pub_active = input.is_pub_active
         self.response.payload.created = created
-        self.response.payload.sec_name = sec_name
+        self.response.payload.security = security
         self.response.payload.delivery_type = input.delivery_type
 
         self.response.payload.topic_name_list = topic_objects_list
@@ -278,7 +276,7 @@ class Edit(AdminService):
     """
     input = 'sub_key', 'cluster_id', AsIs('topic_name_list'), 'sec_base_id', 'delivery_type', \
         '-is_delivery_active', '-is_pub_active', '-push_type', '-rest_push_endpoint_id', '-push_service_name'
-    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'sec_name', 'delivery_type', \
+    output = 'id', 'sub_key', 'is_delivery_active', 'is_pub_active', 'security', 'delivery_type', \
         AsIs('-topic_name_list'), AsIs('-topic_link_list')
 
     def handle(self):
@@ -292,7 +290,7 @@ class Edit(AdminService):
             self.logger.info('No topics provided for subscription %s, deleting subscription', input.sub_key)
 
             for item in self.server.config_store.get_list('pubsub_subscription'):
-                if item.get('sub_key') == input.sub_key:
+                if item['sub_key'] == input.sub_key:
                     self.server.config_store.delete('pubsub_subscription', item['id'])
                     break
 
@@ -302,7 +300,7 @@ class Edit(AdminService):
             self.response.payload.sub_key = input.sub_key
             self.response.payload.is_pub_active = input.get('is_pub_active', True)
             self.response.payload.is_delivery_active = input.get('is_delivery_active', True)
-            self.response.payload.sec_name = sec_def['name']
+            self.response.payload.security = sec_def['name']
             self.response.payload.delivery_type = input.delivery_type
             self.response.payload.topic_name_list = []
             self.response.payload.topic_link_list = []
@@ -311,8 +309,7 @@ class Edit(AdminService):
         topic_objects_list = _build_topic_objects_list(topic_data_list=topic_data_list)
 
         sec_def = _get_sec_by_id(self.server, input.sec_base_id)
-        sec_name = sec_def['name']
-        username = sec_def.get('username', '')
+        security = sec_def['name']
 
         topic_link_list = []
         for topic_obj in topic_objects_list:
@@ -322,9 +319,9 @@ class Edit(AdminService):
         existing = None
         sub_id = None
         for item in self.server.config_store.get_list('pubsub_subscription'):
-            if item.get('sub_key') == input.sub_key:
+            if item['sub_key'] == input.sub_key:
                 existing = item
-                sub_id = item.get('id')
+                sub_id = item['id']
                 break
 
         if not sub_id:
@@ -337,16 +334,15 @@ class Edit(AdminService):
             'sub_key': input.sub_key,
             'is_delivery_active': input.get('is_delivery_active', True),
             'is_pub_active': input.get('is_pub_active', True),
-            'created': existing.get('created', str(utcnow())),
+            'created': existing['created'],
             'sec_base_id': input.sec_base_id,
-            'sec_name': sec_name,
-            'username': username,
-            'security': sec_name,
+            'username': sec_def['username'],
+            'security': security,
             'delivery_type': input.delivery_type,
             'push_type': input.get('push_type') or '',
-            'rest_push_endpoint_id': input.get('rest_push_endpoint_id'),
-            'push_service_name': input.get('push_service_name') or '',
-            'topic_name_list': topic_objects_list,
+            'push_rest_endpoint': input.get('rest_push_endpoint_id') or '',
+            'push_service': input.get('push_service_name') or '',
+            'topic_list': [t['topic_name'] for t in topic_objects_list],
             'topic_link_list': ', '.join(sorted(topic_link_list)),
         }
 
@@ -356,7 +352,7 @@ class Edit(AdminService):
         self.response.payload.sub_key = input.sub_key
         self.response.payload.is_pub_active = data['is_pub_active']
         self.response.payload.is_delivery_active = data['is_delivery_active']
-        self.response.payload.sec_name = sec_name
+        self.response.payload.security = security
         self.response.payload.delivery_type = input.delivery_type
 
         self.response.payload.topic_name_list = topic_objects_list
@@ -395,7 +391,7 @@ class _BaseModifyTopicList(AdminService):
     """
     action = '<Action-Not-Set>'
 
-    input = AsIs('topic_name_list'), '-username', '-sec_name', '-is_delivery_active', '-delivery_type', '-push_type', \
+    input = AsIs('topic_name_list'), '-username', '-security', '-is_delivery_active', '-delivery_type', '-push_type', \
         '-rest_push_endpoint_id', '-push_service_name', '-sub_key'
     output = AsIs('-topic_name_list'),
 
@@ -427,19 +423,14 @@ class _BaseModifyTopicList(AdminService):
         input = self.request.input
         cluster_id = 1
 
-        # Find security definition by username or sec_name via the config store
         sec_def = _find_security(
             self.server,
             username=getattr(input, 'username', None),
-            sec_name=getattr(input, 'sec_name', None)
+            security=getattr(input, 'security', None)
         )
 
         sec_base_id = sec_def['id']
-        sec_name = sec_def['name']
-        sec_username = sec_def.get('username', '')
-
-        lookup_field = 'username' if getattr(input, 'username', None) else 'sec_name'
-        lookup_value = getattr(input, 'username', None) or getattr(input, 'sec_name', None)
+        security = sec_def['name']
 
         # Find any existing subscriptions using GetList service
         subscriptions = self._get_subscriptions_by_sec(cluster_id, sec_base_id)
@@ -484,8 +475,8 @@ class _BaseModifyTopicList(AdminService):
                 current_sub = item
                 break
         else:
-            err_msg = '{}: Could not find subscription for input {} `{}` -> {}'.format(
-                self.action, lookup_field, lookup_value, subscriptions)
+            err_msg = '{}: Could not find subscription for security `{}` -> {}'.format(
+                self.action, security, subscriptions)
             raise Exception(err_msg)
 
         # Find topics and check permissions
@@ -496,9 +487,9 @@ class _BaseModifyTopicList(AdminService):
             if not _topic_exists(self.server, topic_name):
                 raise Exception('Topic `{}` not found'.format(topic_name))
 
-            if not _check_permission(self.server, sec_name, topic_name):
-                msg = 'User `{}` does not have permission for action `{}` on topic `{}`'.format(
-                    sec_username, self.action, topic_name)
+            if not _check_permission(self.server, security, topic_name):
+                msg = 'Security definition `{}` does not have permission for action `{}` on topic `{}`'.format(
+                    security, self.action, topic_name)
                 raise Exception(msg)
 
             new_topic_names.append(topic_name)

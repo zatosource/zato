@@ -33,6 +33,7 @@
             '_publishers',
             '_subscribers',
 
+            '_view',
             '_edit',
             '_delete',
             'id',
@@ -74,7 +75,7 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
 
-                        <th style="text-align:center"><a href="#">Description</a></th>
+                        <th><a href="#">Description</a></th>
                         <th class='ignore' style="text-align:center"><a href="#">Publishers</a></th>
                         <th class='ignore' style="text-align:center"><a href="#">Subscribers</a></th>
 
@@ -88,6 +89,8 @@
 
                         <th class='ignore'>&nbsp;</th>
 
+                        <th class='ignore'>&nbsp;</th>
+                    </tr>
                 </thead>
 
                 <tbody>
@@ -98,7 +101,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
 
-                        <td style="text-align:center">{{ item.description|no_value_indicator }}</td>
+                        <td>{{ item.description|no_value_indicator }}</td>
                         <td class='ignore' style="text-align:center">{{ item.publisher_count }}</td>
                         <td class='ignore' style="text-align:center">{{ item.subscriber_count }}</td>
 

@@ -92,21 +92,51 @@ function showTopicsAlert(pattern, event) {
     // Add to page and create dialog
     $('body').append(popupHtml);
 
+    // Convert page coordinates to viewport-relative for positioning
+    var scrollTop = $(window).scrollTop();
+    var scrollLeft = $(window).scrollLeft();
+    var viewportX = clickX - scrollLeft;
+    var viewportY = clickY - scrollTop;
+
     // Create draggable dialog using jQuery UI
     $('#' + popupId).dialog({
         autoOpen: true,
         width: '20em',
-        height: 'auto',  // Start with auto height, will adjust based on content
+        height: 'auto',
         maxHeight: 400,
         resizable: false,
         draggable: true,
-        position: { my: "left top", at: "left+" + (clickX + 10) + " top+" + clickY, of: window },
+        position: { my: "left top", at: "left+" + (viewportX + 10) + " top+" + viewportY, of: window },
         close: function() {
             $(this).dialog('destroy').remove();
         },
         create: function(event, ui) {
-            // Target only this specific dialog with a direct selector
             $(this).parent('.ui-dialog').css('width', '20em');
+        },
+        open: function() {
+            var $dlg = $(this);
+            var $widget = $dlg.dialog('widget');
+
+            function dismissHandler(e) {
+                if (!$widget.is(e.target) && $widget.has(e.target).length === 0) {
+                    $dlg.dialog('close');
+                }
+            }
+            function escHandler(e) {
+                if (e.key === 'Escape' || e.keyCode === 27) {
+                    $dlg.dialog('close');
+                }
+            }
+
+            setTimeout(function() {
+                $(document).on('mousedown.topicPopup' + popupId, dismissHandler);
+                $(document).on('keydown.topicPopup' + popupId, escHandler);
+            }, 0);
+
+            $dlg.on('dialogclose', function() {
+                $(document).off('mousedown.topicPopup' + popupId);
+                $(document).off('keydown.topicPopup' + popupId);
+            });
         }
     });
 
@@ -149,14 +179,16 @@ function showTopicsAlert(pattern, event) {
     var dialogHeight = dialog.outerHeight();
     var windowWidth = $(window).width();
     var windowHeight = $(window).height();
-    var scrollTop = $(window).scrollTop();
+    var curScrollTop = $(window).scrollTop();
 
+    var dialogOffset = dialog.offset();
     var newPosition = {};
-    if (clickX + dialogWidth > windowWidth - 20) {
-        newPosition.left = Math.max(20, windowWidth - dialogWidth - 20);
+
+    if (dialogOffset.left + dialogWidth > windowWidth + scrollLeft - 20) {
+        newPosition.left = Math.max(scrollLeft + 20, windowWidth + scrollLeft - dialogWidth - 20);
     }
-    if (clickY + dialogHeight > windowHeight + scrollTop - 20) {
-        newPosition.top = Math.max(scrollTop + 20, clickY - dialogHeight - 10);
+    if (dialogOffset.top + dialogHeight > windowHeight + curScrollTop - 20) {
+        newPosition.top = Math.max(curScrollTop + 20, clickY - dialogHeight - 10);
     }
 
     if (newPosition.left !== undefined || newPosition.top !== undefined) {
@@ -708,43 +740,39 @@ patternData = instance.pattern;
 
                 // Populate patterns
                 populatePatterns('edit', patternData);
+            }
+        }
 
-                // Function to display security definition name and add hidden input for ID
-                function initializeEditForm() {
-                    // Store the security definition ID in a hidden field - target only the edit form's container
-                    var $container = $('#edit-form .security-definition-container');
+        // Function to display security definition name and add hidden input for ID
+        function initializeEditForm() {
+            var $container = $('#edit-form .security-definition-container');
+            $container.empty();
+            $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
 
-                    // Clear all existing content from the container
-                    $container.empty();
+            var secName = instance.name || 'Security definition ID: ' + instance.sec_base_id;
+            var clusterID = $('#cluster_id').val() || (typeof cluster_id !== 'undefined' ? cluster_id : '1');
+            var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
+            $container.append(secLink);
 
-                    // Add hidden input for the security definition ID
-                    $container.append('<input type="hidden" id="id_edit-sec_base_id" name="edit-sec_base_id" value="' + instance.sec_base_id + '"/>');
+            updatePatternTypeOptions('edit');
+        }
 
-                    // Display the security definition name as a link
-                    var secName = instance.name || 'Security definition ID: ' + instance.sec_base_id;
-                    var clusterID = $('#cluster_id').val() || (typeof cluster_id !== 'undefined' ? cluster_id : '1');
-                    var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
-                    $container.append(secLink);
-
-                    // Update pattern options based on current access type
-                    updatePatternTypeOptions('edit');
-                }
-
-                // Always populate security definitions via AJAX when select element becomes available
-                var selectElement = $('#id_edit-sec_base_id');
-                if (selectElement.length > 0) {
-                    initializeEditForm();
-                } else {
-                    // Wait for the select element to be added to the DOM
-                    var observer = new MutationObserver(function(mutations) {
-                        var selectElement = $('#id_edit-sec_base_id');
-                        if (selectElement.length > 0) {
-                            initializeEditForm();
-                            observer.disconnect();
-                        }
-                    });
-                    observer.observe(document.body, { childList: true, subtree: true });
-                }
+        var selectElement = $('#id_edit-sec_base_id');
+        if (selectElement.length > 0) {
+            initializeEditForm();
+        } else {
+            var $container = $('#edit-form .security-definition-container');
+            if ($container.length > 0) {
+                initializeEditForm();
+            } else {
+                var observer = new MutationObserver(function(mutations) {
+                    var selectElement = $('#id_edit-sec_base_id');
+                    if (selectElement.length > 0) {
+                        initializeEditForm();
+                        observer.disconnect();
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
             }
         }
 

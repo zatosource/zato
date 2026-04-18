@@ -83,10 +83,10 @@ var Multi_Select_Empty_Message = '<table id="multi-select-table" class="multi-se
 
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
-        var s = '<PubSubSubscription id:{0} topic_link_list:{1} sec_name:{2} pattern_matched:{3}>';
+        var s = '<PubSubSubscription id:{0} topic_link_list:{1} security:{2} pattern_matched:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.topic_link_list ? this.topic_link_list : '(none)',
-                                this.sec_name ? this.sec_name : '(none)',
+                                this.security ? this.security : '(none)',
                                 this.pattern_matched ? this.pattern_matched : '(none)');
     }
 });
@@ -767,7 +767,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.sec_name), item.sec_name);
+    row += String.format('<td><a href="/zato/security/basic-auth/?cluster=1&query={0}">{1}</a></td>', encodeURIComponent(item.security), item.security);
 
     row += String.format('<td>{0}</td>', item.sub_key);
     row += String.format('<td style="text-align:center">{0}</td>', is_delivery_active ? 'Enabled' : 'Disabled');
@@ -800,18 +800,21 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
             row += String.format('<td style="text-align:center">Push <a href="/zato/http-soap/?cluster=1&query={0}&connection=outgoing&transport=plain_http">{1}</a></td>',
                 encodeURIComponent(endpointName), endpointName);
         } else if(item.push_type === 'service' && item.push_service_name) {
-            // For service push type, show the service name
             row += String.format('<td style="text-align:center">Push <a href="/zato/service/?cluster=1&query={0}">{1}</a></td>',
                 encodeURIComponent(item.push_service_name), item.push_service_name);
+        } else {
+            row += '<td style="text-align:center">Push</td>';
         }
     }
 
-    row += String.format('<td style="text-align:center">{0}</td>', item.topic_link_list);
+    row += String.format('<td>{0}</td>', item.topic_link_list);
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit('{0}');\">Edit</a>", item.id));
+    row += '<td style="text-align:center"><a href="/zato/eda/dashboard/?cluster=1">Queue</a></td>';
     row += String.format('<td style="text-align:center">{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_('{0}');\">Delete</a>", item.id));
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_delivery_active);
+    row += String.format("<td class='ignore'>{0}</td>", is_pub_active);
     row += String.format("<td class='ignore'>{0}</td>", item.delivery_type);
 
     row += String.format("<td class='ignore'>{0}</td>", item.sec_base_id);
@@ -820,6 +823,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 
     row += String.format("<td class='ignore'>{0}</td>", item.rest_push_endpoint_name);
     row += String.format("<td class='ignore'>{0}</td>", item.push_service_name);
+    row += String.format("<td class='ignore'>{0}</td>", item.topic_name_list || '');
 
     if(include_tr) {
         row += '</tr>';
@@ -903,7 +907,7 @@ $.fn.zato.pubsub.subscription.edit = function(instance_id) {
         console.log('DEBUG edit: added hidden input for sec_base_id=' + JSON.stringify(instance.sec_base_id));
 
         // Display the security definition name as a link
-        var secName = instance.sec_name || 'Security definition ID: ' + instance.sec_base_id;
+        var secName = instance.security || 'Security definition ID: ' + instance.sec_base_id;
         var clusterID = $('#cluster_id').val() || '1';
         var secLink = '<a href="/zato/security/basic-auth/?cluster=' + clusterID + '&query=' + encodeURIComponent(secName) + '" target="_blank">' + secName + '</a>';
         $container.append(secLink);
@@ -952,7 +956,7 @@ $.fn.zato.pubsub.subscription.create_edit_submit = function(data, status, xhr) {
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
     var instance = $.fn.zato.data_table.data[id];
 
-    var descriptor = 'Security: ' + instance.sec_name + '\nDelivery: ' + instance.delivery_type;
+    var descriptor = 'Security: ' + instance.security + '\nDelivery: ' + instance.delivery_type;
 
     // Define callback to repopulate security definitions after delete completes
     var afterDeleteCallback = function() {
