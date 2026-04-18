@@ -49,6 +49,7 @@ from zato.common.util.time_ import TimeUtil
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.config import ConfigStore
+from zato.common.config.manager import ConfigManager
 from zato_server_core import ConfigStore as RustConfigStore
 
 # ################################################################################################################################
@@ -114,6 +115,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
     config_store: 'RustConfigStore'
+    config_manager: 'ConfigManager'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
@@ -272,6 +274,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # The Rust-backed config store
         self.config_store = RustConfigStore()
+
+        # The Python-backed config manager (YAML source of truth)
+        self.config_manager = ConfigManager()
 
         # The main config store (Python side, populated from Rust store)
         self.config = ConfigStore()
@@ -710,6 +715,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 file_path = os.path.join(enmasse_dir, file_name)
                 logger.info('Loading enmasse auto-deploy YAML: %s', file_path)
                 self.config_store.load_yaml(file_path)
+                self.config_manager.load_yaml(file_path)
 
         self.reload_config()
 
@@ -1191,7 +1197,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         from zato.common.enmasse_.importer import EnmasseImporter
 
         try:
-            importer = EnmasseImporter(self.config_store)
+            importer = EnmasseImporter(self.config_manager)
             importer.import_(file_content)
         except Exception:
             exc = format_exc()
@@ -1207,6 +1213,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'len_stdout_human': '',
                 'len_stderr_human': '',
             })
+
+        # Keep the Rust store in sync during transition
+        try:
+            importer_rust = EnmasseImporter(self.config_store)
+            importer_rust.import_(file_content)
+        except Exception:
+            logger.warning('Rust config store bridge import failed (non-fatal during transition): %s', format_exc())
 
         try:
             self.reload_config()
@@ -1230,7 +1243,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def export_enmasse(self):
 
         from zato.common.enmasse_.exporter import EnmasseExporter
-        exporter = EnmasseExporter(self.config_store)
+        exporter = EnmasseExporter(self.config_manager)
         return exporter.export()
 
 # ################################################################################################################################
@@ -1333,6 +1346,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 return 'Demo scheduler config already imported'
 
         self.config_store.load_yaml(config_path)
+        self.config_manager.load_yaml(config_path)
         self.reload_config()
         return True
 
@@ -1391,6 +1405,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             return 'Demo config already imported'
 
         self.config_store.load_yaml(config_path)
+        self.config_manager.load_yaml(config_path)
         self.reload_config()
 
         start_publisher(self)

@@ -175,7 +175,7 @@ class ConfigLoader:
 # ################################################################################################################################
 
     def load_enmasse_yaml(self:'ParallelServer') -> 'None':
-        """ Loads default objects and enmasse YAML into the Rust ConfigStore.
+        """ Loads default objects and enmasse YAML into both stores.
         """
 
         # Load local secrets first (security definitions with encrypted passwords)
@@ -183,12 +183,14 @@ class ConfigLoader:
         if os.path.exists(secrets_yaml_path):
             logger.info('Loading secrets from %s', secrets_yaml_path)
             self.config_store.load_yaml(secrets_yaml_path)
+            self.config_manager.load_yaml(secrets_yaml_path)
 
         # Then load default objects -- shipped with the codebase (channels referencing security by name)
         from zato.common.data import default_objects_yaml_path
         if os.path.exists(default_objects_yaml_path):
             logger.info('Loading default objects from %s', default_objects_yaml_path)
             self.config_store.load_yaml(default_objects_yaml_path)
+            self.config_manager.load_yaml(default_objects_yaml_path)
 
         # Then load any enmasse YAML from external directories (Docker, deploy_auto_from)
         enmasse_dirs = []
@@ -207,6 +209,7 @@ class ConfigLoader:
                 for yaml_path in sorted(glob.glob(os.path.join(enmasse_dir, pattern))):
                     logger.info('Loading enmasse YAML from %s', yaml_path)
                     self.config_store.load_yaml(yaml_path)
+                    self.config_manager.load_yaml(yaml_path)
 
 # ################################################################################################################################
 

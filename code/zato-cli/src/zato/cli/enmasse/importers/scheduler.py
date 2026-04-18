@@ -28,16 +28,31 @@ logger = logging.getLogger(__name__)
 
 class SchedulerImporter:
 
-    @staticmethod
-    def preprocess(items:'anylist') -> 'anylist':
+    scheduler_defaults = {
+        'service': '',
+        'job_type': 'interval_based',
+        'is_active': True,
+    }
+
+    @classmethod
+    def preprocess(cls, items:'anylist') -> 'anylist':
 
         out = []
 
         for item in items:
             item = preprocess_item(item)
 
+            for key, default_value in cls.scheduler_defaults.items():
+                if key not in item:
+                    item[key] = default_value
+
+            if 'name' in item:
+                item['name'] = str(item['name'])
+
             if 'extra' in item:
                 extra = item['extra']
+                if isinstance(extra, dict):
+                    raise ValueError(f'Scheduler job extra must be a list or string, got dict: {extra}')
                 if isinstance(extra, list):
                     item['extra'] = '\n'.join(str(elem) for elem in extra if elem)
 
