@@ -351,7 +351,7 @@ def index(req):
 
     return TemplateResponse(req, 'zato/settings/python-packages/index.html', {
         'page_config': python_packages_page_config,
-        'requirements': requirements,
+        'textarea_content': requirements,
     })
 
 # ################################################################################################################################

@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, grafana_cloud, http_soap, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
+from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, http_soap, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -1051,6 +1051,20 @@ urlpatterns += [
         login_required(python_packages.restart_proxy), name='settings-python-packages-restart-proxy'),
     url(r'^zato/python-packages/restart-dashboard$',
         login_required(python_packages.restart_dashboard), name='settings-python-packages-restart-dashboard'),
+]
+# ################################################################################################################################
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Settings - Environment variables
+
+    url(r'^zato/env-variables/$',
+        login_required(env_variables.index), name='settings-env-variables'),
+    url(r'^zato/env-variables/test$',
+        login_required(env_variables.test), name='settings-env-variables-test'),
+    url(r'^zato/env-variables/save$',
+        login_required(env_variables.save), name='settings-env-variables-save'),
 ]
 # ################################################################################################################################
 # ################################################################################################################################

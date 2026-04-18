@@ -202,12 +202,12 @@ label.toggle:hover {
 .security-badge {
     display: flex;
     align-items: center;
-    padding: 4px 10px;
+    padding: 7px 10px 7px 5px;
     margin: 0;
     font-size: 12px;
     cursor: grab;
     user-select: none;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     transition: background 0.1s, opacity 0.12s;
     white-space: nowrap;
 }
@@ -217,12 +217,11 @@ label.toggle:hover {
 }
 
 .security-badge:hover {
-    background: rgba(0, 0, 0, 0.03);
+    background: rgba(0, 0, 0, 0.025);
 }
 
 .security-badge.selected {
     background: rgba(41, 128, 185, 0.08);
-    box-shadow: inset 3px 0 0 #5794d0;
 }
 
 .security-badge.dragging {
@@ -230,76 +229,80 @@ label.toggle:hover {
 }
 
 .security-badge-indicator {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
+    min-width: 5px;
+    min-height: 5px;
     border-radius: 50%;
-    margin-right: 6px;
-    flex-shrink: 0;
+    margin: 0;
+    flex: 0 0 5px;
     background: transparent;
     transition: background 0.12s;
 }
 
 .security-badge:hover .security-badge-indicator {
-    background: #999;
+    background: #3b7fc4;
 }
 
 .security-badge.selected .security-badge-indicator {
-    background: #5794d0;
+    background: #3b7fc4;
 }
 
 .security-badge-number {
     display: inline-block;
-    width: 22px;
+    width: 16px;
     font-size: 10px;
     color: #999;
     text-align: right;
-    margin-right: 8px;
+    margin-right: 6px;
     flex-shrink: 0;
 }
 
 .security-badge-type {
     display: inline-block;
-    width: 72px;
-    padding: 1px 6px;
+    width: 76px;
+    padding: 3px 6px;
     font-size: 10px;
-    font-weight: 500;
-    margin-right: 8px;
+    font-weight: 600;
+    margin-right: 10px;
     flex-shrink: 0;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.3px;
     text-align: center;
     box-sizing: border-box;
+    text-transform: uppercase;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 }
 
 .security-badge-type[data-security-type="apikey"] {
-    background: linear-gradient(180deg, rgba(227, 242, 253, 0.9), rgba(187, 222, 251, 0.7));
-    color: #1565c0;
-    border: 1px solid rgba(21, 101, 192, 0.2);
+    background: rgba(37, 99, 175, 0.08);
+    color: #1a56a8;
+    border: 1px solid rgba(37, 99, 175, 0.22);
 }
 
 .security-badge-type[data-security-type="basic_auth"] {
-    background: linear-gradient(180deg, rgba(232, 245, 233, 0.9), rgba(200, 230, 201, 0.7));
-    color: #2e7d32;
-    border: 1px solid rgba(46, 125, 50, 0.2);
+    background: rgba(22, 120, 55, 0.08);
+    color: #15713a;
+    border: 1px solid rgba(22, 120, 55, 0.22);
 }
 
 .security-badge-type[data-security-type="ntlm"] {
-    background: linear-gradient(180deg, rgba(255, 243, 224, 0.9), rgba(255, 224, 178, 0.7));
-    color: #e65100;
-    border: 1px solid rgba(230, 81, 0, 0.2);
+    background: rgba(140, 82, 10, 0.08);
+    color: #8c520a;
+    border: 1px solid rgba(140, 82, 10, 0.22);
 }
 
 .security-badge-type[data-security-type="oauth"] {
-    background: linear-gradient(180deg, rgba(243, 229, 245, 0.9), rgba(225, 190, 231, 0.7));
-    color: #6a1b9a;
-    border: 1px solid rgba(106, 27, 154, 0.2);
+    background: rgba(100, 40, 150, 0.08);
+    color: #5c2d91;
+    border: 1px solid rgba(100, 40, 150, 0.22);
 }
 
 .security-badge-name {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #333;
+    color: #1f2937;
+    font-weight: 400;
 }
 
 .badge-marquee {
@@ -323,6 +326,12 @@ label.toggle:hover {
     width: auto;
     flex-shrink: 0;
     font-size: 12px;
+}
+
+.badge-picker-filter .chosen-container {
+    min-width: 0 !important;
+    width: auto !important;
+    flex-shrink: 0;
 }
 
 .badge-picker-filter input[type="text"] {
@@ -357,9 +366,4 @@ label.toggle:hover {
     padding: 12px;
     text-align: center;
     width: 100%;
-}
-
-/* Dialog containing a badge-picker needs more width */
-.ui-dialog:has(.badge-picker) {
-    width: 62em !important;
 }

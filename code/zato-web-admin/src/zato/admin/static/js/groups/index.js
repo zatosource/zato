@@ -49,6 +49,15 @@ $.fn.zato.groups.badge_picker.init = function(action, data) {
     available_body.empty();
     assigned_body.empty();
 
+    // Sort order for security types
+    var type_order = { 'basic_auth': 0, 'apikey': 1, 'ntlm': 2, 'oauth': 3 };
+    var sort_fn = function(a, b) {
+        var oa = type_order[a.sec_type] !== undefined ? type_order[a.sec_type] : 99;
+        var ob = type_order[b.sec_type] !== undefined ? type_order[b.sec_type] : 99;
+        if (oa !== ob) return oa - ob;
+        return (a.name || '').localeCompare(b.name || '');
+    };
+
     // Global numbering counter
     var num = 1;
 
@@ -63,6 +72,9 @@ $.fn.zato.groups.badge_picker.init = function(action, data) {
             available_items.push(data[i]);
         }
     }
+
+    assigned_items.sort(sort_fn);
+    available_items.sort(sort_fn);
 
     // Render assigned first (they get lower numbers)
     for (var i = 0; i < assigned_items.length; i++) {
@@ -91,8 +103,16 @@ $.fn.zato.groups.badge_picker._make_badge = function(item, num) {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.groups.badge_picker.renumber = function(action) {
-    var num = 1;
-    $('#badge-picker-' + action + ' .security-badge:visible').each(function() {
+    var num;
+
+    num = 1;
+    $('#badge-zone-available-' + action + ' .badge-zone-body .security-badge:visible').each(function() {
+        $(this).find('.security-badge-number').text(num + '.');
+        num++;
+    });
+
+    num = 1;
+    $('#badge-zone-assigned-' + action + ' .badge-zone-body .security-badge:visible').each(function() {
         $(this).find('.security-badge-number').text(num + '.');
         num++;
     });
@@ -145,140 +165,153 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
         $.fn.zato.groups.badge_picker.renumber(action);
     });
 
-    // Marquee (rectangle select)
+    // Marquee (rectangle select) and Drag share a unified mousedown
     var marquee_state = {};
+    var drag_state = {};
 
-    picker.find('.badge-zone-body').off('mousedown.marquee').on('mousedown.marquee', function(e) {
-        if ($(e.target).closest('.security-badge').length && !e.ctrlKey && !e.metaKey) {
-            return; // Let drag handle it
-        }
-        if ($(e.target).closest('.security-badge').length) {
-            return; // Ctrl+click handled by click handler
+    picker.find('.badge-zone-body').off('mousedown.unified').on('mousedown.unified', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            if ($(e.target).closest('.security-badge').length) {
+                return; // Ctrl+click handled by click handler
+            }
         }
 
         var zone_body = $(this);
+        var badge = $(e.target).closest('.security-badge');
         var offset = zone_body.offset();
         var scroll_top = zone_body.scrollTop();
         var scroll_left = zone_body.scrollLeft();
 
-        marquee_state.active = true;
+        marquee_state.pending = true;
+        marquee_state.active = false;
         marquee_state.zone_body = zone_body;
         marquee_state.start_x = e.pageX - offset.left + scroll_left;
         marquee_state.start_y = e.pageY - offset.top + scroll_top;
+        marquee_state.page_x = e.pageX;
+        marquee_state.page_y = e.pageY;
+        marquee_state.badge = badge.length ? badge : null;
 
-        var marquee = $('<div class="badge-marquee"></div>');
-        zone_body.append(marquee);
-        marquee_state.marquee = marquee;
-
-        if (!e.ctrlKey && !e.metaKey) {
-            zone_body.find('.security-badge.selected').removeClass('selected');
-        }
-
-        e.preventDefault();
-    });
-
-    $(document).off('mousemove.marquee_' + action).on('mousemove.marquee_' + action, function(e) {
-        if (!marquee_state.active) return;
-
-        var zone_body = marquee_state.zone_body;
-        var offset = zone_body.offset();
-        var scroll_top = zone_body.scrollTop();
-        var scroll_left = zone_body.scrollLeft();
-
-        var cur_x = e.pageX - offset.left + scroll_left;
-        var cur_y = e.pageY - offset.top + scroll_top;
-
-        var x = Math.min(marquee_state.start_x, cur_x);
-        var y = Math.min(marquee_state.start_y, cur_y);
-        var w = Math.abs(cur_x - marquee_state.start_x);
-        var h = Math.abs(cur_y - marquee_state.start_y);
-
-        marquee_state.marquee.css({ left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
-
-        var marquee_rect = { left: x, top: y, right: x + w, bottom: y + h };
-
-        zone_body.find('.security-badge:visible').each(function() {
-            var badge = $(this);
-            var pos = badge.position();
-            var badge_rect = { left: pos.left, top: pos.top, right: pos.left + badge.outerWidth(), bottom: pos.top + badge.outerHeight() };
-
-            var intersects = !(badge_rect.right < marquee_rect.left || badge_rect.left > marquee_rect.right ||
-                             badge_rect.bottom < marquee_rect.top || badge_rect.top > marquee_rect.bottom);
-
-            if (intersects) {
-                badge.addClass('selected');
-            } else if (!e.ctrlKey && !e.metaKey) {
-                badge.removeClass('selected');
-            }
-        });
-    });
-
-    $(document).off('mouseup.marquee_' + action).on('mouseup.marquee_' + action, function() {
-        if (!marquee_state.active) return;
-        marquee_state.active = false;
-        if (marquee_state.marquee) {
-            marquee_state.marquee.remove();
-            marquee_state.marquee = null;
-        }
-    });
-
-    // Drag and drop - works on single badge OR multi-selected badges
-    var drag_state = {};
-
-    picker.off('mousedown.drag', '.security-badge').on('mousedown.drag', '.security-badge', function(e) {
-        if (e.ctrlKey || e.metaKey) return; // Let click handle selection
-
-        var badge = $(this);
-        var source_zone = badge.closest('.badge-zone');
-
-        drag_state.active = true;
-        drag_state.badge = badge;
-        drag_state.source_zone = source_zone;
-        drag_state.start_x = e.pageX;
-        drag_state.start_y = e.pageY;
+        drag_state.active = false;
         drag_state.dragging = false;
 
+        if (badge.length) {
+            drag_state.badge = badge;
+            drag_state.source_zone = badge.closest('.badge-zone');
+            drag_state.start_x = e.pageX;
+            drag_state.start_y = e.pageY;
+        }
+
         e.preventDefault();
     });
 
-    $(document).off('mousemove.drag_' + action).on('mousemove.drag_' + action, function(e) {
-        if (!drag_state.active) return;
+    $(document).off('mousemove.unified_' + action).on('mousemove.unified_' + action, function(e) {
+        // Pending state: decide whether this is a marquee or a drag
+        if (marquee_state.pending && !marquee_state.active && !drag_state.active) {
+            var dx = Math.abs(e.pageX - marquee_state.page_x);
+            var dy = Math.abs(e.pageY - marquee_state.page_y);
 
-        var dx = e.pageX - drag_state.start_x;
-        var dy = e.pageY - drag_state.start_y;
-        if (!drag_state.dragging && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
-            drag_state.dragging = true;
+            if (dx > 5 || dy > 5) {
+                // If started on a badge and moving mostly horizontal, it's a drag
+                if (marquee_state.badge && dx > dy * 1.5) {
+                    drag_state.active = true;
+                    marquee_state.pending = false;
+                } else {
+                    // It's a marquee
+                    marquee_state.active = true;
+                    marquee_state.pending = false;
 
-            // If the dragged badge is not selected, select only it
-            if (!drag_state.badge.hasClass('selected')) {
-                drag_state.source_zone.find('.security-badge.selected').removeClass('selected');
-                drag_state.badge.addClass('selected');
+                    var zone_body = marquee_state.zone_body;
+                    var marquee = $('<div class="badge-marquee"></div>');
+                    zone_body.append(marquee);
+                    marquee_state.marquee = marquee;
+
+                    if (!e.ctrlKey && !e.metaKey) {
+                        zone_body.find('.security-badge.selected').removeClass('selected');
+                    }
+                }
             }
-
-            drag_state.badges = drag_state.source_zone.find('.security-badge.selected');
-            drag_state.badges.addClass('dragging');
-
-            var ghost = $('<div class="badge-drag-ghost"></div>');
-            ghost.text(drag_state.badges.length + ' item' + (drag_state.badges.length > 1 ? 's' : ''));
-            $('body').append(ghost);
-            drag_state.ghost = ghost;
         }
 
-        if (drag_state.dragging && drag_state.ghost) {
-            drag_state.ghost.css({ left: e.pageX + 12, top: e.pageY + 12 });
+        // Marquee movement
+        if (marquee_state.active) {
+            var zone_body = marquee_state.zone_body;
+            var offset = zone_body.offset();
+            var scroll_top = zone_body.scrollTop();
+            var scroll_left = zone_body.scrollLeft();
 
-            var target = $.fn.zato.groups.badge_picker._get_drop_target(e, picker, drag_state.source_zone);
-            picker.find('.badge-zone').removeClass('drop-target');
-            if (target) {
-                target.addClass('drop-target');
+            var cur_x = e.pageX - offset.left + scroll_left;
+            var cur_y = e.pageY - offset.top + scroll_top;
+
+            var x = Math.min(marquee_state.start_x, cur_x);
+            var y = Math.min(marquee_state.start_y, cur_y);
+            var w = Math.abs(cur_x - marquee_state.start_x);
+            var h = Math.abs(cur_y - marquee_state.start_y);
+
+            marquee_state.marquee.css({ left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+
+            var marquee_rect = { left: x, top: y, right: x + w, bottom: y + h };
+
+            zone_body.find('.security-badge:visible').each(function() {
+                var badge = $(this);
+                var pos = badge.position();
+                var badge_rect = { left: pos.left, top: pos.top, right: pos.left + badge.outerWidth(), bottom: pos.top + badge.outerHeight() };
+
+                var intersects = !(badge_rect.right < marquee_rect.left || badge_rect.left > marquee_rect.right ||
+                                 badge_rect.bottom < marquee_rect.top || badge_rect.top > marquee_rect.bottom);
+
+                if (intersects) {
+                    badge.addClass('selected');
+                } else if (!e.ctrlKey && !e.metaKey) {
+                    badge.removeClass('selected');
+                }
+            });
+        }
+
+        // Drag movement
+        if (drag_state.active) {
+            var dx = e.pageX - drag_state.start_x;
+            var dy = e.pageY - drag_state.start_y;
+            if (!drag_state.dragging && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+                drag_state.dragging = true;
+
+                if (!drag_state.badge.hasClass('selected')) {
+                    drag_state.source_zone.find('.security-badge.selected').removeClass('selected');
+                    drag_state.badge.addClass('selected');
+                }
+
+                drag_state.badges = drag_state.source_zone.find('.security-badge.selected');
+                drag_state.badges.addClass('dragging');
+
+                var ghost = $('<div class="badge-drag-ghost"></div>');
+                ghost.text(drag_state.badges.length + ' item' + (drag_state.badges.length > 1 ? 's' : ''));
+                $('body').append(ghost);
+                drag_state.ghost = ghost;
+            }
+
+            if (drag_state.dragging && drag_state.ghost) {
+                drag_state.ghost.css({ left: e.pageX + 12, top: e.pageY + 12 });
+
+                var target = $.fn.zato.groups.badge_picker._get_drop_target(e, picker, drag_state.source_zone);
+                picker.find('.badge-zone').removeClass('drop-target');
+                if (target) {
+                    target.addClass('drop-target');
+                }
             }
         }
     });
 
-    $(document).off('mouseup.drag_' + action).on('mouseup.drag_' + action, function(e) {
-        if (!drag_state.active) return;
+    $(document).off('mouseup.unified_' + action).on('mouseup.unified_' + action, function(e) {
+        // Handle marquee end
+        if (marquee_state.active) {
+            marquee_state.active = false;
+            if (marquee_state.marquee) {
+                marquee_state.marquee.remove();
+                marquee_state.marquee = null;
+            }
+        }
 
-        if (drag_state.dragging) {
+        // Handle drag end
+        if (drag_state.active && drag_state.dragging) {
             var target = $.fn.zato.groups.badge_picker._get_drop_target(e, picker, drag_state.source_zone);
             if (target) {
                 var target_body = target.find('.badge-zone-body');
@@ -296,7 +329,10 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
             }
         }
 
-        drag_state = {};
+        marquee_state.pending = false;
+        marquee_state.active = false;
+        drag_state.active = false;
+        drag_state.dragging = false;
     });
 
     // Filter events
@@ -477,6 +513,7 @@ $.fn.zato.groups.badge_picker.load = function(action, group_id) {
 $.fn.zato.groups.create = function() {
     $.fn.zato.groups.badge_picker.load('create', null);
     $.fn.zato.data_table._create_edit('create', 'Create a security group', null);
+    $('#create-div').dialog('option', 'width', '45em');
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -485,6 +522,7 @@ $.fn.zato.groups.edit = function(id) {
     var instance = $.fn.zato.data_table.data[id];
     $.fn.zato.groups.badge_picker.load('edit', instance.id);
     $.fn.zato.data_table._create_edit('edit', 'Edit the security group', id);
+    $('#edit-div').dialog('option', 'width', '45em');
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

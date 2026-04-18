@@ -717,7 +717,6 @@ $.fn.zato.data_table.setup_change_password = function() {
     $('#change_password-div').dialog({
         autoOpen: false,
         width: '40em',
-        resizable: true,
         close: function(e, ui) {
             $.fn.zato.data_table.reset_form(form_id);
         }
@@ -932,7 +931,6 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
         $(div_id).dialog({
             autoOpen: false,
             width: '40em',
-            resizable: true,
             close: function(e, ui) {
                 $.fn.zato.data_table.reset_form(form_id);
             }
