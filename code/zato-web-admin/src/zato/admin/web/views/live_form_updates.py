@@ -259,11 +259,11 @@ def _parse_request_data(request_data):
 # ################################################################################################################################
 # ################################################################################################################################
 
-@method_allowed('POST')
+@method_allowed('GET')
 def stream(req):
     """ SSE endpoint for live form updates.
-    The client POSTs a JSON body describing what object types it cares about
-    and what items it currently has. The server then streams diffs as SSE events.
+    The client opens an EventSource (GET) with the snapshot data as a query parameter.
+    The server then streams diffs as SSE events.
     """
     stream_logger = getLogger('zato.live_form_updates')
 
@@ -271,13 +271,13 @@ def stream(req):
         req.META.get('REMOTE_ADDR'), req.method)
 
     try:
-        body = req.body.decode('utf-8')
-        stream_logger.info('live_form_updates.stream: request body length=%d', len(body))
-        stream_logger.info('live_form_updates.stream: request body=%s', body[:500])
-        request_data = loads(body)
+        snapshot_json = req.GET.get('snapshot', '{}')
+        stream_logger.info('live_form_updates.stream: snapshot length=%d', len(snapshot_json))
+        stream_logger.info('live_form_updates.stream: snapshot=%s', snapshot_json[:500])
+        request_data = loads(snapshot_json)
     except Exception:
-        stream_logger.error('live_form_updates.stream: failed to parse request body: %s', format_exc())
-        return HttpResponseBadRequest('Invalid JSON body')
+        stream_logger.error('live_form_updates.stream: failed to parse snapshot: %s', format_exc())
+        return HttpResponseBadRequest('Invalid JSON in snapshot parameter')
 
     initial_object_types = _parse_request_data(request_data)
     stream_logger.info('live_form_updates.stream: parsed %d object types: %s',
@@ -310,7 +310,6 @@ def stream(req):
 
             while True:
                 iteration += 1
-                current_time = time.time()
                 all_diffs = {}
 
                 for object_type, _ in initial_object_types:
@@ -342,7 +341,6 @@ def stream(req):
                     stream_logger.info('live_form_updates.stream: iter=%d, sending diff, length=%d', iteration, len(msg))
                     yield 'data: {}\n\n'.format(msg)
                 else:
-                    # Always yield a comment so Django detects broken pipe quickly
                     yield ': ping\n\n'
 
                 time.sleep(1)

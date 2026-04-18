@@ -2676,84 +2676,42 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
         $.fn.zato.live_form_updates.stop(action);
 
         var request_data = $.fn.zato.live_form_updates._build_request(action);
-        console.log('[live_form_updates] start: request_data=', JSON.stringify(request_data));
+        var snapshot_json = JSON.stringify(request_data);
+        console.log('[live_form_updates] start: snapshot_json length=' + snapshot_json.length);
 
-        // POST the initial snapshot and open SSE via fetch + ReadableStream
-        var _action = action;
+        var url = '/zato/live-form-updates/?snapshot=' + encodeURIComponent(snapshot_json);
 
-        fetch('/zato/live-form-updates/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': $.cookie('csrftoken')
-            },
-            body: JSON.stringify(request_data)
-        }).then(function(response) {
-            console.log('[live_form_updates] start: fetch response status=' + response.status);
-            if(!response.ok) {
-                console.error('[live_form_updates] start: HTTP error', response.status);
-                return;
+        var evtSource = new EventSource(url);
+
+        _connections[action] = {
+            evtSource: evtSource
+        };
+
+        evtSource.onopen = function() {
+            console.log('[live_form_updates] start: EventSource connected for action=' + action);
+        };
+
+        evtSource.onmessage = function(event) {
+            console.log('[live_form_updates] onmessage: action=' + action + ', data=' + event.data.substring(0, 200));
+            try {
+                var diffs = JSON.parse(event.data);
+                $.fn.zato.live_form_updates._apply_diffs(action, diffs);
             }
-
-            var reader = response.body.getReader();
-            var decoder = new TextDecoder();
-            var buffer = '';
-
-            _connections[_action] = {
-                reader: reader,
-                closed: false
-            };
-
-            console.log('[live_form_updates] start: SSE connection established for action=' + _action);
-
-            function pump() {
-                if(_connections[_action] && _connections[_action].closed) {
-                    console.log('[live_form_updates] pump: connection closed for action=' + _action + ', stopping');
-                    reader.cancel();
-                    return;
-                }
-
-                reader.read().then(function(result) {
-                    if(result.done) {
-                        console.log('[live_form_updates] pump: stream done for action=' + _action);
-                        return;
-                    }
-
-                    buffer += decoder.decode(result.value, {stream: true});
-
-                    var lines = buffer.split('\n');
-                    buffer = lines.pop();
-
-                    for(var i = 0; i < lines.length; i++) {
-                        var line = lines[i];
-                        if(line.indexOf('data: ') === 0) {
-                            var json_str = line.substring(6);
-                            console.log('[live_form_updates] pump: received SSE data for action=' + _action + ': ' + json_str.substring(0, 200));
-                            try {
-                                var diffs = JSON.parse(json_str);
-                                $.fn.zato.live_form_updates._apply_diffs(_action, diffs);
-                            }
-                            catch(e) {
-                                console.error('[live_form_updates] pump: JSON parse error', e);
-                            }
-                        }
-                        else if(line.indexOf(': ') === 0) {
-                            console.log('[live_form_updates] pump: SSE comment: ' + line);
-                        }
-                    }
-
-                    pump();
-                }).catch(function(err) {
-                    if(!(_connections[_action] && _connections[_action].closed)) {
-                        console.error('[live_form_updates] pump: stream read error', err);
-                    }
-                });
+            catch(e) {
+                console.error('[live_form_updates] onmessage: JSON parse error', e);
             }
+        };
 
-            pump();
-        }).catch(function(err) {
-            console.error('[live_form_updates] start: fetch error', err);
-        });
+        evtSource.onerror = function(err) {
+            console.log('[live_form_updates] onerror: action=' + action + ', readyState=' + evtSource.readyState);
+            // readyState 2 = CLOSED; don't reconnect
+            if(evtSource.readyState === EventSource.CLOSED) {
+                console.log('[live_form_updates] onerror: EventSource closed for action=' + action);
+            }
+            // Prevent auto-reconnect by closing on error
+            evtSource.close();
+            delete _connections[action];
+        };
     };
 
     // ------------------------------------------------------------------------------------------------------------------------
@@ -2761,10 +2719,9 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
     $.fn.zato.live_form_updates.stop = function(action) {
         var conn = _connections[action];
         if(conn) {
-            console.log('[live_form_updates] stop: closing connection for action=' + action);
-            conn.closed = true;
-            if(conn.reader) {
-                try { conn.reader.cancel(); } catch(e) {}
+            console.log('[live_form_updates] stop: closing EventSource for action=' + action);
+            if(conn.evtSource) {
+                conn.evtSource.close();
             }
             delete _connections[action];
         } else {
