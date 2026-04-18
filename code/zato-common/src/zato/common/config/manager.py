@@ -59,10 +59,20 @@ class ConfigManager:
 
 # ################################################################################################################################
 
+    # YAML sections that also populate a legacy runtime bucket.
+    _also_write_to = {
+        'ldap': 'generic_connection',
+        'confluence': 'generic_connection',
+        'jira': 'generic_connection',
+        'microsoft_365': 'generic_connection',
+    }
+
     def _apply_yaml_data(self, data:'anydict') -> 'None':
         """ Merge parsed YAML data into the store.
         Must be called under self.lock.
         """
+        from zato.common.util.snowflake import new_snowflake
+
         for section, items in data.items():
             if not isinstance(items, list):
                 continue
@@ -83,7 +93,14 @@ class ConfigManager:
                     logger.warning('Skipping item without %s in section %s', key_field, section)
                     continue
 
+                if 'id' not in item:
+                    item['id'] = section + '.' + new_snowflake(section)
+
                 section_store[key] = item
+
+                also = self._also_write_to.get(section)
+                if also:
+                    self._store[also][key] = item
 
 # ################################################################################################################################
 
@@ -133,11 +150,15 @@ class ConfigManager:
 # ################################################################################################################################
 
     def set(self, section:'str', name:'str', data:'anydict') -> 'None':
-        """ Upsert an item in a section.
+        """ Upsert an item in a section. Auto-assigns an 'id' if missing.
         """
+        from zato.common.util.snowflake import new_snowflake
         with self.lock:
             section_store = self._store[section]
-            section_store[name] = deepcopy(data)
+            item = deepcopy(data)
+            if 'id' not in item:
+                item['id'] = section + '.' + new_snowflake(section)
+            section_store[name] = item
 
 # ################################################################################################################################
 

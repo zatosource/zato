@@ -35,7 +35,7 @@ class _Base(AdminService):
     """
     def _get_cache_by_input(self, needs_config=False):
         cache_id = str(self.request.input.id)
-        cache_list = self.server.config_manager.get_list('cache_builtin')
+        cache_list = self.server.config_manager.get_list('cache')
         cache_item = None
         for item in cache_list:
             if item.get('id') == cache_id:

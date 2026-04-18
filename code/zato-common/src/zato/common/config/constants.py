@@ -38,6 +38,7 @@ PubSub_Permission   = 'pubsub_permission'
 PubSub_Subscription = 'pubsub_subscription'
 Elastic_Search      = 'elastic_search'
 Service             = 'service'
+Generic_Connection  = 'generic_connection'
 
 # All valid section names.
 All_Sections = frozenset([
@@ -68,6 +69,7 @@ All_Sections = frozenset([
     PubSub_Subscription,
     Elastic_Search,
     Service,
+    Generic_Connection,
 ])
 
 # Sections whose items are keyed by 'security' rather than 'name'.

@@ -45,7 +45,7 @@ class _object_type:
 
 _object_alias = {}
 
-_object_alias[_object_type.Cache] = 'cache_builtin'
+_object_alias[_object_type.Cache] = 'cache'
 _object_alias[_object_type.Channel_REST] = 'channel_plain_http'
 _object_alias[_object_type.Confluence] = 'zato_generic_connection:cloud-confluence'
 _object_alias[_object_type.Jira] = 'zato_generic_connection:cloud-jira'

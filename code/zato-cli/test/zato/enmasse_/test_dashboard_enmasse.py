@@ -199,7 +199,7 @@ class TestDashboardEnmasse(TestCase):
         cls._server_thread.start()
 
         try:
-            _wait_for_server('127.0.0.1', cls.port, _PASSWORD, timeout=60)
+            _wait_for_server('127.0.0.1', cls.port, _PASSWORD, timeout=5)
         except Exception:
             cls._dump_debug(repo_location)
             _kill_proc(_server_proc)

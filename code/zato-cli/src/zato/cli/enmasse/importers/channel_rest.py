@@ -28,6 +28,26 @@ logger = logging.getLogger(__name__)
 
 class ChannelImporter:
 
+    channel_defaults = {
+        'is_active': True,
+        'merge_url_params_req': True,
+        'match_slash': True,
+        'content_encoding': '',
+        'cache_type': None,
+        'cache_name': '',
+        'cache_expiry': 0,
+        'data_format': 'json',
+        'transport': 'plain_http',
+        'connection': 'channel',
+        'soap_action': '',
+        'soap_version': None,
+        'sec_type': None,
+        'security_id': None,
+        'security_name': None,
+        'is_internal': False,
+        'serialization_type': 'string',
+    }
+
     @staticmethod
     def preprocess(items:'anylist') -> 'anylist':
 
@@ -35,6 +55,15 @@ class ChannelImporter:
 
         for item in items:
             item = preprocess_item(item)
+
+            for key, default_value in ChannelImporter.channel_defaults.items():
+                if key not in item:
+                    item[key] = default_value
+
+            if 'service_name' not in item and 'service' in item:
+                item['service_name'] = item['service']
+            item.setdefault('service_name', '')
+            item.setdefault('service_id', None)
 
             if 'gateway_service_list' in item:
                 gw_list = item['gateway_service_list']

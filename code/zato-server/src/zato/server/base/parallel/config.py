@@ -13,6 +13,7 @@ from logging import getLogger
 
 # Zato
 from zato.bunch import Bunch
+from zato.common.api import PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.util.config import resolve_name
 from zato.common.util.url_dispatcher import get_match_target
 from zato.server.config import ConfigDict
@@ -51,7 +52,7 @@ class ConfigLoader:
 
 # ################################################################################################################################
 
-    def _config_dict_from_rust(self, name, entity_type):
+    def _config_dict_from_manager(self, name, entity_type):
         """ Build a delegating ConfigDict backed by the Rust ConfigStore.
         """
         return ConfigDict(name, config_manager=self.config_manager, entity_type=entity_type)
@@ -64,43 +65,43 @@ class ConfigLoader:
     ) -> 'None':
 
         # Search - ElasticSearch
-        self.config.search_es = self._config_dict_from_rust('search_es', 'elastic_search')
+        self.config.search_es = self._config_dict_from_manager('search_es', 'elastic_search')
 
         # Services
-        self.config.service = self._config_dict_from_rust('service_list', 'service')
+        self.config.service = self._config_dict_from_manager('service_list', 'service')
 
         # Channels - AMQP
-        self.config.channel_amqp = self._config_dict_from_rust('channel_amqp', 'channel_amqp')
+        self.config.channel_amqp = self._config_dict_from_manager('channel_amqp', 'channel_amqp')
 
         # Outgoing - AMQP
-        self.config.out_amqp = self._config_dict_from_rust('out_amqp', 'outgoing_amqp')
+        self.config.out_amqp = self._config_dict_from_manager('out_amqp', 'outgoing_amqp')
 
         # Caches
-        self.config.cache_builtin = self._config_dict_from_rust('cache_builtin', 'cache_builtin')
+        self.config.cache_builtin = self._config_dict_from_manager('cache_builtin', 'cache')
 
         # FTP
-        self.config.out_ftp = self._config_dict_from_rust('out_ftp', 'outgoing_ftp')
+        self.config.out_ftp = self._config_dict_from_manager('out_ftp', 'outgoing_ftp')
 
         # Odoo
-        self.config.out_odoo = self._config_dict_from_rust('out_odoo', 'outgoing_odoo')
+        self.config.out_odoo = self._config_dict_from_manager('out_odoo', 'odoo')
 
         # SAP RFC
-        self.config.out_sap = self._config_dict_from_rust('out_sap', 'outgoing_sap')
+        self.config.out_sap = self._config_dict_from_manager('out_sap', 'outgoing_sap')
 
         # REST
-        self.config.out_plain_http = self._config_dict_from_rust('out_plain_http', 'outgoing_rest')
+        self.config.out_plain_http = self._config_dict_from_manager('out_plain_http', 'outgoing_rest')
 
         # SOAP
-        self.config.out_soap = self._config_dict_from_rust('out_soap', 'outgoing_soap')
+        self.config.out_soap = self._config_dict_from_manager('out_soap', 'outgoing_soap')
 
         # SQL
-        self.config.out_sql = self._config_dict_from_rust('out_sql', 'outgoing_sql')
+        self.config.out_sql = self._config_dict_from_manager('out_sql', 'sql')
 
         # Pub/sub subscriptions
-        self.config.pubsub_subs = self._config_dict_from_rust('pubsub_subs', 'pubsub_subscription')
+        self.config.pubsub_subs = self._config_dict_from_manager('pubsub_subs', 'pubsub_subscription')
 
         # Generic connections
-        self.config.generic_connection = self._config_dict_from_rust('generic_connection', 'generic_connection')
+        self.config.generic_connection = self._config_dict_from_manager('generic_connection', 'generic_connection')
 
         # Security
         self.set_up_security(self.cluster_id)
@@ -121,7 +122,21 @@ class ConfigLoader:
             hs_item.setdefault('security_id', None)
             hs_item.setdefault('security_name', None)
             hs_item.setdefault('is_internal', False)
+            hs_item.setdefault('is_active', True)
             hs_item.setdefault('id', 0)
+            hs_item.setdefault('merge_url_params_req', True)
+            hs_item.setdefault('match_slash', True)
+            hs_item.setdefault('content_encoding', '')
+            hs_item.setdefault('cache_type', None)
+            hs_item.setdefault('cache_name', '')
+            hs_item.setdefault('cache_expiry', 0)
+            hs_item.setdefault('serialization_type', 'string')
+            hs_item.setdefault('url_params_pri', URL_PARAMS_PRIORITY.DEFAULT)
+            hs_item.setdefault('params_pri', PARAMS_PRIORITY.DEFAULT)
+            hs_item.setdefault('method', '')
+
+            service_name = hs_item.get('service_name') or hs_item.get('service') or ''
+            hs_item['service_impl_name'] = self.service_store.name_to_impl_name.get(service_name, service_name)
 
             if 'service_name' not in hs_item and 'service' in hs_item:
                 hs_item['service_name'] = hs_item['service']
@@ -145,10 +160,10 @@ class ConfigLoader:
         self.config.simple_io = ConfigDict('simple_io', Bunch())
 
         # E-mail - SMTP
-        self.config.email_smtp = self._config_dict_from_rust('email_smtp', 'email_smtp')
+        self.config.email_smtp = self._config_dict_from_manager('email_smtp', 'email_smtp')
 
         # E-mail - IMAP
-        self.config.email_imap = self._config_dict_from_rust('email_imap', 'email_imap')
+        self.config.email_imap = self._config_dict_from_manager('email_imap', 'email_imap')
 
         # Logging config
         _logging_stanza = self.fs_server_config.get('logging', {})
