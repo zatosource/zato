@@ -4,6 +4,7 @@ $.fn.zato.textarea_settings.init = function(config) {
 
     var state = {};
     state.config = config;
+    state.initialContent = $('#' + config.textareaId).val();
 
     $('#check-button').on('click', function() {
         $.fn.zato.textarea_settings.handleTest(state);
@@ -26,6 +27,31 @@ $.fn.zato.textarea_settings.init = function(config) {
     $('#allow-delete-label').on('click', function() {
         var toggle = $('#allow-delete-toggle');
         toggle.prop('checked', !toggle.prop('checked'));
+    });
+
+    $('#restore-initial-label').on('click', function(e) {
+        e.preventDefault();
+        $('#' + config.textareaId).val(state.initialContent);
+        $('.test-results').remove();
+        var statusMessage = $('.status-message.test-success');
+        statusMessage.removeClass('show fade test-error-message').text('OK');
+
+        var elem = this;
+        if (elem._tippy) {
+            elem._tippy.destroy();
+        }
+        var tip = tippy(elem, {
+            content: 'OK, restored initial values',
+            trigger: 'manual',
+            placement: 'top',
+            arrow: true,
+            theme: 'dark',
+        });
+        tip.show();
+        setTimeout(function() {
+            tip.hide();
+            setTimeout(function() { tip.destroy(); }, 200);
+        }, 1000);
     });
 };
 

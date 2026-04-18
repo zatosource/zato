@@ -86,6 +86,7 @@ $.namespace('zato.groups.members');
 $.namespace('zato.http_soap');
 $.namespace('zato.http_soap.details');
 $.namespace('zato.http_soap.openapi');
+$.namespace('zato.live_form_updates');
 $.namespace('zato.data_table_widget');
 $.namespace('zato.ide');
 $.namespace('zato.invoker');
@@ -799,6 +800,23 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow,
     }
 
     $.fn.zato.turn_selects_into_chosen(div_id);
+
+    // Start live form updates SSE if any configs are registered for this action,
+    // but skip if all configs use badge_picker handler (those start SSE after their async load)
+    var _lfu_configs = $.fn.zato.live_form_updates._get_configs(action);
+    var _all_badge_picker = _lfu_configs.length > 0;
+    for(var _i = 0; _i < _lfu_configs.length; _i++) {
+        if(_lfu_configs[_i].handler !== 'badge_picker') {
+            _all_badge_picker = false;
+            break;
+        }
+    }
+    if(_all_badge_picker) {
+        console.log('[live_form_updates] _create_edit: skipping auto-start for action=' + action + ' (all configs are badge_picker, will start after load)');
+    } else {
+        console.log('[live_form_updates] _create_edit: calling start for action=' + action);
+        $.fn.zato.live_form_updates.start(action);
+    }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -933,6 +951,7 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
             width: '40em',
             close: function(e, ui) {
                 $.fn.zato.data_table.reset_form(form_id);
+                $.fn.zato.live_form_updates.stop(action);
             }
         });
     });
@@ -2522,3 +2541,445 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
         }, 300);
     });
 }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* Live Form Updates - Reusable SSE-based mechanism for pushing live data changes to open create/edit forms.                     */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+;(function() {
+
+    // Per-action (create/edit) registry of what object types each page cares about
+    var _registry = {};
+
+    // Active EventSource connections, keyed by action
+    var _connections = {};
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates.register = function(action, configs) {
+        if(!_registry[action]) {
+            _registry[action] = [];
+        }
+        for(var i = 0; i < configs.length; i++) {
+            _registry[action].push(configs[i]);
+        }
+        console.log('[live_form_updates] register: action=' + action + ', total configs=' + _registry[action].length + ', object_types=' + JSON.stringify(configs.map(function(c) { return c.object_type; })));
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates.has_config = function(action) {
+        return _registry[action] && _registry[action].length > 0;
+    };
+
+    $.fn.zato.live_form_updates._get_configs = function(action) {
+        return _registry[action] || [];
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._snapshot_select = function(selector) {
+        var items = {};
+        $(selector).find('option').each(function() {
+            var $opt = $(this);
+            var val = $opt.val();
+            if(val) {
+                items[val] = {'name': $opt.text()};
+            }
+        });
+        return items;
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._snapshot_badge_picker = function(action) {
+        var items = {};
+        $('#badge-zone-available-' + action + ' .security-badge, #badge-zone-assigned-' + action + ' .security-badge').each(function() {
+            var $badge = $(this);
+            var id = $badge.attr('data-id');
+            if(id) {
+                items[id] = {
+                    'name': $badge.find('.security-badge-name').text().trim()
+                };
+            }
+        });
+        console.log('[live_form_updates] _snapshot_badge_picker: action=' + action + ', captured ' + Object.keys(items).length + ' badges, sample_ids=' + JSON.stringify(Object.keys(items).slice(0, 5)));
+        return items;
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._snapshot_multi_checkbox = function(container_selector) {
+        var items = {};
+        $(container_selector).find('input[type="checkbox"]').each(function() {
+            var $cb = $(this);
+            var id = $cb.attr('id') || '';
+            var name_cell = $cb.closest('tr').find('a');
+            var label = name_cell.length ? name_cell.text() : '';
+            if(id) {
+                items[id] = {'name': label};
+            }
+        });
+        return items;
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._build_request = function(action) {
+        var configs = _registry[action] || [];
+        var object_types = {};
+
+        console.log('[live_form_updates] _build_request: action=' + action + ', configs count=' + configs.length);
+
+        for(var i = 0; i < configs.length; i++) {
+            var config = configs[i];
+            var items = {};
+
+            if(config.handler === 'badge_picker') {
+                items = $.fn.zato.live_form_updates._snapshot_badge_picker(action);
+                console.log('[live_form_updates] _build_request: badge_picker snapshot for ' + config.object_type + ', item count=' + Object.keys(items).length);
+            }
+            else if(config.handler === 'multi_checkbox') {
+                items = $.fn.zato.live_form_updates._snapshot_multi_checkbox(config.container || '');
+                console.log('[live_form_updates] _build_request: multi_checkbox snapshot for ' + config.object_type + ', item count=' + Object.keys(items).length);
+            }
+            else {
+                var selector = config.target_select || '';
+                if(action === 'edit' && selector && selector.indexOf('edit') === -1) {
+                    selector = selector.replace('#id_', '#id_edit-');
+                }
+                items = $.fn.zato.live_form_updates._snapshot_select(selector);
+                console.log('[live_form_updates] _build_request: select snapshot for ' + config.object_type + ', selector=' + selector + ', item count=' + Object.keys(items).length);
+            }
+
+            object_types[config.object_type] = {
+                'items': items
+            };
+        }
+
+        return {'object_types': object_types};
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates.start = function(action) {
+
+        console.log('[live_form_updates] start: called for action=' + action);
+
+        // Do nothing if no configs registered for this action
+        if(!$.fn.zato.live_form_updates.has_config(action)) {
+            console.log('[live_form_updates] start: no config registered for action=' + action + ', skipping');
+            return;
+        }
+
+        // Close any existing connection for this action
+        $.fn.zato.live_form_updates.stop(action);
+
+        var request_data = $.fn.zato.live_form_updates._build_request(action);
+        console.log('[live_form_updates] start: request_data=', JSON.stringify(request_data));
+
+        // POST the initial snapshot and open SSE via fetch + ReadableStream
+        var _action = action;
+
+        fetch('/zato/live-form-updates/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': $.cookie('csrftoken')
+            },
+            body: JSON.stringify(request_data)
+        }).then(function(response) {
+            console.log('[live_form_updates] start: fetch response status=' + response.status);
+            if(!response.ok) {
+                console.error('[live_form_updates] start: HTTP error', response.status);
+                return;
+            }
+
+            var reader = response.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+
+            _connections[_action] = {
+                reader: reader,
+                closed: false
+            };
+
+            console.log('[live_form_updates] start: SSE connection established for action=' + _action);
+
+            function pump() {
+                if(_connections[_action] && _connections[_action].closed) {
+                    console.log('[live_form_updates] pump: connection closed for action=' + _action + ', stopping');
+                    reader.cancel();
+                    return;
+                }
+
+                reader.read().then(function(result) {
+                    if(result.done) {
+                        console.log('[live_form_updates] pump: stream done for action=' + _action);
+                        return;
+                    }
+
+                    buffer += decoder.decode(result.value, {stream: true});
+
+                    var lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for(var i = 0; i < lines.length; i++) {
+                        var line = lines[i];
+                        if(line.indexOf('data: ') === 0) {
+                            var json_str = line.substring(6);
+                            console.log('[live_form_updates] pump: received SSE data for action=' + _action + ': ' + json_str.substring(0, 200));
+                            try {
+                                var diffs = JSON.parse(json_str);
+                                $.fn.zato.live_form_updates._apply_diffs(_action, diffs);
+                            }
+                            catch(e) {
+                                console.error('[live_form_updates] pump: JSON parse error', e);
+                            }
+                        }
+                        else if(line.indexOf(': ') === 0) {
+                            console.log('[live_form_updates] pump: SSE comment: ' + line);
+                        }
+                    }
+
+                    pump();
+                }).catch(function(err) {
+                    if(!(_connections[_action] && _connections[_action].closed)) {
+                        console.error('[live_form_updates] pump: stream read error', err);
+                    }
+                });
+            }
+
+            pump();
+        }).catch(function(err) {
+            console.error('[live_form_updates] start: fetch error', err);
+        });
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates.stop = function(action) {
+        var conn = _connections[action];
+        if(conn) {
+            console.log('[live_form_updates] stop: closing connection for action=' + action);
+            conn.closed = true;
+            if(conn.reader) {
+                try { conn.reader.cancel(); } catch(e) {}
+            }
+            delete _connections[action];
+        } else {
+            console.log('[live_form_updates] stop: no connection to close for action=' + action);
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._apply_diffs = function(action, diffs) {
+        var configs = _registry[action] || [];
+        console.log('[live_form_updates] _apply_diffs: action=' + action + ', object_types in diff=' + JSON.stringify(Object.keys(diffs)));
+
+        for(var object_type in diffs) {
+            if(!diffs.hasOwnProperty(object_type)) continue;
+
+            var diff = diffs[object_type];
+            console.log('[live_form_updates] _apply_diffs: object_type=' + object_type + ', created=' + (diff.created ? diff.created.length : 0) + ', deleted=' + (diff.deleted ? diff.deleted.length : 0) + ', renamed=' + (diff.renamed ? diff.renamed.length : 0));
+
+            // Find the config for this object_type
+            var config = null;
+            for(var i = 0; i < configs.length; i++) {
+                if(configs[i].object_type === object_type) {
+                    config = configs[i];
+                    break;
+                }
+            }
+            if(!config) {
+                console.log('[live_form_updates] _apply_diffs: no config found for object_type=' + object_type);
+                continue;
+            }
+
+            console.log('[live_form_updates] _apply_diffs: applying diff for object_type=' + object_type + ', handler=' + (config.handler || 'select'));
+
+            if(config.handler === 'badge_picker') {
+                $.fn.zato.live_form_updates._apply_badge_picker_diff(action, config, diff);
+            }
+            else if(config.handler === 'multi_checkbox') {
+                $.fn.zato.live_form_updates._apply_multi_checkbox_diff(action, config, diff);
+            }
+            else {
+                $.fn.zato.live_form_updates._apply_select_diff(action, config, diff);
+            }
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._puff = function($elem) {
+        $elem.addClass('zato-live-updated');
+        setTimeout(function() {
+            $elem.removeClass('zato-live-updated');
+        }, 1600);
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._apply_select_diff = function(action, config, diff) {
+        var selector = config.target_select || '';
+        if(action === 'edit' && selector && selector.indexOf('edit') === -1) {
+            selector = selector.replace('#id_', '#id_edit-');
+        }
+
+        var $select = $(selector);
+        if(!$select.length) return;
+
+        var changed = false;
+
+        // Handle deletions
+        if(diff.deleted && diff.deleted.length) {
+            for(var i = 0; i < diff.deleted.length; i++) {
+                var del_id = diff.deleted[i];
+                $select.find('option[value="' + del_id + '"]').remove();
+            }
+            changed = true;
+        }
+
+        // Handle renames
+        if(diff.renamed && diff.renamed.length) {
+            for(var i = 0; i < diff.renamed.length; i++) {
+                var rename = diff.renamed[i];
+                var $opt = $select.find('option[value="' + rename._id + '"]');
+                if($opt.length) {
+                    var new_label = config.label_format
+                        ? $.fn.zato.live_form_updates._format_label(config.label_format, rename.item || rename.new_labels)
+                        : (rename.new_labels.name || rename.item.name || '');
+                    $opt.text(new_label);
+                    $.fn.zato.live_form_updates._puff($opt);
+                }
+            }
+            changed = true;
+        }
+
+        // Handle creations
+        if(diff.created && diff.created.length) {
+            for(var i = 0; i < diff.created.length; i++) {
+                var item = diff.created[i];
+                var value = item._id || '';
+                var label = config.label_format
+                    ? $.fn.zato.live_form_updates._format_label(config.label_format, item)
+                    : (item.name || item._id || '');
+                var $new_opt = $('<option/>').val(value).text(label);
+                $select.append($new_opt);
+                $.fn.zato.live_form_updates._puff($new_opt);
+            }
+            changed = true;
+        }
+
+        // Refresh Chosen if applicable
+        if(changed) {
+            $select.trigger('chosen:updated');
+            $.fn.zato.live_form_updates._puff($select.closest('td'));
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._format_label = function(format, item) {
+        return format.replace(/\{(\w+)\}/g, function(match, key) {
+            return item[key] !== undefined ? item[key] : match;
+        });
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._apply_badge_picker_diff = function(action, config, diff) {
+
+        console.log('[live_form_updates] _apply_badge_picker_diff: action=' + action + ', created=' + JSON.stringify(diff.created) + ', deleted=' + JSON.stringify(diff.deleted) + ', renamed=' + JSON.stringify(diff.renamed));
+
+        // For badge picker, if there's a callback, call it with the full diff.
+        if(config.callback) {
+            config.callback(action, diff);
+            return;
+        }
+
+        // Default badge picker diff handling
+        var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
+
+        // Handle deletions - remove badges from both zones
+        if(diff.deleted && diff.deleted.length) {
+            for(var i = 0; i < diff.deleted.length; i++) {
+                var del_id = diff.deleted[i];
+                available_body.find('.security-badge[data-id="' + del_id + '"]').remove();
+                $('#badge-zone-assigned-' + action + ' .badge-zone-body')
+                    .find('.security-badge[data-id="' + del_id + '"]').remove();
+            }
+            if(typeof $.fn.zato.groups !== 'undefined' &&
+               typeof $.fn.zato.groups.badge_picker !== 'undefined') {
+                $.fn.zato.groups.badge_picker.renumber(action);
+                $.fn.zato.groups.badge_picker.update_counts(action);
+            }
+        }
+
+        // Handle renames
+        if(diff.renamed && diff.renamed.length) {
+            for(var i = 0; i < diff.renamed.length; i++) {
+                var rename = diff.renamed[i];
+                var $badge = available_body.find('.security-badge[data-id="' + rename._id + '"]');
+                if(!$badge.length) {
+                    $badge = $('#badge-zone-assigned-' + action + ' .badge-zone-body')
+                        .find('.security-badge[data-id="' + rename._id + '"]');
+                }
+                if($badge.length) {
+                    var new_name = rename.new_labels.name || rename.item.name || '';
+                    $badge.find('.security-badge-name').text(new_name);
+                    $.fn.zato.live_form_updates._puff($badge);
+                }
+            }
+        }
+
+        // Handle creations - add new badges to the available zone
+        if(diff.created && diff.created.length) {
+            for(var i = 0; i < diff.created.length; i++) {
+                var item = diff.created[i];
+                if(typeof $.fn.zato.groups !== 'undefined' &&
+                   typeof $.fn.zato.groups.badge_picker !== 'undefined' &&
+                   typeof $.fn.zato.groups.badge_picker._make_badge === 'function') {
+                    var $new_badge = $.fn.zato.groups.badge_picker._make_badge(item, 0);
+                    available_body.append($new_badge);
+                    $.fn.zato.live_form_updates._puff($new_badge);
+                }
+            }
+
+            // Renumber and update counts after adding
+            if(typeof $.fn.zato.groups !== 'undefined' &&
+               typeof $.fn.zato.groups.badge_picker !== 'undefined' &&
+               typeof $.fn.zato.groups.badge_picker.renumber === 'function') {
+                $.fn.zato.groups.badge_picker.renumber(action);
+                $.fn.zato.groups.badge_picker.update_counts(action);
+            }
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+    $.fn.zato.live_form_updates._apply_multi_checkbox_diff = function(action, config, diff) {
+
+        // For multi-checkbox, the simplest reliable approach is to re-fetch and re-populate
+        // if there are any changes, since the checkbox HTML is generated by populate_multi_checkbox.
+        if(config.reload_callback && (
+            (diff.created && diff.created.length) ||
+            (diff.deleted && diff.deleted.length) ||
+            (diff.renamed && diff.renamed.length)
+        )) {
+            config.reload_callback();
+
+            // Apply puff to the container
+            var $container = $(config.container || '');
+            if($container.length) {
+                $.fn.zato.live_form_updates._puff($container);
+            }
+        }
+    };
+
+    // ------------------------------------------------------------------------------------------------------------------------
+
+})();
+

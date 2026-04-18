@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 # Zato
 from zato.admin import settings
 from zato.admin.web.util import static_serve
-from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, http_soap, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
+from zato.admin.web.views import account, datadog, env_variables, grafana_cloud, http_soap, live_form_updates, log_streaming, main, news, openapi_, python_packages, scheduler, service, updates
 from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
@@ -1028,6 +1028,14 @@ urlpatterns += [
         login_required(log_streaming.get_status), name='log-streaming-status'),
     url(r'^zato/log-streaming/stream$',
         login_required(log_streaming.log_stream), name='log-streaming-stream'),
+]
+
+urlpatterns += [
+
+    # Live form updates
+
+    url(r'^zato/live-form-updates/$',
+        login_required(live_form_updates.stream), name='live-form-updates'),
 ]
 
 

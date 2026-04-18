@@ -1113,3 +1113,16 @@ div.action-panel a {
     padding: 0.02rem 0.4rem;
     border-radius: 10px
 }
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* Live form updates - golden puff animation for elements updated via SSE                                                       */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+@keyframes zato-live-puff {
+    0%   { background-color: rgba(255, 193, 7, 0.35); }
+    100% { background-color: transparent; }
+}
+
+.zato-live-updated {
+    animation: zato-live-puff 1.5s ease-out;
+}

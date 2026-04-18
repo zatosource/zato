@@ -70,6 +70,9 @@ class GetList(AdminService):
 
     def handle(self):
 
+        self.logger.info('security.GetList: called with input: sec_type=%s, paginate=%s, query=%s',
+            self.request.input.get('sec_type'), self.request.input.get('paginate'), self.request.input.get('query'))
+
         _needs_internal = self.request.input.get('needs_internal') != ''
         _internal = {ServiceConst.API_Admin_Invoke_Username}
 
@@ -110,6 +113,7 @@ class GetList(AdminService):
 
             out.append(row)
 
+        self.logger.info('security.GetList: returning %d items (before pagination)', len(out))
         self.response.payload = self._paginate_list(out)
 
 # ################################################################################################################################

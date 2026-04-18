@@ -1092,3 +1092,21 @@ $.fn.zato.pubsub.subscription.setupDeliveryTypeVisibility = function(form_type, 
     // Handle push type changes
     $pushType.on('change', toggleEndpointTypeVisibility);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Live form updates registration
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.live_form_updates.register('create', [
+    {object_type: 'security_basic', target_select: '#id_sec_base_id'},
+    {object_type: 'service', target_select: '#id_push_service_name'},
+    {object_type: 'rest_outconn', target_select: '#id_rest_push_endpoint_id'}
+]);
+
+$.fn.zato.live_form_updates.register('edit', [
+    {object_type: 'security_basic', target_select: '#id_edit-sec_base_id'},
+    {object_type: 'service', target_select: '#id_edit-push_service_name'},
+    {object_type: 'rest_outconn', target_select: '#id_edit-rest_push_endpoint_id'}
+]);
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

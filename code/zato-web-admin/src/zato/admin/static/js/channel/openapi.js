@@ -278,3 +278,30 @@ $.fn.zato.channel.openapi.loadRestChannelsForEdit = function(containerId, channe
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Live form updates registration
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.live_form_updates.register('create', [
+    {
+        object_type: 'rest_channel',
+        handler: 'multi_checkbox',
+        container: '#rest-channels-div',
+        reload_callback: function() {
+            $.fn.zato.channel.openapi.loadRestChannels('rest-channels-div');
+        }
+    }
+]);
+
+$.fn.zato.live_form_updates.register('edit', [
+    {
+        object_type: 'rest_channel',
+        handler: 'multi_checkbox',
+        container: '#id_edit-rest-channels-div',
+        reload_callback: function() {
+            var id = $('#id_edit-id').val();
+            $.fn.zato.channel.openapi.loadRestChannelsForEdit('id_edit-rest-channels-div', id);
+        }
+    }
+]);
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

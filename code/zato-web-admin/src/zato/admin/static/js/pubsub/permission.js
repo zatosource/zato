@@ -1158,3 +1158,15 @@ function updatePatternTypeOptions(formType) {
         }
     });
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Live form updates registration
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.live_form_updates.register('create', [
+    {object_type: 'security_basic', target_select: '#id_sec_base_id'}
+]);
+
+$.fn.zato.live_form_updates.register('edit', [
+    {object_type: 'security_basic', target_select: '#id_edit-sec_base_id'}
+]);

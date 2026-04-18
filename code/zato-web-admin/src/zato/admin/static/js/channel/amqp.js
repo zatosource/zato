@@ -69,3 +69,15 @@ $.fn.zato.channel.amqp.delete_ = function(id) {
         'Are you sure you want to delete AMQP channel [{0}]?',
         true);
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Live form updates registration
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.live_form_updates.register('create', [
+    {object_type: 'service', target_select: '#id_service'}
+]);
+
+$.fn.zato.live_form_updates.register('edit', [
+    {object_type: 'service', target_select: '#id_edit-service'}
+]);

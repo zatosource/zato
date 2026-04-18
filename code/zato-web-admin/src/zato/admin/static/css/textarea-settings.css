@@ -70,6 +70,17 @@
     margin-right: auto;
 }
 
+.button-left-options .options-separator {
+    color: #ccc;
+    margin: 0 4px;
+    user-select: none;
+}
+
+#restore-initial-label {
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .button-left-options .toggle-label {
     font-size: 12px;
     font-weight: 600;

@@ -479,3 +479,61 @@ $.fn.zato.http_soap.invoke = function(id) {
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Live form updates registration
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+(function() {
+    var connection = $(document).getUrlParam('connection');
+    var is_channel = connection === 'channel';
+
+    var create_configs = [
+        {
+            object_type: 'security',
+            target_select: '#id_security',
+            label_format: '{sec_type_name}/{name}'
+        }
+    ];
+
+    var edit_configs = [
+        {
+            object_type: 'security',
+            target_select: '#id_edit-security',
+            label_format: '{sec_type_name}/{name}'
+        }
+    ];
+
+    if(is_channel) {
+        create_configs.push({
+            object_type: 'service',
+            target_select: '#id_service'
+        });
+        create_configs.push({
+            object_type: 'security_group',
+            handler: 'multi_checkbox',
+            container: '#multi-select-div-create',
+            reload_callback: function() {
+                var url = '/zato/http-soap/get-security-groups/zato-api-creds/';
+                $.fn.zato.post(url, $.fn.zato.http_soap.create_populate_groups_callback, '', '', true);
+            }
+        });
+
+        edit_configs.push({
+            object_type: 'service',
+            target_select: '#id_edit-service'
+        });
+        edit_configs.push({
+            object_type: 'security_group',
+            handler: 'multi_checkbox',
+            container: '#multi-select-div-edit',
+            reload_callback: function() {
+                var url = '/zato/http-soap/get-security-groups/zato-api-creds/';
+                $.fn.zato.post(url, $.fn.zato.http_soap.edit_populate_groups_callback, '', '', true);
+            }
+        });
+    }
+
+    $.fn.zato.live_form_updates.register('create', create_configs);
+    $.fn.zato.live_form_updates.register('edit', edit_configs);
+})();
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
