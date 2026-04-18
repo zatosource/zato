@@ -19,7 +19,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.BasicAuth;
     $.fn.zato.data_table.new_row_func = $.fn.zato.security.basic_auth.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'username', 'realm']);
+    $.fn.zato.data_table.setup_forms(['name', 'username']);
     var unique_constraints = [
         {field: 'name', entity_type: 'security', attr_name: 'name'}
     ];

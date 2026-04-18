@@ -50,6 +50,7 @@ def _member_string_to_dict(server, group_id, member_str:'str') -> 'dict':
         raise Exception(f'Unrecognized sec_type: {sec_type}')
 
     item = {
+        'id': security_id,
         'name': member_str,
         'type': sec_type,
         'group_id': group_id,
@@ -58,6 +59,7 @@ def _member_string_to_dict(server, group_id, member_str:'str') -> 'dict':
     }
 
     if sec_config := get_sec_func(security_id):
+        item['id'] = sec_config['id']
         item['name'] = sec_config['name']
         item['security_id'] = sec_config['id']
 

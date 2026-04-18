@@ -1235,6 +1235,76 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def get_bearer_token(self, security_id:'str'='', raw_params:'dict | None'=None) -> 'str':
+
+        import json
+        from traceback import format_exc
+        from zato.common.exception import BackendInvocationError
+
+        logger.info('get_bearer_token: security_id=%s, has_raw_params=%s', security_id, bool(raw_params))
+
+        try:
+            if raw_params:
+                logger.info('get_bearer_token: using raw_params, auth_server_url=%s, username=%s',
+                    raw_params['auth_server_url'], raw_params['username'])
+                sec_def = {
+                    'name': raw_params.get('name', ''),
+                    'username': raw_params['username'],
+                    'password': raw_params['secret'],
+                    'auth_server_url': raw_params['auth_server_url'],
+                    'client_id_field': raw_params['client_id_field'],
+                    'client_secret_field': raw_params['client_secret_field'],
+                    'grant_type': raw_params['grant_type'],
+                    'scopes': raw_params.get('scopes', ''),
+                    'extra_fields': raw_params.get('extra_fields', ''),
+                    'data_format': raw_params.get('data_format', 'json'),
+                }
+            else:
+                sec_def = None
+                for item in self.config_store.get_list('security'):
+                    if item['id'] == security_id:
+                        sec_def = item
+                        break
+
+                if not sec_def:
+                    logger.warning('get_bearer_token: definition not found for id=%s', security_id)
+                    return json.dumps({
+                        'is_ok': False,
+                        'error': 'Bearer token definition not found: id=`{}`'.format(security_id)
+                    })
+
+                logger.info('get_bearer_token: found definition name=%s', sec_def['name'])
+
+            config = self.bearer_token_manager._get_bearer_token_config(sec_def)
+            scopes = config.scopes
+            data_format = sec_def.get('data_format') or 'json'
+
+            logger.info('get_bearer_token: requesting token from %s', config.auth_server_url)
+
+            info = self.bearer_token_manager._get_bearer_token_from_auth_server(config, scopes, data_format)
+
+            logger.info('get_bearer_token: token obtained, length=%d', len(info.token))
+            return json.dumps({'is_ok': True, 'token': info.token})
+
+        except BackendInvocationError as e:
+            logger.warning('get_bearer_token: backend error: %s', e.msg)
+            return json.dumps({
+                'is_ok': False,
+                'error': 'Error while obtaining token',
+                'status_code': e.error_response_status_code,
+                'response_body': e.error_response_body,
+                'response_content_type': e.error_response_content_type,
+            })
+
+        except Exception:
+            logger.error('get_bearer_token: error: %s', format_exc())
+            return json.dumps({
+                'is_ok': False,
+                'error': 'Could not obtain token, check server logs for details',
+            })
+
+# ################################################################################################################################
+
     def check_attr_exists(self, entity_type:'str', attr_name:'str', value:'str') -> 'str':
         import json
         exists = self.config_store.attr_value_exists(entity_type, attr_name, value)

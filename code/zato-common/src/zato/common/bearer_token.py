@@ -194,7 +194,11 @@ class BearerTokenManager:
         if not response.ok:
             msg  = f'Bearer token for `{config.sec_def_name}` could not be obtained from {config.auth_server_url} -> '
             msg += f'{response.status_code} -> {response.text}'
-            raise BackendInvocationError(None, msg, needs_msg=True)
+            e = BackendInvocationError(None, msg, needs_msg=True)
+            e.error_response_status_code = response.status_code
+            e.error_response_body = response.text
+            e.error_response_content_type = response.headers.get('Content-Type', '')
+            raise e
 
         # .. if we are here, it means that we can load the JSON response ..
         data:'stranydict' = loads(response.text)

@@ -39,11 +39,123 @@ var _active_instance = null;
 var _details_store = {};
 var _details_seq = 0;
 
+function _syntax_highlight_json(json_str) {
+    var escaped = json_str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    return escaped.replace(
+        /("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        function(match) {
+            var cls = 'hl-number';
+            if (/^"/.test(match)) {
+                cls = /:$/.test(match) ? 'hl-key' : 'hl-string';
+            } else if (/true|false/.test(match)) {
+                cls = 'hl-bool';
+            } else if (/null/.test(match)) {
+                cls = 'hl-null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+        }
+    );
+}
+
+function _make_overlay_draggable($overlay) {
+    var is_dragging = false;
+    var offset_x = 0;
+    var offset_y = 0;
+    var $content = $overlay.find('.invoker-modal-content');
+    var $header = $overlay.find('.invoker-modal-header');
+
+    $header.on('mousedown', function(e) {
+        if ($(e.target).is('button, input, a')) return;
+        is_dragging = true;
+        var rect = $content[0].getBoundingClientRect();
+        offset_x = e.clientX - rect.left;
+        offset_y = e.clientY - rect.top;
+        $content.css({position: 'fixed', margin: '0', left: rect.left + 'px', top: rect.top + 'px', transform: 'none'});
+        e.preventDefault();
+    });
+
+    $(document).on('mousemove.action_runner_drag', function(e) {
+        if (!is_dragging) return;
+        $content.css({left: (e.clientX - offset_x) + 'px', top: (e.clientY - offset_y) + 'px'});
+    });
+
+    $(document).on('mouseup.action_runner_drag', function() {
+        is_dragging = false;
+    });
+}
+
 function _escape_html(text) {
     return String(text == null ? '' : text)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+}
+
+function _pretty_print_markup(raw) {
+    var tokens = raw.match(/(<[^>]+>|[^<]+)/g) || [raw];
+    var indent = 0;
+    var pad = '  ';
+    var lines = [];
+    for (var i = 0; i < tokens.length; i++) {
+        var t = tokens[i].replace(/^\s+|\s+$/g, '');
+        if (!t) continue;
+        if (t.charAt(0) === '<') {
+            var is_closing = /^<\//.test(t);
+            var is_self_closing = /\/>$/.test(t) || /^<!/.test(t) || /^<\?/.test(t)
+                || /^<(meta|link|br|hr|img|input|col|area|base|embed|source|track|wbr)\b/i.test(t);
+            if (is_closing) {
+                indent = Math.max(0, indent - 1);
+                lines.push(Array(indent + 1).join(pad) + t);
+            } else if (is_self_closing) {
+                lines.push(Array(indent + 1).join(pad) + t);
+            } else {
+                lines.push(Array(indent + 1).join(pad) + t);
+                indent++;
+            }
+        } else {
+            lines.push(Array(indent + 1).join(pad) + t);
+        }
+    }
+    return lines.join('\n');
+}
+
+function _highlight_markup_tags(escaped) {
+    return escaped.replace(/(&lt;\/?[a-zA-Z:][a-zA-Z0-9:._-]*(?:\s[^&]*?)?\/?\s*&gt;)/g,
+        '<span class="hl-tag">$1</span>')
+        .replace(/(&lt;![a-zA-Z][^&]*?&gt;)/g, '<span class="hl-tag">$1</span>')
+        .replace(/(&lt;\?[^?]*\?&gt;)/g, '<span class="hl-tag">$1</span>');
+}
+
+function _pretty_print_body(body_text, content_type) {
+    content_type = (content_type || '').toLowerCase();
+
+    if (content_type.indexOf('json') !== -1 || content_type.indexOf('javascript') !== -1) {
+        try {
+            var parsed = JSON.parse(body_text);
+            return _syntax_highlight_json(JSON.stringify(parsed, null, 2));
+        } catch(e) {}
+    }
+
+    if (content_type.indexOf('html') !== -1 || content_type.indexOf('xml') !== -1) {
+        var formatted = _pretty_print_markup(body_text);
+        return _highlight_markup_tags(_escape_html(formatted));
+    }
+
+    try {
+        var parsed = JSON.parse(body_text);
+        return _syntax_highlight_json(JSON.stringify(parsed, null, 2));
+    } catch(e) {}
+
+    var trimmed = body_text.replace(/^\s+/, '');
+    if (trimmed.charAt(0) === '<') {
+        var formatted = _pretty_print_markup(body_text);
+        return _highlight_markup_tags(_escape_html(formatted));
+    }
+
+    return _escape_html(body_text);
 }
 
 function _default_parse(jqXHR, textStatus) {
@@ -92,14 +204,14 @@ function _default_parse(jqXHR, textStatus) {
 
 function _render_success(instance, label) {
     var html = '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:#85e89d">' +
-        _check_svg + _escape_html(label) + '</span>';
+        _escape_html(label) + '</span>';
     instance.setContent(html);
     _hide_timer = setTimeout(function() { instance.hide(); }, 3000);
 }
 
 function _render_error(instance, label, details_id) {
     var html = '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:#f97583">' +
-        _error_svg + _escape_html(label) + '</span>' +
+        _escape_html(label) + '</span>' +
         '<br><a href="javascript:void(0)" style="font-size:12px;margin-top:2px;display:inline-block" ' +
         'onclick="$.fn.zato.action_runner.show_details(\'' + details_id + '\')">Show details</a>';
     instance.setContent(html);
@@ -113,12 +225,19 @@ $.fn.zato.action_runner = {
         var url = opts.url;
         var data = opts.data || '';
         var parse = opts.parse || _default_parse;
+        var on_success = opts.on_success || null;
         var details_modal_title = opts.details_modal_title || 'Response';
+
+        console.log('[action_runner] run: url=' + url + ' data_length=' + data.length + ' has_on_success=' + !!on_success);
+        console.log('[action_runner] run: link_elem=' + (link_elem ? link_elem.tagName + '.' + link_elem.className : 'null'));
+        console.log('[action_runner] run: tippy available=' + (typeof tippy !== 'undefined'));
 
         var use_tippy = link_elem && (typeof tippy !== 'undefined');
 
         if(!use_tippy) {
+            console.log('[action_runner] run: no tippy, using fallback');
             var fallback_callback = function(jqXHR, textStatus) {
+                console.log('[action_runner] fallback callback: status=' + jqXHR.status + ' textStatus=' + textStatus);
                 var r = parse(jqXHR, textStatus);
                 $.fn.zato.user_message(r.is_success, r.label);
             };
@@ -149,15 +268,23 @@ $.fn.zato.action_runner = {
             hideOnClick: false,
             interactive: true,
             appendTo: document.body,
+            zIndex: 100001,
         });
 
         _active_instance = instance;
         instance.show();
 
         var callback = function(jqXHR, textStatus) {
+            console.log('[action_runner] callback: status=' + jqXHR.status + ' textStatus=' + textStatus);
+            console.log('[action_runner] callback: responseText=' + (jqXHR.responseText || '').substring(0, 300));
             var r = parse(jqXHR, textStatus);
+            console.log('[action_runner] callback: parsed is_success=' + r.is_success + ' label=' + (r.label || '').substring(0, 100));
             if(r.is_success) {
-                _render_success(instance, r.label);
+                if(on_success) {
+                    on_success(instance, r);
+                } else {
+                    _render_success(instance, r.label);
+                }
             } else {
                 _details_seq += 1;
                 var details_id = 'action-details-' + _details_seq + '-' + Date.now();
@@ -165,6 +292,9 @@ $.fn.zato.action_runner = {
                     title: details_modal_title,
                     heading: r.details_title || r.label,
                     body: r.details_body || '',
+                    body_html: r.details_body_html || '',
+                    response_content_type: r.response_content_type || '',
+                    status_code: r.status_code || 0,
                     instance: instance
                 };
                 _render_error(instance, r.label, details_id);
@@ -188,29 +318,42 @@ $.fn.zato.action_runner = {
         $.fn.zato.action_runner.close_details();
 
         var body_text = details.body || '(empty response)';
-        var lines = body_text.split('\n');
+        var body_html = details.body_html || '';
+        var response_content_type = details.response_content_type || '';
+
+        var highlighted_body;
+        if(body_html) {
+            highlighted_body = body_html;
+        } else {
+            highlighted_body = _pretty_print_body(body_text, response_content_type);
+        }
+
+        var lines = (highlighted_body.match(/\n/g) || []).length + 1;
         var gutter = '';
-        for(var i = 1; i <= lines.length; i++) {
+        for(var i = 1; i <= lines; i++) {
             gutter += '  ' + i + '\n';
         }
-        var escaped_body = _escape_html(body_text);
-        var escaped_title = _escape_html(details.title || 'Response');
+        var title_text = details.title || 'Response';
+        if (details.status_code) {
+            title_text += ': ' + details.status_code;
+        }
+        var escaped_title = _escape_html(title_text);
 
-        var $overlay = $('<div class="invoker-modal-overlay" data-action-runner-overlay="1">' +
+        var $overlay = $('<div class="invoker-modal-overlay" data-action-runner-overlay="1" style="z-index:100001">' +
             '<div class="invoker-modal-backdrop"></div>' +
-            '<div class="invoker-modal-content" style="width:750px;height:auto;max-height:80vh;resize:none">' +
-                '<div class="invoker-modal-header">' +
+            '<div class="invoker-modal-content" style="width:750px;max-height:80vh;display:flex;flex-direction:column;resize:both;overflow:hidden">' +
+                '<div class="invoker-modal-header" style="flex-shrink:0">' +
                     '<h2>' + escaped_title + '</h2>' +
                     '<button class="invoker-modal-close-btn">\u00d7</button>' +
                 '</div>' +
-                '<div class="invoker-modal-body">' +
-                    '<div class="invoker-modal-response-header">' +
+                '<div class="invoker-modal-body" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden">' +
+                    '<div class="invoker-modal-response-header" style="flex-shrink:0">' +
                         '<span class="invoker-modal-response-label">Response body</span>' +
                         '<a class="invoker-modal-response-copy" href="javascript:void(0)">Copy</a>' +
                     '</div>' +
-                    '<div class="invoker-modal-response-wrap">' +
+                    '<div class="invoker-modal-response-wrap" style="flex:1;min-height:0;overflow:auto">' +
                         '<div class="invoker-modal-response-gutter">' + gutter + '</div>' +
-                        '<pre class="invoker-modal-response-pre">' + escaped_body + '</pre>' +
+                        '<pre class="invoker-modal-response-pre">' + highlighted_body + '</pre>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
@@ -236,6 +379,7 @@ $.fn.zato.action_runner = {
                         animation: 'fade',
                         duration: [50, 50],
                         appendTo: document.body,
+                        zIndex: 100002,
                     });
                     t.show();
                     setTimeout(function() { t.hide(); setTimeout(function() { t.destroy(); }, 100); }, 1500);
@@ -244,10 +388,13 @@ $.fn.zato.action_runner = {
         });
 
         $('body').append($overlay);
+
+        _make_overlay_draggable($overlay);
     },
 
     close_details: function() {
         $('[data-action-runner-overlay]').remove();
+        $(document).off('mousemove.action_runner_drag mouseup.action_runner_drag');
     },
 
     close_all: function() {

@@ -58,6 +58,7 @@ $.fn.zato.security.oauth.data_table.new_row = function(item, data, include_tr) {
 
     row += String.format("<td>{0}</td>", item.client_secret_field);
     row += String.format("<td>{0}</td>", item.grant_type);
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.security.oauth.get_token('{0}', this)\">Get token</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0}, \"Change secret\")'>Change secret</a>", item.id));
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.oauth.edit('{0}')\">Edit</a>", item.id));
@@ -83,3 +84,92 @@ $.fn.zato.security.oauth.delete_ = function(id) {
         'Are you sure you want to delete Bearer token definition `{0}`?',
         true);
 }
+
+$.fn.zato.security.oauth._get_token_parse = function(jqXHR) {
+    console.log('[get_token] parse: status=' + jqXHR.status + ' responseText=' + (jqXHR.responseText || '').substring(0, 500));
+    var parsed = null;
+    try { parsed = JSON.parse(jqXHR.responseText); } catch(e) {
+        console.log('[get_token] parse: JSON parse error: ' + e);
+    }
+    if(parsed && parsed.is_success) {
+        console.log('[get_token] parse: success, token length=' + (parsed.token || '').length);
+        return {is_success: true, label: 'OK', token: parsed.token, details_body: '', details_title: ''};
+    }
+    var label = 'Error while obtaining token';
+    var details_body = (parsed && parsed.info) || '';
+    var response_content_type = (parsed && parsed.response_content_type) || '';
+    var status_code = (parsed && parsed.status_code) || 0;
+    console.log('[get_token] parse: failure, label=' + label);
+    return {
+        is_success: false,
+        label: label,
+        details_title: label,
+        details_body: details_body,
+        response_content_type: response_content_type,
+        status_code: status_code
+    };
+};
+
+$.fn.zato.security.oauth._get_token_success = function(instance, result) {
+    console.log('[get_token] success callback, token length=' + (result.token || '').length);
+    var token = result.token || '';
+    navigator.clipboard.writeText(token).then(function() {
+        console.log('[get_token] token copied to clipboard');
+    }, function(err) {
+        console.log('[get_token] clipboard write failed: ' + err);
+    });
+    instance.setContent('<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:#85e89d">OK, token copied to clipboard</span>');
+    setTimeout(function() { instance.hide(); }, 2000);
+};
+
+$.fn.zato.security.oauth.get_token = function(id, link_elem) {
+    console.log('[get_token] called with id=' + JSON.stringify(id));
+    $.fn.zato.action_runner.run({
+        link_elem: link_elem,
+        url: '/zato/security/oauth/outconn/client-credentials/get-token/',
+        data: JSON.stringify({id: id}),
+        on_success: $.fn.zato.security.oauth._get_token_success,
+        parse: $.fn.zato.security.oauth._get_token_parse,
+        details_modal_title: 'Get token response'
+    });
+};
+
+$.fn.zato.security.oauth.get_token_from_form = function(action, link_elem) {
+    console.log('[get_token] get_token_from_form: action=' + action);
+    var prefix = (action === 'edit') ? 'edit-' : '';
+
+    if(action === 'edit') {
+        var id = $('#id_edit-id').val();
+        console.log('[get_token] edit mode, id=' + JSON.stringify(id));
+        if(id) {
+            $.fn.zato.security.oauth.get_token(id, link_elem);
+            return;
+        }
+    }
+
+    var raw_params = {
+        username: $('#id_' + prefix + 'username').val() || '',
+        secret: $('#id_' + prefix + 'secret').val() || '',
+        auth_server_url: $('#id_' + prefix + 'auth_server_url').val() || '',
+        client_id_field: $('#id_' + prefix + 'client_id_field').val() || '',
+        client_secret_field: $('#id_' + prefix + 'client_secret_field').val() || '',
+        grant_type: $('#id_' + prefix + 'grant_type').val() || '',
+        scopes: $('#id_' + prefix + 'scopes').val() || '',
+        extra_fields: $('#id_' + prefix + 'extra_fields').val() || '',
+        data_format: $('#id_' + prefix + 'data_format').val() || 'json'
+    };
+
+    console.log('[get_token] raw_params: auth_server_url=' + JSON.stringify(raw_params.auth_server_url)
+        + ' username=' + JSON.stringify(raw_params.username)
+        + ' secret_length=' + raw_params.secret.length
+        + ' grant_type=' + JSON.stringify(raw_params.grant_type));
+
+    $.fn.zato.action_runner.run({
+        link_elem: link_elem,
+        url: '/zato/security/oauth/outconn/client-credentials/get-token/',
+        data: JSON.stringify({raw_params: raw_params}),
+        on_success: $.fn.zato.security.oauth._get_token_success,
+        parse: $.fn.zato.security.oauth._get_token_parse,
+        details_modal_title: 'Get token response'
+    });
+};

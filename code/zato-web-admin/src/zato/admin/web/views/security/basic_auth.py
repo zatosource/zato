@@ -46,7 +46,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = 'name', 'is_active', 'username', 'realm'
+        input_required = 'name', 'is_active', 'username'
+        input_optional = 'realm',
         output_required = 'id', 'name'
 
     def success_message(self, item):

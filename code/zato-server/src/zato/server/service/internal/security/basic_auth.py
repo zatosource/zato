@@ -16,6 +16,11 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 # ################################################################################################################################
 
+default_realm = 'API'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class GetList(AdminService):
     _filter_by = 'name',
 
@@ -37,7 +42,7 @@ class GetList(AdminService):
 
 class Create(AdminService):
 
-    input = 'name', 'is_active', 'username', 'realm', '-cluster_id'
+    input = 'name', 'is_active', 'username', '-realm', '-cluster_id'
     output = 'id', 'name'
 
     def handle(self):
@@ -56,7 +61,7 @@ class Create(AdminService):
             'name': input.name,
             'is_active': input.is_active,
             'username': input.username,
-            'realm': input.realm or '',
+            'realm': input.realm or default_realm,
             'password': password,
         })
 
@@ -79,7 +84,7 @@ class Create(AdminService):
 
 class Edit(AdminService):
 
-    input = 'name', 'is_active', 'username', 'realm', '-id', '-cluster_id'
+    input = 'name', 'is_active', 'username', '-realm', '-id', '-cluster_id'
     output = 'id', 'name'
 
     def handle(self):
@@ -115,7 +120,7 @@ class Edit(AdminService):
             existing['name'] = input.name
             existing['is_active'] = input.is_active
             existing['username'] = input.username
-            existing['realm'] = input.realm or ''
+            existing['realm'] = input.realm or default_realm
             existing['type'] = 'basic_auth'
 
             if old_name != input.name:

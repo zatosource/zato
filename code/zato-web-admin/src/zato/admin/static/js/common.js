@@ -1513,7 +1513,7 @@ $.fn.zato.turn_selects_into_chosen = function(parent_id) {
     ]
 
     $.each(prefix_list, function(ignored, prefix) {
-        $(parent_id + ' select[id*="'+ prefix +'"]').chosen(chosen_options);
+        $(parent_id + ' select[id*="'+ prefix +'"]').not('.noChosen').chosen(chosen_options);
     })
 }
 
@@ -2553,6 +2553,16 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
 
     // Active EventSource connections, keyed by action
     var _connections = {};
+
+    // Close all SSE connections before page unload to prevent browser "interrupted" warnings
+    $(window).on('beforeunload', function() {
+        for(var action in _connections) {
+            if(_connections[action] && _connections[action].evtSource) {
+                _connections[action].evtSource.close();
+            }
+        }
+        _connections = {};
+    });
 
     // ------------------------------------------------------------------------------------------------------------------------
 

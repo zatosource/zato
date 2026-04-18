@@ -28,3 +28,27 @@
     margin-top: 2px;
     display: inline-block;
 }
+
+.invoker-modal-response-pre .hl-key {
+    color: #79c0ff;
+}
+
+.invoker-modal-response-pre .hl-string {
+    color: #a5d6ff;
+}
+
+.invoker-modal-response-pre .hl-number {
+    color: #d2a8ff;
+}
+
+.invoker-modal-response-pre .hl-bool {
+    color: #ff7b72;
+}
+
+.invoker-modal-response-pre .hl-null {
+    color: #8b949e;
+}
+
+.invoker-modal-response-pre .hl-tag {
+    color: #7ee787;
+}
