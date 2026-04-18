@@ -283,7 +283,15 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
                 drag_state.badges.addClass('dragging');
 
                 var ghost = $('<div class="badge-drag-ghost"></div>');
-                ghost.text(drag_state.badges.length + ' item' + (drag_state.badges.length > 1 ? 's' : ''));
+                var header = $('<div class="badge-drag-ghost-header"></div>');
+                header.text(drag_state.badges.length + ' item' + (drag_state.badges.length > 1 ? 's' : ''));
+                ghost.append(header);
+                drag_state.badges.each(function() {
+                    var clone = $(this).clone();
+                    clone.removeClass('selected dragging');
+                    clone.addClass('badge-drag-ghost-row');
+                    ghost.append(clone);
+                });
                 $('body').append(ghost);
                 drag_state.ghost = ghost;
             }

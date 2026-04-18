@@ -350,13 +350,30 @@ label.toggle:hover {
     position: fixed;
     pointer-events: none;
     z-index: 9999;
-    padding: 4px 10px;
+    padding: 0;
     border-radius: 3px;
-    background: #444;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(0, 0, 0, 0.15);
     font-size: 12px;
-    font-weight: 500;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-width: 280px;
+    opacity: 0.9;
+}
+
+.badge-drag-ghost-header {
+    padding: 4px 10px;
+    font-weight: 600;
+    font-size: 11px;
+    color: #555;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.badge-drag-ghost .badge-drag-ghost-row {
+    opacity: 0.7;
+    padding: 3px 8px;
+    font-size: 11px;
+    border-bottom: none;
+    cursor: default;
 }
 
 .badge-zone-empty {
