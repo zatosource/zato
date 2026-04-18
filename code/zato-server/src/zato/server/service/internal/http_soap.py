@@ -52,7 +52,7 @@ def _fixup_list_fields(data):
 def _resolve_security_fields(server, data):
     security_id = data.get('security_id')
     if security_id:
-        for sec_item in server.config_store.get_list('security'):
+        for sec_item in server.config_manager.get_list('security'):
             if sec_item.get('id') == security_id:
                 data['security_name'] = sec_item['name']
                 data['sec_type'] = sec_item.get('sec_type') or sec_item.get('type')
@@ -117,7 +117,7 @@ class Get(_BaseGet):
         transport = input.get('transport') or 'plain_http'
         entity_type = _get_entity_type(connection, transport)
 
-        items = self.server.config_store.get_list(entity_type)
+        items = self.server.config_manager.get_list(entity_type)
         for item in items:
             if item.get('name') == name or str(item.get('id')) == str(name):
                 self.response.payload = item
@@ -134,7 +134,7 @@ class GetList(_BaseGet):
 
     def _build_sec_lookup(self):
         out = {}
-        for sec in self.server.config_store.get_list('security'):
+        for sec in self.server.config_manager.get_list('security'):
             out[sec.get('name')] = sec
         return out
 
@@ -159,7 +159,7 @@ class GetList(_BaseGet):
         _logger = logging.getLogger(__name__)
 
         entity_type = _get_entity_type(connection, transport)
-        items = self.server.config_store.get_list(entity_type)
+        items = self.server.config_manager.get_list(entity_type)
 
         _logger.info('http-soap.get-list -> entity_type:%s, include_wrapper:%s, item_count:%s',
             entity_type, include_wrapper, len(items))
@@ -268,9 +268,9 @@ class Create(AdminService):
         _resolve_security_fields(self.server, data)
 
         name = input.name
-        self.server.config_store.set(entity_type, name, data)
+        self.server.config_manager.set(entity_type, name, data)
 
-        stored = self.server.config_store.get(entity_type, name)
+        stored = self.server.config_manager.get(entity_type, name)
         self.response.payload.id = stored['id']
         self.response.payload.name = name
         self.response.payload.url_path = input.url_path
@@ -329,16 +329,16 @@ class Edit(AdminService):
 
         name = input.name
         old_name = None
-        for item in self.server.config_store.get_list(entity_type):
+        for item in self.server.config_manager.get_list(entity_type):
             if str(item.get('id')) == str(input.id):
                 old_name = item.get('name')
                 break
         if old_name and old_name != name:
-            self.server.config_store.delete(entity_type, old_name)
+            self.server.config_manager.delete(entity_type, old_name)
 
-        self.server.config_store.set(entity_type, name, data)
+        self.server.config_manager.set(entity_type, name, data)
 
-        stored = self.server.config_store.get(entity_type, name)
+        stored = self.server.config_manager.get(entity_type, name)
         self.response.payload.id = stored['id']
         self.response.payload.name = name
 
@@ -373,7 +373,7 @@ class Delete(AdminService):
 
         entity_type = _get_entity_type(connection, transport)
         delete_key = None
-        for item in self.server.config_store.get_list(entity_type):
+        for item in self.server.config_manager.get_list(entity_type):
             if item.get('name') == name or str(item.get('id')) == str(name):
                 delete_key = item['name']
                 break
@@ -383,7 +383,7 @@ class Delete(AdminService):
                 raise Exception('HTTP/SOAP object with id or name `{}` not found'.format(name))
             return
 
-        self.server.config_store.delete(entity_type, delete_key)
+        self.server.config_manager.delete(entity_type, delete_key)
         self.response.payload.details = 'OK, deleted'
 
 # ################################################################################################################################
@@ -407,7 +407,7 @@ class Ping(AdminService):
         self.response.payload.inner_exception_message = ''
 
         for entity_type in ('outgoing_rest', 'outgoing_soap'):
-            items = self.server.config_store.get_list(entity_type)
+            items = self.server.config_manager.get_list(entity_type)
             for item in items:
                 if str(item.get('id')) == str(name) or item.get('name') == str(name):
                     transport = item.get('transport', 'plain_http')
@@ -499,7 +499,7 @@ class InvokeChannel(AdminService):
         _set_invoke_response(self, result)
 
     def _get_channel_config(self, channel_id):
-        for item in self.server.config_store.get_list('channel_rest'):
+        for item in self.server.config_manager.get_list('channel_rest'):
             if str(item.get('id')) == str(channel_id) or item.get('name') == str(channel_id):
                 return item
         raise Exception('REST channel `{}` not found'.format(channel_id))
@@ -512,7 +512,7 @@ class InvokeChannel(AdminService):
         if not security_id or str(security_id) in ('None', ZATO_NONE, 'None/ZATO_NONE'):
             return {'sec_type': None, 'username': None, 'password': None, 'orig_username': None}
 
-        for sec_item in self.server.config_store.get_list('security'):
+        for sec_item in self.server.config_manager.get_list('security'):
             if str(sec_item.get('id')) == str(security_id):
                 return self._extract_credentials(sec_item)
 
@@ -629,7 +629,7 @@ class InvokeOutconn(AdminService):
         _set_invoke_response(self, result)
 
     def _get_outconn_config(self, outconn_id):
-        for item in self.server.config_store.get_list('outgoing_rest'):
+        for item in self.server.config_manager.get_list('outgoing_rest'):
             if str(item.get('id')) == str(outconn_id) or item.get('name') == str(outconn_id):
                 return item
         raise Exception('REST outgoing connection `{}` not found'.format(outconn_id))

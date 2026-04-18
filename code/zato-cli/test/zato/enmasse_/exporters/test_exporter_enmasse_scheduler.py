@@ -25,8 +25,8 @@ class TestEnmasseSchedulerExporter(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.config_store.load_yaml_string(template_complex_01)
+        self.config_manager = ConfigManager()
+        self.config_manager.load_yaml_string(template_complex_01)
 
 # ################################################################################################################################
 
@@ -35,7 +35,7 @@ class TestEnmasseSchedulerExporter(TestCase):
         template_dict = yaml.safe_load(template_complex_01)
         scheduler_list_from_yaml = template_dict.get('scheduler', [])
 
-        exporter = EnmasseExporter(self.config_store)
+        exporter = EnmasseExporter(self.config_manager)
         exported_data = exporter.export_to_dict()
 
         self.assertIn('scheduler', exported_data, 'Exporter did not produce a "scheduler" section.')
@@ -70,11 +70,11 @@ class TestEnmasseSchedulerExporterExtended(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        importer = EnmasseImporter(self.config_manager)
         importer.import_(template_scheduler_01)
 
-        self.exporter = EnmasseExporter(self.config_store)
+        self.exporter = EnmasseExporter(self.config_manager)
         self.exported = self.exporter.export_to_dict()
         self.scheduler_list = self.exported.get('scheduler', [])
         self.by_name = {item['name']: item for item in self.scheduler_list}

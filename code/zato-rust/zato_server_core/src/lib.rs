@@ -1,5 +1,4 @@
 pub mod model;
-pub mod config_store;
 pub mod http;
 pub mod logging;
 use pyo3::prelude::*;
@@ -12,7 +11,6 @@ fn next_id() -> String {
 #[pymodule]
 fn zato_server_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<http::HTTPServer>()?;
-    m.add_class::<config_store::ConfigStore>()?;
     m.add_function(wrap_pyfunction!(next_id, m)?)?;
     m.add_function(wrap_pyfunction!(logging::init_rest_log, m)?)?;
     m.add_function(wrap_pyfunction!(logging::init_access_log, m)?)?;

@@ -162,7 +162,7 @@ class ChangePasswordBase(AdminService):
     """ A base class for changing passwords via the Rust ConfigStore.
     """
     password_required = True
-    config_store_entity_type = ''
+    config_manager_entity_type = ''
 
     input = 'password', Int('-id'), '-name', '-type_'
     output = AsIs('id')
@@ -171,7 +171,7 @@ class ChangePasswordBase(AdminService):
 
         instance_id = self.request.input.get('id')
         instance_name = self.request.input.get('name', '')
-        entity_type = self.config_store_entity_type
+        entity_type = self.config_manager_entity_type
 
         password = self.request.input.get('password', '')
 
@@ -182,7 +182,7 @@ class ChangePasswordBase(AdminService):
                 raise Exception('Password must not be empty')
 
         if not instance_name and instance_id:
-            for item in self.server.config_store.get_list(entity_type):
+            for item in self.server.config_manager.get_list(entity_type):
                 if item.get('id') == instance_id:
                     instance_name = item['name']
                     break
@@ -190,12 +190,12 @@ class ChangePasswordBase(AdminService):
         if not instance_name:
             raise Exception('Either ID or name are required on input')
 
-        existing = self.server.config_store.get(entity_type, instance_name)
+        existing = self.server.config_manager.get(entity_type, instance_name)
         if not existing:
             raise Exception('Could not find `{}` in `{}`'.format(instance_name, entity_type))
 
         existing['password'] = password_decrypted
-        self.server.config_store.set(entity_type, instance_name, existing)
+        self.server.config_manager.set(entity_type, instance_name, existing)
 
         self.response.payload.id = existing.get('id') or instance_id
 

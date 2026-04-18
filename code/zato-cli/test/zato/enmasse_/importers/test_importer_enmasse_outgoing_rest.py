@@ -22,8 +22,8 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseOutgoingRESTImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
@@ -42,7 +42,7 @@ class TestEnmasseOutgoingRESTImport(TestCase):
 
     def test_outgoing_rest_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('outgoing_rest', exported)
 
         outgoing_list = exported['outgoing_rest']
@@ -55,7 +55,7 @@ class TestEnmasseOutgoingRESTImport(TestCase):
 
     def test_outgoing_rest_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         outgoing_list = exported['outgoing_rest']
         outgoing_by_name = {item['name']: item for item in outgoing_list}
 

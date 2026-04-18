@@ -20,15 +20,15 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseConfluenceImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
 
     def test_confluence_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('confluence', exported)
 
         conn_list = exported['confluence']
@@ -39,7 +39,7 @@ class TestEnmasseConfluenceImport(TestCase):
 
     def test_confluence_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         conn_list = exported['confluence']
         conn_by_name = {item['name']: item for item in conn_list}
 

@@ -20,15 +20,15 @@ from zato.common.config.manager import ConfigManager
 class TestEnmassePubSubTopicImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
 
     def test_pubsub_topic_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('pubsub_topic', exported)
 
         topic_list = exported['pubsub_topic']
@@ -42,7 +42,7 @@ class TestEnmassePubSubTopicImport(TestCase):
 
     def test_pubsub_topic_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         topic_list = exported['pubsub_topic']
         topic_by_name = {item['name']: item for item in topic_list}
 

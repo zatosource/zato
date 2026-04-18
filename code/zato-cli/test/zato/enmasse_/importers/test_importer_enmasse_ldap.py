@@ -20,15 +20,15 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseLDAPImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
 
     def test_ldap_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('ldap', exported)
 
         ldap_list = exported['ldap']
@@ -39,7 +39,7 @@ class TestEnmasseLDAPImport(TestCase):
 
     def test_ldap_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         ldap_list = exported['ldap']
         ldap_by_name = {item['name']: item for item in ldap_list}
 

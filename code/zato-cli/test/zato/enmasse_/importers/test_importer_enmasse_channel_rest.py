@@ -20,15 +20,15 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseChannelRESTImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
 
     def test_channel_rest_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('channel_rest', exported)
 
         channel_list = exported['channel_rest']
@@ -43,7 +43,7 @@ class TestEnmasseChannelRESTImport(TestCase):
 
     def test_channel_rest_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         channel_list = exported['channel_rest']
         channel_by_name = {item['name']: item for item in channel_list}
 

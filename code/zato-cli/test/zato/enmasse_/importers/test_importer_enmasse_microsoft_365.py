@@ -20,15 +20,15 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseMicrosoft365Import(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
 
     def test_microsoft_365_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('microsoft_365', exported)
 
         m365_list = exported['microsoft_365']
@@ -39,7 +39,7 @@ class TestEnmasseMicrosoft365Import(TestCase):
 
     def test_microsoft_365_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         m365_list = exported['microsoft_365']
         m365_by_name = {item['name']: item for item in m365_list}
 

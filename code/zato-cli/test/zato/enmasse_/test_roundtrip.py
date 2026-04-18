@@ -103,17 +103,17 @@ class TestEnmasseRoundtrip(TestCase):
 
     def _do_import_export(self, yaml_string):
         """ Import a YAML string into a fresh ConfigManager via EnmasseImporter,
-        then export it back via EnmasseExporter. Returns (config_store, exported_dict, exported_yaml).
+        then export it back via EnmasseExporter. Returns (config_manager, exported_dict, exported_yaml).
         """
-        config_store = ConfigManager()
-        importer = EnmasseImporter(config_store)
+        config_manager = ConfigManager()
+        importer = EnmasseImporter(config_manager)
         importer.import_(yaml_string)
 
-        exporter = EnmasseExporter(config_store)
+        exporter = EnmasseExporter(config_manager)
         exported_dict = exporter.export_to_dict()
         exported_yaml = exporter.export()
 
-        return config_store, exported_dict, exported_yaml
+        return config_manager, exported_dict, exported_yaml
 
 # ################################################################################################################################
 

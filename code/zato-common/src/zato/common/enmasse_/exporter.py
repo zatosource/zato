@@ -47,9 +47,9 @@ logger = logging.getLogger(__name__)
 class EnmasseExporter:
     """ Exports Zato objects from the config store to YAML.
     """
-    def __init__(self, config_store:'any_') -> 'None':
+    def __init__(self, config_manager:'any_') -> 'None':
 
-        self.config_store = config_store
+        self.config_manager = config_manager
 
         self.cache_exporter = CacheExporter(self)
         self.channel_exporter = ChannelExporter(self)
@@ -90,7 +90,7 @@ class EnmasseExporter:
         """
         logger.info('Starting export of Zato objects')
 
-        raw = self.config_store.export_to_dict()
+        raw = self.config_manager.export_to_dict()
         output_dict:'stranydict' = {}
 
         section_map = {

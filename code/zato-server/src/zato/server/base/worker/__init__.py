@@ -339,13 +339,13 @@ class WorkerStore(_WorkerStoreBase):
         result = {}
         sec_def_cache = {}
 
-        security_list = self.server.config_store.get_list('security')
+        security_list = self.server.config_manager.get_list('security')
         sec_by_name = {}
         for sec_item in security_list:
             sec_by_name[sec_item.get('name', '')] = sec_item
 
         for entity_type in ('channel_rest', 'channel_soap'):
-            channels = self.server.config_store.get_list(entity_type)
+            channels = self.server.config_manager.get_list(entity_type)
             for item in channels:
 
                 transport = 'soap' if entity_type == 'channel_soap' else 'plain_http'
@@ -1874,7 +1874,7 @@ class WorkerStore(_WorkerStoreBase):
 
         sec_def = self.basic_auth_get(sec_name)
         if sec_def is None:
-            sec_item = self.server.config_store.get('security', sec_name)
+            sec_item = self.server.config_manager.get('security', sec_name)
             if sec_item is None:
                 raise Exception('No user_id for sec name `{}`; cannot push ACL'.format(sec_name))
             user_id = sec_item['id']
@@ -1884,7 +1884,7 @@ class WorkerStore(_WorkerStoreBase):
 
         pub_patterns:'anylist' = []
         sub_patterns:'anylist' = []
-        for perm_row in self.server.config_store.get_list('pubsub_permission'):
+        for perm_row in self.server.config_manager.get_list('pubsub_permission'):
             if perm_row['security'] != sec_name:
                 continue
             for pub_item in perm_row['pub'] or []:

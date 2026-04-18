@@ -45,16 +45,16 @@ def _rest_log_write(msg):
 
 class ConfigDict:
     """ Thin facade that delegates storage to the Rust ConfigStore. If no
-    config_store/entity_type are provided, falls back to an in-memory Bunch
+    config_manager/entity_type are provided, falls back to an in-memory Bunch
     (legacy mode for simple_io, url_sec, etc. that have no Rust backing).
 
     Callers access items as config_dict[name].config.password and the Bunch
     wrapper is constructed on the fly from the Rust-side dict.
     """
-    def __init__(self, name, _bunch=None, *, config_store=None, entity_type=None, sec_type_filter=None):
+    def __init__(self, name, _bunch=None, *, config_manager=None, entity_type=None, sec_type_filter=None):
         self.name = name
         self.lock = RLock()
-        self._config_store = config_store
+        self._config_manager = config_manager
         self._entity_type = entity_type
         self._sec_type_filter = sec_type_filter
 
@@ -62,14 +62,14 @@ class ConfigDict:
         # be serialized to Rust, keyed by item name.
         self._runtime = {}
 
-        if config_store is not None and entity_type is not None:
+        if config_manager is not None and entity_type is not None:
             self._impl = None
         else:
             self._impl = _bunch if _bunch is not None else Bunch()
 
     @property
     def _delegates_to_rust(self):
-        return self._config_store is not None and self._entity_type is not None
+        return self._config_manager is not None and self._entity_type is not None
 
     def _wrap_item(self, raw_dict, key=None):
         """ Wrap a raw dict from Rust into Bunch({'config': Bunch(...)}).
@@ -113,7 +113,7 @@ class ConfigDict:
 
     def _get_all_items_from_rust(self):
         """ Return {name: Bunch({'config': Bunch(...)})} for all items. """
-        items = self._config_store.get_list(self._entity_type)
+        items = self._config_manager.get_list(self._entity_type)
         result = Bunch()
         for item in items:
             item_name = item.get('name', '')
@@ -130,7 +130,7 @@ class ConfigDict:
         with self.lock:
             key = key.strip()
             if self._delegates_to_rust:
-                raw = self._config_store.get(self._entity_type, key)
+                raw = self._config_manager.get(self._entity_type, key)
                 if raw is None:
                     return default
                 if self._sec_type_filter:
@@ -146,7 +146,7 @@ class ConfigDict:
         with self.lock:
             if self._delegates_to_rust:
                 raw = self._unwrap_item(key, value)
-                self._config_store.set(self._entity_type, key, raw)
+                self._config_manager.set(self._entity_type, key, raw)
             else:
                 self._impl[key] = value
 
@@ -158,7 +158,7 @@ class ConfigDict:
         with self.lock:
             key = key.strip()
             if self._delegates_to_rust:
-                raw = self._config_store.get(self._entity_type, key)
+                raw = self._config_manager.get(self._entity_type, key)
                 if raw is None:
                     raise KeyError(key)
                 if self._sec_type_filter:
@@ -173,7 +173,7 @@ class ConfigDict:
     def __delitem__(self, key):
         with self.lock:
             if self._delegates_to_rust:
-                self._config_store.delete(self._entity_type, key)
+                self._config_manager.delete(self._entity_type, key)
                 self._runtime.pop(key, None)
             else:
                 del self._impl[key]
@@ -183,10 +183,10 @@ class ConfigDict:
     def pop(self, key, default):
         with self.lock:
             if self._delegates_to_rust:
-                raw = self._config_store.get(self._entity_type, key)
+                raw = self._config_manager.get(self._entity_type, key)
                 if raw is None:
                     return default
-                self._config_store.delete(self._entity_type, key)
+                self._config_manager.delete(self._entity_type, key)
                 self._runtime.pop(key, None)
                 return self._wrap_item(raw, key=key)
             return self._impl.pop(key, default)
@@ -198,7 +198,7 @@ class ConfigDict:
             if self._delegates_to_rust:
                 for key, value in dict_.items():
                     raw = self._unwrap_item(key, value)
-                    self._config_store.set(self._entity_type, key, raw)
+                    self._config_manager.set(self._entity_type, key, raw)
             else:
                 self._impl.update(dict_)
 
@@ -228,7 +228,7 @@ class ConfigDict:
     def __nonzero__(self):
         with self.lock:
             if self._delegates_to_rust:
-                return len(self._config_store.get_list(self._entity_type)) > 0
+                return len(self._config_manager.get_list(self._entity_type)) > 0
             return bool(self._impl)
 
 # ################################################################################################################################
@@ -269,7 +269,7 @@ class ConfigDict:
         with self.lock:
             if self._delegates_to_rust:
                 key_id_str = str(key_id)
-                items = self._config_store.get_list(self._entity_type)
+                items = self._config_manager.get_list(self._entity_type)
                 for item in items:
                     if str(item.get('id', '')) == key_id_str:
                         if self._sec_type_filter:
@@ -298,7 +298,7 @@ class ConfigDict:
             if self._delegates_to_rust:
                 config_dict = ConfigDict(
                     self.name,
-                    config_store=self._config_store,
+                    config_manager=self._config_manager,
                     entity_type=self._entity_type,
                     sec_type_filter=self._sec_type_filter,
                 )
@@ -314,7 +314,7 @@ class ConfigDict:
         out = []
         with self.lock:
             if self._delegates_to_rust:
-                items = self._config_store.get_list(self._entity_type)
+                items = self._config_manager.get_list(self._entity_type)
                 for item in items:
                     if self._sec_type_filter:
                         sec_type = item.get('sec_type') or item.get('type', '')
@@ -494,20 +494,20 @@ class ConfigStore:
 # ################################################################################################################################
 
     def copy(self):
-        config_store = ConfigStore()
+        config_manager = ConfigStore()
 
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
             if isinstance(attr, ConfigDict):
-                setattr(config_store, attr_name, attr.copy())
+                setattr(config_manager, attr_name, attr.copy())
             elif attr is ZATO_NONE:
-                setattr(config_store, attr_name, ZATO_NONE)
+                setattr(config_manager, attr_name, ZATO_NONE)
 
-        config_store.http_soap = self.http_soap
-        config_store.url_sec = self.url_sec
-        config_store.broker_config = self.broker_config
-        config_store.simple_io = self.simple_io
+        config_manager.http_soap = self.http_soap
+        config_manager.url_sec = self.url_sec
+        config_manager.broker_config = self.broker_config
+        config_manager.simple_io = self.simple_io
 
-        return config_store
+        return config_manager
 
 # ################################################################################################################################

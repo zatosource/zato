@@ -35,7 +35,7 @@ class GetList(AdminService):
     output = 'id', 'name', 'is_active', 'username', '-header'
 
     def handle(self) -> 'None':
-        items = self.server.config_store.get_list('security')
+        items = self.server.config_manager.get_list('security')
         out = [item for item in items if _is_apikey(item)]
         self.response.payload = self._paginate_list(out)
 
@@ -53,10 +53,10 @@ class Create(AdminService):
         name = input.name
         header = input.header or self.server.api_key_header
 
-        if self.server.config_store.get('security', name):
+        if self.server.config_manager.get('security', name):
             raise Exception('API key `{}` already exists'.format(name))
 
-        self.server.config_store.set('security', name, {
+        self.server.config_manager.set('security', name, {
             'type': 'apikey',
             'name': name,
             'is_active': input.is_active,
@@ -65,7 +65,7 @@ class Create(AdminService):
             'header': header,
         })
 
-        item = self.server.config_store.get('security', name)
+        item = self.server.config_manager.get('security', name)
 
         self.response.payload.id = item['id']
         self.response.payload.name = name
@@ -85,7 +85,7 @@ class Edit(AdminService):
         name = input.name
         header = input.header or self.server.api_key_header
 
-        items = self.server.config_store.get_list('security')
+        items = self.server.config_manager.get_list('security')
         old_name = None
         for item in items:
             if _is_apikey(item) and str(item['id']) == str(input.id):
@@ -95,14 +95,14 @@ class Edit(AdminService):
         if not old_name:
             raise Exception('API key not found')
 
-        existing = self.server.config_store.get('security', old_name)
+        existing = self.server.config_manager.get('security', old_name)
         if not existing:
             raise Exception('API key not found')
 
         if name != old_name:
-            if self.server.config_store.get('security', name):
+            if self.server.config_manager.get('security', name):
                 raise Exception('API key `{}` already exists'.format(name))
-            self.server.config_store.delete('security', old_name)
+            self.server.config_manager.delete('security', old_name)
 
         existing['name'] = name
         existing['is_active'] = input.is_active
@@ -111,7 +111,7 @@ class Edit(AdminService):
         existing['header'] = header
         existing['type'] = 'apikey'
 
-        self.server.config_store.set('security', name, existing)
+        self.server.config_manager.set('security', name, existing)
 
         self.response.payload.id = existing['id']
         self.response.payload.name = name
@@ -139,7 +139,7 @@ class ChangePassword(AdminService):
                 raise Exception('Password must not be empty')
 
         if not name and input.get('id'):
-            for item in self.server.config_store.get_list('security'):
+            for item in self.server.config_manager.get_list('security'):
                 if _is_apikey(item) and str(item.get('id')) == str(input.id):
                     name = item['name']
                     break
@@ -147,13 +147,13 @@ class ChangePassword(AdminService):
         if not name:
             raise Exception('Either ID or name are required on input')
 
-        existing = self.server.config_store.get('security', name)
+        existing = self.server.config_manager.get('security', name)
         if not existing:
             raise Exception('API key not found')
 
         existing['password'] = password
         existing['type'] = 'apikey'
-        self.server.config_store.set('security', name, existing)
+        self.server.config_manager.set('security', name, existing)
 
         self.response.payload.id = existing['id']
 
@@ -166,7 +166,7 @@ class Delete(AdminService):
     input = 'id',
 
     def handle(self) -> 'None':
-        items = self.server.config_store.get_list('security')
+        items = self.server.config_manager.get_list('security')
         target_name = None
         for item in items:
             if _is_apikey(item) and str(item.get('id')) == str(self.request.input.id):
@@ -176,7 +176,7 @@ class Delete(AdminService):
         if not target_name:
             raise Exception('API key not found')
 
-        self.server.config_store.delete('security', target_name)
+        self.server.config_manager.delete('security', target_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

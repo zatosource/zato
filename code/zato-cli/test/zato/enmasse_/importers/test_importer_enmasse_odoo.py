@@ -22,8 +22,8 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseOdooImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
@@ -43,7 +43,7 @@ class TestEnmasseOdooImport(TestCase):
 
     def test_odoo_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('odoo', exported)
 
         odoo_list = exported['odoo']
@@ -54,7 +54,7 @@ class TestEnmasseOdooImport(TestCase):
 
     def test_odoo_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         odoo_list = exported['odoo']
         odoo_by_name = {item['name']: item for item in odoo_list}
 

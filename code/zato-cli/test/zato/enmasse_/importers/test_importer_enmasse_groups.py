@@ -20,15 +20,15 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseGroupImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
 
     def test_groups_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('groups', exported)
 
         group_list = exported['groups']
@@ -41,7 +41,7 @@ class TestEnmasseGroupImport(TestCase):
 
     def test_group_members(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         group_list = exported['groups']
         group_by_name = {item['name']: item for item in group_list}
 

@@ -109,7 +109,7 @@ class URLData(PyURLData):
         if not expected_key:
             return True
 
-        result = self.worker.server.config_store.check_apikey(header_value)
+        result = self.worker.server.config_manager.check_apikey(header_value)
         if result is None:
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)

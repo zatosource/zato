@@ -25,11 +25,11 @@ class TestSchedulerRoundTripComplex(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        importer = EnmasseImporter(self.config_manager)
         importer.import_(template_complex_01)
 
-        exporter = EnmasseExporter(self.config_store)
+        exporter = EnmasseExporter(self.config_manager)
         self.exported = exporter.export_to_dict()
         self.exported_by_name = {item['name']: item for item in self.exported.get('scheduler', [])}
 
@@ -76,14 +76,14 @@ class TestSchedulerRoundTripComplex(TestCase):
 
     def test_re_import_produces_identical_export(self):
         """ Export -> re-import -> export again; the two exports must match. """
-        exporter1 = EnmasseExporter(self.config_store)
+        exporter1 = EnmasseExporter(self.config_manager)
         yaml_str = exporter1.export()
 
-        config_store2 = ConfigManager()
-        importer2 = EnmasseImporter(config_store2)
+        config_manager2 = ConfigManager()
+        importer2 = EnmasseImporter(config_manager2)
         importer2.import_(yaml_str)
 
-        exporter2 = EnmasseExporter(config_store2)
+        exporter2 = EnmasseExporter(config_manager2)
         exported2 = exporter2.export_to_dict()
 
         by_name_1 = {item['name']: item for item in self.exported.get('scheduler', [])}
@@ -107,11 +107,11 @@ class TestSchedulerRoundTripExtended(TestCase):
     """
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        importer = EnmasseImporter(self.config_manager)
         importer.import_(template_scheduler_01)
 
-        exporter = EnmasseExporter(self.config_store)
+        exporter = EnmasseExporter(self.config_manager)
         self.exported = exporter.export_to_dict()
         self.exported_by_name = {item['name']: item for item in self.exported.get('scheduler', [])}
 
@@ -185,7 +185,7 @@ class TestSchedulerRoundTripExtended(TestCase):
 
     def test_double_round_trip_stability(self):
         """ Export -> re-import -> export; verify scheduler section is stable. """
-        yaml_str = EnmasseExporter(self.config_store).export()
+        yaml_str = EnmasseExporter(self.config_manager).export()
 
         store2 = ConfigManager()
         EnmasseImporter(store2).import_(yaml_str)

@@ -35,7 +35,7 @@ class GetByID(AdminService):
     output = _output_required + _output_optional
 
     def handle(self):
-        for item in self.server.config_store.get_list('security'):
+        for item in self.server.config_manager.get_list('security'):
             if str(item.get('id')) == str(self.request.input.id):
                 out = dict(item)
                 if 'sec_type' not in out and out.get('type'):
@@ -91,7 +91,7 @@ class GetList(AdminService):
         else:
             query_criteria = []
 
-        items = self.server.config_store.get_list('security')
+        items = self.server.config_manager.get_list('security')
         out = []
 
         for raw in items:

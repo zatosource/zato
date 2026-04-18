@@ -28,7 +28,7 @@ class GetList(AdminService):
         'service_name', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format')
 
     def handle(self):
-        items = self.server.config_store.get_list(_entity_type)
+        items = self.server.config_manager.get_list(_entity_type)
         self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
@@ -64,9 +64,9 @@ class Create(AdminService):
         }
 
         name = input.name
-        self.server.config_store.set(_entity_type, name, data)
+        self.server.config_manager.set(_entity_type, name, data)
 
-        item = self.server.config_store.get(_entity_type, name)
+        item = self.server.config_manager.get(_entity_type, name)
         self.response.payload.id = item['id']
         self.response.payload.name = item['name']
 
@@ -86,7 +86,7 @@ class Edit(AdminService):
         input = self.request.input
 
         old_name = None
-        for item in self.server.config_store.get_list(_entity_type):
+        for item in self.server.config_manager.get_list(_entity_type):
             if item.get('id') == input.id:
                 old_name = item['name']
                 break
@@ -94,7 +94,7 @@ class Edit(AdminService):
         if not old_name:
             raise Exception('AMQP channel with id `{}` not found'.format(input.id))
 
-        existing = self.server.config_store.get(_entity_type, old_name) or {}
+        existing = self.server.config_manager.get(_entity_type, old_name) or {}
 
         existing['name'] = input.name
         existing['is_active'] = input.is_active
@@ -110,11 +110,11 @@ class Edit(AdminService):
         existing['data_format'] = input.get('data_format')
 
         if old_name != input.name:
-            self.server.config_store.delete(_entity_type, old_name)
+            self.server.config_manager.delete(_entity_type, old_name)
 
-        self.server.config_store.set(_entity_type, input.name, existing)
+        self.server.config_manager.set(_entity_type, input.name, existing)
 
-        item = self.server.config_store.get(_entity_type, input.name)
+        item = self.server.config_manager.get(_entity_type, input.name)
         self.response.payload.id = item['id']
         self.response.payload.name = item['name']
 
@@ -130,9 +130,9 @@ class Delete(AdminService):
 
     def handle(self):
         input_id = self.request.input.id
-        for item in self.server.config_store.get_list(_entity_type):
+        for item in self.server.config_manager.get_list(_entity_type):
             if item.get('id') == input_id or item.get('name') == input_id:
-                self.server.config_store.delete(_entity_type, item['name'])
+                self.server.config_manager.delete(_entity_type, item['name'])
                 return
         raise Exception('AMQP channel with id `{}` not found'.format(input_id))
 

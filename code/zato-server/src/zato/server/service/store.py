@@ -494,7 +494,7 @@ class ServiceStore:
     def get_service_info_by_id(self, service_id:'str') -> 'stranydict':
         service_id = str(service_id)
         for impl_name, service_data in self.services.items():
-            config = self.server.config_store.get('service', service_data['name'])
+            config = self.server.config_manager.get('service', service_data['name'])
             if config and str(config.get('id', '')) == service_id:
                 return service_data
         raise KeyError('No such service_id `{}` among deployed services'.format(service_id))
@@ -502,7 +502,7 @@ class ServiceStore:
 # ################################################################################################################################
 
     def get_service_id_by_name(self, service_name:'str') -> 'str':
-        config = self.server.config_store.get('service', service_name)
+        config = self.server.config_manager.get('service', service_name)
         if config:
             return config['id']
         raise KeyError('No such service `{}` in config store'.format(service_name))

@@ -22,8 +22,8 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseCacheImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
@@ -43,9 +43,9 @@ class TestEnmasseCacheImport(TestCase):
 
 # ################################################################################################################################
 
-    def test_cache_imported_to_config_store(self):
+    def test_cache_imported_to_config_manager(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('cache', exported)
 
         cache_list = exported['cache']
@@ -56,7 +56,7 @@ class TestEnmasseCacheImport(TestCase):
 
     def test_cache_values_preserved(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         cache_list = exported['cache']
         cache_by_name = {item['name']: item for item in cache_list}
 

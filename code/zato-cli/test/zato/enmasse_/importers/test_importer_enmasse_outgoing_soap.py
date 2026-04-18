@@ -20,15 +20,15 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseOutgoingSOAPImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
 
     def test_outgoing_soap_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('outgoing_soap', exported)
 
         soap_list = exported['outgoing_soap']
@@ -39,7 +39,7 @@ class TestEnmasseOutgoingSOAPImport(TestCase):
 
     def test_outgoing_soap_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         soap_list = exported['outgoing_soap']
         soap_by_name = {item['name']: item for item in soap_list}
 

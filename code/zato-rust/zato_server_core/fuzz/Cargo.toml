@@ -76,24 +76,3 @@ path = "fuzz_targets/fuzz_format_access_line.rs"
 test = false
 doc = false
 bench = false
-
-[[bin]]
-name = "fuzz_check_basic_auth"
-path = "fuzz_targets/fuzz_check_basic_auth.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
-name = "fuzz_check_apikey"
-path = "fuzz_targets/fuzz_check_apikey.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
-name = "fuzz_security_index_consistency"
-path = "fuzz_targets/fuzz_security_index_consistency.rs"
-test = false
-doc = false
-bench = false

@@ -73,8 +73,8 @@ class EnmasseImporter:
         'pubsub_subscription': PubSubSubscriptionImporter,
     }
 
-    def __init__(self, config_store:'any_') -> 'None':
-        self.config_store = config_store
+    def __init__(self, config_manager:'any_') -> 'None':
+        self.config_manager = config_manager
 
 # ################################################################################################################################
 
@@ -101,7 +101,7 @@ class EnmasseImporter:
             return
 
         preprocessed_yaml = yaml.dump(data, default_flow_style=False, sort_keys=True)
-        self.config_store.load_yaml_string(preprocessed_yaml)
+        self.config_manager.load_yaml_string(preprocessed_yaml)
 
 # ################################################################################################################################
 # ################################################################################################################################

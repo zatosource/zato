@@ -50,7 +50,6 @@ from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.config import ConfigStore
 from zato.common.config.manager import ConfigManager
-from zato_server_core import ConfigStore as RustConfigStore
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -114,7 +113,6 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
-    config_store: 'RustConfigStore'
     config_manager: 'ConfigManager'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
@@ -272,13 +270,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         from zato.common.rules.api import RulesManager
         self.rules = RulesManager()
 
-        # The Rust-backed config store
-        self.config_store = RustConfigStore()
-
-        # The Python-backed config manager (YAML source of truth)
+        # The config manager (YAML source of truth)
         self.config_manager = ConfigManager()
 
-        # The main config store (Python side, populated from Rust store)
+        # The main config store (Python side, populated from config manager)
         self.config = ConfigStore()
 
         # Log streaming manager
@@ -714,7 +709,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             if file_name.endswith(('.yaml', '.yml')):
                 file_path = os.path.join(enmasse_dir, file_name)
                 logger.info('Loading enmasse auto-deploy YAML: %s', file_path)
-                self.config_store.load_yaml(file_path)
                 self.config_manager.load_yaml(file_path)
 
         self.reload_config()
@@ -1095,7 +1089,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         try:
             scheduler_start(
-                self.config_store,
+                self.config_manager,
                 _scheduler_run_cb,
                 spawn,
                 _on_job_executed,
@@ -1116,7 +1110,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         from zato_broker_core import log_admin_info
 
         # Load permissions
-        permissions = self.config_store.get_list('pubsub_permission')
+        permissions = self.config_manager.get_list('pubsub_permission')
 
         client_permissions = {}
 
@@ -1146,7 +1140,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             log_admin_info(f'Loaded permission -> security:{security}, rules:{len(perms)}')
 
         # Load subscriptions
-        subscriptions = self.config_store.get_list('pubsub_subscription')
+        subscriptions = self.config_manager.get_list('pubsub_subscription')
         log_admin_info(f'Loading pub/sub subscriptions -> {len(subscriptions)} subscription(s)')
 
         for sub in subscriptions:
@@ -1214,13 +1208,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'len_stderr_human': '',
             })
 
-        # Keep the Rust store in sync during transition
-        try:
-            importer_rust = EnmasseImporter(self.config_store)
-            importer_rust.import_(file_content)
-        except Exception:
-            logger.warning('Rust config store bridge import failed (non-fatal during transition): %s', format_exc())
-
         try:
             self.reload_config()
         except Exception:
@@ -1274,9 +1261,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 }
             else:
                 sec_def = None
-                for item in self.config_store.get_list('security'):
+                for item in self.config_manager.get_list('security'):
                     if item['id'] == security_id:
-                        sec_def = self.config_store.get('security', item['name'])
+                        sec_def = self.config_manager.get('security', item['name'])
                         break
 
                 if not sec_def:
@@ -1324,7 +1311,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def check_attr_exists(self, entity_type:'str', attr_name:'str', value:'str') -> 'str':
         import json
-        exists = self.config_store.attr_value_exists(entity_type, attr_name, value)
+        exists = self.config_manager.attr_value_exists(entity_type, attr_name, value)
         return json.dumps({'exists': exists})
 
 # ################################################################################################################################
@@ -1339,13 +1326,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
-        existing_jobs = {item.get('name') for item in self.config_store.get_list('scheduler')}
+        existing_jobs = {item.get('name') for item in self.config_manager.get_list('scheduler')}
 
         for job in config.get('scheduler', []):
             if job['name'] in existing_jobs:
                 return 'Demo scheduler config already imported'
 
-        self.config_store.load_yaml(config_path)
         self.config_manager.load_yaml(config_path)
         self.reload_config()
         return True
@@ -1371,10 +1357,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
-        existing_security = {item.get('name') for item in self.config_store.get_list('security')}
-        existing_topics = {item.get('name') for item in self.config_store.get_list('pubsub_topic')}
-        existing_permissions = {item.get('security') for item in self.config_store.get_list('pubsub_permission')}
-        existing_subscriptions = {item.get('security') for item in self.config_store.get_list('pubsub_subscription')}
+        existing_security = {item.get('name') for item in self.config_manager.get_list('security')}
+        existing_topics = {item.get('name') for item in self.config_manager.get_list('pubsub_topic')}
+        existing_permissions = {item.get('security') for item in self.config_manager.get_list('pubsub_permission')}
+        existing_subscriptions = {item.get('security') for item in self.config_manager.get_list('pubsub_subscription')}
 
         has_duplicates = False
 
@@ -1404,7 +1390,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if has_duplicates:
             return 'Demo config already imported'
 
-        self.config_store.load_yaml(config_path)
         self.config_manager.load_yaml(config_path)
         self.reload_config()
 

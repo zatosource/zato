@@ -815,7 +815,7 @@ class OpenAPIHandler(Service):
             raise Forbidden(self.cid)
 
         try:
-            channel = self.server.config_store.get('generic_connection', channel_name)
+            channel = self.server.config_manager.get('generic_connection', channel_name)
             if not channel:
                 raise Forbidden(self.cid)
 

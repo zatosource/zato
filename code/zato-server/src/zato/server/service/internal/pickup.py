@@ -131,7 +131,6 @@ class UpdateEnmasse(Service):
         if enmasse_file_path.endswith('env.ini'):
             return
 
-        self.server.config_store.load_yaml(enmasse_file_path)
         self.server.config_manager.load_yaml(enmasse_file_path)
         self.server.reload_config()
 

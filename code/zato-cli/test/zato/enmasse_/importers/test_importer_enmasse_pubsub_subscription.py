@@ -20,15 +20,15 @@ from zato.common.config.manager import ConfigManager
 class TestEnmassePubSubSubscriptionImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
 
     def test_pubsub_subscription_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('pubsub_subscription', exported)
 
         sub_list = exported['pubsub_subscription']
@@ -38,7 +38,7 @@ class TestEnmassePubSubSubscriptionImport(TestCase):
 
     def test_pubsub_subscription_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         sub_list = exported['pubsub_subscription']
 
         sub_by_security = {item['security']: item for item in sub_list}

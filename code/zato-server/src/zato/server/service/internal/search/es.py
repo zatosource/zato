@@ -38,7 +38,7 @@ class GetList(AdminService):
     output = ('id', 'name', Bool('is_active'), 'hosts', Int('timeout'), 'body_as', '-opaque1')
 
     def handle(self):
-        items = self.server.config_store.get_list(_entity_type)
+        items = self.server.config_manager.get_list(_entity_type)
         self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
@@ -53,7 +53,7 @@ class Create(AdminService):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        store = self.server.config_store
+        store = self.server.config_manager
 
         if store.get(_entity_type, input.name):
             raise BadRequest(self.cid, 'An ElasticSearch connection `{}` already exists in this cluster'.format(input.name))
@@ -85,7 +85,7 @@ class Edit(AdminService):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        store = self.server.config_store
+        store = self.server.config_manager
 
         old = _item_by_id(store.get_list(_entity_type), input.id)
         if not old:
@@ -127,7 +127,7 @@ class Delete(AdminService):
 
     def handle(self):
         input = self.request.input
-        store = self.server.config_store
+        store = self.server.config_manager
         input_id = input.get('id')
         input_name = input.get('name')
 

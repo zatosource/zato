@@ -21,7 +21,7 @@ class GetList(AdminService):
     output = 'id', 'name', 'is_active', '-description', '-publisher_count', '-subscriber_count'
 
     def handle(self):
-        items = self.server.config_store.get_list('pubsub_topic')
+        items = self.server.config_manager.get_list('pubsub_topic')
         self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
@@ -44,7 +44,7 @@ class Create(AdminService):
             'description': input.get('description') or '',
         }
 
-        self.server.config_store.set('pubsub_topic', input.name, data)
+        self.server.config_manager.set('pubsub_topic', input.name, data)
 
         self.response.payload.id = input.name
         self.response.payload.name = input.name
@@ -67,7 +67,7 @@ class Edit(AdminService):
         existing = None
 
         if topic_id:
-            for item in self.server.config_store.get_list('pubsub_topic'):
+            for item in self.server.config_manager.get_list('pubsub_topic'):
                 if item['id'] == topic_id:
                     existing = item
                     break
@@ -82,11 +82,11 @@ class Edit(AdminService):
         existing['description'] = input.get('description') or ''
 
         if old_name != input.name:
-            self.server.config_store.delete('pubsub_topic', old_name)
+            self.server.config_manager.delete('pubsub_topic', old_name)
 
-        self.server.config_store.set('pubsub_topic', input.name, existing)
+        self.server.config_manager.set('pubsub_topic', input.name, existing)
 
-        item = self.server.config_store.get('pubsub_topic', input.name)
+        item = self.server.config_manager.get('pubsub_topic', input.name)
         self.response.payload.id = item['id']
         self.response.payload.name = item['name']
 
@@ -101,9 +101,9 @@ class Delete(AdminService):
     def handle(self):
         input_id = self.request.input.id
 
-        for item in self.server.config_store.get_list('pubsub_topic'):
+        for item in self.server.config_manager.get_list('pubsub_topic'):
             if item.get('id') == input_id or item.get('name') == input_id:
-                self.server.config_store.delete('pubsub_topic', item['name'])
+                self.server.config_manager.delete('pubsub_topic', item['name'])
                 return
 
         raise Exception('Pub/sub topic with id `{}` not found'.format(input_id))
@@ -126,7 +126,7 @@ class GetMatches(AdminService):
         else:
             topic_pattern = input_pattern
 
-        topics = self.server.config_store.get_list('pubsub_topic')
+        topics = self.server.config_manager.get_list('pubsub_topic')
 
         matcher = PatternMatcher()
         client_id = 'temp_client'

@@ -21,12 +21,12 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseJiraExporter(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.config_store.load_yaml_string(template_complex_01)
+        self.config_manager = ConfigManager()
+        self.config_manager.load_yaml_string(template_complex_01)
 
     def test_jira_export(self):
 
-        exporter = EnmasseExporter(self.config_store)
+        exporter = EnmasseExporter(self.config_manager)
         exported_data = exporter.export_to_dict()
 
         if 'jira' not in exported_data:

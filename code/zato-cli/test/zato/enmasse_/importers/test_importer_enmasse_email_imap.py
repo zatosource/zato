@@ -22,8 +22,8 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseIMAPImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
@@ -44,7 +44,7 @@ class TestEnmasseIMAPImport(TestCase):
 
     def test_imap_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('email_imap', exported)
 
         imap_list = exported['email_imap']
@@ -55,7 +55,7 @@ class TestEnmasseIMAPImport(TestCase):
 
     def test_imap_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         imap_list = exported['email_imap']
         imap_by_name = {item['name']: item for item in imap_list}
 

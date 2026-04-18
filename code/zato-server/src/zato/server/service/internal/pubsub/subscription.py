@@ -108,7 +108,7 @@ def get_topic_link(topic_name:'str', is_pub_enabled:'bool', is_delivery_enabled:
 def _get_sec_by_id(server, sec_base_id):
     """ Look up security definition from its ID via the config store.
     """
-    for item in server.config_store.get_list('security'):
+    for item in server.config_manager.get_list('security'):
         if item.get('id') == sec_base_id:
             return item
     raise Exception('Security definition with id `{}` not found'.format(sec_base_id))
@@ -118,7 +118,7 @@ def _get_sec_by_id(server, sec_base_id):
 def _find_security(server, username=None, security=None):
     """ Look up security definition by username or security name via the config store.
     """
-    for item in server.config_store.get_list('security'):
+    for item in server.config_manager.get_list('security'):
         if username and item['username'] == username:
             return item
         if security and item['name'] == security:
@@ -131,7 +131,7 @@ def _find_security(server, username=None, security=None):
 def _topic_exists(server, topic_name):
     """ Check whether a topic exists in the config store.
     """
-    for item in server.config_store.get_list('pubsub_topic'):
+    for item in server.config_manager.get_list('pubsub_topic'):
         if item.get('name') == topic_name:
             return True
     return False
@@ -142,7 +142,7 @@ def _check_permission(server, security, topic_name):
     """ Check whether a security definition has permission for a topic using config store permissions.
     Returns True if allowed, False otherwise.
     """
-    for perm in server.config_store.get_list('pubsub_permission'):
+    for perm in server.config_manager.get_list('pubsub_permission'):
         if perm['security'] != security:
             continue
 
@@ -178,10 +178,10 @@ class GetList(AdminService):
         '-rest_push_endpoint_name', AsIs('-topic_name_list'), '-password'
 
     def handle(self):
-        items = self.server.config_store.get_list('pubsub_subscription')
+        items = self.server.config_manager.get_list('pubsub_subscription')
 
         sec_by_name = {}
-        for sec in self.server.config_store.get_list('security'):
+        for sec in self.server.config_manager.get_list('security'):
             sec_by_name[sec['name']] = sec
 
         out = []
@@ -255,7 +255,7 @@ class Create(AdminService):
             'topic_link_list': ', '.join(sorted(topic_link_list)),
         }
 
-        self.server.config_store.set('pubsub_subscription', sub_id, data)
+        self.server.config_manager.set('pubsub_subscription', sub_id, data)
 
         self.response.payload.id = sub_id
         self.response.payload.sub_key = sub_key
@@ -289,9 +289,9 @@ class Edit(AdminService):
         if not topic_data_list:
             self.logger.info('No topics provided for subscription %s, deleting subscription', input.sub_key)
 
-            for item in self.server.config_store.get_list('pubsub_subscription'):
+            for item in self.server.config_manager.get_list('pubsub_subscription'):
                 if item['sub_key'] == input.sub_key:
-                    self.server.config_store.delete('pubsub_subscription', item['id'])
+                    self.server.config_manager.delete('pubsub_subscription', item['id'])
                     break
 
             sec_def = _get_sec_by_id(self.server, input.sec_base_id)
@@ -318,7 +318,7 @@ class Edit(AdminService):
 
         existing = None
         sub_id = None
-        for item in self.server.config_store.get_list('pubsub_subscription'):
+        for item in self.server.config_manager.get_list('pubsub_subscription'):
             if item['sub_key'] == input.sub_key:
                 existing = item
                 sub_id = item['id']
@@ -327,7 +327,7 @@ class Edit(AdminService):
         if not sub_id:
             raise Exception('Pub/sub subscription with sub_key `{}` not found'.format(input.sub_key))
 
-        self.server.config_store.delete('pubsub_subscription', sub_id)
+        self.server.config_manager.delete('pubsub_subscription', sub_id)
 
         data = {
             'id': sub_id,
@@ -346,7 +346,7 @@ class Edit(AdminService):
             'topic_link_list': ', '.join(sorted(topic_link_list)),
         }
 
-        self.server.config_store.set('pubsub_subscription', sub_id, data)
+        self.server.config_manager.set('pubsub_subscription', sub_id, data)
 
         self.response.payload.id = sub_id
         self.response.payload.sub_key = input.sub_key
@@ -373,12 +373,12 @@ class Delete(AdminService):
         input_id = self.request.input.get('id')
         sub_key = self.request.input.get('sub_key')
 
-        for item in self.server.config_store.get_list('pubsub_subscription'):
+        for item in self.server.config_manager.get_list('pubsub_subscription'):
             match_by_id = input_id and (item.get('id') == input_id)
             match_by_key = sub_key and (item.get('sub_key') == sub_key)
 
             if match_by_id or match_by_key:
-                self.server.config_store.delete('pubsub_subscription', item['id'])
+                self.server.config_manager.delete('pubsub_subscription', item['id'])
                 return
 
         raise Exception('Pub/sub subscription not found (id:`{}`, sub_key:`{}`)'.format(input_id, sub_key))

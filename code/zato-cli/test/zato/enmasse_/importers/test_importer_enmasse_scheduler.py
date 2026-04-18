@@ -23,8 +23,8 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseSchedulerImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
@@ -44,7 +44,7 @@ class TestEnmasseSchedulerImport(TestCase):
 
     def test_scheduler_imported(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('scheduler', exported)
 
         scheduler_list = exported['scheduler']
@@ -59,7 +59,7 @@ class TestEnmasseSchedulerImport(TestCase):
 
     def test_scheduler_values(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         scheduler_list = exported['scheduler']
         scheduler_by_name = {item['name']: item for item in scheduler_list}
 
@@ -83,11 +83,11 @@ class TestEnmasseSchedulerImport(TestCase):
 class TestEnmasseSchedulerImportExtended(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_scheduler_01)
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.scheduler_by_name = {item['name']: item for item in exported.get('scheduler', [])}
 
 # ################################################################################################################################

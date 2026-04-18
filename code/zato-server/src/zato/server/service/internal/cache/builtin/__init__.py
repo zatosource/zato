@@ -35,7 +35,7 @@ def _item_by_id(items, id_):
 # ################################################################################################################################
 
 def _clear_other_defaults(server, current_name):
-    store = server.config_store
+    store = server.config_manager
     for item in store.get_list(_entity_type):
         name = item.get('name')
         if name == current_name or not item.get('is_default'):
@@ -56,7 +56,7 @@ class Get(AdminService):
         Int('current_size')
 
     def handle(self):
-        item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
+        item = _item_by_id(self.server.config_manager.get_list(_entity_type), self.request.input.id)
         if not item:
             raise BadRequest(self.cid, 'Could not find cache_builtin instance with id `{}`'.format(self.request.input.id))
 
@@ -82,7 +82,7 @@ class GetList(AdminService):
 
     def handle(self):
         items = []
-        for raw in self.server.config_store.get_list(_entity_type):
+        for raw in self.server.config_manager.get_list(_entity_type):
             item = dict(raw)
             item.setdefault('cache_type', _COMMON_CACHE.TYPE.BUILTIN)
             try:
@@ -108,7 +108,7 @@ class Create(AdminService):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
 
-        store = self.server.config_store
+        store = self.server.config_manager
         existing = store.get(_entity_type, input.name)
         if existing and _skip_if_exists:
             self.response.payload.id = existing.get('id', input.name)
@@ -168,7 +168,7 @@ class Edit(AdminService):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        store = self.server.config_store
+        store = self.server.config_manager
 
         old = _item_by_id(store.get_list(_entity_type), input.id)
         if not old:
@@ -217,7 +217,7 @@ class Delete(AdminService):
 
     def handle(self):
         input = self.request.input
-        store = self.server.config_store
+        store = self.server.config_manager
         input_id = input.get('id')
         input_name = input.get('name')
 
@@ -249,7 +249,7 @@ class Clear(AdminService):
     input = 'cluster_id', 'id'
 
     def handle(self):
-        item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
+        item = _item_by_id(self.server.config_manager.get_list(_entity_type), self.request.input.id)
         if not item:
             raise BadRequest(self.cid, 'Could not find cache_builtin instance with id `{}`'.format(self.request.input.id))
         self.cache.clear(_COMMON_CACHE.TYPE.BUILTIN, item['name'])

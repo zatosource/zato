@@ -41,20 +41,20 @@ class ConfigLoader:
 
     def set_up_security(self:'ParallelServer', _cluster_id:'int') -> 'None':
         self.config.apikey = ConfigDict(
-            'apikey', config_store=self.config_store, entity_type='security', sec_type_filter='apikey')
+            'apikey', config_manager=self.config_manager, entity_type='security', sec_type_filter='apikey')
         self.config.basic_auth = ConfigDict(
-            'basic_auth', config_store=self.config_store, entity_type='security', sec_type_filter='basic_auth')
+            'basic_auth', config_manager=self.config_manager, entity_type='security', sec_type_filter='basic_auth')
         self.config.ntlm = ConfigDict(
-            'ntlm', config_store=self.config_store, entity_type='security', sec_type_filter='ntlm')
+            'ntlm', config_manager=self.config_manager, entity_type='security', sec_type_filter='ntlm')
         self.config.oauth = ConfigDict(
-            'oauth', config_store=self.config_store, entity_type='security', sec_type_filter='bearer_token')
+            'oauth', config_manager=self.config_manager, entity_type='security', sec_type_filter='bearer_token')
 
 # ################################################################################################################################
 
     def _config_dict_from_rust(self, name, entity_type):
         """ Build a delegating ConfigDict backed by the Rust ConfigStore.
         """
-        return ConfigDict(name, config_store=self.config_store, entity_type=entity_type)
+        return ConfigDict(name, config_manager=self.config_manager, entity_type=entity_type)
 
 # ################################################################################################################################
 
@@ -108,7 +108,7 @@ class ConfigLoader:
         # HTTP/SOAP channels from ConfigStore (includes default-objects.yaml + any enmasse)
         http_soap = []
 
-        for item in self.config_store.get_list('channel_rest'):
+        for item in self.config_manager.get_list('channel_rest'):
 
             hs_item = dict(item)
             hs_item['name'] = resolve_name(hs_item.get('name', ''))
@@ -175,21 +175,19 @@ class ConfigLoader:
 # ################################################################################################################################
 
     def load_enmasse_yaml(self:'ParallelServer') -> 'None':
-        """ Loads default objects and enmasse YAML into both stores.
+        """ Loads default objects and enmasse YAML into the config manager.
         """
 
         # Load local secrets first (security definitions with encrypted passwords)
         secrets_yaml_path = os.path.join(self.repo_location, 'secrets.yaml')
         if os.path.exists(secrets_yaml_path):
             logger.info('Loading secrets from %s', secrets_yaml_path)
-            self.config_store.load_yaml(secrets_yaml_path)
             self.config_manager.load_yaml(secrets_yaml_path)
 
         # Then load default objects -- shipped with the codebase (channels referencing security by name)
         from zato.common.data import default_objects_yaml_path
         if os.path.exists(default_objects_yaml_path):
             logger.info('Loading default objects from %s', default_objects_yaml_path)
-            self.config_store.load_yaml(default_objects_yaml_path)
             self.config_manager.load_yaml(default_objects_yaml_path)
 
         # Then load any enmasse YAML from external directories (Docker, deploy_auto_from)
@@ -208,7 +206,6 @@ class ConfigLoader:
             for pattern in ('*.yaml', '*.yml'):
                 for yaml_path in sorted(glob.glob(os.path.join(enmasse_dir, pattern))):
                     logger.info('Loading enmasse YAML from %s', yaml_path)
-                    self.config_store.load_yaml(yaml_path)
                     self.config_manager.load_yaml(yaml_path)
 
 # ################################################################################################################################

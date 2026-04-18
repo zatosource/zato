@@ -77,7 +77,7 @@ class ImportObjects(Service):
 
     def _get_existing_security(self) -> 'dictlist':
         out:'dictlist' = []
-        sec_list = self.server.config_store.get_list('security')
+        sec_list = self.server.config_manager.get_list('security')
         for item in sec_list:
             out.append({
                 'id': item.get('id', 0),

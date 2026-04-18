@@ -22,8 +22,8 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseSecurityImport(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.importer = EnmasseImporter(self.config_store)
+        self.config_manager = ConfigManager()
+        self.importer = EnmasseImporter(self.config_manager)
         self.importer.import_(template_complex_01)
 
 # ################################################################################################################################
@@ -64,9 +64,9 @@ class TestEnmasseSecurityImport(TestCase):
 
 # ################################################################################################################################
 
-    def test_security_imported_to_config_store(self):
+    def test_security_imported_to_config_manager(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         self.assertIn('security', exported)
 
         security_list = exported['security']
@@ -81,7 +81,7 @@ class TestEnmasseSecurityImport(TestCase):
 
     def test_security_types_preserved(self):
 
-        exported = self.config_store.export_to_dict()
+        exported = self.config_manager.export_to_dict()
         security_list = exported['security']
         security_by_name = {item['name']: item for item in security_list}
 

@@ -28,7 +28,7 @@ class GetList(AdminService):
     output = 'id', 'name', 'is_active', 'username', 'realm', '-password'
 
     def handle(self):
-        items = self.server.config_store.get_list('security')
+        items = self.server.config_manager.get_list('security')
         out = []
         for item in items:
             if item.get('sec_type') == 'basic_auth' or item.get('type') == 'basic_auth':
@@ -48,7 +48,7 @@ class Create(AdminService):
     def handle(self):
         input = self.request.input
 
-        existing = self.server.config_store.get('security', input.name)
+        existing = self.server.config_manager.get('security', input.name)
         if existing:
             raise Exception('HTTP Basic Auth definition `{}` already exists'.format(input.name))
 
@@ -56,7 +56,7 @@ class Create(AdminService):
 
         # ConfigStore allocates the id on `set`, so we set first, then
         # push under the per-user_id lock and roll back on broker reject.
-        self.server.config_store.set('security', input.name, {
+        self.server.config_manager.set('security', input.name, {
             'type': 'basic_auth',
             'name': input.name,
             'is_active': input.is_active,
@@ -65,7 +65,7 @@ class Create(AdminService):
             'password': password,
         })
 
-        item = self.server.config_store.get('security', input.name)
+        item = self.server.config_manager.get('security', input.name)
         user_id = item['id']
 
         with self.server.auth_update_lock(user_id):
@@ -73,7 +73,7 @@ class Create(AdminService):
                 self.server.broker_client.set_credentials(
                     user_id, input.username, password)
             except Exception:
-                self.server.config_store.delete('security', input.name)
+                self.server.config_manager.delete('security', input.name)
                 raise
 
             self.response.payload.id = user_id
@@ -94,7 +94,7 @@ class Edit(AdminService):
         existing = None
 
         if auth_id:
-            for item in self.server.config_store.get_list('security'):
+            for item in self.server.config_manager.get_list('security'):
                 if str(item['id']) == str(auth_id) and item.get('type') == 'basic_auth':
                     existing = item
                     break
@@ -124,11 +124,11 @@ class Edit(AdminService):
             existing['type'] = 'basic_auth'
 
             if old_name != input.name:
-                self.server.config_store.delete('security', old_name)
+                self.server.config_manager.delete('security', old_name)
 
-            self.server.config_store.set('security', input.name, existing)
+            self.server.config_manager.set('security', input.name, existing)
 
-            item = self.server.config_store.get('security', input.name)
+            item = self.server.config_manager.get('security', input.name)
 
             self.response.payload.id = item['id']
             self.response.payload.name = item['name']
@@ -148,7 +148,7 @@ class ChangePassword(AdminService):
         name = input.get('name') or ''
 
         if not name and input.get('id'):
-            for item in self.server.config_store.get_list('security'):
+            for item in self.server.config_manager.get_list('security'):
                 if item.get('id') == input.id:
                     name = item['name']
                     break
@@ -158,7 +158,7 @@ class ChangePassword(AdminService):
 
         password = self.server.decrypt(input.password) if input.password else ''
 
-        existing = self.server.config_store.get('security', name)
+        existing = self.server.config_manager.get('security', name)
         if not existing:
             raise Exception('HTTP Basic Auth definition `{}` not found'.format(name))
 
@@ -169,7 +169,7 @@ class ChangePassword(AdminService):
                 user_id, existing['username'], password)
 
             existing['password'] = password
-            self.server.config_store.set('security', name, existing)
+            self.server.config_manager.set('security', name, existing)
 
             self.response.payload.id = user_id
 
@@ -183,7 +183,7 @@ class Delete(AdminService):
     def handle(self):
         target_name = None
         target_user_id = None
-        for item in self.server.config_store.get_list('security'):
+        for item in self.server.config_manager.get_list('security'):
             if item['id'] == self.request.input.id:
                 target_name = item['name']
                 target_user_id = item['id']
@@ -194,7 +194,7 @@ class Delete(AdminService):
 
         with self.server.auth_update_lock(target_user_id):
             self.server.broker_client.remove_credentials(target_user_id)
-            self.server.config_store.delete('security', target_name)
+            self.server.config_manager.delete('security', target_name)
 
 # ################################################################################################################################
 # ################################################################################################################################

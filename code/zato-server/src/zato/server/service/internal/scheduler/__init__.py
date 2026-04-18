@@ -73,7 +73,7 @@ def _create_edit(self, action):
     service_name = input.service
     logger = self.logger
     cid = self.cid
-    store = self.server.config_store
+    store = self.server.config_manager
 
     if job_type not in (SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED):
         msg = 'Unrecognized job type [{}]'.format(job_type)
@@ -211,7 +211,7 @@ class GetList(_Get):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        items = [self._enrich_job(dict(x)) for x in self.server.config_store.get_list(_entity_type)]
+        items = [self._enrich_job(dict(x)) for x in self.server.config_manager.get_list(_entity_type)]
         if input.get('service_name'):
             items = [x for x in items if x.get('service_name') == input.service_name or x.get('service') == input.service_name]
         self.response.payload = self._paginate_list(items)
@@ -227,7 +227,7 @@ class GetByID(_Get):
     input = 'cluster_id', 'id'
 
     def handle(self):
-        item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
+        item = _item_by_id(self.server.config_manager.get_list(_entity_type), self.request.input.id)
         if not item:
             raise ZatoException(self.cid, 'Job not found')
         self.response.payload = self._enrich_job(item)
@@ -243,7 +243,7 @@ class GetByName(_Get):
     input = 'cluster_id', 'name'
 
     def handle(self):
-        item = self.server.config_store.get(_entity_type, self.request.input.name)
+        item = self.server.config_manager.get(_entity_type, self.request.input.name)
         if not item:
             raise ZatoException(self.cid, 'Job not found')
         self.response.payload = self._enrich_job(item)
@@ -275,7 +275,7 @@ class Delete(_SchedulerAdmin):
     input = 'id',
 
     def handle(self):
-        store = self.server.config_store
+        store = self.server.config_manager
         try:
             item = _item_by_id(store.get_list(_entity_type), self.request.input.id)
             if not item:
@@ -302,7 +302,7 @@ class Execute(_SchedulerAdmin):
 
     def handle(self):
         try:
-            item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
+            item = _item_by_id(self.server.config_manager.get_list(_entity_type), self.request.input.id)
             if not item:
                 raise ZatoException(self.cid, 'Job not found')
 
@@ -369,7 +369,7 @@ class HolidayCalendarGetList(_HolidayCalendarAdmin):
     output = 'id', 'name', '-description'
 
     def handle(self):
-        items = [dict(x) for x in self.server.config_store.get_list(_cal_entity_type)]
+        items = [dict(x) for x in self.server.config_manager.get_list(_cal_entity_type)]
         self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
@@ -383,7 +383,7 @@ class HolidayCalendarGetByID(_HolidayCalendarAdmin):
     output = 'id', 'name', '-description', '-dates', '-weekdays'
 
     def handle(self):
-        items = self.server.config_store.get_list(_cal_entity_type)
+        items = self.server.config_manager.get_list(_cal_entity_type)
         sid = str(self.request.input.id)
         for item in items:
             if str(item.get('id')) == sid:
@@ -409,8 +409,8 @@ class HolidayCalendarCreate(_HolidayCalendarAdmin):
             'dates': input.get('dates') or [],
             'weekdays': input.get('weekdays') or [],
         }
-        self.server.config_store.set(_cal_entity_type, input.name, data)
-        saved = self.server.config_store.get(_cal_entity_type, input.name) or data
+        self.server.config_manager.set(_cal_entity_type, input.name, data)
+        saved = self.server.config_manager.get(_cal_entity_type, input.name) or data
 
         from zato_scheduler_core import scheduler_reload
         scheduler_reload()
@@ -430,7 +430,7 @@ class HolidayCalendarEdit(_HolidayCalendarAdmin):
 
     def handle(self):
         input = self.request.input
-        items = self.server.config_store.get_list(_cal_entity_type)
+        items = self.server.config_manager.get_list(_cal_entity_type)
         sid = str(input.id)
         old_name = None
         for item in items:
@@ -439,7 +439,7 @@ class HolidayCalendarEdit(_HolidayCalendarAdmin):
                 break
 
         if old_name and old_name != input.name:
-            self.server.config_store.delete(_cal_entity_type, old_name)
+            self.server.config_manager.delete(_cal_entity_type, old_name)
 
         data = {
             'id': input.id,
@@ -448,8 +448,8 @@ class HolidayCalendarEdit(_HolidayCalendarAdmin):
             'dates': input.get('dates') or [],
             'weekdays': input.get('weekdays') or [],
         }
-        self.server.config_store.set(_cal_entity_type, input.name, data)
-        saved = self.server.config_store.get(_cal_entity_type, input.name) or data
+        self.server.config_manager.set(_cal_entity_type, input.name, data)
+        saved = self.server.config_manager.get(_cal_entity_type, input.name) or data
 
         from zato_scheduler_core import scheduler_reload
         scheduler_reload()
@@ -467,11 +467,11 @@ class HolidayCalendarDelete(_HolidayCalendarAdmin):
     input = 'id',
 
     def handle(self):
-        items = self.server.config_store.get_list(_cal_entity_type)
+        items = self.server.config_manager.get_list(_cal_entity_type)
         sid = str(self.request.input.id)
         for item in items:
             if str(item.get('id')) == sid:
-                self.server.config_store.delete(_cal_entity_type, item['name'])
+                self.server.config_manager.delete(_cal_entity_type, item['name'])
 
                 from zato_scheduler_core import scheduler_reload
                 scheduler_reload()
@@ -491,7 +491,7 @@ class GetCurrentState(_SchedulerAdmin):
         try:
             from zato_scheduler_core import scheduler_get_all_history, scheduler_get_job_summaries
 
-            store_jobs = self.server.config_store.get_list(_entity_type)
+            store_jobs = self.server.config_manager.get_list(_entity_type)
 
             runtime_by_id = {}
             runtime_by_name = {}

@@ -398,7 +398,7 @@ def start_file_listener_thread(
                 if file_path.endswith('env.ini'):
                     return
                 logger.info('File listener: loading enmasse YAML from %s', file_path)
-                server.config_store.load_yaml(file_path)
+                server.config_manager.load_yaml(file_path)
                 try:
                     server.reload_config()
                 except Exception:

@@ -82,7 +82,7 @@ class SecurityGroupsCtx:
 
     def check_security_basic_auth(self, cid:'str', channel_name:'str', username:'str', password:'str') -> 'intnone':
 
-        result = self.server.config_store.check_basic_auth(username, password)
+        result = self.server.config_manager.check_basic_auth(username, password)
         if result is not None:
             return result
 
@@ -237,7 +237,7 @@ class SecurityGroupsCtx:
 
     def check_security_apikey(self, cid:'str', channel_name:'str', header_value:'str') -> 'intnone':
 
-        result = self.server.config_store.check_apikey(header_value)
+        result = self.server.config_manager.check_apikey(header_value)
         if result is not None:
             return result
 

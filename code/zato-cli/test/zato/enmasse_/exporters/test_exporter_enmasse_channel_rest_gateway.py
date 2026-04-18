@@ -21,12 +21,12 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseChannelRESTGatewayExporter(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.config_store.load_yaml_string(template_rest_gateway)
+        self.config_manager = ConfigManager()
+        self.config_manager.load_yaml_string(template_rest_gateway)
 
     def test_rest_channel_gateway_export(self):
 
-        exporter = EnmasseExporter(self.config_store)
+        exporter = EnmasseExporter(self.config_manager)
         exported_data = exporter.export_to_dict()
 
         if 'channel_rest' in exported_data:

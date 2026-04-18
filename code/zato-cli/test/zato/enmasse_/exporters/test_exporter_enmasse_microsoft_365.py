@@ -21,12 +21,12 @@ from zato.common.config.manager import ConfigManager
 class TestEnmasseMicrosoft365Exporter(TestCase):
 
     def setUp(self) -> 'None':
-        self.config_store = ConfigManager()
-        self.config_store.load_yaml_string(template_complex_01)
+        self.config_manager = ConfigManager()
+        self.config_manager.load_yaml_string(template_complex_01)
 
     def test_microsoft_365_export(self):
 
-        exporter = EnmasseExporter(self.config_store)
+        exporter = EnmasseExporter(self.config_manager)
         exported_data = exporter.export_to_dict()
 
         if 'microsoft_365' not in exported_data:

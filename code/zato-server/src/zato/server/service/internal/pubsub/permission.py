@@ -16,7 +16,7 @@ from zato_server_core import next_id
 def _get_security_by_id(server, sec_base_id):
     """ Look up security definition name from its ID via the config store.
     """
-    for item in server.config_store.get_list('security'):
+    for item in server.config_manager.get_list('security'):
         if item['id'] == sec_base_id:
             return item['name']
     raise Exception('Security definition with id `{}` not found'.format(sec_base_id))
@@ -24,7 +24,7 @@ def _get_security_by_id(server, sec_base_id):
 def _get_user_id(server, security):
     """ Resolve a security definition name to its user_id. Raises if unknown.
     """
-    item = server.config_store.get('security', security)
+    item = server.config_manager.get('security', security)
     if item is not None:
         return item['id']
     resolved = server.sec_user_id(security)
@@ -37,7 +37,7 @@ def _merged_acl_for_user(server, security, extra_row=None, exclude_perm_id=None)
     after `extra_row` is added and `exclude_perm_id` is removed.
     """
     rows = []
-    for perm_row in server.config_store.get_list('pubsub_permission'):
+    for perm_row in server.config_manager.get_list('pubsub_permission'):
         if perm_row['security'] != security:
             continue
         if exclude_perm_id is not None and perm_row['id'] == exclude_perm_id:
@@ -72,9 +72,9 @@ class GetList(AdminService):
     input = '-cluster_id',
 
     def handle(self):
-        items = self.server.config_store.get_list('pubsub_permission')
+        items = self.server.config_manager.get_list('pubsub_permission')
 
-        subscriptions = self.server.config_store.get_list('pubsub_subscription')
+        subscriptions = self.server.config_manager.get_list('pubsub_subscription')
 
         for item in items:
             item['name'] = item['security']
@@ -148,7 +148,7 @@ class Create(AdminService):
             new_pub, new_sub = _merged_acl_for_user(self.server, security, extra_row=data)
             _push_acl(self.server, user_id, new_pub, new_sub)
 
-            self.server.config_store.set('pubsub_permission', perm_id, data)
+            self.server.config_manager.set('pubsub_permission', perm_id, data)
 
         self.response.payload.id = perm_id
         self.response.payload.security = security
@@ -193,8 +193,8 @@ class Edit(AdminService):
             )
             _push_acl(self.server, user_id, new_pub, new_sub)
 
-            self.server.config_store.delete('pubsub_permission', perm_id)
-            self.server.config_store.set('pubsub_permission', perm_id, data)
+            self.server.config_manager.delete('pubsub_permission', perm_id)
+            self.server.config_manager.set('pubsub_permission', perm_id, data)
 
         self.response.payload.id = perm_id
         self.response.payload.security = security
@@ -209,7 +209,7 @@ class Delete(AdminService):
 
     def handle(self):
         perm_id = self.request.input.id
-        existing = self.server.config_store.get('pubsub_permission', perm_id)
+        existing = self.server.config_manager.get('pubsub_permission', perm_id)
         if existing is None:
             return
 
@@ -222,7 +222,7 @@ class Delete(AdminService):
             )
             _push_acl(self.server, user_id, new_pub, new_sub)
 
-            self.server.config_store.delete('pubsub_permission', perm_id)
+            self.server.config_manager.delete('pubsub_permission', perm_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

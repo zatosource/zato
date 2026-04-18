@@ -46,7 +46,7 @@ class GetList(AdminService):
         'ping_address', '-username', '-opaque1')
 
     def handle(self):
-        items = [dict(x) for x in self.server.config_store.get_list(_entity_type)]
+        items = [dict(x) for x in self.server.config_manager.get_list(_entity_type)]
         self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
@@ -62,7 +62,7 @@ class Create(AdminService):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        store = self.server.config_store
+        store = self.server.config_manager
 
         if store.get(_entity_type, input.name):
             raise BadRequest(self.cid, 'An SMTP connection `{}` already exists in this cluster'.format(input.name))
@@ -100,7 +100,7 @@ class Edit(AdminService):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        store = self.server.config_store
+        store = self.server.config_manager
 
         old = _item_by_id(store.get_list(_entity_type), input.id)
         if not old:
@@ -148,7 +148,7 @@ class Delete(AdminService):
 
     def handle(self):
         input = self.request.input
-        store = self.server.config_store
+        store = self.server.config_manager
         input_id = input.get('id')
         input_name = input.get('name')
 
@@ -191,7 +191,7 @@ class ChangePassword(ChangePasswordBase):
 
             instance_id = self.request.input.get('id')
             instance_name = self.request.input.name
-            store = self.server.config_store
+            store = self.server.config_manager
 
             item = None
             if instance_id:
@@ -224,7 +224,7 @@ class Ping(AdminService):
     output = 'info'
 
     def handle(self):
-        item = _item_by_id(self.server.config_store.get_list(_entity_type), self.request.input.id)
+        item = _item_by_id(self.server.config_manager.get_list(_entity_type), self.request.input.id)
         if not item:
             raise BadRequest(self.cid, 'Could not find SMTP connection with id `{}`'.format(self.request.input.id))
 

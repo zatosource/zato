@@ -112,7 +112,7 @@ def _flatten_rust_generic_item(item:'anydict') -> 'anydict':
 # ################################################################################################################################
 
 def _conn_to_rust_payload(conn:'GenericConnection') -> 'anydict':
-    """ Build a PyDict suitable for config_store.set for entity generic_connection.
+    """ Build a PyDict suitable for config_manager.set for entity generic_connection.
     """
     flat = conn.to_dict()
     if not isinstance(flat, dict):
@@ -133,7 +133,7 @@ def _conn_to_rust_payload(conn:'GenericConnection') -> 'anydict':
 # ################################################################################################################################
 
 def _find_generic_item(server, id=None, name=None, type_=None) -> 'anydict | None':
-    for item in server.config_store.get_list('generic_connection'):
+    for item in server.config_manager.get_list('generic_connection'):
         if type_ is not None and item.get('type_') != type_:
             continue
         if id is not None and str(item.get('id')) == str(id):
@@ -283,12 +283,12 @@ class _CreateEdit(AdminService):
 
         new_name = data['name']
         if self.is_edit and old_name and old_name != new_name:
-            self.server.config_store.delete('generic_connection', old_name)
+            self.server.config_manager.delete('generic_connection', old_name)
 
         self.logger.info('create/edit: storing type_=%r, rust_payload keys=%r', rust_payload.get('type_'), list(rust_payload.keys()))
-        self.server.config_store.set('generic_connection', new_name, rust_payload)
+        self.server.config_manager.set('generic_connection', new_name, rust_payload)
 
-        stored = self.server.config_store.get('generic_connection', new_name)
+        stored = self.server.config_manager.get('generic_connection', new_name)
         self.response.payload.id = stored['id']
         self.response.payload.name = new_name
 
@@ -339,7 +339,7 @@ class Delete(AdminService):
                     attr_name, attr_value))
             return
 
-        self.server.config_store.delete('generic_connection', found['name'])
+        self.server.config_manager.delete('generic_connection', found['name'])
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -433,7 +433,7 @@ class GetList(AdminService):
 
         type_ = self.request.input.type_
 
-        all_items = self.server.config_store.get_list('generic_connection')
+        all_items = self.server.config_manager.get_list('generic_connection')
         self.logger.info('get-list: type_=%r, store has %d items, types=%r', type_, len(all_items), [x.get('type_') for x in all_items])
 
         items = all_items
@@ -568,7 +568,7 @@ class ChangePassword(ChangePasswordBase):
             rust_payload = _conn_to_rust_payload(conn)
             rust_payload['id'] = str(item.get('id') or instance_id)
             rust_payload['name'] = item['name']
-            self.server.config_store.set('generic_connection', item['name'], rust_payload)
+            self.server.config_manager.set('generic_connection', item['name'], rust_payload)
 
         self.response.payload.id = instance_id
 
