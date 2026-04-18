@@ -1,0 +1,110 @@
+{% extends "zato/settings-base.html" %}
+
+{% block page_title %}{{ page_config.title }}{% endblock %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/textarea-settings.css">
+{% block textarea_page_css %}{% endblock %}
+{% endblock %}
+
+{% block extra_page_js %}
+<script type="text/javascript" src="/static/js/textarea-settings.js" nonce="{{ CSP_NONCE }}"></script>
+{% block textarea_page_js %}{% endblock %}
+{% endblock %}
+
+{% block section_title %}{{ page_config.version_section_title }}{% endblock %}
+{% block help_icon_id %}version-info-help{% endblock %}
+
+{% block content_rows %}
+<div class="info-container textarea-settings-container">
+    <div class="info-row textarea-row">
+        <div class="info-label">{{ page_config.textarea_label|default:"Content" }}</div>
+        <div class="info-value textarea-value">
+            <textarea id="{{ page_config.textarea_id }}" placeholder="{{ page_config.textarea_placeholder|default:"" }}">{{ textarea_content }}</textarea>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block buttons %}
+<div class="button-container">
+    <div class="button-left-options">
+        <span class="toggle-label" id="allow-delete-label">Allow delete</span>
+        <label class="toggle-switch">
+            <input type="checkbox" id="allow-delete-toggle">
+            <span class="toggle-slider"></span>
+        </label>
+    </div>
+    <div class="button-wrapper">
+        <img src="/static/gfx/spinner.svg" class="button-spinner">
+        <span class="status-message test-success">OK</span>
+        <button class="secondary-button" id="check-button">
+            {{ page_config.check_button_label }}
+        </button>
+    </div>
+    <button class="action-button" id="update-button">
+        {{ page_config.action_button_label }}
+    </button>
+</div>
+{% endblock %}
+
+{% block action_steps %}
+<div class="progress-item hidden" id="progress-test">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">
+            Test
+            <span class="copy-icon progress-error-copy hidden" data-copy="test-error" title="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </span>
+        </div>
+        <div class="progress-text" id="test-error">Waiting...</div>
+    </div>
+</div>
+<div class="progress-item hidden" id="progress-configure">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">
+            {{ page_config.step1_label }}
+            <span class="copy-icon progress-error-copy hidden" data-copy="configure-error" title="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </span>
+        </div>
+        <div class="progress-text" id="configure-error">Waiting...</div>
+    </div>
+</div>
+{% if page_config.show_restart_steps %}
+<div class="progress-item hidden" id="progress-scheduler">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">Scheduler</div>
+        <div class="progress-text">Waiting...</div>
+    </div>
+</div>
+<div class="progress-item hidden" id="progress-server">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">Server</div>
+        <div class="progress-text">Waiting...</div>
+    </div>
+</div>
+<div class="progress-item hidden" id="progress-proxy">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">Proxy</div>
+        <div class="progress-text">Waiting...</div>
+    </div>
+</div>
+<div class="progress-item hidden" id="progress-dashboard">
+    <div class="progress-icon"></div>
+    <div class="progress-content">
+        <div class="progress-platform">Dashboard</div>
+        <div class="progress-text">Waiting...</div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block completion_badge %}
+<span class="info-message status-badge with-shine"></span>
+{% endblock %}
