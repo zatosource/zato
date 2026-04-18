@@ -88,6 +88,28 @@ class _CreateEdit(CreateEdit):
     def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} group `{}`'.format(self.verb, item.name)
 
+    def post_process_return_data(self, return_data:'strdict') -> 'strdict':
+
+        # Extract assigned member IDs from checkbox-style hidden inputs
+        prefix = self.form_prefix or ''
+        member_ids = []
+
+        for key in self.req.POST:
+            if key.startswith(prefix + 'security_group_member_'):
+                member_ids.append(self.req.POST[key])
+
+        # Sync the member list for this group
+        group_id = return_data.get('id') or self.req.POST.get(prefix + 'id') or self.req.POST.get('id')
+
+        if group_id:
+            self.req.zato.client.invoke('zato.groups.edit-member-list', {
+                'group_action': 'set',
+                'group_id': group_id,
+                'member_id_list': member_ids,
+            })
+
+        return return_data
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -211,9 +233,17 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     group_type = req.GET.get('group_type')
     group_id = req.GET.get('group_id')
 
-    member_list = _get_member_list(req, group_type, group_id)
     security_list = _get_security_list(req, sec_type, query)
-    security_list = _filter_out_members_from_security_list(security_list, member_list)
+
+    # If we have a group_id, mark which items are members rather than filtering them out
+    if group_id and group_type:
+        member_list = _get_member_list(req, group_type, group_id)
+        member_ids = {member.security_id for member in member_list}
+        for item in security_list:
+            item['is_member'] = item.id in member_ids
+    else:
+        for item in security_list:
+            item['is_member'] = False
 
     data = dumps(security_list)
     return HttpResponse(data, content_type='application/javascript')

@@ -81,6 +81,7 @@ $.namespace('zato.email.imap');
 $.namespace('zato.email.smtp');
 $.namespace('zato.form');
 $.namespace('zato.groups');
+$.namespace('zato.groups.data_table');
 $.namespace('zato.groups.members');
 $.namespace('zato.http_soap');
 $.namespace('zato.http_soap.details');

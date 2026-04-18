@@ -361,10 +361,12 @@ class EditMemberList(Service):
             for mid in member_id_list:
                 if mid not in members:
                     members.append(mid)
-        else:
+        elif input.group_action == Groups.Membership_Action.Remove:
             for mid in member_id_list:
                 if mid in members:
                     members.remove(mid)
+        elif input.group_action == Groups.Membership_Action.Set:
+            members = list(member_id_list)
 
         data = {
             'id': group['id'],

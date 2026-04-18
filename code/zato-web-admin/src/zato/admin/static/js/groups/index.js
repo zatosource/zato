@@ -27,19 +27,417 @@ $(document).ready(function() {
         $.fn.zato.validate_unique('#id_' + c.field, c.entity_type, c.attr_name);
         $.fn.zato.validate_unique('#id_edit-' + c.field, c.entity_type, c.attr_name);
     });
+
+    // Inject assigned badge IDs as hidden inputs before form submit
+    $.fn.zato.data_table.before_submit_hook = function(form) {
+        var action = form.attr('id').replace('-form', '');
+        $.fn.zato.groups.badge_picker.inject_hidden_inputs(action);
+        return true;
+    };
 })
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Badge Picker
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker = {};
+
+$.fn.zato.groups.badge_picker.init = function(action, data) {
+    var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
+    var assigned_body = $('#badge-zone-assigned-' + action + ' .badge-zone-body');
+
+    available_body.empty();
+    assigned_body.empty();
+
+    for (var i = 0; i < data.length; i++) {
+        var item = data[i];
+        var badge = $('<span/>', {
+            'class': 'sec-badge',
+            'data-id': item.id,
+            'data-sec-type': item.sec_type,
+            'data-name': (item.name || '').toLowerCase(),
+            'text': item.name
+        });
+
+        if (item.is_member) {
+            assigned_body.append(badge);
+        }
+        else {
+            available_body.append(badge);
+        }
+    }
+
+    $.fn.zato.groups.badge_picker.update_counts(action);
+    $.fn.zato.groups.badge_picker.attach_events(action);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker.update_counts = function(action) {
+    var available_count = $('#badge-zone-available-' + action + ' .badge-zone-body .sec-badge:visible').length;
+    var assigned_count = $('#badge-zone-assigned-' + action + ' .badge-zone-body .sec-badge').length;
+    $('#badge-zone-available-' + action + ' .badge-zone-count').text(available_count);
+    $('#badge-zone-assigned-' + action + ' .badge-zone-count').text(assigned_count);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker.attach_events = function(action) {
+    var picker = $('#badge-picker-' + action);
+    var available_body = picker.find('#badge-zone-available-' + action + ' .badge-zone-body');
+    var assigned_body = picker.find('#badge-zone-assigned-' + action + ' .badge-zone-body');
+
+    // Click to move
+    picker.off('click.badge', '.sec-badge').on('click.badge', '.sec-badge', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            // Ctrl+click toggles selection
+            $(this).toggleClass('selected');
+            return;
+        }
+
+        var badge = $(this);
+        var parent_zone = badge.closest('.badge-zone');
+        var target_zone;
+
+        if (parent_zone.attr('id').indexOf('available') !== -1) {
+            target_zone = assigned_body;
+        }
+        else {
+            target_zone = available_body;
+        }
+
+        // If there's a multi-selection, move all selected from same zone
+        var selected = parent_zone.find('.sec-badge.selected');
+        if (selected.length > 0 && badge.hasClass('selected')) {
+            selected.removeClass('selected').appendTo(target_zone);
+        }
+        else {
+            // Clear selection and move single badge
+            picker.find('.sec-badge.selected').removeClass('selected');
+            badge.appendTo(target_zone);
+        }
+
+        $.fn.zato.groups.badge_picker.update_counts(action);
+        $.fn.zato.groups.badge_picker.apply_filter(action);
+    });
+
+    // Marquee (rectangle select)
+    var marquee_state = {};
+
+    picker.find('.badge-zone-body').off('mousedown.marquee').on('mousedown.marquee', function(e) {
+        // Only start marquee on direct click on the body (not on a badge)
+        if ($(e.target).hasClass('sec-badge')) {
+            return;
+        }
+
+        var zone_body = $(this);
+        var offset = zone_body.offset();
+        var scroll_top = zone_body.scrollTop();
+        var scroll_left = zone_body.scrollLeft();
+
+        marquee_state.active = true;
+        marquee_state.zone_body = zone_body;
+        marquee_state.start_x = e.pageX - offset.left + scroll_left;
+        marquee_state.start_y = e.pageY - offset.top + scroll_top;
+
+        // Create marquee element
+        var marquee = $('<div class="badge-marquee"></div>');
+        zone_body.append(marquee);
+        marquee_state.marquee = marquee;
+
+        // Clear previous selection in this zone unless Ctrl held
+        if (!e.ctrlKey && !e.metaKey) {
+            zone_body.find('.sec-badge.selected').removeClass('selected');
+        }
+
+        e.preventDefault();
+    });
+
+    $(document).off('mousemove.marquee_' + action).on('mousemove.marquee_' + action, function(e) {
+        if (!marquee_state.active) return;
+
+        var zone_body = marquee_state.zone_body;
+        var offset = zone_body.offset();
+        var scroll_top = zone_body.scrollTop();
+        var scroll_left = zone_body.scrollLeft();
+
+        var cur_x = e.pageX - offset.left + scroll_left;
+        var cur_y = e.pageY - offset.top + scroll_top;
+
+        var x = Math.min(marquee_state.start_x, cur_x);
+        var y = Math.min(marquee_state.start_y, cur_y);
+        var w = Math.abs(cur_x - marquee_state.start_x);
+        var h = Math.abs(cur_y - marquee_state.start_y);
+
+        marquee_state.marquee.css({
+            left: x + 'px',
+            top: y + 'px',
+            width: w + 'px',
+            height: h + 'px'
+        });
+
+        // Highlight badges that intersect
+        var marquee_rect = {
+            left: x,
+            top: y,
+            right: x + w,
+            bottom: y + h
+        };
+
+        zone_body.find('.sec-badge:visible').each(function() {
+            var badge = $(this);
+            var pos = badge.position();
+            var badge_rect = {
+                left: pos.left,
+                top: pos.top,
+                right: pos.left + badge.outerWidth(),
+                bottom: pos.top + badge.outerHeight()
+            };
+
+            var intersects = !(badge_rect.right < marquee_rect.left ||
+                             badge_rect.left > marquee_rect.right ||
+                             badge_rect.bottom < marquee_rect.top ||
+                             badge_rect.top > marquee_rect.bottom);
+
+            if (intersects) {
+                badge.addClass('selected');
+            }
+            else if (!e.ctrlKey && !e.metaKey) {
+                badge.removeClass('selected');
+            }
+        });
+    });
+
+    $(document).off('mouseup.marquee_' + action).on('mouseup.marquee_' + action, function() {
+        if (!marquee_state.active) return;
+        marquee_state.active = false;
+        if (marquee_state.marquee) {
+            marquee_state.marquee.remove();
+            marquee_state.marquee = null;
+        }
+    });
+
+    // Drag and drop
+    var drag_state = {};
+
+    picker.off('mousedown.drag', '.sec-badge.selected').on('mousedown.drag', '.sec-badge.selected', function(e) {
+        var badge = $(this);
+        if (!badge.hasClass('selected')) return;
+
+        var source_zone = badge.closest('.badge-zone');
+        var selected = source_zone.find('.sec-badge.selected');
+
+        drag_state.active = true;
+        drag_state.source_zone = source_zone;
+        drag_state.badges = selected;
+        drag_state.start_x = e.pageX;
+        drag_state.start_y = e.pageY;
+        drag_state.dragging = false;
+
+        e.preventDefault();
+    });
+
+    $(document).off('mousemove.drag_' + action).on('mousemove.drag_' + action, function(e) {
+        if (!drag_state.active) return;
+
+        // Start drag after 4px threshold
+        var dx = e.pageX - drag_state.start_x;
+        var dy = e.pageY - drag_state.start_y;
+        if (!drag_state.dragging && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+            drag_state.dragging = true;
+            drag_state.badges.addClass('dragging');
+
+            // Create ghost
+            var ghost = $('<div class="badge-drag-ghost"></div>');
+            ghost.text(drag_state.badges.length + ' item' + (drag_state.badges.length > 1 ? 's' : ''));
+            $('body').append(ghost);
+            drag_state.ghost = ghost;
+        }
+
+        if (drag_state.dragging && drag_state.ghost) {
+            drag_state.ghost.css({ left: e.pageX + 12, top: e.pageY + 12 });
+
+            // Highlight drop target
+            var target = $.fn.zato.groups.badge_picker._get_drop_target(e, picker, drag_state.source_zone);
+            picker.find('.badge-zone').removeClass('drop-target');
+            if (target) {
+                target.addClass('drop-target');
+            }
+        }
+    });
+
+    $(document).off('mouseup.drag_' + action).on('mouseup.drag_' + action, function(e) {
+        if (!drag_state.active) return;
+
+        if (drag_state.dragging) {
+            var target = $.fn.zato.groups.badge_picker._get_drop_target(e, picker, drag_state.source_zone);
+            if (target) {
+                var target_body = target.find('.badge-zone-body');
+                drag_state.badges.removeClass('selected dragging').appendTo(target_body);
+                $.fn.zato.groups.badge_picker.update_counts(action);
+                $.fn.zato.groups.badge_picker.apply_filter(action);
+            }
+            else {
+                drag_state.badges.removeClass('dragging');
+            }
+
+            picker.find('.badge-zone').removeClass('drop-target');
+            if (drag_state.ghost) {
+                drag_state.ghost.remove();
+            }
+        }
+
+        drag_state = {};
+    });
+
+    // Filter events
+    var debounce_timer;
+    $('#badge-filter-text-' + action).off('input').on('input', function() {
+        clearTimeout(debounce_timer);
+        debounce_timer = setTimeout(function() {
+            $.fn.zato.groups.badge_picker.apply_filter(action);
+        }, 150);
+    });
+
+    $('#badge-sec-type-' + action).off('change').on('change', function() {
+        $.fn.zato.groups.badge_picker.apply_filter(action);
+    });
+
+    $('#badge-filter-clear-' + action).off('click').on('click', function() {
+        $('#badge-filter-text-' + action).val('');
+        $('#badge-sec-type-' + action).val('');
+        $.fn.zato.groups.badge_picker.apply_filter(action);
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker._get_drop_target = function(e, picker, source_zone) {
+    var zones = picker.find('.badge-zone');
+    var target = null;
+
+    zones.each(function() {
+        if ($(this).attr('id') === source_zone.attr('id')) return;
+        var offset = $(this).offset();
+        var w = $(this).outerWidth();
+        var h = $(this).outerHeight();
+
+        if (e.pageX >= offset.left && e.pageX <= offset.left + w &&
+            e.pageY >= offset.top && e.pageY <= offset.top + h) {
+            target = $(this);
+            return false;
+        }
+    });
+
+    return target;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker.apply_filter = function(action) {
+    var text_val = ($('#badge-filter-text-' + action).val() || '').toLowerCase().trim();
+    var type_val = $('#badge-sec-type-' + action).val() || '';
+    var words = text_val ? text_val.split(/\s+/) : [];
+
+    // Only filter the Available zone
+    var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
+
+    available_body.find('.sec-badge').each(function() {
+        var badge = $(this);
+        var name = badge.data('name') || '';
+        var sec_type = badge.data('sec-type') || '';
+
+        var type_match = !type_val || sec_type === type_val;
+        var text_match = true;
+
+        for (var i = 0; i < words.length; i++) {
+            if (name.indexOf(words[i]) === -1) {
+                text_match = false;
+                break;
+            }
+        }
+
+        if (type_match && text_match) {
+            badge.show();
+        }
+        else {
+            badge.hide();
+        }
+    });
+
+    $.fn.zato.groups.badge_picker.update_counts(action);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker.get_assigned_ids = function(action) {
+    var ids = [];
+    $('#badge-zone-assigned-' + action + ' .badge-zone-body .sec-badge').each(function() {
+        ids.push($(this).data('id'));
+    });
+    return ids;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker.inject_hidden_inputs = function(action) {
+    var form = $('#' + action + '-form');
+    // Remove any previously injected inputs
+    form.find('input.badge-member-input').remove();
+
+    var assigned = $('#badge-zone-assigned-' + action + ' .badge-zone-body .sec-badge');
+    assigned.each(function() {
+        var badge = $(this);
+        var sec_type = badge.data('sec-type');
+        var sec_id = badge.data('id');
+        var member_key = sec_type + '-' + sec_id;
+        form.append($('<input/>', {
+            type: 'hidden',
+            name: 'security_group_member_' + member_key,
+            value: member_key,
+            'class': 'badge-member-input'
+        }));
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker.load = function(action, group_id) {
+    var url = '/zato/groups/get-security-list/?group_type=zato-api-creds';
+    if (group_id) {
+        url += '&group_id=' + group_id;
+    }
+
+    var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
+    available_body.html('<span class="badge-zone-empty">Loading...</span>');
+
+    $.fn.zato.post(url, function(data, status) {
+        if (status === 'success') {
+            var items = $.parseJSON(data.responseText);
+            $.fn.zato.groups.badge_picker.init(action, items || []);
+        }
+        else {
+            available_body.html('<span class="badge-zone-empty">Failed to load</span>');
+        }
+    }, '', '', true);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Create / Edit actions
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.groups.create = function() {
+    $.fn.zato.groups.badge_picker.load('create', null);
     $.fn.zato.data_table._create_edit('create', 'Create a security group', null);
-}
+};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.groups.edit = function(id) {
+    var instance = $.fn.zato.data_table.data[id];
+    $.fn.zato.groups.badge_picker.load('edit', instance.id);
     $.fn.zato.data_table._create_edit('edit', 'Edit the security group', id);
-}
+};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -77,7 +475,7 @@ $.fn.zato.groups.data_table.new_row = function(item, data, include_tr) {
     }
 
     return row;
-}
+};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -86,6 +484,6 @@ $.fn.zato.groups.delete_ = function(id) {
         'Deleted group `{0}`',
         'Are you sure you want to delete group `{0}`?',
         true);
-}
+};
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
