@@ -835,10 +835,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 
 
-        # Reads in all configuration from the Rust ConfigStore
+        # Reads in all configuration from the ConfigManager
         self.worker_store = WorkerStore(self.config, self)
-
-        self.set_up_config(server) # type: ignore
 
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
@@ -869,9 +867,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Some parts of the worker store's configuration are required during the deployment of services
         # which is why we are doing it here, before worker_store.init() is called.
-        self.worker_store.early_init()
 
         locally_deployed = self._after_init_common(server) # type: ignore
+
+        # Now that services are deployed, we can resolve service_impl_name for channels.
+        self.set_up_config(server) # type: ignore
+        self.worker_store.early_init()
 
         # Broker construction - start it in a greenlet so the Rust-heavy __init__
         # (fs_init, fs_start_http_server) overlaps with the Python setup below.

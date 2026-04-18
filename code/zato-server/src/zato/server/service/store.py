@@ -787,6 +787,8 @@ class ServiceStore:
                 self.services[item.impl_name]['slow_threshold'] = item.slow_threshold
 
                 self.name_to_impl_name[item.name] = item.impl_name
+                logger.info('_store_in_ram: registered name=%r -> impl_name=%r, total=%d',
+                    item.name, item.impl_name, len(self.name_to_impl_name))
 
 # ################################################################################################################################
 
