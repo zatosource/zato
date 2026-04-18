@@ -52,7 +52,7 @@ class OutgoingSOAPExporter:
                 'url_path': outgoing_row.get('url_path', ''),
             }
 
-            if security_name := outgoing_row.get('security_name'):
+            if security_name := outgoing_row.get('security') or outgoing_row.get('security_name'):
                 exported_conn['security'] = security_name
 
             if soap_action := outgoing_row.get('soap_action'):

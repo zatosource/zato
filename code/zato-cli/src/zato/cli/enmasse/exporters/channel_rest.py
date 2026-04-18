@@ -52,7 +52,7 @@ class ChannelExporter:
                 'url_path': channel_row.get('url_path', ''),
             }
 
-            if security_name := channel_row.get('security_name'):
+            if security_name := channel_row.get('security') or channel_row.get('security_name'):
                 exported_channel['security'] = security_name
 
             data_format = channel_row.get('data_format')
