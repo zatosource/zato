@@ -43,25 +43,6 @@ pub struct NtlmDef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OAuthDef {
-    #[serde(default = "next_id")]
-    pub id: String,
-    pub name: String,
-    #[serde(default = "default_true")]
-    pub is_active: bool,
-    #[serde(default)]
-    pub username: String,
-    #[serde(default)]
-    pub password: String,
-    #[serde(default)]
-    pub proto_version: String,
-    #[serde(default)]
-    pub sig_method: String,
-    #[serde(default)]
-    pub max_nonce_log: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BearerTokenDef {
     #[serde(default = "next_id")]
     pub id: String,
@@ -73,7 +54,7 @@ pub struct BearerTokenDef {
     #[serde(default)]
     pub password: String,
     #[serde(default)]
-    pub auth_endpoint: String,
+    pub auth_server_url: String,
     #[serde(default)]
     pub client_id_field: String,
     #[serde(default)]
@@ -83,7 +64,9 @@ pub struct BearerTokenDef {
     #[serde(default)]
     pub data_format: String,
     #[serde(default)]
-    pub extra_fields: Vec<String>,
+    pub scopes: String,
+    #[serde(default)]
+    pub extra_fields: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,8 +78,6 @@ pub enum SecurityDef {
     ApiKey(ApiKeyDef),
     #[serde(rename = "ntlm")]
     Ntlm(NtlmDef),
-    #[serde(rename = "oauth")]
-    OAuth(OAuthDef),
     #[serde(rename = "bearer_token")]
     BearerToken(BearerTokenDef),
 }
@@ -107,7 +88,6 @@ impl SecurityDef {
             Self::BasicAuth(d) => &d.name,
             Self::ApiKey(d) => &d.name,
             Self::Ntlm(d) => &d.name,
-            Self::OAuth(d) => &d.name,
             Self::BearerToken(d) => &d.name,
         }
     }
@@ -117,7 +97,6 @@ impl SecurityDef {
             Self::BasicAuth(_) => "basic_auth",
             Self::ApiKey(_) => "apikey",
             Self::Ntlm(_) => "ntlm",
-            Self::OAuth(_) => "oauth",
             Self::BearerToken(_) => "bearer_token",
         }
     }
@@ -127,7 +106,6 @@ impl SecurityDef {
             Self::BasicAuth(d) => &d.username,
             Self::ApiKey(d) => &d.username,
             Self::Ntlm(d) => &d.username,
-            Self::OAuth(d) => &d.username,
             Self::BearerToken(d) => &d.username,
         }
     }
@@ -137,7 +115,6 @@ impl SecurityDef {
             Self::BasicAuth(d) => &d.password,
             Self::ApiKey(d) => &d.password,
             Self::Ntlm(d) => &d.password,
-            Self::OAuth(d) => &d.password,
             Self::BearerToken(d) => &d.password,
         }
     }
@@ -147,7 +124,6 @@ impl SecurityDef {
             Self::BasicAuth(d) => &d.id,
             Self::ApiKey(d) => &d.id,
             Self::Ntlm(d) => &d.id,
-            Self::OAuth(d) => &d.id,
             Self::BearerToken(d) => &d.id,
         }
     }

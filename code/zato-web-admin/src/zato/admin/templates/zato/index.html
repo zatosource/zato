@@ -51,6 +51,16 @@
 
         $(document).ready(function() {
             $('input[type="password"]').hidePassword(true);
+
+            $(document).on('passwordShown passwordHidden', 'input', function(e) {
+                var show = (e.type === 'passwordShown');
+                $(this).closest('form').find('input.hideShowPassword-field').not(this).each(function() {
+                    var current = ($(this).attr('type') === 'text');
+                    if(current !== show) {
+                        $(this).hideShowPassword(show, true);
+                    }
+                });
+            });
         });
 
         {% if user.is_authenticated %}
