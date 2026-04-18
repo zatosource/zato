@@ -63,11 +63,19 @@ class Edit(AdminService):
 
         validate_topic_name(input.name)
 
-        old_name = input.get('old_name') or input.name
+        topic_id = input.get('id')
+        existing = None
 
-        existing = self.server.config_store.get('pubsub_topic', old_name)
+        if topic_id:
+            for item in self.server.config_store.get_list('pubsub_topic'):
+                if item['id'] == topic_id:
+                    existing = item
+                    break
+
         if not existing:
-            raise Exception('Pub/sub topic `{}` not found'.format(old_name))
+            raise Exception('Pub/sub topic not found (id:`{}`, name:`{}`)'.format(topic_id, input.name))
+
+        old_name = existing['name']
 
         existing['name'] = input.name
         existing['is_active'] = input.is_active
