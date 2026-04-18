@@ -5,6 +5,7 @@
     --zato-seablue-light3: #2f81bf;
     --zato-link-hover: #006fbf;
     --zato-link-dash: rgba(0, 0, 0, 0.35);
+    --zato-row-hover: rgba(210, 195, 120, 0.15);
 }
 
 @keyframes zato-spin {
@@ -307,7 +308,7 @@ tr.zato-row-bounce {
 }
 
 #data-table th.header:not(.ignore):nth-child(n+3):hover {
-    background: rgba(0, 0, 0, 0.04);
+    background: var(--zato-row-hover);
     cursor: pointer;
 }
 
@@ -347,7 +348,7 @@ tr.zato-row-bounce {
 }
 
 #data-table tbody tr:not(.ignore):not(.updated):hover {
-    background-color: rgba(210, 195, 120, 0.15);
+    background-color: var(--zato-row-hover);
 }
 
 #data-table td.numbering {

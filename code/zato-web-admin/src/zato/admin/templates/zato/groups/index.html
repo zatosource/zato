@@ -26,7 +26,6 @@
             // ------ 1 ------ //
             'name',
             '_members',
-            '_members_visit',
 
             // ------ 2 ------ //
             '_clone',
@@ -52,8 +51,11 @@
     {% if cluster_id %}
         <div id="markup">
 <h2 class="zato">Groups : {{ group_type_name_title }}</h2>
-        <div class='page_prompt' style="clear:left; padding-top:1rem">
-            <a href="javascript:$.fn.zato.groups.create()">Create a new group</a>
+
+{% include "zato/search-form.html" with page_prompt="Search" show_search_form=True %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.groups.create()">Create a security group</a>
         </div>
 
             <table class="zato-table" id="data-table">
@@ -65,7 +67,6 @@
                         {% comment %} 1 {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Members</a></th>
-                        <th>&nbsp;</th>
 
                         {% comment %} 2 {% endcomment %}
                         <th>&nbsp;</th>
@@ -88,7 +89,6 @@
                         {% comment %} 1 {% endcomment %}
                         <td>{{ item.name }}</td>
                         <td id="group_member_count_{{ item.id }}">{{ member_count|bunchget:item.id }}</td>
-                        <td><a href="{% url "groups-members-manage" item.type item.id %}?cluster={{ cluster_id|default:"1" }}">Go to members</a></td>
 
                         {% comment %} 2 {% endcomment %}
                         <td>
@@ -116,7 +116,6 @@
                 </tbody>
             </table>
 
-{% include "zato/paginate/action-panel.html" %}
         </div>
 
         <div id="create-div" class='data-popup ignore'>

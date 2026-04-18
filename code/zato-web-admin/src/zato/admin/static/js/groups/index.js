@@ -32,13 +32,13 @@ $(document).ready(function() {
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.groups.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create group', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a security group', null);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.groups.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Edit group', id);
+    $.fn.zato.data_table._create_edit('edit', 'Edit the security group', id);
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -56,7 +56,6 @@ $.fn.zato.groups.data_table.new_row = function(item, data, include_tr) {
     // 1
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', $("#group_member_count_"+item.id).text() || 0);
-    row += String.format('<td>{0}</td>', String.format("<a href='/zato/groups/members/{0}/{1}/?cluster=1'>Go to members</a>", item.group_type, item.id));
 
     if(false) {
         row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.groups.clone('{0}')\">Clone</a>", item.id));

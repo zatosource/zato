@@ -10,11 +10,9 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from json import dumps
 from operator import attrgetter
-from traceback import format_exc
 
 # Django
-from django.http import HttpResponse, HttpResponseBadRequest
-from django.template.response import TemplateResponse
+from django.http import HttpResponse
 
 # Zato
 from zato.admin.web.forms.groups import CreateForm, EditForm
@@ -235,66 +233,6 @@ def get_member_list(req:'any_') -> 'HttpResponse':
     return HttpResponse(data, content_type='application/javascript')
 
 # ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('GET')
-def manage_group_members(req:'any_', group_type:'str', group_id:'str | int') -> 'HttpResponse':
-
-    # Local variables
-    template_name = 'zato/groups/members.html'
-
-    # Get a list of all groups that exist
-    group_list = common_get_group_list(req, group_type)
-
-    # Obtain an initial list of members for this group
-    member_list = _get_member_list(req, group_type, group_id)
-
-    # Obtain an initial list of security definitions
-    security_list = _get_security_list(req)
-
-    # Filter out security definitions with members that already exist in the current group
-    security_list = _filter_out_members_from_security_list(security_list, member_list)
-
-    # Build the return data for the template ..
-    return_data = {
-        'cluster_id': req.zato.cluster_id,
-        'group_type': group_type,
-        'group_id': group_id,
-        'group_list': group_list,
-        'member_list': member_list,
-        'security_list': security_list,
-    }
-
-    # .. and return everything to our caller.
-    return TemplateResponse(req, template_name, return_data)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-@method_allowed('POST')
-def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str') -> 'HttpResponse':
-
-    # Local variables
-    group_id = group_id.replace('group-', '')
-    member_id_list = member_id_list.split(',') # type: ignore
-    member_id_list = [elem.strip() for elem in member_id_list] # type: ignore
-
-    # Invoke the remote service ..
-    try:
-        _ = req.zato.client.invoke('zato.groups.edit-member-list', {
-            'group_action': action,
-            'group_id': group_id,
-            'member_id_list': member_id_list
-        })
-    except Exception:
-        response = format_exc()
-        response_class = HttpResponseBadRequest
-    else:
-        response = ''
-        response_class = HttpResponse
-    finally:
-        return response_class(response, content_type='text/plain') # type: ignore
-
 # ################################################################################################################################
 # ################################################################################################################################
 

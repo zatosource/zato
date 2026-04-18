@@ -787,6 +787,16 @@ $.fn.zato.data_table._create_edit = function(action, title, id, remove_multirow,
     div.prev().find('.ui-dialog-title-text').on('mousedown selectstart dblclick', function(e) { e.stopPropagation(); });
     div.dialog('open');
 
+    // Auto-focus the name field if one exists, placing the cursor at position 0
+    var name_field_id = (action == 'edit') ? '#id_edit-name' : '#id_name';
+    var name_field = div.find(name_field_id);
+    if(name_field.length) {
+        name_field.trigger('focus');
+        if(name_field[0].setSelectionRange) {
+            name_field[0].setSelectionRange(0, 0);
+        }
+    }
+
     $.fn.zato.turn_selects_into_chosen(div_id);
 }
 
