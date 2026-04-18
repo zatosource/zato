@@ -451,7 +451,8 @@ div.bd {
 }
 
 div.ui-dialog {
-    width: 38em
+    width: 38em;
+    z-index: 10000 !important;
 }
 
 .ui-dialog-content {
