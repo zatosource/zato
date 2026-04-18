@@ -1,37 +1,46 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
-pub(crate) fn value_to_py(py: Python<'_>, v: &serde_yaml::Value) -> Py<PyAny> {
+pub(crate) fn value_to_py(py: Python<'_>, v: &serde_yaml::Value) -> PyResult<Py<PyAny>> {
     match v {
-        serde_yaml::Value::Null => py.None().into_pyobject(py).unwrap().unbind(),
-        serde_yaml::Value::Bool(b) => (*b).into_pyobject(py).unwrap().to_owned().unbind().into_any(),
+        serde_yaml::Value::Null => Ok(py.None().into_pyobject(py).unwrap().unbind()),
+        serde_yaml::Value::Bool(b) => Ok((*b).into_pyobject(py).unwrap().to_owned().unbind().into_any()),
         serde_yaml::Value::Number(n) => {
             if let Some(i) = n.as_i64() {
-                i.into_pyobject(py).unwrap().unbind().into_any()
+                Ok(i.into_pyobject(py).unwrap().unbind().into_any())
             } else if let Some(u) = n.as_u64() {
-                u.into_pyobject(py).unwrap().unbind().into_any()
+                Ok(u.into_pyobject(py).unwrap().unbind().into_any())
             } else if let Some(f) = n.as_f64() {
-                f.into_pyobject(py).unwrap().unbind().into_any()
+                Ok(f.into_pyobject(py).unwrap().unbind().into_any())
             } else {
-                py.None().into_pyobject(py).unwrap().unbind()
+                Err(pyo3::exceptions::PyValueError::new_err(
+                    format!("YAML number {:?} is not representable as i64, u64, or f64", n)
+                ))
             }
         }
-        serde_yaml::Value::String(s) => s.into_pyobject(py).unwrap().unbind().into_any(),
+        serde_yaml::Value::String(s) => Ok(s.into_pyobject(py).unwrap().unbind().into_any()),
         serde_yaml::Value::Sequence(seq) => {
             let list = PyList::empty(py);
             for item in seq {
-                let _ = list.append(value_to_py(py, item));
+                let _ = list.append(value_to_py(py, item)?);
             }
-            list.unbind().into_any()
+            Ok(list.unbind().into_any())
         }
         serde_yaml::Value::Mapping(map) => {
             let dict = PyDict::new(py);
             for (k, val) in map {
-                if let serde_yaml::Value::String(ks) = k {
-                    let _ = dict.set_item(ks, value_to_py(py, val));
+                match k {
+                    serde_yaml::Value::String(ks) => {
+                        let _ = dict.set_item(ks, value_to_py(py, val)?);
+                    }
+                    other => {
+                        return Err(pyo3::exceptions::PyValueError::new_err(
+                            format!("YAML mapping key {:?} is not a string", other)
+                        ));
+                    }
                 }
             }
-            dict.unbind().into_any()
+            Ok(dict.unbind().into_any())
         }
         serde_yaml::Value::Tagged(t) => value_to_py(py, &t.value),
     }
@@ -43,8 +52,15 @@ pub(crate) fn struct_to_pydict<T: serde::Serialize>(py: Python<'_>, item: &T) ->
     if let serde_yaml::Value::Mapping(map) = yaml_val {
         let dict = PyDict::new(py);
         for (k, v) in &map {
-            if let serde_yaml::Value::String(ks) = k {
-                let _ = dict.set_item(ks, value_to_py(py, v));
+            match k {
+                serde_yaml::Value::String(ks) => {
+                    let _ = dict.set_item(ks, value_to_py(py, v)?);
+                }
+                other => {
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        format!("YAML mapping key {:?} is not a string", other)
+                    ));
+                }
             }
         }
         Ok(dict.unbind())
@@ -76,15 +92,7 @@ fn py_to_value(_py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<serde_yaml::
     } else if let Ok(f) = obj.extract::<f64>() {
         Ok(serde_yaml::Value::Number(serde_yaml::Number::from(f)))
     } else if let Ok(s) = obj.extract::<String>() {
-        if let Ok(i) = s.parse::<i64>() {
-            Ok(serde_yaml::Value::Number(i.into()))
-        } else if s == "true" || s == "True" {
-            Ok(serde_yaml::Value::Bool(true))
-        } else if s == "false" || s == "False" {
-            Ok(serde_yaml::Value::Bool(false))
-        } else {
-            Ok(serde_yaml::Value::String(s))
-        }
+        Ok(serde_yaml::Value::String(s))
     } else if let Ok(list) = obj.cast::<PyList>() {
         let mut seq = Vec::new();
         for item in list.iter() {
