@@ -49,26 +49,52 @@ $.fn.zato.groups.badge_picker.init = function(action, data) {
     available_body.empty();
     assigned_body.empty();
 
-    for (var i = 0; i < data.length; i++) {
-        var item = data[i];
-        var badge = $('<span/>', {
-            'class': 'sec-badge',
-            'data-id': item.id,
-            'data-sec-type': item.sec_type,
-            'data-name': (item.name || '').toLowerCase(),
-            'text': item.name
-        });
+    // Global numbering counter
+    var num = 1;
 
-        if (item.is_member) {
-            assigned_body.append(badge);
+    // Separate into assigned and available
+    var assigned_items = [];
+    var available_items = [];
+
+    for (var i = 0; i < data.length; i++) {
+        if (data[i].is_member) {
+            assigned_items.push(data[i]);
+        } else {
+            available_items.push(data[i]);
         }
-        else {
-            available_body.append(badge);
-        }
+    }
+
+    // Render assigned first (they get lower numbers)
+    for (var i = 0; i < assigned_items.length; i++) {
+        assigned_body.append($.fn.zato.groups.badge_picker._make_badge(assigned_items[i], num++));
+    }
+    for (var i = 0; i < available_items.length; i++) {
+        available_body.append($.fn.zato.groups.badge_picker._make_badge(available_items[i], num++));
     }
 
     $.fn.zato.groups.badge_picker.update_counts(action);
     $.fn.zato.groups.badge_picker.attach_events(action);
+    $.fn.zato.groups.badge_picker.attach_resizer(action);
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker._make_badge = function(item, num) {
+    var badge = $('<div/>', { 'class': 'sec-badge', 'data-id': item.id, 'data-sec-type': item.sec_type, 'data-name': (item.name || '').toLowerCase() });
+    badge.append($('<span/>', { 'class': 'sec-badge-number', 'text': num + '.' }));
+    badge.append($('<span/>', { 'class': 'sec-badge-type', 'data-sec-type': item.sec_type, 'text': item.sec_type_name || item.sec_type }));
+    badge.append($('<span/>', { 'class': 'sec-badge-name', 'text': item.name }));
+    return badge;
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker.renumber = function(action) {
+    var num = 1;
+    $('#badge-picker-' + action + ' .sec-badge:visible').each(function() {
+        $(this).find('.sec-badge-number').text(num + '.');
+        num++;
+    });
 };
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,10 +113,9 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
     var available_body = picker.find('#badge-zone-available-' + action + ' .badge-zone-body');
     var assigned_body = picker.find('#badge-zone-assigned-' + action + ' .badge-zone-body');
 
-    // Click to move
+    // Click to move (single badge) or Ctrl+click to select
     picker.off('click.badge', '.sec-badge').on('click.badge', '.sec-badge', function(e) {
         if (e.ctrlKey || e.metaKey) {
-            // Ctrl+click toggles selection
             $(this).toggleClass('selected');
             return;
         }
@@ -101,33 +126,33 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
 
         if (parent_zone.attr('id').indexOf('available') !== -1) {
             target_zone = assigned_body;
-        }
-        else {
+        } else {
             target_zone = available_body;
         }
 
-        // If there's a multi-selection, move all selected from same zone
+        // If multi-selection exists in same zone, move all selected
         var selected = parent_zone.find('.sec-badge.selected');
         if (selected.length > 0 && badge.hasClass('selected')) {
             selected.removeClass('selected').appendTo(target_zone);
-        }
-        else {
-            // Clear selection and move single badge
+        } else {
             picker.find('.sec-badge.selected').removeClass('selected');
             badge.appendTo(target_zone);
         }
 
         $.fn.zato.groups.badge_picker.update_counts(action);
         $.fn.zato.groups.badge_picker.apply_filter(action);
+        $.fn.zato.groups.badge_picker.renumber(action);
     });
 
     // Marquee (rectangle select)
     var marquee_state = {};
 
     picker.find('.badge-zone-body').off('mousedown.marquee').on('mousedown.marquee', function(e) {
-        // Only start marquee on direct click on the body (not on a badge)
-        if ($(e.target).hasClass('sec-badge')) {
-            return;
+        if ($(e.target).closest('.sec-badge').length && !e.ctrlKey && !e.metaKey) {
+            return; // Let drag handle it
+        }
+        if ($(e.target).closest('.sec-badge').length) {
+            return; // Ctrl+click handled by click handler
         }
 
         var zone_body = $(this);
@@ -140,12 +165,10 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
         marquee_state.start_x = e.pageX - offset.left + scroll_left;
         marquee_state.start_y = e.pageY - offset.top + scroll_top;
 
-        // Create marquee element
         var marquee = $('<div class="badge-marquee"></div>');
         zone_body.append(marquee);
         marquee_state.marquee = marquee;
 
-        // Clear previous selection in this zone unless Ctrl held
         if (!e.ctrlKey && !e.metaKey) {
             zone_body.find('.sec-badge.selected').removeClass('selected');
         }
@@ -169,40 +192,21 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
         var w = Math.abs(cur_x - marquee_state.start_x);
         var h = Math.abs(cur_y - marquee_state.start_y);
 
-        marquee_state.marquee.css({
-            left: x + 'px',
-            top: y + 'px',
-            width: w + 'px',
-            height: h + 'px'
-        });
+        marquee_state.marquee.css({ left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
 
-        // Highlight badges that intersect
-        var marquee_rect = {
-            left: x,
-            top: y,
-            right: x + w,
-            bottom: y + h
-        };
+        var marquee_rect = { left: x, top: y, right: x + w, bottom: y + h };
 
         zone_body.find('.sec-badge:visible').each(function() {
             var badge = $(this);
             var pos = badge.position();
-            var badge_rect = {
-                left: pos.left,
-                top: pos.top,
-                right: pos.left + badge.outerWidth(),
-                bottom: pos.top + badge.outerHeight()
-            };
+            var badge_rect = { left: pos.left, top: pos.top, right: pos.left + badge.outerWidth(), bottom: pos.top + badge.outerHeight() };
 
-            var intersects = !(badge_rect.right < marquee_rect.left ||
-                             badge_rect.left > marquee_rect.right ||
-                             badge_rect.bottom < marquee_rect.top ||
-                             badge_rect.top > marquee_rect.bottom);
+            var intersects = !(badge_rect.right < marquee_rect.left || badge_rect.left > marquee_rect.right ||
+                             badge_rect.bottom < marquee_rect.top || badge_rect.top > marquee_rect.bottom);
 
             if (intersects) {
                 badge.addClass('selected');
-            }
-            else if (!e.ctrlKey && !e.metaKey) {
+            } else if (!e.ctrlKey && !e.metaKey) {
                 badge.removeClass('selected');
             }
         });
@@ -217,19 +221,18 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
         }
     });
 
-    // Drag and drop
+    // Drag and drop - works on single badge OR multi-selected badges
     var drag_state = {};
 
-    picker.off('mousedown.drag', '.sec-badge.selected').on('mousedown.drag', '.sec-badge.selected', function(e) {
-        var badge = $(this);
-        if (!badge.hasClass('selected')) return;
+    picker.off('mousedown.drag', '.sec-badge').on('mousedown.drag', '.sec-badge', function(e) {
+        if (e.ctrlKey || e.metaKey) return; // Let click handle selection
 
+        var badge = $(this);
         var source_zone = badge.closest('.badge-zone');
-        var selected = source_zone.find('.sec-badge.selected');
 
         drag_state.active = true;
+        drag_state.badge = badge;
         drag_state.source_zone = source_zone;
-        drag_state.badges = selected;
         drag_state.start_x = e.pageX;
         drag_state.start_y = e.pageY;
         drag_state.dragging = false;
@@ -240,14 +243,20 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
     $(document).off('mousemove.drag_' + action).on('mousemove.drag_' + action, function(e) {
         if (!drag_state.active) return;
 
-        // Start drag after 4px threshold
         var dx = e.pageX - drag_state.start_x;
         var dy = e.pageY - drag_state.start_y;
         if (!drag_state.dragging && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
             drag_state.dragging = true;
+
+            // If the dragged badge is not selected, select only it
+            if (!drag_state.badge.hasClass('selected')) {
+                drag_state.source_zone.find('.sec-badge.selected').removeClass('selected');
+                drag_state.badge.addClass('selected');
+            }
+
+            drag_state.badges = drag_state.source_zone.find('.sec-badge.selected');
             drag_state.badges.addClass('dragging');
 
-            // Create ghost
             var ghost = $('<div class="badge-drag-ghost"></div>');
             ghost.text(drag_state.badges.length + ' item' + (drag_state.badges.length > 1 ? 's' : ''));
             $('body').append(ghost);
@@ -257,7 +266,6 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
         if (drag_state.dragging && drag_state.ghost) {
             drag_state.ghost.css({ left: e.pageX + 12, top: e.pageY + 12 });
 
-            // Highlight drop target
             var target = $.fn.zato.groups.badge_picker._get_drop_target(e, picker, drag_state.source_zone);
             picker.find('.badge-zone').removeClass('drop-target');
             if (target) {
@@ -276,8 +284,8 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
                 drag_state.badges.removeClass('selected dragging').appendTo(target_body);
                 $.fn.zato.groups.badge_picker.update_counts(action);
                 $.fn.zato.groups.badge_picker.apply_filter(action);
-            }
-            else {
+                $.fn.zato.groups.badge_picker.renumber(action);
+            } else {
                 drag_state.badges.removeClass('dragging');
             }
 
@@ -296,17 +304,60 @@ $.fn.zato.groups.badge_picker.attach_events = function(action) {
         clearTimeout(debounce_timer);
         debounce_timer = setTimeout(function() {
             $.fn.zato.groups.badge_picker.apply_filter(action);
+            $.fn.zato.groups.badge_picker.renumber(action);
         }, 150);
     });
 
     $('#badge-sec-type-' + action).off('change').on('change', function() {
         $.fn.zato.groups.badge_picker.apply_filter(action);
+        $.fn.zato.groups.badge_picker.renumber(action);
     });
 
     $('#badge-filter-clear-' + action).off('click').on('click', function() {
         $('#badge-filter-text-' + action).val('');
         $('#badge-sec-type-' + action).val('');
         $.fn.zato.groups.badge_picker.apply_filter(action);
+        $.fn.zato.groups.badge_picker.renumber(action);
+    });
+};
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.groups.badge_picker.attach_resizer = function(action) {
+    var picker = $('#badge-picker-' + action);
+    var resizer = picker.find('.badge-picker-resizer');
+    var left_zone = picker.find('.badge-zone').first();
+    var right_zone = picker.find('.badge-zone').last();
+
+    var state = {};
+
+    resizer.on('mousedown', function(e) {
+        state.active = true;
+        state.start_x = e.pageX;
+        state.left_width = left_zone.outerWidth();
+        state.right_width = right_zone.outerWidth();
+        resizer.addClass('active');
+        e.preventDefault();
+    });
+
+    $(document).on('mousemove.resizer_' + action, function(e) {
+        if (!state.active) return;
+        var dx = e.pageX - state.start_x;
+        var new_left = state.left_width + dx;
+        var new_right = state.right_width - dx;
+        var min_w = 100;
+
+        if (new_left >= min_w && new_right >= min_w) {
+            var total = new_left + new_right;
+            left_zone.css('flex', '0 0 ' + (new_left / total * 100) + '%');
+            right_zone.css('flex', '0 0 ' + (new_right / total * 100) + '%');
+        }
+    });
+
+    $(document).on('mouseup.resizer_' + action, function() {
+        if (!state.active) return;
+        state.active = false;
+        resizer.removeClass('active');
     });
 };
 
@@ -339,7 +390,6 @@ $.fn.zato.groups.badge_picker.apply_filter = function(action) {
     var type_val = $('#badge-sec-type-' + action).val() || '';
     var words = text_val ? text_val.split(/\s+/) : [];
 
-    // Only filter the Available zone
     var available_body = $('#badge-zone-available-' + action + ' .badge-zone-body');
 
     available_body.find('.sec-badge').each(function() {
@@ -359,8 +409,7 @@ $.fn.zato.groups.badge_picker.apply_filter = function(action) {
 
         if (type_match && text_match) {
             badge.show();
-        }
-        else {
+        } else {
             badge.hide();
         }
     });
@@ -382,7 +431,6 @@ $.fn.zato.groups.badge_picker.get_assigned_ids = function(action) {
 
 $.fn.zato.groups.badge_picker.inject_hidden_inputs = function(action) {
     var form = $('#' + action + '-form');
-    // Remove any previously injected inputs
     form.find('input.badge-member-input').remove();
 
     var assigned = $('#badge-zone-assigned-' + action + ' .badge-zone-body .sec-badge');
@@ -415,8 +463,7 @@ $.fn.zato.groups.badge_picker.load = function(action, group_id) {
         if (status === 'success') {
             var items = $.parseJSON(data.responseText);
             $.fn.zato.groups.badge_picker.init(action, items || []);
-        }
-        else {
+        } else {
             available_body.html('<span class="badge-zone-empty">Failed to load</span>');
         }
     }, '', '', true);
