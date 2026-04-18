@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
+from zato.server.service import Int
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -39,7 +40,7 @@ class Create(AdminService):
     name = 'zato.channel.amqp.create'
 
     input = ('cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue', 'consumer_tag_prefix',
-        'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format')
+        'service', Int('pool_size'), 'ack_mode', Int('prefetch_count'), '-data_format')
     output = ('id', 'name')
 
     def handle(self):
@@ -78,7 +79,7 @@ class Edit(AdminService):
     name = 'zato.channel.amqp.edit'
 
     input = ('id', 'cluster_id', 'name', 'is_active', 'address', 'username', 'password', 'queue',
-        'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode', 'prefetch_count', '-data_format')
+        'consumer_tag_prefix', 'service', Int('pool_size'), 'ack_mode', Int('prefetch_count'), '-data_format')
     output = ('id', 'name')
 
     def handle(self):

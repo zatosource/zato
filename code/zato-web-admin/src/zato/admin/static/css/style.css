@@ -346,7 +346,7 @@ tr.zato-row-bounce {
     background-color: rgba(6, 60, 101, 0.025);
 }
 
-#data-table tbody tr:not(.ignore):hover {
+#data-table tbody tr:not(.ignore):not(.updated):hover {
     background-color: rgba(210, 195, 120, 0.15);
 }
 

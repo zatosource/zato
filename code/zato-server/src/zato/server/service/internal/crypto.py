@@ -9,7 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.server.service import Integer, Service
+from zato.server.service import Int, Service
 
 # ################################################################################################################################
 
@@ -54,7 +54,7 @@ class VerifyHash(Service):
 class GenerateSecret(Service):
     """ Generates a new secret of input bits strength.
     """
-    input = Integer('bits')
+    input = Int('bits')
     output = 'secret'
 
 # ################################################################################################################################
@@ -62,7 +62,7 @@ class GenerateSecret(Service):
 class GeneratePassword(Service):
     """ Generates a new password of input bits strength.
     """
-    input = Integer('bits')
+    input = Int('bits')
     output = 'password'
 
 # ################################################################################################################################

@@ -12,7 +12,7 @@ from uuid import uuid4
 
 # Zato
 from zato.common.util.api import ping_sap
-from zato.server.service import Integer
+from zato.server.service import Int
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -27,7 +27,7 @@ class GetList(AdminService):
     """ Returns a list of SAP RFC connections.
     """
     input = 'cluster_id'
-    output = 'id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Integer('pool_size'), '-sysnr', '-router'
+    output = 'id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Int('pool_size'), '-sysnr', '-router'
 
     def handle(self):
         items = self.server.config_store.get_list(_entity_type)
@@ -39,7 +39,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new SAP RFC connection.
     """
-    input = 'cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Integer('pool_size'), '-sysnr', '-router'
+    input = 'cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Int('pool_size'), '-sysnr', '-router'
     output = 'id', 'name'
 
     def handle(self):
@@ -72,7 +72,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a SAP RFC connection.
     """
-    input = 'id', 'cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Integer('pool_size'), \
+    input = 'id', 'cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Int('pool_size'), \
         '-sysnr', '-router'
     output = 'id', 'name'
 

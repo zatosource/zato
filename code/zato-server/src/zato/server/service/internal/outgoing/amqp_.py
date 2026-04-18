@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # Zato
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -39,7 +39,7 @@ class Create(AdminService):
     """
     name = 'zato.outgoing.amqp.create'
 
-    input = 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
+    input = 'cluster_id', 'name', 'is_active', 'delivery_mode', Int('priority'), Int('pool_size'), \
         '-address', '-username', '-password', '-content_type', '-content_encoding', \
         '-expiration', AsIs('-user_id'), AsIs('-app_id')
     output = 'id', 'name'
@@ -81,7 +81,7 @@ class Edit(AdminService):
     """
     name = 'zato.outgoing.amqp.edit'
 
-    input = 'id', 'cluster_id', 'name', 'is_active', 'delivery_mode', 'priority', 'pool_size', \
+    input = 'id', 'cluster_id', 'name', 'is_active', 'delivery_mode', Int('priority'), Int('pool_size'), \
         '-address', '-username', '-password', '-content_type', '-content_encoding', \
         '-expiration', AsIs('-user_id'), AsIs('-app_id')
     output = 'id', 'name'

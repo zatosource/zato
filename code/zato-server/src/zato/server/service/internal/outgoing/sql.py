@@ -14,7 +14,7 @@ from uuid import uuid4
 # Zato
 from zato.common.exception import ZatoException
 from zato.common.util.api import get_sql_engine_display_name
-from zato.server.service import AsIs, Integer
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -29,8 +29,8 @@ class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
     input = 'cluster_id'
-    output = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
-        Integer('pool_size'), '-extra', '-engine_display_name'
+    output = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Int('port'), 'db_name', 'username', \
+        Int('pool_size'), '-extra', '-engine_display_name'
 
     def handle(self):
         items = self.server.config_store.get_list(_entity_type)
@@ -48,8 +48,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing SQL connection.
     """
-    input = 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
-        Integer('pool_size'), '-extra'
+    input = 'name', 'is_active', 'cluster_id', 'engine', 'host', Int('port'), 'db_name', 'username', \
+        Int('pool_size'), '-extra'
     output = 'id', 'name', 'display_name'
 
     def handle(self):
@@ -87,8 +87,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing SQL connection.
     """
-    input = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', \
-        Integer('pool_size'), '-extra'
+    input = 'id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Int('port'), 'db_name', 'username', \
+        Int('pool_size'), '-extra'
     output = 'id', 'name', 'display_name'
 
     def handle(self):

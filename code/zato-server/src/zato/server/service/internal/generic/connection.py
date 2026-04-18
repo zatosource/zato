@@ -120,6 +120,8 @@ def _conn_to_rust_payload(conn:'GenericConnection') -> 'anydict':
     payload:'anydict' = {}
     extra:'anydict' = {}
     for k, v in flat.items():
+        if v is None:
+            continue
         if k in _generic_connection_keys:
             payload[k] = v
         else:

@@ -15,7 +15,7 @@ from time import time
 from zato.common.api import CONNECTION, URL_TYPE, ZATO_NONE
 from zato.common.json_internal import dumps
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
-from zato.server.service import AsIs, Boolean, Integer
+from zato.server.service import AsIs, Boolean, Int
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class _BaseGet(AdminService):
         '-service_id', '-service_name', '-security_id', '-security_name', '-sec_type', \
         '-method', '-soap_action', '-soap_version', '-data_format', '-host', '-ping_method', '-pool_size', \
         '-merge_url_params_req', '-url_params_pri', '-params_pri', '-serialization_type', '-timeout', \
-        '-content_type', '-cache_id', '-cache_name', Integer('-cache_expiry'), '-cache_type', \
+        '-content_type', '-cache_id', '-cache_name', Int('-cache_expiry'), '-cache_type', \
         '-content_encoding', Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', \
         '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
@@ -128,7 +128,7 @@ class Get(_BaseGet):
 class GetList(_BaseGet):
     """ Returns a list of HTTP/SOAP connections.
     """
-    input = '-connection', '-transport', Integer('-cur_page'), Boolean('-paginate'), '-query', \
+    input = '-connection', '-transport', Int('-cur_page'), Boolean('-paginate'), '-query', \
         *['-' + f if isinstance(f, str) else f for f in _GetList_Optional]
     output = _BaseGet.output + ('-connection', '-transport')
 
@@ -232,7 +232,7 @@ class Create(AdminService):
         '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', '-data_format', \
         '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', '-params_pri', \
         '-serialization_type', '-timeout', '-content_type', \
-        '-cache_id', Integer('-cache_expiry'), '-content_encoding', Boolean('-match_slash'), '-http_accept', \
+        '-cache_id', Int('-cache_expiry'), '-content_encoding', Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-is_active', '-transport', '-is_internal', '-cluster_id', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
@@ -293,7 +293,7 @@ class Edit(AdminService):
         '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', \
         '-data_format', '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', \
         '-params_pri', '-serialization_type', '-timeout', '-content_type', \
-        '-cache_id', Integer('-cache_expiry'), '-content_encoding', Boolean('-match_slash'), '-http_accept', \
+        '-cache_id', Int('-cache_expiry'), '-content_encoding', Boolean('-match_slash'), '-http_accept', \
         '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
         '-cluster_id', '-is_active', '-transport', \
         '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \

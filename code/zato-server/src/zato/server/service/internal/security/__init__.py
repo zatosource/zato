@@ -8,7 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # Zato
 from zato.common.const import ServiceConst
-from zato.server.service import Boolean, Int, Integer, List
+from zato.server.service import Boolean, Int, List
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -22,8 +22,8 @@ if 0:
 
 _output_required = 'id', 'name', 'is_active', 'sec_type'
 _output_optional:'any_' = '-username', '-realm', '-password_type', Boolean('-reject_empty_nonce_creat'), \
-    Boolean('-reject_stale_tokens'), Integer('-reject_expiry_limit'), Integer('-nonce_freshness_time'), '-proto_version', \
-        '-sig_method', Integer('-max_nonce_log')
+    Boolean('-reject_stale_tokens'), Int('-reject_expiry_limit'), Int('-nonce_freshness_time'), '-proto_version', \
+        '-sig_method', Int('-max_nonce_log')
 
 # ################################################################################################################################
 # ################################################################################################################################

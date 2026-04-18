@@ -32,7 +32,7 @@ from zato.common.marshal_.api import Model
 from zato.common.scheduler import get_startup_job_services
 from zato.common.util.api import hot_deploy, parse_extra_into_dict, payload_from_request
 from zato.common.util.file_system import get_tmp_path
-from zato.server.service import Boolean, Int, Integer, Service
+from zato.server.service import Boolean, Int, Service
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -185,7 +185,7 @@ class GetByID(_Get):
 class Edit(AdminService):
     """ Updates a service.
     """
-    input = 'id', 'is_active', Integer('slow_threshold')
+    input = 'id', 'is_active', Int('slow_threshold')
     output = '-id', '-name', '-impl_name', '-is_internal', Boolean('-may_be_deleted')
 
     def handle(self):
@@ -289,7 +289,7 @@ class Invoke(AdminService):
     """ Invokes the service directly, as though it was exposed through a channel defined in web-admin.
     """
     input = '-id', '-name', '-payload', '-channel', '-data_format', '-transport', Boolean('-is_async'), \
-        Integer('-expiration'), Integer('-pid'), Boolean('-all_pids'), Integer('-timeout'), \
+        Int('-expiration'), Int('-pid'), Boolean('-all_pids'), Int('-timeout'), \
         '-needs_response_time'
     output = '-response',
 
@@ -537,7 +537,7 @@ class GetDeploymentInfoList(AdminService):
     """
     input = '-id', '-needs_details', Boolean('-include_internal')
     output = 'server_id', 'server_name', 'service_id', 'service_name', 'fs_location', 'file_name', \
-        Integer('line_number'), '-details'
+        Int('line_number'), '-details'
 
     def get_data(self):
 

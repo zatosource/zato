@@ -12,7 +12,7 @@ from uuid import uuid4
 
 # Zato
 from zato.common.util.api import ping_odoo
-from zato.server.service import Integer
+from zato.server.service import Int
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -27,8 +27,8 @@ class GetList(AdminService):
     """ Returns a list of Odoo connections.
     """
     input = 'cluster_id'
-    output = 'id', 'name', 'is_active', 'host', Integer('port'), 'user', 'database', 'protocol', \
-        Integer('pool_size'), '-client_type'
+    output = 'id', 'name', 'is_active', 'host', Int('port'), 'user', 'database', 'protocol', \
+        Int('pool_size'), '-client_type'
 
     def handle(self):
         items = self.server.config_store.get_list(_entity_type)
@@ -40,8 +40,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Odoo connection.
     """
-    input = 'cluster_id', 'name', 'is_active', 'host', Integer('port'), 'user', 'database', 'protocol', \
-        Integer('pool_size'), '-client_type'
+    input = 'cluster_id', 'name', 'is_active', 'host', Int('port'), 'user', 'database', 'protocol', \
+        Int('pool_size'), '-client_type'
     output = 'id', 'name'
 
     def handle(self):
@@ -73,8 +73,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an Odoo connection.
     """
-    input = 'id', 'cluster_id', 'name', 'is_active', 'host', Integer('port'), 'user', 'database', 'protocol', \
-        Integer('pool_size'), '-client_type'
+    input = 'id', 'cluster_id', 'name', 'is_active', 'host', Int('port'), 'user', 'database', 'protocol', \
+        Int('pool_size'), '-client_type'
     output = 'id', 'name'
 
     def handle(self):

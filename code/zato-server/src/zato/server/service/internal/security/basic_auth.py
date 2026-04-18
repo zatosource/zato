@@ -79,19 +79,26 @@ class Create(AdminService):
 
 class Edit(AdminService):
 
-    input = 'name', 'is_active', 'username', 'realm', '-id', '-cluster_id', '-old_name'
+    input = 'name', 'is_active', 'username', 'realm', '-id', '-cluster_id'
     output = 'id', 'name'
 
     def handle(self):
         input = self.request.input
 
-        old_name = input.get('old_name') or input.name
+        auth_id = input.get('id')
+        existing = None
 
-        existing = self.server.config_store.get('security', old_name)
+        if auth_id:
+            for item in self.server.config_store.get_list('security'):
+                if str(item['id']) == str(auth_id) and item.get('type') == 'basic_auth':
+                    existing = item
+                    break
+
         if not existing:
-            raise Exception('HTTP Basic Auth definition `{}` not found'.format(old_name))
+            raise Exception('HTTP Basic Auth definition not found (id:`{}`, name:`{}`)'.format(auth_id, input.name))
 
         user_id = existing['id']
+        old_name = existing['name']
 
         with self.server.auth_update_lock(user_id):
             password = existing['password']
