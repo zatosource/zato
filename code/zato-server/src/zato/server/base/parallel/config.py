@@ -136,7 +136,7 @@ class ConfigLoader:
             hs_item.setdefault('method', '')
 
             service_name = hs_item.get('service_name') or hs_item.get('service') or ''
-            hs_item['service_impl_name'] = self.service_store.name_to_impl_name.get(service_name, service_name)
+            hs_item['service_impl_name'] = self.service_store.name_to_impl_name[service_name]
 
             if 'service_name' not in hs_item and 'service' in hs_item:
                 hs_item['service_name'] = hs_item['service']
