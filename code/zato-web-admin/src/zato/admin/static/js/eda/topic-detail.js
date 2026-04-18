@@ -178,6 +178,15 @@ $.fn.zato.eda.topic_detail = {};
         if (typeof initial_data === 'string') {
             try { initial_data = JSON.parse(initial_data); } catch (e) { initial_data = {}; }
         }
+
+        $('.eda-tab').on('click', function() {
+            var tab_name = $(this).data('tab');
+            $('.eda-tab').removeClass('eda-tab-active').attr('aria-selected', 'false');
+            $(this).addClass('eda-tab-active').attr('aria-selected', 'true');
+            $('.eda-tab-panel').attr('hidden', true);
+            $('#eda-tab-panel-' + tab_name).removeAttr('hidden');
+        });
+
         detail.render(initial_data);
         setInterval(detail.poll, POLL_INTERVAL_MS);
     };

@@ -165,7 +165,7 @@ class GetList(_Base):
         if query:
             raw_items = self._filter_cache(query, cache)
         else:
-            raw_items = cache
+            raw_items = [entry for _, entry in iteritems(cache)]
 
         items = self._enrich_items(raw_items)
         self.response.payload = self._paginate_list(items)

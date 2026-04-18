@@ -415,3 +415,82 @@ a {
     color: var(--primary-dark);
     font-weight: 600;
 }
+
+.eda-card-scroll {
+    max-height: 480px;
+    overflow-y: auto;
+}
+
+.eda-card-scroll > table {
+    margin: 0;
+}
+
+.eda-card-scroll > table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--white, #fff);
+    z-index: 1;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.eda-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border-light, #e5e5e5);
+    margin-bottom: 16px;
+}
+
+.eda-tab {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent none;
+    background-image: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    box-shadow: none;
+    text-shadow: none;
+    outline: 0;
+    margin-bottom: -2px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #888);
+}
+
+.eda-tab:hover,
+.eda-tab:focus,
+.eda-tab:active {
+    background: transparent none;
+    background-image: none;
+    border-top: 0;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+    box-shadow: none;
+    text-shadow: none;
+    outline: 0;
+}
+
+.eda-tab:hover {
+    color: var(--primary-dark);
+}
+
+.eda-tab:focus-visible {
+    outline: 2px solid var(--primary-dark);
+    outline-offset: 2px;
+}
+
+.eda-tab-active,
+.eda-tab-active:hover {
+    color: var(--primary-dark);
+    border-bottom-color: var(--primary-dark);
+}
+
+.eda-tab-panel[hidden] {
+    display: none;
+}

@@ -47,15 +47,26 @@ $(document).ready(function() {
     <button class="action-button" onclick="$.fn.zato.eda.topic_detail.purge()">Purge topic</button>
 </div>
 
-<h3 class="section-title">Subscriber queues</h3>
-<table class="eda-table">
-    <thead><tr><th>Subscriber</th><th>Pending</th></tr></thead>
-    <tbody id="queues-body"></tbody>
-</table>
+<div class="eda-tabs" role="tablist">
+    <button type="button" class="eda-tab eda-tab-active" data-tab="queues" role="tab" aria-selected="true">Subscriber queues</button>
+    <button type="button" class="eda-tab" data-tab="messages" role="tab" aria-selected="false">Recent messages</button>
+</div>
 
-<h3 class="section-title">Recent messages</h3>
-<table class="eda-table">
-    <thead><tr><th>Message ID</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
-    <tbody id="messages-body"></tbody>
-</table>
+<div class="eda-tab-panel" id="eda-tab-panel-queues" role="tabpanel">
+    <div class="eda-card-scroll">
+        <table class="eda-table">
+            <thead><tr><th>Subscriber</th><th>Pending</th></tr></thead>
+            <tbody id="queues-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="eda-tab-panel" id="eda-tab-panel-messages" role="tabpanel" hidden>
+    <div class="eda-card-scroll">
+        <table class="eda-table">
+            <thead><tr><th>Message ID</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
+            <tbody id="messages-body"></tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

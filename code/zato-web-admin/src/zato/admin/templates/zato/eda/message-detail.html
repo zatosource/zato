@@ -30,8 +30,10 @@ $(document).ready(function() {
 <div id="msg-data-content" style="border: 3px solid var(--primary-dark); padding: 8px;"></div>
 
 <h3 class="section-title">Delivery status</h3>
-<table class="eda-table">
-    <thead><tr><th>Subscriber</th><th>Status</th></tr></thead>
-    <tbody id="delivery-body"></tbody>
-</table>
+<div class="eda-card-scroll">
+    <table class="eda-table">
+        <thead><tr><th>Subscriber</th><th>Status</th></tr></thead>
+        <tbody id="delivery-body"></tbody>
+    </table>
+</div>
 {% endblock %}

@@ -6,6 +6,9 @@ Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common.api import CACHE as _COMMON_CACHE
 from zato.common.exception import BadRequest
@@ -134,6 +137,20 @@ class Create(AdminService):
 
         store.set(_entity_type, input.name, data)
         saved = store.get(_entity_type, input.name) or data
+
+        cache_config = Bunch()
+        cache_config.name = input.name
+        cache_config.cache_type = _COMMON_CACHE.TYPE.BUILTIN
+        cache_config.is_active = input.is_active
+        cache_config.is_default = input.is_default
+        cache_config.max_size = int(input.max_size)
+        cache_config.max_item_size = int(input.max_item_size)
+        cache_config.extend_expiry_on_get = input.extend_expiry_on_get
+        cache_config.extend_expiry_on_set = input.extend_expiry_on_set
+        cache_config.sync_method = input.sync_method
+        cache_config.persistent_storage = input.persistent_storage
+        self.cache.create(cache_config)
+
         self.response.payload.id = saved.get('id', input.name)
         self.response.payload.name = input.name
 
