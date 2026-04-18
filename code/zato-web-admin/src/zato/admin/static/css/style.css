@@ -453,6 +453,10 @@ div.ui-dialog {
     width: 38em !important
 }
 
+.ui-dialog-content {
+    min-height: 0 !important;
+}
+
 p.big-notice {
     background-color: #ccc;
     width: 50%;

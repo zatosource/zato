@@ -241,7 +241,6 @@ def get_member_list(req:'any_') -> 'HttpResponse':
 def manage_group_members(req:'any_', group_type:'str', group_id:'str | int') -> 'HttpResponse':
 
     # Local variables
-    group_id = int(group_id)
     template_name = 'zato/groups/members.html'
 
     # Get a list of all groups that exist
