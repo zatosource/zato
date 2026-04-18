@@ -26,7 +26,7 @@ class GetList(AdminService):
     """ Returns a list of NTLM definitions available.
     """
     input = 'cluster_id', Int('-cur_page'), Bool('-paginate'), '-query'
-    output = 'id', 'name', 'is_active', 'username'
+    output = 'id', 'name', 'username'
 
     def handle(self):
         items = self.server.config_store.get_list('security')
@@ -39,7 +39,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new NTLM definition.
     """
-    input = 'cluster_id', 'name', 'is_active', 'username'
+    input = 'cluster_id', 'name', 'username'
     output = 'id', 'name'
 
     def handle(self):
@@ -52,7 +52,6 @@ class Create(AdminService):
         self.server.config_store.set('security', name, {
             'type': 'ntlm',
             'name': name,
-            'is_active': input.is_active,
             'username': input.username,
             'password': uuid4().hex,
         })
@@ -68,7 +67,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an NTLM definition.
     """
-    input = 'id', 'cluster_id', 'name', 'is_active', 'username'
+    input = 'id', 'cluster_id', 'name', 'username'
     output = 'id', 'name'
 
     def handle(self):
@@ -95,7 +94,6 @@ class Edit(AdminService):
             self.server.config_store.delete('security', old_name)
 
         existing['name'] = name
-        existing['is_active'] = input.is_active
         existing['username'] = input.username
         existing['password'] = existing.get('password', '')
         existing['type'] = 'ntlm'

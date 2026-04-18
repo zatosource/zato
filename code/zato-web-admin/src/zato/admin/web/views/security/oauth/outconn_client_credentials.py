@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 from json import dumps, loads
+from traceback import format_exc
 
 # Django
 from django.http import HttpResponse
@@ -167,11 +168,13 @@ def get_token(req):
             }), content_type='application/json')
 
     except Exception as e:
-        logger.error('get_token: exception: %s', e)
+        tb = format_exc()
+        logger.error('get_token: exception: %s', tb)
         return HttpResponse(dumps({
             'is_success': False,
-            'exception_message': 'Could not obtain token, check server logs for details',
-            'info': '',
+            'exception_message': 'Error while obtaining token',
+            'info': str(e),
+            'response_content_type': 'text/plain',
         }), content_type='application/json')
 
 # ################################################################################################################################

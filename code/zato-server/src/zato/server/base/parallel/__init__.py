@@ -1263,7 +1263,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 sec_def = None
                 for item in self.config_store.get_list('security'):
                     if item['id'] == security_id:
-                        sec_def = item
+                        sec_def = self.config_store.get('security', item['name'])
                         break
 
                 if not sec_def:
@@ -1273,7 +1273,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                         'error': 'Bearer token definition not found: id=`{}`'.format(security_id)
                     })
 
-                logger.info('get_bearer_token: found definition name=%s', sec_def['name'])
+                logger.info('get_bearer_token: found definition name=%s, keys=%s', sec_def['name'], sorted(sec_def.keys()))
 
             config = self.bearer_token_manager._get_bearer_token_config(sec_def)
             scopes = config.scopes
@@ -1297,10 +1297,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             })
 
         except Exception:
-            logger.error('get_bearer_token: error: %s', format_exc())
+            tb = format_exc()
+            logger.error('get_bearer_token: error: %s', tb)
             return json.dumps({
                 'is_ok': False,
-                'error': 'Could not obtain token, check server logs for details',
+                'error': 'Error while obtaining token',
+                'response_body': tb,
+                'response_content_type': 'text/plain',
+                'status_code': 0,
             })
 
 # ################################################################################################################################
