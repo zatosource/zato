@@ -134,7 +134,7 @@ class Delete(AdminService):
 class ChangePassword(AdminService):
     """ Changes the password of an outgoing FTP connection.
     """
-    input = 'id', 'password1', 'password2'
+    input = 'id', 'password'
 
     def handle(self):
         input = self.request.input
@@ -142,7 +142,7 @@ class ChangePassword(AdminService):
         items = self.server.config_store.get_list(_entity_type)
         for item in items:
             if str(item.get('id')) == target_id or item.get('name') == target_id:
-                item['password'] = input.password1
+                item['password'] = input.password
                 self.server.config_store.set(_entity_type, item['name'], item)
                 return
 

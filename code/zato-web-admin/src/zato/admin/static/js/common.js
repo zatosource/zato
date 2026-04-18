@@ -692,7 +692,6 @@ $.fn.zato.data_table.change_password = function(id, title, label, _label_lower) 
 
     $('#secret_type_id').val(_label_lower);
     $('#secret_label1').text(_label);
-    $('#secret_label2').text(_label_lower);
 
     $('#change-password-name').text(name);
     $('#id_change_password-id').val(id);
@@ -732,19 +731,8 @@ $.fn.zato.data_table.setup_change_password = function() {
     });
 
     if($.fn.zato.data_table.password_required) {
-        $("#id_password1").attr($.fn.zato.validate_required_attr, "required");
-        $("#id_password2").attr($.fn.zato.validate_required_attr, "required");
-
-        $('#id_password1').attr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
-        $('#id_password2').attr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
-    }
-
-    else {
-        $("#id_password1").attr($.fn.zato.validate_equals_attr, "equals-id_password2");
-        $("#id_password1").attr($.fn.zato.validate_equals_msg_attr, "Passwords" + $.fn.zato.validate_equals_msg_suffix);
-
-        $("#id_password2").attr($.fn.zato.validate_equals_attr, "equals-id_password1");
-        $("#id_password2").attr($.fn.zato.validate_equals_msg_attr, "Passwords" + $.fn.zato.validate_equals_msg_suffix);
+        $("#id_password").attr($.fn.zato.validate_required_attr, "required");
+        $('#id_password').attr($.fn.zato.validate_required_msg_attr, $.fn.zato.validate_required_msg);
     }
 }
 

@@ -2,7 +2,7 @@
 /* Dashboard kit - outcome helpers.
    Injectable palette-driven helpers for rendering small status dots,
    per-run outcome squares, and tinted outcome badges. The scheduler
-   dashboard uses them with its {ok, error, timeout, skipped_concurrent,
+   dashboard uses them with its {ok, error, timeout, skipped_already_in_flight,
    missed_catchup} palette; any other dashboard can plug its own. */
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }

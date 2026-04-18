@@ -143,7 +143,7 @@ impl RunningJob {
             &job.name,
         );
 
-        let mut rj = RunningJob {
+        let mut running_job = RunningJob {
             id: JobId(job.id.clone()),
             name: job.name.clone(),
             is_active: job.is_active,
@@ -168,10 +168,10 @@ impl RunningJob {
             max_history: DEFAULT_MAX_HISTORY,
             jitter_rng,
         };
-        if rj.is_active {
-            rj.compute_next_fire(Utc::now());
+        if running_job.is_active {
+            running_job.compute_next_fire(Utc::now());
         }
-        rj
+        running_job
     }
 
     pub fn update_from_job(&mut self, job: &SchedulerJob) {

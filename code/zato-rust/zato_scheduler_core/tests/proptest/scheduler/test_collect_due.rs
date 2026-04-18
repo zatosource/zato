@@ -36,9 +36,9 @@ proptest! {
     fn inactive_jobs_never_collected(minutes in 1u32..60) {
         let mut sj = make_due_job("j1", minutes);
         sj.is_active = false;
-        let rj = RunningJob::from_scheduler_job(&sj);
+        let running_job = RunningJob::from_scheduler_job(&sj);
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), rj);
+        state.jobs.insert("j1".into(), running_job);
         let now = Utc::now();
         let batch = collect_due_jobs(&mut state, now, 50);
         prop_assert!(batch.is_empty());
@@ -47,18 +47,18 @@ proptest! {
     #[test]
     fn in_flight_jobs_skipped(minutes in 1u32..30) {
         let sj = make_due_job("j1", minutes);
-        let mut rj = RunningJob::from_scheduler_job(&sj);
-        rj.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
-        rj.sync_instant_from_utc_pub(Utc::now());
-        rj.in_flight = true;
-        rj.in_flight_since = Some(std::time::Instant::now());
+        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        running_job.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
+        running_job.sync_instant_from_utc_pub(Utc::now());
+        running_job.in_flight = true;
+        running_job.in_flight_since = Some(std::time::Instant::now());
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), rj);
+        state.jobs.insert("j1".into(), running_job);
         let now = Utc::now();
         let batch = collect_due_jobs(&mut state, now, 50);
         prop_assert!(batch.is_empty());
-        let rj = state.jobs.get("j1").unwrap();
-        let last = rj.history.back().unwrap();
-        prop_assert_eq!(&last.outcome, "skipped_concurrent");
+        let running_job = state.jobs.get("j1").unwrap();
+        let last = running_job.history.back().unwrap();
+        prop_assert_eq!(&last.outcome, "skipped_already_in_flight");
     }
 }

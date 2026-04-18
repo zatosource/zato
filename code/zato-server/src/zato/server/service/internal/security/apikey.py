@@ -125,24 +125,18 @@ class ChangePassword(AdminService):
     """
     password_required = False
 
-    input = 'password1', 'password2', '-id', '-name'
+    input = 'password', '-id', '-name'
     output = 'id',
 
     def handle(self) -> 'None':
         input = self.request.input
         name = input.get('name', '')
 
-        password1 = self.server.decrypt(input.password1) if input.password1 else ''
-        password2 = self.server.decrypt(input.password2) if input.password2 else ''
+        password = self.server.decrypt(input.password) if input.password else ''
 
         if self.password_required:
-            if not password1:
+            if not password:
                 raise Exception('Password must not be empty')
-            if not password2:
-                raise Exception('Password must be repeated')
-
-        if password1 != password2:
-            raise Exception('Passwords need to be the same')
 
         if not name and input.get('id'):
             for item in self.server.config_store.get_list('security'):
@@ -157,7 +151,7 @@ class ChangePassword(AdminService):
         if not existing:
             raise Exception('API key not found')
 
-        existing['password'] = password1
+        existing['password'] = password
         existing['type'] = 'apikey'
         self.server.config_store.set('security', name, existing)
 

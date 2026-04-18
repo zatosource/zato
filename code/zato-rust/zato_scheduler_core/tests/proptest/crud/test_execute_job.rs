@@ -33,12 +33,12 @@ proptest! {
     #[test]
     fn execute_sets_fire_to_now(_n in 0u32..50) {
         let sj = make_job();
-        let mut rj = RunningJob::from_scheduler_job(&sj);
+        let mut running_job = RunningJob::from_scheduler_job(&sj);
         let before = Utc::now();
-        rj.next_fire_utc = Some(Utc::now());
-        rj.sync_instant_from_utc_pub(Utc::now());
+        running_job.next_fire_utc = Some(Utc::now());
+        running_job.sync_instant_from_utc_pub(Utc::now());
         let after = Utc::now();
-        if let Some(fire) = rj.next_fire_utc {
+        if let Some(fire) = running_job.next_fire_utc {
             prop_assert!(fire >= before - Duration::seconds(1));
             prop_assert!(fire <= after + Duration::seconds(1));
         }
@@ -48,11 +48,10 @@ proptest! {
     fn execute_nonexistent_is_noop(_n in 0u32..50) {
         let mut state = SchedulerState::new();
         let sj = make_job();
-        let rj = RunningJob::from_scheduler_job(&sj);
-        state.jobs.insert("j1".into(), rj);
-        // "execute" a non-existent job
-        if let Some(rj) = state.jobs.get_mut("nonexistent") {
-            rj.next_fire_utc = Some(Utc::now());
+        let running_job = RunningJob::from_scheduler_job(&sj);
+        state.jobs.insert("j1".into(), running_job);
+        if let Some(running_job) = state.jobs.get_mut("nonexistent") {
+            running_job.next_fire_utc = Some(Utc::now());
         }
         prop_assert_eq!(state.jobs.len(), 1);
     }

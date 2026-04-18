@@ -24,9 +24,9 @@ pub fn all_history_to_py_dict<'py>(
     jobs: &std::collections::HashMap<String, crate::job::RunningJob>,
 ) -> PyResult<Py<PyDict>> {
     let out = PyDict::new(py);
-    for (id, rj) in jobs {
+    for (id, running_job) in jobs {
         let list = PyList::empty(py);
-        for rec in &rj.history {
+        for rec in &running_job.history {
             list.append(record_to_py_dict(py, rec)?)?;
         }
         out.set_item(id.as_str(), list)?;

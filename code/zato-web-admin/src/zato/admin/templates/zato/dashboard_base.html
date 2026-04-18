@@ -1,0 +1,59 @@
+{% extends "zato/index.html" %}
+{% load extras %}
+
+{% block "extra_css" %}
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard.css">
+{% block dashboard_extra_css %}{% endblock %}
+{% endblock %}
+
+{% block "extra_js" %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time_range.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/stat_tile.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/main_chart.js"></script>
+{% block dashboard_domain_js %}{% endblock %}
+{% endblock %}
+
+{% block "content" %}
+
+<div class="dashboard-page" style="opacity:0">
+
+    <div class="dashboard-hero">
+        <div class="dashboard-hero-inner">
+            <div class="dashboard-hero-tiles">
+                {% block dashboard_tiles %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-section dashboard-chart-section">
+        <div class="dashboard-card">
+            <div class="dashboard-card-header">
+                <h3>{% block dashboard_chart_title %}{% endblock %}</h3>
+                <div class="dashboard-chart-controls">
+                <span class="dashboard-pill dashboard-pill-clickable dashboard-chart-type-toggle" id="dashboard-chart-type-toggle" title="Toggle chart style"></span>
+                <div class="dashboard-time-range-wrapper">
+                    <span class="dashboard-pill dashboard-pill-clickable" id="dashboard-exec-count"></span>
+                    <div class="dashboard-time-range-menu" id="dashboard-time-range-menu">
+                        {% block dashboard_time_range_options %}{% endblock %}
+                    </div>
+                </div>
+                </div>
+            </div>
+            <div id="dashboard-bar-chart" class="dashboard-chart-body"></div>
+            <div class="dashboard-chart-legend" id="dashboard-chart-legend"></div>
+        </div>
+    </div>
+
+    <div class="dashboard-section dashboard-grid-section">
+        {% block dashboard_grid %}{% endblock %}
+    </div>
+
+    <div class="dashboard-footer"></div>
+
+</div>
+
+{% endblock %}

@@ -1497,8 +1497,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'name': ide_username,
             'is_active': True,
             'type_': SEC_DEF_TYPE.BASIC_AUTH,
-            'password1': ide_password,
-            'password2': ide_password,
+            'password': ide_password,
         }
         _ = self.invoke(service_name, request)
 

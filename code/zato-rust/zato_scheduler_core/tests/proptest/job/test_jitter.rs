@@ -34,8 +34,8 @@ proptest! {
         _n in 0u32..50,
     ) {
         let job = make_jitter_job(0);
-        let rj = RunningJob::from_scheduler_job(&job);
-        if let (Some(fire), Some(sd)) = (rj.next_fire_utc, rj.start_date) {
+        let running_job = RunningJob::from_scheduler_job(&job);
+        if let (Some(fire), Some(sd)) = (running_job.next_fire_utc, running_job.start_date) {
             let diff_ms = (fire - sd).num_milliseconds();
             prop_assert!(diff_ms >= 0);
             prop_assert_eq!(diff_ms % (5 * 60_000), 0);
@@ -45,8 +45,8 @@ proptest! {
     #[test]
     fn same_id_produces_same_jitter(_n in 0u32..20) {
         let job = make_jitter_job(5000);
-        let rj1 = RunningJob::from_scheduler_job(&job);
-        let rj2 = RunningJob::from_scheduler_job(&job);
-        prop_assert_eq!(rj1.next_fire_utc, rj2.next_fire_utc);
+        let running_job_1 = RunningJob::from_scheduler_job(&job);
+        let running_job_2 = RunningJob::from_scheduler_job(&job);
+        prop_assert_eq!(running_job_1.next_fire_utc, running_job_2.next_fire_utc);
     }
 }

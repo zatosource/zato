@@ -7,7 +7,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from uuid import uuid4
+
+logger = logging.getLogger(__name__)
 
 # Zato
 from zato.server.service import Bool, Int
@@ -69,9 +72,9 @@ class Create(AdminService):
             'client_secret_field': input.client_secret_field,
             'grant_type': input.grant_type,
             'data_format': input.data_format,
-            'auth_server_url': input.get('auth_server_url', ''),
-            'scopes': input.get('scopes', ''),
-            'extra_fields': input.get('extra_fields', ''),
+            'auth_server_url': input.get('auth_server_url') or '',
+            'scopes': input.get('scopes') or '',
+            'extra_fields': input.get('extra_fields') or '',
         })
 
         item = self.server.config_store.get('security', name)
@@ -120,9 +123,9 @@ class Edit(AdminService):
         existing['client_secret_field'] = input.client_secret_field
         existing['grant_type'] = input.grant_type
         existing['data_format'] = input.data_format
-        existing['auth_server_url'] = input.get('auth_server_url', '')
-        existing['scopes'] = input.get('scopes', '')
-        existing['extra_fields'] = input.get('extra_fields', '')
+        existing['auth_server_url'] = input.get('auth_server_url') or ''
+        existing['scopes'] = input.get('scopes') or ''
+        existing['extra_fields'] = input.get('extra_fields') or ''
         existing['type'] = 'bearer_token'
 
         self.server.config_store.set('security', name, existing)
@@ -138,24 +141,18 @@ class ChangePassword(AdminService):
     """
     password_required = False
 
-    input = 'password1', 'password2', '-id', '-name'
+    input = 'password', '-id', '-name'
     output = 'id',
 
     def handle(self):
         input = self.request.input
         name = input.get('name', '')
 
-        password1 = self.server.decrypt(input.password1) if input.password1 else ''
-        password2 = self.server.decrypt(input.password2) if input.password2 else ''
+        password = self.server.decrypt(input.password) if input.password else ''
 
         if self.password_required:
-            if not password1:
+            if not password:
                 raise Exception('Password must not be empty')
-            if not password2:
-                raise Exception('Password must be repeated')
-
-        if password1 != password2:
-            raise Exception('Passwords need to be the same')
 
         if not name and input.get('id'):
             for item in self.server.config_store.get_list('security'):
@@ -170,7 +167,7 @@ class ChangePassword(AdminService):
         if not existing:
             raise Exception('Bearer token definition not found')
 
-        existing['password'] = password1
+        existing['password'] = password
         existing['type'] = 'bearer_token'
         self.server.config_store.set('security', name, existing)
 

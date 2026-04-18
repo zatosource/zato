@@ -1,20 +1,9 @@
-{% extends "zato/index.html" %}
+{% extends "zato/dashboard_base.html" %}
 {% load extras %}
 
 {% block html_title %}Pub/sub dashboard{% endblock %}
 
-{% block "extra_css" %}
-<link rel="stylesheet" type="text/css" href="/static/css/dashboard.css">
-{% endblock %}
-
-{% block "extra_js" %}
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time_range.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/stat_tile.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/main_chart.js"></script>
+{% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/utils.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/dashboard.js"></script>
 <script nonce="{{ CSP_NONCE }}">
@@ -24,13 +13,7 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
-{% block "content" %}
-
-<div class="dashboard-page" style="opacity:0">
-
-    <div class="dashboard-hero">
-        <div class="dashboard-hero-inner">
-            <div class="dashboard-hero-tiles">
+{% block dashboard_tiles %}
 
                 <div class="dashboard-tile">
                     <div class="dashboard-tile-label">Topics</div>
@@ -74,33 +57,18 @@ $(document).ready(function() {
                     <div class="dashboard-tile-sublabel" id="stat-deliveries-sublabel"></div>
                 </div>
 
-            </div>
-        </div>
-    </div>
+{% endblock %}
 
-    <div class="dashboard-section dashboard-chart-section">
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3>Publishes &amp; deliveries</h3>
-                <div class="dashboard-chart-controls">
-                <span class="dashboard-pill dashboard-pill-clickable dashboard-chart-type-toggle" id="dashboard-chart-type-toggle" title="Toggle chart style"></span>
-                <div class="dashboard-time-range-wrapper">
-                    <span class="dashboard-pill dashboard-pill-clickable" id="dashboard-exec-count"></span>
-                    <div class="dashboard-time-range-menu" id="dashboard-time-range-menu">
+{% block dashboard_chart_title %}Publishes and deliveries{% endblock %}
+
+{% block dashboard_time_range_options %}
                         <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
                         <div class="dashboard-time-range-option" data-minutes="15">Last 15 minutes</div>
                         <div class="dashboard-time-range-option" data-minutes="30">Last 30 minutes</div>
                         <div class="dashboard-time-range-option dashboard-time-range-active" data-minutes="60">Last 1 hour</div>
-                    </div>
-                </div>
-                </div>
-            </div>
-            <div id="dashboard-bar-chart" class="dashboard-chart-body"></div>
-            <div class="dashboard-chart-legend" id="dashboard-chart-legend"></div>
-        </div>
-    </div>
+{% endblock %}
 
-    <div class="dashboard-section dashboard-grid-section">
+{% block dashboard_grid %}
 
         <div class="dashboard-card dashboard-card-jobs">
             <div class="dashboard-card-header">
@@ -184,11 +152,5 @@ $(document).ready(function() {
                 </div>
             </div>
         </div>
-
-    </div>
-
-    <div class="dashboard-footer"></div>
-
-</div>
 
 {% endblock %}

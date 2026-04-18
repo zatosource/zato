@@ -52,8 +52,8 @@ fuzz_target!(|data: &[u8]| {
                 job_counter += 1;
                 let chunk = &data[offset..data.len().min(offset + 3)];
                 let sj = make_job_from_bytes(chunk, &id);
-                let rj = RunningJob::from_scheduler_job(&sj);
-                state.jobs.insert(id, rj);
+                let running_job = RunningJob::from_scheduler_job(&sj);
+                state.jobs.insert(id, running_job);
                 offset += 3;
             }
             1 => {
@@ -80,15 +80,15 @@ fuzz_target!(|data: &[u8]| {
         }
     }
 
-    for rj in state.jobs.values() {
-        if rj.is_active && rj.interval_ms > 0 && rj.start_date.is_some() {
+    for running_job in state.jobs.values() {
+        if running_job.is_active && running_job.interval_ms > 0 && running_job.start_date.is_some() {
             assert!(
-                rj.next_fire_utc.is_some(),
+                running_job.next_fire_utc.is_some(),
                 "active job with interval and start_date must have next_fire"
             );
         }
-        if !rj.in_flight {
-            assert!(rj.in_flight_since.is_none());
+        if !running_job.in_flight {
+            assert!(running_job.in_flight_since.is_none());
         }
     }
 });

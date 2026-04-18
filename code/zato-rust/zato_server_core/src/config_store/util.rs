@@ -77,9 +77,19 @@ pub(crate) fn pydict_to_struct<T: serde::de::DeserializeOwned>(py: Python<'_>, d
         let yaml_val = py_to_value(py, &v)?;
         map.insert(yaml_key, yaml_val);
     }
-    let yaml_val = serde_yaml::Value::Mapping(map);
+    let yaml_val = serde_yaml::Value::Mapping(map.clone());
     serde_yaml::from_value(yaml_val)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("deserialize: {}", e)))
+        .map_err(|e| {
+            let mut fields = String::new();
+            for (k, v) in &map {
+                if let serde_yaml::Value::String(ks) = k {
+                    fields.push_str(&format!("  {}={:?}\n", ks, v));
+                }
+            }
+            pyo3::exceptions::PyValueError::new_err(
+                format!("deserialize: {}\nFields:\n{}", e, fields)
+            )
+        })
 }
 
 fn py_to_value(_py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<serde_yaml::Value> {

@@ -402,7 +402,7 @@ class SCHEDULER:
         OK = 'ok'
         ERROR = 'error'
         TIMEOUT = 'timeout'
-        SKIPPED_CONCURRENT = 'skipped_concurrent'
+        SKIPPED_ALREADY_IN_FLIGHT = 'skipped_already_in_flight'
         SKIPPED_HOLIDAY = 'skipped_holiday'
         MISSED_CATCHUP = 'missed_catchup'
 

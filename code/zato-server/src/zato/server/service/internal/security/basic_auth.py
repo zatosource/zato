@@ -140,7 +140,7 @@ class ChangePassword(AdminService):
 
     password_required = False
 
-    input = 'password1', 'password2', '-id', '-name'
+    input = 'password', '-id', '-name'
     output = 'id',
 
     def handle(self):
@@ -156,11 +156,7 @@ class ChangePassword(AdminService):
         if not name:
             raise Exception('Either ID or name are required on input')
 
-        password1 = self.server.decrypt(input.password1) if input.password1 else ''
-        password2 = self.server.decrypt(input.password2) if input.password2 else ''
-
-        if password1 != password2:
-            raise Exception('Passwords need to be the same')
+        password = self.server.decrypt(input.password) if input.password else ''
 
         existing = self.server.config_store.get('security', name)
         if not existing:
@@ -170,9 +166,9 @@ class ChangePassword(AdminService):
 
         with self.server.auth_update_lock(user_id):
             self.server.broker_client.set_credentials(
-                user_id, existing['username'], password1)
+                user_id, existing['username'], password)
 
-            existing['password'] = password1
+            existing['password'] = password
             self.server.config_store.set('security', name, existing)
 
             self.response.payload.id = user_id

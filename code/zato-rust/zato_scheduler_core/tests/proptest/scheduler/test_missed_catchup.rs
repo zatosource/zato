@@ -35,15 +35,15 @@ proptest! {
     #[test]
     fn skip_policy_recomputes_to_future(past_hours in 1u32..24) {
         let sj = make_interval_job("skip", past_hours);
-        let mut rj = RunningJob::from_scheduler_job(&sj);
-        rj.next_fire_utc = Some(Utc::now() - Duration::hours(1));
-        rj.sync_instant_from_utc_pub(Utc::now());
+        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        running_job.next_fire_utc = Some(Utc::now() - Duration::hours(1));
+        running_job.sync_instant_from_utc_pub(Utc::now());
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), rj);
+        state.jobs.insert("j1".into(), running_job);
         let now = Utc::now();
         apply_missed_catchup(&mut state, now);
-        let rj = state.jobs.get("j1").unwrap();
-        if let Some(fire) = rj.next_fire_utc {
+        let running_job = state.jobs.get("j1").unwrap();
+        if let Some(fire) = running_job.next_fire_utc {
             prop_assert!(fire >= now - Duration::seconds(1));
         }
     }
@@ -66,24 +66,24 @@ proptest! {
             on_missed: Some("skip".into()),
             max_execution_time_ms: None,
         };
-        let rj = RunningJob::from_scheduler_job(&sj);
-        let fire_before = rj.next_fire_utc;
+        let running_job = RunningJob::from_scheduler_job(&sj);
+        let fire_before = running_job.next_fire_utc;
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), rj);
+        state.jobs.insert("j1".into(), running_job);
         apply_missed_catchup(&mut state, Utc::now());
-        let rj = state.jobs.get("j1").unwrap();
-        prop_assert_eq!(rj.next_fire_utc, fire_before);
+        let running_job = state.jobs.get("j1").unwrap();
+        prop_assert_eq!(running_job.next_fire_utc, fire_before);
     }
 
     #[test]
     fn inactive_jobs_ignored(_n in 0u32..50) {
         let mut sj = make_interval_job("skip", 1);
         sj.is_active = false;
-        let rj = RunningJob::from_scheduler_job(&sj);
+        let running_job = RunningJob::from_scheduler_job(&sj);
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), rj);
+        state.jobs.insert("j1".into(), running_job);
         apply_missed_catchup(&mut state, Utc::now());
-        let rj = state.jobs.get("j1").unwrap();
-        prop_assert!(rj.next_fire_utc.is_none());
+        let running_job = state.jobs.get("j1").unwrap();
+        prop_assert!(running_job.next_fire_utc.is_none());
     }
 }

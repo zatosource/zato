@@ -66,8 +66,7 @@ class Create(_CreateEdit):
             if password:
                 req.zato.client.invoke('zato.security.basic-auth.change-password', {
                     'id': data['id'],
-                    'password1': password,
-                    'password2': password,
+                    'password': password,
                 })
         return response
 

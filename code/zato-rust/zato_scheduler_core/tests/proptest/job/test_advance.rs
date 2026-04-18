@@ -56,20 +56,20 @@ proptest! {
     #[test]
     fn one_time_clears_fire_after_advance(_n in 0u32..50) {
         let job = make_one_time_job();
-        let mut rj = RunningJob::from_scheduler_job(&job);
-        prop_assert!(rj.next_fire_utc.is_some());
-        rj.advance_to_next(Utc::now());
-        prop_assert!(rj.next_fire_utc.is_none());
+        let mut running_job = RunningJob::from_scheduler_job(&job);
+        prop_assert!(running_job.next_fire_utc.is_some());
+        running_job.advance_to_next(Utc::now());
+        prop_assert!(running_job.next_fire_utc.is_none());
     }
 
     #[test]
     fn interval_advances_to_later_fire(minutes in 1u32..60) {
         let job = make_interval_job(minutes);
-        let mut rj = RunningJob::from_scheduler_job(&job);
+        let mut running_job = RunningJob::from_scheduler_job(&job);
         let now = Utc::now();
-        let first_fire = rj.next_fire_utc;
-        rj.advance_to_next(now);
-        if let (Some(f1), Some(f2)) = (first_fire, rj.next_fire_utc) {
+        let first_fire = running_job.next_fire_utc;
+        running_job.advance_to_next(now);
+        if let (Some(f1), Some(f2)) = (first_fire, running_job.next_fire_utc) {
             prop_assert!(f2 >= f1);
         }
     }
@@ -78,9 +78,9 @@ proptest! {
     fn exhausted_repeats_clears_fire(minutes in 1u32..60) {
         let mut sj = make_interval_job(minutes);
         sj.repeats = Some(1);
-        let mut rj = RunningJob::from_scheduler_job(&sj);
-        rj.current_run = 1;
-        rj.advance_to_next(Utc::now());
-        prop_assert!(rj.next_fire_utc.is_none());
+        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        running_job.current_run = 1;
+        running_job.advance_to_next(Utc::now());
+        prop_assert!(running_job.next_fire_utc.is_none());
     }
 }

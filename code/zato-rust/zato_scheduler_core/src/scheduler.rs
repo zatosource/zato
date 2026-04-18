@@ -151,19 +151,19 @@ fn load_jobs_from_config_store(shared: &SchedulerShared, config_store: &PyObject
             Ok((jobs, cals)) => {
                 let mut state = shared.state.lock().unwrap();
                 for (_name, job) in &jobs {
-                    let rj = RunningJob::from_scheduler_job(job);
-                    state.jobs.insert(job.id.clone(), rj);
+                    let running_job = RunningJob::from_scheduler_job(job);
+                    state.jobs.insert(job.id.clone(), running_job);
                 }
                 for (name, cal) in cals {
-                    let mut cd = CalendarData::new(name.clone());
-                    for ds in &cal.dates {
-                        if let Ok(d) = chrono::NaiveDate::parse_from_str(ds, "%Y-%m-%d") {
-                            cd.dates.insert(d);
+                    let mut calendar_data = CalendarData::new(name.clone());
+                    for date_str in &cal.dates {
+                        if let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+                            calendar_data.dates.insert(date);
                         }
                     }
-                    cd.weekdays = cal.weekdays.clone();
-                    cd.description = cal.description.clone();
-                    state.calendars.insert(name, cd);
+                    calendar_data.weekdays = cal.weekdays.clone();
+                    calendar_data.description = cal.description.clone();
+                    state.calendars.insert(name, calendar_data);
                 }
             }
             Err(e) => {
@@ -177,11 +177,11 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
     let now = Utc::now();
     let mut min_ms: i64 = 60_000;
 
-    for rj in state.jobs.values() {
-        if !rj.is_active {
+    for running_job in state.jobs.values() {
+        if !running_job.is_active {
             continue;
         }
-        if let Some(fire_utc) = rj.next_fire_utc {
+        if let Some(fire_utc) = running_job.next_fire_utc {
             let diff = (fire_utc - now).num_milliseconds();
             if diff < min_ms {
                 min_ms = diff;
@@ -204,16 +204,16 @@ pub fn collect_due_jobs(
 
     for id in job_ids {
         let calendars_ref = &state.calendars;
-        let rj = match state.jobs.get_mut(&id) {
-            Some(rj) => rj,
+        let running_job = match state.jobs.get_mut(&id) {
+            Some(running_job) => running_job,
             None => continue,
         };
 
-        if !rj.is_active {
+        if !running_job.is_active {
             continue;
         }
 
-        let Some(fire_utc) = rj.next_fire_utc else { continue };
+        let Some(fire_utc) = running_job.next_fire_utc else { continue };
 
         if fire_utc > threshold {
             continue;
@@ -222,43 +222,43 @@ pub fn collect_due_jobs(
         let planned = fire_utc.to_rfc3339();
         let actual = now.to_rfc3339();
 
-        if rj.in_flight {
-            rj.record_execution(
-                ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_CONCURRENT, rj.current_run)
+        if running_job.in_flight {
+            running_job.record_execution(
+                ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_ALREADY_IN_FLIGHT, running_job.current_run)
             );
-            rj.advance_to_next(now);
+            running_job.advance_to_next(now);
             continue;
         }
 
-        if rj.is_holiday_today(calendars_ref) {
-            rj.record_execution(
-                ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_HOLIDAY, rj.current_run)
+        if running_job.is_holiday_today(calendars_ref) {
+            running_job.record_execution(
+                ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_HOLIDAY, running_job.current_run)
             );
-            rj.advance_to_next(now);
+            running_job.advance_to_next(now);
             continue;
         }
 
-        rj.in_flight = true;
-        rj.in_flight_since = Some(Instant::now());
-        rj.current_run += 1;
+        running_job.in_flight = true;
+        running_job.in_flight_since = Some(Instant::now());
+        running_job.current_run += 1;
 
         let latency = (now - fire_utc).num_milliseconds().max(0) as u64;
 
         batch.push(FireBatch {
-            job_id: rj.id.clone(),
-            name: rj.name.clone(),
-            service: rj.service.clone(),
-            extra: rj.extra.clone(),
-            job_type: rj.job_type.clone(),
-            current_run: rj.current_run,
+            job_id: running_job.id.clone(),
+            name: running_job.name.clone(),
+            service: running_job.service.clone(),
+            extra: running_job.extra.clone(),
+            job_type: running_job.job_type.clone(),
+            current_run: running_job.current_run,
         });
 
-        rj.record_execution(
-            ExecutionRecord::new(&planned, &actual, outcome::EXECUTED, rj.current_run)
+        running_job.record_execution(
+            ExecutionRecord::new(&planned, &actual, outcome::EXECUTED, running_job.current_run)
                 .with_latency(latency)
         );
 
-        rj.advance_to_next(now);
+        running_job.advance_to_next(now);
     }
 
     batch
@@ -295,28 +295,28 @@ fn dispatch_jobs(
 pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
     let now_instant = Instant::now();
 
-    for rj in state.jobs.values_mut() {
-        if !rj.in_flight {
+    for running_job in state.jobs.values_mut() {
+        if !running_job.in_flight {
             continue;
         }
-        let Some(since) = rj.in_flight_since else { continue };
+        let Some(since) = running_job.in_flight_since else { continue };
         let elapsed_ms = now_instant.duration_since(since).as_millis() as u64;
-        if elapsed_ms > rj.max_execution_time_ms {
-            rj.in_flight = false;
-            rj.in_flight_since = None;
-            rj.record_execution(
-                ExecutionRecord::new("", &Utc::now().to_rfc3339(), outcome::TIMEOUT, rj.current_run)
+        if elapsed_ms > running_job.max_execution_time_ms {
+            running_job.in_flight = false;
+            running_job.in_flight_since = None;
+            running_job.record_execution(
+                ExecutionRecord::new("", &Utc::now().to_rfc3339(), outcome::TIMEOUT, running_job.current_run)
                     .with_duration(elapsed_ms)
-                    .with_error(format!("exceeded max_execution_time_ms={}", rj.max_execution_time_ms))
+                    .with_error(format!("exceeded max_execution_time_ms={}", running_job.max_execution_time_ms))
             );
         }
     }
 }
 
 pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
-    for rj in state.jobs.values_mut() {
-        if rj.is_active {
-            rj.compute_next_fire(now);
+    for running_job in state.jobs.values_mut() {
+        if running_job.is_active {
+            running_job.compute_next_fire(now);
         }
     }
     apply_missed_catchup(state, now);
@@ -326,37 +326,37 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
     let job_ids: Vec<String> = state.jobs.keys().cloned().collect();
 
     for id in job_ids {
-        let rj = match state.jobs.get_mut(&id) {
-            Some(rj) => rj,
+        let running_job = match state.jobs.get_mut(&id) {
+            Some(running_job) => running_job,
             None => continue,
         };
 
-        if !rj.is_active || rj.job_type == JobType::OneTime {
+        if !running_job.is_active || running_job.job_type == JobType::OneTime {
             continue;
         }
 
-        let Some(sd) = rj.start_date else { continue };
-        if sd > now {
+        let Some(start_date) = running_job.start_date else { continue };
+        if start_date > now {
             continue;
         }
 
-        match rj.on_missed {
+        match running_job.on_missed {
             OnMissedPolicy::Skip => {
-                rj.compute_next_fire(now);
+                running_job.compute_next_fire(now);
             }
             OnMissedPolicy::RunOnce => {
-                if let Some(fire) = rj.next_fire_utc {
+                if let Some(fire) = running_job.next_fire_utc {
                     if fire < now {
-                        rj.record_execution(
+                        running_job.record_execution(
                             ExecutionRecord::new(
                                 &fire.to_rfc3339(),
                                 &now.to_rfc3339(),
                                 outcome::MISSED_CATCHUP,
-                                rj.current_run,
+                                running_job.current_run,
                             )
                         );
-                        rj.next_fire_utc = Some(now);
-                        rj.sync_instant_from_utc_pub(now);
+                        running_job.next_fire_utc = Some(now);
+                        running_job.sync_instant_from_utc_pub(now);
                     }
                 }
             }

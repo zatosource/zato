@@ -180,21 +180,14 @@ class ChangePassword(ChangePasswordBase):
     password_required = False
 
     def handle(self):
-        password1 = self.request.input.get('password1', '')
-        password2 = self.request.input.get('password2', '')
+        password = self.request.input.get('password', '')
 
-        password1_decrypted = self.server.decrypt(password1) if password1 else password1
-        password2_decrypted = self.server.decrypt(password2) if password2 else password2
+        password_decrypted = self.server.decrypt(password) if password else password
 
         try:
             if self.password_required:
-                if not password1_decrypted:
+                if not password_decrypted:
                     raise Exception('Password must not be empty')
-                if not password2_decrypted:
-                    raise Exception('Password must be repeated')
-
-            if password1_decrypted != password2_decrypted:
-                raise Exception('Passwords need to be the same')
 
             instance_id = self.request.input.get('id')
             instance_name = self.request.input.name
@@ -213,7 +206,7 @@ class ChangePassword(ChangePasswordBase):
 
             name = item['name']
             data = dict(item)
-            data['password'] = password1_decrypted
+            data['password'] = password_decrypted
             store.set(_entity_type, name, data)
 
             self.response.payload.id = item.get('id', instance_id)

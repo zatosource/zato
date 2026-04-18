@@ -44,8 +44,8 @@ proptest! {
     fn sleep_duration_capped_at_60s(offset in 120i64..600) {
         let mut state = SchedulerState::new();
         let sj = make_job_at_offset("j1", offset);
-        let rj = RunningJob::from_scheduler_job(&sj);
-        state.jobs.insert("j1".into(), rj);
+        let running_job = RunningJob::from_scheduler_job(&sj);
+        state.jobs.insert("j1".into(), running_job);
         let dur = compute_sleep_duration(&state);
         prop_assert!(dur <= Duration::from_secs(60));
     }
@@ -54,8 +54,8 @@ proptest! {
     fn sleep_duration_at_least_1ms(offset in -100i64..1) {
         let mut state = SchedulerState::new();
         let sj = make_job_at_offset("j1", offset);
-        let rj = RunningJob::from_scheduler_job(&sj);
-        state.jobs.insert("j1".into(), rj);
+        let running_job = RunningJob::from_scheduler_job(&sj);
+        state.jobs.insert("j1".into(), running_job);
         let dur = compute_sleep_duration(&state);
         prop_assert!(dur >= Duration::from_millis(1));
     }

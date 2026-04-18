@@ -35,44 +35,44 @@ proptest! {
     #[test]
     fn active_interval_job_has_next_fire(minutes in 1u32..60) {
         let sj = make_job("j1", "interval_based", true, minutes, false);
-        let rj = RunningJob::from_scheduler_job(&sj);
+        let running_job = RunningJob::from_scheduler_job(&sj);
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), rj);
-        let rj = state.jobs.get("j1").unwrap();
-        prop_assert!(rj.next_fire_utc.is_some());
-        prop_assert!(!rj.in_flight);
-        prop_assert_eq!(rj.current_run, 0);
-        prop_assert!(rj.history.is_empty());
+        state.jobs.insert("j1".into(), running_job);
+        let running_job = state.jobs.get("j1").unwrap();
+        prop_assert!(running_job.next_fire_utc.is_some());
+        prop_assert!(!running_job.in_flight);
+        prop_assert_eq!(running_job.current_run, 0);
+        prop_assert!(running_job.history.is_empty());
     }
 
     #[test]
     fn active_one_time_future_start_has_fire(minutes in 1u32..60) {
         let sj = make_job("j1", "one_time", true, minutes, true);
-        let rj = RunningJob::from_scheduler_job(&sj);
-        prop_assert!(rj.next_fire_utc.is_some());
+        let running_job = RunningJob::from_scheduler_job(&sj);
+        prop_assert!(running_job.next_fire_utc.is_some());
     }
 
     #[test]
     fn inactive_job_has_no_fire(minutes in 1u32..60) {
         let sj = make_job("j1", "interval_based", false, minutes, false);
-        let rj = RunningJob::from_scheduler_job(&sj);
-        prop_assert!(rj.next_fire_utc.is_none());
+        let running_job = RunningJob::from_scheduler_job(&sj);
+        prop_assert!(running_job.next_fire_utc.is_none());
     }
 
     #[test]
     fn interval_ms_matches_expected(minutes in 1u32..60) {
         let sj = make_job("j1", "interval_based", true, minutes, false);
-        let rj = RunningJob::from_scheduler_job(&sj);
-        prop_assert_eq!(rj.interval_ms, minutes as u64 * 60_000);
+        let running_job = RunningJob::from_scheduler_job(&sj);
+        prop_assert_eq!(running_job.interval_ms, minutes as u64 * 60_000);
     }
 
     #[test]
     fn create_always_fresh_state(minutes in 1u32..60) {
         let sj = make_job("j1", "interval_based", true, minutes, false);
-        let rj = RunningJob::from_scheduler_job(&sj);
-        prop_assert!(!rj.in_flight);
-        prop_assert!(rj.in_flight_since.is_none());
-        prop_assert_eq!(rj.current_run, 0);
-        prop_assert!(rj.history.is_empty());
+        let running_job = RunningJob::from_scheduler_job(&sj);
+        prop_assert!(!running_job.in_flight);
+        prop_assert!(running_job.in_flight_since.is_none());
+        prop_assert_eq!(running_job.current_run, 0);
+        prop_assert!(running_job.history.is_empty());
     }
 }

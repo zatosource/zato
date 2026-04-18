@@ -36,27 +36,27 @@ proptest! {
     #[test]
     fn non_in_flight_jobs_not_touched(_n in 0u32..50) {
         let sj = make_active_job();
-        let rj = RunningJob::from_scheduler_job(&sj);
+        let running_job = RunningJob::from_scheduler_job(&sj);
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), rj);
+        state.jobs.insert("j1".into(), running_job);
         check_in_flight_timeouts(&mut state);
-        let rj = state.jobs.get("j1").unwrap();
-        prop_assert!(!rj.in_flight);
-        prop_assert!(rj.history.is_empty());
+        let running_job = state.jobs.get("j1").unwrap();
+        prop_assert!(!running_job.in_flight);
+        prop_assert!(running_job.history.is_empty());
     }
 
     #[test]
     fn recent_in_flight_not_timed_out(max_exec in 10_000u64..100_000) {
         let mut sj = make_active_job();
         sj.max_execution_time_ms = Some(max_exec);
-        let mut rj = RunningJob::from_scheduler_job(&sj);
-        rj.in_flight = true;
-        rj.in_flight_since = Some(Instant::now());
-        rj.record_execution(ExecutionRecord::new("p", "a", "executed", 1));
+        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        running_job.in_flight = true;
+        running_job.in_flight_since = Some(Instant::now());
+        running_job.record_execution(ExecutionRecord::new("p", "a", "executed", 1));
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), rj);
+        state.jobs.insert("j1".into(), running_job);
         check_in_flight_timeouts(&mut state);
-        let rj = state.jobs.get("j1").unwrap();
-        prop_assert!(rj.in_flight);
+        let running_job = state.jobs.get("j1").unwrap();
+        prop_assert!(running_job.in_flight);
     }
 }

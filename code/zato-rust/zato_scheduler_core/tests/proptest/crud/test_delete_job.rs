@@ -40,8 +40,8 @@ proptest! {
         let ids: Vec<String> = (0..n_total).map(|i| format!("j{i}")).collect();
         for id in &ids {
             let sj = make_job(id);
-            let rj = RunningJob::from_scheduler_job(&sj);
-            state.jobs.insert(id.clone(), rj);
+            let running_job = RunningJob::from_scheduler_job(&sj);
+            state.jobs.insert(id.clone(), running_job);
         }
         for id in &ids[..n_delete] {
             state.jobs.remove(id.as_str());
@@ -60,8 +60,8 @@ proptest! {
         for i in 0..n {
             let id = format!("j{i}");
             let sj = make_job(&id);
-            let rj = RunningJob::from_scheduler_job(&sj);
-            state.jobs.insert(id, rj);
+            let running_job = RunningJob::from_scheduler_job(&sj);
+            state.jobs.insert(id, running_job);
         }
         state.jobs.remove("nonexistent");
         prop_assert_eq!(state.jobs.len(), n);

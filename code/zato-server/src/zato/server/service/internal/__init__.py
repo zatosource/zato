@@ -164,7 +164,7 @@ class ChangePasswordBase(AdminService):
     password_required = True
     config_store_entity_type = ''
 
-    input = 'password1', 'password2', Int('-id'), '-name', '-type_'
+    input = 'password', Int('-id'), '-name', '-type_'
     output = AsIs('id')
 
     def _handle(self, _class=None, _auth_func=None, _action=None, **kwargs):
@@ -173,20 +173,13 @@ class ChangePasswordBase(AdminService):
         instance_name = self.request.input.get('name', '')
         entity_type = self.config_store_entity_type
 
-        password1 = self.request.input.get('password1', '')
-        password2 = self.request.input.get('password2', '')
+        password = self.request.input.get('password', '')
 
-        password1_decrypted = self.server.decrypt(password1) if password1 else password1
-        password2_decrypted = self.server.decrypt(password2) if password2 else password2
+        password_decrypted = self.server.decrypt(password) if password else password
 
         if self.password_required:
-            if not password1_decrypted:
+            if not password_decrypted:
                 raise Exception('Password must not be empty')
-            if not password2_decrypted:
-                raise Exception('Password must be repeated')
-
-        if password1_decrypted != password2_decrypted:
-            raise Exception('Passwords need to be the same')
 
         if not instance_name and instance_id:
             for item in self.server.config_store.get_list(entity_type):
@@ -201,7 +194,7 @@ class ChangePasswordBase(AdminService):
         if not existing:
             raise Exception('Could not find `{}` in `{}`'.format(instance_name, entity_type))
 
-        existing['password'] = password1_decrypted
+        existing['password'] = password_decrypted
         self.server.config_store.set(entity_type, instance_name, existing)
 
         self.response.payload.id = existing.get('id') or instance_id

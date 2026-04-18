@@ -192,7 +192,7 @@ class ChangePassword(_WrapperBase):
         request = self.request.raw_request
         id = request['id']
 
-        password = request.get('password') or request.get('password1') or ''
+        password = request.get('password') or ''
         password = self.server.encrypt(password)
 
         # Update via the ConfigStore

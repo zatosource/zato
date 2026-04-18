@@ -55,6 +55,8 @@ logger = logging.getLogger(__name__)
 
 SKIP_VALUE = 'zato.skip.value'
 
+_boolean_prefixes = ('by_', 'has_', 'is_', 'may_', 'needs_', 'should_')
+
 # ################################################################################################################################
 
 def invoke_list_service(client, cluster, service, extra=None):
@@ -135,7 +137,7 @@ def method_allowed(*methods_allowed):
 
 # ################################################################################################################################
 
-def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated', data=None):
+def change_password(req, service_name, field='password', success_msg='Password updated', data=None):
 
     data = data or req.POST
     secret_type = data.get('secret_type')
@@ -144,10 +146,10 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         success_msg = 'Secret updated'
 
     try:
+        password = data.get(field, '')
         input_dict = {
             'id': data.get('id'),
-            'password1': data.get(field1, ''),
-            'password2': data.get(field2, ''),
+            'password': password,
             'type_': data.get('type_', ''),
         }
         req.zato.client.invoke(service_name, input_dict)
@@ -311,6 +313,9 @@ class BaseView:
 
                 if not value:
                     value = req.zato.args.get(self.form_prefix + name)
+
+                if not value and name.startswith(_boolean_prefixes):
+                    value = False
 
                 self.input[name] = value
 

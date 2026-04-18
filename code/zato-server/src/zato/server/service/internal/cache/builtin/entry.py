@@ -191,7 +191,7 @@ class _CreateEdit(_Base):
 
         # Double check expiry is actually an integer
         try:
-            int(expiry)
+            expiry = int(expiry)
         except ValueError:
             raise BadRequest(self.cid, 'Expiry {} must be an integer instead of {}'.format(repr(expiry), type(expiry)))
 

@@ -36,16 +36,16 @@ proptest! {
     #[test]
     fn active_interval_job_has_next_fire(minutes in 1u32..120) {
         let job = make_interval_job(minutes, false, true);
-        let rj = RunningJob::from_scheduler_job(&job);
-        prop_assert!(rj.next_fire_utc.is_some());
+        let running_job = RunningJob::from_scheduler_job(&job);
+        prop_assert!(running_job.next_fire_utc.is_some());
     }
 
     #[test]
     fn active_interval_job_next_fire_not_in_past(minutes in 1u32..120) {
         let before = Utc::now();
         let job = make_interval_job(minutes, false, true);
-        let rj = RunningJob::from_scheduler_job(&job);
-        if let Some(fire) = rj.next_fire_utc {
+        let running_job = RunningJob::from_scheduler_job(&job);
+        if let Some(fire) = running_job.next_fire_utc {
             prop_assert!(fire >= before - Duration::seconds(1));
         }
     }
@@ -53,18 +53,18 @@ proptest! {
     #[test]
     fn inactive_job_has_no_next_fire(minutes in 1u32..120) {
         let job = make_interval_job(minutes, false, false);
-        let rj = RunningJob::from_scheduler_job(&job);
-        prop_assert!(rj.next_fire_utc.is_none());
+        let running_job = RunningJob::from_scheduler_job(&job);
+        prop_assert!(running_job.next_fire_utc.is_none());
     }
 
     #[test]
     fn future_start_fires_at_start(minutes in 1u32..120) {
         let job = make_interval_job(minutes, true, true);
-        let rj = RunningJob::from_scheduler_job(&job);
-        if let Some(fire) = rj.next_fire_utc {
-            if let Some(sd) = rj.start_date {
+        let running_job = RunningJob::from_scheduler_job(&job);
+        if let Some(fire) = running_job.next_fire_utc {
+            if let Some(sd) = running_job.start_date {
                 let diff = (fire - sd).num_milliseconds().abs();
-                prop_assert!(diff < rj.jitter_ms.unwrap_or(0) as i64 + 1000);
+                prop_assert!(diff < running_job.jitter_ms.unwrap_or(0) as i64 + 1000);
             }
         }
     }

@@ -498,7 +498,7 @@ class ChangePassword(ChangePasswordBase):
         # office-365
         from O365 import Account
 
-        auth_url = self.request.input.password1
+        auth_url = self.request.input.password
         auth_url = self.server.decrypt(auth_url)
 
         query = urlsplit(auth_url).query
@@ -538,13 +538,8 @@ class ChangePassword(ChangePasswordBase):
     def handle(self) -> 'None':
 
         inp = self.request.input
-        password1 = inp.get('password1', '')
-        password2 = inp.get('password2', '')
-        password1_decrypted = self.server.decrypt(password1) if password1 else password1
-        password2_decrypted = self.server.decrypt(password2) if password2 else password2
-
-        if password1_decrypted != password2_decrypted:
-            raise Exception('Passwords need to be the same')
+        password = inp.get('password', '')
+        password_decrypted = self.server.decrypt(password) if password else password
 
         instance_id = inp.get('id')
         type_ = inp.get('type_')
@@ -562,8 +557,8 @@ class ChangePassword(ChangePasswordBase):
 
         self._run_pre_handle_tasks(None, item)
 
-        if password1_decrypted:
-            enc = self.server.encrypt(password1_decrypted)
+        if password_decrypted:
+            enc = self.server.encrypt(password_decrypted)
             if isinstance(enc, bytes):
                 enc = enc.decode('utf8')
             item = dict(item)

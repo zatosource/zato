@@ -102,9 +102,9 @@ fn scheduler_stop(timeout_s: f64) -> PyResult<()> {
 fn scheduler_create_job(_py: Python<'_>, job_id: &str, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
     let shared = get_shared()?;
     let sj = dict_to_scheduler_job(job_id, job_data)?;
-    let rj = RunningJob::from_scheduler_job(&sj);
+    let running_job = RunningJob::from_scheduler_job(&sj);
     with_state_mut(shared, |state| {
-        state.jobs.insert(job_id.to_string(), rj);
+        state.jobs.insert(job_id.to_string(), running_job);
     });
     Ok(())
 }
@@ -118,8 +118,8 @@ fn scheduler_edit_job(_py: Python<'_>, job_id: &str, job_data: &Bound<'_, PyDict
         if let Some(existing) = state.jobs.get_mut(job_id) {
             existing.update_from_job(&sj);
         } else {
-            let rj = RunningJob::from_scheduler_job(&sj);
-            state.jobs.insert(job_id.to_string(), rj);
+            let running_job = RunningJob::from_scheduler_job(&sj);
+            state.jobs.insert(job_id.to_string(), running_job);
         }
     });
     Ok(())
@@ -140,9 +140,9 @@ fn scheduler_delete_job(job_id: &str) -> PyResult<()> {
 fn scheduler_execute_job(job_id: &str) -> PyResult<()> {
     let shared = get_shared()?;
     with_state_mut(shared, |state| {
-        if let Some(rj) = state.jobs.get_mut(job_id) {
-            rj.next_fire_utc = Some(Utc::now());
-            rj.sync_instant_from_utc_pub(Utc::now());
+        if let Some(running_job) = state.jobs.get_mut(job_id) {
+            running_job.next_fire_utc = Some(Utc::now());
+            running_job.sync_instant_from_utc_pub(Utc::now());
         }
     });
     Ok(())
@@ -153,10 +153,10 @@ fn scheduler_execute_job(job_id: &str) -> PyResult<()> {
 fn scheduler_mark_complete(job_id: &str, outcome: &str, duration_ms: u64) -> PyResult<()> {
     let shared = get_shared()?;
     with_state_mut(shared, |state| {
-        if let Some(rj) = state.jobs.get_mut(job_id) {
-            rj.in_flight = false;
-            rj.in_flight_since = None;
-            if let Some(last) = rj.history.back_mut() {
+        if let Some(running_job) = state.jobs.get_mut(job_id) {
+            running_job.in_flight = false;
+            running_job.in_flight_since = None;
+            if let Some(last) = running_job.history.back_mut() {
                 last.duration_ms = Some(duration_ms);
                 if outcome != "ok" {
                     last.outcome = outcome.to_string();
@@ -204,8 +204,8 @@ pub fn reload_jobs(
         if let Some(existing) = state.jobs.get_mut(job_id.as_str()) {
             existing.update_from_job(sj);
         } else {
-            let rj = RunningJob::from_scheduler_job(sj);
-            state.jobs.insert(job_id.clone(), rj);
+            let running_job = RunningJob::from_scheduler_job(sj);
+            state.jobs.insert(job_id.clone(), running_job);
         }
     }
 }
@@ -216,15 +216,15 @@ pub fn reload_calendars(
 ) {
     state.calendars.clear();
     for (name, cal) in new_cals {
-        let mut cd = CalendarData::new(name.clone());
-        for ds in &cal.dates {
-            if let Ok(d) = chrono::NaiveDate::parse_from_str(ds, "%Y-%m-%d") {
-                cd.dates.insert(d);
+        let mut calendar_data = CalendarData::new(name.clone());
+        for date_str in &cal.dates {
+            if let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+                calendar_data.dates.insert(date);
             }
         }
-        cd.weekdays = cal.weekdays.clone();
-        cd.description = cal.description.clone();
-        state.calendars.insert(name, cd);
+        calendar_data.weekdays = cal.weekdays.clone();
+        calendar_data.description = cal.description.clone();
+        state.calendars.insert(name, calendar_data);
     }
 }
 
@@ -233,8 +233,8 @@ pub fn reload_calendars(
 fn scheduler_get_history(py: Python<'_>, job_id: &str) -> PyResult<Py<PyList>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
-    if let Some(rj) = state.jobs.get(job_id) {
-        let records: Vec<ExecutionRecord> = rj.history.iter().cloned().collect();
+    if let Some(running_job) = state.jobs.get(job_id) {
+        let records: Vec<ExecutionRecord> = running_job.history.iter().cloned().collect();
         history::records_to_py_list(py, &records)
     } else {
         Ok(PyList::empty(py).unbind())
@@ -255,17 +255,17 @@ fn scheduler_get_job_summaries(py: Python<'_>) -> PyResult<Py<PyList>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
     let list = PyList::empty(py);
-    for (id, rj) in &state.jobs {
+    for (id, running_job) in &state.jobs {
         let d = PyDict::new(py);
         d.set_item("id", id.as_str())?;
-        d.set_item("name", rj.name.as_str())?;
-        d.set_item("is_active", rj.is_active)?;
-        d.set_item("service", rj.service.as_ref())?;
-        d.set_item("job_type", rj.job_type.as_str())?;
-        d.set_item("in_flight", rj.in_flight)?;
-        d.set_item("current_run", rj.current_run)?;
-        d.set_item("interval_ms", rj.interval_ms)?;
-        match rj.next_fire_utc {
+        d.set_item("name", running_job.name.as_str())?;
+        d.set_item("is_active", running_job.is_active)?;
+        d.set_item("service", running_job.service.as_ref())?;
+        d.set_item("job_type", running_job.job_type.as_str())?;
+        d.set_item("in_flight", running_job.in_flight)?;
+        d.set_item("current_run", running_job.current_run)?;
+        d.set_item("interval_ms", running_job.interval_ms)?;
+        match running_job.next_fire_utc {
             Some(dt) => d.set_item("next_fire_utc", dt.to_rfc3339())?,
             None => d.set_item("next_fire_utc", py.None())?,
         }

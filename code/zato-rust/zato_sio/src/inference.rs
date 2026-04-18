@@ -6,8 +6,6 @@ const SECRET_EXACT: &[&str] = &[
     "auth_data",
     "auth_token",
     "password",
-    "password1",
-    "password2",
     "secret_key",
     "tls_pem_passphrase",
     "token",

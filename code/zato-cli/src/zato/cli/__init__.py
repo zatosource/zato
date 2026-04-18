@@ -371,19 +371,19 @@ class ZatoCommand:
         self.logger.info('')
 
         while True:
-            secret1 = getpass(template + ' (will not echo): ')
+            secret = getpass(template + ' (will not echo): ')
             if not needs_confirm:
-                return secret1.strip('\n')
+                return secret.strip('\n')
 
-            secret2 = getpass('{} again (will not echo): '.format(template))
+            secret_confirm = getpass('{} again (will not echo): '.format(template))
 
-            if secret1 != secret2:
+            if secret != secret_confirm:
                 self.logger.info('{}s do not match'.format(template))
             else:
-                if not secret1 and not allow_empty:
+                if not secret and not allow_empty:
                     self.logger.info('No {} entered'.format(secret_name))
                 else:
-                    return secret1.strip('\n')
+                    return secret.strip('\n')
 
 # ################################################################################################################################
 
