@@ -690,7 +690,7 @@ $.fn.zato.data_table.on_change_password_submit = function() {
             }
         }
 
-        $.fn.zato.data_table._on_submit(form, _callback);
+        $.fn.zato.post(form.attr('action'), _callback, form.serialize(), null, true);
         $('#change_password-div').dialog('close');
 
         return false;
