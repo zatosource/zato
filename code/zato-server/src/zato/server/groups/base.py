@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import logging
 from contextlib import closing
 
 # SQLAlchemy
@@ -17,6 +18,8 @@ from zato.common.api import GENERIC, Groups, SEC_DEF_TYPE
 from zato.common.groups import Member
 from zato.common.odb.model import GenericObject as ModelGenericObject
 from zato.common.odb.query.generic import GroupsWrapper
+
+logger_groups = logging.getLogger('zato.groups.manager')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -70,6 +73,9 @@ class GroupsManager:
 
     def edit_group(self, group_id:'int', group_type:'str', group_name:'str') -> 'None':
 
+        logger_groups.info('GroupsManager.edit_group: group_id=%s, group_type=%s, group_name=%s',
+            group_id, group_type, group_name)
+
         # Work in a new SQL transaction ..
         with closing(self.session()) as session:
 
@@ -81,13 +87,19 @@ class GroupsManager:
             # .. do edit the group's name (but not its opaque attributes) ..
             update = wrapper.update(group_name, id=group_id)
 
+            logger_groups.info('GroupsManager.edit_group: executing update SQL for group_id=%s', group_id)
+
             # .. and commit the changes now.
             session.execute(update)
             session.commit()
 
+            logger_groups.info('GroupsManager.edit_group: committed for group_id=%s', group_id)
+
 # ################################################################################################################################
 
     def delete_group(self, group_id:'int') -> 'None':
+
+        logger_groups.info('GroupsManager.delete_group: group_id=%s', group_id)
 
         # Work in a new SQL transaction ..
         with closing(self.session()) as session:
@@ -104,7 +116,9 @@ class GroupsManager:
             session.execute(remove_members)
 
             # .. and commit the changes now.
-            # session.commit()
+            session.commit()
+
+            logger_groups.info('GroupsManager.delete_group: committed for group_id=%s', group_id)
 
 # ################################################################################################################################
 
@@ -215,6 +229,8 @@ class GroupsManager:
 
     def add_members_to_group(self, group_id:'int', member_id_list:'strlist') -> 'None':
 
+        logger_groups.info('GroupsManager.add_members_to_group: group_id=%s, member_id_list=%s', group_id, member_id_list)
+
         # Local variables
         member_list = []
 
@@ -250,9 +266,14 @@ class GroupsManager:
             # .. and commit the changes.
             session.commit()
 
+            logger_groups.info('GroupsManager.add_members_to_group: committed %d members for group_id=%s',
+                len(member_list), group_id)
+
 # ################################################################################################################################
 
     def remove_members_from_group(self, group_id:'str', member_id_list:'strlist') -> 'None':
+
+        logger_groups.info('GroupsManager.remove_members_from_group: group_id=%s, member_id_list=%s', group_id, member_id_list)
 
         # Work in a new SQL transaction ..
         with closing(self.session()) as session:

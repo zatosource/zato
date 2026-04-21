@@ -6,9 +6,14 @@ Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+import logging
+
 # Zato
 from zato.common.api import Groups
 from zato.server.base.worker.common import WorkerImpl
+
+logger_groups = logging.getLogger('zato.groups.worker')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -37,10 +42,20 @@ class SecurityGroups(WorkerImpl):
 
 # ################################################################################################################################
 
+    def on_broker_msg_Groups_Edit(
+        self:'WorkerStore', # type: ignore
+        msg, # type: Bunch
+    ) -> 'None':
+        logger_groups.info('on_broker_msg_Groups_Edit: msg=%s', msg)
+
+# ################################################################################################################################
+
     def on_broker_msg_Groups_Edit_Member_List(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
+
+        logger_groups.info('on_broker_msg_Groups_Edit_Member_List: msg=%s', msg)
 
         member_id_list = msg.member_id_list
         member_id_list = [elem.split('-') for elem in member_id_list]

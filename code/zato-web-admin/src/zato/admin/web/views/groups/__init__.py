@@ -10,9 +10,11 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 from json import dumps
 from operator import attrgetter
+from traceback import format_exc
 
 # Django
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.groups import CreateForm, EditForm
@@ -68,8 +70,22 @@ class Index(_Index):
 
         member_count = response.data
 
+        # Get all available security definitions for the badge picker ..
+        security_list_response = self.req.zato.client.invoke('zato.security.get-list', {
+            'sec_type': ['apikey', 'basic_auth'],
+            'paginate': False,
+        })
+
+        security_list = security_list_response.data if security_list_response.ok else []
+
+        logger.info('Groups.Index.handle: member_count=%s', member_count)
+        logger.info('Groups.Index.handle: security_list count=%s, items=%s',
+            len(security_list) if security_list else 0,
+            [{'id': s.get('id'), 'name': s.get('name'), 'sec_type': s.get('sec_type')} for s in security_list] if security_list else [])
+
         return {
             'member_count': member_count,
+            'security_list': security_list,
             'create_form': CreateForm(self.req.POST),
             'edit_form': EditForm(self.req.POST, prefix='edit'),
         }
@@ -85,30 +101,39 @@ class _CreateEdit(CreateEdit):
         input_optional = 'id',
         output_required = 'id', 'name'
 
+    def pre_process_input_dict(self, input_dict:'strdict') -> 'None':
+
+        member_prefix = 'security_group_member_'
+        member_keys = [k for k in self.req.POST if k.startswith(member_prefix)]
+        member_values = [self.req.POST[k] for k in member_keys]
+
+        logger.info('Groups._CreateEdit.pre_process_input_dict: POST keys=%s', list(self.req.POST.keys()))
+        logger.info('Groups._CreateEdit.pre_process_input_dict: member_keys=%s, member_values=%s',
+            member_keys, member_values)
+        logger.info('Groups._CreateEdit.pre_process_input_dict: input_dict before injection=%s', input_dict)
+
+        if member_values:
+            input_dict['member_id_list'] = member_values
+            logger.info('Groups._CreateEdit.pre_process_input_dict: injected member_id_list=%s', member_values)
+
+        post_group_type = self.req.POST.get('group_type')
+        if post_group_type and not input_dict.get('group_type'):
+            input_dict['group_type'] = post_group_type
+            logger.info('Groups._CreateEdit.pre_process_input_dict: fixed group_type=%s', post_group_type)
+
+        logger.info('Groups._CreateEdit.pre_process_input_dict: input_dict after injection=%s', input_dict)
+
+    def post_process_return_data(self, return_data:'strdict') -> 'None':
+
+        member_prefix = 'security_group_member_'
+        member_keys = [k for k in self.req.POST if k.startswith(member_prefix)]
+        return_data['member_count'] = len(member_keys)
+
+        logger.info('Groups._CreateEdit.post_process_return_data: member_count=%s, return_data=%s',
+            len(member_keys), return_data)
+
     def success_message(self, item:'any_') -> 'str':
         return 'Successfully {} group `{}`'.format(self.verb, item.name)
-
-    def post_process_return_data(self, return_data:'strdict') -> 'strdict':
-
-        # Extract assigned member IDs from checkbox-style hidden inputs
-        prefix = self.form_prefix or ''
-        member_ids = []
-
-        for key in self.req.POST:
-            if key.startswith(prefix + 'security_group_member_'):
-                member_ids.append(self.req.POST[key])
-
-        # Sync the member list for this group
-        group_id = return_data.get('id') or self.req.POST.get(prefix + 'id') or self.req.POST.get('id')
-
-        if group_id:
-            self.req.zato.client.invoke('zato.groups.edit-member-list', {
-                'group_action': 'set',
-                'group_id': group_id,
-                'member_id_list': member_ids,
-            })
-
-        return return_data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -144,12 +169,16 @@ def _extract_items_from_response(req:'any_', response:'any_') -> 'anylist':
     # Our response to produce
     out:'anylist' = []
 
+    logger.info('Groups._extract_items_from_response: input data count=%s', len(response.data) if response.data else 0)
+
     # .. preprocess all the items received ..
     for item in response.data:
         name = item['name']
         if name in {'ide_publisher', 'pubapi'}:
+            logger.info('Groups._extract_items_from_response: skipping built-in name=%s', name)
             continue
         elif 'zato.' in name:
+            logger.info('Groups._extract_items_from_response: skipping zato.* name=%s', name)
             continue
         else:
             sec_type = item['sec_type']
@@ -159,9 +188,13 @@ def _extract_items_from_response(req:'any_', response:'any_') -> 'anylist':
             item['sec_type_name'] = sec_type_name
             item['security_name'] = security_name
             out.append(item)
+            logger.info('Groups._extract_items_from_response: kept id=%s, name=%s, sec_type=%s',
+                item.get('id'), name, sec_type)
 
     # .. sort it in a human-readable way ..
     out.sort(key=attrgetter('sec_type', 'name'))
+
+    logger.info('Groups._extract_items_from_response: returning %s items', len(out))
 
     # .. and return it to our caller.
     return out
@@ -174,6 +207,8 @@ def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None, query:'str
     # Handle optional parameters
     sec_type = sec_type or ['apikey', 'basic_auth']
 
+    logger.info('Groups._get_security_list: sec_type=%s, query=%s', sec_type, query)
+
     # Obtain an initial list of members for this group ..
     response = req.zato.client.invoke('zato.security.get-list', {
         'sec_type': sec_type,
@@ -181,8 +216,14 @@ def _get_security_list(req:'any_', sec_type:'strnone | strlist'=None, query:'str
         'paginate': False,
     })
 
+    logger.info('Groups._get_security_list: response.ok=%s, raw data count=%s',
+        response.ok, len(response.data) if response.data else 0)
+
     # .. extract the business data ..
     out = _extract_items_from_response(req, response)
+
+    logger.info('Groups._get_security_list: after filtering, returning %s items: %s',
+        len(out), [{'id': getattr(s, 'id', None), 'name': getattr(s, 'name', None), 'sec_type': getattr(s, 'sec_type', None)} for s in out])
 
     # .. and return it to our caller.
     return out
@@ -233,17 +274,14 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     group_type = req.GET.get('group_type')
     group_id = req.GET.get('group_id')
 
-    security_list = _get_security_list(req, sec_type, query)
+    logger.info('Groups.get_security_list (AJAX): sec_type=%s, query=%s, group_type=%s, group_id=%s',
+        sec_type, query, group_type, group_id)
 
-    # If we have a group_id, mark which items are members rather than filtering them out
-    if group_id and group_type:
-        member_list = _get_member_list(req, group_type, group_id)
-        member_ids = {member.security_id for member in member_list}
-        for item in security_list:
-            item['is_member'] = item.id in member_ids
-    else:
-        for item in security_list:
-            item['is_member'] = False
+    member_list = _get_member_list(req, group_type, group_id)
+    security_list = _get_security_list(req, sec_type, query)
+    security_list = _filter_out_members_from_security_list(security_list, member_list)
+
+    logger.info('Groups.get_security_list (AJAX): returning %s items after filtering', len(security_list))
 
     data = dumps(security_list)
     return HttpResponse(data, content_type='application/javascript')
@@ -263,6 +301,67 @@ def get_member_list(req:'any_') -> 'HttpResponse':
     return HttpResponse(data, content_type='application/javascript')
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('GET')
+def manage_group_members(req:'any_', group_type:'str', group_id:'str | int') -> 'HttpResponse':
+
+    # Local variables
+    group_id = int(group_id)
+    template_name = 'zato/groups/members.html'
+
+    # Get a list of all groups that exist
+    group_list = common_get_group_list(req, group_type)
+
+    # Obtain an initial list of members for this group
+    member_list = _get_member_list(req, group_type, group_id)
+
+    # Obtain an initial list of security definitions
+    security_list = _get_security_list(req)
+
+    # Filter out security definitions with members that already exist in the current group
+    security_list = _filter_out_members_from_security_list(security_list, member_list)
+
+    # Build the return data for the template ..
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'group_type': group_type,
+        'group_id': group_id,
+        'group_list': group_list,
+        'member_list': member_list,
+        'security_list': security_list,
+    }
+
+    # .. and return everything to our caller.
+    return TemplateResponse(req, template_name, return_data)
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+@method_allowed('POST')
+def members_action(req:'any_', action:'str', group_id:'str', member_id_list:'str') -> 'HttpResponse':
+
+    # Local variables
+    group_id = group_id.replace('group-', '')
+    member_id_list = member_id_list.split(',') # type: ignore
+    member_id_list = [elem.strip() for elem in member_id_list] # type: ignore
+
+    # Invoke the remote service ..
+    try:
+        _ = req.zato.client.invoke('zato.groups.edit-member-list', {
+            'group_action': action,
+            'group_id': group_id,
+            'member_id_list': member_id_list
+        })
+    except Exception:
+        response = format_exc()
+        response_class = HttpResponseBadRequest
+    else:
+        response = ''
+        response_class = HttpResponse
+    finally:
+        return response_class(response, content_type='text/plain') # type: ignore
+
 # ################################################################################################################################
 # ################################################################################################################################
 

@@ -61,8 +61,11 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
 
         # Find and call the handler method
         handler_name = f'on_broker_msg_{action_code}'
+        logger.info('handle_broker_msg: looking for handler=%s on context=%s, has_attr=%s',
+            handler_name, type(context).__name__, hasattr(context, handler_name))
         if func := getattr(context, handler_name, None):
             msg = bunchify(msg)
+            logger.info('handle_broker_msg: calling %s with msg keys=%s', handler_name, list(msg.keys()))
             response = func(msg)
 
             '''
