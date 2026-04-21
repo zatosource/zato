@@ -50,6 +50,9 @@
 
 
     <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.data_table.internal_services = {
+        {% for svc in internal_services %}"{{ svc }}": true{% if not forloop.last %}, {% endif %}{% endfor %}
+    };
     $.fn.zato.data_table.get_columns = function() {
         return [
 
@@ -340,7 +343,7 @@
 
                         <!-- 7, 8 -->
                         {% if connection == 'channel' %}
-                            <td><a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                            <td>{% if item.service_name in internal_services %}{{ item.service_name }}{% else %}<a href="{% url "service-ide" "service" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a>{% endif %}</td>
                             <td class='ignore'>
                             {% if item.cache_id %}
                                 <a href="/zato/cache/{{ item.cache_type }}/?cluster={{ cluster_id }}&amp;highlight={{ item.cache_id }}">{{ item.cache_name }}</a>

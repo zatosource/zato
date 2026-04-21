@@ -305,6 +305,12 @@ def index(req): # type: ignore
         with open(docusign_path, 'r', encoding='utf-8') as f:
             openapi_sample_data = f.read()
 
+    internal_service_prefixes = ('zato.', 'pub.zato.', 'demo.', 'pubsub.')
+    internal_services = sorted({
+        item.service_name for item in items
+        if getattr(item, 'service_name', None) and item.service_name.startswith(internal_service_prefixes)
+    })
+
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
         'search_form':SearchForm(req.zato.clusters, req.GET),
@@ -325,6 +331,7 @@ def index(req): # type: ignore
         'meta': meta,
         'req':req,
         'openapi_sample_data': openapi_sample_data,
+        'internal_services': internal_services,
         'zato_template_name': 'zato/http_soap/index.html',
         }
 

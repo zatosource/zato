@@ -21,19 +21,10 @@ class SchedulerODBAdapter:
     def get_scheduler_jobs_json(self):
         from zato.common.odb.model import Job, IntervalBasedJob
 
-        logger.info('SchedulerODBAdapter.get_scheduler_jobs_json: cluster_id=%s, odb=%s',
-            self.cluster_id, type(self.odb).__name__)
-
         with closing(self.odb.session()) as session:
             jobs = session.query(Job).filter_by(cluster_id=self.cluster_id).all()
-            logger.info('SchedulerODBAdapter: found %d Job rows for cluster_id=%s', len(jobs), self.cluster_id)
-
             result = {}
             for job in jobs:
-                logger.info('SchedulerODBAdapter: job id=%s, name=%s, is_active=%s, job_type=%s, service=%s, start_date=%s',
-                    job.id, job.name, job.is_active, job.job_type,
-                    job.service.name if job.service else '(none)', job.start_date)
-
                 entry = {
                     'id': str(job.id),
                     'name': job.name,
@@ -55,9 +46,7 @@ class SchedulerODBAdapter:
 
                 result[str(job.id)] = entry
 
-        out = json.dumps(result)
-        logger.info('SchedulerODBAdapter: returning %d jobs, json length=%d', len(result), len(out))
-        return out
+        return json.dumps(result)
 
     def get_holiday_calendars_json(self):
         return json.dumps({})

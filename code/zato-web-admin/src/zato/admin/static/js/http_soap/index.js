@@ -482,7 +482,7 @@ $.fn.zato.http_soap.invoke = function(id) {
 // Live form updates registration
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-(function() {
+;(function() {
     var connection = $(document).getUrlParam('connection');
     var is_channel = connection === 'channel';
 
