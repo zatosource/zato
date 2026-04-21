@@ -422,7 +422,7 @@ class ChangePassword(ChangePasswordBase):
         # office-365
         from O365 import Account
 
-        auth_url = self.request.input.password1
+        auth_url = self.request.input.password
         auth_url = self.server.decrypt(auth_url)
 
         query = urlsplit(auth_url).query

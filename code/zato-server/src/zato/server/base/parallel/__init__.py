@@ -1309,8 +1309,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             'name': ide_username,
             'is_active': True,
             'type_': SEC_DEF_TYPE.BASIC_AUTH,
-            'password1': ide_password,
-            'password2': ide_password,
+            'password': ide_password,
         }
         _ = self.invoke(service_name, request)
 
@@ -1638,6 +1637,24 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def api_worker_store_reconnect_generic(self, *args:'any_', **kwargs:'any_') -> 'any_':
         return self.worker_store.reconnect_generic(*args, **kwargs) # type: ignore
+
+# ################################################################################################################################
+
+    def check_attr_exists(self, entity_type, attr_name, value):
+        import json
+        from contextlib import closing
+        from sqlalchemy import text
+        exists = False
+        with closing(self.odb.session()) as session:
+            try:
+                result = session.execute(
+                    text(f'SELECT 1 FROM {entity_type} WHERE {attr_name} = :val LIMIT 1'),
+                    {'val': value}
+                )
+                exists = result.fetchone() is not None
+            except Exception:
+                pass
+        return json.dumps({'exists': exists})
 
 # ################################################################################################################################
 # ################################################################################################################################

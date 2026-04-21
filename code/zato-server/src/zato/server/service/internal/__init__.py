@@ -213,6 +213,11 @@ class ServerInvoker(AdminService):
             file_content = self.request.raw_request.get('file_content', '')
             file_name = self.request.raw_request.get('file_name', 'enmasse.yaml')
             response = func(file_content, file_name)
+        elif func_name == 'check_attr_exists':
+            entity_type = self.request.raw_request['entity_type']
+            attr_name = self.request.raw_request['attr_name']
+            value = self.request.raw_request['value']
+            response = func(entity_type, attr_name, value)
         else:
             response = func()
 
@@ -227,7 +232,7 @@ class ChangePasswordBase(AdminService):
     password_required = True
 
     class SimpleIO(AdminSIO):
-        input_required = 'password1', 'password2'
+        input_required = 'password',
         input_optional = Int('id'), 'name', 'type_'
         output_required = AsIs('id')
 
@@ -238,22 +243,14 @@ class ChangePasswordBase(AdminService):
         instance_name = self.request.input.name
 
         with closing(self.odb.session()) as session:
-            password1 = self.request.input.get('password1', '')
-            password2 = self.request.input.get('password2', '')
+            password = self.request.input.get('password', '')
 
-            password1_decrypted = self.server.decrypt(password1) if password1 else password1
-            password2_decrypted = self.server.decrypt(password2) if password2 else password2
+            password_decrypted = self.server.decrypt(password) if password else password
 
             try:
                 if self.password_required:
-                    if not password1_decrypted:
+                    if not password_decrypted:
                         raise Exception('Password must not be empty')
-
-                    if not password2_decrypted:
-                        raise Exception('Password must be repeated')
-
-                if password1_decrypted != password2_decrypted:
-                    raise Exception('Passwords need to be the same')
 
                 # Construct a basic query ..
                 query = session.query(class_)
@@ -277,7 +274,7 @@ class ChangePasswordBase(AdminService):
                     raise Exception('Could not find instance with id:`{}` and name:`{}` ({})'.format(
                         instance_id, instance_name, class_))
 
-                auth_func(instance, password1_decrypted)
+                auth_func(instance, password_decrypted)
 
                 session.add(instance)
                 session.commit()
@@ -288,7 +285,7 @@ class ChangePasswordBase(AdminService):
                     self.request.input.id = instance_id
                     self.request.input.action = action
                     self.request.input.name = name
-                    self.request.input.password = password1_decrypted
+                    self.request.input.password = password_decrypted
                     self.request.input.salt = kwargs.get('salt')
 
                     # Always return ID of the object whose password we changed

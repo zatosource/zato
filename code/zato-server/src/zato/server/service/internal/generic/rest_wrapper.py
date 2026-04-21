@@ -191,7 +191,7 @@ class ChangePassword(_WrapperBase):
         id = request['id']
 
         # This is optional
-        password = request.get('password') or request.get('password1') or ''
+        password = request.get('password') or ''
         password = self.server.encrypt(password)
 
         with closing(self.odb.session()) as session:

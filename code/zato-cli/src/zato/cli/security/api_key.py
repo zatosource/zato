@@ -75,8 +75,7 @@ class CreateDefinition(ServerAwareCommand):
         # API request to send to create a new definition
         change_password_request = {
             'name': name,
-            'password1': password,
-            'password2': password,
+            'password': password,
         }
 
         # Change the newly created definition's password
