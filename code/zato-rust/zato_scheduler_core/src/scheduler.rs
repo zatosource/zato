@@ -138,8 +138,12 @@ pub fn load_from_config_store_py(
     let jobs_json: String = cs.call_method0("get_scheduler_jobs_json")?.extract()?;
     let cals_json: String = cs.call_method0("get_holiday_calendars_json")?.extract()?;
 
+    eprintln!("[zato-scheduler] load_from_config_store_py: jobs_json length={}, preview={}",
+        jobs_json.len(), &jobs_json[..jobs_json.len().min(500)]);
+
     let jobs: HashMap<String, zato_server_core::model::SchedulerJob> =
         serde_json::from_str(&jobs_json).map_err(|e| {
+            eprintln!("[zato-scheduler] JSON parse error: {}, json={}", e, &jobs_json[..jobs_json.len().min(1000)]);
             pyo3::exceptions::PyValueError::new_err(format!("bad scheduler jobs JSON: {}", e))
         })?;
     let cals: HashMap<String, zato_server_core::model::HolidayCalendar> =
@@ -173,7 +177,7 @@ fn load_jobs_from_config_store(shared: &SchedulerShared, config_store: &PyObject
                 }
             }
             Err(e) => {
-                log::error!("Failed to load jobs from config store: {}", e);
+                eprintln!("[zato-scheduler] Failed to load jobs from config store: {}", e);
             }
         }
     });

@@ -1054,6 +1054,12 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         try:
             from zato.server.scheduler_.adapter import SchedulerODBAdapter
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
+
+            logger.info('_start_scheduler: odb=%s, cluster_id=%s', type(self.odb).__name__, self.cluster_id)
+
+            test_json = scheduler_adapter.get_scheduler_jobs_json()
+            logger.info('_start_scheduler: adapter returned json length=%d, preview=%s', len(test_json), test_json[:500])
+
             scheduler_start(
                 scheduler_adapter,
                 _scheduler_run_cb,
