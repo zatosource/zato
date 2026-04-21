@@ -48,6 +48,9 @@ class _CreateEdit(CreateEdit):
         input_required = ('name', 'username')
         output_required = ('id', 'name')
 
+    def populate_initial_input_dict(self, initial_input_dict):
+        initial_input_dict['is_active'] = True
+
     def success_message(self, item):
         return 'Successfully {0} the NTLM definition [{1}]'.format(self.verb, item.name)
 
