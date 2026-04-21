@@ -8,6 +8,8 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+
+logger = logging.getLogger('zato')
 from copy import deepcopy
 
 # Bunch
@@ -194,6 +196,10 @@ class Request:
         """
         self.input = ServiceInput()
         self.encrypt_func = encrypt_func
+
+        logger.info('Request.init: is_sio=%s, payload=%s, type=%s, data_format=%s, channel_params=%s',
+            is_sio, str(self.payload)[:200] if self.payload else None, type(self.payload).__name__,
+            data_format, list(self.channel_params.keys()) if self.channel_params else None)
 
         if is_sio:
 

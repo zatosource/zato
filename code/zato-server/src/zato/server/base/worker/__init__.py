@@ -558,13 +558,19 @@ class WorkerStore(_WorkerStoreBase):
 
         for item in channels:
             name = item['name']
-            self.amqp_api.create(name, item, self.invoke, needs_start=True)
-            self.amqp_api.create_channel(name, item)
+            try:
+                self.amqp_api.create(name, item, self.invoke, needs_start=True)
+                self.amqp_api.create_channel(name, item)
+            except Exception:
+                logger.warning('Could not create AMQP channel `%s`, e:`%s`', name, format_exc())
 
         for item in outconns:
             name = item['name']
-            self.amqp_api.create(name, item, self.invoke, needs_start=True)
-            self.amqp_api.create_outconn(name, item)
+            try:
+                self.amqp_api.create(name, item, self.invoke, needs_start=True)
+                self.amqp_api.create_outconn(name, item)
+            except Exception:
+                logger.warning('Could not create AMQP outconn `%s`, e:`%s`', name, format_exc())
 
 # ################################################################################################################################
 

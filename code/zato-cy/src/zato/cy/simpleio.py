@@ -1821,8 +1821,11 @@ class CySimpleIO:
         is_dict:cy.bint = isinstance(elem, dict)
         is_xml:cy.bint  = isinstance(elem, EtreeElementClass)
 
+        logger.info('SIO._parse_input_elem: elem=%s, type=%s, is_dict=%s, is_xml=%s, is_csv=%s, data_format=%s',
+            str(elem)[:200] if elem else None, type(elem).__name__, is_dict, is_xml, is_csv, data_format)
+
         if not (is_dict or is_xml or is_csv):
-            logger.debug('Ignoring CySimpleIO input `{%r}` (%s in %s) (not a dict, CSV or EtreeElementClass )',
+            logger.info('SIO._parse_input_elem: IGNORING input `%r` (%s in %s) (not a dict, CSV or EtreeElementClass)',
                 elem, type(elem).__name__, self.service_class)
             return
 
@@ -1965,6 +1968,12 @@ class CySimpleIO:
     @cy.returns(object)
     def parse_input(self, data:object, data_format:object, service:object=None, extra:dict=None) -> object:
 
+        logger.info('SIO.parse_input: data=%s, type=%s, data_format=%s, service=%s, extra keys=%s',
+            str(data)[:200] if data else None, type(data).__name__, data_format,
+            service.__class__.__name__ if service else None, list(extra.keys()) if extra else None)
+        logger.info('SIO.parse_input: all_input_elems=%s',
+            [e.name for e in self.definition.all_input_elems] if self.definition.all_input_elems else [])
+
         is_csv:cy.bint = data_format == DATA_FORMAT_CSV and isinstance(data, basestring)
 
         if isinstance(data, list):
@@ -1976,6 +1985,7 @@ class CySimpleIO:
                 return self._parse_input_list(csv_data, data_format, is_csv)
             else:
                 out = self._parse_input_elem(data, data_format, extra=extra)
+                logger.info('SIO.parse_input: out=%s, type=%s', str(out)[:200] if out else None, type(out).__name__ if out else None)
             return bunchify(out)
 
 # ################################################################################################################################

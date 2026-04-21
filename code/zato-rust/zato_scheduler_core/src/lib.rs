@@ -30,7 +30,7 @@ static THREAD_HANDLE: std::sync::Mutex<Option<std::thread::JoinHandle<()>>> = st
 
 fn get_shared() -> PyResult<&'static Arc<SchedulerShared>> {
     SHARED.get().ok_or_else(|| {
-        pyo3::exceptions::PyRuntimeError::new_err("scheduler not started")
+        pyo3::exceptions::PyException::new_err("scheduler not started")
     })
 }
 
@@ -67,7 +67,7 @@ fn scheduler_start(
         .spawn(move || {
             scheduler::scheduler_loop(shared, cs, run_cb, spawn_fn, on_job_executed_cb, initial_sleep_time);
         })
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("spawn failed: {e}")))?;
+        .map_err(|e| pyo3::exceptions::PyException::new_err(format!("spawn failed: {e}")))?;
 
     if let Ok(mut guard) = THREAD_HANDLE.lock() {
         *guard = Some(handle);
@@ -172,7 +172,7 @@ fn scheduler_mark_complete(job_id: &str, outcome: &str, duration_ms: u64) -> PyR
 fn scheduler_reload() -> PyResult<()> {
     let shared = get_shared()?;
     let cs = CONFIG_STORE.get().ok_or_else(|| {
-        pyo3::exceptions::PyRuntimeError::new_err("scheduler not started")
+        pyo3::exceptions::PyException::new_err("scheduler not started")
     })?;
 
     Python::try_attach(|py| {
@@ -183,7 +183,7 @@ fn scheduler_reload() -> PyResult<()> {
             reload_calendars(state, new_cals);
         });
         Ok::<_, PyErr>(())
-    }).ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("GIL not available"))??;
+    }).ok_or_else(|| pyo3::exceptions::PyException::new_err("GIL not available"))??;
 
     Ok(())
 }

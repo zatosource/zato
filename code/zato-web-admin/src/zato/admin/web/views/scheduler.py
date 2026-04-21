@@ -442,7 +442,7 @@ def execute(req, job_id, cluster_id):
     """ Executes a scheduler's job.
     """
     try:
-        req.zato.client.invoke('zato.scheduler.job.execute', {'id':job_id})
+        req.zato.client.invoke('zato.scheduler.job.execute', {'job_id':job_id})
     except Exception:
         msg = 'Job could not be executed. job_id:`{}`, cluster_id:`{}`, e:`{}`'.format(job_id, cluster_id, format_exc())
         logger.error(msg)

@@ -23,7 +23,8 @@ from uuid import uuid4
 from bunch import bunchify
 
 # gevent
-from gevent import sleep
+import gevent
+from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # Open Telemetry
@@ -987,10 +988,83 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
+        # Start the Rust scheduler thread (in-process)
+        self._start_scheduler()
+
         # Optionally, if we appear to be a Docker quickstart environment, log all details about the environment.
         self.log_environment_details()
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
+
+# ################################################################################################################################
+
+    def _start_scheduler(self) -> 'None':
+        """ Start the Rust scheduler thread inside this server process.
+        """
+        from json import loads as json_loads
+
+        from zato.common.api import SCHEDULER
+        from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
+        from zato_scheduler_core import scheduler_start
+
+        self._scheduler_started = False
+
+        _main_hub = gevent.get_hub()
+
+        def _scheduler_run_cb(spawn_fn, on_job_executed_cb, ctx_json):
+            _main_hub.loop.run_callback(spawn, on_job_executed_cb, ctx_json)
+
+        def _on_job_executed(ctx_json):
+            import time as _time
+            from bunch import Bunch
+            from zato_scheduler_core import scheduler_mark_complete
+
+            ctx = json_loads(ctx_json)
+            job_id = ctx.get('id', '')
+            job_name = ctx.get('name', '')
+
+            msg = Bunch({
+                'action': SCHEDULER_MSG.JOB_EXECUTED.value,
+                'name': ctx['name'],
+                'service': ctx['service'],
+                'payload': ctx.get('extra') or '',
+                'cid': new_cid_server(),
+                'job_type': ctx['job_type'],
+                'zato_ctx': {
+                    'scheduler_job_id': ctx['id'],
+                },
+            })
+
+            outcome = SCHEDULER.OUTCOME.OK
+            _t0 = _time.monotonic()
+            try:
+                self.worker_store.on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED')
+            except Exception:
+                outcome = SCHEDULER.OUTCOME.ERROR
+                logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
+
+            duration_ms = int((_time.monotonic() - _t0) * 1000)
+
+            try:
+                scheduler_mark_complete(str(job_id), outcome, duration_ms)
+                logger.info('Scheduler job_id=%s; name=%s; outcome=%s; duration=%sms', job_id, job_name, outcome, duration_ms)
+            except Exception:
+                logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
+
+        try:
+            from zato.server.scheduler_.adapter import SchedulerODBAdapter
+            scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
+            scheduler_start(
+                scheduler_adapter,
+                _scheduler_run_cb,
+                spawn,
+                _on_job_executed,
+                0.5,
+            )
+            self._scheduler_started = True
+            logger.info('Scheduler started')
+        except Exception:
+            logger.warning('Scheduler could not be started: %s', format_exc())
 
 # ################################################################################################################################
 
@@ -1116,7 +1190,13 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
 
         # .. publish the message for pub/sub ..
-        self.broker_client.publish_to_pubsub(pubsub_msg)
+        if self.broker_client:
+            self.broker_client.publish_to_pubsub(pubsub_msg)
+
+        # .. reload the Rust scheduler if it was started ..
+        if getattr(self, '_scheduler_started', False):
+            from zato_scheduler_core import scheduler_reload
+            scheduler_reload()
 
         # .. finally, log what happened.
         logger.info('⭐ Config loaded OK')

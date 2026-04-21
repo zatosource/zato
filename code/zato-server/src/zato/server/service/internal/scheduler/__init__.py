@@ -377,22 +377,24 @@ class Execute(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'execute'
 
-    input = 'id',
+    input = 'job_id',
 
     def handle(self):
         try:
+            self.logger.info('Execute.handle: request.input=%s, request.input type=%s', self.request.input, type(self.request.input))
+            self.logger.info('Execute.handle: raw_request=%s, raw_request type=%s', self.request.raw_request, type(self.request.raw_request))
+            self.logger.info('Execute.handle: request.payload=%s', getattr(self.request, 'payload', 'N/A'))
+            self.logger.info('Execute.handle: channel=%s, data_format=%s, transport=%s', self.channel, self.data_format, self.transport)
+
             from contextlib import closing
             from zato.common.odb.model import Job
             with closing(self.odb.session()) as session:
-                job_row = session.query(Job).filter_by(id=self.request.input.id).first()
-            item = {'id': job_row.id, 'name': job_row.name} if job_row else None
-            if not item:
+                job_row = session.query(Job).filter_by(id=self.request.input.job_id).first()
+            if not job_row:
                 raise ZatoException(self.cid, 'Job not found')
 
-            job_id = str(item['id'])
-
             from zato_scheduler_core import scheduler_execute_job
-            scheduler_execute_job(job_id)
+            scheduler_execute_job(str(job_row.id))
         except Exception:
             self.logger.error('Could not execute the job, e:`%s`', format_exc())
             raise
