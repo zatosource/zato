@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from http.client import OK
 from logging import getLogger
 
 # Bunch
@@ -16,12 +17,13 @@ from bunch import Bunch
 from django.urls import resolve
 
 # Zato
-from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.util import get_user_profile
-from zato.client import APIClient
+from zato.client import AnyServiceInvoker
 from zato.common.json_internal import loads
+from zato.common.odb.model import Cluster
 from zato.common.version import get_version
 
 # ################################################################################################################################
@@ -38,6 +40,7 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+# Zato version
 version = get_version()
 
 # ################################################################################################################################
@@ -78,111 +81,47 @@ version = get_version()
 # ################################################################################################################################
 # ################################################################################################################################
 
-_default_cluster = Bunch(id=1, name='default')
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class HeadersEnrichedException(Exception):
     headers: 'anydict'
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class _InvokeResponse:
-    """ Wraps an APIClient response so that web-admin views can access .data / .meta directly.
-    No response_elem unwrapping - services return plain JSON.
-    """
-    def __init__(self, api_response):
-        self.inner = api_response.inner
-        self.ok = api_response.ok
-        self.has_data = api_response.has_data
-        self.meta = {}
-        self.inner_service_response = ''
-
-        raw = api_response.data
-
-        if not (self.ok and raw):
-            self.data = raw
-            return
-
-        if isinstance(raw, str):
-            try:
-                raw = loads(raw)
-            except Exception:
-                pass
-
-        if isinstance(raw, dict):
-            self.meta = raw.pop('_meta', None) or {}
-
-            # .. GetList responses have a "data" key with the list of items ..
-            if 'data' in raw and isinstance(raw['data'], list):
-                self.data = [Bunch(item) if isinstance(item, dict) else item for item in raw['data']]
-
-            # .. all other dict responses are plain key-value payloads.
-            else:
-                self.data = Bunch(raw)
-
-        elif isinstance(raw, list):
-            self.data = [Bunch(item) if isinstance(item, dict) else item for item in raw]
-        else:
-            self.data = raw
-
-    def __iter__(self):
-        if isinstance(self.data, list):
-            return iter(self.data)
-        if isinstance(self.data, dict):
-            return iter([self.data])
-        return iter([])
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class Client:
-    def __init__(self, req, address, path, auth):
+class Client(AnyServiceInvoker):
+    def __init__(self, req, *args, **kwargs):
         self.forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR') or req.META.get('REMOTE_ADDR')
-        self.api_client = APIClient(address, auth[0], auth[1], path=path)
+        super(Client, self).__init__(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def invoke(self, service_name, request=None, **kwargs):
-        needs_exception = kwargs.pop('needs_exception', True)
+    def invoke(self, *args, **kwargs):
+        response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
+        if response.inner.status_code != OK:
 
-        logger.info('web-admin -> server: service=%s', service_name)
-
-        api_response = self.api_client.invoke(service_name, request or {})
-        response = _InvokeResponse(api_response)
-
-        if not response.ok:
-            try:
-                json_data = loads(response.inner.text)
-            except Exception:
-                json_data = {}
-
-            logger.info('Error response from server: ok=%s, text=%r, json_data=%r, headers=%r',
-                response.ok, response.inner.text, json_data, dict(response.inner.headers))
-
-            cid = json_data.get('cid', '')
-            err_details = json_data.get('details', '')
+            json_data = loads(response.inner.text)
+            cid = json_data.get('cid')
+            err_details = json_data.get('details')
+            full_details = 'CID: {}; nDetails: {}'.format(cid, err_details)
 
             if not err_details:
-                err_details = response.inner.headers.get('X-Zato-Message', '')
+                err_details = json_data
 
-            if not err_details:
-                err_details = json_data or response.inner.text
-
-            full_details = 'CID: {}; Details: {}'.format(cid, err_details)
-
-            if needs_exception:
+            if kwargs.get('needs_exception', True):
                 logger.warning(full_details)
                 msg = err_details[0] if isinstance(err_details, list) else err_details
 
                 exc = HeadersEnrichedException(msg)
-                exc.headers = dict(response.inner.headers)
+                exc.headers = response.inner.headers
                 raise exc
+
             else:
                 logger.warning(err_details)
+        return response
 
+# ################################################################################################################################
+
+    def invoke_async(self, *args, **kwargs):
+        response = super(Client, self).invoke_async(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
         return response
 
 # ################################################################################################################################
@@ -205,33 +144,56 @@ class ZatoMiddleware:
 
     def process_request(self, req):
 
+        # Makes each Django view have an access to 'zato.odb' and 'zato.setttings_db' attributes
+        # of the request object. The attributes are SQLAlchemy sessions tied databases defined in app's settings.py
         req.zato = Bunch()
-        req.zato.args = Bunch()
+        req.zato.odb = SASession()
+        req.zato.settings_db = settings_db
+        req.zato.args = Bunch() # Arguments read from URL
 
         # Whether this request to web-admin was served over TLS
         req.zato.is_tls = req.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https'
 
-        resolved_kwargs = resolve(req.path).kwargs
-        req.zato.id = resolved_kwargs.get('id')
-        req.zato.cluster_id = req.GET.get('cluster') \
-            or req.POST.get('cluster_id') \
-            or resolved_kwargs.get('cluster_id') \
-            or resolved_kwargs.get('cluster') \
-            or 1
+        try:
+            resolved_kwargs = resolve(req.path).kwargs
+            req.zato.id = resolved_kwargs.get('id')
+            req.zato.cluster_id = req.GET.get('cluster') \
+                or req.POST.get('cluster_id') \
+                or resolved_kwargs.get('cluster_id') \
+                or resolved_kwargs.get('cluster') \
+                or 1 # By default, this will be the very first cluster so we can just assume it here as the last option.
 
-        req.zato.cluster = _default_cluster
-        req.zato.clusters = [_default_cluster]
-        req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
+            if req.zato.cluster_id:
 
-        url = 'http://127.0.0.1:17010'
-        auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
-        req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth)
+                # Get the cluster we are running under ..
+                req.zato.cluster = req.zato.odb.query(Cluster).\
+                    filter_by(id=req.zato.cluster_id).\
+                    one()
 
-        if not req.user.is_anonymous:
-            needs_logging = not req.get_full_path().endswith(('.js', '.css', '.png'))
-            req.zato.user_profile = get_user_profile(req.user, needs_logging)
-        else:
-            req.zato.user_profile = None
+                url = 'http://127.0.0.1:17010'
+
+                auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
+                req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth, to_bunch=True)
+
+            req.zato.clusters = req.zato.odb.query(Cluster).order_by(Cluster.name).all()
+            req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
+
+            if not req.user.is_anonymous:
+                needs_logging = not req.get_full_path().endswith(('.js', '.css', '.png'))
+                req.zato.user_profile = get_user_profile(req.user, needs_logging)
+            else:
+                req.zato.user_profile = None
+        except Exception:
+            req.zato.odb.rollback()
+            raise
+
+# ################################################################################################################################
+
+    def process_response(self, req, resp):
+        if getattr(req, 'zato', None):
+            req.zato.odb.close()
+
+        return resp
 
 # ################################################################################################################################
 

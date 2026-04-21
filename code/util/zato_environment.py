@@ -45,32 +45,27 @@ is_linux   = 'linux'   in platform_system # noqa: E272
 # ################################################################################################################################
 # ################################################################################################################################
 
-zato_command_template_linux = r"""
-#!{bin_dir}/python
-
-# To prevent an attribute error in pyreadline\py3k_compat.py
-# AttributeError: module 'collections' has no attribute 'Callable'
-
+zato_command_template_linux = r"""#!/bin/bash
+if ! cd . 2>/dev/null; then
+    _cwd="$(pwd 2>/dev/null)" || _cwd=""
+    if [ -n "$_cwd" ] && [ -d "$_cwd" ]; then
+        cd "$_cwd"
+    else
+        cd /tmp
+    fi
+fi
+exec {bin_dir}/python -c "
 try:
     import collections
     collections.Callable = collections.abc.Callable
 except AttributeError:
     pass
-
-# Zato
+import re, sys
+sys.path.append(r'{base_dir}/lib64/python3.6/site-packages/')
+sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
 from zato.cli.zato_command import main
-
-if __name__ == '__main__':
-
-    # stdlib
-    import re
-    import sys
-
-    # This is needed by SUSE
-    sys.path.append(r'{base_dir}/lib64/python3.6/site-packages/')
-
-    sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
-    sys.exit(main())
+sys.exit(main())
+" "\$@"
 """.strip() # noqa: W605
 
 zato_command_template_windows = r"""

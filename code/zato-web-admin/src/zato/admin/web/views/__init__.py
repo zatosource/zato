@@ -494,7 +494,7 @@ class Index(BaseView):
                 self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
 
-                logger.info('Response from service: `%s`', response.data)
+                logger.info('Response from service: ok=`%s`, data_type=`%s`, data=`%s`', response.ok, type(response.data), response.data)
 
                 if response and response.ok:
                     return_data['response_inner'] = response.inner_service_response

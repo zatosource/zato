@@ -614,6 +614,7 @@ class ZatoCommand:
                 if not os.path.exists(work_dir):
                     self.logger.info('Creating directory `%s`', work_dir)
                     os.makedirs(work_dir)
+                    os.chdir(work_dir)
 
                 for elem in os.listdir(work_dir):
                     if elem.startswith('zato') and elem.endswith('config'):

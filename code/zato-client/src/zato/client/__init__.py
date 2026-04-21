@@ -271,7 +271,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
 
         if isinstance(data, dict):
             self.meta = data.get('_meta')
-            data_keys = list(data.keys())
+            data_keys = [k for k in data.keys() if k != '_meta']
             if len(data_keys) == 1:
                 data_key = data_keys[0]
                 if isinstance(data_key, text) and data_key.startswith('zato'):

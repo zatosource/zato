@@ -103,8 +103,11 @@ class Index(_Index):
     def handle_return_data(self, return_data:'any_') -> 'any_':
         filtered_items = []
         for item in self.items:
-            if item.name not in to_ignore:
-                filtered_items.append(item)
+            if item.name in to_ignore:
+                continue
+            if not item.name.startswith('demo.'):
+                continue
+            filtered_items.append(item)
         return_data['items'] = filtered_items
         return return_data
 
