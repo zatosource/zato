@@ -6,62 +6,15 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from contextlib import closing
+
 # Zato
-from zato.server.service.internal import AdminService
-from zato_server_core import next_id
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _get_security_by_id(server, sec_base_id):
-    """ Look up security definition name from its ID via the config store.
-    """
-    for item in server.config_manager.get_list('security'):
-        if item['id'] == sec_base_id:
-            return item['name']
-    raise Exception('Security definition with id `{}` not found'.format(sec_base_id))
-
-def _get_user_id(server, security):
-    """ Resolve a security definition name to its user_id. Raises if unknown.
-    """
-    item = server.config_manager.get('security', security)
-    if item is not None:
-        return item['id']
-    resolved = server.sec_user_id(security)
-    if resolved is None:
-        raise Exception('Cannot resolve user_id for security definition `{}`'.format(security))
-    return resolved
-
-def _merged_acl_for_user(server, security, extra_row=None, exclude_perm_id=None):
-    """ Merged pub/sub pattern lists for a security definition as they would look
-    after `extra_row` is added and `exclude_perm_id` is removed.
-    """
-    rows = []
-    for perm_row in server.config_manager.get_list('pubsub_permission'):
-        if perm_row['security'] != security:
-            continue
-        if exclude_perm_id is not None and perm_row['id'] == exclude_perm_id:
-            continue
-        rows.append(perm_row)
-    if extra_row is not None:
-        rows.append(extra_row)
-
-    pub_patterns = []
-    sub_patterns = []
-    for row in rows:
-        for pub_item in row['pub_topics']:
-            if pub_item and pub_item not in pub_patterns:
-                pub_patterns.append(pub_item)
-        for sub_item in row['sub_topics']:
-            if sub_item and sub_item not in sub_patterns:
-                sub_patterns.append(sub_item)
-    return pub_patterns, sub_patterns
-
-def _push_acl(server, user_id, pub_patterns, sub_patterns):
-    if pub_patterns or sub_patterns:
-        server.broker_client.set_acl(user_id, pub_patterns, sub_patterns)
-    else:
-        server.broker_client.remove_acl(user_id)
+from zato.common.broker_message import PUBSUB
+from zato.common.odb.model import PubSubPermission, SecurityBase
+from zato.common.odb.query import pubsub_permission_list
+from zato.common.util.sql import set_instance_opaque_attrs
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -69,45 +22,38 @@ def _push_acl(server, user_id, pub_patterns, sub_patterns):
 class GetList(AdminService):
     """ Returns a list of pub/sub permissions.
     """
-    input = '-cluster_id',
+    class SimpleIO(GetListAdminSIO):
+        request_elem = 'zato_pubsub_permission_get_list_request'
+        response_elem = 'zato_pubsub_permission_get_list_response'
+        input_required = 'cluster_id',
+        output_required = 'id', 'name', 'pattern', 'access_type', 'sec_base_id', 'subscription_count'
+
+    def get_data(self, session):
+
+        query_config = {}
+
+        if self.request.input['query']:
+            query_config['query'] = self.request.input['query'].strip().split()
+
+        query_results = pubsub_permission_list(session, self.request.input.cluster_id, False, **query_config)
+        processed_results = []
+
+        for result in query_results:
+            permission, name, subscription_count = result
+            processed_results.append({
+                'id': permission.id,
+                'name': name,
+                'pattern': permission.pattern,
+                'access_type': permission.access_type,
+                'sec_base_id': permission.sec_base_id,
+                'subscription_count': subscription_count
+            })
+
+        return processed_results
 
     def handle(self):
-        items = self.server.config_manager.get_list('pubsub_permission')
-
-        subscriptions = self.server.config_manager.get_list('pubsub_subscription')
-
-        for item in items:
-            item['name'] = item['security']
-
-            pub_topics = item['pub_topics']
-            sub_topics = item['sub_topics']
-
-            pattern_lines = []
-            for pub_item in pub_topics:
-                pattern_lines.append('pub={}'.format(pub_item))
-            for sub_item in sub_topics:
-                pattern_lines.append('sub={}'.format(sub_item))
-            item['pattern'] = '\n'.join(pattern_lines)
-
-            has_pub = len(pub_topics) > 0
-            has_sub = len(sub_topics) > 0
-            if has_pub and has_sub:
-                item['access_type'] = 'publisher-subscriber'
-            elif has_pub:
-                item['access_type'] = 'publisher'
-            elif has_sub:
-                item['access_type'] = 'subscriber'
-            else:
-                item['access_type'] = ''
-
-            security = item['security']
-            count = 0
-            for subscription in subscriptions:
-                if subscription['security'] == security:
-                    count += 1
-            item['subscription_count'] = count
-
-        self.response.payload = self._paginate_list(items)
+        with closing(self.odb.session()) as session:
+            self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -115,43 +61,68 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new pub/sub permission.
     """
-    input = 'sec_base_id', '-pub_topics', '-sub_topics', '-cluster_id'
-    output = 'id', 'security'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_permission_create_request'
+        response_elem = 'zato_pubsub_permission_create_response'
+        input_required = 'sec_base_id', 'pattern', 'access_type'
+        input_optional = 'cluster_id'
+        output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
+        cluster_id = self.server.cluster_id
 
-        sec_base_id = input.sec_base_id
-        security = _get_security_by_id(self.server, sec_base_id)
+        # Validate patterns
+        if not input.pattern or not input.pattern.strip():
+            raise Exception('At least one pattern is required')
 
-        pub_topics = input.get('pub_topics') or []
-        sub_topics = input.get('sub_topics') or []
+        patterns = [item.strip() for item in input.pattern.splitlines() if item.strip()]
 
-        if isinstance(pub_topics, str):
-            pub_topics = [item.strip() for item in pub_topics.split(',') if item.strip()]
-        if isinstance(sub_topics, str):
-            sub_topics = [item.strip() for item in sub_topics.split(',') if item.strip()]
+        if not patterns:
+            raise Exception('At least one valid pattern is required')
 
-        data = {
-            'security': security,
-            'sec_base_id': sec_base_id,
-            'pub_topics': pub_topics,
-            'sub_topics': sub_topics,
-        }
+        with closing(self.odb.session()) as session:
+            try:
+                # Check if permission already exists for this security definition and pattern combination
+                existing_perm = session.query(PubSubPermission).\
+                    filter(PubSubPermission.cluster_id==cluster_id).\
+                    filter(PubSubPermission.sec_base_id==input.sec_base_id).\
+                    filter(PubSubPermission.pattern==input.pattern).\
+                    filter(PubSubPermission.access_type==input.access_type).first()
 
-        user_id = _get_user_id(self.server, security)
+                if existing_perm:
+                    raise Exception('Permission already exists for this security definition, pattern combination and access type')
 
-        with self.server.auth_update_lock(user_id):
-            perm_id = next_id()
-            data['id'] = perm_id
+                # Create the permission
+                permission = PubSubPermission()
+                permission.sec_base_id = input.sec_base_id
+                permission.access_type = input.access_type
+                permission.pattern = '\n'.join(patterns) # type: ignore
+                permission.cluster_id = cluster_id       # type: ignore
 
-            new_pub, new_sub = _merged_acl_for_user(self.server, security, extra_row=data)
-            _push_acl(self.server, user_id, new_pub, new_sub)
+                set_instance_opaque_attrs(permission, input)
 
-            self.server.config_manager.set('pubsub_permission', perm_id, data)
+                session.add(permission)
+                session.commit()
 
-        self.response.payload.id = perm_id
-        self.response.payload.security = security
+            except Exception:
+                session.rollback()
+                raise
+            else:
+                sec_base = session.query(SecurityBase).filter_by(id=input.sec_base_id).one()
+
+                input.id = permission.id
+                input.sec_name = sec_base.name
+                input.username = sec_base.username
+
+                input.action = PUBSUB.PERMISSION_CREATE.value
+                input.cid = self.cid
+
+                self.response.payload.id = permission.id
+                self.response.payload.name = sec_base.name
+
+                self.broker_client.publish(input)
+                self.broker_client.publish_to_pubsub(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -159,45 +130,54 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing pub/sub permission.
     """
-    input = 'id', 'sec_base_id', '-pub_topics', '-sub_topics', '-cluster_id'
-    output = 'id', 'security'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_permission_edit_request'
+        response_elem = 'zato_pubsub_permission_edit_response'
+        input_required = 'id', 'sec_base_id', 'pattern', 'access_type'
+        input_optional = 'cluster_id',
+        output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
 
-        perm_id = input.id
-        sec_base_id = input.sec_base_id
-        security = _get_security_by_id(self.server, sec_base_id)
+        # Validate patterns
+        if not input.pattern or not input.pattern.strip():
+            raise Exception('At least one pattern is required')
 
-        pub_topics = input.get('pub_topics') or []
-        sub_topics = input.get('sub_topics') or []
+        patterns = [item.strip() for item in input.pattern.splitlines() if item.strip()]
 
-        if isinstance(pub_topics, str):
-            pub_topics = [item.strip() for item in pub_topics.split(',') if item.strip()]
-        if isinstance(sub_topics, str):
-            sub_topics = [item.strip() for item in sub_topics.split(',') if item.strip()]
+        if not patterns:
+            raise Exception('At least one valid pattern is required')
 
-        user_id = _get_user_id(self.server, security)
+        with closing(self.odb.session()) as session:
+            try:
+                permission = session.query(PubSubPermission).filter_by(id=input.id).one()
 
-        with self.server.auth_update_lock(user_id):
-            data = {
-                'id': perm_id,
-                'security': security,
-                'sec_base_id': sec_base_id,
-                'pub_topics': pub_topics,
-                'sub_topics': sub_topics,
-            }
+                # Update permission fields
+                permission.sec_base_id = input.sec_base_id
+                permission.access_type = input.access_type
+                permission.pattern = '\n'.join(patterns)
 
-            new_pub, new_sub = _merged_acl_for_user(
-                self.server, security, extra_row=data, exclude_perm_id=perm_id,
-            )
-            _push_acl(self.server, user_id, new_pub, new_sub)
+                set_instance_opaque_attrs(permission, input)
 
-            self.server.config_manager.delete('pubsub_permission', perm_id)
-            self.server.config_manager.set('pubsub_permission', perm_id, data)
+                session.commit()
 
-        self.response.payload.id = perm_id
-        self.response.payload.security = security
+            except Exception:
+                session.rollback()
+                raise
+            else:
+                input.id = permission.id
+                input.sec_name = permission.sec_base.name
+                input.username = permission.sec_base.username
+
+                input.action = PUBSUB.PERMISSION_EDIT.value
+                input.cid = self.cid
+
+                self.response.payload.id = permission.id
+                self.response.payload.name = permission.sec_base.name
+
+                self.broker_client.publish(input)
+                self.broker_client.publish_to_pubsub(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -205,24 +185,35 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a pub/sub permission.
     """
-    input = 'id',
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_permission_delete_request'
+        response_elem = 'zato_pubsub_permission_delete_response'
+        input_required = 'id',
 
     def handle(self):
-        perm_id = self.request.input.id
-        existing = self.server.config_manager.get('pubsub_permission', perm_id)
-        if existing is None:
-            return
+        with closing(self.odb.session()) as session:
+            try:
+                permission = session.query(PubSubPermission).\
+                    filter(PubSubPermission.id==self.request.input.id).\
+                    one()
 
-        security = existing['security']
-        user_id = _get_user_id(self.server, security)
+                # Store permission details before deletion
+                self.request.input.sec_base_id = permission.sec_base_id
+                self.request.input.pattern = permission.pattern
+                self.request.input.access_type = permission.access_type
+                self.request.input.username = permission.sec_base.username
 
-        with self.server.auth_update_lock(user_id):
-            new_pub, new_sub = _merged_acl_for_user(
-                self.server, security, exclude_perm_id=perm_id,
-            )
-            _push_acl(self.server, user_id, new_pub, new_sub)
+                session.delete(permission)
+                session.commit()
+            except Exception:
+                session.rollback()
+                raise
+            else:
+                self.request.input.action = PUBSUB.PERMISSION_DELETE.value
+                self.request.input.cid = self.cid
 
-            self.server.config_manager.delete('pubsub_permission', perm_id)
+                self.broker_client.publish(self.request.input)
+                self.broker_client.publish_to_pubsub(self.request.input)
 
 # ################################################################################################################################
 # ################################################################################################################################

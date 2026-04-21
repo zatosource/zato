@@ -1301,6 +1301,74 @@ def get_engine_url(args):
 
 # ################################################################################################################################
 
+def get_engine(args):
+    import sqlalchemy as sa
+    return sa.create_engine(get_engine_url(args))
+
+# ################################################################################################################################
+
+def get_session(engine):
+    from sqlalchemy import orm
+    session = orm.sessionmaker()
+    session.configure(bind=engine)
+    return session()
+
+# ################################################################################################################################
+
+def get_crypto_manager_from_server_config(config, repo_dir):
+
+    priv_key_location = os.path.abspath(os.path.join(repo_dir, config.crypto.priv_key_location))
+
+    cm = CryptoManager(priv_key_location=priv_key_location)
+    cm.load_keys()
+
+    return cm
+
+# ################################################################################################################################
+
+def get_odb_session_from_server_config(config, cm, odb_password_encrypted):
+
+    engine_args = Bunch()
+    engine_args.odb_type = config.odb.engine
+    engine_args.odb_user = config.odb.username
+    engine_args.odb_host = config.odb.host
+    engine_args.odb_port = config.odb.port
+    engine_args.odb_db_name = config.odb.db_name
+
+    if odb_password_encrypted:
+        engine_args.odb_password = cm.decrypt(config.odb.password) if config.odb.password else ''
+    else:
+        engine_args.odb_password = config.odb.password
+
+    return get_session(get_engine(engine_args))
+
+# ################################################################################################################################
+
+def get_odb_session_from_component_dir(component_dir, config_file, CryptoManagerClass):
+
+    repo_dir = get_repo_dir_from_component_dir(component_dir)
+    cm = CryptoManagerClass.from_repo_dir(None, repo_dir, None)
+    secrets_conf = get_config(repo_dir, 'secrets.conf', needs_user_config=False)
+    config = get_config(repo_dir, config_file, crypto_manager=cm, secrets_conf=secrets_conf)
+
+    return get_odb_session_from_server_config(config, None, False)
+
+# ################################################################################################################################
+
+def get_odb_session_from_server_dir(server_dir):
+
+    from zato.common.crypto.api import ServerCryptoManager
+
+    repo_dir = get_repo_dir_from_component_dir(server_dir)
+    cm = ServerCryptoManager.from_repo_dir(None, repo_dir, None)
+    secrets_conf = get_config(repo_dir, 'secrets.conf', needs_user_config=False)
+    config = get_config(repo_dir, 'server.conf', crypto_manager=cm, secrets_conf=secrets_conf)
+
+    return get_odb_session_from_server_config(config, cm, True)
+
+# ################################################################################################################################
+
+
 def startup_service_payload_from_path(name, value, repo_location):
     """ Reads payload from a local file. Abstracted out to ease in testing.
     """

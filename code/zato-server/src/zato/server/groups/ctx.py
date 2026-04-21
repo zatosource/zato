@@ -82,12 +82,11 @@ class SecurityGroupsCtx:
 
     def check_security_basic_auth(self, cid:'str', channel_name:'str', username:'str', password:'str') -> 'intnone':
 
-        result = self.server.config_manager.check_basic_auth(username, password)
-        if result is not None:
-            return result
-
-        if self.basic_auth_credentials.get(username):
-            logger.info(f'Invalid password; username={username}; channel={channel_name}; cid={cid}')
+        if sec_info := self.basic_auth_credentials.get(username):
+            if is_string_equal(password, sec_info.password):
+                return sec_info.security_id
+            else:
+                logger.info(f'Invalid password; username={username}; channel={channel_name}; cid={cid}')
         else:
             logger.info(f'Username not found; username={username}; channel={channel_name}; cid={cid}')
 
@@ -237,11 +236,10 @@ class SecurityGroupsCtx:
 
     def check_security_apikey(self, cid:'str', channel_name:'str', header_value:'str') -> 'intnone':
 
-        result = self.server.config_manager.check_apikey(header_value)
-        if result is not None:
-            return result
-
-        logger.info(f'Invalid API key; channel={channel_name}; cid={cid}')
+        if sec_info := self.apikey_credentials.get(header_value):
+            return sec_info.security_id
+        else:
+            logger.info(f'Invalid API key; channel={channel_name}; cid={cid}')
 
 # ################################################################################################################################
 

@@ -73,7 +73,6 @@ def _create_edit(self, action):
     service_name = input.service
     logger = self.logger
     cid = self.cid
-    store = self.server.config_manager
 
     if job_type not in (SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED):
         msg = 'Unrecognized job type [{}]'.format(job_type)
@@ -156,12 +155,48 @@ def _create_edit(self, action):
             data[param] = None
 
     try:
-        if action == 'edit' and old_name and old_name != name:
-            store.delete(_entity_type, old_name)
-        store.set(_entity_type, name, data)
-        saved = store.get(_entity_type, name) or data
+        with closing(self.odb.session()) as session:
+            service_row = session.query(ServiceModel).filter_by(name=service_name, cluster_id=input.cluster_id).first()
+            if not service_row:
+                raise ZatoException(cid, 'Service `{}` not found in ODB'.format(service_name))
 
-        job_id = str(saved.get('id'))
+            if action == 'edit':
+                job_row = session.query(Job).filter_by(id=input.id).first()
+                if not job_row:
+                    raise ZatoException(cid, 'Job `{}` not found'.format(input.id))
+                job_row.name = name
+                job_row.is_active = is_active
+                job_row.job_type = job_type
+                job_row.start_date = start_date
+                job_row.service = service_row
+                job_row.extra = extra_str or None
+            else:
+                cluster_row = session.query(Cluster).filter_by(id=input.cluster_id).first()
+                job_row = Job()
+                job_row.name = name
+                job_row.is_active = is_active
+                job_row.job_type = job_type
+                job_row.start_date = start_date
+                job_row.service = service_row
+                job_row.cluster = cluster_row
+                job_row.extra = extra_str or None
+                session.add(job_row)
+                session.flush()
+
+            if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
+                ib = session.query(IntervalBasedJob).filter_by(job_id=job_row.id).first()
+                if not ib:
+                    ib = IntervalBasedJob()
+                    ib.job = job_row
+                    session.add(ib)
+                for param in _ib_params:
+                    setattr(ib, param, data.get(param) or 0)
+                ib.repeats = data.get('repeats')
+
+            session.commit()
+
+            data['id'] = job_row.id
+            job_id = str(job_row.id)
 
         from zato_scheduler_core import scheduler_create_job, scheduler_edit_job
         if action == 'create':
@@ -169,7 +204,7 @@ def _create_edit(self, action):
         else:
             scheduler_edit_job(job_id, data)
 
-        self.response.payload.id = saved.get('id')
+        self.response.payload.id = job_row.id
         self.response.payload.name = input.name
     except Exception:
         logger.error('Could not complete the request, e:`%s`', format_exc())
@@ -211,7 +246,21 @@ class GetList(_Get):
     def handle(self):
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        items = [self._enrich_job(dict(x)) for x in self.server.config_manager.get_list(_entity_type)]
+        from contextlib import closing
+        from zato.common.odb.model import Job, IntervalBasedJob
+        with closing(self.odb.session()) as session:
+            job_rows = session.query(Job).filter_by(cluster_id=input.cluster_id).all()
+            items = []
+            for j in job_rows:
+                d = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
+                     'start_date': j.start_date.isoformat() if j.start_date else '', 'service': j.service.name if j.service else '',
+                     'extra': j.extra or ''}
+                ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
+                if ib:
+                    for p in _ib_params:
+                        d[p] = getattr(ib, p, 0) or 0
+                    d['repeats'] = ib.repeats
+                items.append(self._enrich_job(d))
         if input.get('service_name'):
             items = [x for x in items if x.get('service_name') == input.service_name or x.get('service') == input.service_name]
         self.response.payload = self._paginate_list(items)
@@ -227,7 +276,20 @@ class GetByID(_Get):
     input = 'cluster_id', 'id'
 
     def handle(self):
-        item = _item_by_id(self.server.config_manager.get_list(_entity_type), self.request.input.id)
+        from contextlib import closing
+        from zato.common.odb.model import Job, IntervalBasedJob
+        item = None
+        with closing(self.odb.session()) as session:
+            j = session.query(Job).filter_by(id=self.request.input.id).first()
+            if j:
+                item = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
+                        'start_date': j.start_date.isoformat() if j.start_date else '', 'service': j.service.name if j.service else '',
+                        'extra': j.extra or ''}
+                ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
+                if ib:
+                    for p in _ib_params:
+                        item[p] = getattr(ib, p, 0) or 0
+                    item['repeats'] = ib.repeats
         if not item:
             raise ZatoException(self.cid, 'Job not found')
         self.response.payload = self._enrich_job(item)
@@ -243,7 +305,20 @@ class GetByName(_Get):
     input = 'cluster_id', 'name'
 
     def handle(self):
-        item = self.server.config_manager.get(_entity_type, self.request.input.name)
+        from contextlib import closing
+        from zato.common.odb.model import Job, IntervalBasedJob
+        item = None
+        with closing(self.odb.session()) as session:
+            j = session.query(Job).filter_by(name=self.request.input.name, cluster_id=self.server.cluster_id).first()
+            if j:
+                item = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
+                        'start_date': j.start_date.isoformat() if j.start_date else '', 'service': j.service.name if j.service else '',
+                        'extra': j.extra or ''}
+                ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
+                if ib:
+                    for p in _ib_params:
+                        item[p] = getattr(ib, p, 0) or 0
+                    item['repeats'] = ib.repeats
         if not item:
             raise ZatoException(self.cid, 'Job not found')
         self.response.payload = self._enrich_job(item)
@@ -275,8 +350,7 @@ class Delete(_SchedulerAdmin):
     input = 'id',
 
     def handle(self):
-        store = self.server.config_manager
-        try:
+            try:
             item = _item_by_id(store.get_list(_entity_type), self.request.input.id)
             if not item:
                 raise ZatoException(self.cid, 'Job not found')
@@ -302,7 +376,20 @@ class Execute(_SchedulerAdmin):
 
     def handle(self):
         try:
-            item = _item_by_id(self.server.config_manager.get_list(_entity_type), self.request.input.id)
+            from contextlib import closing
+        from zato.common.odb.model import Job, IntervalBasedJob
+        item = None
+        with closing(self.odb.session()) as session:
+            j = session.query(Job).filter_by(id=self.request.input.id).first()
+            if j:
+                item = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
+                        'start_date': j.start_date.isoformat() if j.start_date else '', 'service': j.service.name if j.service else '',
+                        'extra': j.extra or ''}
+                ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
+                if ib:
+                    for p in _ib_params:
+                        item[p] = getattr(ib, p, 0) or 0
+                    item['repeats'] = ib.repeats
             if not item:
                 raise ZatoException(self.cid, 'Job not found')
 
@@ -369,7 +456,7 @@ class HolidayCalendarGetList(_HolidayCalendarAdmin):
     output = 'id', 'name', '-description'
 
     def handle(self):
-        items = [dict(x) for x in self.server.config_manager.get_list(_cal_entity_type)]
+        items = []
         self.response.payload = self._paginate_list(items)
 
 # ################################################################################################################################
@@ -383,13 +470,7 @@ class HolidayCalendarGetByID(_HolidayCalendarAdmin):
     output = 'id', 'name', '-description', '-dates', '-weekdays'
 
     def handle(self):
-        items = self.server.config_manager.get_list(_cal_entity_type)
-        sid = str(self.request.input.id)
-        for item in items:
-            if str(item.get('id')) == sid:
-                self.response.payload = item
-                return
-        raise ZatoException(self.cid, 'Holiday calendar not found')
+        raise ZatoException(self.cid, 'Holiday calendars are not yet supported in ODB')
 
 # ################################################################################################################################
 
@@ -402,21 +483,7 @@ class HolidayCalendarCreate(_HolidayCalendarAdmin):
     output = 'id', 'name'
 
     def handle(self):
-        input = self.request.input
-        data = {
-            'name': input.name,
-            'description': input.get('description') or None,
-            'dates': input.get('dates') or [],
-            'weekdays': input.get('weekdays') or [],
-        }
-        self.server.config_manager.set(_cal_entity_type, input.name, data)
-        saved = self.server.config_manager.get(_cal_entity_type, input.name) or data
-
-        from zato_scheduler_core import scheduler_reload
-        scheduler_reload()
-
-        self.response.payload.id = saved.get('id')
-        self.response.payload.name = input.name
+        raise ZatoException(self.cid, 'Holiday calendars are not yet supported in ODB')
 
 # ################################################################################################################################
 
@@ -429,33 +496,7 @@ class HolidayCalendarEdit(_HolidayCalendarAdmin):
     output = 'id', 'name'
 
     def handle(self):
-        input = self.request.input
-        items = self.server.config_manager.get_list(_cal_entity_type)
-        sid = str(input.id)
-        old_name = None
-        for item in items:
-            if str(item.get('id')) == sid:
-                old_name = item.get('name')
-                break
-
-        if old_name and old_name != input.name:
-            self.server.config_manager.delete(_cal_entity_type, old_name)
-
-        data = {
-            'id': input.id,
-            'name': input.name,
-            'description': input.get('description') or None,
-            'dates': input.get('dates') or [],
-            'weekdays': input.get('weekdays') or [],
-        }
-        self.server.config_manager.set(_cal_entity_type, input.name, data)
-        saved = self.server.config_manager.get(_cal_entity_type, input.name) or data
-
-        from zato_scheduler_core import scheduler_reload
-        scheduler_reload()
-
-        self.response.payload.id = saved.get('id')
-        self.response.payload.name = input.name
+        raise ZatoException(self.cid, 'Holiday calendars are not yet supported in ODB')
 
 # ################################################################################################################################
 
@@ -467,17 +508,7 @@ class HolidayCalendarDelete(_HolidayCalendarAdmin):
     input = 'id',
 
     def handle(self):
-        items = self.server.config_manager.get_list(_cal_entity_type)
-        sid = str(self.request.input.id)
-        for item in items:
-            if str(item.get('id')) == sid:
-                self.server.config_manager.delete(_cal_entity_type, item['name'])
-
-                from zato_scheduler_core import scheduler_reload
-                scheduler_reload()
-                return
-
-        raise ZatoException(self.cid, 'Holiday calendar not found')
+        raise ZatoException(self.cid, 'Holiday calendars are not yet supported in ODB')
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -491,7 +522,15 @@ class GetCurrentState(_SchedulerAdmin):
         try:
             from zato_scheduler_core import scheduler_get_all_history, scheduler_get_job_summaries
 
-            store_jobs = self.server.config_manager.get_list(_entity_type)
+            from contextlib import closing
+            from zato.common.odb.model import Job, IntervalBasedJob
+            with closing(self.odb.session()) as session:
+                job_rows = session.query(Job).filter_by(cluster_id=self.server.cluster_id).all()
+                store_jobs = []
+                for j in job_rows:
+                    d = {'id': str(j.id), 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
+                         'service': j.service.name if j.service else ''}
+                    store_jobs.append(d)
 
             runtime_by_id = {}
             runtime_by_name = {}

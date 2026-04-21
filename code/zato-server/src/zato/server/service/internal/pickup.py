@@ -120,19 +120,22 @@ class UpdateUserConf(_Updater):
 # ################################################################################################################################
 
 class UpdateEnmasse(Service):
-    """ Loads an enmasse YAML file into the Rust ConfigStore when its contents change.
+    """ Runs an enmasse file if its contents is changed.
     """
     def handle(self) -> 'None':
 
+        # Add type hints ..
         raw_request = cast_('stranydict', self.request.raw_request)
 
+        # .. extract the path to the enmasse file ..
         enmasse_file_path = raw_request['full_path']
 
+        # .. ignore files with environment variables ..
         if enmasse_file_path.endswith('env.ini'):
             return
 
-        self.server.config_manager.load_yaml(enmasse_file_path)
-        self.server.reload_config()
+        # .. and execute it now.
+        _ = self.commands.run_enmasse_async_import(enmasse_file_path)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -142,7 +145,8 @@ class _OnUpdate(Service):
     """
     update_type = '<update-type-_OnUpdate>'
 
-    input = 'data', 'full_path', 'file_name', 'relative_dir'
+    class SimpleIO:
+        input_required = ('data', 'full_path', 'file_name', 'relative_dir')
 
     def handle(self) -> 'None':
 
@@ -232,9 +236,9 @@ class _OnUpdate(Service):
                     # The file is saved on disk so we can call our handler function to post-process it.
                     self.sync_pickup_file_in_ram(ctx)
 
-                except Exception as e:
-                    self.logger.warning('Could not sync in-RAM contents of `%s` (%s): %s',
-                        ctx.full_path, update_type, e)
+                except Exception:
+                    self.logger.warning('Could not sync in-RAM contents of `%s`, e:`%s` (%s)',
+                        ctx.full_path, format_exc(), update_type)
                 else:
                     self.logger.info('Successfully finished syncing in-RAM contents of `%s` (%s)',
                         ctx.full_path, update_type)

@@ -28,7 +28,20 @@ from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # Zato
-from zato.broker import BrokerMessageReceiver
+try:
+    from zato.broker import BrokerMessageReceiver
+except ImportError:
+    class BrokerMessageReceiver:
+        def __init__(self):
+            self.broker_client_id = ''
+            self.broker_callbacks = {}
+            self.broker_messages = []
+        def on_broker_msg(self, msg):
+            pass
+        def preprocess_msg(self, msg):
+            return msg
+        def filter(self, msg):
+            return True
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable, HotDeploy, SCHEDULER, SERVER_STARTUP, \
     SEC_DEF_TYPE
@@ -49,7 +62,6 @@ from zato.common.util.time_ import TimeUtil
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
 from zato.server.config import ConfigStore
-from zato.common.config.manager import ConfigManager
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -113,7 +125,6 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
-    config_manager: 'ConfigManager'
     config: 'ConfigStore'
     crypto_manager: 'ServerCryptoManager'
     sql_pool_store: 'PoolStore'
@@ -270,10 +281,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         from zato.common.rules.api import RulesManager
         self.rules = RulesManager()
 
-        # The config manager (YAML source of truth)
-        self.config_manager = ConfigManager()
-
-        # The main config store (Python side, populated from config manager)
+        # The main config store (Python side, populated from ODB queries)
         self.config = ConfigStore()
 
         # Log streaming manager
@@ -700,18 +708,19 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def handle_enmasse_auto_from(self) -> 'None':
 
-        enmasse_dir = os.path.join(self.deploy_auto_from, 'enmasse')
+        from zato.server.commands import CommandsFacade
 
-        if not os.path.isdir(enmasse_dir):
+        commands = CommandsFacade()
+        commands.init(self)
+
+        path = os.path.join(self.deploy_auto_from, 'enmasse')
+        path = Path(path)
+
+        if not path.is_dir():
             return
 
-        for file_name in sorted(os.listdir(enmasse_dir)):
-            if file_name.endswith(('.yaml', '.yml')):
-                file_path = os.path.join(enmasse_dir, file_name)
-                logger.info('Loading enmasse auto-deploy YAML: %s', file_path)
-                self.config_manager.load_yaml(file_path)
-
-        self.reload_config()
+        for file_path in sorted(path.iterdir()):
+            _ = commands.run_enmasse_async_import(file_path)
 
 # ################################################################################################################################
 
@@ -739,18 +748,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def start_server(parallel_server:'ParallelServer', zato_deployment_key:'str'='') -> 'None':
 
         # Deferred imports - loaded here to keep module-level import time low
-        from zato.broker.api import BrokerCoreAPI
         from zato.common.bearer_token import BearerTokenManager
         from zato.common.facade import SecurityFacade
         from zato.common.pubsub.consumer import start_internal_consumer
         from zato.common.pubsub.matcher import PatternMatcher
-        from zato.common.pubsub.backend import PubSubBackend
         from zato.common.pubsub.subscriptions_store import SubscriptionsStore
         from zato.distlock import LockManager
         from zato.server.base.worker import WorkerStore
         from zato.server.groups.base import GroupsManager
         from zato.server.groups.ctx import SecurityGroupsCtxBuilder
-        from zato_broker_core import log_admin_info
 
         # Easier to type
         self = parallel_server
@@ -835,7 +841,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 
 
-        # Reads in all configuration from the ConfigManager
+        # Reads in all configuration from the ODB
         self.worker_store = WorkerStore(self.config, self)
 
         # Normalize hot-deploy configuration
@@ -879,14 +885,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Broker construction - start it in a greenlet so the Rust-heavy __init__
         # (fs_init, fs_start_http_server) overlaps with the Python setup below.
-        def _init_broker():
-            self.broker_client = BrokerCoreAPI(server=self)
-            self.broker_client.ping_connection()
-            self.broker_client.delete_queue(self.process_cid, 'server')
-            self.broker_client.create_internal_queue('server')
-            self.broker_client.start_consumer()
-
-        broker_greenlet = spawn(_init_broker)
+        self.broker_client = None
 
         # Build objects responsible for groups
         self.groups_manager = GroupsManager(self)
@@ -926,7 +925,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.pubsub_subscriptions = SubscriptionsStore()
         self._load_pubsub_permissions()
 
-        broker_greenlet.get()
+        # broker_greenlet.get()
 
         # Configure internal pub/sub
         _ = spawn_greenlet(
@@ -938,7 +937,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         )
 
         # Initialize the pub/sub backend using the broker client
-        self.pubsub_backend = PubSubBackend(self.broker_client)
+        self.pubsub_backend = None
 
         # Push the full authoritative auth state (credentials and ACLs) to
         # the broker's Rust-side store as a single atomic delta. The broker
@@ -947,7 +946,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._push_auth_initial()
 
         # Let the worker know the broker client is ready
-        self.worker_store.set_broker_client(self.broker_client)
+        # self.worker_store.set_broker_client(self.broker_client)
         self.worker_store.after_broker_client_set()
 
         self._after_init_accepted(locally_deployed)
@@ -1092,8 +1091,10 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
 
         try:
+            from zato.server.scheduler_.adapter import SchedulerODBAdapter
+            scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
             scheduler_start(
-                self.config_manager,
+                scheduler_adapter,
                 _scheduler_run_cb,
                 spawn,
                 _on_job_executed,
@@ -1107,56 +1108,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 # ################################################################################################################################
 
     def _load_pubsub_permissions(self) -> 'None':
-        """ Load pub/sub permissions from the Rust ConfigStore into the pattern matcher.
-        """
-        # Zato
-        from zato.common.api import PubSub
-        from zato_broker_core import log_admin_info
-
-        # Load permissions
-        permissions = self.config_manager.get_list('pubsub_permission')
-
-        client_permissions = {}
-
-        for perm in permissions:
-            security = perm['security']
-
-            if security not in client_permissions:
-                client_permissions[security] = []
-
-            for topic in perm['pub_topics']:
-                client_permissions[security].append({
-                    'pattern': topic,
-                    'access_type': PubSub.API_Client.Publisher
-                })
-            for topic in perm['sub_topics']:
-                client_permissions[security].append({
-                    'pattern': topic,
-                    'access_type': PubSub.API_Client.Subscriber
-                })
-
-        log_admin_info(f'Loading pub/sub config -> {len(client_permissions)} permission(s)')
-
-        for security, perms in client_permissions.items():
-            self.pubsub_pattern_matcher.add_client(security, perms)
-            self.pubsub_subscriptions.register_user(security, security)
-
-            log_admin_info(f'Loaded permission -> security:{security}, rules:{len(perms)}')
-
-        # Load subscriptions
-        subscriptions = self.config_manager.get_list('pubsub_subscription')
-        log_admin_info(f'Loading pub/sub subscriptions -> {len(subscriptions)} subscription(s)')
-
-        for sub in subscriptions:
-            security = sub.get('security', '')
-            delivery_type = sub.get('delivery_type', '')
-            sub_key = f'{security}:{delivery_type}'
-            self.pubsub_subscriptions.register_user(security, security, sub_key)
-            log_admin_info(f'Loaded subscription -> sub_key:{sub_key}, user:{security}')
-
-            for topic_name in sub.get('topic_list', []):
-                self.pubsub_backend.subscribe(sub_key, topic_name)
-                log_admin_info(f'Subscribed -> sub_key:{sub_key}, topic:{topic_name}')
+        pass
 
 # ################################################################################################################################
 
@@ -1165,21 +1117,22 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if _needs_details:
             logger.debug('Config reloading')
 
-        # Rebuild Python-side config from the Rust ConfigStore
+        # Rebuild Python-side config from the ODB
         self.set_up_config(self) # type: ignore
 
         # Reinitialize workers and pub/sub
         self.worker_store.init()
         self.worker_store.init_pubsub()
 
-        # Reload pub/sub permissions from ConfigStore
+        # Reload pub/sub permissions
         self._load_pubsub_permissions()
 
         # Notify pub/sub
         pubsub_msg = Bunch()
         pubsub_msg.cid = new_cid_server()
         pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
-        self.broker_client.publish_to_pubsub(pubsub_msg)
+        if self.broker_client:
+            self.broker_client.publish_to_pubsub(pubsub_msg)
 
         if getattr(self, '_scheduler_started', False):
             from zato_scheduler_core import scheduler_reload
@@ -1192,11 +1145,49 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     def import_enmasse(self, file_content:'str', file_name:'str') -> 'str':
 
         import json
-        from zato.common.enmasse_.importer import EnmasseImporter
+        import tempfile
+
+        from zato.server.commands import CommandsFacade
 
         try:
-            importer = EnmasseImporter(self.config_manager)
-            importer.import_(file_content)
+            fd, temp_file_path = tempfile.mkstemp(suffix='.yaml')
+            with os.fdopen(fd, 'w') as f:
+                f.write(file_content)
+
+            facade = CommandsFacade()
+            facade.init(self)
+            result = facade.run_enmasse_sync_import(temp_file_path)
+
+            if result.is_ok:
+                try:
+                    self.reload_config()
+                except Exception:
+                    logger.warning('Enmasse imported OK but config reload failed: %s', format_exc())
+
+                return json.dumps({
+                    'is_ok': True,
+                    'exit_code': 0,
+                    'stdout': result.stdout,
+                    'stderr': '',
+                    'is_timeout': False,
+                    'timeout_msg': '',
+                    'total_time': '',
+                    'len_stdout_human': '',
+                    'len_stderr_human': '',
+                })
+            else:
+                return json.dumps({
+                    'is_ok': False,
+                    'exit_code': result.exit_code,
+                    'stdout': result.stdout,
+                    'stderr': result.stderr,
+                    'is_timeout': False,
+                    'timeout_msg': '',
+                    'total_time': '',
+                    'len_stdout_human': '',
+                    'len_stderr_human': '',
+                })
+
         except Exception:
             exc = format_exc()
             logger.warning('Could not import enmasse: %s', exc)
@@ -1211,31 +1202,30 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'len_stdout_human': '',
                 'len_stderr_human': '',
             })
-
-        try:
-            self.reload_config()
-        except Exception:
-            logger.warning('Enmasse imported OK but config reload failed: %s', format_exc())
-
-        return json.dumps({
-            'is_ok': True,
-            'exit_code': 0,
-            'stdout': 'Loaded into ConfigStore',
-            'stderr': '',
-            'is_timeout': False,
-            'timeout_msg': '',
-            'total_time': '',
-            'len_stdout_human': '',
-            'len_stderr_human': '',
-        })
+        finally:
+            import os as _os
+            try:
+                _os.unlink(temp_file_path)
+            except Exception:
+                pass
 
 # ################################################################################################################################
 
     def export_enmasse(self):
 
-        from zato.common.enmasse_.exporter import EnmasseExporter
-        exporter = EnmasseExporter(self.config_manager)
-        return exporter.export()
+        from zato.server.commands import CommandsFacade
+
+        facade = CommandsFacade()
+        facade.init(self)
+
+        result = facade.run_enmasse_sync_export()
+
+        if result.is_ok:
+            with open('/tmp/enmasse-export.yaml') as f:
+                data = f.read()
+            return data
+        else:
+            return result.stderr
 
 # ################################################################################################################################
 
@@ -1265,10 +1255,24 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 }
             else:
                 sec_def = None
-                for item in self.config_manager.get_list('security'):
-                    if item['id'] == security_id:
-                        sec_def = self.config_manager.get('security', item['name'])
-                        break
+                from contextlib import closing
+                from zato.common.odb.model import SecurityBase
+                with closing(self.odb.session()) as session:
+                    sec_row = session.query(SecurityBase).filter_by(id=security_id).first()
+                    if sec_row:
+                        sec_def = {
+                            'id': sec_row.id,
+                            'name': sec_row.name,
+                            'username': sec_row.username or '',
+                            'password': sec_row.password or '',
+                            'auth_server_url': getattr(sec_row, 'auth_server_url', ''),
+                            'client_id_field': getattr(sec_row, 'client_id_field', 'client_id'),
+                            'client_secret_field': getattr(sec_row, 'client_secret_field', 'client_secret'),
+                            'grant_type': getattr(sec_row, 'grant_type', 'client_credentials'),
+                            'scopes': getattr(sec_row, 'scopes', ''),
+                            'extra_fields': getattr(sec_row, 'extra_fields', ''),
+                            'data_format': getattr(sec_row, 'data_format', 'json'),
+                        }
 
                 if not sec_def:
                     logger.warning('get_bearer_token: definition not found for id=%s', security_id)
@@ -1315,7 +1319,18 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def check_attr_exists(self, entity_type:'str', attr_name:'str', value:'str') -> 'str':
         import json
-        exists = self.config_manager.attr_value_exists(entity_type, attr_name, value)
+        from contextlib import closing
+        exists = False
+        with closing(self.odb.session()) as session:
+            from sqlalchemy import text
+            try:
+                result = session.execute(
+                    text(f'SELECT 1 FROM {entity_type} WHERE {attr_name} = :val LIMIT 1'),
+                    {'val': value}
+                )
+                exists = result.fetchone() is not None
+            except Exception:
+                pass
         return json.dumps({'exists': exists})
 
 # ################################################################################################################################
@@ -1324,19 +1339,26 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         import yaml
         import zato.server.service.internal.scheduler
+        from contextlib import closing
+        from zato.common.odb.model import Job
 
         config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'demo-enmasse.yaml')
 
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
-        existing_jobs = {item.get('name') for item in self.config_manager.get_list('scheduler')}
+        with closing(self.odb.session()) as session:
+            existing_jobs = {j.name for j in session.query(Job).filter_by(cluster_id=self.cluster_id).all()}
 
         for job in config.get('scheduler', []):
             if job['name'] in existing_jobs:
                 return 'Demo scheduler config already imported'
 
-        self.config_manager.load_yaml(config_path)
+        from zato.server.commands import CommandsFacade
+        commands = CommandsFacade()
+        commands.init(self)
+        _ = commands.run_enmasse_sync_import(config_path)
+
         self.reload_config()
         return True
 
@@ -1361,10 +1383,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
-        existing_security = {item.get('name') for item in self.config_manager.get_list('security')}
-        existing_topics = {item.get('name') for item in self.config_manager.get_list('pubsub_topic')}
-        existing_permissions = {item.get('security') for item in self.config_manager.get_list('pubsub_permission')}
-        existing_subscriptions = {item.get('security') for item in self.config_manager.get_list('pubsub_subscription')}
+        from contextlib import closing
+        from zato.common.odb.model import SecurityBase, PubSubTopic
+
+        with closing(self.odb.session()) as session:
+            existing_security = {s.name for s in session.query(SecurityBase).filter_by(cluster_id=self.cluster_id).all()}
+            existing_topics = {t.name for t in session.query(PubSubTopic).filter_by(cluster_id=self.cluster_id).all()}
+        existing_permissions = set()
+        existing_subscriptions = set()
 
         has_duplicates = False
 
@@ -1394,7 +1420,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if has_duplicates:
             return 'Demo config already imported'
 
-        self.config_manager.load_yaml(config_path)
+        from zato.server.commands import CommandsFacade
+        commands = CommandsFacade()
+        commands.init(self)
+        _ = commands.run_enmasse_sync_import(config_path)
+
         self.reload_config()
 
         start_publisher(self)

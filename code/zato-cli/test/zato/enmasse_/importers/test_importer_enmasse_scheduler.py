@@ -7,185 +7,239 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import yaml
+import os
+import tempfile
 from unittest import TestCase, main
 
 # Zato
+from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
+from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.scheduler import SchedulerImporter
-from zato.common.enmasse_.importer import EnmasseImporter
+from zato.common.api import SCHEDULER
+from zato.common.odb.model import IntervalBasedJob, Job
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
-from zato.common.test.enmasse_._template_scheduler_01 import template_scheduler_01
-from zato.common.config.manager import ConfigManager
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseSchedulerImport(TestCase):
+if 0:
+    from zato.common.typing_ import any_, stranydict
+    any_, stranydict = any_, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestEnmasseSchedulerFromYAML(TestCase):
+    """ Tests importing Scheduler definitions from YAML files using enmasse.
+    """
 
     def setUp(self) -> 'None':
-        self.config_manager = ConfigManager()
-        self.importer = EnmasseImporter(self.config_manager)
-        self.importer.import_(template_complex_01)
+
+        # Server path for database connection
+        self.server_path = os.path.expanduser('~/env/qs-1/server1')
+
+        # Create a temporary file using the existing template which already contains scheduler job definitions
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
+        _ = self.temp_file.write(template_complex_01.encode('utf-8'))
+        self.temp_file.close()
+
+        # Initialize the importer
+        self.importer = EnmasseYAMLImporter()
+
+        # Initialize scheduler importer
+        self.scheduler_importer = SchedulerImporter(self.importer)
+
+        # Parse the YAML file
+        self.yaml_config = cast_('stranydict', None)
+        self.session = cast_('any_', None)
 
 # ################################################################################################################################
 
-    def test_scheduler_preprocessing(self):
+    def tearDown(self) -> 'None':
+        if self.session:
+            self.session.close()
+        os.unlink(self.temp_file.name)
+        cleanup_enmasse()
 
-        template_dict = yaml.safe_load(template_complex_01)
-        scheduler_items = template_dict['scheduler']
+# ################################################################################################################################
 
-        preprocessed = SchedulerImporter.preprocess(scheduler_items)
+    def _setup_test_environment(self):
+        """ Set up the test environment by opening a database session and parsing the YAML file.
+        """
+        if not self.session:
+            self.session = get_session_from_server_dir(self.server_path)
 
-        for item in preprocessed:
-            self.assertIn('start_date', item)
+        if not self.yaml_config:
+            self.yaml_config = self.importer.from_path(self.temp_file.name)
+
+# ################################################################################################################################
+
+    def test_job_definition_creation(self):
+        """ Test creating scheduler job definitions from YAML.
+        """
+        self._setup_test_environment()
+
+        # Get definitions from YAML
+        job_defs = self.yaml_config['scheduler']
+
+        # Process all scheduler job definitions
+        created, updated = self.scheduler_importer.sync_job_definitions(job_defs, self.session)
+
+        # Should have created 4 definitions
+        self.assertEqual(len(created), 4)
+        self.assertEqual(len(updated), 0)
+
+        # Verify first job was created correctly
+        job = self.session.query(Job).filter_by(name='enmasse.scheduler.1').one()
+        self.assertEqual(job.job_type, SCHEDULER.JOB_TYPE.INTERVAL_BASED)
+
+        # Verify interval job was created correctly
+        interval_job = self.session.query(IntervalBasedJob).filter_by(job_id=job.id).one()
+        self.assertEqual(interval_job.seconds, 2)
+
+        # Verify second job was created correctly
+        job = self.session.query(Job).filter_by(name='enmasse.scheduler.2').one()
+        self.assertEqual(job.job_type, SCHEDULER.JOB_TYPE.INTERVAL_BASED)
+
+        # Verify interval job was created correctly
+        interval_job = self.session.query(IntervalBasedJob).filter_by(job_id=job.id).one()
+        self.assertEqual(interval_job.minutes, 51)
+
+# ################################################################################################################################
+
+    def test_job_update(self):
+        """ Test updating existing scheduler job definitions.
+        """
+        self._setup_test_environment()
+
+        # First, get the job definition from YAML and create it
+        job_defs = self.yaml_config['scheduler']
+        job_def = job_defs[0]  # First job has seconds=2
+
+        # Create the job definition
+        instance = self.scheduler_importer.create_job_definition(job_def, self.session)
+        self.session.commit()
+        original_seconds = 2
+
+        # Verify interval job was created with original seconds
+        interval_job = self.session.query(IntervalBasedJob).filter_by(job_id=instance.id).one()
+        self.assertEqual(interval_job.seconds, original_seconds)
+
+        # Prepare an update definition based on the existing one
+        update_def = {
+            'name': job_def['name'],
+            'id': instance.id,
+            'seconds': 5,  # Changed seconds
+            'minutes': 30  # Added minutes
+        }
+
+        # Update the job definition
+        updated_instance = self.scheduler_importer.update_job_definition(update_def, self.session)
+        self.session.commit()
+
+        # Verify the interval job was updated
+        updated_interval = self.session.query(IntervalBasedJob).filter_by(job_id=updated_instance.id).one()
+        self.assertEqual(updated_interval.seconds, 5)
+        self.assertEqual(updated_interval.minutes, 30)
+
+# ################################################################################################################################
+
+    def test_complete_job_import_flow(self):
+        """ Test the complete flow of importing scheduler job definitions from a YAML file.
+        """
+        self._setup_test_environment()
+
+        # Process all job definitions from the YAML
+        job_list = self.yaml_config['scheduler']
+        job_created, job_updated = self.scheduler_importer.sync_job_definitions(job_list, self.session)
+
+        # Update importer's job definitions
+        self.importer.job_defs = self.scheduler_importer.job_defs
+
+        # Verify job definitions were created
+        self.assertEqual(len(job_created), 4)
+        self.assertEqual(len(job_updated), 0)
+
+        # Verify the job definitions dictionary was populated
+        self.assertEqual(len(self.scheduler_importer.job_defs), 4)
+
+        # Verify that these definitions are accessible from the main importer
+        self.assertEqual(len(self.importer.job_defs), 4)
+
+        # Try importing the same definitions again - should result in updates, not creations
+        job_created2, job_updated2 = self.scheduler_importer.sync_job_definitions(job_list, self.session)
+        self.assertEqual(len(job_created2), 0)
+        self.assertEqual(len(job_updated2), 4)
+
+# ################################################################################################################################
+
+    def test_scheduler_configuration(self):
+        """ Test the configuration of scheduled jobs.
+        """
+        self._setup_test_environment()
+
+        # Verify scheduler configurations exist in the YAML
+        scheduler_defs = self.yaml_config['scheduler']
+        self.assertTrue(len(scheduler_defs) > 0, 'No scheduler definitions found in YAML')
+
+        # Check common properties for all scheduler items
+        for item in scheduler_defs:
+            self.assertIn('name', item)
+            self.assertIn('service', item)
             self.assertIn('job_type', item)
+            self.assertIn('start_date', item)
+            self.assertTrue(item['name'].startswith('enmasse.scheduler.'))
+            self.assertEqual(item['service'], 'demo.ping')
+            self.assertEqual(item['job_type'], 'interval_based')
 
-# ################################################################################################################################
+        # Verify different interval types (seconds, minutes, hours, days)
+        scheduler1 = cast_('any_', None)
+        scheduler2 = cast_('any_', None)
+        scheduler3 = cast_('any_', None)
+        scheduler4 = cast_('any_', None)
 
-    def test_scheduler_imported(self):
+        # Find scheduler items by name using a simple loop
+        for item in scheduler_defs:
+            if item['name'] == 'enmasse.scheduler.1':
+                scheduler1 = item
+            elif item['name'] == 'enmasse.scheduler.2':
+                scheduler2 = item
+            elif item['name'] == 'enmasse.scheduler.3':
+                scheduler3 = item
+            elif item['name'] == 'enmasse.scheduler.4':
+                scheduler4 = item
 
-        exported = self.config_manager.export_to_dict()
-        self.assertIn('scheduler', exported)
+        # Check scheduler with seconds interval
+        self.assertIsNotNone(scheduler1)
+        self.assertIn('seconds', scheduler1)
+        self.assertEqual(scheduler1['seconds'], 2)
 
-        scheduler_list = exported['scheduler']
-        scheduler_by_name = {item['name']: item for item in scheduler_list}
+        # Check scheduler with minutes interval
+        self.assertIsNotNone(scheduler2)
+        self.assertIn('minutes', scheduler2)
+        self.assertEqual(scheduler2['minutes'], 51)
 
-        self.assertIn('enmasse.scheduler.1', scheduler_by_name)
-        self.assertIn('enmasse.scheduler.2', scheduler_by_name)
-        self.assertIn('enmasse.scheduler.3', scheduler_by_name)
-        self.assertIn('enmasse.scheduler.4', scheduler_by_name)
+        # Check scheduler with hours interval
+        self.assertIsNotNone(scheduler3)
+        self.assertIn('hours', scheduler3)
+        self.assertEqual(scheduler3['hours'], 3)
 
-# ################################################################################################################################
-
-    def test_scheduler_values(self):
-
-        exported = self.config_manager.export_to_dict()
-        scheduler_list = exported['scheduler']
-        scheduler_by_name = {item['name']: item for item in scheduler_list}
-
-        s1 = scheduler_by_name['enmasse.scheduler.1']
-        self.assertEqual(s1['service'], 'demo.ping')
-        self.assertEqual(s1['job_type'], 'interval_based')
-        self.assertEqual(s1['seconds'], 2)
-
-        s2 = scheduler_by_name['enmasse.scheduler.2']
-        self.assertEqual(s2['minutes'], 51)
-
-        s3 = scheduler_by_name['enmasse.scheduler.3']
-        self.assertEqual(s3['hours'], 3)
-
-        s4 = scheduler_by_name['enmasse.scheduler.4']
-        self.assertEqual(s4['days'], 10)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class TestEnmasseSchedulerImportExtended(TestCase):
-
-    def setUp(self) -> 'None':
-        self.config_manager = ConfigManager()
-        self.importer = EnmasseImporter(self.config_manager)
-        self.importer.import_(template_scheduler_01)
-
-        exported = self.config_manager.export_to_dict()
-        self.scheduler_by_name = {item['name']: item for item in exported.get('scheduler', [])}
-
-# ################################################################################################################################
-
-    def test_all_jobs_imported(self):
-        expected_names = [
-            'enmasse.scheduler.one_time.1',
-            'enmasse.scheduler.weeks.1',
-            'enmasse.scheduler.repeats.1',
-            'enmasse.scheduler.extra_list.1',
-            'enmasse.scheduler.extra_string.1',
-            'enmasse.scheduler.inactive.1',
-            'enmasse.scheduler.future.1',
-            'enmasse.scheduler.no_start_date.1',
-        ]
-        for name in expected_names:
-            self.assertIn(name, self.scheduler_by_name, f'Job "{name}" not found after import')
-
-# ################################################################################################################################
-
-    def test_one_time_job_type(self):
-        job = self.scheduler_by_name['enmasse.scheduler.one_time.1']
-        self.assertEqual(job['job_type'], 'one_time')
-        self.assertEqual(job['service'], 'demo.ping')
-
-# ################################################################################################################################
-
-    def test_weeks_interval(self):
-        job = self.scheduler_by_name['enmasse.scheduler.weeks.1']
-        self.assertEqual(job['job_type'], 'interval_based')
-        self.assertEqual(job['weeks'], 2)
-
-# ################################################################################################################################
-
-    def test_repeats_field(self):
-        job = self.scheduler_by_name['enmasse.scheduler.repeats.1']
-        self.assertEqual(job['minutes'], 30)
-        self.assertEqual(job['repeats'], 5)
-
-# ################################################################################################################################
-
-    def test_extra_list_joined(self):
-        template_dict = yaml.safe_load(template_scheduler_01)
-        scheduler_items = template_dict['scheduler']
-
-        preprocessed = SchedulerImporter.preprocess(scheduler_items)
-        extra_list_job = [j for j in preprocessed if j['name'] == 'enmasse.scheduler.extra_list.1'][0]
-
-        self.assertIn('extra', extra_list_job)
-        self.assertIsInstance(extra_list_job['extra'], str)
-        self.assertIn('key1=value1', extra_list_job['extra'])
-        self.assertIn('key2=value2', extra_list_job['extra'])
-        self.assertIn('key3=value3', extra_list_job['extra'])
-
-# ################################################################################################################################
-
-    def test_extra_string_preserved(self):
-        template_dict = yaml.safe_load(template_scheduler_01)
-        scheduler_items = template_dict['scheduler']
-
-        preprocessed = SchedulerImporter.preprocess(scheduler_items)
-        extra_str_job = [j for j in preprocessed if j['name'] == 'enmasse.scheduler.extra_string.1'][0]
-
-        self.assertEqual(extra_str_job['extra'], 'single_extra_value')
-
-# ################################################################################################################################
-
-    def test_inactive_job(self):
-        job = self.scheduler_by_name['enmasse.scheduler.inactive.1']
-        self.assertFalse(job['is_active'])
-        self.assertEqual(job['days'], 7)
-
-# ################################################################################################################################
-
-    def test_no_start_date_job(self):
-        job = self.scheduler_by_name['enmasse.scheduler.no_start_date.1']
-        self.assertEqual(job['hours'], 4)
-        self.assertEqual(job['service'], 'demo.ping')
-
-# ################################################################################################################################
-
-    def test_preprocess_does_not_modify_start_date(self):
-        template_dict = yaml.safe_load(template_scheduler_01)
-        scheduler_items = template_dict['scheduler']
-
-        originals = {}
-        for item in scheduler_items:
-            originals[item['name']] = item.get('start_date')
-
-        preprocessed = SchedulerImporter.preprocess(scheduler_items)
-
-        for item in preprocessed:
-            self.assertEqual(item.get('start_date'), originals[item['name']])
+        # Check scheduler with days interval
+        self.assertIsNotNone(scheduler4)
+        self.assertIn('days', scheduler4)
+        self.assertEqual(scheduler4['days'], 10)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    # stdlib
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
     _ = main()
 
 # ################################################################################################################################

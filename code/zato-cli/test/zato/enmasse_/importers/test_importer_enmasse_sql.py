@@ -7,79 +7,165 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import yaml
+import os
+import tempfile
 from unittest import TestCase, main
 
 # Zato
+from zato.cli.enmasse.client import cleanup_enmasse, get_session_from_server_dir
+from zato.cli.enmasse.importer import EnmasseYAMLImporter
 from zato.cli.enmasse.importers.sql import SQLImporter
-from zato.common.enmasse_.importer import EnmasseImporter
+from zato.cli.enmasse.util import get_engine_from_type
+from zato.common.odb.model import SQLConnectionPool
 from zato.common.test.enmasse_._template_complex_01 import template_complex_01
-from zato.common.config.manager import ConfigManager
+from zato.common.typing_ import cast_
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class TestEnmasseSQLImport(TestCase):
+if 0:
+    from zato.common.typing_ import any_, stranydict
+    any_, stranydict = any_, stranydict
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class TestEnmasseSQLFromYAML(TestCase):
+    """ Tests importing SQL connection pool definitions from YAML files using enmasse.
+    """
 
     def setUp(self) -> 'None':
-        self.config_manager = ConfigManager()
-        self.importer = EnmasseImporter(self.config_manager)
-        self.importer.import_(template_complex_01)
+        # Server path for database connection
+        self.server_path = os.path.expanduser('~/env/qs-1/server1')
 
-# ################################################################################################################################
+        # Create a temporary file using the existing template
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.yaml')
+        _ = self.temp_file.write(template_complex_01.encode('utf-8'))
+        self.temp_file.close()
 
-    def test_sql_preprocessing_engine_mapping(self):
+        # Initialize the importer
+        self.importer = EnmasseYAMLImporter()
 
-        template_dict = yaml.safe_load(template_complex_01)
-        sql_items = template_dict['sql']
+        # Initialize SQL importer
+        self.sql_importer = SQLImporter(self.importer)
 
-        preprocessed = SQLImporter.preprocess(sql_items)
+        # Parse the YAML file
+        self.yaml_config = cast_('stranydict', None)
+        self.session = cast_('any_', None)
 
-        for item in preprocessed:
-            self.assertIn('engine', item)
-            self.assertIn('password', item)
+    def tearDown(self) -> 'None':
+        if self.session:
+            self.session.close()
+        os.unlink(self.temp_file.name)
+        cleanup_enmasse()
 
-        sql1 = [item for item in preprocessed if item['name'] == 'enmasse.sql.1'][0]
-        self.assertEqual(sql1['engine'], 'mysql+pymysql')
+    def _setup_test_environment(self):
+        """ Set up the test environment by opening a database session and parsing the YAML file.
+        """
+        if not self.session:
+            self.session = get_session_from_server_dir(self.server_path)
 
-        sql2 = [item for item in preprocessed if item['name'] == 'enmasse.sql.2'][0]
-        self.assertEqual(sql2['engine'], 'oracle')
+        if not self.yaml_config:
+            self.yaml_config = self.importer.from_path(self.temp_file.name)
 
-# ################################################################################################################################
+    def test_sql_definition_creation(self):
+        """ Test creating SQL connection pool definitions from YAML.
+        """
+        self._setup_test_environment()
 
-    def test_sql_imported(self):
+        # Get definitions from YAML
+        sql_defs = self.yaml_config['sql']
 
-        exported = self.config_manager.export_to_dict()
-        self.assertIn('sql', exported)
+        # Process all SQL definitions
+        created, updated = self.sql_importer.sync_sql_definitions(sql_defs, self.session)
 
-        sql_list = exported['sql']
-        sql_by_name = {item['name']: item for item in sql_list}
+        # Should have created 2 definitions (based on the number in the template)
+        self.assertEqual(len(created), 2)
+        self.assertEqual(len(updated), 0)
 
-        self.assertIn('enmasse.sql.1', sql_by_name)
-        self.assertIn('enmasse.sql.2', sql_by_name)
+        # Verify SQL connection was created correctly
+        sql = self.session.query(SQLConnectionPool).filter_by(name='enmasse.sql.1').one()
+        self.assertEqual(sql.host, '127.0.0.1')
+        self.assertEqual(sql.port, 3306)
+        self.assertEqual(sql.username, 'enmasse.1')
+        self.assertEqual(sql.db_name, 'MYDB_01')
+        self.assertEqual(sql.engine, 'mysql+pymysql')
+        self.assertTrue(hasattr(sql, 'password'))
 
-# ################################################################################################################################
+    def test_sql_update(self):
+        """ Test updating existing SQL connection pool definitions.
+        """
+        self._setup_test_environment()
 
-    def test_sql_values(self):
+        # First, get the SQL definition from YAML and create it
+        sql_defs = self.yaml_config['sql']
+        sql_def = sql_defs[0]
 
-        exported = self.config_manager.export_to_dict()
-        sql_list = exported['sql']
-        sql_by_name = {item['name']: item for item in sql_list}
+        # Create the SQL definition
+        instance = self.sql_importer.create_sql_definition(sql_def, self.session)
+        self.session.commit()
+        original_host = sql_def['host']
+        self.assertEqual(instance.host, original_host)
 
-        s1 = sql_by_name['enmasse.sql.1']
-        self.assertEqual(s1['host'], '127.0.0.1')
-        self.assertEqual(s1['port'], 3306)
-        self.assertEqual(s1['db_name'], 'MYDB_01')
-        self.assertEqual(s1['username'], 'enmasse.1')
+        # Prepare an update definition based on the existing one
+        update_def = {
+            'name': sql_def['name'],
+            'id': instance.id,
+            'host': 'sql-updated.example.com',  # Changed host
+            'port': 5433  # Changed port
+        }
 
-        s2 = sql_by_name['enmasse.sql.2']
-        self.assertEqual(s2['host'], '10.152.81.199')
-        self.assertEqual(s2['port'], 1521)
+        # Update the SQL definition
+        updated_instance = self.sql_importer.update_sql_definition(update_def, self.session)
+        self.session.commit()
+
+        # Verify the update was applied
+        self.assertEqual(updated_instance.host, 'sql-updated.example.com')
+        self.assertEqual(updated_instance.port, 5433)
+
+        # Make sure other fields were preserved from the original YAML definition
+        self.assertEqual(updated_instance.username, sql_def['username'])
+        self.assertEqual(updated_instance.db_name, sql_def['db_name'])
+        expected_engine = get_engine_from_type(sql_def['type'])
+        self.assertEqual(updated_instance.engine, expected_engine)
+
+    def test_complete_sql_import_flow(self):
+        """ Test the complete flow of importing SQL connection pool definitions from a YAML file.
+        """
+        self._setup_test_environment()
+
+        # Process all SQL definitions from the YAML
+        sql_list = self.yaml_config['sql']
+        sql_created, sql_updated = self.sql_importer.sync_sql_definitions(sql_list, self.session)
+
+        # Update importer's SQL definitions
+        self.importer.sql_defs = self.sql_importer.sql_defs
+
+        # Verify SQL definitions were created (2 in the template)
+        self.assertEqual(len(sql_created), 2)
+        self.assertEqual(len(sql_updated), 0)
+
+        # Verify the SQL definitions dictionary was populated
+        self.assertEqual(len(self.sql_importer.sql_defs), 2)
+
+        # Verify that these definitions are accessible from the main importer
+        self.assertEqual(len(self.importer.sql_defs), 2)
+
+        # Try importing the same definitions again - should result in updates, not creations
+        sql_created2, sql_updated2 = self.sql_importer.sync_sql_definitions(sql_list, self.session)
+        self.assertEqual(len(sql_created2), 0)
+        self.assertEqual(len(sql_updated2), 2)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if __name__ == '__main__':
+
+    # stdlib
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
     _ = main()
 
 # ################################################################################################################################

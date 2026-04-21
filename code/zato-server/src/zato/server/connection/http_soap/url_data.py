@@ -22,7 +22,6 @@ from zato.common.py23_.past.builtins import unicode
 from zato.bunch import Bunch
 from zato.common.api import CHANNEL, CONNECTION, MISC, SEC_DEF_TYPE, ZATO_NONE
 from zato.common.broker_message import code_to_name, SECURITY
-from zato.common.crypto.api import is_string_equal
 from zato.common.dispatch import dispatcher
 from zato.common.util.api import update_apikey_username_to_channel, wait_for_dict_key
 from zato.common.util.auth import enrich_with_sec_data, on_basic_auth
@@ -48,7 +47,7 @@ class URLData(PyURLData):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, \
-                 oauth_config=None, apikey_config=None, broker_client=None):
+                 oauth_config=None, apikey_config=None, broker_client=None, odb=None):
         super(URLData, self).__init__(channel_data)
 
         self.worker = worker
@@ -58,6 +57,7 @@ class URLData(PyURLData):
         self.oauth_config = oauth_config
         self.apikey_config = apikey_config
         self.broker_client = broker_client
+        self.odb = odb
 
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
@@ -89,12 +89,11 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _handle_security_apikey(self, cid, sec_def, path_info, body, http_environ, ignored_post_data=None, enforce_auth=True):
-        """ Performs the authentication against an API key via the Rust ConfigStore's
-        constant-time check_apikey method.
+    def _handle_security_apikey(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+        """ Performs the authentication against an API key in a specified HTTP header.
         """
-        header = sec_def.get('header', '') if isinstance(sec_def, dict) else getattr(sec_def, 'header', '')
-        if header not in http_environ:
+        # Find out if the header was provided at all
+        if sec_def['header'] not in wsgi_environ:
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'
@@ -103,14 +102,10 @@ class URLData(PyURLData):
             else:
                 return False
 
-        header_value = http_environ[header]
-        expected_key = sec_def.get('password', '') if isinstance(sec_def, dict) else getattr(sec_def, 'password', '')
+        expected_key = sec_def.get('password', '')
 
-        if not expected_key:
-            return True
-
-        result = self.worker.server.config_manager.check_apikey(header_value)
-        if result is None:
+        # Passwords are not required
+        if expected_key and wsgi_environ[sec_def['header']] != expected_key:
             if enforce_auth:
                 msg = '401 Unauthorized path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 error_msg = '401 Unauthorized'
@@ -123,14 +118,12 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, http_environ, ignored_post_data=None,
+    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None,
         enforce_auth=True):
-        """ Performs the authentication using HTTP Basic Auth via the Rust ConfigStore's
-        constant-time check_basic_auth method.
+        """ Performs the authentication using HTTP Basic Auth.
         """
-        env = {'HTTP_AUTHORIZATION':http_environ.get('HTTP_AUTHORIZATION')}
+        env = {'HTTP_AUTHORIZATION':wsgi_environ.get('HTTP_AUTHORIZATION')}
         url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
-
         result = on_basic_auth(cid, env, url_config, False)
 
         if not result:
@@ -147,7 +140,7 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
-    def check_security(self, sec, cid, channel_item, path_info, payload, http_environ, post_data, worker_store, *,
+    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, *,
         enforce_auth=True):
         """ Authenticates and authorizes a given request. Returns None on success
         """
@@ -155,11 +148,11 @@ class URLData(PyURLData):
         sec_def, sec_def_type = sec.sec_def, sec.sec_def['sec_type']
         handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
 
-        auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, http_environ, post_data, enforce_auth)
+        auth_result = getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth)
         if not auth_result:
             return False
 
-        enrich_with_sec_data(http_environ, sec_def, sec_def_type)
+        enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
 
         return auth_result
 
@@ -202,13 +195,54 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
+    def _update_apikey(self, name, config):
+        config.orig_header = config.header
+        update_apikey_username_to_channel(config)
+        self.apikey_config[name] = Bunch()
+        self.apikey_config[name].config = config
+
     def apikey_get(self, name):
+        """ Returns the configuration of the API key of the given name.
+        """
+        wait_for_dict_key(self.apikey_config, name)
         with self.url_sec_lock:
             return self.apikey_config.get(name)
 
     def apikey_get_by_id(self, def_id):
+        """ Same as apikey_get but returns information by definition ID.
+        """
         with self.url_sec_lock:
             return self._get_sec_def_by_id(self.apikey_config, def_id)
+
+    def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg, *args):
+        """ Creates a new API key security definition.
+        """
+        with self.url_sec_lock:
+            self._update_apikey(msg.name, msg)
+
+    def on_broker_msg_SECURITY_APIKEY_EDIT(self, msg, *args):
+        """ Updates an existing API key security definition.
+        """
+        with self.url_sec_lock:
+            del self.apikey_config[msg.old_name]
+            self._update_apikey(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY)
+
+    def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg, *args):
+        """ Deletes an API key security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('apikey', msg.name)
+            del self.apikey_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY, True)
+
+    def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an API key security definition.
+        """
+        wait_for_dict_key(self.apikey_config, msg.name)
+        with self.url_sec_lock:
+            self.apikey_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY)
 
 # ################################################################################################################################
 
@@ -220,29 +254,150 @@ class URLData(PyURLData):
 
 # ################################################################################################################################
 
+    def _update_basic_auth(self, name, config):
+        self.basic_auth_config[name] = Bunch()
+        self.basic_auth_config[name].config = config
+
     def basic_auth_get(self, name):
+        """ Returns the configuration of the HTTP Basic Auth security definition of the given name.
+        """
+        wait_for_dict_key(self.basic_auth_config._impl, name)
         with self.url_sec_lock:
             return self.basic_auth_config.get(name)
 
     def basic_auth_get_by_id(self, def_id):
+        """ Same as basic_auth_get but returns information by definition ID.
+        """
         with self.url_sec_lock:
             return self._get_sec_def_by_id(self.basic_auth_config, def_id)
 
+    def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
+        """ Creates a new HTTP Basic Auth security definition.
+        """
+        with self.url_sec_lock:
+            self._update_basic_auth(msg.name, msg)
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
+        """ Updates an existing HTTP Basic Auth security definition.
+        """
+        with self.url_sec_lock:
+            current_config = self.basic_auth_config[msg.old_name]
+            msg.password = current_config.config.password
+            del self.basic_auth_config[msg.old_name]
+            self._update_basic_auth(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
+        """ Deletes an HTTP Basic Auth security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('basic_auth', msg.name)
+            del self.basic_auth_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
+
+    def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an HTTP Basic Auth security definition.
+        """
+        wait_for_dict_key(self.basic_auth_config, msg.name)
+        with self.url_sec_lock:
+            self.basic_auth_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
+
 # ################################################################################################################################
 
+    def _update_ntlm(self, name, config):
+        self.ntlm_config[name] = Bunch()
+        self.ntlm_config[name].config = config
+
     def ntlm_get(self, name):
+        """ Returns the configuration of the NTLM security definition of the given name.
+        """
+        wait_for_dict_key(self.ntlm_config, name)
         with self.url_sec_lock:
             return self.ntlm_config.get(name)
 
+    def on_broker_msg_SECURITY_NTLM_CREATE(self, msg, *args):
+        """ Creates a new NTLM security definition.
+        """
+        with self.url_sec_lock:
+            self._update_ntlm(msg.name, msg)
+
+    def on_broker_msg_SECURITY_NTLM_EDIT(self, msg, *args):
+        """ Updates an existing NTLM security definition.
+        """
+        with self.url_sec_lock:
+            current_config = self.ntlm_config[msg.old_name]
+            msg.password = current_config.config.password
+            del self.ntlm_config[msg.old_name]
+            self._update_ntlm(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.NTLM)
+
+    def on_broker_msg_SECURITY_NTLM_DELETE(self, msg, *args):
+        """ Deletes an NTLM security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('ntlm', msg.name)
+            del self.ntlm_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.NTLM, True)
+
+    def on_broker_msg_SECURITY_NTLM_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an NTLM security definition.
+        """
+        wait_for_dict_key(self.ntlm_config, msg.name)
+        with self.url_sec_lock:
+            self.ntlm_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, SEC_DEF_TYPE.NTLM)
+
 # ################################################################################################################################
 
+    def _update_oauth(self, name, config):
+        self.oauth_config[name] = Bunch()
+        self.oauth_config[name].config = config
+
     def oauth_get(self, name):
+        """ Returns the configuration of the OAuth account of the given name.
+        """
+        wait_for_dict_key(self.oauth_config, name)
         with self.url_sec_lock:
             return self.oauth_config.get(name)
 
     def oauth_get_by_id(self, def_id):
+        """ Same as oauth_get but returns information by definition ID.
+        """
         with self.url_sec_lock:
             return self._get_sec_def_by_id(self.oauth_config, def_id)
+
+    def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg, *args):
+        """ Creates a new OAuth account.
+        """
+        with self.url_sec_lock:
+            self._update_oauth(msg.name, msg)
+
+    def on_broker_msg_SECURITY_OAUTH_EDIT(self, msg, *args):
+        """ Updates an existing OAuth account.
+        """
+        with self.url_sec_lock:
+            current_config = self.oauth_config[msg.old_name]
+            msg.password = current_config.config.password
+            del self.oauth_config[msg.old_name]
+            self._update_oauth(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
+
+    def on_broker_msg_SECURITY_OAUTH_DELETE(self, msg, *args):
+        """ Deletes an OAuth account.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('oauth', msg.name)
+            del self.oauth_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH, True)
+
+    def on_broker_msg_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes the password of an OAuth account.
+        """
+        wait_for_dict_key(self.oauth_config, msg.name)
+        with self.url_sec_lock:
+            self.oauth_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
 
 # ################################################################################################################################
 

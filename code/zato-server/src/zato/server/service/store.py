@@ -9,7 +9,6 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import importlib
 import inspect
-import json
 import logging
 import os
 import sys
@@ -28,6 +27,7 @@ from typing import Any, List
 from gevent.lock import RLock
 
 # humanize
+from humanize import naturalsize
 
 # PyYAML
 try:
@@ -38,17 +38,22 @@ except ImportError:
     Dumper = Dumper
 
 # Zato
-from zato.common.api import DONT_DEPLOY_ATTR_NAME, LazySourceCodeInfo, SourceCodeInfo, TRACE1
+from zato.common.api import DONT_DEPLOY_ATTR_NAME, SourceCodeInfo, TRACE1
+from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
+from zato.common.marshal_.api import Model as DataClassModel
+from zato.common.marshal_.simpleio import DataClassSimpleIO
+from zato.common.odb.model.base import Base as ModelBase
 from zato.common.typing_ import cast_, list_
-from zato.common.util.api import import_module_from_path, is_python_file, visit_py_source
+from zato.common.util.api import deployment_info, import_module_from_path, is_python_file, visit_py_source
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
+from zato.server.config import ConfigDict
 from zato.server.service import PubSubHook, SchedulerFacade, Service
 from zato.server.service.internal import AdminService
 
-# Zato - Rust SIO
-from zato_sio import SIOProcessor
+# Zato - Cython
+from zato.simpleio import CySimpleIO
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -56,13 +61,16 @@ from zato_sio import SIOProcessor
 if 0:
     from sqlalchemy.orm.session import Session as SASession
     from zato.common.hot_deploy_ import HotDeployProject
-    from zato.common.typing_ import any_, anydict, anylist, callable_, module_, stranydict, \
-        strdictdict, strlist, stroriter, tuple_
+    from zato.common.odb.api import ODBManager
+    from zato.common.typing_ import any_, anydict, anylist, callable_, intstrdict, module_, stranydict, \
+        strdictdict, strint, strintdict, strlist, stroriter, tuple_
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.config import ConfigStore
     callable_ = callable_
+    intstrdict = intstrdict
     strdictdict = strdictdict
+    strintdict = strintdict
     stroriter = stroriter
     ConfigStore      = ConfigStore
     HotDeployProject = HotDeployProject
@@ -241,6 +249,7 @@ class ServiceStore:
     """ A store of Zato services.
     """
     services: 'stranydict'
+    odb: 'ODBManager'
     server: 'ParallelServer'
     is_testing:'bool'
 
@@ -248,14 +257,18 @@ class ServiceStore:
         self,
         *,
         services,   # type: strdictdict
+        odb,        # type: ODBManager
         server,     # type: ParallelServer
         is_testing, # type: bool
     ) -> 'None':
         self.services = services
+        self.odb = odb
         self.server = server
         self.is_testing = is_testing
         self.max_batch_size = 0
         self.models = {}            # type: stranydict
+        self.id_to_impl_name = {}   # type: intstrdict
+        self.impl_name_to_id = {}   # type: strintdict
         self.name_to_impl_name = {} # type: stranydict
         self.deployment_info = {}   # type: stranydict
         self.update_lock = RLock()
@@ -278,12 +291,27 @@ class ServiceStore:
 
 # ################################################################################################################################
 
+    def _delete_service_from_odb(self, service_id:'int') -> 'None':
+        _ = self.server.invoke('zato.service.delete', {
+            'id':service_id
+        })
+
+# ################################################################################################################################
+
     def _delete_service_data(self, name:'str', delete_from_odb:'bool'=False) -> 'None':
         try:
-            impl_name = self.name_to_impl_name[name]
+            impl_name = self.name_to_impl_name[name]     # type: str
+            service_id = self.impl_name_to_id[impl_name] # type: int
+            del self.id_to_impl_name[service_id]
+            del self.impl_name_to_id[impl_name]
             del self.name_to_impl_name[name]
             del self.services[impl_name]
+            if delete_from_odb:
+                self._delete_service_from_odb(service_id)
         except KeyError:
+            # This is as expected and may happen if a service
+            # was already deleted, e.g. it was in the same module
+            # that another deleted service was in.
             pass
 
 # ################################################################################################################################
@@ -384,7 +412,7 @@ class ServiceStore:
         # Dataclasses require class objects ..
         if isclass(msg_class):
 
-            from zato.common.marshal_.api import Model as DataClassModel
+            # .. and it needs to be our own Model subclass ..
             if not issubclass(msg_class,  DataClassModel):
                 logger.warning('%s definition %s in service %s will be ignored - \'%s\' should be a subclass of %s',
                 msg_type,
@@ -406,7 +434,10 @@ class ServiceStore:
 
     def set_up_class_attributes(self, class_:'type[Service]', service_store:'ServiceStore') -> 'None':
 
+        # Local aliases
         service_name = class_.get_name()
+        _Class_SimpleIO = None # type: ignore
+        _Class_SimpleIO = _Class_SimpleIO # type: ignore
 
         # Set up enforcement of what other services a given service can invoke
         try:
@@ -414,23 +445,109 @@ class ServiceStore:
         except AttributeError:
             class_.invokes = []
 
-        _sio_input  = getattr(class_, 'input', None)
-        _sio_output = getattr(class_, 'output', None)
+        # If the class does not have a SimpleIO attribute
+        # but it does have input or output declared
+        # then we add a SimpleIO wrapper ourselves.
+        if not hasattr(class_, 'SimpleIO'):
 
-        if _sio_input or _sio_output:
+            _direct_sio_input  = getattr(class_, 'input', None)
+            _direct_sio_output = getattr(class_, 'output', None)
 
-            has_input_data_class  = self._has_io_data_class(class_, _sio_input,  'Input')
-            has_output_data_class = self._has_io_data_class(class_, _sio_output, 'Output')
+            if _direct_sio_input or _direct_sio_output:
+
+                # If I/O is declared directly, it means that we do not need response wrappers
+                class_._zato_needs_response_wrapper = False # type: ignore
+
+                class _Class_SimpleIO:
+                    pass
+
+                if _direct_sio_input:
+                    _Class_SimpleIO.input = _direct_sio_input # type: ignore
+
+                if _direct_sio_output:
+                    _Class_SimpleIO.output = _direct_sio_output # type: ignore
+
+                class_.SimpleIO = _Class_SimpleIO # type: ignore
+
+        try:
+            class_.SimpleIO # type: ignore
+            class_.has_sio = True
+        except AttributeError:
+            class_.has_sio = False
+
+        if class_.has_sio:
+
+            sio_input  = getattr(
+                class_.SimpleIO, # type: ignore
+                'input',
+                 None
+                )
+
+            sio_output = getattr(
+                class_.SimpleIO, # type: ignore
+                'output',
+                None
+            )
+
+            has_input_data_class  = self._has_io_data_class(class_, sio_input,  'Input')
+            has_output_data_class = self._has_io_data_class(class_, sio_output, 'Output')
+
+            # If either input or output is a dataclass but the other one is not,
+            # we need to turn the latter into a dataclass as well.
+
+            # We are here if output is a dataclass ..
+            if has_output_data_class:
+
+                # .. but input is not and it should be ..
+                if (not has_input_data_class) and sio_input:
+
+                    # .. create a name for the dynamically-generated input model class ..
+                    name = class_.__module__ + '_' + class_.__name__
+                    name = name.replace('.', '_')
+                    name += '_AutoInput'
+
+                    # .. generate the input model class now ..
+                    model_input = DataClassModel.build_model_from_flat_input(
+                        service_store.server,
+                        service_store.server.sio_config,
+                        CySimpleIO,
+                        name,
+                        sio_input
+                    )
+
+                    # .. and assign it as input.
+                    if _Class_SimpleIO:
+                        _Class_SimpleIO.input = model_input # type: ignore
+
+            # We are here if input is a dataclass ..
+            if has_input_data_class:
+
+                # .. but output is not and it should be.
+                if (not has_output_data_class) and sio_output:
+
+                    # .. create a name for the dynamically-generated output model class ..
+                    name = class_.__module__ + '_' + class_.__name__
+                    name = name.replace('.', '_')
+                    name += '_AutoOutput'
+
+                    # .. generate the input model class now ..
+                    model_output = DataClassModel.build_model_from_flat_input(
+                        service_store.server,
+                        service_store.server.sio_config,
+                        CySimpleIO,
+                        name,
+                        sio_output
+                    )
+
+                    if _Class_SimpleIO:
+                        _Class_SimpleIO.output = model_output # type: ignore
 
             if has_input_data_class or has_output_data_class:
-                from zato.common.marshal_.simpleio import DataClassSimpleIO
-                _ = DataClassSimpleIO.attach_sio(service_store.server, None, class_) # type: ignore
+                SIOClass = DataClassSimpleIO
             else:
-                _ = SIOProcessor.attach_sio(service_store.server, None, class_)
+                SIOClass = CySimpleIO # type: ignore
 
-            class_.has_sio = True
-        else:
-            class_.has_sio = False
+            _ = SIOClass.attach_sio(service_store.server, service_store.server.sio_config, class_) # type: ignore
 
         # May be None during unit-tests - not every test provides it.
         if service_store:
@@ -451,6 +568,7 @@ class ServiceStore:
                 class_.add_http_method_handlers()
                 class_._worker_store = service_store.server.worker_store
                 class_._enforce_service_invokes = service_store.server.enforce_service_invokes # type: ignore
+                class_.odb = service_store.server.odb
                 class_.schedule = SchedulerFacade(service_store.server)
                 class_.cloud.confluence = service_store.server.worker_store.cloud_confluence
                 class_.cloud.jira = service_store.server.worker_store.cloud_jira
@@ -484,32 +602,41 @@ class ServiceStore:
         """ Returns True if service indicated by service_name has a SimpleIO definition.
         """
         with self.update_lock:
-            impl_name = self.name_to_impl_name[service_name]
-            service_info = self.services[impl_name]
+            service_id = self.get_service_id_by_name(service_name)
+            service_info = self.get_service_info_by_id(service_id) # type: stranydict
             class_ = service_info['service_class'] # type: Service
             return getattr(class_, 'has_sio', False)
 
 # ################################################################################################################################
 
-    def get_service_info_by_id(self, service_id:'str') -> 'stranydict':
-        service_id = str(service_id)
-        for impl_name, service_data in self.services.items():
-            config = self.server.config_manager.get('service', service_data['name'])
-            if config and str(config.get('id', '')) == service_id:
-                return service_data
-        raise KeyError('No such service_id `{}` among deployed services'.format(service_id))
+    def get_service_info_by_id(self, service_id:'strint') -> 'stranydict':
+        if not isinstance(service_id, int):
+            service_id = int(service_id)
+
+        try:
+            impl_name = self.id_to_impl_name[service_id]
+        except KeyError:
+            keys_found = sorted(self.id_to_impl_name)
+            keys_found = [(elem, type(elem)) for elem in keys_found]
+            raise KeyError('No such service_id key `{}` `({})` among `{}`'.format(repr(service_id), type(service_id), keys_found))
+        else:
+            try:
+                return self.services[impl_name]
+            except KeyError:
+                keys_found = sorted(repr(elem) for elem in self.services.keys())
+                keys_found = [(elem, type(elem)) for elem in keys_found]
+                raise KeyError('No such impl_name key `{}` `({})` among `{}`'.format(
+                    repr(impl_name), type(impl_name), keys_found))
 
 # ################################################################################################################################
 
-    def get_service_id_by_name(self, service_name:'str') -> 'str':
-        config = self.server.config_manager.get('service', service_name)
-        if config:
-            return config['id']
-        raise KeyError('No such service `{}` in config store'.format(service_name))
+    def get_service_id_by_name(self, service_name:'str') -> 'int':
+        impl_name = self.name_to_impl_name[service_name]
+        return self.impl_name_to_id[impl_name]
 
 # ################################################################################################################################
 
-    def get_service_name_by_id(self, service_id:'str') -> 'str':
+    def get_service_name_by_id(self, service_id:'int') -> 'str':
         return self.get_service_info_by_id(service_id)['name']
 
 # ################################################################################################################################
@@ -543,19 +670,15 @@ class ServiceStore:
         service.config = self.server.user_config
         service.user_config = self.server.user_config
         service.time = self.server.time_util
-        if Service._SecurityFacade is None:
-            from zato.common.facade import SecurityFacade
-            Service._SecurityFacade = SecurityFacade
-        service.security = Service._SecurityFacade(service.server)
+        service.security = SecurityFacade(service.server)
 
         # .. and return everything to our caller.
         return service, is_active
 
 # ################################################################################################################################
 
-    def new_instance_by_id(self, service_id:'str', *args:'any_', **kwargs:'any_') -> 'tuple_[Service, bool]':
-        service_info = self.get_service_info_by_id(service_id)
-        impl_name = service_info.get('impl_name') or self.name_to_impl_name[service_info['name']]
+    def new_instance_by_id(self, service_id:'int', *args:'any_', **kwargs:'any_') -> 'tuple_[Service, bool]':
+        impl_name = self.id_to_impl_name[service_id]
         return self.new_instance(impl_name)
 
 # ################################################################################################################################
@@ -593,6 +716,17 @@ class ServiceStore:
     ) -> 'anylist':
         """ Imports and optionally caches locally internal services.
         """
+
+        sql_services = {}
+
+        for item in self.odb.get_sql_internal_service_list(self.server.cluster_id):
+            sql_services[item.impl_name] = { # type: ignore
+                'id': item.id,               # type: ignore
+                'impl_name': item.impl_name, # type: ignore
+                'is_active': item.is_active, # type: ignore
+                'slow_threshold': item.slow_threshold, # type: ignore
+            }
+
         service_info = []
 
         logger.info('{} internal services (%s)'.format(self.action_internal_doing), self.server.name)
@@ -603,208 +737,266 @@ class ServiceStore:
             class_ = service.service_class
             impl_name = service.impl_name
 
-            service_name = self.services[impl_name]['name']
-            service_id = self.get_service_id_by_name(service_name)
-
             service_info.append({
                 'service_class': class_,
                 'mod': inspect.getmodule(class_),
                 'impl_name': impl_name,
-                'service_id': service_id,
+                'service_id': self.impl_name_to_id[impl_name],
                 'is_active': self.services[impl_name]['is_active'],
                 'slow_threshold': self.services[impl_name]['slow_threshold'],
                 'fs_location': inspect.getfile(class_),
                 'deployment_info': 'no-deployment-info'
             })
 
-        logger.info('{} %d internal services (%s)'.format(self.action_internal_done),
-            len(info.to_process), self.server.name)
+        logger.info('{} %d internal services (%s) (%s)'.format(self.action_internal_done),
+            len(info.to_process), info.total_size_human, self.server.name)
 
         return info.to_process
-
-# ################################################################################################################################
-
-    @staticmethod
-    def _get_manifest_paths(base_dir:'str') -> 'tuple':
-        """ Returns (server_manifest_path, package_manifest_path).
-        """
-        server_path = os.path.join(base_dir, 'config', 'repo', '.internal-manifest.json')
-        package_path = os.path.join(os.path.dirname(__file__), '_internal_manifest.json')
-        return server_path, package_path
-
-# ################################################################################################################################
-
-    @staticmethod
-    def _find_manifest(base_dir:'str') -> 'str':
-        """ Returns the path to an existing manifest or empty string.
-        """
-        server_path, package_path = ServiceStore._get_manifest_paths(base_dir)
-        if os.path.exists(server_path):
-            return server_path
-        if os.path.exists(package_path):
-            return package_path
-        return ''
-
-# ################################################################################################################################
-
-    def _build_manifest(self, items:'list', base_dir:'str') -> 'list':
-        """ Runs the full scan and returns manifest entries plus writes the manifest file.
-        """
-        info = self.import_services_from_anywhere(items, base_dir, is_internal=True)
-
-        manifest_entries = []
-        for service in info.to_process:
-            class_ = service.service_class
-            manifest_entries.append({
-                'module': class_.__module__,
-                'class': class_.__name__,
-            })
-
-        server_path, _ = ServiceStore._get_manifest_paths(base_dir)
-        os.makedirs(os.path.dirname(server_path), exist_ok=True)
-
-        with open(server_path, 'w') as f:
-            json.dump(manifest_entries, f, indent=2, sort_keys=True)
-
-        logger.info('Wrote internal services manifest to %s (%d entries)', server_path, len(manifest_entries))
-
-        return info.to_process
-
-# ################################################################################################################################
-
-    def _import_from_manifest(self, manifest_path:'str') -> 'list':
-        """ Fast O(1)-style import path: reads the manifest, bulk-imports modules, getattr classes.
-        """
-        from time import monotonic as _mn
-
-        _t0 = _mn()
-
-        with open(manifest_path) as f:
-            entries = json.load(f)
-
-        _t_json = _mn()
-
-        to_process = []
-        modules_cache = {}
-
-        _slow_imports = []
-        _import_total = 0.0
-        _setup_total = 0.0
-
-        for entry in entries:
-            module_name = entry['module']
-            class_name = entry['class']
-
-            if module_name not in modules_cache:
-                _ti = _mn()
-                try:
-                    modules_cache[module_name] = import_module(module_name)
-                except Exception:
-                    logger.warning('Manifest: could not import module `%s`', module_name)
-                    continue
-                _td = (_mn() - _ti) * 1000
-                _import_total += _td
-                if _td > 5.0:
-                    _slow_imports.append((module_name, _td))
-
-            mod = modules_cache[module_name]
-            class_ = getattr(mod, class_name, None)
-
-            if class_ is None:
-                logger.warning('Manifest: class `%s` not found in module `%s`', class_name, module_name)
-                continue
-
-            _ts = _mn()
-
-            fs_location = inspect.getfile(mod)
-            class_.zato_set_module_name(fs_location)
-
-            self.set_up_class_attributes(class_, self)
-
-            name = class_.get_name()
-
-            if issubclass(class_, PubSubHook):
-                self.server.pubsub_hooks.append(name)
-                self.server.pubsub_hooks.sort()
-
-            service = InRAMService()
-            service.cluster_id = self.server.cluster_id
-            service.is_active = True
-            service.is_internal = True
-            service.name = name
-            service.impl_name = class_.get_impl_name()
-            service.service_class = class_
-            service.source_code_info = LazySourceCodeInfo(mod, class_, getsourcefile(mod) or 'no-source-file')
-
-            to_process.append(service)
-            _setup_total += (_mn() - _ts) * 1000
-
-        _t_imports = _mn()
-
-        self._store_in_ram(None, to_process)
-        self._store_deployment_info(to_process)
-
-        _t_store = _mn()
-
-        info = type('DeploymentInfo', (), {'to_process': to_process, 'total_size': 0, 'total_size_human': ''})()
-        self._after_import_to_config(info)
-
-        _t_config = _mn()
-
-        logger.info(
-            'Manifest timing: json=%.1f ms, imports=%.1f ms, setup=%.1f ms, loop=%.1f ms (%d mods, %d svcs), store=%.1f ms, config=%.1f ms, total=%.1f ms',
-            (_t_json - _t0) * 1000,
-            _import_total,
-            _setup_total,
-            (_t_imports - _t_json) * 1000,
-            len(modules_cache),
-            len(to_process),
-            (_t_store - _t_imports) * 1000,
-            (_t_config - _t_store) * 1000,
-            (_t_config - _t0) * 1000,
-        )
-        if _slow_imports:
-            _slow_imports.sort(key=lambda x: -x[1])
-            for _smod, _stime in _slow_imports[:10]:
-                logger.info('  slow import: %s -> %.1f ms', _smod, _stime)
-
-        return to_process
 
 # ################################################################################################################################
 
     def _store_in_ram(self, session:'SASession | None', to_process:'inramlist') -> 'None':
 
+        if self.is_testing:
+            services = {}
+
+            for in_ram_service in to_process: # type: InRAMService
+                service_info = {}
+                service_info['id'] = randint(0, 1000000)
+                services[in_ram_service.name] = service_info
+
+        else:
+
+            # We need to look up all the services in ODB to be able to find their IDs
+            if session:
+                needs_new_session = False
+            else:
+                needs_new_session = True
+                session = self.odb.session()
+            try:
+                services = self.get_basic_data_services(session)
+            finally:
+                if needs_new_session and session:
+                    session.close()
+
         with self.update_lock:
             for item in to_process: # type: InRAMService
 
-                self.services[item.impl_name] = {}
-                self.services[item.impl_name]['name'] = item.name
-                self.services[item.impl_name]['deployment_info'] = item.deployment_info
-                self.services[item.impl_name]['service_class'] = item.service_class
-                self.services[item.impl_name]['path'] = item.source_code_info.path
-                self.services[item.impl_name]['_source_code_info'] = item.source_code_info
-                self.services[item.impl_name]['is_active'] = item.is_active
-                self.services[item.impl_name]['slow_threshold'] = item.slow_threshold
+                service_dict = services[item.name]
+                service_id = service_dict['id']
 
+                item_name = item.name
+                item_deployment_info = item.deployment_info
+                item_service_class = item.service_class
+
+                self.services[item.impl_name] = {}
+                self.services[item.impl_name]['name'] = item_name
+                self.services[item.impl_name]['deployment_info'] = item_deployment_info
+                self.services[item.impl_name]['service_class'] = item_service_class
+                self.services[item.impl_name]['path'] = item.source_code_info.path
+                self.services[item.impl_name]['source_code'] = item.source_code_info.source.decode('utf8')
+
+                item_is_active = item.is_active
+                item_slow_threshold = item.slow_threshold
+
+                self.services[item.impl_name]['is_active'] = item_is_active
+                self.services[item.impl_name]['slow_threshold'] = item_slow_threshold
+
+                self.id_to_impl_name[service_id] = item.impl_name
+                self.impl_name_to_id[item.impl_name] = service_id
                 self.name_to_impl_name[item.name] = item.impl_name
-                logger.info('_store_in_ram: registered name=%r -> impl_name=%r, total=%d',
-                    item.name, item.impl_name, len(self.name_to_impl_name))
 
 # ################################################################################################################################
 
-    def _store_deployment_info(self, to_process:'inramlist') -> 'None':
-        """ Stores deployment metadata in memory for each service.
+    def _store_services_in_odb(
+        self,
+        session,       # type: any_
+        batch_indexes, # type: anylist
+        to_process     # type: anylist
+    ) -> 'bool':
+        """ Looks up all Service objects in ODB and if any of our local ones is not in the databaset yet, it is added.
         """
+        # Will be set to True if any of the batches added at list one new service to ODB
+        any_added = False
+
+        # Get all services already deployed in ODB for comparisons (Service)
+        services = self.get_basic_data_services(session)
+
+        # Add any missing Service objects from each batch delineated by indexes found
+        for start_idx, end_idx in batch_indexes:
+
+            to_add = []
+            batch_services = to_process[start_idx:end_idx]
+
+            for service in batch_services: # type: InRAMService
+
+                # No such Service object in ODB so we need to store it
+                if service.name not in services:
+                    to_add.append(service)
+
+            # Add to ODB all the Service objects from this batch found not to be in ODB already
+            if to_add:
+                elems = [elem.to_dict() for elem in to_add]
+
+                # This saves services in ODB
+                self.odb.add_services(session, elems)
+
+                # Now that we have them, we can look up their IDs ..
+                service_id_list = self.odb.get_service_id_list(session, self.server.cluster_id,
+                    [elem['name'] for elem in elems]) # type: anydict
+
+                # .. and add them for later use.
+                for item in service_id_list: # type: dict
+                    self.impl_name_to_id[item.impl_name] = item.id
+
+                any_added = True
+
+        return any_added
+
+# ################################################################################################################################
+
+    def _should_delete_deployed_service(self, service:'InRAMService', already_deployed:'stranydict') -> 'bool':
+        """ Returns True if a given service has been already deployed but its current source code,
+        one that is about to be deployed, is changed in comparison to what is stored in ODB.
+        """
+
+        # Already deployed ..
+        if service.name in already_deployed:
+
+            # .. thus, return True if current source code is different to what we have already
+            if service.source_code_info.source != already_deployed[service.name]:
+                return True
+
+        # If we are here, it means that we should not delete this service
+        return False
+
+# ################################################################################################################################
+
+    def _store_deployed_services_in_odb(
+        self,
+        session,       # type: any_
+        batch_indexes, # type: anylist
+        to_process,    # type: anylist
+    ) -> 'None':
+        """ Looks up all Service objects in ODB, checks if any is not deployed locally and deploys it if it is not.
+        """
+        # Local objects
         now = _utcnow()
         now_iso = now.isoformat()
 
-        for service in to_process: # type: InRAMService
-            class_ = service.service_class
-            path = service.source_code_info.path
-            from zato.common.util.api import deployment_info
-            deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
-            deployment_info_dict['_source_code_info'] = service.source_code_info
-            self.deployment_info[service.impl_name] = deployment_info_dict
+        # Get all services already deployed in ODB for comparisons (Service) - it is needed to do it again,
+        # in addition to _store_deployed_services_in_odb, because that other method may have added
+        # DB-level IDs that we need with our own objects.
+        services = self.get_basic_data_services(session)
+
+        # Same goes for deployed services objects (DeployedService)
+        already_deployed = self.get_basic_data_deployed_services()
+
+        # Modules visited may return a service that has been already visited via another module,
+        # in which case we need to skip such a duplicate service.
+        already_visited = set()
+
+        # Add any missing DeployedService objects from each batch delineated by indexes found
+        for start_idx, end_idx in batch_indexes:
+
+            # Deployed services that need to be deleted before they can be re-added,
+            # which will happen if a service's name does not change but its source code does
+            to_delete = []
+
+            # DeployedService objects to be added
+            to_add = []
+
+            # InRAMService objects to process in this iteration
+            batch_services = to_process[start_idx:end_idx]
+
+            for service in batch_services: # type: InRAMService
+
+                # Ignore service we have already processed
+                if service.name in already_visited:
+                    continue
+                else:
+                    already_visited.add(service.name)
+
+                # Make sure to re-deploy services that have changed their source code
+                if self._should_delete_deployed_service(service, already_deployed):
+                    to_delete.append(self.get_service_id_by_name(service.name))
+                    del already_deployed[service.name]
+
+                # At this point we wil always have IDs for all Service objects
+                service_id = services[service.name]['id']
+
+                # Metadata about this deployment as a JSON object
+                class_ = service.service_class
+                path = service.source_code_info.path
+                deployment_info_dict = deployment_info('service-store', str(class_), now_iso, path)
+                deployment_info_dict['line_number'] = service.source_code_info.line_number
+                self.deployment_info[service.impl_name] = deployment_info_dict
+                deployment_details = dumps(deployment_info_dict)
+
+                # No such Service object in ODB so we need to store it
+                if service.name not in already_deployed:
+                    to_add.append({
+                        'server_id': self.server.id,
+                        'service_id': service_id,
+                        'deployment_time': now,
+                        'details': deployment_details,
+                        'source': service.source_code_info.source,
+                        'source_path': service.source_code_info.path,
+                        'source_hash': service.source_code_info.hash,
+                        'source_hash_method': service.source_code_info.hash_method,
+                    })
+
+            # If any services are to be redeployed, delete them first now
+            if to_delete:
+                self.odb.drop_deployed_services_by_name(session, to_delete)
+
+            # If any services are to be deployed, do it now.
+            if to_add:
+                self.odb.add_deployed_services(session, to_add)
+
+# ################################################################################################################################
+
+    def _store_in_odb(self, session:'SASession | None', to_process:'inramlist') -> 'None':
+
+        # Indicates boundaries of deployment batches
+        batch_indexes = get_batch_indexes(to_process, self.max_batch_size)
+
+        # Store Service objects first
+        needs_commit = self._store_services_in_odb(session, batch_indexes, to_process)
+
+        # This flag will be True if there were any services to be added,
+        # in which case we need to commit the sesssion here to make it possible
+        # for the next method to have access to these newly added Service objects.
+        if needs_commit:
+            if session:
+                session.commit()
+
+        # Now DeployedService can be added - they assume that all Service objects all are in ODB already
+        self._store_deployed_services_in_odb(session, batch_indexes, to_process)
+
+# ################################################################################################################################
+
+    def get_basic_data_services(self, session:'SASession') -> 'anydict':
+
+        # We will return service keyed by their names
+        out = {}
+
+        # This is a list of services to turn into a dict
+        service_list = self.odb.get_basic_data_service_list(session)
+
+        for service_id, name, impl_name in service_list: # type: name, name
+            out[name] = {'id': service_id, 'impl_name': impl_name}
+
+        return out
+
+# ################################################################################################################################
+
+    def get_basic_data_deployed_services(self) -> 'anydict':
+
+        # This is a list of services to turn into a set
+        deployed_service_list = self.odb.get_basic_data_deployed_service_list()
+
+        return {elem[0]:elem[1] for elem in deployed_service_list}
 
 # ################################################################################################################################
 
@@ -885,36 +1077,65 @@ class ServiceStore:
                 imported = self.import_services_from_module_object(item, is_internal)
                 to_process.extend(imported)
 
+        total_size = 0
+
         to_process = set(to_process)
         to_process = list(to_process)
 
+        for item in to_process:
+            item = cast_('InRAMService', item)
+            total_size += item.source_code_info.len_source
+
         info = DeploymentInfo()
         info.to_process[:] = to_process
-        info.total_size = 0
-        info.total_size_human = ''
+        info.total_size = total_size
+        info.total_size_human = naturalsize(info.total_size)
 
-        self._store_in_ram(None, info.to_process)
-        self._store_deployment_info(info.to_process)
-        self._after_import_to_config(info)
+        if self.is_testing:
+            session = None
+        else:
+            session = self.odb.session()
 
+        try:
+            # Save data to both ODB and RAM if we are not testing,
+            # otherwise, in RAM only.
+            if not self.is_testing:
+                self._store_in_odb(session, info.to_process)
+            self._store_in_ram(session, info.to_process)
+
+            # Postprocessing, like rate limiting which needs access to information that becomes
+            # available only after a service is saved to ODB.
+            if not self.is_testing:
+                self.after_import(session, info)
+
+        # Done with everything, we can commit it now, assuming we are not in a unittest
+        finally:
+            if session:
+                session.commit() # type: ignore
+
+        # Done deploying, we can return
         return info
 
 # ################################################################################################################################
 
-    def _after_import_to_config(self, info:'DeploymentInfo') -> 'None':
-        """ Registers newly deployed services in server.config.service so they are invocable.
-        """
-        for item in info.to_process: # type: InRAMService
-            name = item.name
-            if name not in self.server.config.service:
-                self.server.config.service[name] = {
-                    'config': {
-                        'name': name,
-                        'impl_name': item.impl_name,
-                        'is_active': item.is_active,
-                        'slow_threshold': item.slow_threshold,
-                    }
-                }
+    def after_import(self, session:'SASession | None', info:'DeploymentInfo') -> 'None':
+
+        # Names of all services that have been just deployed ..
+        deployed_service_name_list = [item.name for item in info.to_process]
+
+        # .. out of which we need to substract the ones that the server is already aware of
+        # because they were added to SQL ODB prior to current deployment ..
+        for name in deployed_service_name_list[:]:
+            if name in self.server.config.service:
+                deployed_service_name_list.remove(name)
+
+        # .. and now we know for which services to create ConfigDict objects.
+
+        query = self.odb.get_service_list_with_include(
+            session, self.server.cluster_id, deployed_service_name_list, True) # type: anylist
+
+        service_list = ConfigDict.from_query('service_list_after_import', query, decrypt_func=self.server.decrypt)
+        self.server.config.service.update(service_list._impl)
 
 # ################################################################################################################################
 
@@ -1095,8 +1316,7 @@ class ServiceStore:
                 continue
             else:
                 # .. get the actual source code ..
-                _sci = service_data.get('_source_code_info')
-                source_code = _sci.source.decode('utf8') if _sci else ''
+                source_code = service_data['source_code']
 
                 # .. this module can be ignored if it does not import the input one ..
                 if not self._has_module_import(source_code, mod_name):
@@ -1177,7 +1397,6 @@ class ServiceStore:
         """ Is item a model that we can deploy?
         """
         if isclass(item) and hasattr(item, '__mro__'):
-            from zato.common.marshal_.api import Model as DataClassModel
             if issubclass(item, DataClassModel) and (item is not DataClassModel):
                 if item.__module__ == current_module.__name__:
                     return True
@@ -1190,9 +1409,10 @@ class ServiceStore:
     def _should_deploy_service(self, name:'str', item:'any_', current_module:'module_', fs_location:'str') -> 'bool':
         """ Is item a service that we can deploy?
         """
+
         if isclass(item) and hasattr(item, '__mro__') and hasattr(item, 'get_name'):
             if item is not Service and item is not AdminService:
-                if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
+                if not hasattr(item, DONT_DEPLOY_ATTR_NAME) and not issubclass(item, ModelBase):
 
                     # Do not deploy services that only happened to have been imported
                     # in this module but are actually defined elsewhere.
@@ -1214,11 +1434,32 @@ class ServiceStore:
 
 # ################################################################################################################################
 
-    def _get_source_code_info(self, mod:'any_', class_:'any_') -> 'LazySourceCodeInfo':
-        """ Returns a lazy source code info object that defers file reading until first access.
+    def _get_source_code_info(self, mod:'any_', class_:'any_') -> 'SourceCodeInfo':
+        """ Returns the source code of and the FS path to the given module.
         """
-        path = inspect.getsourcefile(mod) or 'no-source-file'
-        return LazySourceCodeInfo(mod, class_, path)
+        source_info = SourceCodeInfo()
+        try:
+            file_name = mod.__file__ or ''
+            if file_name[-1] in('c', 'o'):
+                file_name = file_name[:-1]
+
+            # We would have used inspect.getsource(mod) had it not been apparently using
+            # cached copies of the source code
+            source_info.source = open(file_name, 'rb').read()
+            source_info.len_source = len(source_info.source)
+
+            source_info.path = inspect.getsourcefile(mod) or 'no-source-file'
+            source_info.hash = sha256(source_info.source).hexdigest()
+            source_info.hash_method = 'SHA-256'
+
+            # The line number this class object is defined on
+            source_info.line_number = inspect.findsource(class_)[1]
+
+        except IOError:
+            if has_trace1:
+                logger.log(TRACE1, 'Ignoring IOError, mod:`%s`, e:`%s`', mod, format_exc())
+
+        return source_info
 
 # ################################################################################################################################
 

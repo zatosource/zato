@@ -21,8 +21,9 @@ from zato.common.py23_.past.builtins import basestring, long
 # Zato
 from zato.common.api import CACHE
 from zato.common.exception import BadRequest
+from zato.common.util.search import SearchResults
 from zato.server.service import AsIs, Bool, Float, Int
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
@@ -33,22 +34,13 @@ time_keys = ('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')
 class _Base(AdminService):
     """ Base class for services that access the contents of a given cache.
     """
-    def _get_cache_by_input(self, needs_config=False):
-        cache_id = str(self.request.input.id)
-        cache_list = self.server.config_manager.get_list('cache')
-        cache_item = None
-        for item in cache_list:
-            if item.get('id') == cache_id:
-                cache_item = item
-                break
+    def _get_cache_by_input(self, needs_odb=False):
+        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.id)
 
-        if not cache_item:
-            raise BadRequest(self.cid, 'Could not find cache with id `{}`'.format(cache_id))
-
-        if needs_config:
-            return bunchify(cache_item)
+        if needs_odb:
+            return odb_cache
         else:
-            return self.cache.get_cache(CACHE.TYPE.BUILTIN, cache_item['name'])
+            return self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
 
 # ################################################################################################################################
 
@@ -57,35 +49,40 @@ class GetList(_Base):
     """
     _filter_by = ('name',)
 
-    input = AsIs('id'), Int('-cur_page'), Bool('-paginate'), '-query', Int('-max_chars')
-    output = AsIs('id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at', \
-        'last_read', 'prev_read', 'last_write', 'prev_write', 'server', '-value', '-chars_omitted'
+    class SimpleIO(GetListAdminSIO):
+        input_required = (AsIs('id'),)
+        input_optional = GetListAdminSIO.input_optional + (Int('max_chars'),)
+        output_required = (AsIs('id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
+            'last_read', 'prev_read', 'last_write', 'prev_write', 'server')
+        output_optional = ('value', 'chars_omitted')
+        output_repeated = True
 
 # ################################################################################################################################
 
-    def _enrich_items(self, raw_items, _time_keys=time_keys) -> 'list':
+    def _get_data_from_sliceable(self, sliceable, query_ctx, _time_keys=time_keys):
 
         max_chars = self.request.input.get('max_chars') or 30
-        now = self.time.utcnow(needs_format=False)
         out = []
 
-        for item in raw_items:
+        now = self.time.utcnow(needs_format=False)
 
-            if isinstance(item, dict):
-                pass
-            elif hasattr(item, 'to_dict'):
-                item = item.to_dict()
-            else:
-                continue
+        start = query_ctx.cur_page * query_ctx.page_size
+        stop = start + query_ctx.page_size
 
+        for _idx, item in enumerate(sliceable[start:stop]):
+
+            # Internally, time is kept as doubles so we need to convert it to a datetime object or null it out.
             for name in _time_keys:
-                _value = item.get(name)
+                _value = item[name]
                 if _value:
                     item[name] = arrow_get(_value)
                 else:
                     item[name] = None
 
-            expiry = item.pop('expiry', None)
+            del _value
+
+            # Compute expiry since the last operation + the time left to expiry
+            expiry = item.pop('expiry')
             if expiry:
                 item['expiry_op'] = int(expiry)
                 item['expiry_left'] = int((item['expires_at'] - now).total_seconds())
@@ -93,11 +90,13 @@ class GetList(_Base):
                 item['expiry_op'] = None
                 item['expiry_left'] = None
 
+            # Now that we have worked with all the time keys needed, we can serialize them to the ISO-8601 format.
             for name in _time_keys:
                 if item[name]:
                     item[name] = item[name].isoformat()
 
-            value = item.get('value', '')
+            # Shorten the value if it's possible, if it's not something else than a string/unicode
+            value = item['value']
             if isinstance(value, basestring):
                 len_value = len(value)
                 chars_omitted = len_value - max_chars
@@ -113,7 +112,7 @@ class GetList(_Base):
             item['server'] = '{} ({})'.format(self.server.name, self.server.pid)
             out.append(item)
 
-        return out
+        return SearchResults(None, out, None, len(sliceable))
 
 # ################################################################################################################################
 
@@ -159,16 +158,26 @@ class GetList(_Base):
 
 # ################################################################################################################################
 
-    def handle(self):
-        cache = self._get_cache_by_input()
-        query = self.request.input.get('query')
-        if query:
-            raw_items = self._filter_cache(query, cache)
-        else:
-            raw_items = [entry for _, entry in iteritems(cache)]
+    def _get_data(self, _ignored_session, _ignored_cluster_id, *args, **kwargs):
 
-        items = self._enrich_items(raw_items)
-        self.response.payload = self._paginate_list(items)
+        # Get the cache object first
+        cache = self._get_cache_by_input()
+
+        query_ctx = bunchify(kwargs)
+        query = query_ctx.get('query', None)
+
+        # Without any query, simply return a slice of the underlying list from the cache object
+        if not query:
+            sliceable = cache
+        else:
+            sliceable = self._filter_cache(query, cache)
+
+        return self._get_data_from_sliceable(sliceable, query_ctx)
+
+# ################################################################################################################################
+
+    def handle(self):
+        self.response.payload[:] = self._search(self._get_data)
 
 # ################################################################################################################################
 
@@ -177,7 +186,9 @@ class _CreateEdit(_Base):
     old_key_elem = '<invalid>'
     new_key_elem = 'key'
 
-    input = 'cluster_id', 'id', 'key', 'value', Bool('replace_existing'), '-key_data_type', '-value_data_type', Float('-expiry')
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'id', 'key', 'value', Bool('replace_existing'))
+        input_optional = ('key_data_type', 'value_data_type', Float('expiry'))
 
     def handle(self):
 
@@ -191,7 +202,7 @@ class _CreateEdit(_Base):
 
         # Double check expiry is actually an integer
         try:
-            expiry = int(expiry)
+            int(expiry)
         except ValueError:
             raise BadRequest(self.cid, 'Expiry {} must be an integer instead of {}'.format(repr(expiry), type(expiry)))
 
@@ -221,8 +232,8 @@ class Update(_CreateEdit):
     """
     old_key_elem = 'old_key'
 
-    input = 'cluster_id', 'id', 'key', 'value', Bool('replace_existing'), '-key_data_type', '-value_data_type', \
-        Float('-expiry'), '-old_key'
+    class SimpleIO(_CreateEdit.SimpleIO):
+        input_optional = _CreateEdit.SimpleIO.input_optional + ('old_key',)
 
     def handle(self):
 
@@ -238,8 +249,10 @@ class Update(_CreateEdit):
 class Get(_Base):
     """ Returns an individual entry from the cache given on input.
     """
-    input = 'cluster_id', 'id', 'key'
-    output = Bool('key_found'), '-key', '-value', '-is_key_integer', '-is_value_integer', Float('-expiry')
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'id', 'key')
+        output_required = (Bool('key_found'),)
+        output_optional = ('key', 'value', 'is_key_integer', 'is_value_integer', Float('expiry'))
 
     def handle(self):
 
@@ -263,8 +276,9 @@ class Get(_Base):
 class Delete(_Base):
     """ Deletes an entry from the cache given on input.
     """
-    input = 'cluster_id', 'id', 'key'
-    output = Bool('key_found'),
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'id', 'key')
+        output_required = (Bool('key_found'),)
 
     def handle(self):
 

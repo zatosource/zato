@@ -15,6 +15,7 @@ from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 
 class LDAPImporter(GenericConnectionImporter):
 
+    # Connection-specific constants
     connection_type = GENERIC.CONNECTION.TYPE.OUTCONN_LDAP
 
     connection_defaults = {

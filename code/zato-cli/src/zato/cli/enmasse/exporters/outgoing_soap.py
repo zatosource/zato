@@ -8,11 +8,19 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
+# Zato
+from zato.common.api import CONNECTION, URL_TYPE
+from zato.common.odb.model import to_json
+from zato.common.odb.query import http_soap_list
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.cli.enmasse.exporter import EnmasseYAMLExporter
     from zato.common.typing_ import anydict, list_
+
     outgoing_soap_def_list = list_[anydict]
 
 # ################################################################################################################################
@@ -25,34 +33,41 @@ logger = logging.getLogger(__name__)
 
 class OutgoingSOAPExporter:
 
-    def __init__(self, exporter) -> 'None':
+    def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, items) -> 'outgoing_soap_def_list':
+    def export(self, session: 'SASession', cluster_id: 'int') -> 'outgoing_soap_def_list':
         """ Exports outgoing SOAP connection definitions.
         """
         logger.info('Exporting outgoing SOAP connection definitions')
 
-        if not items:
-            logger.info('No outgoing SOAP connection definitions found')
+        # Get outgoing SOAP connections from database
+        db_outgoing = http_soap_list(
+            session,
+            cluster_id,
+            connection=CONNECTION.OUTGOING,
+            transport=URL_TYPE.SOAP,
+            return_internal=False,
+        )
+        db_outgoing = to_json(db_outgoing)
+
+        if not db_outgoing:
+            logger.info('No outgoing SOAP connection definitions found in DB')
             return []
 
-        exported_outgoing = []
-        logger.info('Processing %d outgoing SOAP connection definitions', len(items))
+        exported_outgoing: 'outgoing_soap_def_list' = []
+        logger.info('Processing %d outgoing SOAP connection definitions', len(db_outgoing))
 
-        for outgoing_row in items:
+        for outgoing_row in db_outgoing:
+            logger.debug('Processing outgoing SOAP connection row %s', outgoing_row)
 
-            # Skip internal connections
-            if outgoing_row.get('is_internal'):
-                continue
-
-            exported_conn = {
+            exported_conn: 'anydict' = {
                 'name': outgoing_row['name'],
-                'host': outgoing_row.get('host', ''),
-                'url_path': outgoing_row.get('url_path', ''),
+                'host': outgoing_row['host'],
+                'url_path': outgoing_row['url_path'],
             }
 
-            if security_name := outgoing_row.get('security') or outgoing_row.get('security_name'):
+            if security_name := outgoing_row.get('security_name'):
                 exported_conn['security'] = security_name
 
             if soap_action := outgoing_row.get('soap_action'):

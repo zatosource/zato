@@ -14,8 +14,16 @@ _rust_func = None
 def _get_rust_func():
     global _rust_func
     if _rust_func is None:
-        from zato_broker_core import broker_new_cid_pubsub
-        _rust_func = broker_new_cid_pubsub
+        try:
+            from zato_broker_core import broker_new_cid_pubsub
+            _rust_func = broker_new_cid_pubsub
+        except ImportError:
+            import time, random
+            def _fallback_cid(_precision):
+                ts = int(time.time() * 1_000_000)
+                rnd = random.randint(0, 0xFFFF)
+                return f'{ts:016x}{rnd:04x}'
+            _rust_func = _fallback_cid
     return _rust_func
 
 # ################################################################################################################################

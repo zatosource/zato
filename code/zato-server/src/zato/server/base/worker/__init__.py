@@ -32,12 +32,12 @@ from orjson import dumps
 from zato.bunch import Bunch
 from zato.common import broker_message
 from zato.common.api import API_Key, CHANNEL, CONNECTION, DATA_FORMAT, GENERIC as COMMON_GENERIC, \
-     PubSub, SCHEDULER, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List
+     PubSub, SEC_DEF_TYPE, simple_types, Wrapper_Name_Prefix_List, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, GENERIC as BROKER_MSG_GENERIC, SERVICE
 from zato.common.const import SECRETS
 from zato.common.dispatch import dispatcher
 from zato.common.json_internal import loads
-from zato.common.sql_pool import PoolStore, SessionWrapper
+from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.typing_ import cast_
 from zato.common.util.api import asbool, fs_safe_name, import_module_from_path, new_cid_server, parse_datetime, \
     rebuild_subscription_dict_list, spawn_greenlet, update_apikey_username_to_channel, utcnow, visit_py_source, \
@@ -55,14 +55,12 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.sap import SAPWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
-from zato.server.generic.api.channel_hl7_mllp import ChannelHL7MLLPWrapper
+from zato.server.ext.zunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from zato.server.generic.api.channel_openapi import ChannelOpenAPIWrapper
 from zato.server.generic.api.cloud_confluence import CloudConfluenceWrapper
 from zato.server.generic.api.cloud_jira import CloudJiraWrapper
 from zato.server.generic.api.cloud_microsoft_365 import CloudMicrosoft365Wrapper
 from zato.server.generic.api.cloud_salesforce import CloudSalesforceWrapper
-from zato.server.generic.api.outconn_hl7_fhir import OutconnHL7FHIRWrapper
-from zato.server.generic.api.outconn_hl7_mllp import OutconnHL7MLLPWrapper
 from zato.server.generic.api.outconn_ldap import OutconnLDAPWrapper
 from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 
@@ -71,20 +69,14 @@ from zato.server.generic.api.outconn_mongodb import OutconnMongoDBWrapper
 
 logger = logging.getLogger(__name__)
 
-def _rest_log_write(msg):
-    with open('/tmp/rest.txt', 'a') as _f:
-        from datetime import datetime
-        _f.write(datetime.now().isoformat() + ' ' + msg + '\n')
-        _f.flush()
-
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
     from bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
-    from zato.broker.broker import BrokerCoreAPI
-    from zato.common.typing_ import any_, anydict, anylist, anytuple, callable_, dictnone, strdict, strnone, tupnone
+    from zato.broker.client import BrokerClient
+    from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
     from zato.server.config import ConfigStore
@@ -109,6 +101,11 @@ _pubsub_max_retry_time = 20 # PubSub.Max_Retry_Time
 # ################################################################################################################################
 # ################################################################################################################################
 
+pickup_conf_item_prefix = 'zato.pickup'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class _generic_msg:
     create          = BROKER_MSG_GENERIC.CONNECTION_CREATE.value
     edit            = BROKER_MSG_GENERIC.CONNECTION_EDIT.value
@@ -116,6 +113,14 @@ class _generic_msg:
     change_password = BROKER_MSG_GENERIC.CONNECTION_CHANGE_PASSWORD.value
 
 # ################################################################################################################################
+# ################################################################################################################################
+
+class GeventWorker(GunicornGeventWorker):
+
+    def __init__(self, *args:'any_', **kwargs:'any_') -> 'None':
+        self.deployment_key = '{}.{}'.format(utcnow().isoformat(), uuid4().hex)
+        super(GunicornGeventWorker, self).__init__(*args, **kwargs)
+
 # ################################################################################################################################
 
 def _get_base_classes() -> 'anytuple':
@@ -147,9 +152,9 @@ _base_type = '_WorkerStoreBase'
 _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 
 class WorkerStore(_WorkerStoreBase):
-    """ Dispatches work between different pieces of configuration of an individual server worker.
+    """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
-    broker_client: 'BrokerCoreAPI | None' = None
+    broker_client: 'BrokerClient | None' = None
 
     def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -161,9 +166,6 @@ class WorkerStore(_WorkerStoreBase):
 
         # To expedite look-ups
         self._simple_types = simple_types
-
-        # Generic connections - Channel - HL7 MLLP
-        self.channel_hl7_mllp = {}
 
         # Generic connections - Channel - OpenAPI
         self.channel_openapi = {}
@@ -182,12 +184,6 @@ class WorkerStore(_WorkerStoreBase):
 
         # Generic connections - Cloud - Salesforce
         self.cloud_salesforce = {}
-
-        # Generic connections - HL7 FHIR outconns
-        self.outconn_hl7_fhir = {}
-
-        # Generic connections - HL7 MLLP outconns
-        self.outconn_hl7_mllp = {}
 
         # Generic connections - LDAP outconns
         self.outconn_ldap = {}
@@ -215,27 +211,21 @@ class WorkerStore(_WorkerStoreBase):
 
         # Maps generic connection types to their API handler objects
         self.generic_conn_api = {
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: self.channel_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: self.channel_openapi,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: self.cloud_confluence,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: self.cloud_jira,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: self.cloud_microsoft_365,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: self.cloud_salesforce,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: self.outconn_hl7_fhir,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: self.outconn_hl7_mllp,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: self.outconn_ldap,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: self.outconn_mongodb,
         }
 
         self._generic_conn_handler = {
-            COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP: ChannelHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI: ChannelOpenAPIWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE: CloudConfluenceWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA: CloudJiraWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365: CloudMicrosoft365Wrapper,
             COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE: CloudSalesforceWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR: OutconnHL7FHIRWrapper,
-            COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP: OutconnHL7MLLPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP: OutconnLDAPWrapper,
             COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB: OutconnMongoDBWrapper,
         }
@@ -262,21 +252,6 @@ class WorkerStore(_WorkerStoreBase):
         # API keys
         self.update_apikeys()
 
-        # Resolve service_name -> service_impl_name for each channel
-        for channel_item in self.worker_config.http_soap:
-            svc_name = channel_item.get('service_name', '')
-            if svc_name and 'service_impl_name' not in channel_item:
-                impl_name = self.server.service_store.name_to_impl_name.get(svc_name, '')
-                channel_item['service_impl_name'] = impl_name
-                if impl_name:
-                    channel_item['service_id'] = self.server.service_store.get_service_id_by_name(svc_name)
-            channel_item.setdefault('service_impl_name', '')
-            channel_item.setdefault('cache_type', None)
-            channel_item.setdefault('cache_id', None)
-            channel_item.setdefault('cache_expiry', None)
-            channel_item.setdefault('cache_name', None)
-            channel_item.setdefault('security_groups', None)
-
         request_handler = RequestHandler(self.server)
         url_data = URLData(
             self,
@@ -287,6 +262,7 @@ class WorkerStore(_WorkerStoreBase):
             self.worker_config.oauth,
             self.worker_config.apikey,
             self.broker_client,
+            self.server.odb,
         )
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP requests to services.
@@ -333,62 +309,8 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def _get_channel_url_sec(self) -> 'any_':
-        from zato.common.api import HTTP_SOAP, MISC, ZATO_NONE
-        from zato.common.util.url_dispatcher import get_match_target
-
-        result = {}
-        sec_def_cache = {}
-
-        security_list = self.server.config_manager.get_list('security')
-        sec_by_name = {}
-        for sec_item in security_list:
-            sec_by_name[sec_item.get('name', '')] = sec_item
-
-        for entity_type in ('channel_rest', 'channel_soap'):
-            channels = self.server.config_manager.get_list(entity_type)
-            for item in channels:
-
-                transport = 'soap' if entity_type == 'channel_soap' else 'plain_http'
-                soap_action = item.get('soap_action', '')
-
-                target = get_match_target({
-                    'http_accept': item.get('http_accept', ''),
-                    'http_method': item.get('method', ''),
-                    'soap_action': soap_action,
-                    'url_path': item.get('url_path', ''),
-                }, http_methods_allowed_re=self.server.http_methods_allowed_re)
-
-                result[target] = Bunch()
-                result[target].is_active = item.get('is_active', True)
-                result[target].transport = transport
-                result[target].data_format = item.get('data_format', '')
-
-                security_name = item.get('security_name') or item.get('sec_def') or ''
-                sec_type = item.get('sec_type', '')
-
-                if security_name and security_name != ZATO_NONE:
-                    sec_def = sec_by_name.get(security_name)
-                    if sec_def:
-                        result[target].sec_def = Bunch()
-                        result[target].sec_def.id = sec_def.get('id', 0)
-                        result[target].sec_def.name = sec_def['name']
-                        result[target].sec_def.password = self.server.decrypt(sec_def.get('password') or '')
-                        result[target].sec_def.sec_type = sec_def.get('sec_type') or sec_def.get('type', '')
-
-                        if result[target].sec_def.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
-                            result[target].sec_def.username = sec_def.get('username', '')
-                            result[target].sec_def.realm = sec_def.get('realm', '')
-                        elif result[target].sec_def.sec_type == SEC_DEF_TYPE.APIKEY:
-                            header = sec_def.get('header', 'X-API-Key')
-                            result[target].sec_def.header = 'HTTP_{}'.format(header.upper().replace('-', '_'))
-                        elif result[target].sec_def.sec_type == SEC_DEF_TYPE.NTLM:
-                            result[target].sec_def.username = sec_def.get('username', '')
-                    else:
-                        result[target].sec_def = ZATO_NONE
-                else:
-                    result[target].sec_def = ZATO_NONE
-
-        return result
+        out:'any_' = self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0]
+        return out
 
 # ################################################################################################################################
 
@@ -409,7 +331,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def set_broker_client(self, broker_client:'BrokerCoreAPI') -> 'None':
+    def set_broker_client(self, broker_client:'BrokerClient') -> 'None':
         self.broker_client = broker_client
 
 # ################################################################################################################################
@@ -499,20 +421,20 @@ class WorkerStore(_WorkerStoreBase):
         wrapper_config = {
             'id':config.id,
             'is_active':config.is_active,
-            'method':config.get('method'),
+            'method':config.method,
             'data_format':config.get('data_format'),
             'name':config.name,
-            'transport':config.get('transport', 'plain_http'),
-            'address_host':config.get('host', ''),
-            'address_url_path':config.get('url_path', '/'),
-            'soap_action':config.get('soap_action', ''),
-            'soap_version':config.get('soap_version'),
-            'ping_method':config.get('ping_method', 'HEAD'),
-            'pool_size':config.get('pool_size', 20),
-            'serialization_type':config.get('serialization_type', 'json'),
-            'timeout':config.get('timeout', 90),
-            'content_type':config.get('content_type'),
-            'validate_tls':config.get('validate_tls', True),
+            'transport':config.transport,
+            'address_host':config.host,
+            'address_url_path':config.url_path,
+            'soap_action':config.soap_action,
+            'soap_version':config.soap_version,
+            'ping_method':config.ping_method,
+            'pool_size':config.pool_size,
+            'serialization_type':config.serialization_type,
+            'timeout':config.timeout,
+            'content_type':config.content_type,
+            'validate_tls':config.validate_tls,
         }
 
         wrapper_config.update(sec_config)
@@ -527,10 +449,9 @@ class WorkerStore(_WorkerStoreBase):
 
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in list(config_dict):
+            for name in list(config_dict): # Must use list explicitly so config_dict can be changed during iteration
                 config_data = config_dict[name]
                 if not isinstance(config_data, str):
-                    config_data.config.setdefault('transport', transport)
                     out.append([config_dict, config_data])
 
         return out
@@ -538,10 +459,17 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def init_sql(self) -> 'None':
-        """ Initializes SQL connections for user-defined outgoing pools.
+        """ Initializes SQL connections, first to ODB and then any user-defined ones.
         """
+        # We need a store first
         self.sql_pool_store = PoolStore()
 
+        # Connect to ODB
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
+        self.odb = SessionWrapper()
+        self.odb.init_session(ZATO_ODB_POOL_NAME, self.worker_config.odb_data, self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
+
+        # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:
             config = self.worker_config.out_sql[pool_name]['config']
             config['fs_sql_config'] = self.server.fs_sql_config
@@ -567,17 +495,6 @@ class WorkerStore(_WorkerStoreBase):
 
             # To make the API consistent with that of SQL connection pools
             config_data.ping = wrapper.ping
-
-            # Write back so that ConfigDict persists runtime attrs (.conn, .ping)
-            name = config_data.config.get('name', '')
-            _rest_log_write('init_http_soap: name=%s, config_dict type=%s, id=%s, delegates=%s' % (
-                name, type(config_dict).__name__, id(config_dict), config_dict._delegates_to_rust))
-            _rest_log_write('init_http_soap: config_data keys before write-back=%s' % (list(config_data.keys()),))
-            if name:
-                config_dict[name] = config_data
-                _rest_log_write('init_http_soap: after write-back, _runtime keys=%s' % (list(config_dict._runtime.keys()),))
-                _rest_log_write('init_http_soap: _runtime[%s] keys=%s' % (
-                    name, list(config_dict._runtime[name].keys()) if name in config_dict._runtime else 'MISSING'))
 
             # Store ID -> name mapping
             config_dict.set_key_id_data(config_data.config)
@@ -705,7 +622,7 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def update_apikeys(self) -> 'None':
-        """ API keys need to be upper-cased and in the format that the HTTP environment will have them in.
+        """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
         """
         for config_dict in self.worker_config.apikey.values():
             config_dict.config.orig_header = config_dict.config.get('header') or API_Key.Default_Header
@@ -801,27 +718,21 @@ class WorkerStore(_WorkerStoreBase):
     def init_generic_connections_config(self) -> 'None':
 
         # Local aliases
-        channel_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_HL7_MLLP, {})
         channel_openapi_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CHANNEL_OPENAPI, {})
         cloud_confluence_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_CONFLUENCE, {})
         cloud_jira_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_JIRA, {})
         cloud_microsoft_365_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365, {})
         cloud_salesforce_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.CLOUD_SALESFORCE, {})
-        outconn_hl7_fhir_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_FHIR, {})
-        outconn_hl7_mllp_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_HL7_MLLP, {})
         outconn_ldap_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_LDAP, {})
         outconn_mongodb_map = self.generic_impl_func_map.setdefault(COMMON_GENERIC.CONNECTION.TYPE.OUTCONN_MONGODB, {})
 
         # These generic connections are regular - they use common API methods for such connections
         regular_maps = [
-            channel_hl7_mllp_map,
             channel_openapi_map,
             cloud_confluence_map,
             cloud_jira_map,
             cloud_microsoft_365_map,
             cloud_salesforce_map,
-            outconn_hl7_fhir_map,
-            outconn_hl7_mllp_map,
             outconn_ldap_map,
             outconn_mongodb_map,
         ]
@@ -1032,7 +943,6 @@ class WorkerStore(_WorkerStoreBase):
         """ Creates a new HTTP Basic Auth security definition
         """
         dispatcher.notify(broker_message.SECURITY.BASIC_AUTH_CREATE.value, msg)
-        self._push_basic_auth_to_broker(msg)
 
 # ################################################################################################################################
 
@@ -1050,8 +960,6 @@ class WorkerStore(_WorkerStoreBase):
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
 
-        self._push_basic_auth_to_broker(msg)
-
 # ################################################################################################################################
 
     def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
@@ -1063,10 +971,6 @@ class WorkerStore(_WorkerStoreBase):
         # .. update security groups.
         for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
             security_groups_ctx.on_basic_auth_deleted(msg.id)
-
-        user_id = msg.id
-        with self.server.auth_update_lock(user_id):
-            self.server.broker_client.remove_credentials(user_id)
 
 # ################################################################################################################################
 
@@ -1083,26 +987,6 @@ class WorkerStore(_WorkerStoreBase):
             # .. and update security groups.
             for security_groups_ctx in self._yield_security_groups_ctx_items(): # type: ignore
                 security_groups_ctx.set_current_basic_auth(msg.id, sec_def['username'], sec_def['password'])
-
-            user_id = sec_def['id']
-            with self.server.auth_update_lock(user_id):
-                self.server.broker_client.set_credentials(
-                    user_id, sec_def['username'], sec_def['password'])
-
-# ################################################################################################################################
-
-    def _push_basic_auth_to_broker(self, msg:'bunch_') -> 'None':
-        """ Push a Basic Auth create/edit/password-change to the broker.
-        """
-        with self.server.auth_update_lock(msg.id):
-            self.server.broker_client.apply_auth_delta({
-                'cred_upserts': [{
-                    'user_id':  msg.id,
-                    'username': msg.username,
-                    'method':   'basic_auth',
-                    'password': msg.password,
-                }],
-            })
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1264,9 +1148,9 @@ class WorkerStore(_WorkerStoreBase):
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
-            'http_environ': kwargs.get('http_environ'),
+            'wsgi_environ': kwargs.get('wsgi_environ'),
             'channel_item': kwargs.get('channel_item'),
-        }, channel, '', needs_response=True, serialize=serialize)
+        }, channel, '', needs_response=True, serialize=serialize, skip_response_elem=kwargs.get('skip_response_elem'))
 
 # ################################################################################################################################
 
@@ -1276,7 +1160,8 @@ class WorkerStore(_WorkerStoreBase):
         zato_ctx = msg.get('zato_ctx') or {}
         cid = msg['cid']
 
-        http_environ = {
+        # The default WSGI environment that always exists ..
+        wsgi_environ = {
             'zato.request_ctx.async_msg':msg,
             'zato.request_ctx.in_reply_to':msg.get('in_reply_to'),
             'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
@@ -1284,7 +1169,7 @@ class WorkerStore(_WorkerStoreBase):
         }
 
         if zato_ctx:
-            http_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
+            wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
 
         data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')
@@ -1301,17 +1186,24 @@ class WorkerStore(_WorkerStoreBase):
             logger.warning(msg)
             raise Exception(msg)
 
+        skip_response_elem=kwargs.get('skip_response_elem')
+
         response = service.update_handle(service.set_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
-            self.worker_config.simple_io, job_type=msg.get('job_type'), http_environ=http_environ,
+            self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
 
+        if skip_response_elem:
+            response = dumps(response)
+            response = response.decode('utf8')
+
+        # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('callback'):
 
             cb_msg = {}
             cb_msg['action'] = SERVICE.PUBLISH.value
             cb_msg['service'] = msg['callback']
-            cb_msg['payload'] = service.response.payload
+            cb_msg['payload'] = response if skip_response_elem else service.response.payload
             cb_msg['cid'] = new_cid_server()
             cb_msg['channel'] = CHANNEL.INVOKE_ASYNC_CALLBACK
             cb_msg['data_format'] = data_format
@@ -1322,47 +1214,23 @@ class WorkerStore(_WorkerStoreBase):
             self.broker_client.invoke_async(cb_msg) # type: ignore
 
         if kwargs.get('needs_response'):
-            if isinstance(response, dict):
+            if skip_response_elem:
                 return response
+            else:
+                if isinstance(response, dict):
+                    return response
 
-            response = service.response.payload
+                response = service.response.payload
 
-            if hasattr(response, 'getvalue'):
-                response = response.getvalue(serialize=kwargs.get('serialize'))
+                if hasattr(response, 'getvalue'):
+                    response = response.getvalue(serialize=kwargs.get('serialize'))
 
-            return response
+                return response
 
 # ################################################################################################################################
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg:'bunch_', args:'any_'=None) -> 'any_':
-        import time as _time
-        _t0 = _time.monotonic()
-        outcome = SCHEDULER.OUTCOME.OK
-
-        job_name = getattr(msg, 'name', '')
-        job_id = ''
-        zato_ctx = getattr(msg, 'zato_ctx', None) or {}
-        if isinstance(zato_ctx, dict):
-            job_id = zato_ctx.get('scheduler_job_id', '')
-
-        try:
-            response = self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
-        except Exception:
-            outcome = SCHEDULER.OUTCOME.ERROR
-            response = None
-            logger.warning('Scheduler job_id=%s; name=%s; outcome=error; traceback=%s', job_id, job_name, format_exc())
-
-        duration_ms = int((_time.monotonic() - _t0) * 1000)
-
-        if job_id:
-            try:
-                from zato_scheduler_core import scheduler_mark_complete
-                scheduler_mark_complete(str(job_id), outcome, duration_ms)
-                logger.info('Scheduler job_id=%s; name=%s; outcome=%s; duration=%sms', job_id, job_name, outcome, duration_ms)
-            except Exception:
-                logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
-
-        return response
+        return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
 
 # ################################################################################################################################
 
@@ -1524,27 +1392,16 @@ class WorkerStore(_WorkerStoreBase):
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
 
-        _rest_log_write('OUTGOING_CREATE_EDIT: name=%s, transport=%s' % (msg['name'], msg.get('transport')))
-
         # .. delete the connection if it exists ..
         self._delete_config_close_wrapper_http_soap(del_name, msg['transport'], logger.debug)
 
         # .. and create a new one
         wrapper = self._http_soap_wrapper_from_config(msg, has_sec_config=False)
         config_dict = getattr(self.worker_config, 'out_' + msg['transport'])
-
-        _rest_log_write('OUTGOING_CREATE_EDIT: config_dict id=%s, delegates=%s' % (id(config_dict), config_dict._delegates_to_rust))
-
-        item = Bunch()
-        item.config = msg
-        item.conn = wrapper
-        item.ping = wrapper.ping
-
-        _rest_log_write('OUTGOING_CREATE_EDIT: item keys before write=%s' % (list(item.keys()),))
-        config_dict[msg['name']] = item
-        _rest_log_write('OUTGOING_CREATE_EDIT: after write, _runtime keys=%s' % (list(config_dict._runtime.keys()),))
-        _rest_log_write('OUTGOING_CREATE_EDIT: _runtime[%s]=%s' % (
-            msg['name'], list(config_dict._runtime[msg['name']].keys()) if msg['name'] in config_dict._runtime else 'MISSING'))
+        config_dict[msg['name']] = Bunch()
+        config_dict[msg['name']].config = msg
+        config_dict[msg['name']].conn = wrapper
+        config_dict[msg['name']].ping = wrapper.ping # (just like in self.init_http)
 
         # Store mapping of ID -> name
         config_dict.set_key_id_data(msg)
@@ -1741,9 +1598,10 @@ class WorkerStore(_WorkerStoreBase):
         wrapper.build_queue()
 
         item = Bunch()
-        item.config = msg
-        item.conn = wrapper
+
         config_dict[msg['name']] = item
+        config_dict[msg['name']].config = msg
+        config_dict[msg['name']].conn = wrapper
 
         return item
 
@@ -1831,7 +1689,7 @@ class WorkerStore(_WorkerStoreBase):
         sub_key = msg.get('sub_key')
         topic_name = msg.get('topic_name')
         if sub_key and topic_name:
-            self.server.pubsub_backend.subscribe(sub_key, topic_name)
+            self.server.pubsub_redis.subscribe(sub_key, topic_name)
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
         pass
@@ -1840,65 +1698,31 @@ class WorkerStore(_WorkerStoreBase):
         sub_key = msg.get('sub_key')
         topic_name = msg.get('topic_name')
         if sub_key and topic_name:
-            self.server.pubsub_backend.unsubscribe(sub_key, topic_name)
+            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
-        old_name = msg.get('old_topic_name')
-        new_name = msg.get('new_topic_name')
+        old_name = msg.get('old_name')
+        new_name = msg.get('name')
         if old_name and new_name and old_name != new_name:
-            self.server.pubsub_backend.rename_topic(old_name, new_name)
+            self.server.pubsub_redis.rename_topic(old_name, new_name)
 
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
-        topic_name = msg.get('topic_name')
+        topic_name = msg.get('name')
         if topic_name:
-            self.server.pubsub_backend.delete_topic(topic_name)
+            self.server.pubsub_redis.delete_topic(topic_name)
 
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
-        self._push_pubsub_permission_to_broker(msg)
+        pass
 
     def on_broker_msg_PUBSUB_PERMISSION_EDIT(self, msg:'bunch_') -> 'None':
-        self._push_pubsub_permission_to_broker(msg)
+        pass
 
     def on_broker_msg_PUBSUB_PERMISSION_DELETE(self, msg:'bunch_') -> 'None':
-        self._push_pubsub_permission_to_broker(msg)
-
-    def _push_pubsub_permission_to_broker(self, msg:'bunch_') -> 'None':
-        """ Recompute the merged ACL for `msg.security` and push the
-        result to the broker's Rust auth store, keyed on `user_id`.
-        """
-        sec_name = msg.security
-
-        sec_def = self.basic_auth_get(sec_name)
-        if sec_def is None:
-            sec_item = self.server.config_manager.get('security', sec_name)
-            if sec_item is None:
-                raise Exception('No user_id for sec name `{}`; cannot push ACL'.format(sec_name))
-            user_id = sec_item['id']
-        else:
-            sec_config = sec_def['config']
-            user_id = sec_config['id']
-
-        pub_patterns:'anylist' = []
-        sub_patterns:'anylist' = []
-        for perm_row in self.server.config_manager.get_list('pubsub_permission'):
-            if perm_row['security'] != sec_name:
-                continue
-            for pub_item in perm_row['pub'] or []:
-                if pub_item and pub_item not in pub_patterns:
-                    pub_patterns.append(pub_item)
-            for sub_item in perm_row['sub'] or []:
-                if sub_item and sub_item not in sub_patterns:
-                    sub_patterns.append(sub_item)
-
-        with self.server.auth_update_lock(user_id):
-            if pub_patterns or sub_patterns:
-                self.server.broker_client.set_acl(user_id, pub_patterns, sub_patterns)
-            else:
-                self.server.broker_client.remove_acl(user_id)
+        pass
 
 # ################################################################################################################################
 # ################################################################################################################################

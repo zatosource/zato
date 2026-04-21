@@ -8,12 +8,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
+# Zato
+from zato.common.odb.model import to_json
+from zato.common.odb.query import job_list
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.cli.enmasse.exporter import EnmasseYAMLExporter
+    from zato.common.odb.model import Job
     from zato.common.typing_ import anydict, list_
+
     job_def_list = list_[anydict]
+    db_job_list = list_[Job]
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -23,33 +32,43 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+_interval_based_job_attrs = {'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class SchedulerExporter:
 
-    def __init__(self, exporter) -> 'None':
+    def __init__(self, exporter:'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, items) -> 'job_def_list':
+    def export(self, session:'SASession', cluster_id:'int') -> 'job_def_list':
         """ Exports scheduler job definitions.
         """
         logger.info('Exporting scheduler job definitions')
 
-        if not items:
-            logger.info('No scheduler job definitions found')
+        db_jobs = job_list(session, cluster_id)
+
+        if not db_jobs:
+            logger.info('No scheduler job definitions found in DB')
             return []
+
+        jobs = to_json(db_jobs, return_as_dict=True)
 
         exported_jobs = []
 
-        for row in items:
-            start_date = row.get('start_date', '')
+        for row in jobs:
+            # Start with name and service, matching import order
+            start_date = row['start_date']
             if not isinstance(start_date, str):
                 start_date = str(start_date)
 
             item = {
                 'name': row['name'],
-                'service': row.get('service_name') or row.get('service', ''),
-                'job_type': row.get('job_type', ''),
+                'service': row['service_name'],
+                'job_type': row['job_type'],
                 'start_date': start_date,
-                'is_active': row.get('is_active', True),
+                'is_active': row['is_active'],
             }
 
             for attr in ['weeks', 'days', 'hours', 'minutes', 'seconds']:
@@ -64,7 +83,7 @@ class SchedulerExporter:
 
             if extra := row.get('extra'):
                 extra = extra.decode('utf8') if isinstance(extra, bytes) else extra
-                extra = extra.strip() if isinstance(extra, str) else extra
+                extra = extra.strip()
                 if extra:
                     item['extra'] = extra
 

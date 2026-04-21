@@ -16,19 +16,11 @@ from zato.cli.enmasse.importers.generic import GenericConnectionImporter
 # ################################################################################################################################
 # ################################################################################################################################
 
-if 0:
-    from zato.common.typing_ import anylist
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 logger = logging.getLogger(__name__)
-
-# ################################################################################################################################
-# ################################################################################################################################
 
 class Microsoft365Importer(GenericConnectionImporter):
 
+    # Connection-specific constants
     connection_type = GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365
 
     connection_defaults = {
@@ -47,35 +39,48 @@ class Microsoft365Importer(GenericConnectionImporter):
         'client_id': None,
         'secret_value': None,
         'scopes': None,
-        'recv_timeout': 250,
+        'recv_timeout': 250
     }
 
     connection_secret_keys = ['secret', 'secret_value', 'password']
     connection_required_attrs = ['name', 'client_id', 'tenant_id']
 
-    @classmethod
-    def preprocess(cls, items:'anylist') -> 'anylist':
+# ################################################################################################################################
 
-        out = []
+    def _process_scopes(self, connection_def):
 
-        for item in items:
+        scopes = connection_def.get('scopes')
 
-            # Run the parent class preprocessing first
-            preprocessed = super().preprocess([item])
-            item = preprocessed[0]
+        # If scopes is a list, convert it to a newline-delimited string
+        if isinstance(scopes, list):
+            connection_def['scopes'] = '\n'.join(scopes)
 
-            scopes = item.get('scopes')
-            if isinstance(scopes, list):
-                item['scopes'] = '\n'.join(scopes)
+        return connection_def
 
-            for key in ['secret', 'password']:
-                if value := item.get(key):
-                    item['secret_value'] = value
-                    break
+# ################################################################################################################################
 
-            out.append(item)
+    def _process_secret(self, connection_def):
 
-        return out
+        for key in ['secret', 'password']:
+            if value := connection_def.get(key):
+                connection_def['secret_value'] = value
+                break
+
+        return connection_def
+
+# ################################################################################################################################
+
+    def create_definition(self, connection_def, session):
+        connection_def = self._process_scopes(connection_def)
+        connection_def = self._process_secret(connection_def)
+        return super().create_definition(connection_def, session)
+
+# ################################################################################################################################
+
+    def update_definition(self, connection_def, session):
+        connection_def = self._process_scopes(connection_def)
+        connection_def = self._process_secret(connection_def)
+        return super().update_definition(connection_def, session)
 
 # ################################################################################################################################
 # ################################################################################################################################

@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+Copyright (C) 2024, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+from contextlib import closing
+from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.server.service import Int, Bool
-from zato.server.service.internal import AdminService
+from zato.common.api import SEC_DEF_TYPE
+from zato.common.broker_message import SECURITY
+from zato.common.odb.model import Cluster, APIKeySecurity
+from zato.common.odb.query import apikey_security_list
+from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
+    from sqlalchemy.orm import Session as SASession
     from zato.common.typing_ import any_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _is_apikey(item):
-    return item.get('sec_type') == 'apikey' or item.get('type') == 'apikey'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,13 +32,23 @@ def _is_apikey(item):
 class GetList(AdminService):
     """ Returns a list of API keys available.
     """
-    input = 'cluster_id', Int('-cur_page'), Bool('-paginate'), '-query'
-    output = 'id', 'name', 'is_active', 'username', '-header'
+    _filter_by = APIKeySecurity.name,
+
+    class SimpleIO(GetListAdminSIO):
+        request_elem = 'zato_security_apikey_get_list_request'
+        response_elem = 'zato_security_apikey_get_list_response'
+        input_required = 'cluster_id',
+        output_required = 'id', 'name', 'is_active', 'username'
+        output_optional:'any_' = 'header'
+
+    def get_data(self, session:'SASession') -> 'any_':
+        search_result = self._search(apikey_security_list, session, self.request.input.cluster_id, False)
+        return elems_with_opaque(search_result) # type: ignore
 
     def handle(self) -> 'None':
-        items = self.server.config_manager.get_list('security')
-        out = [item for item in items if _is_apikey(item)]
-        self.response.payload = self._paginate_list(out)
+        with closing(self.odb.session()) as session:
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -45,31 +56,58 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new API key.
     """
-    input = 'name', 'is_active', '-cluster_id', '-header'
-    output = 'id', 'name', 'header'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_apikey_create_request'
+        response_elem = 'zato_security_apikey_create_response'
+        input_required = 'name', 'is_active'
+        input_optional:'any_' = 'cluster_id', 'header'
+        output_required = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
+
         input = self.request.input
-        name = input.name
-        header = input.header or self.server.api_key_header
+        input.username = 'Zato-Not-Used-' + uuid4().hex
+        input.password = uuid4().hex
+        input.password = self.server.encrypt(input.password)
+        input.header = input.header or self.server.api_key_header
+        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
-        if self.server.config_manager.get('security', name):
-            raise Exception('API key `{}` already exists'.format(name))
+        with closing(self.odb.session()) as session:
+            try:
+                cluster = session.query(Cluster).filter_by(id=cluster_id).first()
 
-        self.server.config_manager.set('security', name, {
-            'type': 'apikey',
-            'name': name,
-            'is_active': input.is_active,
-            'username': 'Zato-Not-Used-' + uuid4().hex,
-            'password': self.server.encrypt(uuid4().hex),
-            'header': header,
-        })
+                # Let's see if we already have a definition of that name before committing
+                # any stuff into the database.
+                existing_one = session.query(APIKeySecurity).\
+                    filter(Cluster.id==cluster_id).\
+                    filter(APIKeySecurity.name==input.name).first()
 
-        item = self.server.config_manager.get('security', name)
+                if existing_one:
+                    raise Exception('API key `{}` already exists in this cluster'.format(input.name))
 
-        self.response.payload.id = item['id']
-        self.response.payload.name = name
-        self.response.payload.header = header
+                auth = APIKeySecurity(None, input.name, input.is_active, input.username, input.password, cluster)
+                set_instance_opaque_attrs(auth, input)
+
+                session.add(auth)
+                session.commit()
+
+            except Exception:
+                self.logger.error('API key could not be created, e:`{}`', format_exc())
+                session.rollback()
+
+                raise
+            else:
+                input.id = auth.id
+                input.action = SECURITY.APIKEY_CREATE.value
+                input.sec_type = SEC_DEF_TYPE.APIKEY
+                self.broker_client.publish(input)
+
+                self.response.payload.id = auth.id
+                self.response.payload.name = auth.name
+                self.response.payload.header = input.header
+
+        # Make sure the object has been created
+        _:'any_' = self.server.worker_store.wait_for_apikey(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -77,85 +115,77 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an API key.
     """
-    input = 'id', 'name', 'is_active', '-cluster_id', '-header'
-    output = 'id', 'name', 'header'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_apikey_edit_request'
+        response_elem = 'zato_security_apikey_edit_response'
+        input_required = 'id', 'name', 'is_active'
+        input_optional:'any_' = 'cluster_id', 'header'
+        output_required = 'id', 'name', 'header'
 
     def handle(self) -> 'None':
+
         input = self.request.input
-        name = input.name
-        header = input.header or self.server.api_key_header
+        input.header = input.header or self.server.api_key_header
+        cluster_id = input.get('cluster_id') or self.server.cluster_id
 
-        items = self.server.config_manager.get_list('security')
-        old_name = None
-        for item in items:
-            if _is_apikey(item) and str(item['id']) == str(input.id):
-                old_name = item['name']
-                break
+        with closing(self.odb.session()) as session:
+            try:
+                existing_one = session.query(APIKeySecurity).\
+                    filter(Cluster.id==cluster_id).\
+                    filter(APIKeySecurity.name==input.name).\
+                    filter(APIKeySecurity.id!=input.id).\
+                    first()
 
-        if not old_name:
-            raise Exception('API key not found')
+                if existing_one:
+                    raise Exception('API key `{}` already exists in this cluster'.format(input.name))
 
-        existing = self.server.config_manager.get('security', old_name)
-        if not existing:
-            raise Exception('API key not found')
+                definition = session.query(APIKeySecurity).filter_by(id=input.id).one()
 
-        if name != old_name:
-            if self.server.config_manager.get('security', name):
-                raise Exception('API key `{}` already exists'.format(name))
-            self.server.config_manager.delete('security', old_name)
+                opaque = parse_instance_opaque_attr(definition)
+                set_instance_opaque_attrs(definition, input)
 
-        existing['name'] = name
-        existing['is_active'] = input.is_active
-        existing['username'] = existing.get('username', '')
-        existing['password'] = existing.get('password', '')
-        existing['header'] = header
-        existing['type'] = 'apikey'
+                old_name = definition.name
 
-        self.server.config_manager.set('security', name, existing)
+                definition.name = input.name
+                definition.is_active = input.is_active
 
-        self.response.payload.id = existing['id']
-        self.response.payload.name = name
-        self.response.payload.header = header
+                session.add(definition)
+                session.commit()
+
+            except Exception:
+                self.logger.error('API key could not be updated, e:`{}`', format_exc())
+                session.rollback()
+
+                raise
+            else:
+                input.action = SECURITY.APIKEY_EDIT.value
+                input.old_name = old_name
+                input.username = definition.username
+                input.sec_type = SEC_DEF_TYPE.APIKEY
+                self.broker_client.publish(input)
+
+                self.response.payload.id = definition.id
+                self.response.payload.name = definition.name
+                self.response.payload.header = opaque.header
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChangePassword(AdminService):
+class ChangePassword(ChangePasswordBase):
     """ Changes the password of an API key.
     """
     password_required = False
 
-    input = 'password', '-id', '-name'
-    output = 'id',
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_security_apikey_change_password_request'
+        response_elem = 'zato_security_apikey_change_password_response'
 
     def handle(self) -> 'None':
-        input = self.request.input
-        name = input.get('name', '')
 
-        password = self.server.decrypt(input.password) if input.password else ''
+        def _auth(instance:'any_', password:'str') -> 'None':
+            instance.password = password
 
-        if self.password_required:
-            if not password:
-                raise Exception('Password must not be empty')
-
-        if not name and input.get('id'):
-            for item in self.server.config_manager.get_list('security'):
-                if _is_apikey(item) and str(item.get('id')) == str(input.id):
-                    name = item['name']
-                    break
-
-        if not name:
-            raise Exception('Either ID or name are required on input')
-
-        existing = self.server.config_manager.get('security', name)
-        if not existing:
-            raise Exception('API key not found')
-
-        existing['password'] = password
-        existing['type'] = 'apikey'
-        self.server.config_manager.set('security', name, existing)
-
-        self.response.payload.id = existing['id']
+        return self._handle(APIKeySecurity, _auth, SECURITY.APIKEY_CHANGE_PASSWORD.value)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -163,20 +193,29 @@ class ChangePassword(AdminService):
 class Delete(AdminService):
     """ Deletes an API key.
     """
-    input = 'id',
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_apikey_delete_request'
+        response_elem = 'zato_security_apikey_delete_response'
+        input_required = 'id'
 
     def handle(self) -> 'None':
-        items = self.server.config_manager.get_list('security')
-        target_name = None
-        for item in items:
-            if _is_apikey(item) and str(item.get('id')) == str(self.request.input.id):
-                target_name = item['name']
-                break
+        with closing(self.odb.session()) as session:
+            try:
+                auth = session.query(APIKeySecurity).\
+                    filter(APIKeySecurity.id==self.request.input.id).\
+                    one()
 
-        if not target_name:
-            raise Exception('API key not found')
+                session.delete(auth)
+                session.commit()
+            except Exception:
+                self.logger.error('API key could not be deleted, e:`{}`', format_exc())
+                session.rollback()
 
-        self.server.config_manager.delete('security', target_name)
+                raise
+            else:
+                self.request.input.action = SECURITY.APIKEY_DELETE.value
+                self.request.input.name = auth.name
+                self.broker_client.publish(self.request.input)
 
 # ################################################################################################################################
 # ################################################################################################################################

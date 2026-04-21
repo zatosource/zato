@@ -6,9 +6,15 @@ Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# stdlib
+from contextlib import closing
+from json import dumps
+
 # Zato
 from zato.common.api import CONNECTION, URL_TYPE
 from zato.common.broker_message import OUTGOING
+from zato.common.odb.model import HTTPSOAP
+from zato.common.util.sql import parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -48,9 +54,6 @@ class GetList(Service):
         if isinstance(self.request.raw_request, dict):
             wrapper_type = self.request.raw_request.get('wrapper_type', '') # type: str
 
-        import logging
-        logger = logging.getLogger(__name__)
-
         # This response has all the REST connections possible ..
         response = self.invoke(service_name, {
             'include_wrapper': True,
@@ -58,20 +61,10 @@ class GetList(Service):
             'connection': CONNECTION.OUTGOING,
             'transport': URL_TYPE.PLAIN_HTTP,
             'paginate': False,
-        })
-
-        logger.info('rest-wrapper.get-list -> response type:%s, value:%s', type(response).__name__, response)
-
-        # .. extract the list of items ..
-        items = response.get('data', response) if isinstance(response, dict) else response
-
-        logger.info('rest-wrapper.get-list -> items type:%s, len:%s', type(items).__name__, len(items) if hasattr(items, '__len__') else '?')
+        }, skip_response_elem=True)
 
         # .. iterate through each of them ..
-        for item in items:
-
-            logger.info('rest-wrapper.get-list -> item is_wrapper:%s, wrapper_type:%s, name:%s',
-                item.get('is_wrapper'), item.get('wrapper_type'), item.get('name'))
+        for item in response:
 
             # .. ignore items that are not wrappers ..
             if not item.get('is_wrapper'):
@@ -94,7 +87,7 @@ class GetList(Service):
             # .. and append the item to the result ..
             out.append(item)
 
-        self.response.payload = out
+        self.response.payload = dumps(out)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -139,7 +132,7 @@ class _WrapperBase(Service):
             request['name'] = name
 
         # .. and send it to the service.
-        response = self.invoke(service_name, request)
+        response = self.invoke(service_name, request, skip_response_elem=True)
 
         # This is used by Create and Edit actions
         if self._uses_name:
@@ -160,6 +153,7 @@ class _WrapperBase(Service):
 
 class Create(_WrapperBase):
     name = 'zato.generic.rest-wrapper.create'
+    response_elem = None
     _wrapper_impl_suffix = 'create'
     _uses_name = True
 
@@ -168,6 +162,7 @@ class Create(_WrapperBase):
 
 class Edit(_WrapperBase):
     name = 'zato.generic.rest-wrapper.edit'
+    response_elem = None
     _wrapper_impl_suffix = 'edit'
     _uses_name = True
 
@@ -189,19 +184,27 @@ class ChangePassword(_WrapperBase):
 
     def handle(self) -> 'None':
 
+        # Reusable
         request = self.request.raw_request
+
+        # This must always exist
         id = request['id']
 
-        password = request.get('password') or ''
+        # This is optional
+        password = request.get('password') or request.get('password1') or ''
         password = self.server.encrypt(password)
 
-        # Update via the ConfigStore
-        outconn_list = self.server.config_manager.get_list('outgoing_rest')
-        for item in outconn_list:
-            if item.get('id') == id:
-                item['password'] = password
-                self.server.config_manager.set('outgoing_rest', item['name'], item)
-                break
+        with closing(self.odb.session()) as session:
+
+            item = session.query(HTTPSOAP).filter_by(id=id).one()
+
+            opaque = parse_instance_opaque_attr(item)
+            opaque['password'] = password
+
+            set_instance_opaque_attrs(item, opaque)
+
+            session.add(item)
+            session.commit()
 
         # Notify all the members of the cluster of the change
         self.broker_client.publish({

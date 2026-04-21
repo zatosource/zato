@@ -13,12 +13,16 @@ import uuid
 
 # Zato
 from zato.common.util.api import asbool
+from zato.common.util.sql import get_security_by_id
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, anydict, strdict
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.cli.enmasse.importer import EnmasseYAMLImporter
+    from zato.common.odb.model import HTTPSOAP
+    from zato.common.typing_ import any_, anydict, bool_, strdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -62,6 +66,44 @@ def get_type_from_engine(engine:'str') -> 'str':
 
 # ################################################################################################################################
 
+def security_needs_update(yaml_item:'anydict', db_def:'anydict', importer:'EnmasseYAMLImporter') -> 'bool_':
+
+    yaml_security = yaml_item.get('security')
+    db_security_id = db_def.get('security_id')
+
+    logger.info('Checking security update: yaml_security=%s db_security_id=%s', yaml_security, db_security_id)
+    logger.info('Available sec_defs: %s', list(importer.sec_defs.keys()))
+
+    # If security is not defined in YAML but exists in DB - update needed
+    if yaml_security is None and db_security_id is not None:
+        logger.info('Security removed in YAML but exists in DB')
+        return True
+
+    # If security is defined in YAML but not in DB - update needed
+    elif yaml_security is not None and db_security_id is None:
+        logger.info('Security defined in YAML but missing in DB')
+        return True
+
+    # If security is defined in both, check if they match
+    elif yaml_security is not None and db_security_id is not None:
+        if yaml_security not in importer.sec_defs:
+            logger.warning('Security definition %s not found, skipping comparison', yaml_security)
+            return False
+
+        sec_def = importer.sec_defs[yaml_security]
+        logger.info('Found sec_def: %s', sec_def)
+        logger.info('Comparing sec_def id %s with db_security_id %s', sec_def['id'], db_security_id)
+        if sec_def['id'] != db_security_id:
+            logger.info('Security mismatch: YAML=%s (id=%s) DB_ID=%s', yaml_security, sec_def['id'], db_security_id)
+            return True
+        else:
+            logger.info('Security matches: YAML=%s (id=%s) DB_ID=%s', yaml_security, sec_def['id'], db_security_id)
+
+    return False
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 def get_value_from_environment(value:'any_') -> 'str':
 
     if not isinstance(value, str):
@@ -93,6 +135,24 @@ def preprocess_item(item:'strdict') -> 'any_':
         item[key] = value
 
     return item
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def assign_security(item:'HTTPSOAP', item_def:'anydict', importer:'EnmasseYAMLImporter', session:'SASession') -> 'None':
+
+    if 'security' in item_def or 'security_name' in item_def:
+        name = item_def['name']
+        security_name = item_def.get('security') or item_def.get('security_name')
+
+        if security_name not in importer.sec_defs:
+            error_msg = f'Security definition "{security_name}" not found for "{name}"'
+            logger.error(error_msg)
+            return
+
+        sec_def = importer.sec_defs[security_name]
+        security_id = sec_def['id']
+        item.security = get_security_by_id(session, security_id)
 
 # ################################################################################################################################
 # ################################################################################################################################

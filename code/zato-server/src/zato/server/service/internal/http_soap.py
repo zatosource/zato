@@ -7,30 +7,30 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
-import logging
-from time import time
+from contextlib import closing
+from traceback import format_exc
 
 # Zato
-from zato.common.api import CONNECTION, URL_TYPE, ZATO_NONE
+from zato.common.api import CONNECTION, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+     Groups, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, \
+     ZATO_NONE
+from zato.common.broker_message import CHANNEL, OUTGOING
+from zato.common.exception import ServiceMissingException
 from zato.common.json_internal import dumps
-from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
-from zato.server.service import AsIs, Boolean, Int
-from zato.server.service.internal import AdminService
-
-logger = logging.getLogger(__name__)
-
-def _rest_log_write(msg):
-    with open('/tmp/rest.txt', 'a') as _f:
-        from datetime import datetime
-        _f.write(datetime.now().isoformat() + ' ' + msg + '\n')
-        _f.flush()
+from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.query import cache_by_id, http_soap, http_soap_list
+from zato.common.util.api import as_bool
+from zato.common.util.sql import elems_with_opaque, get_dict_with_opaque, get_security_by_id, parse_instance_opaque_attr, \
+     set_instance_opaque_attrs
+from zato.server.connection.http_soap import BadRequest
+from zato.server.service import AsIs, Boolean, Integer
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_, strdict, strintdict
+    from zato.common.typing_ import any_, anylist, strdict, strintdict
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -40,56 +40,60 @@ _GetList_Optional = ('include_wrapper', 'cluster_id', 'connection', 'transport',
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _fixup_list_fields(data):
-    for key in ('gateway_service_list', 'security_groups'):
-        value = data.get(key)
-        if isinstance(value, str):
-            try:
-                data[key] = json.loads(value)
-            except (json.JSONDecodeError, ValueError):
-                data[key] = []
+class _HTTPSOAPService:
+    """ A common class for various HTTP/SOAP-related services.
+    """
+    def notify_worker_threads(self, params, action):
+        """ Notify worker threads of new or updated parameters.
+        """
+        params['action'] = action
+        self.broker_client.publish(params)
 
-def _resolve_security_fields(server, data):
-    security_id = data.get('security_id')
-    if security_id:
-        for sec_item in server.config_manager.get_list('security'):
-            if sec_item.get('id') == security_id:
-                data['security_name'] = sec_item['name']
-                data['sec_type'] = sec_item.get('sec_type') or sec_item.get('type')
-                break
+    def _handle_security_info(self, session, security_id, connection, transport):
+        """ First checks whether the security type is correct for the given
+        connection type. If it is, returns a dictionary of security-related information.
+        """
+        info = {'security_id': None, 'security_name':None, 'sec_type':None}
 
-def _get_entity_type(connection, transport):
-    """ Map connection + transport to Rust ConfigStore entity type. """
-    if connection == CONNECTION.CHANNEL or connection == 'channel':
-        if transport == URL_TYPE.PLAIN_HTTP or transport == 'plain_http':
-            return 'channel_rest'
-        else:
-            return 'channel_soap'
-    else:
-        if transport == URL_TYPE.PLAIN_HTTP or transport == 'plain_http':
-            return 'outgoing_rest'
-        else:
-            return 'outgoing_soap'
+        if security_id:
 
-# ################################################################################################################################
+            sec_def = session.query(SecurityBase.name, SecurityBase.sec_type).\
+                filter(SecurityBase.id==security_id).\
+                one()
+
+            if connection == 'outgoing':
+
+                if transport == URL_TYPE.PLAIN_HTTP and \
+                   sec_def.sec_type not in (SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.OAUTH, SEC_DEF_TYPE.NTLM):
+                    raise Exception('Unsupported sec_type `{}`'.format(sec_def.sec_type))
+
+            info['security_id'] = security_id
+            info['security_name'] = sec_def.name
+            info['sec_type'] = sec_def.sec_type
+
+        return info
+
 # ################################################################################################################################
 
 class _BaseGet(AdminService):
-
-    output = 'id', 'name', 'is_active', 'is_internal', 'url_path', \
-        '-service_id', '-service_name', '-security_id', '-security_name', '-sec_type', \
-        '-method', '-soap_action', '-soap_version', '-data_format', '-host', '-ping_method', '-pool_size', \
-        '-merge_url_params_req', '-url_params_pri', '-params_pri', '-serialization_type', '-timeout', \
-        '-content_type', '-cache_id', '-cache_name', Int('-cache_expiry'), '-cache_type', \
-        '-content_encoding', Boolean('-match_slash'), '-http_accept', \
-        '-should_parse_on_input', '-should_validate', '-should_return_errors', \
-        '-data_encoding', '-username', '-is_wrapper', '-wrapper_type', AsIs('-security_groups'), '-security_group_count', \
-        '-security_group_member_count', '-needs_security_group_names', Boolean('-validate_tls'), '-gateway_service_list'
+    """ Base class for services returning information about HTTP/SOAP objects.
+    """
+    class SimpleIO:
+        output_required = 'id', 'name', 'is_active', 'is_internal', 'url_path'
+        output_optional = 'service_id', 'service_name', 'security_id', 'security_name', 'sec_type', \
+            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req', \
+            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', \
+            'content_type', 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type', \
+            'content_encoding', Boolean('match_slash'), 'http_accept', \
+                'should_parse_on_input', 'should_validate', 'should_return_errors', \
+                'data_encoding', 'username', 'is_wrapper', 'wrapper_type', AsIs('security_groups'), 'security_group_count', \
+                'security_group_member_count', 'needs_security_group_names', Boolean('validate_tls'), 'gateway_service_list'
 
 # ################################################################################################################################
 
     def _get_security_groups_info(self, item:'any_', security_groups_member_count:'strintdict') -> 'strdict':
 
+        # Our response to produce
         out:'strdict' = {
             'group_count': 0,
             'member_count': 0,
@@ -101,72 +105,51 @@ class _BaseGet(AdminService):
                 out['member_count'] += member_count
                 out['group_count'] += 1
 
+        # .. now, return the response to our caller.
         return out
 
 # ################################################################################################################################
 
 class Get(_BaseGet):
-    """ Returns information about an individual HTTP/SOAP object by its name.
+    """ Returns information about an individual HTTP/SOAP object by its ID.
     """
-    input = '-cluster_id', '-id', '-name', '-connection', '-transport'
+    class SimpleIO(_BaseGet.SimpleIO):
+        request_elem = 'zato_http_soap_get_request'
+        response_elem = 'zato_http_soap_get_response'
+        input_optional = 'cluster_id', 'id', 'name'
 
     def handle(self):
-        input = self.request.input
-        name = input.get('name') or input.get('id')
-        connection = input.get('connection') or 'channel'
-        transport = input.get('transport') or 'plain_http'
-        entity_type = _get_entity_type(connection, transport)
-
-        items = self.server.config_manager.get_list(entity_type)
-        for item in items:
-            if item.get('name') == name or str(item.get('id')) == str(name):
-                self.response.payload = item
-                return
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        with closing(self.odb.session()) as session:
+            self.request.input.require_any('id', 'name')
+            item = http_soap(session, cluster_id, self.request.input.id, self.request.input.name)
+            out = get_dict_with_opaque(item)
+            self.response.payload = out
 
 # ################################################################################################################################
 
 class GetList(_BaseGet):
     """ Returns a list of HTTP/SOAP connections.
     """
-    input = '-connection', '-transport', Int('-cur_page'), Boolean('-paginate'), '-query', \
-        *['-' + f if isinstance(f, str) else f for f in _GetList_Optional]
-    output = _BaseGet.output + ('-connection', '-transport')
+    _filter_by = HTTPSOAP.name,
 
-    def _build_sec_lookup(self):
-        out = {}
-        for sec in self.server.config_manager.get_list('security'):
-            out[sec.get('name')] = sec
-        return out
+    class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
+        request_elem = 'zato_http_soap_get_list_request'
+        response_elem = 'zato_http_soap_get_list_response'
+        input_optional = GetListAdminSIO.input_optional + _GetList_Optional
+        output_optional = _BaseGet.SimpleIO.output_optional + ('connection', 'transport')
+        output_repeated = True
 
-    def _build_service_lookup(self):
-        out = {}
-        for svc_data in self.server.service_store.services.values():
-            name = svc_data['name']
-            service_id = self.server.service_store.get_service_id_by_name(name)
-            out[name] = service_id
-        return out
+    def get_data(self, session):
 
-    def handle(self):
-        from zato.common.api import Groups
-
-        connection = self.request.input.get('connection') or 'channel'
-        transport = self.request.input.get('transport') or 'plain_http'
+        # Local aliases
+        out:'anylist' = []
+        cluster_id = self.request.input.get('cluster_id') or self.server.cluster_id
+        needs_security_group_names = self.request.input.get('needs_security_group_names') or False
         include_wrapper = self.request.input.get('include_wrapper') or False
         should_ignore_wrapper = not include_wrapper
-        needs_security_group_names = self.request.input.get('needs_security_group_names') or False
 
-        import logging
-        _logger = logging.getLogger(__name__)
-
-        entity_type = _get_entity_type(connection, transport)
-        items = self.server.config_manager.get_list(entity_type)
-
-        _logger.info('http-soap.get-list -> entity_type:%s, include_wrapper:%s, item_count:%s',
-            entity_type, include_wrapper, len(items))
-        for _i, _item in enumerate(items):
-            _logger.info('http-soap.get-list -> raw item[%s] is_wrapper:%s, wrapper_type:%s, name:%s, keys:%s',
-                _i, _item.get('is_wrapper'), _item.get('wrapper_type'), _item.get('name'), list(_item.keys()))
-
+        # Get information about security groups which may be used later on
         security_groups_member_count = self.invoke('zato.groups.get-member-count', group_type=Groups.Type.API_Clients)
 
         if needs_security_group_names:
@@ -174,17 +157,27 @@ class GetList(_BaseGet):
         else:
             all_security_groups = []
 
-        sec_lookup = self._build_sec_lookup()
-        svc_lookup = self._build_service_lookup()
+        # Obtain the basic result ..
+        result = self._search(http_soap_list, session, cluster_id,
+            self.request.input.connection, self.request.input.transport,
+            as_bool(self.server.fs_server_config.misc.return_internal_objects),
+            self.request.input.get('data_format'),
+            False,
+            )
 
-        out = []
+        # .. extract all the opaque elements ..
+        data:'anylist' = elems_with_opaque(result)
 
-        for item in items:
+        # .. go through everything we have so far ..
+        for item in data:
 
+            # .. build a dictionary of information about groups ..
             security_groups_for_item_info = self._get_security_groups_info(item, security_groups_member_count)
+
             item['security_group_count'] = security_groups_for_item_info['group_count']
             item['security_group_member_count'] = security_groups_for_item_info['member_count']
 
+            # .. optionally, we may need to turn security group IDs into their names ..
             if needs_security_group_names:
                 if security_groups_for_item := item.get('security_groups'):
                     new_security_groups = []
@@ -195,238 +188,594 @@ class GetList(_BaseGet):
                                 break
                     item['security_groups'] = sorted(new_security_groups)
 
+            # .. ignore wrapper elements if told do ..
             if should_ignore_wrapper and item.get('is_wrapper'):
                 continue
 
-            item['connection'] = connection
-            item['transport'] = transport
-
-            sec_name = item.get('security_name')
-            if sec_name and sec_name in sec_lookup:
-                sec_def = sec_lookup[sec_name]
-                item['security_id'] = sec_def.get('id')
-                item['sec_type'] = sec_def.get('sec_type') or sec_def.get('type')
-            else:
-                item.setdefault('security_id', None)
-                item.setdefault('sec_type', None)
-
-            svc_name = item.get('service') or item.get('service_name')
-            item['service_name'] = svc_name
-            item['service_id'] = svc_lookup.get(svc_name) if svc_name else None
-
-            for field in ('soap_action', 'soap_version', 'ping_method', 'pool_size',
-                          'serialization_type', 'timeout', 'cache_id', 'cache_name', 'cache_type'):
-                item.setdefault(field, None)
-
+            # .. if we are here, it means that this element is to be returned ..
             out.append(item)
 
-        self.response.payload = self._paginate_list(out)
+        # .. now, return the result to our caller.
+        return out
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class Create(AdminService):
+class _CreateEdit(AdminService, _HTTPSOAPService):
+
+# ################################################################################################################################
+
+    def _raise_error(self, name, url_path, http_accept, http_method, soap_action, source):
+        msg = 'Such a channel already exists ({}); url_path:`{}`, http_accept:`{}`, http_method:`{}`, soap_action:`{}` (src:{})'
+        raise Exception(msg.format(name, url_path, http_accept, http_method, soap_action, source))
+
+# ################################################################################################################################
+
+    def ensure_channel_is_unique(self, session, url_path, http_accept, http_method, soap_action, cluster_id):
+        existing_ones = session.query(HTTPSOAP).\
+            filter(HTTPSOAP.cluster_id==cluster_id).\
+            filter(HTTPSOAP.url_path==url_path).\
+            filter(HTTPSOAP.soap_action==soap_action).\
+            filter(HTTPSOAP.connection==CONNECTION.CHANNEL).\
+            all()
+
+        # At least one channel with this kind of basic information already exists
+        # but it is possible that it requires different HTTP headers (e.g. Accept, Method)
+        # so we need to check each one manually.
+        if existing_ones:
+            for item in existing_ones:
+                opaque = parse_instance_opaque_attr(item)
+                item_http_accept = opaque.get('http_accept')
+
+                # Raise an exception if the existing channel's method is equal to ours
+                # but only if they use different Accept headers.
+                if http_method:
+                    if item.method == http_method:
+                        if item_http_accept == http_accept:
+                            self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk1')
+
+                # Similar, but from the Accept header's perspective
+                if item_http_accept == http_accept:
+                    if item.method == http_method:
+                        self._raise_error(item.name, url_path, http_accept, http_method, soap_action, 'chk2')
+
+# ################################################################################################################################
+
+    def _preprocess_security_groups(self, input):
+
+        # This will contain only IDs
+        new_input_security_groups = []
+
+        # Security groups are optional
+        if input_security_groups := input.get('security_groups'):
+
+            # Get information about security groups which is need to turn group names into group IDs
+            existing_security_groups = self.invoke('zato.groups.get-list', group_type=Groups.Type.API_Clients)
+
+            for input_group in input_security_groups:
+                group_id = None
+                try:
+                    input_group = int(input_group)
+                except ValueError:
+                    for existing_group in existing_security_groups:
+                        if input_group == existing_group['name']:
+                            group_id = existing_group['id']
+                            break
+                    else:
+                        raise Exception(f'Could not find ID for group `{input_group}`')
+                else:
+                    group_id = input_group
+                finally:
+                    if group_id:
+                        new_input_security_groups.append(group_id)
+
+        # Return what we have to our caller
+        return new_input_security_groups
+
+# ################################################################################################################################
+
+    def _get_service_from_input(self, session, input):
+
+        service = session.query(Service).\
+            filter(Cluster.id==input.cluster_id).\
+            filter(Service.cluster_id==Cluster.id)
+
+        if input.service:
+            service = service.filter(Service.name==input.service)
+        elif input.service_id:
+            service = service.filter(Service.id==input.service_id)
+        else:
+            raise Exception('Either service or service_id is required on input')
+
+        service = service.first()
+
+        if not service:
+            msg = 'Service `{}` does not exist in this cluster'.format(input.service)
+            self.logger.info(msg)
+            raise ServiceMissingException(msg)
+        else:
+            return service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class Create(_CreateEdit):
     """ Creates a new HTTP/SOAP connection.
     """
-    input = 'name', 'url_path', 'connection', \
-        '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', '-data_format', \
-        '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', '-params_pri', \
-        '-serialization_type', '-timeout', '-content_type', \
-        '-cache_id', Int('-cache_expiry'), '-content_encoding', Boolean('-match_slash'), '-http_accept', \
-        '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
-        '-is_active', '-transport', '-is_internal', '-cluster_id', \
-        '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
-        '-gateway_service_list'
-    output = 'id', 'name', '-url_path'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_create_request'
+        response_elem = 'zato_http_soap_create_response'
+        input_required = 'name', 'url_path', 'connection'
+        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', 'data_format', \
+            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri', \
+            'serialization_type', 'timeout', 'content_type', \
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
+            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
+            'is_active', 'transport', 'is_internal', 'cluster_id', \
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls'), \
+            'gateway_service_list'
+        output_required = 'id', 'name'
+        output_optional = 'url_path'
 
     def handle(self):
 
+        # For later use
+        skip_opaque = []
+
         input = self.request.input
-        connection = input.connection
-        transport = input.get('transport') or URL_TYPE.PLAIN_HTTP
+        input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ) else None
+        input.soap_action = input.soap_action if input.soap_action else ''
+        input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+        input.security_groups = self._preprocess_security_groups(input)
 
-        entity_type = _get_entity_type(connection, transport)
+        input.is_active   = input.get('is_active',   True)
+        input.is_internal = input.get('is_internal', False)
 
-        data = {}
-        for key in ('name', 'url_path', 'connection', 'service', 'service_id', 'security_id', 'method',
-            'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size',
-            'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type',
-            'timeout', 'content_type', 'cache_id', 'cache_expiry', 'content_encoding',
-            'match_slash', 'http_accept', 'should_parse_on_input', 'should_validate',
-            'should_return_errors', 'data_encoding', 'is_active', 'transport', 'is_internal',
-            'is_wrapper', 'wrapper_type', 'username', 'password', 'security_groups',
-            'validate_tls', 'gateway_service_list'):
-            value = input.get(key)
-            if value is not None and value != '':
-                data[key] = value
+        input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
+        input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
+        input.data_format = input.get('data_format') or ''
 
-        data.setdefault('is_active', True)
-        data.setdefault('is_internal', False)
-        data.setdefault('transport', URL_TYPE.PLAIN_HTTP)
+        input.data_encoding = input.get('data_encoding') or 'utf-8'
 
-        _fixup_list_fields(data)
-        _resolve_security_fields(self.server, data)
+        # Remove extra whitespace
+        input_name = input.name
+        input_host = input.host
+        input_url_path = input.url_path
+        input_ping_method = input.get('ping_method')
+        input_content_type = input.get('content_type')
 
-        name = input.name
-        self.server.config_manager.set(entity_type, name, data)
+        if input_name:
+            input.name = input_name.strip()
 
-        stored = self.server.config_manager.get(entity_type, name)
-        self.response.payload.id = stored['id']
-        self.response.payload.name = name
-        self.response.payload.url_path = input.url_path
+        if input_host:
+            input.host = input_host.strip()
 
-        if connection == 'outgoing':
-            self._notify_worker_outconn_created(stored)
+        if input_url_path:
+            input.url_path = input_url_path.strip()
 
-    def _notify_worker_outconn_created(self, config):
-        from zato.bunch import Bunch
-        msg = Bunch(config)
-        msg.setdefault('transport', URL_TYPE.PLAIN_HTTP)
-        self.server.worker_store.on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(msg)
+        if input_ping_method:
+            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
+
+        if input_content_type:
+            input.content_type = input_content_type.strip()
+
+        if input.content_encoding and input.content_encoding != 'gzip':
+            raise Exception('Content encoding must be empty or equal to `gzip`')
+
+        with closing(self.odb.session()) as session:
+            existing_one = session.query(HTTPSOAP.id).\
+                filter(HTTPSOAP.cluster_id==input.cluster_id).\
+                filter(HTTPSOAP.name==input.name).\
+                filter(HTTPSOAP.connection==input.connection).\
+                filter(HTTPSOAP.transport==input.transport).\
+                first()
+
+            if existing_one:
+                raise Exception('An object of that name `{}` already exists in this cluster'.format(input.name))
+
+            if input.connection == CONNECTION.CHANNEL:
+                service = self._get_service_from_input(session, input)
+            else:
+                service = None
+
+            # Will raise exception if the security type doesn't match connection
+            # type and transport
+            sec_info = self._handle_security_info(session, input.security_id,
+                input.connection, input.transport)
+
+            # Make sure this combination of channel parameters does not exist already
+            if input.connection == CONNECTION.CHANNEL:
+                self.ensure_channel_is_unique(session,
+                    input.url_path, input.http_accept, input.method, input.soap_action, input.cluster_id)
+
+            try:
+
+                item = self._new_zato_instance_with_cluster(HTTPSOAP)
+                item.connection = input.connection
+                item.transport = input.transport
+                item.is_internal = input.is_internal
+                item.name = input.name
+                item.is_active = input.is_active
+                item.host = input.host
+                item.url_path = input.url_path
+                item.method = input.method
+                item.soap_action = input.soap_action.strip()
+                item.soap_version = input.soap_version or None
+                item.data_format = input.data_format
+                item.service = service
+                item.ping_method = input.ping_method
+                item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
+                item.merge_url_params_req = input.get('merge_url_params_req') or True
+                item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
+                item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
+                item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
+                item.timeout = input.timeout
+                item.content_type = input.content_type
+                item.cache_id = input.get('cache_id') or None
+                item.cache_expiry = input.get('cache_expiry') or 0
+                item.content_encoding = input.content_encoding
+                item.is_wrapper = bool(input.is_wrapper)
+                item.wrapper_type = input.wrapper_type
+
+                if input.username:
+                    item.username = input.username
+                else:
+                    skip_opaque.append('username')
+
+                if input.password:
+                    item.password = input.password
+                else:
+                    skip_opaque.append('password')
+
+                if input.security_id:
+                    item.security = get_security_by_id(session, input.security_id)
+                else:
+                    input.security_id = None # To ensure that SQLite does not reject ''
+
+                # Opaque attributes
+                set_instance_opaque_attrs(item, input, skip=skip_opaque)
+
+                session.add(item)
+                session.commit()
+
+                if input.connection == CONNECTION.CHANNEL:
+                    input.impl_name = service.impl_name
+                    input.service_id = service.id
+                    input.service_name = service.name
+
+                    cache = cache_by_id(session, input.cluster_id, item.cache_id) if item.cache_id else None
+                    if cache:
+                        input.cache_type = cache.cache_type
+                        input.cache_name = cache.name
+                    else:
+                        input.cache_type = None
+                        input.cache_name = None
+
+                input.id = item.id
+                input.update(sec_info)
+
+                if input.connection == CONNECTION.CHANNEL:
+                    action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
+                else:
+                    action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
+                self.notify_worker_threads(input, action)
+
+                self.response.payload.id = item.id
+                self.response.payload.name = item.name
+                self.response.payload.url_path = item.url_path
+
+            except Exception:
+                self.logger.error('Object could not be created, e:`%s', format_exc())
+                session.rollback()
+
+                raise
 
 # ################################################################################################################################
 
-class Edit(AdminService):
+class Edit(_CreateEdit):
     """ Updates an HTTP/SOAP connection.
     """
-    input = 'id', 'name', 'url_path', 'connection', \
-        '-service', '-service_id', AsIs('-security_id'), '-method', '-soap_action', '-soap_version', \
-        '-data_format', '-host', '-ping_method', '-pool_size', Boolean('-merge_url_params_req'), '-url_params_pri', \
-        '-params_pri', '-serialization_type', '-timeout', '-content_type', \
-        '-cache_id', Int('-cache_expiry'), '-content_encoding', Boolean('-match_slash'), '-http_accept', \
-        '-should_parse_on_input', '-should_validate', '-should_return_errors', '-data_encoding', \
-        '-cluster_id', '-is_active', '-transport', \
-        '-is_wrapper', '-wrapper_type', '-username', '-password', AsIs('-security_groups'), Boolean('-validate_tls'), \
-        '-gateway_service_list'
-    output = '-id', '-name'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_edit_request'
+        response_elem = 'zato_http_soap_edit_response'
+        input_required = 'id', 'name', 'url_path', 'connection'
+        input_optional = 'service', 'service_id', AsIs('security_id'), 'method', 'soap_action', 'soap_version', \
+            'data_format', 'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', \
+            'params_pri', 'serialization_type', 'timeout', 'content_type', \
+            'cache_id', Integer('cache_expiry'), 'content_encoding', Boolean('match_slash'), 'http_accept', \
+            'should_parse_on_input', 'should_validate', 'should_return_errors', 'data_encoding', \
+            'cluster_id', 'is_active', 'transport', \
+            'is_wrapper', 'wrapper_type', 'username', 'password', AsIs('security_groups'), Boolean('validate_tls'), \
+            'gateway_service_list'
+        output_optional = 'id', 'name'
 
     def handle(self):
 
+        # For later use
+        skip_opaque = []
+
         input = self.request.input
-        connection = input.connection
-        transport = input.get('transport') or URL_TYPE.PLAIN_HTTP
+        input.security_id  = input.security_id if input.security_id not in (ZATO_NONE,) else None
+        input.soap_action  = input.soap_action if input.soap_action else ''
+        input.timeout      = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+        input.security_groups = self._preprocess_security_groups(input)
 
-        entity_type = _get_entity_type(connection, transport)
+        input.is_active   = input.get('is_active',   True)
+        input.is_internal = input.get('is_internal', False)
 
-        data = {}
-        for key in ('id', 'name', 'url_path', 'connection', 'service', 'service_id', 'security_id', 'method',
-            'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size',
-            'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type',
-            'timeout', 'content_type', 'cache_id', 'cache_expiry', 'content_encoding',
-            'match_slash', 'http_accept', 'should_parse_on_input', 'should_validate',
-            'should_return_errors', 'data_encoding', 'is_active', 'transport',
-            'is_wrapper', 'wrapper_type', 'username', 'password', 'security_groups',
-            'validate_tls', 'gateway_service_list'):
-            value = input.get(key)
-            if value is not None and value != '':
-                data[key] = value
+        input.transport   = input.get('transport')   or URL_TYPE.PLAIN_HTTP
+        input.cluster_id  = input.get('cluster_id')  or self.server.cluster_id
+        input.data_format = input.get('data_format') or ''
 
-        data.setdefault('is_active', True)
-        data.setdefault('transport', URL_TYPE.PLAIN_HTTP)
+        input.data_encoding = input.get('data_encoding') or 'utf-8'
 
-        _fixup_list_fields(data)
-        _resolve_security_fields(self.server, data)
+        # Remove extra whitespace
+        input_name = input.name
+        input_host = input.host
+        input_url_path = input.url_path
+        input_ping_method = input.get('ping_method')
+        input_content_type = input.get('content_type')
 
-        name = input.name
-        old_name = None
-        for item in self.server.config_manager.get_list(entity_type):
-            if str(item.get('id')) == str(input.id):
-                old_name = item.get('name')
-                break
-        if old_name and old_name != name:
-            self.server.config_manager.delete(entity_type, old_name)
+        if input_name:
+            input.name = input_name.strip()
 
-        self.server.config_manager.set(entity_type, name, data)
+        if input_host:
+            input.host = input_host.strip()
 
-        stored = self.server.config_manager.get(entity_type, name)
-        self.response.payload.id = stored['id']
-        self.response.payload.name = name
+        if input_url_path:
+            input.url_path = input_url_path.strip()
 
-        if connection == 'outgoing':
-            self._notify_worker_outconn_edited(stored, old_name)
+        if input_ping_method:
+            input.ping_method = input_ping_method.strip() or DEFAULT_HTTP_PING_METHOD
 
-    def _notify_worker_outconn_edited(self, config, old_name):
-        from zato.bunch import Bunch
-        msg = Bunch(config)
-        msg.setdefault('transport', URL_TYPE.PLAIN_HTTP)
-        if old_name:
-            msg['old_name'] = old_name
-        self.server.worker_store.on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(msg)
+        if input_content_type:
+            input.content_type = input_content_type.strip()
+
+        if input.content_encoding and input.content_encoding != 'gzip':
+            raise Exception('Content encoding must be empty or equal to `gzip`')
+
+        with closing(self.odb.session()) as session:
+
+            existing_one = session.query(
+                HTTPSOAP.id,
+                HTTPSOAP.url_path,
+                ).\
+                filter(HTTPSOAP.cluster_id==input.cluster_id).\
+                filter(HTTPSOAP.id!=input.id).\
+                filter(HTTPSOAP.name==input.name).\
+                filter(HTTPSOAP.connection==input.connection).\
+                filter(HTTPSOAP.transport==input.transport).\
+                first()
+
+            if existing_one:
+                if input.connection == CONNECTION.CHANNEL:
+                    object_type = 'channel'
+                else:
+                    object_type = 'connection'
+                msg = 'A {} of that name:`{}` already exists in this cluster; path: `{}` (id:{})'
+                raise Exception(msg.format(object_type, input.name, existing_one.url_path, existing_one.id))
+
+            if input.connection == CONNECTION.CHANNEL:
+                service = self._get_service_from_input(session, input)
+            else:
+                service = None
+
+            # Will raise exception if the security type doesn't match connection
+            # type and transport
+            sec_info = self._handle_security_info(session, input.security_id, input.connection, input.transport)
+
+            try:
+                item = session.query(HTTPSOAP).filter_by(id=input.id).one()
+
+                opaque = parse_instance_opaque_attr(item)
+
+                old_name = item.name
+                old_url_path = item.url_path
+                old_soap_action = item.soap_action
+                old_http_method = item.method
+                old_http_accept = opaque.get('http_accept')
+
+                item.name = input.name
+                item.is_active = input.is_active
+                item.host = input.host
+                item.url_path = input.url_path
+                item.security_id = input.security_id or None # So that SQLite does not reject ''
+                item.connection = input.connection
+                item.transport = input.transport
+                item.cluster_id = input.cluster_id
+                item.method = input.method
+                item.soap_action = input.soap_action
+                item.soap_version = input.soap_version or None
+                item.data_format = input.data_format
+                item.service = service
+                item.ping_method = input.ping_method
+                item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
+                item.merge_url_params_req = input.get('merge_url_params_req') or False
+                item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
+                item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
+                item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
+                item.timeout = input.get('timeout')
+                item.content_type = input.content_type
+                item.cache_id = input.get('cache_id') or None
+                item.cache_expiry = input.get('cache_expiry') or 0
+                item.content_encoding = input.content_encoding
+                item.is_wrapper = bool(input.is_wrapper)
+                item.wrapper_type = input.wrapper_type
+
+                if input.username:
+                    item.username = input.username
+                else:
+                    skip_opaque.append('username')
+
+                if input.password:
+                    item.password = input.password
+                else:
+                    skip_opaque.append('password')
+
+                # Opaque attributes
+                set_instance_opaque_attrs(item, input, skip=skip_opaque)
+
+                session.add(item)
+                session.commit()
+
+                if input.connection == CONNECTION.CHANNEL:
+                    input.impl_name = service.impl_name
+                    input.service_id = service.id
+                    input.service_name = service.name
+                    input.merge_url_params_req = item.merge_url_params_req
+                    input.url_params_pri = item.url_params_pri
+                    input.params_pri = item.params_pri
+
+                    cache = cache_by_id(session, input.cluster_id, item.cache_id) if item.cache_id else None
+                    if cache:
+                        input.cache_type = cache.cache_type
+                        input.cache_name = cache.name
+                    else:
+                        input.cache_type = None
+                        input.cache_name = None
+
+                else:
+                    input.ping_method = item.ping_method
+                    input.pool_size = item.pool_size
+
+                input.is_internal = item.is_internal
+                input.old_name = old_name
+                input.old_url_path = old_url_path
+                input.old_soap_action = old_soap_action
+                input.old_http_method = old_http_method
+                input.old_http_accept = old_http_accept
+                input.update(sec_info)
+
+                if input.connection == CONNECTION.CHANNEL:
+                    action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
+                else:
+                    action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
+
+                self.notify_worker_threads(input, action)
+
+                self.response.payload.id = item.id
+                self.response.payload.name = item.name
+
+            except Exception:
+                self.logger.error('Object could not be updated, e:`%s`', format_exc())
+                session.rollback()
+
+                raise
 
 # ################################################################################################################################
 
-class Delete(AdminService):
+class Delete(AdminService, _HTTPSOAPService):
     """ Deletes an HTTP/SOAP connection.
     """
-    input = '-id', '-name', '-connection', '-should_raise_if_missing', '-transport'
-    output = '-details'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_delete_request'
+        response_elem = 'zato_http_soap_delete_response'
+        input_optional = 'id', 'name', 'connection', 'should_raise_if_missing'
+        output_optional = 'details'
 
     def handle(self):
 
         input = self.request.input
-        name = input.get('name') or input.get('id')
-        connection = input.get('connection') or 'channel'
-        transport = input.get('transport') or 'plain_http'
+        input_id = input.get('id')
+        name = input.get('name')
+        connection = input.get('connection')
 
-        if not name:
-            raise Exception('Either ID or name are required on input')
+        has_expected_input = input_id or (name and connection)
 
-        entity_type = _get_entity_type(connection, transport)
-        delete_key = None
-        for item in self.server.config_manager.get_list(entity_type):
-            if item.get('name') == name or str(item.get('id')) == str(name):
-                delete_key = item['name']
-                break
+        if not has_expected_input:
+            raise Exception('Either ID or name/connection are required on input')
 
-        if not delete_key:
-            if input.get('should_raise_if_missing', True):
-                raise Exception('HTTP/SOAP object with id or name `{}` not found'.format(name))
-            return
+        with closing(self.odb.session()) as session:
+            try:
+                query = session.query(HTTPSOAP)
 
-        self.server.config_manager.delete(entity_type, delete_key)
-        self.response.payload.details = 'OK, deleted'
+                if input_id:
+                    query = query.\
+                        filter(HTTPSOAP.id==input_id)
+
+                else:
+                    query = query.\
+                        filter(HTTPSOAP.name==name).\
+                        filter(HTTPSOAP.connection==connection)
+
+                item = query.first()
+
+                # Optionally, raise an exception if such an object is missing
+                if not item:
+                    if input.get('should_raise_if_missing', True):
+                        raise BadRequest(self.cid, 'Could not find an object based on input -> `{}`'.format(input))
+                    else:
+                        self.response.payload.details = 'No such object'
+                        return
+
+                opaque = parse_instance_opaque_attr(item)
+
+                old_name = item.name
+                old_transport = item.transport
+                old_url_path = item.url_path
+                old_soap_action = item.soap_action
+                old_http_method = item.method
+                old_http_accept = opaque.get('http_accept')
+
+                session.delete(item)
+                session.commit()
+
+                if item.connection == CONNECTION.CHANNEL:
+                    action = CHANNEL.HTTP_SOAP_DELETE.value
+                else:
+                    action = OUTGOING.HTTP_SOAP_DELETE.value
+
+                self.notify_worker_threads({
+                    'id': self.request.input.id,
+                    'name':old_name,
+                    'transport':old_transport,
+                    'old_url_path':old_url_path,
+                    'old_soap_action':old_soap_action,
+                    'old_http_method': old_http_method,
+                    'old_http_accept': old_http_accept,
+                }, action)
+
+                self.response.payload.details = 'OK, deleted'
+
+            except Exception:
+                session.rollback()
+                self.logger.error('Object could not be deleted, e:`%s`', format_exc())
+
+                raise
 
 # ################################################################################################################################
 
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
-    input = 'id', '-ping_path'
-    output = 'id', 'is_success', '-info', '-status_code', '-status_text', '-exception_message', '-inner_exception_message'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_ping_request'
+        response_elem = 'zato_http_soap_ping_response'
+        input_required = 'id'
+        input_optional = 'ping_path'
+        output_required = 'id', 'is_success'
+        output_optional = 'info'
 
     def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
+            config_dict = getattr(self.outgoing, item.transport)
+            self.response.payload.id = self.request.input.id
 
-        name = self.request.input.id
-
-        self.response.payload.id = self.request.input.id
-        self.response.payload.is_success = False
-        self.response.payload.status_code = 0
-        self.response.payload.status_text = ''
-        self.response.payload.info = ''
-        self.response.payload.exception_message = ''
-        self.response.payload.inner_exception_message = ''
-
-        for entity_type in ('outgoing_rest', 'outgoing_soap'):
-            items = self.server.config_manager.get_list(entity_type)
-            for item in items:
-                if str(item.get('id')) == str(name) or item.get('name') == str(name):
-                    transport = item.get('transport', 'plain_http')
-                    config_dict = getattr(self.outgoing, transport)
-                    try:
-                        response = config_dict.get(item['name']).ping(
-                            self.cid, return_response=True, ping_path=self.request.input.ping_path)
-                        self.response.payload.is_success = 200 <= response.status_code < 300
-                        self.response.payload.status_code = response.status_code
-                        self.response.payload.status_text = '{} {}'.format(response.status_code, response.reason)
-                        self.response.payload.info = response.text or ''
-                    except Exception as e:
-                        msg = e.args[0] if e.args else str(e)
-                        if not isinstance(msg, str):
-                            msg = str(msg)
-                        self.response.payload.exception_message = msg
-                        self.response.payload.inner_exception_message = getattr(e, 'inner_message', '') or ''
-                        self.response.payload.info = msg
-                    return
+            try:
+                result = config_dict.get(item.name).ping(self.cid, ping_path=self.request.input.ping_path)
+                is_success = True
+            except Exception as e:
+                result = e.args[0]
+                is_success = False
+            finally:
+                self.response.payload.info = result
+                self.response.payload.is_success = is_success
 
 # ################################################################################################################################
 
@@ -441,241 +790,4 @@ class GetURLSecurity(AdminService):
         self.response.payload = dumps(response, sort_keys=True, indent=4)
         self.response.content_type = 'application/json'
 
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _set_invoke_response(service, result):
-    """ Shared helper -- populates a service's response payload from an invocation result dict. """
-    service.response.payload.status_code = result['status_code']
-    service.response.payload.response_body = result['response_body']
-    service.response.payload.response_time = result['response_time']
-
-# ################################################################################################################################
-
-def _parse_key_value_params(text):
-    """ Parses 'key1=val1&key2=val2' or 'key1=val1\\nkey2=val2' (or a mix) into a dict.
-    Normalizes all separators to newlines, then splits and parses each pair.
-    """
-    if not text or not text.strip():
-        return {}
-
-    normalized = text.replace('&', '\n')
-    result = {}
-
-    for line in normalized.split('\n'):
-        line = line.strip()
-        if '=' in line:
-            key, _, value = line.partition('=')
-            key = key.strip()
-            if key:
-                result[key] = value.strip()
-
-    return result
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class InvokeChannel(AdminService):
-    """ Invokes a REST channel by creating a temporary HTTPSOAPWrapper,
-    calling the channel's local URL with its security credentials,
-    and always cleaning up the wrapper afterwards.
-    """
-
-    name = 'zato.http-soap.invoke-channel'
-    input = 'id', '-payload', '-request_method', '-query_params', '-path_params'
-    output = '-status_code', '-response_body', '-response_time'
-
-    def handle(self):
-        channel_config = self._get_channel_config(self.request.input.id)
-        sec_config = self._get_security_config(channel_config)
-        url_path = self._resolve_url_path(channel_config)
-        wrapper = self._build_temp_wrapper(channel_config, sec_config, url_path)
-
-        try:
-            result = self._invoke_wrapper(wrapper)
-        finally:
-            wrapper.session.close()
-
-        _set_invoke_response(self, result)
-
-    def _get_channel_config(self, channel_id):
-        for item in self.server.config_manager.get_list('channel_rest'):
-            if str(item.get('id')) == str(channel_id) or item.get('name') == str(channel_id):
-                return item
-        raise Exception('REST channel `{}` not found'.format(channel_id))
-
-    def _get_security_config(self, channel_config):
-        """ Returns a dict with sec_type, username, password, orig_username
-        for the channel's security definition, or a no-security dict.
-        """
-        security_id = channel_config.get('security_id')
-        if not security_id or str(security_id) in ('None', ZATO_NONE, 'None/ZATO_NONE'):
-            return {'sec_type': None, 'username': None, 'password': None, 'orig_username': None}
-
-        for sec_item in self.server.config_manager.get_list('security'):
-            if str(sec_item.get('id')) == str(security_id):
-                return self._extract_credentials(sec_item)
-
-        return {'sec_type': None, 'username': None, 'password': None, 'orig_username': None}
-
-    def _extract_credentials(self, sec_item):
-        sec_type = sec_item.get('sec_type') or sec_item.get('type', '')
-        username = sec_item.get('username', '') or ''
-        orig_username = sec_item.get('orig_username', '') or username
-        password = sec_item.get('password', '') or ''
-        password = self._decrypt_password(password)
-
-        return {
-            'sec_type': sec_type,
-            'username': username,
-            'password': password,
-            'orig_username': orig_username,
-        }
-
-    def _decrypt_password(self, password):
-        if password and hasattr(self.server, 'decrypt'):
-            try:
-                return self.server.decrypt(password)
-            except Exception:
-                pass
-        return password
-
-    def _resolve_url_path(self, channel_config):
-        url_path = channel_config.get('url_path', '/')
-        path_params = _parse_key_value_params(self.request.input.get('path_params', ''))
-        if path_params:
-            try:
-                url_path = url_path.format(**path_params)
-            except (KeyError, ValueError):
-                pass
-        return url_path
-
-    def _build_temp_wrapper(self, channel_config, sec_config, url_path):
-        """ Builds a temporary HTTPSOAPWrapper pointing at the local channel URL. """
-        port = getattr(self.server, 'port', 17010)
-        method = self.request.input.get('request_method', '') or 'POST'
-        query_params = _parse_key_value_params(self.request.input.get('query_params', ''))
-
-        wrapper_config = {
-            'id': 'temp-invoke-{}'.format(self.cid),
-            'is_active': True,
-            'method': method,
-            'data_format': 'json',
-            'name': 'temp-invoke-channel-{}'.format(self.cid),
-            'transport': 'plain_http',
-            'address_host': 'http://127.0.0.1:{}'.format(port),
-            'address_url_path': url_path,
-            'soap_action': '',
-            'soap_version': None,
-            'ping_method': 'HEAD',
-            'pool_size': 1,
-            'serialization_type': 'json',
-            'timeout': 90,
-            'content_type': None,
-            'validate_tls': False,
-            'security_name': None,
-            'security_id': None,
-            'sec_type': sec_config.get('sec_type'),
-            'username': sec_config.get('username'),
-            'password': sec_config.get('password'),
-            'password_type': None,
-            'orig_username': sec_config.get('orig_username'),
-            'salt': None,
-        }
-
-        return HTTPSOAPWrapper(self.server, wrapper_config)
-
-    def _invoke_wrapper(self, wrapper):
-        method = self.request.input.get('request_method', '') or 'POST'
-        payload = self.request.input.get('payload', '') or ''
-        query_params = _parse_key_value_params(self.request.input.get('query_params', ''))
-
-        start = time()
-        try:
-            response = wrapper.http_request(method, self.cid, data=payload, params=query_params or None)
-            elapsed = time() - start
-            return {
-                'status_code': response.status_code,
-                'response_body': response.text,
-                'response_time': '{:.1f}ms'.format(elapsed * 1000),
-            }
-        except Exception as e:
-            elapsed = time() - start
-            return {
-                'status_code': 0,
-                'response_body': str(e),
-                'response_time': '{:.1f}ms'.format(elapsed * 1000),
-            }
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-class InvokeOutconn(AdminService):
-    """ Invokes an existing REST outgoing connection by its ID. """
-
-    name = 'zato.http-soap.invoke-outconn'
-    input = 'id', '-payload', '-request_method', '-query_params', '-path_params'
-    output = '-status_code', '-response_body', '-response_time'
-
-    def handle(self):
-        outconn_config = self._get_outconn_config(self.request.input.id)
-        outconn_name = outconn_config['name']
-
-        method = self.request.input.get('request_method', '') or 'POST'
-        payload = self.request.input.get('payload', '') or ''
-        params = self._build_params()
-
-        result = self._invoke_outconn(outconn_name, method, payload, params)
-        _set_invoke_response(self, result)
-
-    def _get_outconn_config(self, outconn_id):
-        for item in self.server.config_manager.get_list('outgoing_rest'):
-            if str(item.get('id')) == str(outconn_id) or item.get('name') == str(outconn_id):
-                return item
-        raise Exception('REST outgoing connection `{}` not found'.format(outconn_id))
-
-    def _build_params(self):
-        params = {}
-        path_params = _parse_key_value_params(self.request.input.get('path_params', ''))
-        query_params = _parse_key_value_params(self.request.input.get('query_params', ''))
-        params.update(path_params)
-        params.update(query_params)
-        return params
-
-    def _invoke_outconn(self, outconn_name, method, payload, params):
-        config_dict = self.outgoing.plain_http
-        _rest_log_write('invoke_outconn: outconn_name=%s' % outconn_name)
-        _rest_log_write('invoke_outconn: config_dict type=%s, id=%s' % (type(config_dict).__name__, id(config_dict)))
-        _rest_log_write('invoke_outconn: config_dict._delegates_to_rust=%s' % config_dict._delegates_to_rust)
-        _rest_log_write('invoke_outconn: config_dict._runtime keys=%s' % (list(config_dict._runtime.keys()),))
-        _rest_log_write('invoke_outconn: config_dict._runtime[%s]=%s' % (
-            outconn_name, list(config_dict._runtime[outconn_name].keys()) if outconn_name in config_dict._runtime else 'MISSING'))
-
-        config_item = config_dict.get(outconn_name)
-        _rest_log_write('invoke_outconn: config_item type=%s' % (type(config_item).__name__ if config_item else 'None'))
-        if config_item:
-            _rest_log_write('invoke_outconn: config_item keys=%s' % (list(config_item.keys()),))
-        if not config_item:
-            raise Exception('Outgoing REST connection wrapper `{}` not found'.format(outconn_name))
-
-        conn = config_item.conn
-        start = time()
-
-        try:
-            response = conn.http_request(method, self.cid, data=payload, params=params)
-            elapsed = time() - start
-            return {
-                'status_code': response.status_code,
-                'response_body': response.text,
-                'response_time': '{:.1f}ms'.format(elapsed * 1000),
-            }
-        except Exception as e:
-            elapsed = time() - start
-            return {
-                'status_code': 0,
-                'response_body': str(e),
-                'response_time': '{:.1f}ms'.format(elapsed * 1000),
-            }
-
-# ################################################################################################################################
 # ################################################################################################################################

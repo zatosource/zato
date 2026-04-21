@@ -1,182 +1,116 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2024, Zato Source s.r.o. https://zato.io
+Copyright (C) 2019, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 # stdlib
+from contextlib import closing
 from time import time
 from uuid import uuid4
 
+# Python 2/3 compatibility
+from six import add_metaclass
+
 # Zato
+from zato.common.broker_message import OUTGOING
+from zato.common.odb.model import OutgoingSAP
+from zato.common.odb.query import out_sap_list
 from zato.common.util.api import ping_sap
-from zato.server.service import Int
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
+
+elem = 'email_imap'
+model = OutgoingSAP
+label = 'a SAP RFC connection'
+get_list_docs = 'SAP RFC connections'
+broker_message = OUTGOING
+broker_message_prefix = 'SAP_'
+list_func = out_sap_list
+skip_input_params = ['password']
+
 # ################################################################################################################################
 
-_entity_type = 'outgoing_sap'
+def instance_hook(service, input, instance, attrs):
+    if 'create' in service.get_name().lower():
+        instance.password = uuid4().hex
 
 # ################################################################################################################################
+
+def broker_message_hook(service, input, instance, attrs, service_type):
+    if service_type == 'create_edit':
+        input.password = instance.password
+
 # ################################################################################################################################
 
+@add_metaclass(GetListMeta)
 class GetList(AdminService):
-    """ Returns a list of SAP RFC connections.
-    """
-    input = 'cluster_id'
-    output = 'id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Int('pool_size'), '-sysnr', '-router'
-
-    def handle(self):
-        items = self.server.config_manager.get_list(_entity_type)
-        self.response.payload = self._paginate_list(items)
+    _filter_by = OutgoingSAP.name,
 
 # ################################################################################################################################
-# ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Create(AdminService):
-    """ Creates a new SAP RFC connection.
-    """
-    input = 'cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Int('pool_size'), '-sysnr', '-router'
-    output = 'id', 'name'
-
-    def handle(self):
-        input = self.request.input
-        data = {
-            'name': input.name,
-            'is_active': input.is_active,
-            'host': input.host,
-            'user': input.user,
-            'client': input.client,
-            'sysid': input.sysid,
-            'pool_size': input.pool_size,
-            'password': uuid4().hex,
-        }
-        if input.get('sysnr'):
-            data['sysnr'] = input.sysnr
-        if input.get('router'):
-            data['router'] = input.router
-
-        name = input.name
-        self.server.config_manager.set(_entity_type, name, data)
-
-        stored = self.server.config_manager.get(_entity_type, name)
-        self.response.payload.id = stored['id']
-        self.response.payload.name = name
+    pass
 
 # ################################################################################################################################
-# ################################################################################################################################
 
+@add_metaclass(CreateEditMeta)
 class Edit(AdminService):
-    """ Updates a SAP RFC connection.
-    """
-    input = 'id', 'cluster_id', 'name', 'is_active', 'host', 'user', 'client', 'sysid', Int('pool_size'), \
-        '-sysnr', '-router'
-    output = 'id', 'name'
-
-    def handle(self):
-        input = self.request.input
-        target_id = str(input.id)
-        old_name = None
-        existing = None
-        for item in self.server.config_manager.get_list(_entity_type):
-            if str(item.get('id')) == target_id:
-                old_name = item['name']
-                existing = self.server.config_manager.get(_entity_type, old_name)
-                if not existing:
-                    existing = dict(item)
-                break
-        if not old_name or not existing:
-            raise Exception('SAP connection with id `{}` not found'.format(target_id))
-
-        existing.update({
-            'id': input.id,
-            'name': input.name,
-            'is_active': input.is_active,
-            'host': input.host,
-            'user': input.user,
-            'client': input.client,
-            'sysid': input.sysid,
-            'pool_size': input.pool_size,
-        })
-        if input.get('sysnr'):
-            existing['sysnr'] = input.sysnr
-        if input.get('router'):
-            existing['router'] = input.router
-
-        if old_name != input.name:
-            self.server.config_manager.delete(_entity_type, old_name)
-
-        self.server.config_manager.set(_entity_type, input.name, existing)
-
-        self.response.payload.id = existing.get('id', input.name)
-        self.response.payload.name = input.name
+    pass
 
 # ################################################################################################################################
-# ################################################################################################################################
 
+@add_metaclass(DeleteMeta)
 class Delete(AdminService):
-    """ Deletes a SAP RFC connection.
-    """
-    input = 'id'
-
-    def handle(self):
-        target_id = str(self.request.input.id)
-        for item in self.server.config_manager.get_list(_entity_type):
-            if str(item.get('id')) == target_id or item.get('name') == target_id:
-                self.server.config_manager.delete(_entity_type, item['name'])
-                return
-        raise Exception('SAP connection with id `{}` not found'.format(target_id))
+    pass
 
 # ################################################################################################################################
-# ################################################################################################################################
 
-class ChangePassword(AdminService):
-    """ Changes the password of a SAP connection.
+class ChangePassword(ChangePasswordBase):
+    """ Changes the password of an SAP connection
     """
     password_required = False
 
-    input = 'id', 'password'
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_outgoing_sap_change_password_request'
+        response_elem = 'zato_outgoing_sap_change_password_response'
 
     def handle(self):
-        input = self.request.input
-        target_id = str(input.id)
-        items = self.server.config_manager.get_list(_entity_type)
-        for item in items:
-            if str(item.get('id')) == target_id or item.get('name') == target_id:
-                item['password'] = input.password
-                self.server.config_manager.set(_entity_type, item['name'], item)
-                return
+        def _auth(instance, password):
+            instance.password = password
 
-# ################################################################################################################################
+        return self._handle(OutgoingSAP, _auth, OUTGOING.SAP_CHANGE_PASSWORD.value,
+            publish_instance_attrs=['host', 'sysnr', 'client', 'sysid', 'user', 'password', 'router', 'pool_size'])
+
 # ################################################################################################################################
 
 class Ping(AdminService):
     """ Pings a SAP connection to check its configuration.
     """
-    input = 'id'
-    output = 'info'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_sap_ping_request'
+        response_elem = 'zato_outgoing_sap_ping_response'
+        input_required = ('id',)
+        output_required = ('info',)
 
     def handle(self):
-        target_id = str(self.request.input.id)
-        items = self.server.config_manager.get_list(_entity_type)
 
-        item_name = None
-        for item in items:
-            if str(item.get('id')) == target_id or item.get('name') == target_id:
-                item_name = item['name']
-                break
+        with closing(self.odb.session()) as session:
+            item = session.query(OutgoingSAP).filter_by(id=self.request.input.id).one()
 
-        if not item_name:
-            raise Exception('Could not find SAP connection with id `{}`'.format(target_id))
+        with self.outgoing.sap[item.name].conn.client() as client:
 
-        with self.outgoing.sap[item_name].conn.client() as client:
             start_time = time()
             ping_sap(client)
             response_time = time() - start_time
+
             self.response.payload.info = 'Ping OK, took:`{0:03.4f} s`'.format(response_time)
 
-# ################################################################################################################################
 # ################################################################################################################################

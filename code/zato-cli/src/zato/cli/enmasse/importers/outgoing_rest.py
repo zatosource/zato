@@ -8,15 +8,21 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import logging
+from copy import deepcopy
 
 # Zato
-from zato.cli.enmasse.util import preprocess_item
+from zato.cli.enmasse.util import assign_security, preprocess_item, security_needs_update
+from zato.common.api import CONNECTION, URL_TYPE
+from zato.common.odb.model import HTTPSOAP, to_json
+from zato.common.util.sql import set_instance_opaque_attrs
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import anylist
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.cli.enmasse.importer import EnmasseYAMLImporter
+    from zato.common.typing_ import any_, anydict, anylist, listtuple
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -26,41 +32,189 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 # ################################################################################################################################
 
+connection_extra_field_defaults = {
+    'validate_tls': True,
+}
+
+# ################################################################################################################################
+# ################################################################################################################################
+
 class OutgoingRESTImporter:
 
-    outgoing_rest_defaults = {
-        'is_active': True,
-        'ping_method': 'GET',
-        'pool_size': 20,
-        'timeout': 60,
-    }
+    def __init__(self, importer:'EnmasseYAMLImporter') -> 'None':
+        self.importer = importer
+        self.connection_defs = {}
 
-    connection_extra_field_defaults = {
-        'validate_tls': True,
-    }
+# ################################################################################################################################
 
-    @classmethod
-    def preprocess(cls, items:'anylist') -> 'anylist':
+    def get_outgoing_rest_from_db(self, session:'SASession', cluster_id:'int') -> 'anydict':
+        out = {}
+        logger.info('Retrieving outgoing REST connections from database for cluster_id=%s', cluster_id)
 
-        out = []
+        query = session.query(HTTPSOAP).filter(HTTPSOAP.cluster_id==cluster_id).filter(HTTPSOAP.connection==CONNECTION.OUTGOING).filter(HTTPSOAP.transport==URL_TYPE.PLAIN_HTTP) # type: ignore
+        connections = to_json(query, return_as_dict=True)
+        logger.info('Processing %d outgoing REST connections', len(connections))
 
-        for item in items:
+        for item in connections:
+            item = item['fields']
+            name = item['name']
+            logger.info('Processing outgoing REST connection: %s (id=%s)', name, item['id'])
+            out[name] = item
+            self.connection_defs[name] = item
+
+        return out
+
+# ################################################################################################################################
+
+    def compare_outgoing_rest(self, yaml_defs:'anylist', db_defs:'anydict') -> 'listtuple':
+        to_create = []
+        to_update = []
+
+        logger.info('Comparing %d YAML outgoing REST connections with %d DB outgoing REST connections', len(yaml_defs), len(db_defs))
+
+        for item in yaml_defs:
             item = preprocess_item(item)
 
+            # Handle the previous tls_verify key which now is called validate_tls
             if 'tls_verify' in item:
                 item['validate_tls'] = item.pop('tls_verify')
 
-            for key, default_value in cls.outgoing_rest_defaults.items():
-                if key not in item:
-                    item[key] = default_value
+            name = item['name']
+            logger.info('Checking YAML outgoing REST connection: name=%s', name)
 
-            for key, default_value in cls.connection_extra_field_defaults.items():
-                if key not in item:
-                    item[key] = default_value
+            db_def = db_defs.get(name)
 
-            out.append(item)
+            if not db_def:
+                logger.info('Outgoing REST connection %s not found in DB, will create new', name)
+                to_create.append(item)
+            else:
+                logger.info('Outgoing REST connection %s exists in DB with id=%s', name, db_def['id'])
 
-        return out
+                needs_update = False
+
+                # Compare standard attributes (excluding security)
+                for key, value in item.items():
+                    if key != 'security':
+                        db_value = db_def.get(key)
+                        if db_value != value:
+                            logger.info('Value mismatch for %s.%s: YAML=%s DB=%s', name, key, value, db_value)
+                            needs_update = True
+                            break
+
+                # Check security definition
+                if security_needs_update(item, db_def, self.importer):
+                    needs_update = True
+
+                if needs_update:
+                    item['id'] = db_def['id']
+                    logger.info('Will update %s with id=%s', name, db_def['id'])
+                    to_update.append(item)
+                else:
+                    logger.info('No update needed for %s', name)
+
+        logger.info('Comparison result: to_create=%d to_update=%d', len(to_create), len(to_update))
+        return to_create, to_update
+
+# ################################################################################################################################
+
+    def create_outgoing_rest(self, outgoing_def:'anydict', session:'SASession') -> 'any_':
+
+        name = outgoing_def['name']
+        logger.info('Creating new outgoing REST connection: %s', name)
+
+        outgoing = HTTPSOAP()
+        outgoing.name = name
+        outgoing.connection = CONNECTION.OUTGOING
+        outgoing.transport = URL_TYPE.PLAIN_HTTP
+        outgoing.cluster = self.importer.get_cluster(session)
+        outgoing.is_active = True
+        outgoing.is_internal = False
+        outgoing.soap_action = '' # Must be an empty string
+
+        # Set default values that may not be provided
+        outgoing.ping_method = outgoing_def.get('ping_method', 'GET')
+        outgoing.pool_size = outgoing_def.get('pool_size', 20)
+        outgoing.timeout = outgoing_def.get('timeout', 60)
+        outgoing.data_format = outgoing_def.get('data_format') or None
+
+        for key, value in outgoing_def.items():
+            if key not in ['security', 'security_name']:
+                setattr(outgoing, key, value)
+
+        assign_security(outgoing, outgoing_def, self.importer, session)
+
+        outgoing_def = deepcopy(outgoing_def)
+        for key, value in connection_extra_field_defaults.items():
+            if key not in outgoing_def:
+                outgoing_def[key] = value
+        set_instance_opaque_attrs(outgoing, outgoing_def)
+
+        session.add(outgoing)
+        self.connection_defs[name] = outgoing
+        return outgoing
+
+# ################################################################################################################################
+
+    def update_outgoing_rest(self, outgoing_def:'anydict', session:'SASession') -> 'any_':
+        outgoing_id = outgoing_def['id']
+        name = outgoing_def['name']
+        logger.info('Updating outgoing REST connection: %s (id=%s)', name, outgoing_id)
+
+        outgoing = session.query(HTTPSOAP).filter_by(id=outgoing_id).one()
+
+        for key, value in outgoing_def.items():
+            if key not in ['security', 'security_name']:
+                setattr(outgoing, key, value)
+
+        assign_security(outgoing, outgoing_def, self.importer, session)
+
+        outgoing_def = deepcopy(outgoing_def)
+        for key, value in connection_extra_field_defaults.items():
+            if key not in outgoing_def:
+                outgoing_def[key] = value
+        set_instance_opaque_attrs(outgoing, outgoing_def)
+
+        session.add(outgoing)
+        self.connection_defs[name] = outgoing
+        return outgoing
+
+# ################################################################################################################################
+
+    def sync_outgoing_rest(self, outgoing_list:'anylist', session:'SASession') -> 'listtuple':
+        logger.info('Processing %d outgoing REST connections from YAML', len(outgoing_list))
+
+        db_outgoing = self.get_outgoing_rest_from_db(session, self.importer.cluster_id)
+        to_create, to_update = self.compare_outgoing_rest(outgoing_list, db_outgoing)
+
+        out_created = []
+        out_updated = []
+
+        try:
+            logger.info('Creating %d new outgoing REST connections', len(to_create))
+            for item in to_create:
+                logger.info('Creating outgoing REST connection: name=%s', item['name'])
+                instance = self.create_outgoing_rest(item, session)
+                logger.info('Created outgoing REST connection: name=%s id=%s', instance.name, instance.id)
+                out_created.append(instance)
+
+            logger.info('Updating %d existing outgoing REST connections', len(to_update))
+            for item in to_update:
+                logger.info('Updating outgoing REST connection: name=%s id=%s', item['name'], item['id'])
+                instance = self.update_outgoing_rest(item, session)
+                logger.info('Updated outgoing REST connection: name=%s id=%s', instance.name, instance.id)
+                out_updated.append(instance)
+
+            logger.info('Committing changes: created=%d updated=%d', len(out_created), len(out_updated))
+            session.commit()
+            logger.info('Successfully committed all changes')
+
+        except Exception as e:
+            logger.error('Error syncing outgoing REST connections: %s', e)
+            logger.exception('Full exception details:')
+            session.rollback()
+            raise
+
+        return out_created, out_updated
 
 # ################################################################################################################################
 # ################################################################################################################################

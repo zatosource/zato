@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 
@@ -8,11 +9,20 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
-# ################################################################################################################################
-# ################################################################################################################################
+# Zato
+from zato.common.api import GENERIC
+from zato.common.odb.model import to_json
+from zato.common.odb.query.generic import connection_list
+from zato.common.util.sql import parse_instance_opaque_attr
+
+# Create logger for this module
+logger = logging.getLogger(__name__)
 
 if 0:
+    from sqlalchemy.orm.session import Session as SASession
+    from zato.cli.enmasse.exporter import EnmasseYAMLExporter
     from zato.common.typing_ import anydict, list_
+
     microsoft_365_def_list = list_[anydict]
 
 # ################################################################################################################################
@@ -20,32 +30,51 @@ if 0:
 
 logger = logging.getLogger(__name__)
 
+# Fields to extract from connection definitions
+OPTIONAL_FIELDS = [
+    'timeout', 'pool_size', 'recv_timeout', 'is_active'
+]
+
+# Fields to extract from opaque attributes
+OPAQUE_FIELDS = [
+    'tenant_id', 'client_id', 'scopes', 'secret_value'
+]
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Microsoft365Exporter:
 
-    def __init__(self, exporter) -> 'None':
+    def __init__(self, exporter: 'EnmasseYAMLExporter') -> 'None':
         self.exporter = exporter
 
-    def export(self, items) -> 'microsoft_365_def_list':
+    def export(self, session: 'SASession', cluster_id: 'int') -> 'microsoft_365_def_list':
         """ Exports Microsoft 365 connection definitions.
         """
         logger.info('Exporting Microsoft 365 connection definitions')
 
-        if not items:
-            logger.info('No Microsoft 365 connection definitions found')
+        # Get Microsoft 365 connections from database using the generic connection query
+        db_microsoft_365 = connection_list(session, cluster_id, GENERIC.CONNECTION.TYPE.CLOUD_MICROSOFT_365)
+
+        if not db_microsoft_365:
+            logger.info('No Microsoft 365 connection definitions found in DB')
             return []
 
-        logger.debug('Processing %d Microsoft 365 connection definitions', len(items))
+        microsoft_365_connections = to_json(db_microsoft_365, return_as_dict=True)
+        logger.debug('Processing %d Microsoft 365 connection definitions', len(microsoft_365_connections))
 
         exported_microsoft_365 = []
 
-        for row in items:
+        for row in microsoft_365_connections:
+
+            if GENERIC.ATTR_NAME in row:
+                opaque = parse_instance_opaque_attr(row)
+                row.update(opaque)
+                del row[GENERIC.ATTR_NAME]
 
             item = {
                 'name': row['name'],
-                'is_active': row.get('is_active', True),
+                'is_active': row['is_active']
             }
 
             if client_id := row.get('client_id'):
@@ -55,16 +84,14 @@ class Microsoft365Exporter:
                 item['tenant_id'] = tenant_id
 
             if scopes := row.get('scopes'):
-                if isinstance(scopes, str):
-                    lines = scopes.splitlines()
-                    clean_scopes = [line.strip() for line in lines if line.strip()]
-                    if clean_scopes:
-                        if len(clean_scopes) <= 1:
-                            item['scopes'] = clean_scopes[0] if clean_scopes else ''
-                        else:
-                            item['scopes'] = sorted(clean_scopes)
-                else:
-                    item['scopes'] = scopes
+                lines = scopes.splitlines()
+                clean_scopes = [line.strip() for line in lines if line.strip()]
+
+                if clean_scopes:
+                    if len(clean_scopes) <= 1:
+                        item['scopes'] = clean_scopes[0] if clean_scopes else ''
+                    else:
+                        item['scopes'] = sorted(clean_scopes)
 
             if (pool_size := row.get('pool_size')) and pool_size != 10:
                 item['pool_size'] = pool_size

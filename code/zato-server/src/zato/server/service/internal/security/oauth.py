@@ -1,34 +1,29 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2025, Zato Source s.r.o. https://zato.io
+Copyright (C) 2023, Zato Source s.r.o. https://zato.io
 
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging
+from contextlib import closing
+from traceback import format_exc
 from uuid import uuid4
 
-logger = logging.getLogger(__name__)
-
 # Zato
-from zato.server.service import Bool, Int
-from zato.server.service.internal import AdminService
+from zato.common.api import SEC_DEF_TYPE
+from zato.common.broker_message import SECURITY
+from zato.common.odb.model import Cluster, OAuth
+from zato.common.odb.query import oauth_list
+from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 if 0:
-    from zato.common.typing_ import any_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _is_oauth(item):
-    st = item.get('sec_type')
-    t = item.get('type')
-    return st == 'bearer_token' or t == 'bearer_token'
+    from zato.common.typing_ import any_, anylist
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -36,14 +31,22 @@ def _is_oauth(item):
 class GetList(AdminService):
     """ Returns a list of Bearer token definitions available.
     """
-    input = 'cluster_id', Int('-cur_page'), Bool('-paginate'), '-query'
-    output = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type', \
-        '-auth_server_url', '-scopes', '-extra_fields', '-data_format'
+    _filter_by = OAuth.name,
+
+    class SimpleIO(GetListAdminSIO):
+        request_elem = 'zato_security_oauth_get_list_request'
+        response_elem = 'zato_security_oauth_get_list_response'
+        input_required = 'cluster_id'
+        output_required = 'id', 'name', 'is_active', 'username', 'client_id_field', 'client_secret_field', 'grant_type'
+        output_optional = 'auth_server_url', 'scopes', 'extra_fields', 'data_format'
+
+    def get_data(self, session:'any_') -> 'anylist':
+        return elems_with_opaque(self._search(oauth_list, session, self.request.input.cluster_id, False)) # type: ignore
 
     def handle(self):
-        items = self.server.config_manager.get_list('security')
-        out = [item for item in items if _is_oauth(item)]
-        self.response.payload = self._paginate_list(out)
+        with closing(self.odb.session()) as session:
+            data = self.get_data(session)
+            self.response.payload[:] = data
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -51,148 +54,165 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new Bearer token definition.
     """
-    input = 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
-        'client_secret_field', 'grant_type', 'data_format', '-auth_server_url', '-scopes', '-extra_fields'
-    output = 'id', 'name'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_oauth_create_request'
+        response_elem = 'zato_security_oauth_create_response'
+        input_required = 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
+            'client_secret_field', 'grant_type', 'data_format'
+        input_optional = 'auth_server_url', 'scopes', 'extra_fields'
+        output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
-        name = input.name
+        input.password = uuid4().hex
 
-        if self.server.config_manager.get('security', name):
-            raise Exception('Bearer token definition `{}` already exists'.format(name))
+        with closing(self.odb.session()) as session:
+            try:
+                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
 
-        self.server.config_manager.set('security', name, {
-            'type': 'bearer_token',
-            'name': name,
-            'is_active': input.is_active,
-            'username': input.username,
-            'password': uuid4().hex,
-            'client_id_field': input.client_id_field,
-            'client_secret_field': input.client_secret_field,
-            'grant_type': input.grant_type,
-            'data_format': input.data_format,
-            'auth_server_url': input.get('auth_server_url') or '',
-            'scopes': input.get('scopes') or '',
-            'extra_fields': input.get('extra_fields') or '',
-        })
+                # Let's see if we already have a definition of that name before committing
+                # any stuff into the database.
+                existing_one = session.query(OAuth).\
+                    filter(Cluster.id==input.cluster_id).\
+                    filter(OAuth.name==input.name).first()
 
-        item = self.server.config_manager.get('security', name)
+                if existing_one:
+                    raise Exception('Bearer token definition `{}` already exists in this cluster'.format(input.name))
 
-        self.response.payload.id = item['id']
-        self.response.payload.name = name
+                definition = OAuth()
+                definition.name = input.name
+                definition.is_active = input.is_active
+                definition.username = input.username
+                definition.proto_version = 'not-used' # type: ignore
+                definition.sig_method = 'not-used' # type: ignore
+                definition.max_nonce_log = 0 # type: ignore
+                definition.cluster = cluster # type: ignore
+
+                set_instance_opaque_attrs(definition, input)
+
+                session.add(definition)
+                session.commit()
+
+            except Exception:
+                msg = 'Bearer token definition could not be created, e:`%s`'
+                self.logger.error(msg, format_exc())
+                session.rollback()
+
+                raise
+            else:
+                input.id = definition.id
+                input.action = SECURITY.OAUTH_CREATE.value
+                input.sec_type = SEC_DEF_TYPE.OAUTH
+                self.broker_client.publish(input)
+
+            self.response.payload.id = definition.id
+            self.response.payload.name = definition.name
+
+        # Make sure the object has been created
+        _:'any_' = self.server.worker_store.wait_for_oauth(input.name)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(AdminService):
-    """ Updates a Bearer token definition.
+    """ Updates an Bearer token definition.
     """
-    input = 'id', 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
-        'client_secret_field', 'grant_type', 'data_format', '-auth_server_url', '-scopes', '-extra_fields'
-    output = 'id', 'name'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_oauth_edit_request'
+        response_elem = 'zato_security_oauth_edit_response'
+        input_required = 'id', 'cluster_id', 'name', 'is_active', 'username', 'client_id_field', \
+            'client_secret_field', 'grant_type', 'data_format'
+        input_optional = 'auth_server_url', 'scopes', 'extra_fields'
+        output_required = 'id', 'name'
 
     def handle(self):
         input = self.request.input
-        name = input.name
+        with closing(self.odb.session()) as session:
+            try:
+                existing_one = session.query(OAuth).\
+                    filter(Cluster.id==input.cluster_id).\
+                    filter(OAuth.name==input.name).\
+                    filter(OAuth.id!=input.id).\
+                    first()
 
-        items = self.server.config_manager.get_list('security')
-        old_name = None
-        for item in items:
-            if _is_oauth(item) and str(item['id']) == str(input.id):
-                old_name = item['name']
-                break
+                if existing_one:
+                    raise Exception('Bearer token definition `{}` already exists in this cluster'.format(input.name))
 
-        if not old_name:
-            raise Exception('Bearer token definition not found')
+                definition = session.query(OAuth).filter_by(id=input.id).one()
+                old_name = definition.name
 
-        existing = self.server.config_manager.get('security', old_name)
-        if not existing:
-            raise Exception('Bearer token definition not found')
+                definition.name = input.name
+                definition.is_active = input.is_active
+                definition.username = input.username
 
-        if name != old_name:
-            if self.server.config_manager.get('security', name):
-                raise Exception('Bearer token definition `{}` already exists'.format(name))
-            self.server.config_manager.delete('security', old_name)
+                set_instance_opaque_attrs(definition, input)
 
-        existing['name'] = name
-        existing['is_active'] = input.is_active
-        existing['username'] = input.username
-        existing['password'] = existing.get('password', '')
-        existing['client_id_field'] = input.client_id_field
-        existing['client_secret_field'] = input.client_secret_field
-        existing['grant_type'] = input.grant_type
-        existing['data_format'] = input.data_format
-        existing['auth_server_url'] = input.get('auth_server_url') or ''
-        existing['scopes'] = input.get('scopes') or ''
-        existing['extra_fields'] = input.get('extra_fields') or ''
-        existing['type'] = 'bearer_token'
+                session.add(definition)
+                session.commit()
 
-        self.server.config_manager.set('security', name, existing)
+            except Exception:
+                msg = 'Bearer token definition could not be updated, e:`%s`'
+                self.logger.error(msg, format_exc())
+                session.rollback()
 
-        self.response.payload.id = existing['id']
-        self.response.payload.name = name
+                raise
+            else:
+                input.action = SECURITY.OAUTH_EDIT.value
+                input.old_name = old_name
+                input.sec_type = SEC_DEF_TYPE.OAUTH
+                self.broker_client.publish(input)
+
+                self.response.payload.id = definition.id
+                self.response.payload.name = definition.name
 
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ChangePassword(AdminService):
-    """ Changes the password of a Bearer token definition.
+class ChangePassword(ChangePasswordBase):
+    """ Changes the password of an Bearer token definition.
     """
     password_required = False
 
-    input = 'password', '-id', '-name'
-    output = 'id',
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_security_oauth_change_password_request'
+        response_elem = 'zato_security_oauth_change_password_response'
 
     def handle(self):
-        input = self.request.input
-        name = input.get('name', '')
+        def _auth(instance:'any_', password:'str'):
+            instance.password = password
 
-        password = self.server.decrypt(input.password) if input.password else ''
-
-        if self.password_required:
-            if not password:
-                raise Exception('Password must not be empty')
-
-        if not name and input.get('id'):
-            for item in self.server.config_manager.get_list('security'):
-                if _is_oauth(item) and str(item.get('id')) == str(input.id):
-                    name = item['name']
-                    break
-
-        if not name:
-            raise Exception('Either ID or name are required on input')
-
-        existing = self.server.config_manager.get('security', name)
-        if not existing:
-            raise Exception('Bearer token definition not found')
-
-        existing['password'] = password
-        existing['type'] = 'bearer_token'
-        self.server.config_manager.set('security', name, existing)
-
-        self.response.payload.id = existing['id']
+        return self._handle(OAuth, _auth, SECURITY.OAUTH_CHANGE_PASSWORD.value)
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Delete(AdminService):
-    """ Deletes a Bearer token definition.
+    """ Deletes an Bearer token definition.
     """
-    input = 'id'
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_oauth_delete_request'
+        response_elem = 'zato_security_oauth_delete_response'
+        input_required = 'id'
 
     def handle(self):
-        items = self.server.config_manager.get_list('security')
-        target_name = None
-        for item in items:
-            if _is_oauth(item) and str(item.get('id')) == str(self.request.input.id):
-                target_name = item['name']
-                break
+        with closing(self.odb.session()) as session:
+            try:
+                auth = session.query(OAuth).\
+                    filter(OAuth.id==self.request.input.id).\
+                    one()
 
-        if not target_name:
-            raise Exception('Bearer token definition not found')
+                session.delete(auth)
+                session.commit()
+            except Exception:
+                msg = 'Bearer token definition could not be deleted, e:`%s`'
+                self.logger.error(msg, format_exc())
+                session.rollback()
 
-        self.server.config_manager.delete('security', target_name)
+                raise
+            else:
+                self.request.input.action = SECURITY.OAUTH_DELETE.value
+                self.request.input.name = auth.name
+                self.broker_client.publish(self.request.input)
 
 # ################################################################################################################################
 # ################################################################################################################################
