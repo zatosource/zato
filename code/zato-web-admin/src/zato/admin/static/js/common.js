@@ -656,7 +656,7 @@ $.fn.zato.data_table.on_change_password_submit = function() {
     if($.fn.zato.is_form_valid(form)) {
 
         var _id = $('#id_change_password-id').val();
-        var _secret_type = $('#secret_type_id').val() || 'password';
+        var _secret_type = $('#change_password-form').data('secret-type') || $('#secret_type_id').val() || 'password';
 
         var _callback = function(data, status) {
             var tr = $.fn.zato.data_table.row_updated(_id);
@@ -723,6 +723,7 @@ $.fn.zato.data_table.change_password = function(id, title, label, _label_lower) 
 
     $('#secret_type_id').val(_label_lower);
     $('#secret_label1').text(_label);
+    $('#change_password-form').data('secret-type', _label_lower);
 
     $('#change-password-name').text(name);
     $('#id_change_password-id').val(id);
