@@ -1195,6 +1195,35 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def import_demo_scheduler(self):
+
+        import yaml
+        import zato.server.service.internal.scheduler
+        from contextlib import closing
+        from zato.common.odb.model import Job
+
+        config_path = os.path.join(os.path.dirname(zato.server.service.internal.scheduler.__file__), 'demo-enmasse.yaml')
+
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        with closing(self.odb.session()) as session:
+            existing_jobs = {j.name for j in session.query(Job).filter_by(cluster_id=self.cluster_id).all()}
+
+        for job in config.get('scheduler', []):
+            if job['name'] in existing_jobs:
+                return 'Demo scheduler config already imported'
+
+        from zato.server.commands import CommandsFacade
+        commands = CommandsFacade()
+        commands.init(self)
+        _ = commands.run_enmasse_sync_import(config_path)
+
+        self.reload_config()
+        return True
+
+# ################################################################################################################################
+
     def import_test_pubsub_enmasse(self):
 
         # Zato
