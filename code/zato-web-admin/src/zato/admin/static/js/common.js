@@ -654,9 +654,40 @@ $.fn.zato.data_table.on_change_password_submit = function() {
 
     var form = $('#change_password-form');
     if($.fn.zato.is_form_valid(form)) {
+
+        var _id = $('#id_change_password-id').val();
+        var _secret_type = $('#secret_type_id').val() || 'password';
+
         var _callback = function(data, status) {
-            $.fn.zato.data_table.row_updated($('#id_change_password-id').val());
+            var tr = $.fn.zato.data_table.row_updated(_id);
             $.fn.zato.data_table._on_submit_complete(data, status);
+
+            var link = tr.find('a').filter(function() {
+                var text = $(this).text().toLowerCase();
+                return text.indexOf('change') !== -1 && (text.indexOf('password') !== -1 || text.indexOf('key') !== -1 || text.indexOf('secret') !== -1);
+            }).first();
+
+            if(link.length) {
+                var tooltip_text = 'OK, ' + _secret_type + ' changed';
+                var _tooltip = tippy(link[0], {
+                    content: tooltip_text,
+                    allowHTML: false,
+                    theme: 'dark',
+                    trigger: 'manual',
+                    placement: 'right',
+                    arrow: true,
+                    interactive: false,
+                    inertia: true,
+                });
+                var instance = Array.isArray(_tooltip) ? _tooltip[0] : _tooltip;
+                if(instance) {
+                    instance.show();
+                    setTimeout(function() {
+                        instance.hide();
+                        setTimeout(function() { instance.destroy(); }, 300);
+                    }, 1200);
+                }
+            }
         }
 
         $.fn.zato.data_table._on_submit(form, _callback);
