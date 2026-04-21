@@ -831,8 +831,17 @@ class InvokeChannel(AdminService):
     output = '-status_code', '-response_body', '-response_time'
 
     def handle(self):
-        channel_config = self._get_channel_config(self.request.input.id)
-        sec_config = self._get_security_config(channel_config)
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).first()
+            if not item:
+                raise Exception('REST channel `{}` not found'.format(self.request.input.id))
+
+            channel_config = {
+                'url_path': item.url_path,
+                'security_id': item.security_id,
+            }
+            sec_config = self._get_security_config(session, item.security_id)
+
         url_path = self._resolve_url_path(channel_config)
         wrapper = self._build_temp_wrapper(channel_config, sec_config, url_path)
 
@@ -843,44 +852,28 @@ class InvokeChannel(AdminService):
 
         _set_invoke_response(self, result)
 
-    def _get_channel_config(self, channel_id):
-        for item in self.server.config_store.get_list('channel_rest'):
-            if str(item.get('id')) == str(channel_id) or item.get('name') == str(channel_id):
-                return item
-        raise Exception('REST channel `{}` not found'.format(channel_id))
-
-    def _get_security_config(self, channel_config):
-        security_id = channel_config.get('security_id')
-        if not security_id or str(security_id) in ('None', ZATO_NONE, 'None/ZATO_NONE'):
+    def _get_security_config(self, session, security_id):
+        if not security_id:
             return {'sec_type': None, 'username': None, 'password': None, 'orig_username': None}
 
-        for sec_item in self.server.config_store.get_list('security'):
-            if str(sec_item.get('id')) == str(security_id):
-                return self._extract_credentials(sec_item)
+        sec_def = session.query(SecurityBase).filter_by(id=security_id).first()
+        if not sec_def:
+            return {'sec_type': None, 'username': None, 'password': None, 'orig_username': None}
 
-        return {'sec_type': None, 'username': None, 'password': None, 'orig_username': None}
-
-    def _extract_credentials(self, sec_item):
-        sec_type = sec_item.get('sec_type') or sec_item.get('type', '')
-        username = sec_item.get('username', '') or ''
-        orig_username = sec_item.get('orig_username', '') or username
-        password = sec_item.get('password', '') or ''
-        password = self._decrypt_password(password)
-
-        return {
-            'sec_type': sec_type,
-            'username': username,
-            'password': password,
-            'orig_username': orig_username,
-        }
-
-    def _decrypt_password(self, password):
+        username = getattr(sec_def, 'username', '') or ''
+        password = getattr(sec_def, 'password', '') or ''
         if password and hasattr(self.server, 'decrypt'):
             try:
-                return self.server.decrypt(password)
+                password = self.server.decrypt(password)
             except Exception:
                 pass
-        return password
+
+        return {
+            'sec_type': sec_def.sec_type,
+            'username': username,
+            'password': password,
+            'orig_username': username,
+        }
 
     def _resolve_url_path(self, channel_config):
         url_path = channel_config.get('url_path', '/')
@@ -959,8 +952,11 @@ class InvokeOutconn(AdminService):
     output = '-status_code', '-response_body', '-response_time'
 
     def handle(self):
-        outconn_config = self._get_outconn_config(self.request.input.id)
-        outconn_name = outconn_config['name']
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).first()
+            if not item:
+                raise Exception('REST outgoing connection `{}` not found'.format(self.request.input.id))
+            outconn_name = item.name
 
         method = self.request.input.get('request_method', '') or 'POST'
         payload = self.request.input.get('payload', '') or ''
@@ -968,12 +964,6 @@ class InvokeOutconn(AdminService):
 
         result = self._invoke_outconn(outconn_name, method, payload, params)
         _set_invoke_response(self, result)
-
-    def _get_outconn_config(self, outconn_id):
-        for item in self.server.config_store.get_list('outgoing_rest'):
-            if str(item.get('id')) == str(outconn_id) or item.get('name') == str(outconn_id):
-                return item
-        raise Exception('REST outgoing connection `{}` not found'.format(outconn_id))
 
     def _build_params(self):
         params = {}
