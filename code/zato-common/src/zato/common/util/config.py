@@ -311,13 +311,6 @@ def resolve_env_variables(data):
 
 # ################################################################################################################################
 
-_secret_exact = frozenset(SECRETS.PARAMS) | {
-    'api_key', 'apiKey', 'xApiKey', 'tls_pem_passphrase',
-}
-
-_secret_prefixes = ('secret_prefix_', 'password_prefix_')
-_secret_suffixes = ('_secret_suffix', '_password_suffix')
-
 def _replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
 
     # If there is no input, we can return immediately
@@ -344,21 +337,23 @@ def _replace_query_string_items(server:'ParallelServer', data:'any_') -> 'str':
         should_continue = True
 
         # .. check exact keys ..
-        if key in _secret_exact:
-            value = Secret_Shadow
-            should_continue = False
+        for name in server.sio_config.secret_config.exact:
+            if key == name:
+                value = Secret_Shadow
+                should_continue = False
+                break
 
         # .. check prefixes ..
         if should_continue:
-            for name in _secret_prefixes:
+            for name in server.sio_config.secret_config.prefixes:
                 if key.startswith(name):
                     value = Secret_Shadow
-                    should_continue = False
+                    should_continue = should_continue
                     break
 
         # .. check suffixes ..
         if should_continue:
-            for name in _secret_suffixes:
+            for name in server.sio_config.secret_config.suffixes:
                 if key.endswith(name):
                     value = Secret_Shadow
                     break

@@ -8,11 +8,10 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import os
-import sys
 from copy import deepcopy
 
 # Zato
-from zato.cli import common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
+from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, ZatoCommand
 from zato.common.typing_ import cast_
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.platform_ import is_windows
@@ -24,31 +23,6 @@ from zato.common.util.open_ import open_w
 if 0:
     from bunch import Bunch
     from zato.common.typing_ import any_
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-def _use_color() -> 'bool':
-    if os.environ.get('NO_COLOR') is not None:
-        return False
-    if os.environ.get('TERM') == 'dumb':
-        return False
-    if not hasattr(sys.stdout, 'isatty'):
-        return False
-    return sys.stdout.isatty()
-
-_color_enabled = _use_color()
-
-def _highlight(text:'str') -> 'str':
-    if _color_enabled:
-        return '\033[1;33m{}\033[0m'.format(text)
-    return '[{}]'.format(text)
-
-def _step(current:'int', total:'int', msg:'str') -> 'str':
-    tag = '{}/{}'.format(current, total)
-    if _color_enabled:
-        tag = '\033[1;36m{}\033[0m'.format(tag)
-    return '| {} | {}'.format(tag, msg)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -126,7 +100,7 @@ check_config_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
 start_servers_template = """
 $ZATO_BIN start $BASE_DIR/{server_name} --verbose --env-file /opt/hot-deploy/enmasse/env.ini
 $ZATO_BIN wait --path $BASE_DIR/{server_name}
-_step "{step_number}/$STEPS" "{server_name} started"
+echo [{step_number}/$STEPS] {server_name} started
 """
 
 # ################################################################################################################################
@@ -136,14 +110,6 @@ zato_qs_start_head_template = """#!/bin/bash
 
 set -e
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
-
-_step() {{
-    if [ -t 1 ] && [ -z "${{NO_COLOR:-}}" ] && [ "${{TERM:-}}" != "dumb" ]; then
-        printf '| \\033[1;36m%s\\033[0m | %s\\n' "$1" "$2"
-    else
-        printf '| %s | %s\\n' "$1" "$2"
-    fi
-}}
 
 {preamble_script}
 
@@ -164,7 +130,7 @@ zato_qs_start_body_template = """
 {check_config_extra}
 
 # Make sure TCP ports are available
-_step "{check_config_step_number}/$STEPS" "Checking TCP ports availability"
+echo [{check_config_step_number}/$STEPS] Checking TCP ports availability
 
 ZATO_BIN_PATH=`which zato`
 ZATO_BIN_DIR=`python -c "import os; print(os.path.dirname('$ZATO_BIN_PATH'))"`
@@ -183,8 +149,8 @@ $ZATO_BIN_DIR/py $UTIL_DIR/check_tcp_ports.py {check_tcp_ports_suffix}
 # ################################################################################################################################
 
 zato_qs_check_config_extra = """
-_step "1/$STEPS" "Redis connection OK"
-_step "2/$STEPS" "Configuration check OK"
+echo [1/$STEPS] Redis connection OK
+echo [2/$STEPS] SQL ODB connection OK
 """
 
 # ################################################################################################################################
@@ -193,7 +159,7 @@ _step "2/$STEPS" "Configuration check OK"
 zato_qs_start_dashboard = """
 # .. Dashboard comes as the last one because it may ask Django-related questions.
 $ZATO_BIN start $BASE_DIR/web-admin --verbose
-_step "$STEPS/$STEPS" "Dashboard started"
+echo [$STEPS/$STEPS] Dashboard started
 """
 
 # ################################################################################################################################
@@ -229,7 +195,7 @@ exit 0
 
 stop_servers_template = """
 $ZATO_BIN stop $BASE_DIR/{server_name}
-_step "{step_number}/$STEPS" "{server_name} stopped"
+echo [{step_number}/$STEPS] {server_name} stopped
 """
 
 # ################################################################################################################################
@@ -237,12 +203,12 @@ _step "{step_number}/$STEPS" "{server_name} stopped"
 
 zato_qs_start_scheduler = """
 $ZATO_BIN start $BASE_DIR/scheduler --verbose
-_step "{scheduler_step_count}/$STEPS" "Scheduler started"
+echo [{scheduler_step_count}/$STEPS] Scheduler started
 """
 
 zato_qs_stop_scheduler = """
 $ZATO_BIN stop $BASE_DIR/scheduler
-_step "$STEPS/$STEPS" "Scheduler stopped"
+echo [$STEPS/$STEPS] Scheduler stopped
 """
 
 # ################################################################################################################################
@@ -251,14 +217,6 @@ _step "$STEPS/$STEPS" "Scheduler stopped"
 zato_qs_stop_template = """#!/bin/bash
 
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
-
-_step() {{
-    if [ -t 1 ] && [ -z "${{NO_COLOR:-}}" ] && [ "${{TERM:-}}" != "dumb" ]; then
-        printf '| \\033[1;36m%s\\033[0m | %s\\n' "$1" "$2"
-    else
-        printf '| %s | %s\\n' "$1" "$2"
-    fi
-}}
 
 {script_dir}
 
@@ -284,13 +242,13 @@ CLUSTER={cluster_name}
 
 # Start the load balancer first ..
 $ZATO_BIN stop $BASE_DIR/load-balancer
-_step "1/$STEPS" "Load-balancer stopped"
+echo [1/$STEPS] Load-balancer stopped
 
 # .. servers ..
 {stop_servers}
 
 $ZATO_BIN stop $BASE_DIR/web-admin
-_step "{web_admin_step_count}/$STEPS" "Dashboard stopped"
+echo [{web_admin_step_count}/$STEPS] Dashboard stopped
 
 # .. scheduler ..
 {stop_scheduler}
@@ -340,7 +298,7 @@ class Create(ZatoCommand):
     """ Quickly creates a working environment.
     """
     needs_empty_dir = True
-    opts:'any_' = []
+    opts:'any_' = deepcopy(common_odb_opts)
     opts.append({'name':'--cluster-name', 'help':'Name to be given to the new environment'})
     opts.append({'name':'--servers', 'help':'How many servers to create', 'default':1}) # type: ignore
     opts.append({'name':'--threads-per-server', 'help':'How many main threads to use per server', 'default':1}) # type: ignore
@@ -364,8 +322,16 @@ class Create(ZatoCommand):
         out.verbose = args.verbose
         out.store_log = args.store_log
         out.store_config = args.store_config
+        out.odb_type = args.odb_type
+        out.odb_host = args.odb_host
+        out.odb_port = args.odb_port
+        out.odb_user = args.odb_user
+        out.odb_db_name = args.odb_db_name
         out.kvdb_host = self.get_arg('kvdb_host')
         out.kvdb_port = self.get_arg('kvdb_port')
+        out.sqlite_path = getattr(args, 'sqlite_path', None)
+        out.postgresql_schema = getattr(args, 'postgresql_schema', None)
+        out.odb_password = args.odb_password
         out.kvdb_password = self.get_arg('kvdb_password')
         out.cluster_name = cluster_name
         out.scheduler_name = 'scheduler1'
@@ -388,11 +354,12 @@ class Create(ZatoCommand):
 
     def execute(self, args:'any_') -> 'None':
         """ Quickly creates Zato components
-        1) Cluster initial data
-        2) Server
-        3) Dashboard
-        4) Scheduler
-        5) Scripts
+        1) ODB
+        2) ODB initial data
+        3) Server
+        4) Dashboard
+        5) Scheduler
+        6) Scripts
         """
 
         # stdlib
@@ -400,6 +367,7 @@ class Create(ZatoCommand):
         import random
         import stat
         from collections import OrderedDict
+        from contextlib import closing
         from itertools import count
         from uuid import uuid4
 
@@ -415,9 +383,11 @@ class Create(ZatoCommand):
         secret_key = getattr(args, 'secret_key', None) or Fernet.generate_key()
 
         # Zato
-        from zato.cli import create_cluster, create_scheduler, create_server, create_web_admin
+        from zato.cli import create_cluster, create_odb, create_scheduler, create_server, create_web_admin
         from zato.common.crypto.api import CryptoManager
         from zato.common.defaults import http_plain_server_port
+        from zato.common.odb.model import Cluster
+        from zato.common.util.api import get_engine, get_session
 
         random.seed()
 
@@ -445,6 +415,9 @@ class Create(ZatoCommand):
 
         # Make sure we always work with absolute paths
         args_path = os.path.abspath(args.path)
+
+        if args.odb_type == 'sqlite':
+            args.sqlite_path = os.path.join(args_path, 'zato.db')
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
@@ -475,7 +448,8 @@ class Create(ZatoCommand):
         should_create_scheduler = not no_scheduler
         create_components_other_than_scheduler = not scheduler_only
 
-        total_non_servers_steps = 4
+        # Under Windows, even if the load balancer is created, we do not log this information.
+        total_non_servers_steps = 3 if is_windows else 5
         total_steps = total_non_servers_steps + servers
 
         # Take the scheduler into account
@@ -484,18 +458,29 @@ class Create(ZatoCommand):
         elif scheduler_only:
             # 1 for servers
             # 1 for Dashboard
-            total_steps -= 2
+            # 1 for the load-balancer
+            total_steps -= 3
 
 # ################################################################################################################################
 
         #
-        # 1) Cluster initial data
+        # 1) ODB
+        #
+        if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
+            self.logger.info('[{}/{}] ODB schema already exists'.format(next(next_step), total_steps))
+        else:
+            self.logger.info('[{}/{}] ODB schema created'.format(next(next_step), total_steps))
+
+# ################################################################################################################################
+
+        #
+        # 2) ODB initial data
         #
         create_cluster_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
         create_cluster_args.secret_key = secret_key
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False) # type: ignore
 
-        self.logger.info(_step(next(next_step), total_steps, 'Cluster initial data created'))
+        self.logger.info('[{}/{}] ODB initial data created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -524,7 +509,7 @@ class Create(ZatoCommand):
                 _ = create_server.Create(
                     create_server_args).execute(create_server_args, next(next_port), False, True) # type: ignore
 
-                self.logger.info(_step(next(next_step), total_steps, 'server{} created'.format(name)))
+                self.logger.info('[{}/{}] server{} created'.format(next(next_step), total_steps, name))
 
 # ################################################################################################################################
 
@@ -550,7 +535,7 @@ class Create(ZatoCommand):
             # Need to reset the logger here because executing the create_web_admin command
             # loads the Dashboard's logger which doesn't like that of ours.
             self.reset_logger(args, True)
-            self.logger.info(_step(next(next_step), total_steps, 'Dashboard created'))
+            self.logger.info('[{}/{}] Dashboard created'.format(next(next_step), total_steps))
         else:
             admin_created = False
 
@@ -566,16 +551,21 @@ class Create(ZatoCommand):
             scheduler_path = os.path.join(args_path, 'scheduler')
             os.mkdir(scheduler_path)
 
+            session = get_session(get_engine(args)) # type: ignore
+
+            with closing(session):
+                cluster_id:'int' = session.query(Cluster.id).filter(Cluster.name==cluster_name).one()[0] # type: ignore
+
             create_scheduler_args = self._bunch_from_args(args, admin_invoke_password, cluster_name)
             create_scheduler_args.path = scheduler_path
-            create_scheduler_args.cluster_id = 1
+            create_scheduler_args.cluster_id = cluster_id
             create_scheduler_args.server_path = first_server_path
             create_scheduler_args.scheduler_api_client_for_server_auth_required = scheduler_api_client_for_server_auth_required
             create_scheduler_args.scheduler_api_client_for_server_username = scheduler_api_client_for_server_username
             create_scheduler_args.scheduler_api_client_for_server_password = scheduler_api_client_for_server_password
 
             _ = create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, True) # type: ignore
-            self.logger.info(_step(next(next_step), total_steps, 'Scheduler created'))
+            self.logger.info('[{}/{}] Scheduler created'.format(next(next_step), total_steps))
 
 # ################################################################################################################################
 
@@ -713,17 +703,14 @@ class Create(ZatoCommand):
             os.chmod(zato_qs_stop_path, file_mod)
             os.chmod(zato_qs_restart_path, file_mod)
 
-            self.logger.info(_step(next(next_step), total_steps, 'Management scripts created'))
+            self.logger.info('[{}/{}] Management scripts created'.format(next(next_step), total_steps))
 
-        self.logger.info('All done')
+        self.logger.info('Quickstart environment {} created'.format(cluster_name))
 
         if admin_created:
-            self.logger.info(
-                'Dashboard user: %s, password: %s',
-                _highlight('admin'),
-                _highlight(web_admin_password.decode('utf8'))) # type: ignore
+            self.logger.info('Dashboard user:[admin], password:[%s]', web_admin_password.decode('utf8')) # type: ignore
         else:
-            self.logger.info('User %s already exists', _highlight('admin'))
+            self.logger.info('User [admin] already exists in the ODB')
 
         self.logger.info('Start the environment by issuing this command: %s', zato_qs_start_path)
         self.logger.info('Visit https://zato.io/support for more information and support options')

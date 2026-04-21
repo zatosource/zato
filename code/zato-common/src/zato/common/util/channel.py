@@ -24,6 +24,7 @@ def create_openapi_channel(session, cluster, service):
     """ Creates the OpenAPI handler channel.
     """
     from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
+    from zato.common.odb.model import HTTPSOAP
 
     channel = HTTPSOAP(
         None, openapi_channel_name, True, True, CONNECTION.CHANNEL,
@@ -41,6 +42,7 @@ def ensure_openapi_channel_exists(session, cluster_id):
     Returns True if created, False if already existed.
     """
     from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
+    from zato.common.odb.model import Cluster, HTTPSOAP, Service
 
     existing = session.query(HTTPSOAP).filter(
         HTTPSOAP.name == openapi_channel_name,
@@ -79,6 +81,7 @@ def ensure_django_channel_exists(session, cluster_id):
     Returns True if created, False if already existed.
     """
     from zato.common.api import CONNECTION, DATA_FORMAT, URL_TYPE
+    from zato.common.odb.model import Cluster, HTTPSOAP, Service
 
     existing = session.query(HTTPSOAP).filter(
         HTTPSOAP.name == django_channel_name,

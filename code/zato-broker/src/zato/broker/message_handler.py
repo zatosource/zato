@@ -13,9 +13,6 @@ from traceback import format_exc
 # Bunch
 from bunch import bunchify
 
-# zato-broker-core (Rust extension)
-from zato_broker_core import log_admin_info, log_admin_error
-
 # Zato
 from zato.common.broker_message import code_to_name
 from zato.common.typing_ import any_, anydict, dataclass, strnone
@@ -53,34 +50,39 @@ def handle_broker_msg(msg:'anydict', context:'any_') -> 'BrokerMessageResult':
     result = BrokerMessageResult()
 
     try:
+        # Extract action information
         action_code = msg.get('action')
         if not action_code:
             return result
 
+        # Store action info in result
         result.action_code = action_code
         result.action_name = action_code
 
+        # Find and call the handler method
         handler_name = f'on_broker_msg_{action_code}'
-
-        log_admin_info(f'Broker msg received -> action:{action_code}, msg:{msg}')
-
         if func := getattr(context, handler_name, None):
             msg = bunchify(msg)
             response = func(msg)
 
+            '''
+            print()
+            print(555, msg)
+            print(666, func)
+            print(777, response)
+            print()
+            '''
+
             result.response = response
             result.was_handled = True
-
-            log_admin_info(f'Broker msg handled -> action:{action_code}, handler:{handler_name}')
         else:
-            logger.debug('No handler %s on %s', handler_name, context.__class__.__name__)
+            logger.warning('No such handler: %s in context: %s -> %s', handler_name, context, msg)
 
         return result
 
     except Exception:
         msg_action = msg.get('action') or 'undefined_msg_action'
         action = code_to_name.get(msg_action) or 'undefined_action'
-        log_admin_error(f'Broker msg error -> action:{msg_action} ({action}), e:{format_exc()}')
         msg = f'Could not handle broker message: ({action}:{msg_action}) `repr({msg})`, e:`{format_exc()}`' # type: ignore
         raise Exception(msg)
 

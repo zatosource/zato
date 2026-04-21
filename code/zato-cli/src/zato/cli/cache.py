@@ -16,6 +16,11 @@ from zato.cli import ManageCommand
 if 0:
     # stdlib
     from argparse import Namespace
+
+    # Zato
+    from zato.client import JSONResponse
+
+    JSONResponse = JSONResponse
     Namespace = Namespace
 
 # ################################################################################################################################

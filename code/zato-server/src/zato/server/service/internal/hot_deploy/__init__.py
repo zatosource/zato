@@ -25,7 +25,7 @@ from zato.common.util.file_system import fs_safe_now
 from zato.common.util.open_ import open_w
 from zato.common.util.python_ import import_module_by_path
 from zato.server.service import AsIs
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
@@ -55,8 +55,10 @@ class DeploymentCtx:
 class Create(AdminService):
     """ Creates all the filesystem directories and files out of a deployment package stored in the ODB.
     """
-    input = 'payload', 'payload_name', '-is_startup'
-    output = AsIs('-services_deployed'), '-zato_ide_deploy_create_response'
+    class SimpleIO(AdminSIO):
+        input_required = 'payload', 'payload_name'
+        input_optional = 'is_startup'
+        output_optional = AsIs('services_deployed'), 'zato_ide_deploy_create_response'
 
 # ################################################################################################################################
 
@@ -212,7 +214,7 @@ class Create(AdminService):
             service = cast_('InRAMService', service)
 
             # .. extract the ID of the deployed service ..
-            service_id = self.server.service_store.get_service_id_by_name(service.name)
+            service_id = self.server.service_store.impl_name_to_id[service.impl_name]
 
             # .. append it for later use ..
             service_id_list.append(service_id)

@@ -6,6 +6,9 @@ Copyright (C) 2021, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# Bunch
+from bunch import Bunch
+
 # PyYAML
 from yaml import FullLoader, load as yaml_load
 
@@ -23,6 +26,21 @@ if 0:
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+sio_config = Bunch()
+
+sio_config.int = Bunch()
+sio_config.bool = Bunch()
+sio_config.secret = Bunch()
+sio_config.bytes_to_str = Bunch()
+
+sio_config.int.prefix = set()
+sio_config.int.exact = set()
+sio_config.int.suffix = {'_id'}
+
+sio_config.bool.prefix = set()
+sio_config.bool.exact = set()
+sio_config.bool.suffix = set()
 
 service_name = 'helpers.dataclass-service'
 

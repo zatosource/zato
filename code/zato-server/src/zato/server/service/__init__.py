@@ -15,6 +15,13 @@ from inspect import isclass
 from re import findall
 from traceback import format_exc
 
+# Bunch
+from bunch import bunchify
+
+# lxml
+from lxml.etree import _Element as EtreeElement # type: ignore
+from lxml.objectify import ObjectifiedElement
+
 # gevent
 from gevent import Timeout, sleep as _gevent_sleep, spawn as _gevent_spawn
 from gevent.lock import RLock
@@ -27,25 +34,35 @@ from zato.bunch import Bunch
 from zato.common.api import BROKER, CHANNEL, DATA_FORMAT, NotGiven, PARAMS_PRIORITY, \
      RESTAdapterResponse, zato_no_op_marker
 from zato.common.exception import Inactive, Reportable, ZatoException
+from zato.common.facade import SecurityFacade
 from zato.common.json_internal import dumps
-from zato.common.typing_ import type_
+from zato.common.monitoring.logger_ import DatadogLogger
+from zato.common.monitoring.metrics import ServiceMetrics
+from zato.common.typing_ import cast_, type_
 from zato.common.util.api import make_repr, new_cid, payload_from_request, service_name_from_impl, spawn_greenlet, uncamelify
 from zato.common.util.python_ import get_module_name_by_path
 from zato.common.util.time_ import utcnow
 from zato.server.commands import CommandsFacade
-from zato.server.connection.facade import RESTFacade, SchedulerFacade
-from zato.server.pattern.base import FanOut, ParallelExec
-from zato.server.pattern.invoke_retry import InvokeRetry
-from zato.server.service.reqresp import Cloud, Outgoing, Request
+from zato.server.connection.cache import CacheAPI
+from zato.server.connection.email import EMailAPI
+from zato.server.connection.facade import KeysightContainer, RESTFacade, SchedulerFacade
+from zato.server.connection.http_soap.outgoing import current_datadog_cid, current_datadog_context, \
+    current_datadog_env_name, current_datadog_process_name, current_datadog_service_name
+from zato.server.connection.search import SearchAPI
+from zato.server.pattern.api import FanOut
+from zato.server.pattern.api import InvokeRetry
+from zato.server.pattern.api import ParallelExec
+from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request
 
-# Zato - Rust SIO
-from zato_sio import Payload as SimpleIOPayload
-from zato_sio import Response
+# Zato - Cython
+from zato.cy.reqresp.payload import SimpleIOPayload
+from zato.cy.reqresp.response import Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.common.ext.dataclasses import dataclass
 from zato.common.marshal_.api import Model, ModelCtx
-from zato_sio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
+from zato.server.connection.cloud.microsoft_dataverse import DataverseClient
+from zato.simpleio import AsIs, CSV, Bool, Date, DateTime, Dict, Decimal, DictList, Elem as SIOElem, Float, Int, List, \
      Opaque, Text, UTC, UUID
 
 # For pyflakes
@@ -56,6 +73,7 @@ dataclass = dataclass
 Date = Date
 DateTime = DateTime
 Decimal = Decimal
+DataverseClient = DataverseClient
 Dict = Dict
 DictList = DictList
 Float = Float
@@ -73,9 +91,10 @@ UUID = UUID # type: ignore
 if 0:
     from ddtrace._trace.context import Context as DatadogContext
     from logging import Logger
-    from zato.broker.broker import BrokerCoreAPI
+    from zato.broker.client import BrokerClient
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
+    from zato.common.odb.api import ODBManager
     from zato.common.rules.api import RulesManager
     from zato.common.typing_ import any_, anydict, anydictnone, boolnone, callable_, callnone, dictnone, intnone, \
         listnone, modelnone, strdict, strdictnone, strstrdict, strnone, strlist
@@ -86,18 +105,18 @@ if 0:
     from zato.server.base.worker import WorkerStore
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict, ConfigStore
-    from zato_sio import SIOProcessor
+    from zato.simpleio import CySimpleIO
     anydictnone = anydictnone
     callnone = callnone
     dictnone = dictnone
     modelnone = modelnone
     strdictnone = strdictnone
     AuditPII = AuditPII
-    BrokerCoreAPI = BrokerCoreAPI
+    BrokerClient = BrokerClient
     callable_ = callable_
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
-    SIOProcessor = SIOProcessor # type: ignore
+    CySimpleIO = CySimpleIO # type: ignore
     FTPStore = FTPStore
     ODBManager = ODBManager
     ParallelServer = ParallelServer
@@ -131,10 +150,11 @@ _async_callback = CHANNEL.INVOKE_ASYNC_CALLBACK
 
 # ################################################################################################################################
 
-_http_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
+_wsgi_channels = {CHANNEL.HTTP_SOAP, CHANNEL.INVOKE, CHANNEL.INVOKE_ASYNC}
 
 # ################################################################################################################################
 
+_response_raw_types=(bytes, str, dict, list, tuple, EtreeElement, Model, ObjectifiedElement)
 _utcnow = utcnow
 
 # ################################################################################################################################
@@ -314,13 +334,6 @@ class Service:
     search:'SearchAPI | None' = None
     patterns: 'PatternsFacade | None' = None
 
-    _EMailAPI:'type | None' = None
-    _SearchAPI:'type | None' = None
-    _KeysightContainer:'type | None' = None
-    _SecurityFacade:'type | None' = None
-    _ServiceMetrics:'type | None' = None
-    _AMQPRequestData:'type | None' = None
-
     amqp = AMQPFacade()
     commands = CommandsFacade()
 
@@ -347,7 +360,7 @@ class Service:
     keysight: 'KeysightContainer'
 
     server: 'ParallelServer'
-    broker_client: 'BrokerCoreAPI'
+    broker_client: 'BrokerClient'
     time: 'TimeUtil'
 
     # These two are the same
@@ -392,7 +405,7 @@ class Service:
         self.in_reply_to = ''
         self.data_format = ''
         self.transport = ''
-        self.http_environ = {} # type: anydict
+        self.wsgi_environ = {} # type: anydict
         self.job_type = ''     # type: str
         self.environ = Bunch()
         self.request = Request(self) # type: Request
@@ -497,7 +510,7 @@ class Service:
 
 # ################################################################################################################################
 
-    def _init(self, may_have_http_environ:'bool'=False) -> 'None':
+    def _init(self, may_have_wsgi_environ:'bool'=False) -> 'None':
         """ Actually initializes the service.
         """
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
@@ -509,24 +522,18 @@ class Service:
 
         if self.component_enabled_email:
             if not Service.email:
-                if Service._EMailAPI is None:
-                    from zato.server.connection.email import EMailAPI
-                    Service._EMailAPI = EMailAPI
-                Service.email = Service._EMailAPI(self._worker_store.email_smtp_api, self._worker_store.email_imap_api)
+                Service.email = EMailAPI(self._worker_store.email_smtp_api, self._worker_store.email_imap_api)
 
         if self.component_enabled_search:
             if not Service.search:
-                if Service._SearchAPI is None:
-                    from zato.server.connection.search import SearchAPI
-                    Service._SearchAPI = SearchAPI
-                Service.search = Service._SearchAPI(self._worker_store.search_es_api)
+                Service.search = SearchAPI(self._worker_store.search_es_api)
 
-        if may_have_http_environ:
-            self.request.http.init(self.http_environ)
+        if may_have_wsgi_environ:
+            self.request.http.init(self.wsgi_environ)
 
         # self.has_sio attribute is set by ServiceStore during deployment
         if self.has_sio:
-            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.http_environ, self.server.encrypt)
+            self.request.init(True, self.cid, self._sio, self.data_format, self.transport, self.wsgi_environ, self.server.encrypt)
             self.response.init(self.cid, self._sio, self.data_format)
 
         # Cache is always enabled
@@ -536,48 +543,29 @@ class Service:
         self.rest.init(self.cid, self._worker_store.worker_config.out_plain_http)
 
         # Vendors - Keysight
-        _kc = Service._KeysightContainer
-        if _kc is None:
-            from zato.server.connection.facade import KeysightContainer
-            Service._KeysightContainer = KeysightContainer
-            _kc = KeysightContainer
-        self.keysight = _kc()
+        self.keysight = KeysightContainer()
         self.keysight.init(self.cid, self._worker_store.worker_config.out_plain_http)
 
 # ################################################################################################################################
 
-    @staticmethod
-    def set_response_data(service, **kwargs):
-        response = service.response
-        payload = response.payload
+    def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
+        response = service.response.payload
+        if not isinstance(response, _response_raw_types):
 
-        if isinstance(payload, (bytes, str, dict, list, tuple)):
-            return payload
+            if hasattr(response, 'getvalue'):
+                response = response.getvalue(serialize=kwargs.get('serialize'))
+                if kwargs.get('as_bunch'):
+                    response = bunchify(response)
 
-        from zato.common.marshal_.api import Model
-        if isinstance(payload, Model):
-            return payload
+            elif hasattr(response, 'to_dict'):
+                response = response.to_dict()
 
-        if hasattr(payload, 'getvalue'):
-            serialize = kwargs.get('serialize')
-            if serialize:
-                new_response = payload.getvalue(serialize=serialize)
-            else:
-                new_response = payload.getvalue()
+            elif hasattr(response, 'to_json'):
+                response = response.to_json()
 
-            if kwargs.get('as_bunch'):
-                from zato.bunch import bunchify
-                new_response = bunchify(new_response)
+            service.response.payload = response
 
-        elif hasattr(payload, 'to_dict'):
-            new_response = payload.to_dict()
-        elif hasattr(payload, 'to_json'):
-            new_response = payload.to_json()
-        else:
-            new_response = payload
-
-        response.payload = new_response
-        return new_response
+        return response
 
 # ################################################################################################################################
 
@@ -618,6 +606,22 @@ class Service:
 
 # ################################################################################################################################
 
+    def extract_target(self, name:'str') -> 'tuple[str, str]':
+        """ Splits a service's name into name and target, if the latter is provided on input at all.
+        """
+        # It can be either a name or a name followed by the target to invoke the service on,
+        # i.e. 'myservice' or 'myservice@mytarget'.
+        if '@' in name:
+            name, target = name.split('@')
+            if not target:
+                raise ZatoException(self.cid, 'Target must not be empty in `{}`'.format(name))
+        else:
+            target = ''
+
+        return name, target
+
+# ################################################################################################################################
+
     def update_handle(self,
         set_response_func, # type: callable_
         service,       # type: Service
@@ -626,7 +630,7 @@ class Service:
         data_format,   # type: str
         transport,     # type: str
         server,        # type: ParallelServer
-        broker_client, # type: BrokerCoreAPI | None
+        broker_client, # type: BrokerClient | None
         worker_store,  # type: WorkerStore
         cid,           # type: str
         simple_io_config, # type: anydict
@@ -640,23 +644,23 @@ class Service:
         if service.needs_datadog_logging:
             service.logger = DatadogLogger(cid, server, service.name, self.process_name, self)
         else:
-            _class = service.__class__
-            _cached = getattr(_class, '_cached_logger', None)
-            if _cached is None:
-                _cached = _get_logger(service.name)
-                _class._cached_logger = _cached
-            service.logger = _cached
+
+            # .. no Datadog = use stdlib's logger.
+            service.logger = _get_logger(service.name) # type: Logger
 
         # .. now we can assign the logger to our request object.
         service.request.logger = service.logger
 
-        http_environ = kwargs.get('http_environ', {})
-        payload = http_environ.get('zato.request.payload')
-        channel_item = http_environ.get('zato.channel_item', {})
+        wsgi_environ = kwargs.get('wsgi_environ', {})
+        payload = wsgi_environ.get('zato.request.payload')
+        channel_item = wsgi_environ.get('zato.channel_item', {})
 
         zato_response_headers_container = kwargs.get('zato_response_headers_container')
 
-        if not payload:
+        # Here's an edge case. If a SOAP request has a single child in Body and this child is an empty element
+        # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
+        # to False so we'd be parsing the payload again superfluously.
+        if not isinstance(payload, ObjectifiedElement) and not payload:
             payload = payload_from_request(server.json_parser, cid, raw_request, data_format, transport, channel_item)
 
         job_type = kwargs.get('job_type') or ''
@@ -665,10 +669,10 @@ class Service:
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
         service.update(service, channel, server, broker_client, # type: ignore
-            worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, http_environ,
+            worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
-            in_reply_to=http_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
+            in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'),
             channel_info=kwargs.get('channel_info'),
             channel_item=channel_item)
 
@@ -716,8 +720,8 @@ class Service:
             # .. if this is a REST channel, create a span for it ..
             if channel == CHANNEL.HTTP_SOAP and channel_item:
                 channel_name = channel_item.get('name', '')
-                request_method = http_environ.get('REQUEST_METHOD', '')
-                raw_uri = http_environ.get('RAW_URI', '')
+                request_method = wsgi_environ.get('REQUEST_METHOD', '')
+                raw_uri = wsgi_environ.get('RAW_URI', '')
                 _datadog_channel_span = self.server.datadog_tracer.start_span(
                     name='zato.http.channel',
                     service=_dd_service_name,
@@ -819,7 +823,44 @@ class Service:
             response.payload = ''
             response.status_code = BAD_REQUEST
 
-        return response
+        # If we are told always to skip response elements, this is where we make use of it.
+        _zato_needs_response_wrapper = getattr(service.__class__, '_zato_needs_response_wrapper', None)
+        if _zato_needs_response_wrapper is False:
+            kwargs['skip_response_elem'] = True
+
+        if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
+
+            # If if has .keys, it means it is a dict.
+            response = cast_('dict', response) # type: ignore
+
+            keys = list(response)
+            try:
+                keys.remove('_meta')
+            except ValueError:
+                # This is fine, there was only the actual response element here,
+                # without the '_meta' pagination
+                pass
+
+            # It is possible that the dictionary is empty
+            response_elem = keys[0] if keys else None
+
+            # This covers responses that have only one top-level element
+            # and that element's name is 'response' or, e.g. 'zato_amqp_...'
+            if len(keys) == 1:
+                if response_elem == 'response' or (isinstance(response_elem, str) and response_elem.startswith('zato')):
+                    return response[response_elem]
+
+                # This may be a dict response from a service, in which case we return it as is
+                elif isinstance(response, dict): # type: ignore
+                    return response
+
+            # .. otherwise, this could be a dictionary of elements other than the above
+            # so we just return the dict as it is.
+            else:
+                return response
+
+        else:
+            return response
 
 # ################################################################################################################################
 
@@ -903,12 +944,10 @@ class Service:
 
 # ################################################################################################################################
 
-    def invoke_by_id(self, service_id:'str', *args:'any_', **kwargs:'any_') -> 'any_':
+    def invoke_by_id(self, service_id:'int', *args:'any_', **kwargs:'any_') -> 'any_':
         """ Invokes a service synchronously by its ID.
         """
-        service_info = self.server.service_store.get_service_info_by_id(str(service_id))
-        impl_name = self.server.service_store.name_to_impl_name[service_info['name']]
-        return self.invoke_by_impl_name(impl_name, *args, **kwargs)
+        return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -979,12 +1018,15 @@ class Service:
         _async_callback=_async_callback, # type: Service | str
     ) -> 'None':
 
-        response = self.invoke(ctx.service_name, ctx.data, data_format=ctx.data_format, channel=channel)
+        # Invoke our target service ..
+        response = self.invoke(ctx.service_name, ctx.data, data_format=ctx.data_format, channel=channel, skip_response_elem=True)
 
+        # .. and report back the response to our callback(s), if there are any.
         if ctx.callback:
             for callback_service in ctx.callback: # type: str
                 _ = self.invoke(callback_service, payload=response, channel=_async_callback, cid=new_cid,
-                    data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ)
+                    data_format=ctx.data_format, in_reply_to=ctx.cid, environ=ctx.environ,
+                    skip_response_elem=True)
 
 # ################################################################################################################################
 
@@ -1127,7 +1169,7 @@ class Service:
         service,               # type: Service
         channel_type,          # type: str
         server,                # type: ParallelServer
-        broker_client,         # type: BrokerCoreAPI
+        broker_client,         # type: BrokerClient
         _ignored,              # type: any_
         cid,                   # type: str
         payload,               # type: any_
@@ -1135,7 +1177,7 @@ class Service:
         transport='',          # type: str
         simple_io_config=None, # type: anydictnone
         data_format='',        # type: str
-        http_environ=None,     # type: dictnone
+        wsgi_environ=None,     # type: dictnone
         job_type='',           # type: str
         channel_params=None,   # type: dictnone
         merge_channel_params=True, # type: bool
@@ -1149,7 +1191,7 @@ class Service:
     ) -> 'None':
         """ Takes a service instance and updates it with the current request's context data.
         """
-        http_environ = http_environ or {}
+        wsgi_environ = wsgi_environ or {}
 
         service.server = server
         service.broker_client = broker_client
@@ -1158,22 +1200,14 @@ class Service:
         service.request.raw_request = raw_request
         service.transport = transport
         service.data_format = data_format
-        service.http_environ = http_environ or {}
+        service.wsgi_environ = wsgi_environ or {}
         service.job_type = job_type
         service.config = server.user_config
         service.user_config = server.user_config
         service.static_config = server.static_config
         service.time = server.time_util
-
-        if Service._SecurityFacade is None:
-            from zato.common.facade import SecurityFacade
-            Service._SecurityFacade = SecurityFacade
-        service.security = Service._SecurityFacade(service.server)
-
-        if Service._ServiceMetrics is None:
-            from zato.common.monitoring.metrics import ServiceMetrics
-            Service._ServiceMetrics = ServiceMetrics
-        service.metrics = Service._ServiceMetrics(service)
+        service.security = SecurityFacade(service.server)
+        service.metrics = ServiceMetrics(service)
 
         if channel_params:
             service.request.channel_params.update(channel_params)
@@ -1182,14 +1216,12 @@ class Service:
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 
-        channel_item: 'strdict' = http_environ.get('zato.channel_item') or {}
-        sec_def_info = http_environ.get('zato.sec_def', {})
+        channel_item = wsgi_environ.get('zato.channel_item') or {}
+        channel_item = cast_('strdict', channel_item)
+        sec_def_info = wsgi_environ.get('zato.sec_def', {})
 
         if channel_type == _AMQP:
-            if Service._AMQPRequestData is None:
-                from zato.server.service.reqresp import AMQPRequestData
-                Service._AMQPRequestData = AMQPRequestData
-            service.request.amqp = Service._AMQPRequestData(channel_item['amqp_msg'])
+            service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
 
         chan_sec_info = ChannelSecurityInfo(
             sec_def_info.get('id'),
@@ -1211,7 +1243,7 @@ class Service:
         )
 
         if init:
-            service._init(channel_type in _http_channels)
+            service._init(channel_type in _wsgi_channels)
 
 # ################################################################################################################################
 
@@ -1223,7 +1255,7 @@ class Service:
             self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
         _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
-            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, http_environ=self.http_environ)
+            cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
 
         return service
 
@@ -1438,10 +1470,10 @@ SOAPAdapter = RESTAdapter
 
 class BusinessCentralAdapter(Service):
 
-    model: 'any_' = None
-    conn_name: 'str' = None
-    base_url: 'str' = None
-    endpoint: 'str' = None
+    model     = None
+    conn_name = cast_('str', None)
+    base_url  = cast_('str', None)
+    endpoint  = cast_('str', None)
 
 # ################################################################################################################################
 

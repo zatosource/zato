@@ -105,43 +105,6 @@ _OAuth = SEC_DEF_TYPE.OAUTH
 # ################################################################################################################################
 # ################################################################################################################################
 
-def _get_inner_exception_message(exc:'BaseException') -> 'str':
-    """ Walks the exception chain and returns the message of the deepest underlying exception.
-    """
-    current = exc
-    seen = set()
-
-    while True:
-
-        if id(current) in seen:
-            break
-        seen.add(id(current))
-
-        # urllib3 MaxRetryError holds the real reason on .reason
-        reason = getattr(current, 'reason', None)
-        if isinstance(reason, BaseException) and id(reason) not in seen:
-            current = reason
-            continue
-
-        # requests.ConnectionError wraps urllib3 errors in args[0]
-        args = getattr(current, 'args', None)
-        if args and isinstance(args[0], BaseException) and id(args[0]) not in seen:
-            current = args[0]
-            continue
-
-        # Standard exception chaining
-        cause = current.__cause__ or current.__context__
-        if isinstance(cause, BaseException) and id(cause) not in seen:
-            current = cause
-            continue
-
-        break
-
-    return str(current)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class Response(_RequestsResponse):
     data: 'strdictnone'
     zato_method: 'str'
@@ -456,13 +419,11 @@ class BaseHTTPSOAPWrapper:
         except RequestsTimeout as e:
             self._push_metrics(start_time, 'timeout')
             msg = f'Timeout error: {e}'
-            inner = _get_inner_exception_message(e)
-            raise BackendInvocationError(cid, msg, needs_msg=True, inner_message=inner)
+            raise BackendInvocationError(cid, msg, needs_msg=True)
         except RequestsConnectionError as e:
             self._push_metrics(start_time, 'connection_error')
             msg = f'Connection error: {e}'
-            inner = _get_inner_exception_message(e)
-            raise BackendInvocationError(cid, msg, needs_msg=True, inner_message=inner)
+            raise BackendInvocationError(cid, msg, needs_msg=True)
         except Exception as e:
             self._push_metrics(start_time, 'error')
             raise

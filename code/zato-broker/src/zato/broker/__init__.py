@@ -21,9 +21,9 @@ from zato.broker.message_handler import handle_broker_msg
 
 if 0:
     from kombu.transport.pyamqp import Message as KombuMessage
-    from zato.broker.api import BrokerCoreAPI
+    from zato.broker.client import BrokerClient
     from zato.server.base.worker import WorkerStore
-    BrokerCoreAPI = BrokerCoreAPI
+    BrokerClient = BrokerClient
     KombuMessage = KombuMessage
     WorkerStore = WorkerStore
 
@@ -44,7 +44,7 @@ service_invoke = SERVICE.INVOKE.value
 class BrokerMessageReceiver:
     """ A class that knows how to handle messages received from other worker processes.
     """
-    broker_client: 'BrokerCoreAPI'
+    broker_client: 'BrokerClient'
     worker_store: 'WorkerStore'
 
     def __init__(self):

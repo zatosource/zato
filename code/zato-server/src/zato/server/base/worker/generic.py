@@ -191,18 +191,12 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def ping_generic_connection(self, conn_id:'int', conn_name:'str'='') -> 'None':
+    def ping_generic_connection(self, conn_id:'int') -> 'None':
         conn_dict, _ = self._find_conn_info(conn_id)
 
-        if not conn_dict:
-            raise Exception('Connection `{}` could not be pinged'.format(conn_name))
-
         self.logger.info('About to ping generic connection `%s` (%s)', conn_dict.name, conn_dict.type_)
-        try:
-            conn = conn_dict['conn']
-            conn.ping()
-        except Exception as e:
-            raise Exception('Could not ping connection `{}`; {}'.format(conn_dict.name, e)) from e
+        conn = conn_dict['conn']
+        conn.ping()
         self.logger.info('Generic connection `%s` pinged successfully (%s)', conn_dict.name, conn_dict.type_)
 
 # ################################################################################################################################

@@ -12,7 +12,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 class ServiceConst:
     ServiceInvokerName = 'pub.zato.service.service-invoker'
     API_Admin_Invoke_Username = 'admin.invoke'
-    API_Admin_Invoke_Url_Path = '/zato/api/invoke/{}'
+    API_Admin_Invoke_Url_Path = '/zato/admin/invoke'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -20,7 +20,7 @@ class ServiceConst:
 class SECRETS:
 
     # These parameters will be automatically encrypted in SimpleIO input
-    PARAMS = ('auth_data', 'auth_token', 'password', 'secret_key', 'token', 'secret')
+    PARAMS = ('auth_data', 'auth_token', 'password', 'password1', 'password2', 'secret_key', 'token', 'secret')
 
     # Zato secret (Fernet)
     PREFIX = 'zato.secf.'

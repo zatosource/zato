@@ -247,21 +247,18 @@ class _IDEBase(Service):
         invoke_params = {
             'needs_details': True,
             'include_internal': False,
+            'skip_response_elem': True,
         }
 
         # Invoke the service
         service_list_response = self.invoke('zato.service.get-deployment-info-list', **invoke_params)
 
+        # Check if the response is None
         if service_list_response is None:
             return
 
-        # .. extract the list of items ..
-        if isinstance(service_list_response, dict):
-            items = service_list_response.get('data', [])
-        else:
-            items = service_list_response
-
-        for item in items:
+        # Iterate and yield items
+        for item in service_list_response:
             yield item
 
 # ################################################################################################################################
@@ -748,7 +745,7 @@ class DeleteFile(_GetBase):
             self.logger.info('Deleted path %s', work_dir_fs_location)
 
         # .. now, delete it from our in-RAM service store ..
-        self.server.service_store.delete_objects_by_file_path(work_dir_fs_location, delete_from_odb=False)
+        self.server.service_store.delete_objects_by_file_path(work_dir_fs_location, delete_from_odb=True)
 
         # .. find the location with the demo service ..
         demo_py_fs = get_demo_py_fs_locations(self.server.base_dir)

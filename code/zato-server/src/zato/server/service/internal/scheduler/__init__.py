@@ -350,13 +350,18 @@ class Delete(_SchedulerAdmin):
     input = 'id',
 
     def handle(self):
-            try:
-            item = _item_by_id(store.get_list(_entity_type), self.request.input.id)
-            if not item:
-                raise ZatoException(self.cid, 'Job not found')
+        from contextlib import closing
+        from zato.common.odb.model import Job, IntervalBasedJob
+        try:
+            with closing(self.odb.session()) as session:
+                job_row = session.query(Job).filter_by(id=self.request.input.id).first()
+                if not job_row:
+                    raise ZatoException(self.cid, 'Job not found')
 
-            job_id = str(item['id'])
-            store.delete(_entity_type, item['name'])
+                job_id = str(job_row.id)
+                session.query(IntervalBasedJob).filter_by(job_id=job_row.id).delete()
+                session.delete(job_row)
+                session.commit()
 
             from zato_scheduler_core import scheduler_delete_job
             scheduler_delete_job(job_id)
@@ -377,19 +382,10 @@ class Execute(_SchedulerAdmin):
     def handle(self):
         try:
             from contextlib import closing
-        from zato.common.odb.model import Job, IntervalBasedJob
-        item = None
-        with closing(self.odb.session()) as session:
-            j = session.query(Job).filter_by(id=self.request.input.id).first()
-            if j:
-                item = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
-                        'start_date': j.start_date.isoformat() if j.start_date else '', 'service': j.service.name if j.service else '',
-                        'extra': j.extra or ''}
-                ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
-                if ib:
-                    for p in _ib_params:
-                        item[p] = getattr(ib, p, 0) or 0
-                    item['repeats'] = ib.repeats
+            from zato.common.odb.model import Job
+            with closing(self.odb.session()) as session:
+                job_row = session.query(Job).filter_by(id=self.request.input.id).first()
+            item = {'id': job_row.id, 'name': job_row.name} if job_row else None
             if not item:
                 raise ZatoException(self.cid, 'Job not found')
 

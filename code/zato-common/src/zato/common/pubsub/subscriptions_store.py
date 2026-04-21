@@ -54,6 +54,7 @@ class SubscriptionsStore:
         """ Register a user with their security definition name and optionally a sub_key.
         """
         with self._lock:
+
             # Store username <-> sec_name mapping
             self._username_to_sec_name[username] = sec_name
             self._sec_name_to_username[sec_name] = username
@@ -71,8 +72,7 @@ class SubscriptionsStore:
         """ Get subscription key for a username.
         """
         with self._lock:
-            sub_key = self._username_to_sub_key.get(username)
-            return sub_key
+            return self._username_to_sub_key.get(username)
 
 # ################################################################################################################################
 
@@ -80,8 +80,7 @@ class SubscriptionsStore:
         """ Get username for a subscription key.
         """
         with self._lock:
-            username = self._sub_key_to_username.get(sub_key)
-            return username
+            return self._sub_key_to_username.get(sub_key)
 
 # ################################################################################################################################
 
@@ -89,8 +88,7 @@ class SubscriptionsStore:
         """ Get security definition name for a username.
         """
         with self._lock:
-            sec_name = self._username_to_sec_name.get(username)
-            return sec_name
+            return self._username_to_sec_name.get(username)
 
 # ################################################################################################################################
 
@@ -98,8 +96,7 @@ class SubscriptionsStore:
         """ Get username for a security definition name.
         """
         with self._lock:
-            username = self._sec_name_to_username.get(sec_name)
-            return username
+            return self._sec_name_to_username.get(sec_name)
 
 # ################################################################################################################################
 

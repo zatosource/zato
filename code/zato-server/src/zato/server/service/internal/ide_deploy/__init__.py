@@ -19,8 +19,11 @@ from zato.server.service import Service
 class Create(Service):
     """ Like zato.hot-deploy.create but returns an empty string if input payload is empty to let IDEs test server connections.
     """
-    input = '-payload_name', '-payload'
-    output = 'success', 'msg'
+    class SimpleIO:
+        request_elem = 'zato_ide_deploy_create_request'
+        response_elem = 'zato_ide_deploy_create_response'
+        input_optional = ('payload_name', 'payload')
+        output_required = ('success', 'msg')
 
     def handle(self):
         if not self.request.payload:

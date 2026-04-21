@@ -91,6 +91,8 @@ def get_permissions_for_sec_base(session, sec_base_id:'int', cluster_id:'int') -
     """ Get all active permissions for a security definition.
     Returns a list of permission dictionaries with pattern and access_type.
     """
+    from zato.common.odb.model import PubSubPermission
+
     permissions = session.query(PubSubPermission).filter(
         PubSubPermission.sec_base_id == sec_base_id,
         PubSubPermission.cluster_id == cluster_id,
@@ -157,6 +159,9 @@ def get_security_definition(session, cluster_id, username=None, sec_name=None):
     Returns tuple of (sec_def, lookup_field, lookup_value).
     Raises Exception if not found or if neither username nor sec_name provided.
     """
+    # Zato
+    from zato.common.odb.model import SecurityBase
+
     if username:
         sec_def = session.query(SecurityBase).\
             filter(SecurityBase.cluster_id==cluster_id).\

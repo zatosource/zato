@@ -13,7 +13,7 @@ from logging import getLogger
 from requests import get as requests_get
 
 # Zato
-from zato.client import APIClient
+from zato.client import AnyServiceInvoker
 from zato.common.ext.dataclasses import dataclass
 from zato.common.typing_ import any_, cast_, dict_field
 
@@ -23,7 +23,7 @@ from zato.common.typing_ import any_, cast_, dict_field
 if 0:
     from requests import Response
     from typing import Callable
-    from zato.client import _APIResponse
+    from zato.client import ServiceInvokeResponse
     from zato.common.typing_ import anydict, anylist, callable_, intnone, stranydict, strordictnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.connection.server.rpc.config import RPCServerInvocationCtx
@@ -32,7 +32,7 @@ if 0:
     ParallelServer = ParallelServer
     RPCServerInvocationCtx = RPCServerInvocationCtx
     Response = Response
-    _APIResponse = _APIResponse
+    ServiceInvokeResponse = ServiceInvokeResponse
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -108,6 +108,8 @@ class LocalServerInvoker(ServerInvoker):
 class RemoteServerInvoker(ServerInvoker):
     """ Invokes services on a remote server using RPC.
     """
+    url_path = '/zato/internal/invoke'
+
     def __init__(self, ctx:'RPCServerInvocationCtx') -> 'None':
         super().__init__(
             cast_('ParallelServer', None),
@@ -128,11 +130,10 @@ class RemoteServerInvoker(ServerInvoker):
         self.address = '{}://{}:{}'.format(protocol, self.invocation_ctx.address, self.invocation_ctx.port)
 
         # Credentials to connect to the remote server with
-        username = self.invocation_ctx.username
-        password = self.invocation_ctx.password
+        credentials = (self.invocation_ctx.username, self.invocation_ctx.password)
 
         # Now, we can build a client to the remote server
-        self.invoker = APIClient(self.address, username, password)
+        self.invoker = AnyServiceInvoker(self.address, self.url_path, credentials)
 
 # ################################################################################################################################
 
@@ -170,7 +171,7 @@ class RemoteServerInvoker(ServerInvoker):
             _ = requests_get(self.ping_address, timeout=ping_timeout)
 
         # .. actually invoke the server now ..
-        response = invoke_func(service, request) # type: _APIResponse
+        response = invoke_func(service, request, *args, **kwargs) # type: ServiceInvokeResponse
         response = response.data
 
         return response
@@ -183,12 +184,14 @@ class RemoteServerInvoker(ServerInvoker):
 # ################################################################################################################################
 
     def invoke_async(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self._invoke(self.invoker.invoke, *args, **kwargs)
+        return self._invoke(self.invoker.invoke_async, *args, **kwargs)
 
 # ################################################################################################################################
 
     def invoke_all_pids(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self._invoke(self.invoker.invoke, *args, **kwargs)
+        kwargs['all_pids'] = True
+        skip_response_elem = kwargs.pop('skip_response_elem', True)
+        return self._invoke(self.invoker.invoke, skip_response_elem=skip_response_elem, *args, **kwargs)
 
 # ################################################################################################################################
 # ################################################################################################################################

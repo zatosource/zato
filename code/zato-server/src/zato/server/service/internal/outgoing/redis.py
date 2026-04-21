@@ -45,18 +45,14 @@ def set_kvdb_config(server_config:'strdict', input_data:'Bunch', redis_sentinels
 # ################################################################################################################################
 # ################################################################################################################################
 
-_get_list_output_fields = AsIs('id'), 'is_active', 'name', 'host', Int('port'), 'db', Bool('use_redis_sentinels'), \
-    AsIs('redis_sentinels'), 'redis_sentinels_master'
-
-# ################################################################################################################################
-# ################################################################################################################################
-
 class GetList(AdminService):
 
-    input = '-id', '-name'
-    output = AsIs('-id'), '-is_active', '-name', '-host', Int('-port'), '-db', Bool('-use_redis_sentinels'), \
-        AsIs('-redis_sentinels'), '-redis_sentinels_master'
-    default_value = None
+    class SimpleIO:
+        input_optional = 'id', 'name'
+        output_optional = AsIs('id'), 'is_active', 'name', 'host', Int('port'), 'db', Bool('use_redis_sentinels'), \
+            AsIs('redis_sentinels'), 'redis_sentinels_master'
+        default_value = None
+        response_elem = None
 
 # ################################################################################################################################
 
@@ -75,7 +71,7 @@ class GetList(AdminService):
         config = get_config_object(self.server.repo_location, 'server.conf')
         config = config['kvdb']
 
-        for elem in _get_list_output_fields:
+        for elem in self.SimpleIO.output_optional:
 
             # Extract the embedded name or use it as is
             name = elem.name if isinstance(elem, SIOElem) else elem # type: ignore
@@ -100,15 +96,18 @@ class GetList(AdminService):
 # ################################################################################################################################
 
     def handle(self) -> 'None':
-        self.response.payload = self._paginate_list(self.get_data())
+        self.response.payload[:] = self.get_data()
 
 # ################################################################################################################################
 # ################################################################################################################################
 
 class Edit(AdminService):
 
-    input = 'host', 'port', 'db', 'redis_sentinels', 'redis_sentinels_master', AsIs('-id'), '-name', Bool('-use_redis_sentinels')
-    output = 'id', 'name'
+    class SimpleIO:
+        input_optional = AsIs('id'), 'name', Bool('use_redis_sentinels')
+        input_required = 'host', 'port', 'db', 'redis_sentinels', 'redis_sentinels_master'
+        output_required = 'id', 'name'
+        response_elem = None
 
     def handle(self) -> 'None':
 
@@ -148,13 +147,16 @@ class ChangePassword(ChangePasswordBase):
     """
     password_required = False
 
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        pass
+
     def handle(self):
 
         # Local alias
         input = self.request.input
 
         # Encryption requires bytes
-        password = (input.password or '').encode('utf8')
+        password = (input.password1 or '').encode('utf8')
 
         # Now, encrypt the input password
         password = self.crypto.encrypt(password, needs_str=True)

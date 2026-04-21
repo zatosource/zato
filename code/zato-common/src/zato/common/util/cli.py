@@ -202,7 +202,8 @@ class _AuthManager:
         # API request to send to create a new definition
         change_password_request = {
             'name': name,
-            'password': password,
+            'password1': password,
+            'password2': password,
         }
 
         # Change the password

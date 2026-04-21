@@ -113,16 +113,15 @@ class RedisConsumer:
 
             body = loads(data)
 
-            class _RedisMsg:
+            # Create a mock message object with ack method for compatibility
+            class MockMsg:
                 def ack(self):
                     pass
-                def reject(self, requeue=False):
-                    pass
 
-            redis_msg = _RedisMsg()
+            mock_msg = MockMsg()
 
             # Call the callback
-            self.config.on_msg_callback(body, redis_msg, self.config.name, {})
+            self.config.on_msg_callback(body, mock_msg, self.config.name, {})
 
         except Exception as e:
             logger.warning(f'Error processing Redis message: {e}')
