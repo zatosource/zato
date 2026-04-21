@@ -556,7 +556,7 @@ a:not(.menu-link) {
     padding-bottom: 2px;
 }
 
-a:not(.menu-link):hover {
+a:not(.menu-link):not(.chosen-single):hover {
     color: var(--zato-link-hover) !important;
     background-color: transparent;
     text-decoration: none;
@@ -867,7 +867,7 @@ div.page_prompt a.current {
     font-weight: 400;
 }
 
-.form-data tr td a:hover {
+.form-data tr td a:not(.chosen-single):hover {
     color: var(--zato-link-hover) !important;
 }
 
@@ -895,7 +895,6 @@ table.multi-select-table tbody tr:hover {
     color: #000 !important;
     background-image: none;
     padding-bottom: 0;
-    background-color: transparent;
 }
 
 .chosen-container .chosen-results li {
