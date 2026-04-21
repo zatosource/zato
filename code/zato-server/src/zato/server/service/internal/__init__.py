@@ -218,6 +218,12 @@ class ServerInvoker(AdminService):
             attr_name = self.request.raw_request['attr_name']
             value = self.request.raw_request['value']
             response = func(entity_type, attr_name, value)
+        elif func_name == 'get_bearer_token':
+            from json import loads as json_loads
+            security_id = self.request.raw_request.get('security_id', '')
+            raw_params_json = self.request.raw_request.get('raw_params_json', '')
+            raw_params = json_loads(raw_params_json) if raw_params_json else None
+            response = func(security_id, raw_params)
         else:
             response = func()
 

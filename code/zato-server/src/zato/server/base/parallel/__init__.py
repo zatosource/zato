@@ -1640,6 +1640,85 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
 # ################################################################################################################################
 
+    def get_bearer_token(self, security_id='', raw_params=None):
+
+        import json
+        from traceback import format_exc
+        from zato.common.exception import BackendInvocationError
+
+        logger.info('get_bearer_token: security_id=%s, has_raw_params=%s', security_id, bool(raw_params))
+
+        try:
+            if raw_params:
+                sec_def = {
+                    'name': raw_params.get('name', ''),
+                    'username': raw_params['username'],
+                    'password': raw_params['secret'],
+                    'auth_server_url': raw_params['auth_server_url'],
+                    'client_id_field': raw_params['client_id_field'],
+                    'client_secret_field': raw_params['client_secret_field'],
+                    'grant_type': raw_params['grant_type'],
+                    'scopes': raw_params.get('scopes', ''),
+                    'extra_fields': raw_params.get('extra_fields', ''),
+                    'data_format': raw_params.get('data_format', 'json'),
+                }
+            else:
+                sec_def = None
+                from contextlib import closing
+                from zato.common.odb.model import SecurityBase
+                with closing(self.odb.session()) as session:
+                    sec_row = session.query(SecurityBase).filter_by(id=security_id).first()
+                    if sec_row:
+                        sec_def = {
+                            'id': sec_row.id,
+                            'name': sec_row.name,
+                            'username': sec_row.username or '',
+                            'password': sec_row.password or '',
+                            'auth_server_url': getattr(sec_row, 'auth_server_url', ''),
+                            'client_id_field': getattr(sec_row, 'client_id_field', 'client_id'),
+                            'client_secret_field': getattr(sec_row, 'client_secret_field', 'client_secret'),
+                            'grant_type': getattr(sec_row, 'grant_type', 'client_credentials'),
+                            'scopes': getattr(sec_row, 'scopes', ''),
+                            'extra_fields': getattr(sec_row, 'extra_fields', ''),
+                            'data_format': getattr(sec_row, 'data_format', 'json'),
+                        }
+
+                if not sec_def:
+                    return json.dumps({
+                        'is_ok': False,
+                        'error': 'Bearer token definition not found: id=`{}`'.format(security_id)
+                    })
+
+            config = self.bearer_token_manager._get_bearer_token_config(sec_def)
+            scopes = config.scopes
+            data_format = sec_def.get('data_format') or 'json'
+
+            info = self.bearer_token_manager._get_bearer_token_from_auth_server(config, scopes, data_format)
+
+            return json.dumps({'is_ok': True, 'token': info.token})
+
+        except BackendInvocationError as e:
+            return json.dumps({
+                'is_ok': False,
+                'error': 'Error while obtaining token',
+                'response_body': getattr(e, 'inner_message', '') or str(e),
+                'response_content_type': 'text/plain',
+                'status_code': 0,
+            })
+
+        except Exception:
+            tb = format_exc()
+            logger.error('get_bearer_token: error: %s', tb)
+            return json.dumps({
+                'is_ok': False,
+                'error': 'Error while obtaining token',
+                'response_body': tb,
+                'response_content_type': 'text/plain',
+                'status_code': 0,
+            })
+
+# ################################################################################################################################
+
     def check_attr_exists(self, entity_type, attr_name, value):
         import json
         from contextlib import closing
