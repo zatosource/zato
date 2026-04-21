@@ -8,6 +8,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from time import time
 from traceback import format_exc
 
 # Zato
@@ -789,5 +790,221 @@ class GetURLSecurity(AdminService):
         response['soap_handler.http_soap'] = sorted(self.worker_store.request_handler.soap_handler.http_soap.items())
         self.response.payload = dumps(response, sort_keys=True, indent=4)
         self.response.content_type = 'application/json'
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+def _set_invoke_response(service, result):
+    service.response.payload.status_code = result['status_code']
+    service.response.payload.response_body = result['response_body']
+    service.response.payload.response_time = result['response_time']
+
+# ################################################################################################################################
+
+def _parse_key_value_params(text):
+    if not text or not text.strip():
+        return {}
+
+    result = {}
+    for sep in ('&', '\n'):
+        if sep in text:
+            for pair in text.split(sep):
+                pair = pair.strip()
+                if '=' in pair:
+                    key, _, value = pair.partition('=')
+                    result[key.strip()] = value.strip()
+            return result
+
+    if '=' in text:
+        key, _, value = text.partition('=')
+        result[key.strip()] = value.strip()
+
+    return result
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class InvokeChannel(AdminService):
+
+    name = 'zato.http-soap.invoke-channel'
+    input = 'id', '-payload', '-request_method', '-query_params', '-path_params'
+    output = '-status_code', '-response_body', '-response_time'
+
+    def handle(self):
+        channel_config = self._get_channel_config(self.request.input.id)
+        sec_config = self._get_security_config(channel_config)
+        url_path = self._resolve_url_path(channel_config)
+        wrapper = self._build_temp_wrapper(channel_config, sec_config, url_path)
+
+        try:
+            result = self._invoke_wrapper(wrapper)
+        finally:
+            wrapper.session.close()
+
+        _set_invoke_response(self, result)
+
+    def _get_channel_config(self, channel_id):
+        for item in self.server.config_store.get_list('channel_rest'):
+            if str(item.get('id')) == str(channel_id) or item.get('name') == str(channel_id):
+                return item
+        raise Exception('REST channel `{}` not found'.format(channel_id))
+
+    def _get_security_config(self, channel_config):
+        security_id = channel_config.get('security_id')
+        if not security_id or str(security_id) in ('None', ZATO_NONE, 'None/ZATO_NONE'):
+            return {'sec_type': None, 'username': None, 'password': None, 'orig_username': None}
+
+        for sec_item in self.server.config_store.get_list('security'):
+            if str(sec_item.get('id')) == str(security_id):
+                return self._extract_credentials(sec_item)
+
+        return {'sec_type': None, 'username': None, 'password': None, 'orig_username': None}
+
+    def _extract_credentials(self, sec_item):
+        sec_type = sec_item.get('sec_type') or sec_item.get('type', '')
+        username = sec_item.get('username', '') or ''
+        orig_username = sec_item.get('orig_username', '') or username
+        password = sec_item.get('password', '') or ''
+        password = self._decrypt_password(password)
+
+        return {
+            'sec_type': sec_type,
+            'username': username,
+            'password': password,
+            'orig_username': orig_username,
+        }
+
+    def _decrypt_password(self, password):
+        if password and hasattr(self.server, 'decrypt'):
+            try:
+                return self.server.decrypt(password)
+            except Exception:
+                pass
+        return password
+
+    def _resolve_url_path(self, channel_config):
+        url_path = channel_config.get('url_path', '/')
+        path_params = _parse_key_value_params(self.request.input.get('path_params', ''))
+        if path_params:
+            try:
+                url_path = url_path.format(**path_params)
+            except (KeyError, ValueError):
+                pass
+        return url_path
+
+    def _build_temp_wrapper(self, channel_config, sec_config, url_path):
+        from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
+
+        port = getattr(self.server, 'port', 17010)
+        method = self.request.input.get('request_method', '') or 'POST'
+
+        wrapper_config = {
+            'id': 'temp-invoke-{}'.format(self.cid),
+            'is_active': True,
+            'method': method,
+            'data_format': 'json',
+            'name': 'temp-invoke-channel-{}'.format(self.cid),
+            'transport': 'plain_http',
+            'address_host': 'http://127.0.0.1:{}'.format(port),
+            'address_url_path': url_path,
+            'soap_action': '',
+            'soap_version': None,
+            'ping_method': 'HEAD',
+            'pool_size': 1,
+            'serialization_type': 'json',
+            'timeout': 90,
+            'content_type': None,
+            'validate_tls': False,
+            'security_name': None,
+            'security_id': None,
+            'sec_type': sec_config.get('sec_type'),
+            'username': sec_config.get('username'),
+            'password': sec_config.get('password'),
+            'password_type': None,
+            'orig_username': sec_config.get('orig_username'),
+            'salt': None,
+        }
+
+        return HTTPSOAPWrapper(self.server, wrapper_config)
+
+    def _invoke_wrapper(self, wrapper):
+        method = self.request.input.get('request_method', '') or 'POST'
+        payload = self.request.input.get('payload', '') or ''
+        query_params = _parse_key_value_params(self.request.input.get('query_params', ''))
+
+        start = time()
+        try:
+            response = wrapper.http_request(method, self.cid, data=payload, params=query_params or None)
+            elapsed = time() - start
+            return {
+                'status_code': response.status_code,
+                'response_body': response.text,
+                'response_time': '{:.1f}ms'.format(elapsed * 1000),
+            }
+        except Exception as e:
+            elapsed = time() - start
+            return {
+                'status_code': 0,
+                'response_body': str(e),
+                'response_time': '{:.1f}ms'.format(elapsed * 1000),
+            }
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class InvokeOutconn(AdminService):
+
+    name = 'zato.http-soap.invoke-outconn'
+    input = 'id', '-payload', '-request_method', '-query_params', '-path_params'
+    output = '-status_code', '-response_body', '-response_time'
+
+    def handle(self):
+        outconn_config = self._get_outconn_config(self.request.input.id)
+        outconn_name = outconn_config['name']
+
+        method = self.request.input.get('request_method', '') or 'POST'
+        payload = self.request.input.get('payload', '') or ''
+        params = self._build_params()
+
+        result = self._invoke_outconn(outconn_name, method, payload, params)
+        _set_invoke_response(self, result)
+
+    def _get_outconn_config(self, outconn_id):
+        for item in self.server.config_store.get_list('outgoing_rest'):
+            if str(item.get('id')) == str(outconn_id) or item.get('name') == str(outconn_id):
+                return item
+        raise Exception('REST outgoing connection `{}` not found'.format(outconn_id))
+
+    def _build_params(self):
+        params = {}
+        path_params = _parse_key_value_params(self.request.input.get('path_params', ''))
+        query_params = _parse_key_value_params(self.request.input.get('query_params', ''))
+        params.update(path_params)
+        params.update(query_params)
+        return params
+
+    def _invoke_outconn(self, outconn_name, method, payload, params):
+        config_item = self.outgoing.plain_http.get(outconn_name)
+        if not config_item:
+            raise Exception('Outgoing REST connection wrapper `{}` not found'.format(outconn_name))
+
+        conn = config_item.conn
+        start = time()
+
+        try:
+            response = conn.http_request(method, self.cid, data=payload, params=params)
+            elapsed = time() - start
+            return {
+                'status_code': response.status_code,
+                'response_body': response.text,
+                'response_time': '{:.1f}ms'.format(elapsed * 1000),
+            }
+        except Exception as e:
+            elapsed = time() - start
+            return {
+                'status_code': 0,
+                'response_body': str(e),
+                'response_time': '{:.1f}ms'.format(elapsed * 1000),
+            }
 
 # ################################################################################################################################
