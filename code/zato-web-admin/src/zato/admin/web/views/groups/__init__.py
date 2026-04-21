@@ -277,11 +277,24 @@ def get_security_list(req:'any_') -> 'HttpResponse':
     logger.info('Groups.get_security_list (AJAX): sec_type=%s, query=%s, group_type=%s, group_id=%s',
         sec_type, query, group_type, group_id)
 
-    member_list = _get_member_list(req, group_type, group_id)
     security_list = _get_security_list(req, sec_type, query)
-    security_list = _filter_out_members_from_security_list(security_list, member_list)
 
-    logger.info('Groups.get_security_list (AJAX): returning %s items after filtering', len(security_list))
+    if group_id:
+        member_list = _get_member_list(req, group_type, group_id)
+        member_security_ids = {getattr(m, 'security_id', None) for m in member_list}
+
+        logger.info('Groups.get_security_list (AJAX): member_security_ids=%s', member_security_ids)
+
+        for sec_item in security_list:
+            if sec_item.id in member_security_ids:
+                sec_item['is_member'] = True
+            else:
+                sec_item['is_member'] = False
+    else:
+        for sec_item in security_list:
+            sec_item['is_member'] = False
+
+    logger.info('Groups.get_security_list (AJAX): returning %s items', len(security_list))
 
     data = dumps(security_list)
     return HttpResponse(data, content_type='application/javascript')
