@@ -529,7 +529,7 @@ $.fn.zato.groups.data_table.new_row = function(item, data, include_tr) {
     let row = '';
 
     if(include_tr) {
-        row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
+        row += String.format("<tr id='tr_{0}'>", item.id);
     }
 
     row += "<td class='numbering'>&nbsp;</td>";

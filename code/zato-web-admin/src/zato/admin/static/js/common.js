@@ -2713,7 +2713,8 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
         var evtSource = new EventSource(url);
 
         _connections[action] = {
-            evtSource: evtSource
+            evtSource: evtSource,
+            is_first_message: true
         };
 
         evtSource.onopen = function() {
@@ -2724,7 +2725,12 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
             console.log('[live_form_updates] onmessage: action=' + action + ', data=' + event.data.substring(0, 200));
             try {
                 var diffs = JSON.parse(event.data);
-                $.fn.zato.live_form_updates._apply_diffs(action, diffs);
+                var conn = _connections[action];
+                var skip_puff = conn && conn.is_first_message;
+                if(skip_puff) {
+                    conn.is_first_message = false;
+                }
+                $.fn.zato.live_form_updates._apply_diffs(action, diffs, skip_puff);
             }
             catch(e) {
                 console.error('[live_form_updates] onmessage: JSON parse error', e);
@@ -2760,9 +2766,9 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
 
     // ------------------------------------------------------------------------------------------------------------------------
 
-    $.fn.zato.live_form_updates._apply_diffs = function(action, diffs) {
+    $.fn.zato.live_form_updates._apply_diffs = function(action, diffs, skip_puff) {
         var configs = _registry[action] || [];
-        console.log('[live_form_updates] _apply_diffs: action=' + action + ', object_types in diff=' + JSON.stringify(Object.keys(diffs)));
+        console.log('[live_form_updates] _apply_diffs: action=' + action + ', skip_puff=' + !!skip_puff + ', object_types in diff=' + JSON.stringify(Object.keys(diffs)));
 
         for(var object_type in diffs) {
             if(!diffs.hasOwnProperty(object_type)) continue;
@@ -2770,7 +2776,6 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
             var diff = diffs[object_type];
             console.log('[live_form_updates] _apply_diffs: object_type=' + object_type + ', created=' + (diff.created ? diff.created.length : 0) + ', deleted=' + (diff.deleted ? diff.deleted.length : 0) + ', renamed=' + (diff.renamed ? diff.renamed.length : 0));
 
-            // Find the config for this object_type
             var config = null;
             for(var i = 0; i < configs.length; i++) {
                 if(configs[i].object_type === object_type) {
@@ -2786,7 +2791,7 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
             console.log('[live_form_updates] _apply_diffs: applying diff for object_type=' + object_type + ', handler=' + (config.handler || 'select'));
 
             if(config.handler === 'badge_picker') {
-                $.fn.zato.live_form_updates._apply_badge_picker_diff(action, config, diff);
+                $.fn.zato.live_form_updates._apply_badge_picker_diff(action, config, diff, skip_puff);
             }
             else if(config.handler === 'multi_checkbox') {
                 $.fn.zato.live_form_updates._apply_multi_checkbox_diff(action, config, diff);
@@ -2876,9 +2881,9 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
 
     // ------------------------------------------------------------------------------------------------------------------------
 
-    $.fn.zato.live_form_updates._apply_badge_picker_diff = function(action, config, diff) {
+    $.fn.zato.live_form_updates._apply_badge_picker_diff = function(action, config, diff, skip_puff) {
 
-        console.log('[live_form_updates] _apply_badge_picker_diff: action=' + action + ', created=' + JSON.stringify(diff.created) + ', deleted=' + JSON.stringify(diff.deleted) + ', renamed=' + JSON.stringify(diff.renamed));
+        console.log('[live_form_updates] _apply_badge_picker_diff: action=' + action + ', skip_puff=' + !!skip_puff + ', created=' + JSON.stringify(diff.created) + ', deleted=' + JSON.stringify(diff.deleted) + ', renamed=' + JSON.stringify(diff.renamed));
 
         // For badge picker, if there's a callback, call it with the full diff.
         if(config.callback) {
@@ -2916,7 +2921,9 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
                 if($badge.length) {
                     var new_name = rename.new_labels.name || rename.item.name || '';
                     $badge.find('.security-badge-name').text(new_name);
-                    $.fn.zato.live_form_updates._puff($badge);
+                    if(!skip_puff) {
+                        $.fn.zato.live_form_updates._puff($badge);
+                    }
                 }
             }
         }
@@ -2930,7 +2937,9 @@ $.fn.zato.validate_unique = function(field_id, entity_type, attr_name) {
                    typeof $.fn.zato.groups.badge_picker._make_badge === 'function') {
                     var $new_badge = $.fn.zato.groups.badge_picker._make_badge(item, 0);
                     available_body.append($new_badge);
-                    $.fn.zato.live_form_updates._puff($new_badge);
+                    if(!skip_puff) {
+                        $.fn.zato.live_form_updates._puff($new_badge);
+                    }
                 }
             }
 
