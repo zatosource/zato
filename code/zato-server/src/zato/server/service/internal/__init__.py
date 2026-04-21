@@ -302,12 +302,6 @@ class ChangePasswordBase(AdminService):
 
                     self.broker_client.publish(self.request.input)
 
-                    if action == SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value:
-                        self.request.input.cid = self.cid
-                        self.request.input.username = instance.username
-
-                        self.broker_client.publish_to_pubsub(self.request.input)
-
             except Exception:
                 self.logger.error('Could not update password, e:`%s`', format_exc())
                 session.rollback()

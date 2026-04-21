@@ -11,7 +11,6 @@ import logging
 
 # Zato
 from zato.common.api import ZATO_NONE
-from zato.common.broker_message import SERVICE
 from zato.common.util.api import new_cid_broker_client
 from zato.common.util.config import resolve_env_variables
 from zato.broker.message_handler import handle_broker_msg
@@ -32,11 +31,6 @@ if 0:
 
 logger = logging.getLogger('zato')
 has_debug = logger.isEnabledFor(logging.DEBUG)
-
-# ################################################################################################################################
-# ################################################################################################################################
-
-service_invoke = SERVICE.INVOKE.value
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -68,19 +62,7 @@ class BrokerMessageReceiver:
             return
 
         # Use the shared handler
-        result = handle_broker_msg(msg, self.worker_store)
-
-        # If message was handled and it's a service invocation that needs a reply
-        if result.was_handled and result.action_code == service_invoke:
-            if reply_to := msg.get('reply_to'):
-                correlation_id = msg.get('cid', '')
-                self.broker_client.publish_to_queue(reply_to, result.response, correlation_id=correlation_id)
-            else:
-                # Left empty for logging
-                pass
-        else:
-            # Left empty for logging
-            pass
+        handle_broker_msg(msg, self.worker_store)
 
 # ################################################################################################################################
 

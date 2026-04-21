@@ -35,13 +35,13 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 
 # Zato
 from zato.broker import BrokerMessageReceiver
-from zato.broker.redis_client import RedisBrokerClient as BrokerClient
+from zato.broker.redis_client import BrokerClient
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.audit import audit_pii
 from zato.common.bearer_token import BearerTokenManager
-from zato.common.broker_message import HOT_DEPLOY, PUBSUB
+from zato.common.broker_message import HOT_DEPLOY
 from zato.common.const import SECRETS
 from zato.common.facade import SecurityFacade
 from zato.common.json_internal import loads
@@ -50,7 +50,6 @@ from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
 from zato.common.pubsub.matcher import PatternMatcher
-from zato.common.pubsub.redis_backend import RedisPubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
 from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
@@ -158,7 +157,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     groups_manager: 'GroupsManager'
     security_groups_ctx_builder: 'SecurityGroupsCtxBuilder'
 
-    pubsub_redis: 'RedisPubSubBackend'
     pubsub_pattern_matcher: 'PatternMatcher'
     pubsub_subscriptions: 'SubscriptionsStore'
 
@@ -922,18 +920,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # Set up the broker client
         self.broker_client = BrokerClient(server=self)
-        self.broker_client.ping_connection()
 
-        # Delete the queue to remove any message we don't want to read since they were published when we were not running,
-        # and then create it all again so we have a fresh start.
-        self.broker_client.delete_queue(self.process_cid, 'server')
-        self.broker_client.create_internal_queue('server')
-
-        # Start the broker client's own consumer
-        self.broker_client.start_consumer()
-
-        # Initialize Redis pub/sub backend using broker client's Redis connection
-        self.pubsub_redis = RedisPubSubBackend(self.broker_client.redis)
         self.pubsub_pattern_matcher = PatternMatcher()
         self.pubsub_subscriptions = SubscriptionsStore()
 
@@ -1177,15 +1164,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # .. now reload it ..
         self.worker_store.init()
         self.worker_store.init_pubsub()
-
-        # .. notify the pub/sub server too ..
-        pubsub_msg = Bunch()
-        pubsub_msg.cid = new_cid_server()
-        pubsub_msg.action = PUBSUB.RELOAD_CONFIG.value
-
-        # .. publish the message for pub/sub ..
-        if self.broker_client:
-            self.broker_client.publish_to_pubsub(pubsub_msg)
 
         # .. reload the Rust scheduler if it was started ..
         if getattr(self, '_scheduler_started', False):
@@ -1546,31 +1524,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         # Datadog
         from ddtrace.trace import tracer
         self.datadog_tracer = tracer
-
-# ################################################################################################################################
-
-    def on_pubsub_message(self, body:'any_', amqp_msg:'KombuMessage', name:'str', config:'dict') -> 'None':
-
-        # Make sure we work with a dict ..
-        if not isinstance(body, dict):
-            body = loads(body)
-
-        # .. which we can now turn into a Bunch ..
-        body = bunchify(body)
-
-        # .. and now we can call the actual handler now ..
-        try:
-            self.on_broker_msg(body)
-
-        # .. indicate the message has not been processed
-        except Exception:
-            log_msg = f'Rejecting pub/sub message: body={body}, amqp_msg={amqp_msg}, e={format_exc()}'
-            logger.warning(log_msg)
-            amqp_msg.reject(requeue=True)
-
-        # .. otherwise, confirm it's been consumed.
-        else:
-            amqp_msg.ack()
 
 # ################################################################################################################################
 

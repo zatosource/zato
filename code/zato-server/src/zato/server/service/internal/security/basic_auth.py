@@ -120,9 +120,7 @@ class Create(AdminService):
                 pubsub_msg.username = input.username
                 pubsub_msg.password = input.password
 
-                # .. and publish both ..
                 self.broker_client.publish(input)
-                self.broker_client.publish_to_pubsub(pubsub_msg)
 
             self.response.payload.id = auth.id
             self.response.payload.name = auth.name
@@ -219,8 +217,6 @@ class Edit(AdminService):
                     pubsub_msg.old_username = old_username
                     pubsub_msg.new_username = input.username
 
-                    self.broker_client.publish_to_pubsub(pubsub_msg)
-
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
 
@@ -279,7 +275,6 @@ class Delete(AdminService):
                 self.request.input.username = auth.username
 
                 self.broker_client.publish(self.request.input)
-                self.broker_client.publish_to_pubsub(self.request.input)
 
 # ################################################################################################################################
 # ################################################################################################################################

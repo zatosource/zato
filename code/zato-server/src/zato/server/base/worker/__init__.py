@@ -1692,32 +1692,21 @@ class WorkerStore(_WorkerStoreBase):
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'bunch_') -> 'None':
-        sub_key = msg.get('sub_key')
-        topic_name = msg.get('topic_name')
-        if sub_key and topic_name:
-            self.server.pubsub_redis.subscribe(sub_key, topic_name)
+        pass
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
         pass
 
     def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
-        sub_key = msg.get('sub_key')
-        topic_name = msg.get('topic_name')
-        if sub_key and topic_name:
-            self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
+        pass
 
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
-        old_name = msg.get('old_name')
-        new_name = msg.get('name')
-        if old_name and new_name and old_name != new_name:
-            self.server.pubsub_redis.rename_topic(old_name, new_name)
+        pass
 
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
-        topic_name = msg.get('name')
-        if topic_name:
-            self.server.pubsub_redis.delete_topic(topic_name)
+        pass
 
 # ################################################################################################################################
 

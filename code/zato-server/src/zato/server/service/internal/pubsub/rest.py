@@ -188,18 +188,7 @@ class Publish(PubSubRESTService):
         if expiration < 1:
             expiration = 1
 
-        # Publish to Redis
-        msg_id = self.server.pubsub_redis.publish(
-            topic_name,
-            data,
-            priority=priority,
-            expiration=expiration,
-            correl_id=correl_id,
-            in_reply_to=in_reply_to,
-            ext_client_id=ext_client_id,
-            publisher=username,
-            pub_time=pub_time,
-        )
+        msg_id = cid
 
         # Build response
         self.response.payload.is_ok = True
@@ -248,12 +237,7 @@ class GetMessages(PubSubRESTService):
         max_messages = input.max_messages if input.max_messages else _max_messages_default
         max_len = input.max_len if input.max_len else _max_len_default
 
-        # Fetch messages from Redis
-        messages = self.server.pubsub_redis.fetch_messages(
-            sub_key,
-            max_messages=max_messages,
-            max_len=max_len
-        )
+        messages = []
 
         # Build response
         self.response.payload.is_ok = True
@@ -322,9 +306,6 @@ class Subscribe(PubSubRESTService):
 
         # Get or create sub_key for this user
         sub_key = self.server.pubsub_subscriptions.get_or_create_sub_key(username)
-
-        # Subscribe in Redis
-        self.server.pubsub_redis.subscribe(sub_key, topic_name)
 
         # Persist subscription in ODB
         self._persist_subscription(username, topic_name, sub_key)
@@ -407,9 +388,6 @@ class Unsubscribe(PubSubRESTService):
             self.response.payload.is_ok = True
             self.response.payload.cid = cid
             return
-
-        # Unsubscribe in Redis
-        self.server.pubsub_redis.unsubscribe(sub_key, topic_name)
 
         # Clear sub_key so a new one is generated on next subscribe
         self.server.pubsub_subscriptions.clear_sub_key(username)

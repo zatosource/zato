@@ -122,7 +122,6 @@ class Create(AdminService):
                 self.response.payload.name = sec_base.name
 
                 self.broker_client.publish(input)
-                self.broker_client.publish_to_pubsub(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -177,7 +176,6 @@ class Edit(AdminService):
                 self.response.payload.name = permission.sec_base.name
 
                 self.broker_client.publish(input)
-                self.broker_client.publish_to_pubsub(input)
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -213,7 +211,6 @@ class Delete(AdminService):
                 self.request.input.cid = self.cid
 
                 self.broker_client.publish(self.request.input)
-                self.broker_client.publish_to_pubsub(self.request.input)
 
 # ################################################################################################################################
 # ################################################################################################################################
