@@ -49,7 +49,6 @@ from zato.common.log_streaming import LogStreamingManager
 from zato.common.marshal_.api import MarshalAPI
 from zato.common.odb.api import PoolStore
 from zato.common.odb.post_process import ODBPostProcess
-from zato.common.pubsub.redis_consumer import start_internal_redis_consumer as start_internal_consumer
 from zato.common.pubsub.matcher import PatternMatcher
 from zato.common.pubsub.redis_backend import RedisPubSubBackend
 from zato.common.pubsub.subscriptions_store import SubscriptionsStore
@@ -930,14 +929,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self.broker_client.delete_queue(self.process_cid, 'server')
         self.broker_client.create_internal_queue('server')
 
-        # Configure internal pub/sub
-        _ = spawn_greenlet(
-            start_internal_consumer,
-            'zato.server',
-            'server',
-            'zato-server',
-            self.on_pubsub_message
-        )
+        # Start the broker client's own consumer
+        self.broker_client.start_consumer()
 
         # Initialize Redis pub/sub backend using broker client's Redis connection
         self.pubsub_redis = RedisPubSubBackend(self.broker_client.redis)

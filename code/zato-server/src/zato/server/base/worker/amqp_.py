@@ -48,6 +48,7 @@ class AMQP(WorkerImpl):
     ) -> 'None':
         with self.update_lock:
             self.amqp_out_name_to_def[msg.name] = msg.name
+            self.amqp_connection_create(msg)
             self.amqp_api.create_outconn(msg.name, msg)
 
 # ################################################################################################################################
