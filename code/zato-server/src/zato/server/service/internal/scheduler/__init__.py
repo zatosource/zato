@@ -263,7 +263,7 @@ class GetList(_Get):
                 items.append(self._enrich_job(d))
         if input.get('service_name'):
             items = [x for x in items if x.get('service_name') == input.service_name or x.get('service') == input.service_name]
-        self.response.payload = self._paginate_list(items)
+        self.response.payload = items
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -453,7 +453,7 @@ class HolidayCalendarGetList(_HolidayCalendarAdmin):
 
     def handle(self):
         items = []
-        self.response.payload = self._paginate_list(items)
+        self.response.payload = items
 
 # ################################################################################################################################
 
