@@ -662,7 +662,6 @@ $.fn.zato.invoker.render_overlay_html = function() {
         +       '<div class="invoker-modal-buttons">'
         +         '<input type="button" id="invoker-modal-invoke-btn" class="invoker-btn-primary" value="Invoke" />'
         +         '<input type="button" id="invoker-modal-history-btn" value="History" />'
-        +         '<input type="button" id="invoker-modal-format-btn" value="Format response" />'
         +         '<div class="invoker-more-options-toggle">'
         +           '<a href="javascript:$.fn.zato.invoker.toggle_more_options()">More options</a>'
         +         '</div>'
@@ -733,7 +732,6 @@ $.fn.zato.invoker._bind_modal_events = function() {
     $(".invoker-modal-backdrop").on("click", $.fn.zato.invoker.close_overlay);
     $("#invoker-modal-invoke-btn").on("click", $.fn.zato.invoker._on_modal_invoke);
     $("#invoker-modal-history-btn").on("click", $.fn.zato.invoker._open_modal_history);
-    $("#invoker-modal-format-btn").on("click", $.fn.zato.invoker._on_format_response);
     $("#invoker-modal-copy-btn").on("click", $.fn.zato.invoker._on_copy_response);
 
 
@@ -1016,9 +1014,10 @@ $.fn.zato.invoker._on_modal_invoke_error = function(jq_xhr, request_text) {
 $.fn.zato.invoker._set_modal_result = function(status, response_text, request_text) {
     $("#invoker-modal-status").text(status).removeClass("invoker-blinking");
 
+    let formatted = $.fn.zato.invoker._format_response_text(response_text);
     let pre = $("#invoker-modal-response");
-    pre.data("raw-response", response_text);
-    $.fn.zato.invoker._render_highlighted_response(pre, response_text);
+    pre.data("raw-response", formatted);
+    $.fn.zato.invoker._render_highlighted_response(pre, formatted);
 
     let config = $.fn.zato.invoker._modal_config;
     if (config) {
