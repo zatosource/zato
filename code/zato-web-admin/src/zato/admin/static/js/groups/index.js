@@ -538,7 +538,7 @@ $.fn.zato.groups.data_table.new_row = function(item, data, include_tr) {
     // 1
     row += String.format('<td>{0}</td>', item.name);
     var member_count = data.member_count !== undefined ? data.member_count : ($("#group_member_count_"+item.id).text() || 0);
-    row += String.format('<td id="group_member_count_{0}">{1}</td>', item.id, member_count);
+    row += String.format('<td id="group_member_count_{0}" class="text-center">{1}</td>', item.id, member_count);
 
     // 2
     if(false) {
