@@ -86,7 +86,7 @@ def poll(req):
 def import_demo_config(req):
 
     response = req.zato.client.invoke('zato.server.invoker', {
-        'func_name': 'import_demo_eda',
+        'func_name': 'import_demo_pubsub',
     })
 
     out = HttpResponse()

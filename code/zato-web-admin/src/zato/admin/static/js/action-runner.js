@@ -203,10 +203,10 @@ function _default_parse(jqXHR, textStatus) {
 }
 
 function _render_success(instance, label) {
-    var html = '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:#85e89d">' +
+    var html = '<span style="display:inline-flex;align-items:center;white-space:nowrap;font-size:13px;color:#fff">' +
         _escape_html(label) + '</span>';
     instance.setContent(html);
-    _hide_timer = setTimeout(function() { instance.hide(); }, 3000);
+    _hide_timer = setTimeout(function() { instance.hide(); }, 800);
 }
 
 function _render_error(instance, label, details_id) {

@@ -381,11 +381,6 @@ class Execute(_SchedulerAdmin):
 
     def handle(self):
         try:
-            self.logger.info('Execute.handle: request.input=%s, request.input type=%s', self.request.input, type(self.request.input))
-            self.logger.info('Execute.handle: raw_request=%s, raw_request type=%s', self.request.raw_request, type(self.request.raw_request))
-            self.logger.info('Execute.handle: request.payload=%s', getattr(self.request, 'payload', 'N/A'))
-            self.logger.info('Execute.handle: channel=%s, data_format=%s, transport=%s', self.channel, self.data_format, self.transport)
-
             from contextlib import closing
             from zato.common.odb.model import Job
             with closing(self.odb.session()) as session:

@@ -72,6 +72,11 @@ pub fn scheduler_loop(
 
     {
         let mut state = shared.state.lock().unwrap();
+        eprintln!("[zato-scheduler] Loaded {} jobs", state.jobs.len());
+        for (id, rj) in &state.jobs {
+            eprintln!("[zato-scheduler] job id={} name={} active={} next_fire={:?}",
+                id, rj.name, rj.is_active, rj.next_fire_utc);
+        }
         let now = Utc::now();
         apply_missed_catchup(&mut state, now);
     }
@@ -118,6 +123,7 @@ pub fn scheduler_loop(
         };
 
         if !fire_batch.is_empty() {
+            eprintln!("[zato-scheduler] Dispatching {} jobs", fire_batch.len());
             dispatch_jobs(&fire_batch, &run_cb, &spawn_fn, &on_job_executed_cb);
         }
     }

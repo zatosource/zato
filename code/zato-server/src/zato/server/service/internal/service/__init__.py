@@ -407,9 +407,6 @@ class Invoke(AdminService):
 
         func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
 
-        self.logger.info('_invoke_current_server_pid: id_=%s, payload=%s (type=%s), channel=%s, data_format=%s, transport=%s',
-            id_, str(payload)[:200] if payload else None, type(payload), channel, data_format, transport)
-
         response = func(
             id_,
             payload, # type: ignore
@@ -541,27 +538,19 @@ class Invoke(AdminService):
         # This is our input ..
         orig_payload:'any_' = self.request.input.get('payload')
 
-        self.logger.info('service.invoke: orig_payload=%s, type=%s', str(orig_payload)[:200] if orig_payload else None, type(orig_payload))
-
         # .. which is optional ..
         if orig_payload:
 
             # .. if it exists, it will be BASE64-encoded ..
             orig_payload = b64decode(orig_payload) # type: ignore
 
-            self.logger.info('service.invoke: after b64decode=%s, type=%s', str(orig_payload)[:200], type(orig_payload))
-
             # .. try and see if it a dict of extra keys and value ..
             payload = self._get_payload_from_extra(orig_payload)
-
-            self.logger.info('service.invoke: after _get_payload_from_extra=%s, type=%s', str(payload)[:200] if payload else None, type(payload))
 
             # .. if it is not, run the regular parser ..
             if not payload:
                 payload = payload_from_request(self.server.json_parser, self.cid, orig_payload,
                     self.request.input.data_format, self.request.input.transport)
-
-                self.logger.info('service.invoke: after payload_from_request=%s, type=%s', str(payload)[:200] if payload else None, type(payload))
 
                 if payload:
 
@@ -573,8 +562,6 @@ class Invoke(AdminService):
                     if scheduler_indicator in payload: # type: ignore
                         payload = loads(payload) # type: ignore
                         payload = payload['data'] # type: ignore
-
-        self.logger.info('service.invoke: final payload=%s, type=%s', str(payload)[:200] if payload else None, type(payload))
 
         id = self.request.input.get('id')
         name = self.request.input.get('name') or ''
