@@ -700,14 +700,18 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                 visible_groups = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
             }
 
-            if (new_exec_elements.length > 0) {
-                var rgb = detail._dashboard().theme.row_recency_color;
-                var max_a = kit.recency.MAX_ALPHA;
-                for (var i = 0; i < new_exec_elements.length; i++) {
-                    var alpha = max_a * (1 - i / Math.max(new_exec_elements.length, kit.recency.STEPS));
-                    new_exec_elements[i].css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
+            var rgb = detail._dashboard().theme.row_recency_color;
+            var max_a = kit.recency.MAX_ALPHA;
+            var steps = kit.recency.STEPS;
+            var primaries = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
+            primaries.each(function(idx) {
+                if (idx < steps) {
+                    var alpha = max_a * (1 - idx / steps);
+                    $(this).css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
+                } else {
+                    $(this).css('background', '');
                 }
-            }
+            });
         },
         on_page_change: function(page) {
             kit.url_state.set({page: page > 1 ? page : null});
