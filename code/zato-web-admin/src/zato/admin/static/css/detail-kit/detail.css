@@ -482,3 +482,74 @@ a {
 .detail-tab-panel[hidden] {
     display: none;
 }
+
+.detail-header-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.detail-component-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.detail-spinner {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    margin-right: 6px;
+    animation: zato-spin 0.6s linear infinite;
+    filter: brightness(0) saturate(100%) invert(8%) sepia(91%) saturate(2593%)
+            hue-rotate(194deg) brightness(96%) contrast(99%);
+}
+
+.detail-loading-row td {
+    text-align: center;
+    padding: 24px 12px !important;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.detail-pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 13px;
+}
+
+.detail-pagination-controls a {
+    color: var(--detail-link-color);
+}
+
+.detail-pagination-info {
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+.detail-run-extras td {
+    background: var(--background-light, #f8f9fa);
+    color: var(--text-muted, #888);
+    font-size: 12px;
+}
+
+.detail-run-extras-toggle {
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--detail-link-color);
+    margin-left: 6px;
+    white-space: nowrap;
+}

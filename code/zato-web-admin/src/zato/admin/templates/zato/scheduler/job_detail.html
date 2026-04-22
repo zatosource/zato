@@ -7,11 +7,20 @@
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/job_detail.css">
 {% endblock %}
 
-{% block section_title %}<span id="detail-section-title">Job detail</span>{% endblock %}
+{% block section_title %}
+<div class="detail-header-row">
+    <span id="detail-section-title">
+        <span class="detail-component-pill" style="background:#1a6fa0;color:#e0f0ff">Scheduler</span>
+        Job detail
+    </span>
+    <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="common" style="font-size:13px">Back to dashboard</a>
+</div>
+{% endblock %}
 {% block help_icon_id %}scheduler-job-help{% endblock %}
 
 {% block detail_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time_range.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/job_detail.js"></script>
 <script nonce="{{ CSP_NONCE }}">
@@ -49,7 +58,6 @@ $(document).ready(function() {
 
 {% block actions %}
 <div class="button-container" id="detail-actions">
-    <button class="action-button" onclick="window.location='/zato/scheduler/dashboard/?cluster={{ cluster_id }}'">Back to dashboard</button>
     <button class="action-button" id="btn-execute-now">Execute now</button>
 </div>
 {% endblock %}
@@ -61,10 +69,30 @@ $(document).ready(function() {
 
 {% block tab_panels %}
 <div class="detail-tab-panel" id="detail-tab-panel-executions" role="tabpanel">
-    <h3 class="section-title">Execution timeline</h3>
+
+    <h3 class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <span>Execution timeline</span>
+        <span class="dashboard-time-range-wrapper" style="font-size:13px;font-weight:400">
+            <span class="dashboard-pill dashboard-pill-clickable" id="detail-timeline-range-pill">All</span>
+            <div class="dashboard-time-range-menu" id="detail-timeline-range-menu">
+                <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
+                <div class="dashboard-time-range-option" data-minutes="15">Last 15 minutes</div>
+                <div class="dashboard-time-range-option" data-minutes="30">Last 30 minutes</div>
+                <div class="dashboard-time-range-option" data-minutes="60">Last 1 hour</div>
+                <div class="dashboard-time-range-option" data-minutes="360">Last 6 hours</div>
+                <div class="dashboard-time-range-option" data-minutes="1440">Today</div>
+                <div class="dashboard-time-range-option" data-minutes="2880">Yesterday</div>
+                <div class="dashboard-time-range-option" data-minutes="10080">This week</div>
+                <div class="dashboard-time-range-option" data-minutes="43200">This month</div>
+                <div class="dashboard-time-range-option" data-minutes="525600">This year</div>
+                <div class="dashboard-time-range-option dashboard-time-range-active" data-minutes="0">All</div>
+            </div>
+        </span>
+    </h3>
     <div id="detail-timeline" style="min-height:60px"></div>
 
     <h3 class="section-title">Execution history <span class="detail-badge" id="detail-history-count" style="font-size:11px"></span></h3>
+    <div class="detail-pagination-controls" id="detail-history-pagination-top"></div>
     <div class="detail-card-scroll">
         <table class="detail-table" id="detail-history-table">
             <thead>
@@ -78,9 +106,16 @@ $(document).ready(function() {
                     <th>Error</th>
                 </tr>
             </thead>
-            <tbody id="detail-history-table-body"></tbody>
+            <tbody id="detail-history-table-body">
+                <tr class="detail-loading-row">
+                    <td colspan="7">
+                        <img src="/static/gfx/spinner.svg" class="detail-spinner"> Loading...
+                    </td>
+                </tr>
+            </tbody>
         </table>
     </div>
+    <div class="detail-pagination-controls" id="detail-history-pagination-bottom"></div>
 </div>
 
 <div class="detail-tab-panel" id="detail-tab-panel-configuration" role="tabpanel" hidden>

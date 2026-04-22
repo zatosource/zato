@@ -1,4 +1,7 @@
+@import url("kit.css");
 @import url("outcome.css");
+@import url("time_range.css");
+@import url("main_chart.css");
 
 .detail-config-extra {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;

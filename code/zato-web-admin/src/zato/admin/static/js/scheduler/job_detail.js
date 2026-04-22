@@ -7,15 +7,85 @@ $.fn.zato.scheduler.job_detail._dashboard = function() {
     return $.fn.zato.scheduler.dashboard;
 };
 
+$.fn.zato.scheduler.job_detail._time_range_minutes = 0;
+$.fn.zato.scheduler.job_detail._history_data = [];
+$.fn.zato.scheduler.job_detail._job_data = {};
+$.fn.zato.scheduler.job_detail._pagination = null;
+
 // ////////////////////////////////////////////////////////////////////////////
-// Render section title and stat cards
+// Outcome priority for grouping (higher = more significant)
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.job_detail._outcome_priority = {
+    'error': 5,
+    'timeout': 4,
+    'ok': 3,
+    'missed_catchup': 2,
+    'skipped_already_in_flight': 1,
+    'skipped_holiday': 0
+};
+
+// ////////////////////////////////////////////////////////////////////////////
+// Filter history by time range
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.job_detail._filter_by_range = function(history) {
+    var minutes = $.fn.zato.scheduler.job_detail._time_range_minutes;
+    if (!minutes || minutes <= 0 || !history) return history;
+    var cutoff = Date.now() - (minutes * 60 * 1000);
+    var filtered = [];
+    for (var i = 0; i < history.length; i++) {
+        var ts = history[i].actual_fire_time_iso || history[i].planned_fire_time_iso;
+        if (ts && new Date(ts).getTime() >= cutoff) {
+            filtered.push(history[i]);
+        }
+    }
+    return filtered;
+};
+
+// ////////////////////////////////////////////////////////////////////////////
+// Group history by run number with collapsible extras
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.job_detail._group_by_run = function(sorted) {
+    var priority = $.fn.zato.scheduler.job_detail._outcome_priority;
+    var groups = [];
+    var run_map = {};
+
+    for (var i = 0; i < sorted.length; i++) {
+        var r = sorted[i];
+        var run_key = (r.current_run !== null && r.current_run !== undefined) ? r.current_run : ('_' + i);
+
+        if (run_map.hasOwnProperty(run_key)) {
+            var group = run_map[run_key];
+            var r_prio = priority[r.outcome] || 0;
+            var p_prio = priority[group.primary.outcome] || 0;
+            if (r_prio > p_prio) {
+                group.extras.push(group.primary);
+                group.primary = r;
+            } else {
+                group.extras.push(r);
+            }
+        } else {
+            var new_group = {run: run_key, primary: r, extras: []};
+            run_map[run_key] = new_group;
+            groups.push(new_group);
+        }
+    }
+    return groups;
+};
+
+// ////////////////////////////////////////////////////////////////////////////
+// Render section title
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_header = function(job) {
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
     var type_label = dashboard.job_type_labels[job.job_type] || job.job_type;
     var status_text = job.is_active ? 'Active' : 'Paused';
-    var title = (job.name || 'Unknown job') + ' <span style="font-weight:400;font-size:13px;color:var(--text-muted)">' +
+    var title = '<span class="detail-component-pill" style="background:#1a6fa0;color:#e0f0ff">Scheduler</span> ' +
+        (job.name || 'Unknown job') +
+        ' <span style="font-weight:400;font-size:13px;color:var(--text-muted)">' +
         type_label + ' \u00b7 ' + status_text + '</span>';
     $('#detail-section-title').html(title);
 };
@@ -25,6 +95,7 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_stats = function(job, history) {
+    var kit = $.fn.zato.dashboard_kit;
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
 
     var total_runs = history.length;
@@ -43,9 +114,9 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job, history) {
 
     var average_duration = duration_count > 0 ? Math.round(total_duration / duration_count) : null;
 
-    $('#stat-total-runs').text(total_runs);
+    $('#stat-total-runs').text(kit.format_number_full(total_runs));
     var $errors = $('#stat-errors');
-    $errors.text(error_count);
+    $errors.text(kit.format_number_full(error_count));
     if (error_count > 0) $errors.css('color', '#e0226e');
 
     $('#stat-avg-duration').text(dashboard.format_duration(average_duration));
@@ -64,6 +135,7 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job, history) {
 
 $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     var container = $('#detail-config-grid');
+    var kit = $.fn.zato.dashboard_kit;
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
     var html = '';
 
@@ -77,16 +149,16 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
 
     if (job.job_type === 'interval_based') {
         var parts = [];
-        if (job.weeks) parts.push(job.weeks + ' weeks');
-        if (job.days) parts.push(job.days + ' days');
-        if (job.hours) parts.push(job.hours + ' hours');
-        if (job.minutes) parts.push(job.minutes + ' minutes');
-        if (job.seconds) parts.push(job.seconds + ' seconds');
+        if (job.weeks) parts.push(kit.format_number_full(job.weeks) + ' weeks');
+        if (job.days) parts.push(kit.format_number_full(job.days) + ' days');
+        if (job.hours) parts.push(kit.format_number_full(job.hours) + ' hours');
+        if (job.minutes) parts.push(kit.format_number_full(job.minutes) + ' minutes');
+        if (job.seconds) parts.push(kit.format_number_full(job.seconds) + ' seconds');
         html += '<div><strong>Interval</strong><br>' + (parts.join(', ') || '-') + '</div>';
     }
 
     if (job.repeats !== null && job.repeats !== undefined) {
-        html += '<div><strong>Repeats</strong><br>' + (job.repeats === 0 ? 'Unlimited' : job.repeats) + '</div>';
+        html += '<div><strong>Repeats</strong><br>' + (job.repeats === 0 ? 'Unlimited' : kit.format_number_full(job.repeats)) + '</div>';
     }
 
     if (job.max_execution_time_ms) {
@@ -94,7 +166,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     }
 
     if (job.jitter_ms) {
-        html += '<div><strong>Jitter</strong><br>' + job.jitter_ms + ' ms</div>';
+        html += '<div><strong>Jitter</strong><br>' + kit.format_number_full(job.jitter_ms) + ' ms</div>';
     }
 
     if (job.extra) {
@@ -111,16 +183,19 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
 };
 
 // ////////////////////////////////////////////////////////////////////////////
-// Render timeline (with SVG glow filter)
+// Render timeline (with SVG glow filter and interactive tooltip)
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var container = $('#detail-timeline');
-    if (!history || history.length === 0) {
-        container.html('<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No execution history yet</div>');
+    var filtered = $.fn.zato.scheduler.job_detail._filter_by_range(history);
+
+    if (!filtered || filtered.length === 0) {
+        container.html('<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No execution history in this range</div>');
         return;
     }
 
+    var kit = $.fn.zato.dashboard_kit;
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
     var bar_colors = dashboard.outcome_bar_colors;
 
@@ -132,8 +207,8 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var row_height = 16;
 
     var timestamps = [];
-    for (var record_index = 0; record_index < history.length; record_index++) {
-        var record = history[record_index];
+    for (var record_index = 0; record_index < filtered.length; record_index++) {
+        var record = filtered[record_index];
         var time_string = record.actual_fire_time_iso || record.planned_fire_time_iso;
         if (time_string) {
             timestamps.push(new Date(time_string).getTime());
@@ -141,7 +216,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     }
 
     if (timestamps.length === 0) {
-        container.html('<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No execution history yet</div>');
+        container.html('<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No execution history in this range</div>');
         return;
     }
 
@@ -172,8 +247,8 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     svg += 'x2="' + (chart_width - padding_right) + '" y2="' + (padding_top + row_height / 2) + '" ';
     svg += 'stroke="rgba(0,0,0,0.06)" stroke-width="2" />';
 
-    for (var entry_index = 0; entry_index < history.length; entry_index++) {
-        var entry = history[entry_index];
+    for (var entry_index = 0; entry_index < filtered.length; entry_index++) {
+        var entry = filtered[entry_index];
         var entry_time_string = entry.actual_fire_time_iso || entry.planned_fire_time_iso;
         if (!entry_time_string) continue;
 
@@ -184,66 +259,170 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
         var bar_length = Math.max(4, (entry_duration / time_range) * draw_width);
         bar_length = Math.min(bar_length, draw_width - (entry_x - padding_left));
 
-        var tooltip = dashboard.format_local_time(entry_time_string) + ' - ' +
-                      (dashboard.outcome_labels[entry.outcome] || entry.outcome) + ' - ' +
-                      dashboard.format_duration(entry.duration_ms);
+        var esc = function(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;'); };
 
         svg += '<rect x="' + entry_x.toFixed(1) + '" y="' + padding_top + '" ';
         svg += 'width="' + bar_length.toFixed(1) + '" height="' + row_height + '" ';
-        svg += 'fill="' + entry_color + '" opacity="0.85" rx="3" filter="url(#timelineGlow)">';
-        svg += '<title>' + tooltip + '</title>';
-        svg += '</rect>';
+        svg += 'fill="' + entry_color + '" opacity="0.85" rx="3" filter="url(#timelineGlow)" ';
+        svg += 'data-time="' + esc(entry_time_string) + '" ';
+        svg += 'data-outcome="' + esc(entry.outcome) + '" ';
+        svg += 'data-duration="' + esc(entry.duration_ms) + '" ';
+        svg += 'data-latency="' + esc(entry.dispatch_latency_ms) + '" ';
+        svg += 'data-run="' + esc(entry.current_run) + '" ';
+        svg += 'data-error="' + esc(entry.error) + '" ';
+        svg += 'style="cursor:pointer" />';
     }
 
     svg += '</svg>';
     container.html(svg);
+
+    container.off('mousemove.timeline mouseleave.timeline');
+    container.on('mousemove.timeline', function(event) {
+        var target = event.target;
+        if (target.tagName !== 'rect' || !$(target).attr('data-outcome')) {
+            kit.tooltip.hide();
+            return;
+        }
+        var $r = $(target);
+        var outcome_key = $r.attr('data-outcome');
+        var outcome_label = dashboard.outcome_labels[outcome_key] || outcome_key;
+        var outcome_color = bar_colors[outcome_key] || '#ccc';
+        var time_str = $r.attr('data-time');
+        var run_num = $r.attr('data-run');
+        var duration_val = $r.attr('data-duration');
+        var latency_val = $r.attr('data-latency');
+        var error_val = $r.attr('data-error');
+
+        var time_display = kit.format_local_time(time_str);
+        var run_display = (run_num && run_num !== 'null' && run_num !== 'undefined')
+            ? '#' + kit.format_number_full(parseInt(run_num, 10))
+            : '';
+
+        var tt_html = '<div class="dashboard-tooltip-header">' +
+            '<div class="dashboard-tooltip-title">' + time_display + '</div>';
+        if (run_display) {
+            tt_html += '<div class="dashboard-tooltip-subtitle">Run ' + run_display + '</div>';
+        }
+        tt_html += '</div>';
+        tt_html += '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' +
+            outcome_color + ';margin-right:5px;vertical-align:middle"></span>' + outcome_label;
+
+        if (duration_val && duration_val !== 'null' && duration_val !== 'undefined') {
+            tt_html += '<br>Duration: ' + dashboard.format_duration(parseInt(duration_val, 10));
+        }
+        if (latency_val && latency_val !== 'null' && latency_val !== 'undefined') {
+            tt_html += '<br>Latency: ' + kit.format_number_full(parseInt(latency_val, 10)) + ' ms';
+        }
+        if (error_val && error_val.length > 0 && error_val !== 'null' && error_val !== 'undefined') {
+            var short_err = error_val.length > 60 ? error_val.substring(0, 60) + '...' : error_val;
+            tt_html += '<br><span style="color:#ff6b6b">Error: ' + short_err + '</span>';
+        }
+
+        kit.tooltip.show(event, tt_html);
+    });
+    container.on('mouseleave.timeline', function() {
+        kit.tooltip.hide();
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////////
-// Render history table
+// Render history table (grouped, paginated)
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
-    var table_body = $('#detail-history-table-body');
+    var kit = $.fn.zato.dashboard_kit;
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
-    table_body.empty();
+    var filtered = $.fn.zato.scheduler.job_detail._filter_by_range(history);
 
-    if (!history || history.length === 0) {
-        table_body.append('<tr><td colspan="7" style="color:var(--text-muted);padding:16px 12px">No execution history</td></tr>');
+    if (!filtered || filtered.length === 0) {
+        $('#detail-history-table-body').html(
+            '<tr><td colspan="7" style="color:var(--text-muted);padding:16px 12px">No execution history</td></tr>'
+        );
         $('#detail-history-count').text('');
+        $('#detail-history-pagination-top').empty();
+        $('#detail-history-pagination-bottom').empty();
         return;
     }
 
-    $('#detail-history-count').text(history.length + ' runs');
-
-    var sorted = history.slice().sort(function(first, second) {
+    var sorted = filtered.slice().sort(function(first, second) {
         return (second.actual_fire_time_iso || '').localeCompare(first.actual_fire_time_iso || '');
     });
 
-    for (var record_index = 0; record_index < sorted.length; record_index++) {
-        var record = sorted[record_index];
-        var planned_time = dashboard.format_local_time(record.planned_fire_time_iso);
-        var actual_time = dashboard.format_local_time(record.actual_fire_time_iso);
-        var dispatch_latency = record.dispatch_latency_ms !== null && record.dispatch_latency_ms !== undefined
-            ? record.dispatch_latency_ms + ' ms'
+    var groups = $.fn.zato.scheduler.job_detail._group_by_run(sorted);
+    $('#detail-history-count').text(kit.format_number_full(filtered.length) + ' runs');
+
+    var mono_style = 'font-family:monospace;font-feature-settings:\'tnum\' on;white-space:nowrap';
+    var mono_wrap = 'font-family:monospace;font-feature-settings:\'tnum\' on';
+
+    var render_single_row = function(record, extra_class) {
+        var planned_time = kit.format_local_time(record.planned_fire_time_iso);
+        var actual_time = kit.format_local_time(record.actual_fire_time_iso);
+        var dispatch_latency = (record.dispatch_latency_ms !== null && record.dispatch_latency_ms !== undefined)
+            ? kit.format_number_full(record.dispatch_latency_ms) + ' ms'
             : '-';
         var duration = dashboard.format_duration(record.duration_ms);
         var outcome = dashboard.outcome_badge(record.outcome);
-        var run_number = record.current_run !== null && record.current_run !== undefined ? record.current_run : '-';
+        var run_number = (record.current_run !== null && record.current_run !== undefined)
+            ? kit.format_number_full(record.current_run) : '-';
         var error_text = record.error || '';
         var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
 
-        var row = '<tr>';
-        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;white-space:nowrap">' + planned_time + '</td>';
-        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;white-space:nowrap">' + actual_time + '</td>';
-        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on">' + dispatch_latency + '</td>';
-        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on">' + duration + '</td>';
+        var cls = extra_class ? ' class="' + extra_class + '"' : '';
+        var row = '<tr' + cls + '>';
+        row += '<td style="' + mono_style + '">' + planned_time + '</td>';
+        row += '<td style="' + mono_style + '">' + actual_time + '</td>';
+        row += '<td style="' + mono_wrap + '">' + dispatch_latency + '</td>';
+        row += '<td style="' + mono_wrap + '">' + duration + '</td>';
         row += '<td>' + outcome + '</td>';
-        row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on">' + run_number + '</td>';
+        row += '<td style="' + mono_wrap + '">' + run_number + '</td>';
         row += '<td title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
         row += '</tr>';
-        table_body.append(row);
-    }
+        return row;
+    };
+
+    var render_group = function(group) {
+        var html = '';
+        var primary_row = render_single_row(group.primary, '');
+
+        if (group.extras.length > 0) {
+            var toggle_id = 'extras-' + group.run;
+            var label = '+ ' + group.extras.length + ' skipped';
+            primary_row = primary_row.replace('</td></tr>',
+                ' <span class="detail-run-extras-toggle" data-target=".' + toggle_id + '">' +
+                label + '</span></td></tr>');
+            html += primary_row;
+            for (var e = 0; e < group.extras.length; e++) {
+                html += render_single_row(group.extras[e], 'detail-run-extras ' + toggle_id).replace('<tr', '<tr style="display:none"');
+            }
+        } else {
+            html += primary_row;
+        }
+        return html;
+    };
+
+    $.fn.zato.scheduler.job_detail._pagination = kit.pagination.init({
+        data: groups,
+        page_size: 50,
+        table_body: '#detail-history-table-body',
+        container_top: '#detail-history-pagination-top',
+        container_bottom: '#detail-history-pagination-bottom',
+        render_row: function(group) {
+            return render_group(group);
+        }
+    });
+
+    $(document).off('click.run-extras').on('click.run-extras', '.detail-run-extras-toggle', function() {
+        var target_class = $(this).data('target');
+        var $rows = $(target_class);
+        var visible = $rows.first().is(':visible');
+        if (visible) {
+            $rows.hide();
+            $(this).text('+ ' + $rows.length + ' skipped');
+        } else {
+            $rows.show();
+            $(this).text('\u2212 ' + $rows.length + ' skipped');
+        }
+    });
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -271,6 +450,16 @@ $.fn.zato.scheduler.job_detail.init_tabs = function() {
 };
 
 // ////////////////////////////////////////////////////////////////////////////
+// Redraw timeline + history (called when time range changes)
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.job_detail._redraw = function() {
+    var detail = $.fn.zato.scheduler.job_detail;
+    detail.render_timeline(detail._history_data);
+    detail.render_history_table(detail._history_data);
+};
+
+// ////////////////////////////////////////////////////////////////////////////
 // Main render
 // ////////////////////////////////////////////////////////////////////////////
 
@@ -279,9 +468,38 @@ $.fn.zato.scheduler.job_detail.render = function(job, history, job_id, cluster_i
     $.fn.zato.scheduler.job_detail.render_stats(job, history);
     $.fn.zato.scheduler.job_detail.render_config(job, cluster_id);
     $.fn.zato.scheduler.job_detail.render_timeline(history);
-    $.fn.zato.scheduler.job_detail.render_history_table(history);
     $.fn.zato.scheduler.job_detail.render_actions(job_id);
     $.fn.zato.scheduler.job_detail.init_tabs();
+
+    var kit = $.fn.zato.dashboard_kit;
+    var detail = $.fn.zato.scheduler.job_detail;
+
+    var range_names = {
+        5: 'Last 5m', 15: 'Last 15m', 30: 'Last 30m', 60: 'Last 1h',
+        360: 'Last 6h', 1440: 'Today', 2880: 'Yesterday',
+        10080: 'This week', 43200: 'This month', 525600: 'This year', 0: 'All'
+    };
+
+    kit.time_range.init({
+        pill: '#detail-timeline-range-pill',
+        menu: '#detail-timeline-range-menu',
+        storage_key: 'zato_job_detail_time_range',
+        on_change: function(minutes) {
+            detail._time_range_minutes = minutes;
+            $('#detail-timeline-range-pill').text(range_names[minutes] || 'All');
+            detail._redraw();
+        }
+    });
+
+    var stored = parseInt(kit.storage_get('zato_job_detail_time_range') || '0', 10) || 0;
+    detail._time_range_minutes = stored;
+    if (stored && range_names[stored]) {
+        $('#detail-timeline-range-pill').text(range_names[stored]);
+    }
+
+    setTimeout(function() {
+        detail.render_history_table(history);
+    }, 50);
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -295,5 +513,7 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, history_data, job_id, c
     if (typeof history_data === 'string') {
         try { history_data = JSON.parse(history_data); } catch(parse_error) { history_data = []; }
     }
+    $.fn.zato.scheduler.job_detail._job_data = job_data;
+    $.fn.zato.scheduler.job_detail._history_data = history_data;
     $.fn.zato.scheduler.job_detail.render(job_data, history_data, job_id, cluster_id);
 };
