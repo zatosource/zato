@@ -100,7 +100,7 @@
     box-sizing: border-box;
 }
 
-/* Bar chart tooltip */
+/* Chart tooltip */
 
 .dashboard-chart-tooltip {
     position: fixed;
@@ -116,4 +116,61 @@
     display: none;
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+.dashboard-tooltip-body {
+    margin-top: 4px;
+}
+
+.dashboard-tooltip-row {
+    margin: 2px 0;
+}
+
+.dashboard-tooltip-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+.dashboard-tooltip-total {
+    margin-top: 4px;
+    font-weight: 700;
+}
+
+.dashboard-tooltip-muted {
+    color: var(--text-muted, #a0a0a5);
+}
+
+/* Inline no-data message */
+
+.dashboard-inline-empty {
+    color: var(--text-muted, #a0a0a5);
+    font-size: 13px;
+    padding: 8px 0;
+}
+
+/* Table cell helpers */
+
+.dashboard-cell-mono {
+    font-family: monospace;
+    font-feature-settings: 'tnum' on;
+    white-space: nowrap;
+}
+
+.dashboard-cell-mono-wrap {
+    font-family: monospace;
+    font-feature-settings: 'tnum' on;
+}
+
+.dashboard-cell-center {
+    text-align: center;
+}
+
+/* SVG hit-area rectangles */
+
+.dashboard-chart-hitrect {
+    cursor: pointer;
 }

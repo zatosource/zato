@@ -665,9 +665,11 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             for (var key_index = 0; key_index < visible_keys.length; key_index++) {
                 var key = visible_keys[key_index];
                 var count = bucket[key] || 0;
-                body_lines.push('<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + bar_colors[key] + ';margin-right:5px;vertical-align:middle"></span>' + (labels[key] || key) + ': <b>' + kit.format_number_full(count) + '</b>');
+                body_lines.push('<div class="dashboard-tooltip-row">' +
+                    '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[key] + '"></span>' +
+                    (labels[key] || key) + ': <b>' + kit.format_number_full(count) + '</b></div>');
             }
-            tooltip_html += body_lines.join('<br>');
+            tooltip_html += '<div class="dashboard-tooltip-body">' + body_lines.join('') + '</div>';
 
             tooltip.html(tooltip_html);
             tooltip.css({display: 'block', left: '0px', top: '0px'});

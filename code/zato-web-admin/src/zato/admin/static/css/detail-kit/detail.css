@@ -480,11 +480,25 @@ a {
 
 .detail-header-row {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
+    align-items: center;
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 4px;
+}
+
+.detail-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.detail-header-controls .dashboard-chart-legend {
+    padding-top: 0;
+}
+
+.detail-header-row > .detail-back-link {
+    margin-left: auto;
 }
 
 .detail-back-link {

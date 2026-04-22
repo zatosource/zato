@@ -13,6 +13,25 @@
         <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
         Job detail
     </span>
+    <div class="detail-header-controls">
+        <span class="dashboard-time-range-wrapper">
+            <span class="dashboard-pill dashboard-pill-clickable" id="detail-timeline-range-pill">All</span>
+            <div class="dashboard-time-range-menu" id="detail-timeline-range-menu">
+                <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
+                <div class="dashboard-time-range-option" data-minutes="15">Last 15 minutes</div>
+                <div class="dashboard-time-range-option" data-minutes="30">Last 30 minutes</div>
+                <div class="dashboard-time-range-option" data-minutes="60">Last 1 hour</div>
+                <div class="dashboard-time-range-option" data-minutes="360">Last 6 hours</div>
+                <div class="dashboard-time-range-option" data-minutes="1440">Today</div>
+                <div class="dashboard-time-range-option" data-minutes="2880">Yesterday</div>
+                <div class="dashboard-time-range-option" data-minutes="10080">This week</div>
+                <div class="dashboard-time-range-option" data-minutes="43200">This month</div>
+                <div class="dashboard-time-range-option" data-minutes="525600">This year</div>
+                <div class="dashboard-time-range-option dashboard-time-range-active" data-minutes="0">All</div>
+            </div>
+        </span>
+        <div class="dashboard-chart-legend" id="detail-timeline-legend"></div>
+    </div>
     <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="common detail-back-link">Back to dashboard</a>
 </div>
 {% endblock %}
@@ -39,26 +58,9 @@ $(document).ready(function() {
 
 {% block stat_cards %}
 <div class="stat-cards" id="detail-stat-cards">
-    <div class="stat-card stat-card-has-menu">
+    <div class="stat-card">
         <div>
-            <div class="stat-card-label">Runs
-                <span class="dashboard-time-range-wrapper stat-card-inline-control">
-                    <span class="dashboard-pill dashboard-pill-clickable stat-card-inline-pill" id="detail-timeline-range-pill">All</span>
-                    <div class="dashboard-time-range-menu" id="detail-timeline-range-menu">
-                        <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
-                        <div class="dashboard-time-range-option" data-minutes="15">Last 15 minutes</div>
-                        <div class="dashboard-time-range-option" data-minutes="30">Last 30 minutes</div>
-                        <div class="dashboard-time-range-option" data-minutes="60">Last 1 hour</div>
-                        <div class="dashboard-time-range-option" data-minutes="360">Last 6 hours</div>
-                        <div class="dashboard-time-range-option" data-minutes="1440">Today</div>
-                        <div class="dashboard-time-range-option" data-minutes="2880">Yesterday</div>
-                        <div class="dashboard-time-range-option" data-minutes="10080">This week</div>
-                        <div class="dashboard-time-range-option" data-minutes="43200">This month</div>
-                        <div class="dashboard-time-range-option" data-minutes="525600">This year</div>
-                        <div class="dashboard-time-range-option dashboard-time-range-active" data-minutes="0">All</div>
-                    </div>
-                </span>
-            </div>
+            <div class="stat-card-label">Runs</div>
             <div class="stat-card-value" id="stat-total-runs">-</div>
         </div>
         <div></div>
@@ -93,13 +95,10 @@ $(document).ready(function() {
 {% block tab_panels %}
 <div class="dashboard-tab-panel" id="dashboard-tab-panel-executions" role="tabpanel">
 
-    <div class="section-title-row">
-        <h3 class="section-title">Run timeline</h3>
-        <div class="dashboard-chart-legend" id="detail-timeline-legend"></div>
-    </div>
+    <h3 class="section-title">Run timeline</h3>
     <div id="detail-timeline" style="min-height:60px"></div>
 
-    <h3 class="section-title">Run history <span class="detail-badge detail-badge-sm" id="detail-history-count"></span></h3>
+    <h3 class="section-title">Run history</h3>
     <div class="detail-pagination-controls" id="detail-history-pagination-top"></div>
     <div class="detail-card-scroll">
         <table class="detail-table detail-table-fixed" id="detail-history-table">

@@ -240,7 +240,9 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 (is_off ? ' dashboard-legend-badge-off' : '') +
                 '" data-key="' + k + '"></span>');
             badge.css({'color': tc, 'background': bg});
-            badge.append('<span class="dashboard-legend-badge-dot" style="background:' + dot + '"></span>');
+            var dot_el = $('<span class="dashboard-legend-badge-dot"></span>');
+            dot_el.css('background', dot);
+            badge.append(dot_el);
             badge.append(labels[k] || k);
             $el.append(badge);
         }

@@ -471,10 +471,11 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 for (var ki = 0; ki < visible_keys.length; ki++) {
                     var k = visible_keys[ki];
                     var count = bucket[k] || 0;
-                    body_lines.push('<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + (palette[k] || '#888') + ';margin-right:5px;vertical-align:middle"></span>' +
-                        (labels[k] || k) + ': <b>' + ns.format_number_full(count) + '</b>');
+                    body_lines.push('<div class="dashboard-tooltip-row">' +
+                        '<span class="dashboard-tooltip-dot" style="background:' + (palette[k] || '#888') + '"></span>' +
+                        (labels[k] || k) + ': <b>' + ns.format_number_full(count) + '</b></div>');
                 }
-                tooltip_html += body_lines.join('<br>');
+                tooltip_html += '<div class="dashboard-tooltip-body">' + body_lines.join('') + '</div>';
 
                 $tooltip.html(tooltip_html);
                 $tooltip.css({display: 'block', left: '0px', top: '0px'});
