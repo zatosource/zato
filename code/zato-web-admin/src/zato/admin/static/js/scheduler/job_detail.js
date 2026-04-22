@@ -745,7 +745,7 @@ $.fn.zato.scheduler.job_detail.init_tabs = function() {
 
 $.fn.zato.scheduler.job_detail.poll = function() {
     var detail = $.fn.zato.scheduler.job_detail;
-    var job_id = String(detail._object_id);
+    var job_id = detail._object_id;
     var job_name = (detail._job_data && detail._job_data.name) || '';
 
     if (detail._pagination) {
@@ -764,7 +764,7 @@ $.fn.zato.scheduler.job_detail.poll = function() {
             var jobs = data.jobs;
             for (var i = 0; i < jobs.length; i++) {
                 var entry = jobs[i];
-                if (String(entry.id) === job_id || entry.name === job_name) {
+                if (entry.id === job_id || entry.name === job_name) {
                     detail._job_data.next_fire_utc = entry.next_fire_utc;
                     detail._job_data.is_running = entry.is_running;
                     detail._job_data.current_run = entry.current_run;
@@ -885,7 +885,7 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, pol
         try { job_data = JSON.parse(job_data); } catch(parse_error) { job_data = {}; }
     }
     $.fn.zato.scheduler.job_detail._job_data = job_data;
-    $.fn.zato.scheduler.job_detail._object_id = job_id || '';
+    $.fn.zato.scheduler.job_detail._object_id = Number(job_id);
     $.fn.zato.scheduler.job_detail._poll_config = poll_config || {};
     $.fn.zato.scheduler.job_detail.render(job_data, job_id, cluster_id);
 };

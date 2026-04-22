@@ -99,27 +99,27 @@ fn scheduler_stop(timeout_s: f64) -> PyResult<()> {
 
 #[pyfunction]
 #[pyo3(signature = (job_id, job_data))]
-fn scheduler_create_job(_py: Python<'_>, job_id: &str, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
+fn scheduler_create_job(_py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
     let shared = get_shared()?;
     let sj = dict_to_scheduler_job(job_id, job_data)?;
     let running_job = RunningJob::from_scheduler_job(&sj);
     with_state_mut(shared, |state| {
-        state.jobs.insert(job_id.to_string(), running_job);
+        state.jobs.insert(job_id, running_job);
     });
     Ok(())
 }
 
 #[pyfunction]
 #[pyo3(signature = (job_id, job_data))]
-fn scheduler_edit_job(_py: Python<'_>, job_id: &str, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
+fn scheduler_edit_job(_py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
     let shared = get_shared()?;
     let sj = dict_to_scheduler_job(job_id, job_data)?;
     with_state_mut(shared, |state| {
-        if let Some(existing) = state.jobs.get_mut(job_id) {
+        if let Some(existing) = state.jobs.get_mut(&job_id) {
             existing.update_from_job(&sj);
         } else {
             let running_job = RunningJob::from_scheduler_job(&sj);
-            state.jobs.insert(job_id.to_string(), running_job);
+            state.jobs.insert(job_id, running_job);
         }
     });
     Ok(())
@@ -127,20 +127,20 @@ fn scheduler_edit_job(_py: Python<'_>, job_id: &str, job_data: &Bound<'_, PyDict
 
 #[pyfunction]
 #[pyo3(signature = (job_id,))]
-fn scheduler_delete_job(job_id: &str) -> PyResult<()> {
+fn scheduler_delete_job(job_id: i64) -> PyResult<()> {
     let shared = get_shared()?;
     with_state_mut(shared, |state| {
-        state.jobs.remove(job_id);
+        state.jobs.remove(&job_id);
     });
     Ok(())
 }
 
 #[pyfunction]
 #[pyo3(signature = (job_id,))]
-fn scheduler_execute_job(job_id: &str) -> PyResult<()> {
+fn scheduler_execute_job(job_id: i64) -> PyResult<()> {
     let shared = get_shared()?;
     with_state_mut(shared, |state| {
-        if let Some(running_job) = state.jobs.get_mut(job_id) {
+        if let Some(running_job) = state.jobs.get_mut(&job_id) {
             running_job.next_fire_utc = Some(Utc::now());
             running_job.sync_instant_from_utc_pub(Utc::now());
         }
@@ -150,10 +150,10 @@ fn scheduler_execute_job(job_id: &str) -> PyResult<()> {
 
 #[pyfunction]
 #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
-fn scheduler_mark_complete(job_id: &str, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
+fn scheduler_mark_complete(job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
     let shared = get_shared()?;
     with_state_mut(shared, |state| {
-        if let Some(running_job) = state.jobs.get_mut(job_id) {
+        if let Some(running_job) = state.jobs.get_mut(&job_id) {
             running_job.in_flight = false;
             running_job.in_flight_since = None;
             running_job.in_flight_run = None;
@@ -196,20 +196,20 @@ pub fn reload_jobs(
     state: &mut scheduler::SchedulerState,
     new_jobs: std::collections::HashMap<String, zato_server_core::model::SchedulerJob>,
 ) {
-    let new_ids: std::collections::HashSet<String> = new_jobs.values().map(|j| j.id.clone()).collect();
-    let old_ids: std::collections::HashSet<String> = state.jobs.keys().cloned().collect();
+    let new_ids: std::collections::HashSet<i64> = new_jobs.values().map(|j| j.id).collect();
+    let old_ids: std::collections::HashSet<i64> = state.jobs.keys().cloned().collect();
 
     for id in old_ids.difference(&new_ids) {
         state.jobs.remove(id);
     }
 
     for (_name, sj) in &new_jobs {
-        let job_id = &sj.id;
-        if let Some(existing) = state.jobs.get_mut(job_id.as_str()) {
+        let job_id = sj.id;
+        if let Some(existing) = state.jobs.get_mut(&job_id) {
             existing.update_from_job(sj);
         } else {
             let running_job = RunningJob::from_scheduler_job(sj);
-            state.jobs.insert(job_id.clone(), running_job);
+            state.jobs.insert(job_id, running_job);
         }
     }
 }
@@ -234,10 +234,10 @@ pub fn reload_calendars(
 
 #[pyfunction]
 #[pyo3(signature = (job_id,))]
-fn scheduler_get_history(py: Python<'_>, job_id: &str) -> PyResult<Py<PyList>> {
+fn scheduler_get_history(py: Python<'_>, job_id: i64) -> PyResult<Py<PyList>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
-    if let Some(running_job) = state.jobs.get(job_id) {
+    if let Some(running_job) = state.jobs.get(&job_id) {
         let records: Vec<ExecutionRecord> = running_job.history.iter().cloned().collect();
         history::records_to_py_list(py, &records)
     } else {
@@ -247,10 +247,10 @@ fn scheduler_get_history(py: Python<'_>, job_id: &str) -> PyResult<Py<PyList>> {
 
 #[pyfunction]
 #[pyo3(signature = (job_id, offset, limit, exclude_outcomes=None))]
-fn scheduler_get_history_page(py: Python<'_>, job_id: &str, offset: usize, limit: usize, exclude_outcomes: Option<&str>) -> PyResult<Py<PyDict>> {
+fn scheduler_get_history_page(py: Python<'_>, job_id: i64, offset: usize, limit: usize, exclude_outcomes: Option<&str>) -> PyResult<Py<PyDict>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
-    if let Some(running_job) = state.jobs.get(job_id) {
+    if let Some(running_job) = state.jobs.get(&job_id) {
         let excluded: Vec<&str> = exclude_outcomes
             .map(|s| s.split(',').map(|v| v.trim()).filter(|v| !v.is_empty()).collect())
             .unwrap_or_default();
@@ -279,10 +279,10 @@ fn scheduler_get_history_page(py: Python<'_>, job_id: &str, offset: usize, limit
 
 #[pyfunction]
 #[pyo3(signature = (job_id, since_iso, exclude_outcomes=None))]
-fn scheduler_get_history_since(py: Python<'_>, job_id: &str, since_iso: &str, exclude_outcomes: Option<&str>) -> PyResult<Py<PyList>> {
+fn scheduler_get_history_since(py: Python<'_>, job_id: i64, since_iso: &str, exclude_outcomes: Option<&str>) -> PyResult<Py<PyList>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
-    if let Some(running_job) = state.jobs.get(job_id) {
+    if let Some(running_job) = state.jobs.get(&job_id) {
         let excluded: Vec<&str> = exclude_outcomes
             .map(|s| s.split(',').map(|v| v.trim()).filter(|v| !v.is_empty()).collect())
             .unwrap_or_default();
@@ -314,7 +314,7 @@ fn scheduler_get_job_summaries(py: Python<'_>) -> PyResult<Py<PyList>> {
     let list = PyList::empty(py);
     for (id, running_job) in &state.jobs {
         let d = PyDict::new(py);
-        d.set_item("id", id.as_str())?;
+        d.set_item("id", *id)?;
         d.set_item("name", running_job.name.as_str())?;
         d.set_item("is_active", running_job.is_active)?;
         d.set_item("service", running_job.service.as_ref())?;
@@ -331,7 +331,7 @@ fn scheduler_get_job_summaries(py: Python<'_>) -> PyResult<Py<PyList>> {
     Ok(list.unbind())
 }
 
-fn dict_to_scheduler_job(job_id: &str, d: &Bound<'_, PyDict>) -> PyResult<zato_server_core::model::SchedulerJob> {
+fn dict_to_scheduler_job(job_id: i64, d: &Bound<'_, PyDict>) -> PyResult<zato_server_core::model::SchedulerJob> {
     let get_str = |key: &str| -> PyResult<String> {
         d.get_item(key)?
             .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(key.to_string()))?
@@ -353,7 +353,7 @@ fn dict_to_scheduler_job(job_id: &str, d: &Bound<'_, PyDict>) -> PyResult<zato_s
     };
 
     Ok(zato_server_core::model::SchedulerJob {
-        id: job_id.to_string(),
+        id: job_id,
         name: get_str("name")?,
         is_active: get_bool("is_active")?,
         service: get_str("service")?,

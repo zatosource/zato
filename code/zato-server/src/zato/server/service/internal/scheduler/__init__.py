@@ -20,6 +20,7 @@ from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Job
+from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Int, Bool
 from zato.server.service.internal import AdminService
 
@@ -35,9 +36,8 @@ _new_params = ('jitter_ms', 'timezone', 'calendar', 'on_missed', 'max_execution_
 # ################################################################################################################################
 
 def _item_by_id(items, id_):
-    sid = str(id_)
     for item in items:
-        if str(item['id']) == sid:
+        if item['id'] == id_:
             return item
     return None
 
@@ -83,9 +83,9 @@ def _create_edit(self, action):
     jobs = store.get_list(_entity_type)
 
     def _other_same_name(jid):
-        for j in jobs:
-            if j['name'] == name and str(j['id']) != str(jid):
-                return j
+        for job in jobs:
+            if job['name'] == name and job['id'] != jid:
+                return job
         return None
 
     if action == 'create':
@@ -197,10 +197,12 @@ def _create_edit(self, action):
                 ib.seconds = data['seconds']
                 ib.repeats = data['repeats']
 
+            set_instance_opaque_attrs(job_row, input, only=list(_new_params))
+            session.add(job_row)
             session.commit()
 
             data['id'] = job_row.id
-            job_id = str(job_row.id)
+            job_id = job_row.id
 
         from zato_scheduler_core import scheduler_create_job, scheduler_edit_job
         if action == 'create':
@@ -259,24 +261,13 @@ class GetList(_Get):
 
             search_result = self._search(job_list, session, input.cluster_id, input.get('service_name'), False)
 
+            data = elems_with_opaque(search_result)
+
             items = []
-            for row in search_result:
-                d = {
-                    'id': row.id,
-                    'name': row.name,
-                    'is_active': row.is_active,
-                    'job_type': row.job_type,
-                    'start_date': row.start_date.isoformat() if row.start_date else '',
-                    'service': row.service_name,
-                    'extra': row.extra,
-                }
-                d['weeks'] = row.weeks
-                d['days'] = row.days
-                d['hours'] = row.hours
-                d['minutes'] = row.minutes
-                d['seconds'] = row.seconds
-                d['repeats'] = row.repeats
-                items.append(self._enrich_job(d))
+            for row in data:
+                row['service'] = row.pop('service_name', row.get('service', ''))
+                row['start_date'] = row['start_date'].isoformat() if row['start_date'] else ''
+                items.append(self._enrich_job(row))
 
         self.response.payload = items
 
@@ -295,12 +286,13 @@ class GetByID(_Get):
         from zato.common.odb.model import Job, IntervalBasedJob
         item = None
         with closing(self.odb.session()) as session:
-            j = session.query(Job).filter_by(id=self.request.input.id).first()
-            if j:
-                item = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
-                        'start_date': j.start_date.isoformat(), 'service': j.service.name,
-                        'extra': j.extra}
-                ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
+            job = session.query(Job).filter_by(id=self.request.input.id).first()
+            if job:
+                item = {'id': job.id, 'name': job.name, 'is_active': job.is_active, 'job_type': job.job_type,
+                        'start_date': job.start_date.isoformat(), 'service': job.service.name,
+                        'extra': job.extra}
+                item.update(parse_instance_opaque_attr(job))
+                ib = session.query(IntervalBasedJob).filter_by(job_id=job.id).first()
                 if ib:
                     item['weeks'] = ib.weeks
                     item['days'] = ib.days
@@ -327,12 +319,13 @@ class GetByName(_Get):
         from zato.common.odb.model import Job, IntervalBasedJob
         item = None
         with closing(self.odb.session()) as session:
-            j = session.query(Job).filter_by(name=self.request.input.name, cluster_id=self.server.cluster_id).first()
-            if j:
-                item = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
-                        'start_date': j.start_date.isoformat(), 'service': j.service.name,
-                        'extra': j.extra}
-                ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
+            job = session.query(Job).filter_by(name=self.request.input.name, cluster_id=self.server.cluster_id).first()
+            if job:
+                item = {'id': job.id, 'name': job.name, 'is_active': job.is_active, 'job_type': job.job_type,
+                        'start_date': job.start_date.isoformat(), 'service': job.service.name,
+                        'extra': job.extra}
+                item.update(parse_instance_opaque_attr(job))
+                ib = session.query(IntervalBasedJob).filter_by(job_id=job.id).first()
                 if ib:
                     item['weeks'] = ib.weeks
                     item['days'] = ib.days
@@ -379,7 +372,7 @@ class Delete(_SchedulerAdmin):
                 if not job_row:
                     raise ZatoException(self.cid, 'Job not found')
 
-                job_id = str(job_row.id)
+                job_id = job_row.id
                 session.query(IntervalBasedJob).filter_by(job_id=job_row.id).delete()
                 session.delete(job_row)
                 session.commit()
@@ -410,7 +403,7 @@ class Execute(_SchedulerAdmin):
                 raise ZatoException(self.cid, 'Job not found')
 
             from zato_scheduler_core import scheduler_execute_job
-            scheduler_execute_job(str(job_row.id))
+            scheduler_execute_job(job_row.id)
         except Exception:
             self.logger.error('Could not execute the job, e:`%s`', format_exc())
             raise
@@ -576,9 +569,9 @@ class GetCurrentState(_SchedulerAdmin):
             with closing(self.odb.session()) as session:
                 job_rows = session.query(Job).filter_by(cluster_id=self.server.cluster_id).all()
                 store_jobs = []
-                for j in job_rows:
-                    d = {'id': str(j.id), 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
-                         'service': j.service.name}
+                for job in job_rows:
+                    d = {'id': job.id, 'name': job.name, 'is_active': job.is_active, 'job_type': job.job_type,
+                         'service': job.service.name}
                     store_jobs.append(d)
 
             runtime_by_id = {}

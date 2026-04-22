@@ -42,7 +42,7 @@ pub fn records_page_to_py_dict(py: Python<'_>, records: &[ExecutionRecord], tota
 
 pub fn all_history_to_py_dict<'py>(
     py: Python<'py>,
-    jobs: &std::collections::HashMap<String, crate::job::RunningJob>,
+    jobs: &std::collections::HashMap<i64, crate::job::RunningJob>,
 ) -> PyResult<Py<PyDict>> {
     let out = PyDict::new(py);
     for (id, running_job) in jobs {
@@ -50,7 +50,7 @@ pub fn all_history_to_py_dict<'py>(
         for rec in &running_job.history {
             list.append(record_to_py_dict(py, rec)?)?;
         }
-        out.set_item(id.as_str(), list)?;
+        out.set_item(*id, list)?;
     }
     Ok(out.unbind())
 }

@@ -12,8 +12,8 @@ static TZ_ALIASES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchedulerJob {
-    #[serde(default = "next_id")]
-    pub id: String,
+    #[serde(default)]
+    pub id: i64,
     pub name: String,
     #[serde(default = "default_true")]
     pub is_active: bool,

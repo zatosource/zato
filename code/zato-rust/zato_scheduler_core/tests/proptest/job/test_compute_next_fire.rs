@@ -10,7 +10,7 @@ fn make_interval_job(minutes: u32, future_start: bool, is_active: bool) -> Sched
         (Utc::now() - Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string()
     };
     SchedulerJob {
-        id: "j1".into(),
+        id: 1,
         name: "test".into(),
         is_active,
         service: "svc".into(),

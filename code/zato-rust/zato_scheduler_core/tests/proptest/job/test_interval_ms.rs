@@ -4,7 +4,7 @@ use zato_server_core::model::SchedulerJob;
 
 fn make_job(weeks: u32, days: u32, hours: u32, minutes: u32, seconds: u32) -> SchedulerJob {
     SchedulerJob {
-        id: "j1".into(),
+        id: 1,
         name: "test".into(),
         is_active: true,
         service: "svc".into(),

@@ -17,7 +17,7 @@ const DEFAULT_CLOCK_JUMP_THRESHOLD_MS: i64 = 5_000;
 const DEFAULT_COALESCE_WINDOW_MS: i64 = 50;
 
 pub struct SchedulerState {
-    pub jobs: HashMap<String, RunningJob>,
+    pub jobs: HashMap<i64, RunningJob>,
     pub calendars: HashMap<String, CalendarData>,
     pub dirty: bool,
 }
@@ -152,7 +152,7 @@ fn load_jobs_from_config_store(shared: &SchedulerShared, config_store: &PyObject
                 let mut state = shared.state.lock().unwrap();
                 for (_name, job) in &jobs {
                     let running_job = RunningJob::from_scheduler_job(job);
-                    state.jobs.insert(job.id.clone(), running_job);
+                    state.jobs.insert(job.id, running_job);
                 }
                 for (name, cal) in cals {
                     let mut calendar_data = CalendarData::new(name.clone());
@@ -200,7 +200,7 @@ pub fn collect_due_jobs(
     let threshold = now + chrono::Duration::milliseconds(coalesce_window_ms);
     let mut batch = Vec::new();
 
-    let job_ids: Vec<String> = state.jobs.keys().cloned().collect();
+    let job_ids: Vec<i64> = state.jobs.keys().cloned().collect();
 
     for id in job_ids {
         let calendars_ref = &state.calendars;
@@ -272,7 +272,7 @@ fn dispatch_jobs(
     Python::try_attach(|py| {
         for item in batch {
             let ctx = serde_json::json!({
-                "id": item.job_id.as_ref(),
+                "id": item.job_id.0,
                 "name": item.name,
                 "service": item.service.as_ref(),
                 "extra": item.extra,
@@ -324,7 +324,7 @@ pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>)
 }
 
 pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
-    let job_ids: Vec<String> = state.jobs.keys().cloned().collect();
+    let job_ids: Vec<i64> = state.jobs.keys().cloned().collect();
 
     for id in job_ids {
         let running_job = state.jobs.get_mut(&id).unwrap();

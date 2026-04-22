@@ -5,13 +5,13 @@ use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::scheduler::{SchedulerState, compute_sleep_duration};
 use zato_server_core::model::SchedulerJob;
 
-fn make_job_at_offset(id: &str, offset_secs: i64) -> SchedulerJob {
+fn make_job_at_offset(id: i64, offset_secs: i64) -> SchedulerJob {
     let start = (Utc::now() + CDuration::seconds(offset_secs))
         .format("%Y-%m-%dT%H:%M:%S")
         .to_string();
     SchedulerJob {
-        id: id.into(),
-        name: id.into(),
+        id,
+        name: format!("job-{id}"),
         is_active: true,
         service: "svc".into(),
         job_type: "interval_based".into(),
@@ -43,9 +43,9 @@ proptest! {
     #[test]
     fn sleep_duration_capped_at_60s(offset in 120i64..600) {
         let mut state = SchedulerState::new();
-        let sj = make_job_at_offset("j1", offset);
+        let sj = make_job_at_offset(1, offset);
         let running_job = RunningJob::from_scheduler_job(&sj);
-        state.jobs.insert("j1".into(), running_job);
+        state.jobs.insert(1, running_job);
         let dur = compute_sleep_duration(&state);
         prop_assert!(dur <= Duration::from_secs(60));
     }
@@ -53,9 +53,9 @@ proptest! {
     #[test]
     fn sleep_duration_at_least_1ms(offset in -100i64..1) {
         let mut state = SchedulerState::new();
-        let sj = make_job_at_offset("j1", offset);
+        let sj = make_job_at_offset(1, offset);
         let running_job = RunningJob::from_scheduler_job(&sj);
-        state.jobs.insert("j1".into(), running_job);
+        state.jobs.insert(1, running_job);
         let dur = compute_sleep_duration(&state);
         prop_assert!(dur >= Duration::from_millis(1));
     }

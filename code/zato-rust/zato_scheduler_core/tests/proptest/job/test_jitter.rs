@@ -6,7 +6,7 @@ use zato_server_core::model::SchedulerJob;
 fn make_jitter_job(jitter_ms: u32) -> SchedulerJob {
     let start = (Utc::now() - Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
     SchedulerJob {
-        id: "jitter-test".into(),
+        id: 1,
         name: "jitter-test".into(),
         is_active: true,
         service: "svc".into(),

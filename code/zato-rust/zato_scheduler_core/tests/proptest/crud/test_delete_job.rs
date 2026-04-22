@@ -4,12 +4,12 @@ use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::scheduler::SchedulerState;
 use zato_server_core::model::SchedulerJob;
 
-fn make_job(id: &str) -> SchedulerJob {
+fn make_job(id: i64) -> SchedulerJob {
     let start = (Utc::now() - Duration::hours(1))
         .format("%Y-%m-%dT%H:%M:%S")
         .to_string();
     SchedulerJob {
-        id: id.into(),
+        id,
         name: format!("job-{id}"),
         is_active: true,
         service: "svc".into(),
@@ -37,18 +37,18 @@ proptest! {
     ) {
         let n_delete = n_delete.min(n_total - 1);
         let mut state = SchedulerState::new();
-        let ids: Vec<String> = (0..n_total).map(|i| format!("j{i}")).collect();
-        for id in &ids {
+        let ids: Vec<i64> = (0..n_total).map(|i| i as i64).collect();
+        for &id in &ids {
             let sj = make_job(id);
             let running_job = RunningJob::from_scheduler_job(&sj);
-            state.jobs.insert(id.clone(), running_job);
+            state.jobs.insert(id, running_job);
         }
-        for id in &ids[..n_delete] {
-            state.jobs.remove(id.as_str());
+        for &id in &ids[..n_delete] {
+            state.jobs.remove(&id);
         }
         prop_assert_eq!(state.jobs.len(), n_total - n_delete);
-        for id in &ids[n_delete..] {
-            prop_assert!(state.jobs.contains_key(id.as_str()));
+        for &id in &ids[n_delete..] {
+            prop_assert!(state.jobs.contains_key(&id));
         }
     }
 
@@ -58,12 +58,12 @@ proptest! {
     ) {
         let mut state = SchedulerState::new();
         for i in 0..n {
-            let id = format!("j{i}");
-            let sj = make_job(&id);
+            let id = i as i64;
+            let sj = make_job(id);
             let running_job = RunningJob::from_scheduler_job(&sj);
             state.jobs.insert(id, running_job);
         }
-        state.jobs.remove("nonexistent");
+        state.jobs.remove(&999);
         prop_assert_eq!(state.jobs.len(), n);
     }
 }

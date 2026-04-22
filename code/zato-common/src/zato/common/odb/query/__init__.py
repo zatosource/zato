@@ -189,6 +189,7 @@ def _job(session, cluster_id):
         Job.job_type,
         Job.start_date,
         Job.extra,
+        Job.opaque1,
         Service.name.label('service_name'),
         Service.impl_name.label('service_impl_name'),
         Service.id.label('service_id'),

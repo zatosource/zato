@@ -45,6 +45,11 @@ from zato.common.py23_.past.builtins import unicode
 
 logger = logging.getLogger(__name__)
 
+default_jitter_ms = ''
+default_timezone = ''
+default_on_missed = 'run_once'
+default_max_execution_time_ms = ''
+
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -339,10 +344,10 @@ def index(req):
                     ib_job.repeats = repeats
                     job.interval_based = ib_job
 
-                    job.jitter_ms = job_elem.jitter_ms
-                    job.timezone = job_elem.timezone
-                    job.on_missed = job_elem.on_missed
-                    job.max_execution_time_ms = job_elem.max_execution_time_ms
+                    job.jitter_ms = getattr(job_elem, 'jitter_ms', default_jitter_ms)
+                    job.timezone = getattr(job_elem, 'timezone', default_timezone)
+                    job.on_missed = getattr(job_elem, 'on_missed', default_on_missed)
+                    job.max_execution_time_ms = getattr(job_elem, 'max_execution_time_ms', default_max_execution_time_ms)
 
                 else:
                     msg = 'Unrecognized job type, name:`{}`, type:`{}`'.format(name, job_type)

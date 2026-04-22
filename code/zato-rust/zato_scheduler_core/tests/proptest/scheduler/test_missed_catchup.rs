@@ -9,7 +9,7 @@ fn make_interval_job(on_missed: &str, past_hours: u32) -> SchedulerJob {
         .format("%Y-%m-%dT%H:%M:%S")
         .to_string();
     SchedulerJob {
-        id: "j1".into(),
+        id: 1,
         name: "test".into(),
         is_active: true,
         service: "svc".into(),
@@ -39,10 +39,10 @@ proptest! {
         running_job.next_fire_utc = Some(Utc::now() - Duration::hours(1));
         running_job.sync_instant_from_utc_pub(Utc::now());
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), running_job);
+        state.jobs.insert(1, running_job);
         let now = Utc::now();
         apply_missed_catchup(&mut state, now);
-        let running_job = state.jobs.get("j1").unwrap();
+        let running_job = state.jobs.get(&1).unwrap();
         if let Some(fire) = running_job.next_fire_utc {
             prop_assert!(fire >= now - Duration::seconds(1));
         }
@@ -54,7 +54,7 @@ proptest! {
             .format("%Y-%m-%dT%H:%M:%S")
             .to_string();
         let sj = SchedulerJob {
-            id: "j1".into(),
+            id: 1,
             name: "test".into(),
             is_active: true,
             service: "svc".into(),
@@ -69,9 +69,9 @@ proptest! {
         let running_job = RunningJob::from_scheduler_job(&sj);
         let fire_before = running_job.next_fire_utc;
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), running_job);
+        state.jobs.insert(1, running_job);
         apply_missed_catchup(&mut state, Utc::now());
-        let running_job = state.jobs.get("j1").unwrap();
+        let running_job = state.jobs.get(&1).unwrap();
         prop_assert_eq!(running_job.next_fire_utc, fire_before);
     }
 
@@ -81,9 +81,9 @@ proptest! {
         sj.is_active = false;
         let running_job = RunningJob::from_scheduler_job(&sj);
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), running_job);
+        state.jobs.insert(1, running_job);
         apply_missed_catchup(&mut state, Utc::now());
-        let running_job = state.jobs.get("j1").unwrap();
+        let running_job = state.jobs.get(&1).unwrap();
         prop_assert!(running_job.next_fire_utc.is_none());
     }
 }

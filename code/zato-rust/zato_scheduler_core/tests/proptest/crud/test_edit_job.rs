@@ -8,7 +8,7 @@ fn make_job(minutes: u32, is_active: bool) -> SchedulerJob {
         .format("%Y-%m-%dT%H:%M:%S")
         .to_string();
     SchedulerJob {
-        id: "j1".into(),
+        id: 1,
         name: "original".into(),
         is_active,
         service: "svc-original".into(),

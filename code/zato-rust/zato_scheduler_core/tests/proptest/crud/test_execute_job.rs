@@ -9,7 +9,7 @@ fn make_job() -> SchedulerJob {
         .format("%Y-%m-%dT%H:%M:%S")
         .to_string();
     SchedulerJob {
-        id: "j1".into(),
+        id: 1,
         name: "test".into(),
         is_active: true,
         service: "svc".into(),
@@ -49,8 +49,8 @@ proptest! {
         let mut state = SchedulerState::new();
         let sj = make_job();
         let running_job = RunningJob::from_scheduler_job(&sj);
-        state.jobs.insert("j1".into(), running_job);
-        if let Some(running_job) = state.jobs.get_mut("nonexistent") {
+        state.jobs.insert(1, running_job);
+        if let Some(running_job) = state.jobs.get_mut(&999) {
             running_job.next_fire_utc = Some(Utc::now());
         }
         prop_assert_eq!(state.jobs.len(), 1);

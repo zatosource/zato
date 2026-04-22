@@ -6,7 +6,7 @@ use zato_server_core::model::SchedulerJob;
 fn make_interval_job(minutes: u32) -> SchedulerJob {
     let start = (Utc::now() - Duration::hours(2)).format("%Y-%m-%dT%H:%M:%S").to_string();
     SchedulerJob {
-        id: "j1".into(),
+        id: 1,
         name: "test".into(),
         is_active: true,
         service: "svc".into(),
@@ -30,7 +30,7 @@ fn make_interval_job(minutes: u32) -> SchedulerJob {
 fn make_one_time_job() -> SchedulerJob {
     let start = (Utc::now() + Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
     SchedulerJob {
-        id: "j1".into(),
+        id: 1,
         name: "test".into(),
         is_active: true,
         service: "svc".into(),

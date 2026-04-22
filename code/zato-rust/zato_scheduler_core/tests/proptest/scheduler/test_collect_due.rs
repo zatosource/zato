@@ -4,13 +4,13 @@ use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::scheduler::{SchedulerState, collect_due_jobs};
 use zato_server_core::model::SchedulerJob;
 
-fn make_due_job(id: &str, minutes_ago: u32) -> SchedulerJob {
+fn make_due_job(id: i64, minutes_ago: u32) -> SchedulerJob {
     let start = (Utc::now() - Duration::minutes(i64::from(minutes_ago) + 60))
         .format("%Y-%m-%dT%H:%M:%S")
         .to_string();
     SchedulerJob {
-        id: id.into(),
-        name: id.into(),
+        id,
+        name: format!("job-{id}"),
         is_active: true,
         service: "svc".into(),
         job_type: "interval_based".into(),
@@ -34,11 +34,11 @@ proptest! {
 
     #[test]
     fn inactive_jobs_never_collected(minutes in 1u32..60) {
-        let mut sj = make_due_job("j1", minutes);
+        let mut sj = make_due_job(1, minutes);
         sj.is_active = false;
         let running_job = RunningJob::from_scheduler_job(&sj);
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), running_job);
+        state.jobs.insert(1, running_job);
         let now = Utc::now();
         let batch = collect_due_jobs(&mut state, now, 50);
         prop_assert!(batch.is_empty());
@@ -46,18 +46,18 @@ proptest! {
 
     #[test]
     fn in_flight_jobs_skipped(minutes in 1u32..30) {
-        let sj = make_due_job("j1", minutes);
+        let sj = make_due_job(1, minutes);
         let mut running_job = RunningJob::from_scheduler_job(&sj);
         running_job.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
         running_job.sync_instant_from_utc_pub(Utc::now());
         running_job.in_flight = true;
         running_job.in_flight_since = Some(std::time::Instant::now());
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), running_job);
+        state.jobs.insert(1, running_job);
         let now = Utc::now();
         let batch = collect_due_jobs(&mut state, now, 50);
         prop_assert!(batch.is_empty());
-        let running_job = state.jobs.get("j1").unwrap();
+        let running_job = state.jobs.get(&1).unwrap();
         let last = running_job.history.back().unwrap();
         prop_assert_eq!(&last.outcome, "skipped_already_in_flight");
     }

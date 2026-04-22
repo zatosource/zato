@@ -1,6 +1,4 @@
 use std::collections::VecDeque;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::time::Instant;
 
 use chrono::{DateTime, LocalResult, TimeZone, Utc};
@@ -118,7 +116,7 @@ impl RunningJob {
             Self::parse_start_date(&job.start_date, tz.as_ref())
                 .unwrap_or_else(|| Utc::now())
         );
-        let seed = Self::name_hash(&job.id);
+        let seed = job.id as u64;
         let jitter_rng = SmallRng::seed_from_u64(seed);
         let on_missed = OnMissedPolicy::from(
             job.on_missed.as_deref().unwrap_or("run_once")
@@ -129,7 +127,7 @@ impl RunningJob {
         );
 
         let mut running_job = RunningJob {
-            id: JobId(job.id.clone()),
+            id: JobId(job.id),
             name: job.name.clone(),
             is_active: job.is_active,
             service: ServiceName(job.service.clone()),
@@ -195,7 +193,7 @@ impl RunningJob {
 
         if job.jitter_ms != self.jitter_ms {
             self.jitter_ms = job.jitter_ms;
-            self.jitter_rng = SmallRng::seed_from_u64(Self::name_hash(self.id.as_ref()));
+            self.jitter_rng = SmallRng::seed_from_u64(self.id.0 as u64);
         }
 
         if schedule_changed && self.is_active {
@@ -350,11 +348,6 @@ impl RunningJob {
         Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc))
     }
 
-    fn name_hash(name: &str) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        name.hash(&mut hasher);
-        hasher.finish()
-    }
 }
 
 #[cfg(test)]
@@ -364,7 +357,7 @@ mod tests {
     #[test]
     fn test_compute_interval_ms() {
         let job = SchedulerJob {
-            id: "1".into(), name: "t".into(), is_active: true,
+            id: 1, name: "t".into(), is_active: true,
             service: "s".into(), job_type: "interval_based".into(),
             start_date: "2026-01-01T00:00:00".into(),
             extra: None, weeks: Some(1), days: Some(2), hours: Some(3),
@@ -387,10 +380,4 @@ mod tests {
         assert!(dt.is_some());
     }
 
-    #[test]
-    fn test_name_hash_stable() {
-        let h1 = RunningJob::name_hash("my-job");
-        let h2 = RunningJob::name_hash("my-job");
-        assert_eq!(h1, h2);
-    }
 }

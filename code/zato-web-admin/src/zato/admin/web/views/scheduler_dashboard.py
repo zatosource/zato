@@ -115,7 +115,7 @@ def job_detail(req, job_id):
             job_name = job_data['name']
 
             for entry in state_data['jobs']:
-                if entry['id'] == str(job_id) or entry['name'] == job_name:
+                if entry['id'] == int(job_id) or entry['name'] == job_name:
                     job_data['next_fire_utc'] = entry['next_fire_utc']
                     job_data['is_running'] = entry['is_running']
                     job_data['current_run'] = entry['current_run']

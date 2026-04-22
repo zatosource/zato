@@ -10,7 +10,7 @@ fn make_active_job() -> SchedulerJob {
         .format("%Y-%m-%dT%H:%M:%S")
         .to_string();
     SchedulerJob {
-        id: "j1".into(),
+        id: 1,
         name: "test".into(),
         is_active: true,
         service: "svc".into(),
@@ -38,9 +38,9 @@ proptest! {
         let sj = make_active_job();
         let running_job = RunningJob::from_scheduler_job(&sj);
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), running_job);
+        state.jobs.insert(1, running_job);
         check_in_flight_timeouts(&mut state);
-        let running_job = state.jobs.get("j1").unwrap();
+        let running_job = state.jobs.get(&1).unwrap();
         prop_assert!(!running_job.in_flight);
         prop_assert!(running_job.history.is_empty());
     }
@@ -54,9 +54,9 @@ proptest! {
         running_job.in_flight_since = Some(Instant::now());
         running_job.record_execution(ExecutionRecord::new("p", "a", "executed", 1));
         let mut state = SchedulerState::new();
-        state.jobs.insert("j1".into(), running_job);
+        state.jobs.insert(1, running_job);
         check_in_flight_timeouts(&mut state);
-        let running_job = state.jobs.get("j1").unwrap();
+        let running_job = state.jobs.get(&1).unwrap();
         prop_assert!(running_job.in_flight);
     }
 }

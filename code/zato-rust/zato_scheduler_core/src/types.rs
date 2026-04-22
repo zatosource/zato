@@ -1,17 +1,11 @@
 use std::fmt;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct JobId(pub String);
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct JobId(pub i64);
 
 impl fmt::Display for JobId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl AsRef<str> for JobId {
-    fn as_ref(&self) -> &str {
-        &self.0
+        write!(f, "{}", self.0)
     }
 }
 
