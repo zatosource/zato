@@ -31,6 +31,8 @@ _service_name_prefix = 'zato.scheduler.job.'
 _entity_type = 'scheduler'
 _ib_params = ('weeks', 'days', 'hours', 'minutes', 'seconds')
 _new_params = ('jitter_ms', 'timezone', 'calendar', 'on_missed', 'max_execution_time_ms')
+default_page = 1
+default_page_size = 50
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -440,8 +442,8 @@ class GetHistory(_SchedulerAdmin):
                     rows.append(rec)
                 self.response.payload = {'rows': rows}
             else:
-                page = self.request.input.get('page') or 1
-                page_size = self.request.input.get('page_size') or 50
+                page = int(self.request.input.get('page') or default_page)
+                page_size = int(self.request.input.get('page_size') or default_page_size)
                 offset = (page - 1) * page_size
 
                 result = scheduler_get_history_page(job_id, offset, page_size, exclude_outcomes)

@@ -6,7 +6,6 @@ Copyright (C) 2025, Zato Source s.r.o. https://zato.io
 Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-import json
 import logging
 from contextlib import closing
 
@@ -18,15 +17,15 @@ class SchedulerODBAdapter:
         self.odb = odb
         self.cluster_id = cluster_id
 
-    def get_scheduler_jobs_json(self):
+    def get_scheduler_jobs(self):
         from zato.common.odb.model import Job, IntervalBasedJob
+        from zato.common.util.sql import parse_instance_opaque_attr
 
         with closing(self.odb.session()) as session:
             jobs = session.query(Job).filter_by(cluster_id=self.cluster_id).all()
             result = {}
             for job in jobs:
                 entry = {
-                    'id': str(job.id),
                     'name': job.name,
                     'is_active': job.is_active,
                     'job_type': job.job_type,
@@ -34,6 +33,9 @@ class SchedulerODBAdapter:
                     'start_date': job.start_date.isoformat() if job.start_date else '',
                     'extra': job.extra or '',
                 }
+
+                opaque = parse_instance_opaque_attr(job)
+                entry.update(opaque)
 
                 interval = session.query(IntervalBasedJob).filter_by(job_id=job.id).first()
                 if interval:
@@ -44,9 +46,6 @@ class SchedulerODBAdapter:
                     entry['seconds'] = interval.seconds or 0
                     entry['repeats'] = interval.repeats
 
-                result[str(job.id)] = entry
+                result[job.id] = entry
 
-        return json.dumps(result)
-
-    def get_holiday_calendars_json(self):
-        return json.dumps({})
+        return result

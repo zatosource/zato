@@ -54,7 +54,7 @@ impl SchedulerShared {
 
 pub fn scheduler_loop(
     shared: Arc<SchedulerShared>,
-    config_store: PyObject,
+    odb_adapter: PyObject,
     run_cb: PyObject,
     spawn_fn: PyObject,
     on_job_executed_cb: PyObject,
@@ -68,7 +68,7 @@ pub fn scheduler_loop(
         return;
     }
 
-    load_jobs_from_config_store(&shared, &config_store);
+    load_initial_jobs(&shared, &odb_adapter);
 
     {
         let mut state = shared.state.lock().unwrap();
@@ -123,51 +123,40 @@ pub fn scheduler_loop(
     }
 }
 
-pub fn load_from_config_store_py(
-    cs: &Bound<'_, PyAny>,
+pub fn load_jobs(
+    adapter: &Bound<'_, PyAny>,
 ) -> PyResult<(
-    HashMap<String, zato_server_core::model::SchedulerJob>,
+    Vec<zato_server_core::model::SchedulerJob>,
     HashMap<String, zato_server_core::model::HolidayCalendar>,
 )> {
-    let jobs_json: String = cs.call_method0("get_scheduler_jobs_json")?.extract()?;
-    let cals_json: String = cs.call_method0("get_holiday_calendars_json")?.extract()?;
+    use pyo3::types::PyDict;
 
-    let jobs: HashMap<String, zato_server_core::model::SchedulerJob> =
-        serde_json::from_str(&jobs_json).map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!("bad scheduler jobs JSON: {}", e))
-        })?;
-    let cals: HashMap<String, zato_server_core::model::HolidayCalendar> =
-        serde_json::from_str(&cals_json).map_err(|e| {
-            pyo3::exceptions::PyValueError::new_err(format!("bad holiday calendars JSON: {}", e))
-        })?;
+    let jobs_dict: Bound<'_, PyDict> = adapter.call_method0("get_scheduler_jobs")?.cast_into()?;
+    let mut jobs = Vec::new();
+    for (key, value) in jobs_dict.iter() {
+        let job_id: i64 = key.extract()?;
+        let job_data: Bound<'_, PyDict> = value.cast_into()?;
+        let sj = crate::dict_to_scheduler_job(job_id, &job_data)?;
+        jobs.push(sj);
+    }
 
+    let cals = HashMap::new();
     Ok((jobs, cals))
 }
 
-fn load_jobs_from_config_store(shared: &SchedulerShared, config_store: &PyObject) {
+fn load_initial_jobs(shared: &SchedulerShared, odb_adapter: &PyObject) {
     Python::try_attach(|py| {
-        let cs = config_store.bind(py);
-        match load_from_config_store_py(cs) {
-            Ok((jobs, cals)) => {
+        let adapter = odb_adapter.bind(py);
+        match load_jobs(adapter) {
+            Ok((jobs, _cals)) => {
                 let mut state = shared.state.lock().unwrap();
-                for (_name, job) in &jobs {
+                for job in &jobs {
                     let running_job = RunningJob::from_scheduler_job(job);
                     state.jobs.insert(job.id, running_job);
                 }
-                for (name, cal) in cals {
-                    let mut calendar_data = CalendarData::new(name.clone());
-                    for date_str in &cal.dates {
-                        if let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                            calendar_data.dates.insert(date);
-                        }
-                    }
-                    calendar_data.weekdays = cal.weekdays.clone();
-                    calendar_data.description = cal.description.clone();
-                    state.calendars.insert(name, calendar_data);
-                }
             }
             Err(e) => {
-                log::error!("Failed to load jobs from config store: {}", e);
+                log::error!("Failed to load jobs: {}", e);
             }
         }
     });

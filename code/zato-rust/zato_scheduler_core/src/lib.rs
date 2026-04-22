@@ -25,7 +25,7 @@ use scheduler::SchedulerShared;
 type PyObject = Py<PyAny>;
 
 static SHARED: std::sync::OnceLock<Arc<SchedulerShared>> = std::sync::OnceLock::new();
-static CONFIG_STORE: std::sync::OnceLock<PyObject> = std::sync::OnceLock::new();
+static ODB_ADAPTER: std::sync::OnceLock<PyObject> = std::sync::OnceLock::new();
 static THREAD_HANDLE: std::sync::Mutex<Option<std::thread::JoinHandle<()>>> = std::sync::Mutex::new(None);
 
 fn get_shared() -> PyResult<&'static Arc<SchedulerShared>> {
@@ -47,10 +47,10 @@ where
 }
 
 #[pyfunction]
-#[pyo3(signature = (config_store, run_cb, spawn_fn, on_job_executed_cb, initial_sleep_time))]
+#[pyo3(signature = (odb_adapter, run_cb, spawn_fn, on_job_executed_cb, initial_sleep_time))]
 fn scheduler_start(
     py: Python<'_>,
-    config_store: PyObject,
+    odb_adapter: PyObject,
     run_cb: PyObject,
     spawn_fn: PyObject,
     on_job_executed_cb: PyObject,
@@ -58,14 +58,14 @@ fn scheduler_start(
 ) -> PyResult<()> {
     let shared = Arc::new(SchedulerShared::new());
     let _ = SHARED.set(Arc::clone(&shared));
-    let _ = CONFIG_STORE.set(config_store.clone_ref(py));
+    let _ = ODB_ADAPTER.set(odb_adapter.clone_ref(py));
 
-    let cs = config_store.clone_ref(py);
+    let adapter = odb_adapter.clone_ref(py);
 
     let handle = std::thread::Builder::new()
         .name("zato-scheduler".into())
         .spawn(move || {
-            scheduler::scheduler_loop(shared, cs, run_cb, spawn_fn, on_job_executed_cb, initial_sleep_time);
+            scheduler::scheduler_loop(shared, adapter, run_cb, spawn_fn, on_job_executed_cb, initial_sleep_time);
         })
         .map_err(|e| pyo3::exceptions::PyException::new_err(format!("spawn failed: {e}")))?;
 
@@ -175,16 +175,15 @@ fn scheduler_mark_complete(job_id: i64, outcome: &str, duration_ms: u64, current
 #[pyo3(signature = ())]
 fn scheduler_reload() -> PyResult<()> {
     let shared = get_shared()?;
-    let cs = CONFIG_STORE.get().ok_or_else(|| {
+    let adapter = ODB_ADAPTER.get().ok_or_else(|| {
         pyo3::exceptions::PyException::new_err("scheduler not started")
     })?;
 
     Python::try_attach(|py| {
-        let cs_bound = cs.bind(py);
-        let (new_jobs, new_cals) = scheduler::load_from_config_store_py(cs_bound)?;
+        let adapter_bound = adapter.bind(py);
+        let (new_jobs, _cals) = scheduler::load_jobs(adapter_bound)?;
         with_state_mut(shared, |state| {
             reload_jobs(state, new_jobs);
-            reload_calendars(state, new_cals);
         });
         Ok::<_, PyErr>(())
     }).ok_or_else(|| pyo3::exceptions::PyException::new_err("GIL not available"))??;
@@ -194,16 +193,16 @@ fn scheduler_reload() -> PyResult<()> {
 
 pub fn reload_jobs(
     state: &mut scheduler::SchedulerState,
-    new_jobs: std::collections::HashMap<String, zato_server_core::model::SchedulerJob>,
+    new_jobs: Vec<zato_server_core::model::SchedulerJob>,
 ) {
-    let new_ids: std::collections::HashSet<i64> = new_jobs.values().map(|j| j.id).collect();
+    let new_ids: std::collections::HashSet<i64> = new_jobs.iter().map(|j| j.id).collect();
     let old_ids: std::collections::HashSet<i64> = state.jobs.keys().cloned().collect();
 
     for id in old_ids.difference(&new_ids) {
         state.jobs.remove(id);
     }
 
-    for (_name, sj) in &new_jobs {
+    for sj in &new_jobs {
         let job_id = sj.id;
         if let Some(existing) = state.jobs.get_mut(&job_id) {
             existing.update_from_job(sj);
@@ -331,7 +330,7 @@ fn scheduler_get_job_summaries(py: Python<'_>) -> PyResult<Py<PyList>> {
     Ok(list.unbind())
 }
 
-fn dict_to_scheduler_job(job_id: i64, d: &Bound<'_, PyDict>) -> PyResult<zato_server_core::model::SchedulerJob> {
+pub fn dict_to_scheduler_job(job_id: i64, d: &Bound<'_, PyDict>) -> PyResult<zato_server_core::model::SchedulerJob> {
     let get_str = |key: &str| -> PyResult<String> {
         d.get_item(key)?
             .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(key.to_string()))?
