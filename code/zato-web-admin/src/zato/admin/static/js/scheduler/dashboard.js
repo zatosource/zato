@@ -33,32 +33,32 @@ $.fn.zato.scheduler.dashboard.outcome_colors = {
     'ok': '#2a7fbf',
     'error': '#e0226e',
     'timeout': '#b35e00',
-    'skipped_already_in_flight': '#8a7bab',
-    'missed_catchup': '#5a9e8f'
+    'skipped_already_in_flight': '#5a9e8f',
+    'missed_catchup': '#8a7bab'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bg_colors = {
     'ok': 'rgba(42, 127, 191, 0.12)',
     'error': 'rgba(224, 34, 110, 0.12)',
     'timeout': 'rgba(179, 94, 0, 0.12)',
-    'skipped_already_in_flight': 'rgba(138, 123, 171, 0.12)',
-    'missed_catchup': 'rgba(90, 158, 143, 0.12)'
+    'skipped_already_in_flight': 'rgba(90, 158, 143, 0.12)',
+    'missed_catchup': 'rgba(138, 123, 171, 0.12)'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bar_colors = {
     'ok': '#3a9ad9',
     'error': '#c0392b',
     'timeout': '#b45309',
-    'skipped_already_in_flight': '#7b6d9e',
-    'missed_catchup': '#4d8a7c'
+    'skipped_already_in_flight': '#4d8a7c',
+    'missed_catchup': '#7b6d9e'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bar_tints = {
     'ok': '#d1e8f8',
     'error': '#f5d5d2',
     'timeout': '#fde8cd',
-    'skipped_already_in_flight': '#e2dced',
-    'missed_catchup': '#d0e8e3'
+    'skipped_already_in_flight': '#d0e8e3',
+    'missed_catchup': '#e2dced'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_labels = {
@@ -213,11 +213,39 @@ $.fn.zato.scheduler.dashboard._push_spark = function(key, value) {
 
 $.fn.zato.scheduler.dashboard._spark_values = function(key) {
     var data = $.fn.zato.scheduler.dashboard._spark_data[key];
-    var values = new Array(data.length);
-    for (var i = 0; i < data.length; i++) {
-        values[i] = data[i].value;
+    var bucket_count = 60;
+
+    if (data.length <= bucket_count) {
+        var values = new Array(data.length);
+        for (var i = 0; i < data.length; i++) {
+            values[i] = data[i].value;
+        }
+        return values;
     }
-    return values;
+
+    var now = Date.now();
+    var window_ms = $.fn.zato.scheduler.dashboard._tile_window_ms;
+    var window_start = now - window_ms;
+    var bucket_size = window_ms / bucket_count;
+    var buckets = new Array(bucket_count);
+    for (var b = 0; b < bucket_count; b++) {
+        buckets[b] = null;
+    }
+    for (var d = 0; d < data.length; d++) {
+        var idx = Math.floor((data[d].ts - window_start) / bucket_size);
+        if (idx < 0) idx = 0;
+        if (idx >= bucket_count) idx = bucket_count - 1;
+        buckets[idx] = data[d].value;
+    }
+    var last_val = buckets[0] !== null ? buckets[0] : 0;
+    for (var f = 0; f < bucket_count; f++) {
+        if (buckets[f] === null) {
+            buckets[f] = last_val;
+        } else {
+            last_val = buckets[f];
+        }
+    }
+    return buckets;
 };
 
 /* Shared helper: for every 1-minute bucket in the last hour, count the

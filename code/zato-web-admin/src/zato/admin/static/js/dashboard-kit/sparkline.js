@@ -24,8 +24,10 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" ';
             svg += 'fill="#012845" stroke="' + color + '" stroke-width="1.5"/>';
         } else if (style === 'filled_halo') {
+            svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r + 3) + '" ';
+            svg += 'fill="rgba(0,0,0,0.5)"/>';
             svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r + 2) + '" ';
-            svg += 'fill="none" stroke="' + color + '" stroke-opacity="0.35" stroke-width="1"/>';
+            svg += 'fill="none" stroke="' + color + '" stroke-opacity="0.5" stroke-width="1"/>';
             svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + color + '"/>';
         } else if (style === 'hollow_halo') {
             svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r + 2) + '" ';
