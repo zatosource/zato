@@ -631,6 +631,8 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
     var detail = $.fn.zato.scheduler.job_detail;
     var poll_config = detail._poll_config;
 
+    var new_row_count = 0;
+
     detail._pagination = kit.pagination.init({
         poll_url: poll_config.poll_url,
         object_type: poll_config.object_type,
@@ -641,6 +643,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         container_bottom: '#detail-history-pagination-bottom',
         render_page: function($body, rows) {
             $body.empty();
+            new_row_count = 0;
             if (!rows || rows.length === 0) {
                 $body.html('<tr><td colspan="7" class="dashboard-inline-empty">No run history</td></tr>');
                 return;
@@ -656,7 +659,6 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
 
             $body.find('.dashboard-inline-empty').closest('tr').remove();
 
-            var new_exec_elements = [];
             for (var g = groups.length - 1; g >= 0; g--) {
                 var group = groups[g];
                 var run_key = group.run;
@@ -684,7 +686,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                     $body.prepend($group_rows);
 
                     if (exec_outcomes[group.primary.outcome]) {
-                        new_exec_elements.push($group_rows.first());
+                        new_row_count++;
                     }
                 }
             }
@@ -703,10 +705,11 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             var rgb = detail._dashboard().theme.row_recency_color;
             var max_a = kit.recency.MAX_ALPHA;
             var steps = kit.recency.STEPS;
+            var limit = Math.min(new_row_count, steps);
             var primaries = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
             primaries.each(function(idx) {
-                if (idx < steps) {
-                    var alpha = max_a * (1 - idx / steps);
+                if (idx < limit) {
+                    var alpha = max_a * Math.pow(1 - idx / steps, 2.5);
                     $(this).css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
                 } else {
                     $(this).css('background', '');
