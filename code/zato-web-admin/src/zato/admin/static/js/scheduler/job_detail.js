@@ -307,7 +307,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
 };
 
 // ////////////////////////////////////////////////////////////////////////////
-// Render timeline (with SVG glow filter and interactive tooltip)
+// Render timeline — Stacked Area Sparkline
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
@@ -322,21 +322,19 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var kit = $.fn.zato.dashboard_kit;
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
     var bar_colors = dashboard.outcome_bar_colors;
+    var outcome_labels = dashboard.outcome_labels;
+    var outcome_keys = ['ok', 'skipped_already_in_flight', 'missed_catchup', 'timeout', 'error'];
 
     var chart_width = container.width() || 700;
-    var chart_height = 60;
-    var padding_left = 8;
-    var padding_right = 8;
-    var padding_top = 8;
-    var row_height = 16;
+    var chart_height = 28;
+    var pad_top = 1;
+    var pad_bot = 1;
+    var draw_h = chart_height - pad_top - pad_bot;
 
     var timestamps = [];
-    for (var record_index = 0; record_index < filtered.length; record_index++) {
-        var record = filtered[record_index];
-        var time_string = record.actual_fire_time_iso || record.planned_fire_time_iso;
-        if (time_string) {
-            timestamps.push(new Date(time_string).getTime());
-        }
+    for (var i = 0; i < filtered.length; i++) {
+        var ts = filtered[i].actual_fire_time_iso || filtered[i].planned_fire_time_iso;
+        if (ts) timestamps.push(new Date(ts).getTime());
     }
 
     if (timestamps.length === 0) {
@@ -346,55 +344,105 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 
     var min_time = Math.min.apply(null, timestamps);
     var max_time = Math.max.apply(null, timestamps);
-    var time_range = max_time - min_time;
-
-    if (time_range === 0) {
-        time_range = 3600000;
-        min_time = max_time - time_range;
+    var time_span = max_time - min_time;
+    if (time_span === 0) {
+        time_span = 3600000;
+        min_time = max_time - time_span;
     }
 
-    var draw_width = chart_width - padding_left - padding_right;
+    var bucket_count = Math.min(80, Math.max(16, Math.floor(chart_width / 14)));
+    var bucket_ms = time_span / bucket_count;
+    var buckets = [];
+    for (var b = 0; b < bucket_count; b++) {
+        var bk = {total: 0, start: min_time + b * bucket_ms, end: min_time + (b + 1) * bucket_ms};
+        for (var k = 0; k < outcome_keys.length; k++) bk[outcome_keys[k]] = 0;
+        buckets.push(bk);
+    }
+
+    var max_stack = 0;
+    for (var r = 0; r < filtered.length; r++) {
+        var row_ts = filtered[r].actual_fire_time_iso || filtered[r].planned_fire_time_iso;
+        if (!row_ts) continue;
+        var row_t = new Date(row_ts).getTime();
+        var bi = Math.min(bucket_count - 1, Math.max(0, Math.floor((row_t - min_time) / bucket_ms)));
+        var outcome = filtered[r].outcome || 'ok';
+        if (buckets[bi].hasOwnProperty(outcome)) {
+            buckets[bi][outcome]++;
+        } else {
+            buckets[bi]['ok']++;
+        }
+        buckets[bi].total++;
+        if (buckets[bi].total > max_stack) max_stack = buckets[bi].total;
+    }
+    if (max_stack === 0) max_stack = 1;
+
+    var seg_w = chart_width / bucket_count;
+    var baseline = chart_height - pad_bot;
+
+    var _bezier = function(pts) {
+        if (pts.length < 2) return '';
+        var d = 'M' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
+        for (var ci = 1; ci < pts.length; ci++) {
+            var p = pts[ci - 1];
+            var c = pts[ci];
+            var cpx = (p.x + c.x) / 2;
+            d += ' C' + cpx.toFixed(1) + ',' + p.y.toFixed(1) +
+                ' ' + cpx.toFixed(1) + ',' + c.y.toFixed(1) +
+                ' ' + c.x.toFixed(1) + ',' + c.y.toFixed(1);
+        }
+        return d;
+    };
+
+    var cumulative = [];
+    for (var ci2 = 0; ci2 < bucket_count; ci2++) cumulative.push(0);
 
     var svg = '<svg width="' + chart_width + '" height="' + chart_height + '" xmlns="http://www.w3.org/2000/svg">';
 
-    svg += '<defs>';
-    svg += '<filter id="timelineGlow">';
-    svg += '<feGaussianBlur stdDeviation="2" result="blur"/>';
-    svg += '<feMerge>';
-    svg += '<feMergeNode in="blur"/>';
-    svg += '<feMergeNode in="SourceGraphic"/>';
-    svg += '</feMerge>';
-    svg += '</filter>';
-    svg += '</defs>';
+    for (var li = 0; li < outcome_keys.length; li++) {
+        var okey = outcome_keys[li];
+        var color = bar_colors[okey] || '#ccc';
 
-    svg += '<line x1="' + padding_left + '" y1="' + (padding_top + row_height / 2) + '" ';
-    svg += 'x2="' + (chart_width - padding_right) + '" y2="' + (padding_top + row_height / 2) + '" ';
-    svg += 'stroke="rgba(0,0,0,0.06)" stroke-width="2" />';
+        var has_any = false;
+        for (var chk = 0; chk < bucket_count; chk++) {
+            if (buckets[chk][okey] > 0) { has_any = true; break; }
+        }
+        if (!has_any) continue;
 
-    for (var entry_index = 0; entry_index < filtered.length; entry_index++) {
-        var entry = filtered[entry_index];
-        var entry_time_string = entry.actual_fire_time_iso || entry.planned_fire_time_iso;
-        if (!entry_time_string) continue;
+        var top_pts = [];
+        var bot_pts = [];
 
-        var entry_time = new Date(entry_time_string).getTime();
-        var entry_x = padding_left + ((entry_time - min_time) / time_range) * draw_width;
-        var entry_color = bar_colors[entry.outcome] || '#ccc';
-        var entry_duration = parseInt(entry.duration_ms || 0, 10);
-        var bar_length = Math.max(4, (entry_duration / time_range) * draw_width);
-        bar_length = Math.min(bar_length, draw_width - (entry_x - padding_left));
+        for (var si = 0; si < bucket_count; si++) {
+            var x = si * seg_w + seg_w / 2;
+            var val = buckets[si][okey] || 0;
+            var prev_cum = cumulative[si];
+            var new_cum = prev_cum + val;
 
-        var esc = function(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;'); };
+            var y_bot = baseline - (prev_cum / max_stack) * draw_h;
+            var y_top = baseline - (new_cum / max_stack) * draw_h;
 
-        svg += '<rect x="' + entry_x.toFixed(1) + '" y="' + padding_top + '" ';
-        svg += 'width="' + bar_length.toFixed(1) + '" height="' + row_height + '" ';
-        svg += 'fill="' + entry_color + '" opacity="0.85" rx="3" filter="url(#timelineGlow)" ';
-        svg += 'data-time="' + esc(entry_time_string) + '" ';
-        svg += 'data-outcome="' + esc(entry.outcome) + '" ';
-        svg += 'data-duration="' + esc(entry.duration_ms) + '" ';
-        svg += 'data-latency="' + esc(entry.dispatch_latency_ms) + '" ';
-        svg += 'data-run="' + esc(entry.current_run) + '" ';
-        svg += 'data-error="' + esc(entry.error) + '" ';
-        svg += 'style="cursor:pointer" />';
+            top_pts.push({x: x, y: y_top});
+            bot_pts.push({x: x, y: y_bot});
+        }
+
+        var top_path = _bezier(top_pts);
+        var bot_rev = bot_pts.slice().reverse();
+        var bot_path = _bezier(bot_rev);
+
+        var area = top_path + ' L' + bot_rev[0].x.toFixed(1) + ',' + bot_rev[0].y.toFixed(1) +
+            bot_path.substring(bot_path.indexOf('C') - 1) +
+            ' Z';
+
+        svg += '<path d="' + area + '" fill="' + color + '" opacity="0.75" />';
+
+        for (var si2 = 0; si2 < bucket_count; si2++) {
+            cumulative[si2] += (buckets[si2][okey] || 0);
+        }
+    }
+
+    for (var hi = 0; hi < bucket_count; hi++) {
+        svg += '<rect x="' + (hi * seg_w).toFixed(1) + '" y="0" ' +
+            'width="' + seg_w.toFixed(1) + '" height="' + chart_height + '" ' +
+            'fill="transparent" data-bucket="' + hi + '" style="cursor:pointer" />';
     }
 
     svg += '</svg>';
@@ -403,47 +451,42 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     container.off('mousemove.timeline mouseleave.timeline');
     container.on('mousemove.timeline', function(event) {
         var target = event.target;
-        if (target.tagName !== 'rect' || !$(target).attr('data-outcome')) {
+        if (!$(target).attr('data-bucket')) {
             kit.tooltip.hide();
             return;
         }
-        var $r = $(target);
-        var outcome_key = $r.attr('data-outcome');
-        var outcome_label = dashboard.outcome_labels[outcome_key] || outcome_key;
-        var outcome_color = bar_colors[outcome_key] || '#ccc';
-        var time_str = $r.attr('data-time');
-        var run_num = $r.attr('data-run');
-        var duration_val = $r.attr('data-duration');
-        var latency_val = $r.attr('data-latency');
-        var error_val = $r.attr('data-error');
 
-        var time_display = kit.format_local_time(time_str);
-        var run_display = (run_num && run_num !== 'null' && run_num !== 'undefined')
-            ? '#' + kit.format_number_full(parseInt(run_num, 10))
-            : '';
+        var idx = parseInt($(target).attr('data-bucket'), 10);
+        var bkt = buckets[idx];
+        if (!bkt || bkt.total === 0) { kit.tooltip.hide(); return; }
 
-        var tt_html = '<div class="dashboard-tooltip-header">' +
-            '<div class="dashboard-tooltip-title">' + time_display + '</div>';
-        if (run_display) {
-            tt_html += '<div class="dashboard-tooltip-subtitle">Run ' + run_display + '</div>';
-        }
-        tt_html += '</div>';
-        tt_html += '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' +
-            outcome_color + ';margin-right:5px;vertical-align:middle"></span>' + outcome_label;
+        var t_from = kit.format_local_time(new Date(bkt.start).toISOString());
+        var t_to = kit.format_local_time(new Date(bkt.end).toISOString());
 
-        if (duration_val && duration_val !== 'null' && duration_val !== 'undefined') {
-            tt_html += '<br>Duration: ' + dashboard.format_duration(parseInt(duration_val, 10));
-        }
-        if (latency_val && latency_val !== 'null' && latency_val !== 'undefined') {
-            tt_html += '<br>Latency: ' + kit.format_number_full(parseInt(latency_val, 10)) + ' ms';
-        }
-        if (error_val && error_val.length > 0 && error_val !== 'null' && error_val !== 'undefined') {
-            var short_err = error_val.length > 60 ? error_val.substring(0, 60) + '...' : error_val;
-            tt_html += '<br><span style="color:#ff6b6b">Error: ' + short_err + '</span>';
-        }
+        var tt = '<div class="dashboard-tooltip-header">' +
+            '<div class="dashboard-tooltip-title">' + t_from + '</div>' +
+            '<div class="dashboard-tooltip-subtitle">to ' + t_to + '</div>' +
+            '</div>';
 
-        kit.tooltip.show(event, tt_html);
+        tt += '<div style="margin-top:4px">';
+        for (var oi = 0; oi < outcome_keys.length; oi++) {
+            var ok2 = outcome_keys[oi];
+            var ov = bkt[ok2] || 0;
+            if (ov === 0) continue;
+            var pct = Math.round((ov / bkt.total) * 100);
+            tt += '<div style="margin:2px 0">' +
+                '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' +
+                (bar_colors[ok2] || '#ccc') + ';margin-right:5px;vertical-align:middle"></span>' +
+                (outcome_labels[ok2] || ok2) + ': ' + kit.format_number_full(ov) +
+                ' <span style="color:var(--text-muted)">(' + pct + '%)</span>' +
+                '</div>';
+        }
+        tt += '<div style="margin-top:4px;font-weight:700">Total: ' + kit.format_number_full(bkt.total) + '</div>';
+        tt += '</div>';
+
+        kit.tooltip.show(event, tt);
     });
+
     container.on('mouseleave.timeline', function() {
         kit.tooltip.hide();
     });
