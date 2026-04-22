@@ -75,7 +75,7 @@
     transition: color 150ms ease;
 }
 
-.dashboard-hero-pill-link:hover {
+a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     color: #fff !important;
     text-decoration: none;
 }
