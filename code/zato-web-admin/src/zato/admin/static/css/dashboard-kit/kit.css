@@ -16,7 +16,7 @@
 /* Hero metrics strip */
 
 .dashboard-hero {
-    background: #000;
+    background: var(--zato-hero-bg);
     padding: 28px 0;
     position: relative;
 }
