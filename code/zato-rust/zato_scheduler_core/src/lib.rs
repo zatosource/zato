@@ -156,8 +156,9 @@ fn scheduler_mark_complete(job_id: &str, outcome: &str, duration_ms: u64, curren
         if let Some(running_job) = state.jobs.get_mut(job_id) {
             running_job.in_flight = false;
             running_job.in_flight_since = None;
+            running_job.in_flight_run = None;
             for rec in running_job.history.iter_mut().rev() {
-                if rec.current_run == current_run && rec.outcome == "ok" {
+                if rec.current_run == current_run {
                     rec.duration_ms = Some(duration_ms);
                     if outcome != "ok" {
                         rec.outcome = outcome.to_string();

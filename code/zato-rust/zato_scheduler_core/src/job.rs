@@ -57,22 +57,6 @@ impl ExecutionRecord {
         self
     }
 
-    pub fn to_dict_items(&self) -> Vec<(&'static str, String)> {
-        let mut items = vec![
-            ("planned_fire_time_iso", self.planned_fire_time_iso.clone()),
-            ("actual_fire_time_iso", self.actual_fire_time_iso.clone()),
-            ("dispatch_latency_ms", self.dispatch_latency_ms.to_string()),
-            ("outcome", self.outcome.clone()),
-            ("current_run", self.current_run.to_string()),
-        ];
-        if let Some(d) = self.duration_ms {
-            items.push(("duration_ms", d.to_string()));
-        }
-        if let Some(ref e) = self.error {
-            items.push(("error", e.clone()));
-        }
-        items
-    }
 }
 
 #[derive(Debug)]
@@ -97,6 +81,7 @@ pub struct RunningJob {
     pub next_fire_instant: Option<Instant>,
     pub in_flight: bool,
     pub in_flight_since: Option<Instant>,
+    pub in_flight_run: Option<u32>,
     pub current_run: u32,
 
     pub history: VecDeque<ExecutionRecord>,
@@ -163,6 +148,7 @@ impl RunningJob {
             next_fire_instant: None,
             in_flight: false,
             in_flight_since: None,
+            in_flight_run: None,
             current_run: 0,
             history: VecDeque::with_capacity(DEFAULT_MAX_HISTORY),
             max_history: DEFAULT_MAX_HISTORY,

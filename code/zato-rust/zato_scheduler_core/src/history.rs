@@ -5,8 +5,18 @@ use pyo3::types::{PyDict, PyList};
 
 fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bound<'py, PyDict>> {
     let d = PyDict::new(py);
-    for (k, v) in rec.to_dict_items() {
-        d.set_item(k, v)?;
+    d.set_item("planned_fire_time_iso", &rec.planned_fire_time_iso)?;
+    d.set_item("actual_fire_time_iso", &rec.actual_fire_time_iso)?;
+    d.set_item("dispatch_latency_ms", rec.dispatch_latency_ms)?;
+    d.set_item("outcome", &rec.outcome)?;
+    d.set_item("current_run", rec.current_run)?;
+    match rec.duration_ms {
+        Some(d_ms) => d.set_item("duration_ms", d_ms)?,
+        None => d.set_item("duration_ms", py.None())?,
+    }
+    match &rec.error {
+        Some(e) => d.set_item("error", e)?,
+        None => d.set_item("error", py.None())?,
     }
     Ok(d)
 }

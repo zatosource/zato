@@ -219,6 +219,8 @@ pub fn collect_due_jobs(
         let planned = fire_utc.to_rfc3339();
         let actual = now.to_rfc3339();
 
+        running_job.current_run += 1;
+
         if running_job.in_flight {
             running_job.record_execution(
                 ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_ALREADY_IN_FLIGHT, running_job.current_run)
@@ -237,7 +239,7 @@ pub fn collect_due_jobs(
 
         running_job.in_flight = true;
         running_job.in_flight_since = Some(Instant::now());
-        running_job.current_run += 1;
+        running_job.in_flight_run = Some(running_job.current_run);
 
         let latency = (now - fire_utc).num_milliseconds().max(0) as u64;
 
@@ -299,10 +301,12 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
         let Some(since) = running_job.in_flight_since else { continue };
         let elapsed_ms = now_instant.duration_since(since).as_millis() as u64;
         if elapsed_ms > running_job.max_execution_time_ms {
+            let run = running_job.in_flight_run.unwrap();
             running_job.in_flight = false;
             running_job.in_flight_since = None;
+            running_job.in_flight_run = None;
             running_job.record_execution(
-                ExecutionRecord::new("", &Utc::now().to_rfc3339(), outcome::TIMEOUT, running_job.current_run)
+                ExecutionRecord::new("", &Utc::now().to_rfc3339(), outcome::TIMEOUT, run)
                     .with_duration(elapsed_ms)
                     .with_error(format!("exceeded max_execution_time_ms={}", running_job.max_execution_time_ms))
             );
@@ -341,6 +345,7 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
             OnMissedPolicy::RunOnce => {
                 if let Some(fire) = running_job.next_fire_utc {
                     if fire < now {
+                        running_job.current_run += 1;
                         running_job.record_execution(
                             ExecutionRecord::new(
                                 &fire.to_rfc3339(),

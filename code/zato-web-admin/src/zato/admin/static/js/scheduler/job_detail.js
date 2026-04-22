@@ -34,15 +34,6 @@ $.fn.zato.scheduler.job_detail._set_hidden_series = function(hidden) {
 // Outcome priority for grouping (higher = more significant)
 // ////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.job_detail._outcome_priority = {
-    'error': 5,
-    'timeout': 4,
-    'ok': 3,
-    'missed_catchup': 2,
-    'skipped_already_in_flight': 1,
-    'skipped_holiday': 0
-};
-
 // ////////////////////////////////////////////////////////////////////////////
 // Filter history by time range
 // ////////////////////////////////////////////////////////////////////////////
@@ -81,37 +72,6 @@ $.fn.zato.scheduler.job_detail._filter_by_outcome = function(history) {
     return out;
 };
 
-// ////////////////////////////////////////////////////////////////////////////
-// Group history by run number with collapsible extras
-// ////////////////////////////////////////////////////////////////////////////
-
-$.fn.zato.scheduler.job_detail._group_by_run = function(sorted) {
-    var priority = $.fn.zato.scheduler.job_detail._outcome_priority;
-    var groups = [];
-    var run_map = {};
-
-    for (var i = 0; i < sorted.length; i++) {
-        var r = sorted[i];
-        var run_key = (r.current_run !== null && r.current_run !== undefined) ? r.current_run : ('_' + i);
-
-        if (run_map.hasOwnProperty(run_key)) {
-            var group = run_map[run_key];
-            var r_prio = priority[r.outcome] || 0;
-            var p_prio = priority[group.primary.outcome] || 0;
-            if (r_prio > p_prio) {
-                group.extras.push(group.primary);
-                group.primary = r;
-            } else {
-                group.extras.push(r);
-            }
-        } else {
-            var new_group = {run: run_key, primary: r, extras: []};
-            run_map[run_key] = new_group;
-            groups.push(new_group);
-        }
-    }
-    return groups;
-};
 
 // ////////////////////////////////////////////////////////////////////////////
 // Render section title
@@ -132,10 +92,9 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
     var detail = $.fn.zato.scheduler.job_detail;
     var dashboard = detail._dashboard();
 
-    var total_runs = job.current_run || 0;
-    $('#stat-total-runs').text(kit.format_number_full(total_runs));
+    $('#stat-total-runs').text(kit.format_number_full(job.current_run));
 
-    var recent = job.recent_outcomes || [];
+    var recent = job.recent_outcomes;
     var error_count = 0;
     for (var i = 0; i < recent.length; i++) {
         if (recent[i] === 'error') error_count++;
@@ -602,26 +561,6 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     return row;
 };
 
-$.fn.zato.scheduler.job_detail._render_group = function(group) {
-    var detail = $.fn.zato.scheduler.job_detail;
-    var html = '';
-    var primary_row = detail._render_single_row(group.primary, '');
-
-    if (group.extras.length > 0) {
-        var toggle_id = 'extras-' + group.run;
-        var label = '+ ' + group.extras.length + ' skipped';
-        primary_row = primary_row.replace('</td></tr>',
-            ' <span class="detail-run-extras-toggle" data-target=".' + toggle_id + '">' +
-            label + '</span></td></tr>');
-        html += primary_row;
-        for (var e = 0; e < group.extras.length; e++) {
-            html += detail._render_single_row(group.extras[e], 'detail-run-extras ' + toggle_id).replace('<tr', '<tr style="display:none"');
-        }
-    } else {
-        html += primary_row;
-    }
-    return html;
-};
 
 $.fn.zato.scheduler.job_detail._execution_outcomes = {'ok': true, 'error': true, 'timeout': true};
 
@@ -648,59 +587,30 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                 $body.html('<tr><td colspan="7" class="dashboard-inline-empty">No run history</td></tr>');
                 return;
             }
-            var groups = detail._group_by_run(rows);
-            for (var i = 0; i < groups.length; i++) {
-                $body.append(detail._render_group(groups[i]));
+            for (var i = 0; i < rows.length; i++) {
+                $body.append(detail._render_single_row(rows[i], ''));
             }
-            console.log('render_page: input rows=' + rows.length + ', groups=' + groups.length + ', rendered tr=' + $body.children('tr').length);
         },
         render_new: function($body, rows, page_size) {
             var exec_outcomes = detail._execution_outcomes;
-            var groups = detail._group_by_run(rows);
 
             $body.find('.dashboard-inline-empty').closest('tr').remove();
 
-            for (var g = groups.length - 1; g >= 0; g--) {
-                var group = groups[g];
-                var run_key = group.run;
-
-                var $existing_primary = $body.find('tr[data-ts]').filter(function() {
-                    var row_run = $(this).data('run');
-                    return row_run !== undefined && String(row_run) === String(run_key);
-                }).first();
-
-                if ($existing_primary.length) {
-                    for (var e = 0; e < group.extras.length; e++) {
-                        var extra_rec = group.extras[e];
-                        var toggle_id = 'extras-' + run_key;
-                        var $extra = $(detail._render_single_row(extra_rec, 'detail-run-extras ' + toggle_id).replace('<tr', '<tr style="display:none"'));
-                        $existing_primary.after($extra);
-                    }
-                    var $toggle = $existing_primary.find('.detail-run-extras-toggle');
-                    if ($toggle.length) {
-                        var count = $body.find('.' + 'extras-' + run_key).length;
-                        $toggle.text('+ ' + count + ' skipped');
-                    }
-                } else {
-                    var html = detail._render_group(group);
-                    var $group_rows = $(html);
-                    $body.prepend($group_rows);
-
-                    if (exec_outcomes[group.primary.outcome]) {
+            for (var i = rows.length - 1; i >= 0; i--) {
+                var rec = rows[i];
+                var $existing = $body.find('tr[data-run="' + rec.current_run + '"]');
+                if (!$existing.length) {
+                    $body.prepend(detail._render_single_row(rec, ''));
+                    if (exec_outcomes[rec.outcome]) {
                         new_row_count++;
                     }
                 }
             }
 
-            var visible_groups = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
-            while (visible_groups.length > page_size) {
-                var $last = visible_groups.last();
-                var last_run = $last.data('run');
-                if (last_run !== undefined) {
-                    $body.find('.extras-' + last_run).remove();
-                }
-                $last.remove();
-                visible_groups = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
+            var visible_rows = $body.children('tr').not('.dashboard-inline-empty');
+            while (visible_rows.length > page_size) {
+                visible_rows.last().remove();
+                visible_rows = $body.children('tr').not('.dashboard-inline-empty');
             }
 
             var rgb = detail._dashboard().theme.row_recency_color;
@@ -722,18 +632,6 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         }
     });
 
-    $(document).off('click.run-extras').on('click.run-extras', '.detail-run-extras-toggle', function() {
-        var target_class = $(this).data('target');
-        var $rows = $(target_class);
-        var visible = $rows.first().is(':visible');
-        if (visible) {
-            $rows.hide();
-            $(this).text('+ ' + $rows.length + ' skipped');
-        } else {
-            $rows.show();
-            $(this).text('\u2212 ' + $rows.length + ' skipped');
-        }
-    });
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -802,7 +700,7 @@ $.fn.zato.scheduler.job_detail._ensure_runs_rendered = function() {
             if (typeof data === 'string') {
                 try { data = JSON.parse(data); } catch(e) { return; }
             }
-            detail._chart_history = data.rows || [];
+            detail._chart_history = data.rows;
             detail.render_timeline(detail._chart_history);
         }
     });
@@ -863,7 +761,7 @@ $.fn.zato.scheduler.job_detail.poll = function() {
             if (typeof data === 'string') {
                 try { data = JSON.parse(data); } catch(e) { return; }
             }
-            var jobs = data.jobs || [];
+            var jobs = data.jobs;
             for (var i = 0; i < jobs.length; i++) {
                 var entry = jobs[i];
                 if (String(entry.id) === job_id || entry.name === job_name) {
@@ -871,7 +769,7 @@ $.fn.zato.scheduler.job_detail.poll = function() {
                     detail._job_data.is_running = entry.is_running;
                     detail._job_data.current_run = entry.current_run;
                     detail._job_data.interval_ms = entry.interval_ms;
-                    detail._job_data.recent_outcomes = entry.recent_outcomes || [];
+                    detail._job_data.recent_outcomes = entry.recent_outcomes;
                     detail._job_data.last_outcome = entry.last_outcome;
                     detail._job_data.last_duration_ms = entry.last_duration_ms;
                     break;
