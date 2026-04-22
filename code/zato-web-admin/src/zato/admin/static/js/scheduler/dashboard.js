@@ -33,32 +33,32 @@ $.fn.zato.scheduler.dashboard.outcome_colors = {
     'ok': '#2a7fbf',
     'error': '#e0226e',
     'timeout': '#b35e00',
-    'skipped_already_in_flight': '#9a7b5a',
-    'missed_catchup': '#8a7bab'
+    'skipped_already_in_flight': '#7b5ea7',
+    'missed_catchup': '#9a7b5a'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bg_colors = {
     'ok': 'rgba(42, 127, 191, 0.12)',
     'error': 'rgba(224, 34, 110, 0.12)',
     'timeout': 'rgba(179, 94, 0, 0.12)',
-    'skipped_already_in_flight': 'rgba(154, 123, 90, 0.12)',
-    'missed_catchup': 'rgba(138, 123, 171, 0.12)'
+    'skipped_already_in_flight': 'rgba(123, 94, 167, 0.12)',
+    'missed_catchup': 'rgba(154, 123, 90, 0.12)'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bar_colors = {
     'ok': '#3a9ad9',
     'error': '#c0392b',
     'timeout': '#b45309',
-    'skipped_already_in_flight': '#8a6d4f',
-    'missed_catchup': '#7b6d9e'
+    'skipped_already_in_flight': '#6b4d94',
+    'missed_catchup': '#8a6d4f'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bar_tints = {
     'ok': '#d1e8f8',
     'error': '#f5d5d2',
     'timeout': '#fde8cd',
-    'skipped_already_in_flight': '#e8ddd0',
-    'missed_catchup': '#e2dced'
+    'skipped_already_in_flight': '#ddd0ef',
+    'missed_catchup': '#e8ddd0'
 };
 
 $.fn.zato.scheduler.dashboard.outcome_labels = {

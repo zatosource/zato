@@ -30,7 +30,7 @@
     text-transform: uppercase;
     letter-spacing: 0.02em;
     padding: 3px 8px;
-    border-radius: 3px;
+    border-radius: var(--zato-pill-radius);
     cursor: pointer;
     user-select: none;
     transition: opacity 100ms ease, background 100ms ease;
