@@ -12,6 +12,7 @@ use crate::types::{JobId, JobType, OnMissedPolicy, ServiceName};
 
 pub const DEFAULT_MAX_EXECUTION_TIME_MS: u64 = 3_600_000;
 pub const DEFAULT_MAX_HISTORY: usize = 10_000;
+pub const DEFAULT_ON_MISSED: &str = "run_once";
 
 pub const MIN_MAX_EXECUTION_TIME_MS: u64 = 1_000;
 pub const MAX_MAX_EXECUTION_TIME_MS: u64 = 86_400_000;
@@ -119,7 +120,7 @@ impl RunningJob {
         let seed = job.id as u64;
         let jitter_rng = SmallRng::seed_from_u64(seed);
         let on_missed = OnMissedPolicy::from(
-            job.on_missed.as_deref().unwrap_or("run_once")
+            job.on_missed.as_deref().unwrap_or(DEFAULT_ON_MISSED)
         );
         let max_exec = clamp_max_execution_time(
             job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS),
@@ -166,7 +167,7 @@ impl RunningJob {
         self.job_type = JobType::from(job.job_type.as_str());
         self.calendar = job.calendar.clone();
         self.on_missed = OnMissedPolicy::from(
-            job.on_missed.as_deref().unwrap_or("run_once")
+            job.on_missed.as_deref().unwrap_or(DEFAULT_ON_MISSED)
         );
         self.max_execution_time_ms = clamp_max_execution_time(
             job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS),

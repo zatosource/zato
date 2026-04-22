@@ -3,6 +3,13 @@ if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
 if (typeof $.fn.zato.scheduler === 'undefined') { $.fn.zato.scheduler = {}; }
 $.fn.zato.scheduler.dashboard = {};
 
+$.fn.zato.scheduler.dashboard.config = {
+    cluster_id: '1',
+    chart_width: 800,
+    default_time_range: 0,
+    error_message: 'Error executing job'
+};
+
 // ////////////////////////////////////////////////////////////////////////////
 // Theme - all dashboard-specific colors in one place
 // ////////////////////////////////////////////////////////////////////////////
@@ -226,8 +233,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         var html = '';
         for (var index = 0; index < recent_outcomes.length; index++) {
             var outcome = recent_outcomes[index];
-            var color = bar_colors[outcome] || '#ccc';
-            var label = labels[outcome] || outcome;
+            var color = bar_colors[outcome];
+            var label = labels[outcome];
             html += '<span class="dashboard-outcome-square" style="background:' + color + '" title="' + label + '"></span>';
         }
         return html;
@@ -241,9 +248,9 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         var colors = dash.outcome_colors;
         var bg_colors = dash.outcome_bg_colors;
         var labels = dash.outcome_labels;
-        var color = colors[outcome] || '#6e6e73';
-        var bg = bg_colors[outcome] || 'rgba(110,110,115,0.12)';
-        var label = labels[outcome] || outcome;
+        var color = colors[outcome];
+        var bg = bg_colors[outcome];
+        var label = labels[outcome];
         return '<span class="dashboard-outcome-badge" style="color:' + color + ';background:' + bg + '">' + label + '</span>';
     };
 
@@ -306,7 +313,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             ' \u00b7 ' + filtered_count_full
         );
 
-        var chart_width = container.width() || 800;
+        var chart_width = container.width();
         var chart_height = 200;
         var padding_left = 40;
         var padding_bottom = 28;
@@ -361,7 +368,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         for (var timeline_index = 0; timeline_index < filtered.length; timeline_index++) {
             var record = filtered[timeline_index];
             var time = new Date(record.actual_fire_time_iso).getTime();
-            var outcome = record.outcome || 'ok';
+            var outcome = record.outcome;
             var target_bucket = Math.floor((time - min_time) / bucket_size);
             if (target_bucket >= bucket_count) target_bucket = bucket_count - 1;
             if (target_bucket < 0) target_bucket = 0;
@@ -385,7 +392,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             for (var ms_index = 0; ms_index < buckets.length; ms_index++) {
                 var ms_sum = 0;
                 for (var ms_key = 0; ms_key < visible_keys.length; ms_key++) {
-                    ms_sum += (buckets[ms_index][visible_keys[ms_key]] || 0);
+                    ms_sum += buckets[ms_index][visible_keys[ms_key]];
                 }
                 if (ms_sum > max_stack) max_stack = ms_sum;
             }
@@ -436,7 +443,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         var bucket_slot_width = draw_width / bucket_count;
         var group_padding = bucket_slot_width * 0.15;
         var group_width = bucket_slot_width - group_padding * 2;
-        var num_visible = visible_keys.length || 1;
+        var num_visible = visible_keys.length;
         var bar_gap = Math.max(1, group_width * 0.06);
         var bar_width = (group_width - bar_gap * (num_visible - 1)) / num_visible;
 
@@ -474,7 +481,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
                 for (var sk2 = 0; sk2 < visible_keys.length; sk2++) {
                     var sk_key = visible_keys[sk2];
-                    var sk_val = buckets[sbi][sk_key] || 0;
+                    var sk_val = buckets[sbi][sk_key];
                     var sk_h = sk_val > 0 ? Math.max(2, (sk_val / max_stack) * draw_height) : 0;
 
                     if (sk_val > 0) {
@@ -653,7 +660,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
             var total_runs = 0;
             for (var tk = 0; tk < visible_keys.length; tk++) {
-                total_runs += (bucket[visible_keys[tk]] || 0);
+                total_runs += bucket[visible_keys[tk]];
             }
             var runs_label = total_runs === 1
                 ? '1 run'
@@ -667,10 +674,10 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var body_lines = [];
             for (var key_index = 0; key_index < visible_keys.length; key_index++) {
                 var key = visible_keys[key_index];
-                var count = bucket[key] || 0;
+                var count = bucket[key];
                 body_lines.push('<div class="dashboard-tooltip-row">' +
                     '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[key] + '"></span>' +
-                    (labels[key] || key) + ': <b>' + kit.format_number_full(count) + '</b></div>');
+                    labels[key] + ': <b>' + kit.format_number_full(count) + '</b></div>');
             }
             tooltip_html += '<div class="dashboard-tooltip-body">' + body_lines.join('') + '</div>';
 
@@ -714,12 +721,12 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             return;
         }
 
-        var cluster_id = $(document).getUrlParam('cluster') || '1';
+        var cluster_id = dash.config.cluster_id;
 
         kit.set_number($('#dashboard-jobs-count'), jobs.length);
 
         jobs.sort(function(first, second) {
-            return (first.name || '').localeCompare(second.name || '');
+            return first.name.localeCompare(second.name);
         });
 
         for (var job_index = 0; job_index < jobs.length; job_index++) {
@@ -728,7 +735,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var next_fire_tooltip = kit.format_local_time(job.next_fire_utc);
             var detail_url = '/zato/scheduler/dashboard/job/' + encodeURIComponent(job.id) + '/?cluster=' + cluster_id;
 
-            var service_name = job.service || '';
+            var service_name = job.service;
             var service_cell = '';
             if (service_name) {
                 var service_url = '/zato/service/overview/' + encodeURIComponent(service_name) + '/?cluster=' + cluster_id;
@@ -767,7 +774,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             return;
         }
 
-        var cluster_id = $(document).getUrlParam('cluster') || '1';
+        var cluster_id = dash.config.cluster_id;
 
         var failures = [];
         for (var record_index = 0; record_index < timeline.length; record_index++) {
@@ -794,13 +801,14 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var failure = failures[failure_index];
             var time_text = kit.relative_time_past(failure.actual_fire_time_iso);
             var time_tooltip = kit.format_local_time(failure.actual_fire_time_iso);
-            var error_text = failure.error || '';
+            var error_text = failure.error;
+            if (error_text === null) error_text = '';
             var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
 
-            var f_ts = failure.actual_fire_time_iso || '';
+            var f_ts = failure.actual_fire_time_iso;
             html += '<tr data-ts="' + f_ts + '">';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
-            html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(failure.job_id) + '/?cluster=' + cluster_id + '">' + (failure.job_name || failure.job_id) + '</a></td>';
+            html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(failure.job_id) + '/?cluster=' + cluster_id + '">' + failure.job_name + '</a></td>';
             html += '<td>' + dash.outcome_badge(failure.outcome) + '</td>';
             html += '<td class="dashboard-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
             html += '</tr>';
@@ -824,7 +832,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             return;
         }
 
-        var cluster_id = $(document).getUrlParam('cluster') || '1';
+        var cluster_id = dash.config.cluster_id;
 
         var upcoming = [];
 
@@ -890,7 +898,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     // ////////////////////////////////////////////////////////////////////////
 
     dash.execute_job = function(job_id, trigger_elem) {
-        var cluster_id = $(document).getUrlParam('cluster') || '1';
+        var cluster_id = dash.config.cluster_id;
         var url = '/zato/scheduler/execute/' + job_id + '/cluster/' + cluster_id + '/';
 
         $.ajax({
@@ -901,7 +909,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 $.fn.zato.user_message(true, 'OK, job executed');
             },
             error: function(xhr) {
-                $.fn.zato.user_message(false, xhr.responseText || 'Error executing job');
+                $.fn.zato.user_message(false, xhr.responseText);
             }
         });
     };
@@ -925,7 +933,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         var paused_jobs = data.paused_jobs;
 
         var outcome_counts = data.outcome_counts;
-        var failures_lifetime = (outcome_counts['error'] || 0) + (outcome_counts['timeout'] || 0);
+        var failures_lifetime = outcome_counts['error'] + outcome_counts['timeout'];
 
         var buffers = dash._spark_buffers;
         buffers.seed_flat({
@@ -1107,7 +1115,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         });
 
         // Time range
-        dash._time_range_minutes = parseInt(kit.storage_get('zato_scheduler_time_range') || '0', 10) || 0;
+        var _stored_range = parseInt(kit.storage_get('zato_scheduler_time_range'), 10);
+        dash._time_range_minutes = isNaN(_stored_range) ? dash.config.default_time_range : _stored_range;
 
         var menu = $('#dashboard-time-range-menu');
         var pill = $('#dashboard-exec-count');
@@ -1140,9 +1149,9 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             chart_container._zato_wheel_bound = true;
             chart_container.addEventListener('wheel', function(event) {
                 event.preventDefault();
-                var current = dash._zoom_bucket_count || 0;
+                var current = dash._zoom_bucket_count;
                 if (!current) {
-                    var w = chart_container.offsetWidth || 800;
+                    var w = chart_container.offsetWidth;
                     current = Math.min(60, Math.max(12, Math.floor(w / 16)));
                 }
                 if (event.deltaY < 0) {
@@ -1192,7 +1201,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         });
 
         kit.url_state.on_pop(function(params) {
-            var refresh_val = parseInt(params.get('refresh') || '0', 10);
+            var refresh_val = parseInt(params.get('refresh'), 10);
             if (!isNaN(refresh_val)) {
                 dash._auto_refresh.set_seconds(refresh_val);
             }

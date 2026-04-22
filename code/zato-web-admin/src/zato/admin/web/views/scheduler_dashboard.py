@@ -16,6 +16,9 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import method_allowed
+from zato.common.defaults import default_cluster_id
+
+default_error_message = 'Error fetching scheduler state'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -67,7 +70,7 @@ def poll(req):
                 return HttpResponse(json.dumps(raw), content_type='application/json')
         else:
             return HttpResponse(
-                json.dumps({'error': response.details or 'Error fetching scheduler state'}),
+                json.dumps({'error': response.details}),
                 content_type='application/json',
                 status=500,
             )
@@ -91,7 +94,7 @@ def job_detail(req, job_id):
 
     try:
         response = req.zato.client.invoke('zato.scheduler.job.get-by-id', {
-            'cluster_id': cluster_id or '1',
+            'cluster_id': default_cluster_id,
             'id': job_id,
         })
         if response.ok:
@@ -110,7 +113,7 @@ def job_detail(req, job_id):
             if isinstance(raw, str):
                 state_data = json.loads(raw)
             else:
-                state_data = raw or {}
+                state_data = raw
 
             job_name = job_data['name']
 

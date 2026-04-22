@@ -11,6 +11,8 @@ from contextlib import closing
 
 logger = logging.getLogger(__name__)
 
+default_interval_value = 0
+
 class SchedulerODBAdapter:
 
     def __init__(self, odb, cluster_id):
@@ -39,11 +41,11 @@ class SchedulerODBAdapter:
 
                 interval = session.query(IntervalBasedJob).filter_by(job_id=job.id).first()
                 if interval:
-                    entry['weeks'] = interval.weeks or 0
-                    entry['days'] = interval.days or 0
-                    entry['hours'] = interval.hours or 0
-                    entry['minutes'] = interval.minutes or 0
-                    entry['seconds'] = interval.seconds or 0
+                    entry['weeks'] = interval.weeks if interval.weeks is not None else default_interval_value
+                    entry['days'] = interval.days if interval.days is not None else default_interval_value
+                    entry['hours'] = interval.hours if interval.hours is not None else default_interval_value
+                    entry['minutes'] = interval.minutes if interval.minutes is not None else default_interval_value
+                    entry['seconds'] = interval.seconds if interval.seconds is not None else default_interval_value
                     entry['repeats'] = interval.repeats
 
                 result[job.id] = entry

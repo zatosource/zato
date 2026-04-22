@@ -17,6 +17,7 @@ except ImportError:
 
 # Zato
 from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
+from zato.common.defaults import default_cluster_id
 from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Job
@@ -69,7 +70,7 @@ class _SchedulerAdmin(AdminService):
 def _create_edit(self, action):
     """Creating and updating a job using Rust config store."""
     input = self.request.input
-    input.cluster_id = input.get('cluster_id') or self.server.cluster_id
+    input.cluster_id = default_cluster_id
 
     job_type = input.job_type
     name = input.name
@@ -257,7 +258,7 @@ class GetList(_Get):
         from zato.common.odb.query import job_list
 
         input = self.request.input
-        input.cluster_id = input.get('cluster_id') or self.server.cluster_id
+        input.cluster_id = default_cluster_id
 
         with closing(self.odb.session()) as session:
 
@@ -321,7 +322,7 @@ class GetByName(_Get):
         from zato.common.odb.model import Job, IntervalBasedJob
         item = None
         with closing(self.odb.session()) as session:
-            job = session.query(Job).filter_by(name=self.request.input.name, cluster_id=self.server.cluster_id).first()
+            job = session.query(Job).filter_by(name=self.request.input.name, cluster_id=default_cluster_id).first()
             if job:
                 item = {'id': job.id, 'name': job.name, 'is_active': job.is_active, 'job_type': job.job_type,
                         'start_date': job.start_date.isoformat(), 'service': job.service.name,
@@ -425,8 +426,8 @@ class GetHistory(_SchedulerAdmin):
             from zato_scheduler_core import scheduler_get_history_page, scheduler_get_history_since
 
             job_id = self.request.input.id
-            since_ts = self.request.input.get('since_ts') or ''
-            exclude_outcomes = self.request.input.get('exclude_outcomes') or None
+            since_ts = self.request.input.get('since_ts')
+            exclude_outcomes = self.request.input.get('exclude_outcomes')
 
             from contextlib import closing
             with closing(self.odb.session()) as session:
@@ -569,7 +570,7 @@ class GetCurrentState(_SchedulerAdmin):
             from contextlib import closing
             from zato.common.odb.model import Job, IntervalBasedJob
             with closing(self.odb.session()) as session:
-                job_rows = session.query(Job).filter_by(cluster_id=self.server.cluster_id).all()
+                job_rows = session.query(Job).filter_by(cluster_id=default_cluster_id).all()
                 store_jobs = []
                 for job in job_rows:
                     d = {'id': job.id, 'name': job.name, 'is_active': job.is_active, 'job_type': job.job_type,
@@ -608,10 +609,10 @@ class GetCurrentState(_SchedulerAdmin):
                 else:
                     paused_jobs += 1
 
-                runtime = runtime_by_id.get(job_id) or runtime_by_name.get(name, {})
+                runtime = runtime_by_id.get(job_id, runtime_by_name.get(name, {}))
                 is_running = runtime.get('in_flight', False)
 
-                history = all_history.get(job_id, []) or history_by_name.get(name, [])
+                history = all_history.get(job_id, history_by_name.get(name, []))
 
                 last_outcome = None
                 last_duration_ms = None
@@ -641,7 +642,13 @@ class GetCurrentState(_SchedulerAdmin):
                     'recent_outcomes': recent_outcomes,
                 })
 
-            outcome_counts = {}
+            outcome_counts = {
+                'ok': 0,
+                'error': 0,
+                'timeout': 0,
+                'skipped_already_in_flight': 0,
+                'missed_catchup': 0,
+            }
             history_timeline = []
             total_executions = 0
 

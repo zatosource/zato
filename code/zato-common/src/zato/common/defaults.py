@@ -12,3 +12,5 @@ web_admin_host = '0.0.0.0'
 web_admin_port = 8182
 
 http_plain_server_port = 17010
+
+default_cluster_id = 1
