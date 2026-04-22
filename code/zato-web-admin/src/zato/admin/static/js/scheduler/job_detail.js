@@ -83,7 +83,7 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
     var type_label = dashboard.job_type_labels[job.job_type] || job.job_type;
     var status_text = job.is_active ? 'Active' : 'Paused';
-    var title = '<span class="detail-component-pill" style="background:#1a6fa0;color:#e0f0ff">Scheduler</span> ' +
+    var title = '<a href="/zato/scheduler/dashboard/?cluster=1" class="detail-component-pill" style="background:#1a6fa0;color:#e0f0ff">Scheduler</a> ' +
         (job.name || 'Unknown job') +
         ' <span style="font-weight:400;font-size:13px;color:var(--text-muted)">' +
         type_label + ' \u00b7 ' + status_text + '</span>';
@@ -97,14 +97,15 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
 $.fn.zato.scheduler.job_detail.render_stats = function(job, history) {
     var kit = $.fn.zato.dashboard_kit;
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
+    var filtered = $.fn.zato.scheduler.job_detail._filter_by_range(history);
 
-    var total_runs = history.length;
+    var total_runs = filtered.length;
     var error_count = 0;
     var total_duration = 0;
     var duration_count = 0;
 
-    for (var record_index = 0; record_index < history.length; record_index++) {
-        var record = history[record_index];
+    for (var record_index = 0; record_index < filtered.length; record_index++) {
+        var record = filtered[record_index];
         if (record.outcome === 'error') error_count++;
         if (record.duration_ms !== null && record.duration_ms !== undefined) {
             total_duration += parseInt(record.duration_ms, 10) || 0;
@@ -117,7 +118,11 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job, history) {
     $('#stat-total-runs').text(kit.format_number_full(total_runs));
     var $errors = $('#stat-errors');
     $errors.text(kit.format_number_full(error_count));
-    if (error_count > 0) $errors.css('color', '#e0226e');
+    if (error_count > 0) {
+        $errors.css('color', '#e0226e');
+    } else {
+        $errors.css('color', '');
+    }
 
     $('#stat-avg-duration').text(dashboard.format_duration(average_duration));
 
@@ -353,6 +358,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
 
     var mono_style = 'font-family:monospace;font-feature-settings:\'tnum\' on;white-space:nowrap';
     var mono_wrap = 'font-family:monospace;font-feature-settings:\'tnum\' on';
+    var center_style = 'text-align:center';
 
     var render_single_row = function(record, extra_class) {
         var planned_time = kit.format_local_time(record.planned_fire_time_iso);
@@ -371,9 +377,9 @@ $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
         var row = '<tr' + cls + '>';
         row += '<td style="' + mono_style + '">' + planned_time + '</td>';
         row += '<td style="' + mono_style + '">' + actual_time + '</td>';
-        row += '<td style="' + mono_wrap + '">' + dispatch_latency + '</td>';
-        row += '<td style="' + mono_wrap + '">' + duration + '</td>';
-        row += '<td>' + outcome + '</td>';
+        row += '<td style="' + mono_wrap + ';' + center_style + '">' + dispatch_latency + '</td>';
+        row += '<td style="' + mono_wrap + ';' + center_style + '">' + duration + '</td>';
+        row += '<td style="' + center_style + '">' + outcome + '</td>';
         row += '<td style="' + mono_wrap + '">' + run_number + '</td>';
         row += '<td title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
         row += '</tr>';
@@ -400,14 +406,20 @@ $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
         return html;
     };
 
+    var initial_page = parseInt(kit.url_state.get('page', '1'), 10) || 1;
+
     $.fn.zato.scheduler.job_detail._pagination = kit.pagination.init({
         data: groups,
         page_size: 50,
+        initial_page: initial_page,
         table_body: '#detail-history-table-body',
         container_top: '#detail-history-pagination-top',
         container_bottom: '#detail-history-pagination-bottom',
         render_row: function(group) {
             return render_group(group);
+        },
+        on_page_change: function(page) {
+            kit.url_state.set({page: page > 1 ? page : null});
         }
     });
 
@@ -431,21 +443,66 @@ $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
 
 $.fn.zato.scheduler.job_detail.render_actions = function(job_id) {
     $('#btn-execute-now').on('click', function() {
-        $.fn.zato.scheduler.dashboard.execute_job(job_id);
+        var btn = this;
+        var cluster_id = $(document).getUrlParam('cluster') || '1';
+        var url = '/zato/scheduler/execute/' + job_id + '/cluster/' + cluster_id + '/';
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            headers: {'X-CSRFToken': $.cookie('csrftoken')},
+            success: function() {
+                var _tooltip = tippy(btn, {
+                    content: 'OK, job executed',
+                    allowHTML: false,
+                    theme: 'dark',
+                    trigger: 'manual',
+                    placement: 'left',
+                    arrow: true,
+                    interactive: false,
+                    inertia: true,
+                });
+                var instance = Array.isArray(_tooltip) ? _tooltip[0] : _tooltip;
+                if (instance) {
+                    instance.show();
+                    setTimeout(function() {
+                        instance.hide();
+                        setTimeout(function() { instance.destroy(); }, 300);
+                    }, 1200);
+                }
+            },
+            error: function(xhr) {
+                $.fn.zato.user_message(false, xhr.responseText || 'Error executing job');
+            }
+        });
     });
 };
 
 // ////////////////////////////////////////////////////////////////////////////
-// Tab switching
+// Tab switching (with URL state)
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.init_tabs = function() {
+    var kit = $.fn.zato.dashboard_kit;
+
+    var url_tab = kit.url_state.get('tab');
+    if (url_tab) {
+        var $target = $('.detail-tab[data-tab="' + url_tab + '"]');
+        if ($target.length) {
+            $('.detail-tab').removeClass('detail-tab-active').attr('aria-selected', 'false');
+            $target.addClass('detail-tab-active').attr('aria-selected', 'true');
+            $('.detail-tab-panel').attr('hidden', true);
+            $('#detail-tab-panel-' + url_tab).removeAttr('hidden');
+        }
+    }
+
     $('.detail-tab').on('click', function() {
         var tab_name = $(this).data('tab');
         $('.detail-tab').removeClass('detail-tab-active').attr('aria-selected', 'false');
         $(this).addClass('detail-tab-active').attr('aria-selected', 'true');
         $('.detail-tab-panel').attr('hidden', true);
         $('#detail-tab-panel-' + tab_name).removeAttr('hidden');
+        kit.url_state.set({tab: tab_name});
     });
 };
 
@@ -455,6 +512,7 @@ $.fn.zato.scheduler.job_detail.init_tabs = function() {
 
 $.fn.zato.scheduler.job_detail._redraw = function() {
     var detail = $.fn.zato.scheduler.job_detail;
+    detail.render_stats(detail._job_data, detail._history_data);
     detail.render_timeline(detail._history_data);
     detail.render_history_table(detail._history_data);
 };
@@ -464,21 +522,24 @@ $.fn.zato.scheduler.job_detail._redraw = function() {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render = function(job, history, job_id, cluster_id) {
-    $.fn.zato.scheduler.job_detail.render_header(job);
-    $.fn.zato.scheduler.job_detail.render_stats(job, history);
-    $.fn.zato.scheduler.job_detail.render_config(job, cluster_id);
-    $.fn.zato.scheduler.job_detail.render_timeline(history);
-    $.fn.zato.scheduler.job_detail.render_actions(job_id);
-    $.fn.zato.scheduler.job_detail.init_tabs();
-
     var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
+
+    detail.render_header(job);
+    detail.render_stats(job, history);
+    detail.render_config(job, cluster_id);
+    detail.render_timeline(history);
+    detail.render_actions(job_id);
+    detail.init_tabs();
 
     var range_names = {
         5: 'Last 5m', 15: 'Last 15m', 30: 'Last 30m', 60: 'Last 1h',
         360: 'Last 6h', 1440: 'Today', 2880: 'Yesterday',
         10080: 'This week', 43200: 'This month', 525600: 'This year', 0: 'All'
     };
+
+    var url_range = kit.url_state.get('range');
+    var initial_range = url_range !== null ? parseInt(url_range, 10) : null;
 
     kit.time_range.init({
         pill: '#detail-timeline-range-pill',
@@ -487,14 +548,26 @@ $.fn.zato.scheduler.job_detail.render = function(job, history, job_id, cluster_i
         on_change: function(minutes) {
             detail._time_range_minutes = minutes;
             $('#detail-timeline-range-pill').text(range_names[minutes] || 'All');
+            kit.url_state.set({range: minutes || null, page: null});
             detail._redraw();
         }
     });
 
-    var stored = parseInt(kit.storage_get('zato_job_detail_time_range') || '0', 10) || 0;
-    detail._time_range_minutes = stored;
-    if (stored && range_names[stored]) {
-        $('#detail-timeline-range-pill').text(range_names[stored]);
+    if (initial_range !== null && !isNaN(initial_range)) {
+        detail._time_range_minutes = initial_range;
+        if (range_names[initial_range]) {
+            $('#detail-timeline-range-pill').text(range_names[initial_range]);
+        }
+        kit.storage_set('zato_job_detail_time_range', initial_range);
+        var $menu = $('#detail-timeline-range-menu');
+        $menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
+        $menu.find('.dashboard-time-range-option[data-minutes="' + initial_range + '"]').addClass('dashboard-time-range-active');
+    } else {
+        var stored = parseInt(kit.storage_get('zato_job_detail_time_range') || '0', 10) || 0;
+        detail._time_range_minutes = stored;
+        if (stored && range_names[stored]) {
+            $('#detail-timeline-range-pill').text(range_names[stored]);
+        }
     }
 
     setTimeout(function() {

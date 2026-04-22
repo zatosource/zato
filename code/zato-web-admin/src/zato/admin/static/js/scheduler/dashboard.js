@@ -901,7 +901,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     // Execute job
     // ////////////////////////////////////////////////////////////////////////
 
-    dash.execute_job = function(job_id) {
+    dash.execute_job = function(job_id, trigger_elem) {
         var cluster_id = $(document).getUrlParam('cluster') || '1';
         var url = '/zato/scheduler/execute/' + job_id + '/cluster/' + cluster_id + '/';
 
@@ -910,7 +910,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             type: 'POST',
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function() {
-                $.fn.zato.user_message(true, 'OK, request submitted');
+                $.fn.zato.user_message(true, 'OK, job executed');
             },
             error: function(xhr) {
                 $.fn.zato.user_message(false, xhr.responseText || 'Error executing job');

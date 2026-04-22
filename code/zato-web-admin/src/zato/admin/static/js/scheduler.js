@@ -337,7 +337,11 @@ $.fn.zato.scheduler.execute = function(id, link_elem) {
     $.fn.zato.action_runner.run({
         link_elem: link_elem,
         url: url,
-        details_modal_title: 'Execute response'
+        details_modal_title: 'Execute response',
+        on_success: function(instance) {
+            instance.setContent('OK, job executed');
+            setTimeout(function() { instance.hide(); }, 1200);
+        }
     });
 }
 

@@ -49,6 +49,16 @@ a {
     letter-spacing: 0.5px;
 }
 
+.stat-card .dashboard-time-range-wrapper {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+.stat-card .dashboard-time-range-menu {
+    right: auto;
+    left: 0;
+}
+
 .stat-card-value {
     font-size: 28px;
     font-weight: 900;
@@ -504,6 +514,17 @@ a {
     margin-right: 6px;
 }
 
+a.detail-component-pill,
+a.detail-component-pill:link,
+a.detail-component-pill:hover,
+a.detail-component-pill:focus,
+a.detail-component-pill:active,
+a.detail-component-pill:visited {
+    color: inherit !important;
+    text-decoration: none !important;
+    background-image: none !important;
+}
+
 .detail-spinner {
     width: 20px;
     height: 20px;
@@ -524,10 +545,21 @@ a {
 .detail-pagination-controls {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 12px;
     padding: 8px 0;
     font-size: 13px;
+}
+
+.detail-table-fixed {
+    table-layout: fixed;
+}
+
+.detail-table-fixed td,
+.detail-table-fixed th {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
 }
 
 .detail-pagination-controls a {

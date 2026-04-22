@@ -10,7 +10,7 @@
 {% block section_title %}
 <div class="detail-header-row">
     <span id="detail-section-title">
-        <span class="detail-component-pill" style="background:#1a6fa0;color:#e0f0ff">Scheduler</span>
+        <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="detail-component-pill" style="background:#1a6fa0;color:#e0f0ff">Scheduler</a>
         Job detail
     </span>
     <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="common" style="font-size:13px">Back to dashboard</a>
@@ -37,8 +37,28 @@ $(document).ready(function() {
 
 {% block stat_cards %}
 <div class="stat-cards" id="detail-stat-cards">
-    <div class="stat-card">
-        <div><div class="stat-card-label">Total runs</div><div class="stat-card-value" id="stat-total-runs">-</div></div>
+    <div class="stat-card" style="position:relative">
+        <div>
+            <div class="stat-card-label">Runs
+                <span class="dashboard-time-range-wrapper" style="font-weight:400;margin-left:4px">
+                    <span class="dashboard-pill dashboard-pill-clickable" id="detail-timeline-range-pill" style="font-size:10px;padding:1px 6px">All</span>
+                    <div class="dashboard-time-range-menu" id="detail-timeline-range-menu">
+                        <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="15">Last 15 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="30">Last 30 minutes</div>
+                        <div class="dashboard-time-range-option" data-minutes="60">Last 1 hour</div>
+                        <div class="dashboard-time-range-option" data-minutes="360">Last 6 hours</div>
+                        <div class="dashboard-time-range-option" data-minutes="1440">Today</div>
+                        <div class="dashboard-time-range-option" data-minutes="2880">Yesterday</div>
+                        <div class="dashboard-time-range-option" data-minutes="10080">This week</div>
+                        <div class="dashboard-time-range-option" data-minutes="43200">This month</div>
+                        <div class="dashboard-time-range-option" data-minutes="525600">This year</div>
+                        <div class="dashboard-time-range-option dashboard-time-range-active" data-minutes="0">All</div>
+                    </div>
+                </span>
+            </div>
+            <div class="stat-card-value" id="stat-total-runs">-</div>
+        </div>
         <div></div>
     </div>
     <div class="stat-card">
@@ -70,38 +90,29 @@ $(document).ready(function() {
 {% block tab_panels %}
 <div class="detail-tab-panel" id="detail-tab-panel-executions" role="tabpanel">
 
-    <h3 class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
-        <span>Execution timeline</span>
-        <span class="dashboard-time-range-wrapper" style="font-size:13px;font-weight:400">
-            <span class="dashboard-pill dashboard-pill-clickable" id="detail-timeline-range-pill">All</span>
-            <div class="dashboard-time-range-menu" id="detail-timeline-range-menu">
-                <div class="dashboard-time-range-option" data-minutes="5">Last 5 minutes</div>
-                <div class="dashboard-time-range-option" data-minutes="15">Last 15 minutes</div>
-                <div class="dashboard-time-range-option" data-minutes="30">Last 30 minutes</div>
-                <div class="dashboard-time-range-option" data-minutes="60">Last 1 hour</div>
-                <div class="dashboard-time-range-option" data-minutes="360">Last 6 hours</div>
-                <div class="dashboard-time-range-option" data-minutes="1440">Today</div>
-                <div class="dashboard-time-range-option" data-minutes="2880">Yesterday</div>
-                <div class="dashboard-time-range-option" data-minutes="10080">This week</div>
-                <div class="dashboard-time-range-option" data-minutes="43200">This month</div>
-                <div class="dashboard-time-range-option" data-minutes="525600">This year</div>
-                <div class="dashboard-time-range-option dashboard-time-range-active" data-minutes="0">All</div>
-            </div>
-        </span>
-    </h3>
+    <h3 class="section-title">Execution timeline</h3>
     <div id="detail-timeline" style="min-height:60px"></div>
 
     <h3 class="section-title">Execution history <span class="detail-badge" id="detail-history-count" style="font-size:11px"></span></h3>
     <div class="detail-pagination-controls" id="detail-history-pagination-top"></div>
     <div class="detail-card-scroll">
-        <table class="detail-table" id="detail-history-table">
+        <table class="detail-table detail-table-fixed" id="detail-history-table">
+            <colgroup>
+                <col style="width:18%">
+                <col style="width:18%">
+                <col style="width:8%">
+                <col style="width:8%">
+                <col style="width:14%">
+                <col style="width:6%">
+                <col style="width:28%">
+            </colgroup>
             <thead>
                 <tr>
                     <th>Planned time</th>
                     <th>Actual time</th>
-                    <th>Latency</th>
-                    <th>Duration</th>
-                    <th>Outcome</th>
+                    <th style="text-align:center">Latency</th>
+                    <th style="text-align:center">Duration</th>
+                    <th style="text-align:center">Outcome</th>
                     <th>Run</th>
                     <th>Error</th>
                 </tr>

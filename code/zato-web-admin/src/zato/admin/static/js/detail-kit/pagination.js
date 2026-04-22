@@ -7,9 +7,10 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     kit.pagination = {};
 
     kit.pagination.init = function(config) {
-        var current_page = 1;
         var page_size = config.page_size || 50;
         var data = config.data || [];
+        var max_page = Math.ceil(data.length / page_size) || 1;
+        var current_page = Math.min(Math.max(parseInt(config.initial_page, 10) || 1, 1), max_page);
 
         function total_pages() {
             return Math.ceil(data.length / page_size) || 1;
