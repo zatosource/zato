@@ -290,7 +290,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
 
     var job_name = job.name || '';
     var manage_url = '/zato/scheduler/?cluster=' + cluster_id + '&query=' + encodeURIComponent(job_name);
-    html += card('Manage', '<a href="' + manage_url + '">Edit / delete in scheduler</a>', true);
+    html += card('Manage', '<a href="' + manage_url + '">Click to configure</a>', true);
 
     html += '</div>';
 

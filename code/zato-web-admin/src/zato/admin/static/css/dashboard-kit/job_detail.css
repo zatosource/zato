@@ -54,8 +54,9 @@
     min-height: 0;
     background: var(--white);
     border: 2px solid var(--primary-dark);
-    padding: 10px 16px;
+    padding: 8px 16px;
     box-shadow: 3px 3px 0px var(--shadow-dark);
+    margin-bottom: 0;
 }
 
 .detail-config-extra-card > .meta-label {
@@ -70,12 +71,12 @@
 
 .detail-config-extra {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
-    font-size: 12px;
+    font-size: 0.85em;
     font-feature-settings: 'tnum' on, 'lnum' on;
     font-variant-numeric: tabular-nums lining-nums;
     background: inherit;
     padding: 0;
-    margin: 8px 0 0;
+    margin: 4px 0 0;
     white-space: pre;
     overflow: auto;
     flex: 1;
