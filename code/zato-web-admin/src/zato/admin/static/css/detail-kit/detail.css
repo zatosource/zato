@@ -81,7 +81,7 @@ a {
 .stat-card-inline-btn:focus,
 .stat-card-inline-btn:active {
     background: var(--component-accent-light, #e0f0ff) !important;
-    color: var(--component-accent, #1a6fa0) !important;
+    color: var(--component-accent, #012845) !important;
 }
 
 .stat-card .dashboard-time-range-menu {

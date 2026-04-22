@@ -4,7 +4,7 @@
 @import url("main_chart.css");
 
 :root {
-    --component-accent: #1a6fa0;
+    --component-accent: var(--zato-seablue, #012845);
     --component-accent-light: #e0f0ff;
 }
 
