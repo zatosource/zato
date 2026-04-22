@@ -1,18 +1,16 @@
-{% extends "zato/settings-base.html" %}
+{% extends "zato/detail_base.html" %}
 
 {% block page_title %}Message: {{ msg_id }}{% endblock %}
 
-{% block extra_page_css %}
+{% block detail_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/eda.css">
 {% endblock %}
 
-{% block section_title %}Message details: <span class="eda-copy-target" data-copy-value="{{ msg_id }}" style="font-family:monospace; cursor:pointer; border-bottom:1px dashed #999">{{ msg_id }}</span>{% endblock %}
+{% block section_title %}Message details: <span class="detail-copy-target" data-copy-value="{{ msg_id }}" style="font-family:monospace; cursor:pointer; border-bottom:1px dashed #999">{{ msg_id }}</span>{% endblock %}
 {% block help_icon_id %}eda-message-help{% endblock %}
 
-{% block extra_page_js %}
+{% block detail_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/ace-builds/src/ace.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/utils.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/message-detail.js"></script>
 <script nonce="{{ CSP_NONCE }}">
@@ -22,16 +20,17 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
-{% block content_rows %}
+{% block tabs %}{% endblock %}
 
-<div class="eda-msg-metadata" id="msg-metadata"></div>
+{% block tab_panels %}
+<div class="detail-metadata" id="msg-metadata"></div>
 
 <h3 class="section-title">Message data</h3>
 <div id="msg-data-content" style="border: 3px solid var(--primary-dark); padding: 8px;"></div>
 
 <h3 class="section-title">Delivery status</h3>
-<div class="eda-card-scroll">
-    <table class="eda-table">
+<div class="detail-card-scroll">
+    <table class="detail-table">
         <thead><tr><th>Subscriber</th><th>Status</th></tr></thead>
         <tbody id="delivery-body"></tbody>
     </table>

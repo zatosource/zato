@@ -108,7 +108,7 @@ $.fn.zato.eda.publish.submit = function() {
             var msg_id = resp.msg_id || '';
             $spinner.removeClass('active');
             $btn.prop('disabled', false);
-            $status.html('Published message: <span class="eda-copy-target" data-copy-value="' + msg_id + '">' + msg_id + '</span>');
+            $status.html('Published message: <span class="detail-copy-target" data-copy-value="' + msg_id + '">' + msg_id + '</span>');
             $status.addClass('show');
             $.fn.zato.eda.bind_copy_targets();
         },

@@ -1,21 +1,19 @@
-{% extends "zato/settings-base.html" %}
+{% extends "zato/detail_base.html" %}
 
 {% block page_title %}Queue: {{ sub_key }}{% endblock %}
 
-{% block extra_page_css %}
+{% block detail_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/eda.css">
 {% endblock %}
 
 {% block section_title %}Queue: {{ sub_key }}
 
-<span class="eda-refresh-indicator" id="eda-last-refresh"></span>
+<span class="detail-refresh-indicator" id="eda-last-refresh"></span>
 
 {% endblock %}
 {% block help_icon_id %}eda-queue-help{% endblock %}
 
-{% block extra_page_js %}
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
+{% block detail_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/utils.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/queue-detail.js"></script>
 <script nonce="{{ CSP_NONCE }}">
@@ -25,11 +23,10 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
-{% block content_rows %}
-
+{% block stat_cards %}
 <div class="stat-cards">
     <div class="stat-card">
-        <div><div class="stat-card-label">Topic</div><div class="stat-card-value" style="font-size:18px"><a href="{% url 'eda-topic-detail' topic_name=topic_name %}?cluster={{ cluster_id|default:'1' }}" style="color:var(--eda-link-color)">{{ topic_name }}</a></div></div>
+        <div><div class="stat-card-label">Topic</div><div class="stat-card-value" style="font-size:18px"><a href="{% url 'eda-topic-detail' topic_name=topic_name %}?cluster={{ cluster_id|default:'1' }}" style="color:var(--detail-link-color)">{{ topic_name }}</a></div></div>
         <div></div>
     </div>
     <div class="stat-card">
@@ -37,13 +34,19 @@ $(document).ready(function() {
         <div id="spark-depth"></div>
     </div>
 </div>
+{% endblock %}
 
+{% block actions %}
 <div class="button-container">
     <button class="action-button" onclick="$.fn.zato.eda.queue_detail.purge()">Purge queue</button>
 </div>
+{% endblock %}
 
+{% block tabs %}{% endblock %}
+
+{% block tab_panels %}
 <h3 class="section-title">Pending messages</h3>
-<table class="eda-table">
+<table class="detail-table">
     <thead><tr><th>Message ID</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
     <tbody id="messages-body"></tbody>
 </table>

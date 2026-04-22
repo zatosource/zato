@@ -68,7 +68,7 @@ $.fn.zato.eda.message_detail.init = function(data) {
         var item = statuses[status_idx];
         var status_class = 'status-' + (item.status || '').replace(/ /g, '_');
         var sub_link = '<a href="/zato/eda/queue/' + encodeURIComponent(data.topic_name || '') + '/' + encodeURIComponent(item.sub_key) + '/?cluster=1">' + item.sub_key + '</a>';
-        $tbody.append('<tr><td>' + sub_link + '</td><td><span class="eda-status-badge ' + status_class + '">' + item.status + '</span></td></tr>');
+        $tbody.append('<tr><td>' + sub_link + '</td><td><span class="detail-status-badge ' + status_class + '">' + item.status + '</span></td></tr>');
     }
     if (statuses.length === 0) {
         $tbody.append('<tr><td colspan="2">No subscribers</td></tr>');

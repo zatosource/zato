@@ -1,0 +1,23 @@
+{% extends "zato/settings-base.html" %}
+
+{% block extra_page_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/detail-kit/detail.css">
+{% block detail_css %}{% endblock %}
+{% endblock %}
+
+{% block extra_page_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
+{% block detail_js %}{% endblock %}
+{% endblock %}
+
+{% block content_rows %}
+{% block stat_cards %}{% endblock %}
+{% block actions %}{% endblock %}
+
+<div class="detail-tabs" role="tablist">
+{% block tabs %}{% endblock %}
+</div>
+
+{% block tab_panels %}{% endblock %}
+{% endblock %}

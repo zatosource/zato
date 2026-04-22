@@ -26,7 +26,7 @@ $.fn.zato.eda.format_number = function(n) {
 };
 
 $.fn.zato.eda.depth_html = function(d) {
-    return '<span class="eda-badge">' + d + '</span>';
+    return '<span class="detail-badge">' + d + '</span>';
 };
 
 $.fn.zato.eda.update_refresh_indicator = function() {
@@ -57,7 +57,7 @@ $.fn.zato.eda.format_local_time = function(ts) {
 };
 
 $.fn.zato.eda.bind_copy_targets = function() {
-    $('.eda-copy-target').off('click.edacopy').on('click.edacopy', function() {
+    $('.detail-copy-target').off('click.edacopy').on('click.edacopy', function() {
         var value = $(this).data('copy-value');
         var elem = this;
         navigator.clipboard.writeText(value).then(function() {

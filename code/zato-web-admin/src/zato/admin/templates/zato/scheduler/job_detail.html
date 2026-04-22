@@ -1,20 +1,17 @@
-{% extends "zato/index.html" %}
+{% extends "zato/detail_base.html" %}
 {% load extras %}
 
-{% block html_title %}Job detail{% endblock %}
+{% block page_title %}Job detail{% endblock %}
 
-{% block "extra_css" %}
-<link rel="stylesheet" type="text/css" href="/static/css/dashboard.css">
+{% block detail_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/job_detail.css">
 {% endblock %}
 
-{% block "extra_js" %}
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/kit.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/sparkline.js"></script>
+{% block section_title %}<span id="detail-section-title">Job detail</span>{% endblock %}
+{% block help_icon_id %}scheduler-job-help{% endblock %}
+
+{% block detail_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time_range.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/tabs.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/stat_tile.js"></script>
-<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/main_chart.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/job_detail.js"></script>
 <script nonce="{{ CSP_NONCE }}">
@@ -29,71 +26,64 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
-{% block "content" %}
-
-<div class="dashboard-page" style="opacity:0">
-
-    <div class="dashboard-hero dashboard-hero-compact">
-        <div class="dashboard-hero-inner">
-            <div id="dashboard-detail-header"></div>
-            <div id="dashboard-detail-actions" class="dashboard-detail-actions"></div>
-        </div>
+{% block stat_cards %}
+<div class="stat-cards" id="detail-stat-cards">
+    <div class="stat-card">
+        <div><div class="stat-card-label">Total runs</div><div class="stat-card-value" id="stat-total-runs">-</div></div>
+        <div></div>
     </div>
-
-    <div class="dashboard-section" style="margin-top:28px">
-        <div class="dashboard-grid-section">
-
-            <div class="dashboard-card">
-                <div class="dashboard-card-header">
-                    <h3>Configuration</h3>
-                </div>
-                <div id="dashboard-detail-config"></div>
-            </div>
-
-            <div class="dashboard-card">
-                <div class="dashboard-card-header">
-                    <h3>Statistics</h3>
-                </div>
-                <div class="dashboard-detail-stats" id="dashboard-detail-stats"></div>
-            </div>
-
-        </div>
+    <div class="stat-card">
+        <div><div class="stat-card-label">Errors</div><div class="stat-card-value" id="stat-errors">-</div></div>
+        <div></div>
     </div>
-
-    <div class="dashboard-section" style="margin-top:20px">
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3>Execution timeline</h3>
-            </div>
-            <div id="dashboard-timeline" class="dashboard-chart-body" style="min-height:60px"></div>
-        </div>
+    <div class="stat-card">
+        <div><div class="stat-card-label">Avg duration</div><div class="stat-card-value-sm" id="stat-avg-duration">-</div></div>
+        <div></div>
     </div>
-
-    <div class="dashboard-section" style="margin-top:20px">
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3>Execution history</h3>
-                <span class="dashboard-pill" id="dashboard-history-count"></span>
-            </div>
-            <table class="zato-table" id="dashboard-history-table">
-                <thead>
-                    <tr>
-                        <th>Planned time</th>
-                        <th>Actual time</th>
-                        <th>Latency</th>
-                        <th>Duration</th>
-                        <th>Outcome</th>
-                        <th>Run</th>
-                        <th>Error</th>
-                    </tr>
-                </thead>
-                <tbody id="dashboard-history-table-body"></tbody>
-            </table>
-        </div>
+    <div class="stat-card">
+        <div><div class="stat-card-label">Next fire</div><div class="stat-card-value-sm" id="stat-next-fire">-</div></div>
+        <div></div>
     </div>
+</div>
+{% endblock %}
 
-    <div class="dashboard-footer"></div>
+{% block actions %}
+<div class="button-container" id="detail-actions">
+    <button class="action-button" onclick="window.location='/zato/scheduler/dashboard/?cluster={{ cluster_id }}'">Back to dashboard</button>
+    <button class="action-button" id="btn-execute-now">Execute now</button>
+</div>
+{% endblock %}
 
+{% block tabs %}
+    <button type="button" class="detail-tab detail-tab-active" data-tab="executions" role="tab" aria-selected="true">Executions</button>
+    <button type="button" class="detail-tab" data-tab="configuration" role="tab" aria-selected="false">Configuration</button>
+{% endblock %}
+
+{% block tab_panels %}
+<div class="detail-tab-panel" id="detail-tab-panel-executions" role="tabpanel">
+    <h3 class="section-title">Execution timeline</h3>
+    <div id="detail-timeline" style="min-height:60px"></div>
+
+    <h3 class="section-title">Execution history <span class="detail-badge" id="detail-history-count" style="font-size:11px"></span></h3>
+    <div class="detail-card-scroll">
+        <table class="detail-table" id="detail-history-table">
+            <thead>
+                <tr>
+                    <th>Planned time</th>
+                    <th>Actual time</th>
+                    <th>Latency</th>
+                    <th>Duration</th>
+                    <th>Outcome</th>
+                    <th>Run</th>
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody id="detail-history-table-body"></tbody>
+        </table>
+    </div>
 </div>
 
+<div class="detail-tab-panel" id="detail-tab-panel-configuration" role="tabpanel" hidden>
+    <div class="detail-meta" id="detail-config-grid"></div>
+</div>
 {% endblock %}
