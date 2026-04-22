@@ -61,6 +61,22 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var instance_id = ns.sparkline._counter++;
         var grad_id = 'sparkArea_' + instance_id;
 
+        var max_points = Math.max(2, Math.floor(w / 8));
+        if (data_points.length > max_points) {
+            var step = data_points.length / max_points;
+            var resampled = [];
+            for (var ri = 0; ri < max_points; ri++) {
+                var start_i = Math.floor(ri * step);
+                var end_i = Math.floor((ri + 1) * step);
+                var sum = 0;
+                for (var si = start_i; si < end_i; si++) {
+                    sum += data_points[si];
+                }
+                resampled.push(sum / (end_i - start_i));
+            }
+            data_points = resampled;
+        }
+
         var min_val = Math.min.apply(null, data_points);
         var max_val = Math.max.apply(null, data_points);
         var range = max_val - min_val;
