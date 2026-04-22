@@ -11,6 +11,7 @@
     --zato-link-hover: #006fbf;
     --zato-link-dash: rgba(0, 0, 0, 0.35);
     --zato-row-hover: rgba(210, 195, 120, 0.15);
+    --primary-dark: #012845;
 }
 
 @keyframes zato-spin {

@@ -68,6 +68,7 @@
     color: var(--primary-dark);
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 2px solid var(--primary-dark);
     border-radius: 0;
     box-shadow:
         0 1px 3px rgba(0, 0, 0, 0.04),
