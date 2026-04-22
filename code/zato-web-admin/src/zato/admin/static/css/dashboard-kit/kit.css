@@ -33,10 +33,18 @@
     position: relative;
 }
 
-.dashboard-hero-pill {
+.dashboard-hero-pill-group {
     position: absolute;
     right: calc(100% + 16px);
     top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dashboard-hero-pill-name,
+.dashboard-hero-pill-link {
+    display: block;
     padding: 5px 14px;
     border-radius: 4px;
     font-size: 11px;
@@ -53,6 +61,26 @@
         0 8px 20px -4px rgba(0, 0, 0, 0.40),
         0 20px 40px -8px rgba(0, 0, 0, 0.50),
         0 40px 70px -16px rgba(0, 0, 0, 0.55);
+}
+
+.dashboard-hero-pill-name {
+    font-size: 12px;
+}
+
+.dashboard-hero-pill-link {
+    font-size: 10px;
+    text-decoration: none;
+    padding: 5px 14px !important;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 150ms ease;
+}
+
+.dashboard-hero-pill-link:hover {
+    color: #fff !important;
+    text-decoration: none;
 }
 
 /* Sections */

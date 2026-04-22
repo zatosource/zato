@@ -14,8 +14,15 @@ $.fn.zato.scheduler.dashboard.theme = {
     accent_dark:  '#2a7fbf',
     spark_color:  '#82ccff',
     spark_err:    '#ff6b6b',
-    pill_bg:      '#1a6fa0',
-    pill_color:   '#e0f0ff'
+    pill_bg:        '#1a6fa0',
+    pill_color:     '#e0f0ff',
+    pill_link_bg:   '#0f4a6e',
+    pill_link_color: '#a0d4f0',
+    pill_links: [
+        {label: 'History', href: '#'},
+        {label: 'Failures', href: '#'},
+        {label: 'Upcoming', href: '#'}
+    ]
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -1601,12 +1608,14 @@ $.fn.zato.scheduler.dashboard.init = function(initial_data) {
     }
 
     var _t = $.fn.zato.scheduler.dashboard.theme;
-    $('#dashboard-hero-pill')
-        .text(_t.name)
-        .css({
-            'background': _t.pill_bg,
-            'color': _t.pill_color
-        });
+    var group_html = '<div class="dashboard-hero-pill-name" style="background:' + _t.pill_bg + ';color:' + _t.pill_color + '">' + _t.name + '</div>';
+    if (_t.pill_links && _t.pill_links.length) {
+        for (var pi = 0; pi < _t.pill_links.length; pi++) {
+            var pl = _t.pill_links[pi];
+            group_html += '<a href="' + pl.href + '" class="dashboard-hero-pill-link" style="background:' + _t.pill_link_bg + ';color:' + _t.pill_link_color + '">' + pl.label + '</a>';
+        }
+    }
+    $('#dashboard-hero-pill-group').html(group_html);
 
     try {
         var stored_bars = localStorage.getItem('zato_scheduler_show_bars');
