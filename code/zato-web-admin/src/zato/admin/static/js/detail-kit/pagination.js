@@ -98,6 +98,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     total_count = data.total || 0;
                     current_page = data.page || page;
 
+                    console.log('pagination.fetch_page: requested page_size=' + page_size + ', got rows=' + rows.length + ', total=' + total_count + ', page=' + current_page);
                     render_page($body, rows);
 
                     update_last_ts(rows);
@@ -128,6 +129,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                         data = JSON.parse(data);
                     }
                     var rows = data.rows || [];
+                    console.log('pagination.poll_new: got rows=' + rows.length + ', since_ts=' + last_ts);
                     if (rows.length === 0) return;
 
                     update_last_ts(rows);

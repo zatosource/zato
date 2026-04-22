@@ -18,8 +18,12 @@ $.fn.zato.scheduler.dashboard.theme = {
     pill_color:     '#e0f0ff',
     pill_link_bg:   '#0f4a6e',
     pill_link_color: '#c0e2f5',
-    pill_links: [
-    ],
+    pill_links: false ? [
+        // When re-enabling, restore top:50%;transform:translateY(-50%) on .dashboard-hero-pill-group in kit.css
+        {label: 'History', href: '#'},
+        {label: 'Failures', href: '#'},
+        {label: 'Upcoming', href: '#'}
+    ] : [],
     row_recency_color: '218, 165, 32'
 };
 

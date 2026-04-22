@@ -652,6 +652,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             for (var i = 0; i < groups.length; i++) {
                 $body.append(detail._render_group(groups[i]));
             }
+            console.log('render_page: input rows=' + rows.length + ', groups=' + groups.length + ', rendered tr=' + $body.children('tr').length);
         },
         render_new: function($body, rows, page_size) {
             var exec_outcomes = detail._execution_outcomes;
