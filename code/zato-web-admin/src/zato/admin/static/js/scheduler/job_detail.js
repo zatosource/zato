@@ -597,7 +597,7 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + dispatch_latency + '</td>';
     row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + duration + '</td>';
     row += '<td class="dashboard-cell-center">' + outcome + '</td>';
-    row += '<td class="dashboard-cell-mono-wrap">' + run_number + '</td>';
+    row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + run_number + '</td>';
     row += '<td title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
     row += '</tr>';
     return row;

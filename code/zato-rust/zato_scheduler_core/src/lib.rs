@@ -149,17 +149,20 @@ fn scheduler_execute_job(job_id: &str) -> PyResult<()> {
 }
 
 #[pyfunction]
-#[pyo3(signature = (job_id, outcome, duration_ms))]
-fn scheduler_mark_complete(job_id: &str, outcome: &str, duration_ms: u64) -> PyResult<()> {
+#[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
+fn scheduler_mark_complete(job_id: &str, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
     let shared = get_shared()?;
     with_state_mut(shared, |state| {
         if let Some(running_job) = state.jobs.get_mut(job_id) {
             running_job.in_flight = false;
             running_job.in_flight_since = None;
-            if let Some(last) = running_job.history.back_mut() {
-                last.duration_ms = Some(duration_ms);
-                if outcome != "ok" {
-                    last.outcome = outcome.to_string();
+            for rec in running_job.history.iter_mut().rev() {
+                if rec.current_run == current_run && rec.outcome == "ok" {
+                    rec.duration_ms = Some(duration_ms);
+                    if outcome != "ok" {
+                        rec.outcome = outcome.to_string();
+                    }
+                    break;
                 }
             }
         }

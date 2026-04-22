@@ -1000,14 +1000,15 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             from zato_scheduler_core import scheduler_mark_complete
 
             ctx = json_loads(ctx_json)
-            job_id = ctx.get('id', '')
-            job_name = ctx.get('name', '')
+            job_id = ctx['id']
+            job_name = ctx['name']
+            current_run = ctx['current_run']
 
             msg = Bunch({
                 'action': SCHEDULER_MSG.JOB_EXECUTED.value,
                 'name': ctx['name'],
                 'service': ctx['service'],
-                'payload': ctx.get('extra') or '',
+                'payload': ctx['extra'],
                 'cid': new_cid_server(),
                 'job_type': ctx['job_type'],
                 'zato_ctx': {
@@ -1026,7 +1027,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             duration_ms = int((_time.monotonic() - _t0) * 1000)
 
             try:
-                scheduler_mark_complete(str(job_id), outcome, duration_ms)
+                scheduler_mark_complete(job_id, outcome, duration_ms, current_run)
                 logger.info('Scheduler job_id=%s; name=%s; outcome=%s; duration=%sms', job_id, job_name, outcome, duration_ms)
             except Exception:
                 logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
