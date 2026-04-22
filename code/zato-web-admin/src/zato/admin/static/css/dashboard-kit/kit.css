@@ -36,8 +36,7 @@
 .dashboard-hero-pill-group {
     position: absolute;
     right: calc(100% + 16px);
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
     display: flex;
     flex-direction: column;
     gap: 6px;

@@ -19,9 +19,6 @@ $.fn.zato.scheduler.dashboard.theme = {
     pill_link_bg:   '#0f4a6e',
     pill_link_color: '#c0e2f5',
     pill_links: [
-        {label: 'History', href: '#'},
-        {label: 'Failures', href: '#'},
-        {label: 'Upcoming', href: '#'}
     ],
     row_recency_color: '218, 165, 32'
 };
