@@ -14,13 +14,7 @@
 }
 
 #btn-execute-now {
-    background: var(--component-accent-light);
-    color: var(--component-accent);
-}
-
-#btn-execute-now:hover {
-    background: var(--component-accent-light);
-    opacity: 0.85;
+    cursor: pointer;
 }
 
 #detail-history-count {
