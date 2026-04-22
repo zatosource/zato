@@ -638,6 +638,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         object_type: poll_config.object_type,
         object_id: detail._object_id,
         page_size: 50,
+        exclude_outcomes: 'skipped_already_in_flight,missed_catchup',
         table_body: '#detail-history-table-body',
         container_top: '#detail-history-pagination-top',
         container_bottom: '#detail-history-pagination-bottom',

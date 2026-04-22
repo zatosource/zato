@@ -242,29 +242,49 @@ fn scheduler_get_history(py: Python<'_>, job_id: &str) -> PyResult<Py<PyList>> {
 }
 
 #[pyfunction]
-#[pyo3(signature = (job_id, offset, limit))]
-fn scheduler_get_history_page(py: Python<'_>, job_id: &str, offset: usize, limit: usize) -> PyResult<Py<PyDict>> {
+#[pyo3(signature = (job_id, offset, limit, exclude_outcomes=None))]
+fn scheduler_get_history_page(py: Python<'_>, job_id: &str, offset: usize, limit: usize, exclude_outcomes: Option<&str>) -> PyResult<Py<PyDict>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
     if let Some(running_job) = state.jobs.get(job_id) {
-        let total = running_job.history.len();
-        let start = if offset >= total { total } else { total - offset };
-        let end = if limit >= start { 0 } else { start - limit };
-        let slice: Vec<ExecutionRecord> = running_job.history.range(end..start).rev().cloned().collect();
-        history::records_page_to_py_dict(py, &slice, total)
+        let excluded: Vec<&str> = exclude_outcomes
+            .map(|s| s.split(',').map(|v| v.trim()).filter(|v| !v.is_empty()).collect())
+            .unwrap_or_default();
+
+        if excluded.is_empty() {
+            let total = running_job.history.len();
+            let start = if offset >= total { total } else { total - offset };
+            let end = if limit >= start { 0 } else { start - limit };
+            let slice: Vec<ExecutionRecord> = running_job.history.range(end..start).rev().cloned().collect();
+            history::records_page_to_py_dict(py, &slice, total)
+        } else {
+            let filtered: Vec<ExecutionRecord> = running_job.history.iter()
+                .filter(|r| !excluded.contains(&r.outcome.as_str()))
+                .cloned()
+                .collect();
+            let total = filtered.len();
+            let start = if offset >= total { total } else { total - offset };
+            let end = if limit >= start { 0 } else { start - limit };
+            let slice: Vec<ExecutionRecord> = filtered[end..start].iter().rev().cloned().collect();
+            history::records_page_to_py_dict(py, &slice, total)
+        }
     } else {
         history::records_page_to_py_dict(py, &[], 0)
     }
 }
 
 #[pyfunction]
-#[pyo3(signature = (job_id, since_iso))]
-fn scheduler_get_history_since(py: Python<'_>, job_id: &str, since_iso: &str) -> PyResult<Py<PyList>> {
+#[pyo3(signature = (job_id, since_iso, exclude_outcomes=None))]
+fn scheduler_get_history_since(py: Python<'_>, job_id: &str, since_iso: &str, exclude_outcomes: Option<&str>) -> PyResult<Py<PyList>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
     if let Some(running_job) = state.jobs.get(job_id) {
+        let excluded: Vec<&str> = exclude_outcomes
+            .map(|s| s.split(',').map(|v| v.trim()).filter(|v| !v.is_empty()).collect())
+            .unwrap_or_default();
         let records: Vec<ExecutionRecord> = running_job.history.iter()
             .filter(|r| r.actual_fire_time_iso.as_str() > since_iso)
+            .filter(|r| excluded.is_empty() || !excluded.contains(&r.outcome.as_str()))
             .rev()
             .cloned()
             .collect();

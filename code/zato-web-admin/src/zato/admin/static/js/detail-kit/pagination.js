@@ -11,6 +11,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var object_type = config.object_type;
         var object_id = config.object_id;
         var page_size = config.page_size || 50;
+        var exclude_outcomes = config.exclude_outcomes || '';
         var $body = $(config.table_body);
         var csrf_token = config.csrf_token || $.cookie('csrftoken');
         var render_page = config.render_page;
@@ -87,7 +88,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     object_type: object_type,
                     id: object_id,
                     page: page,
-                    page_size: page_size
+                    page_size: page_size,
+                    exclude_outcomes: exclude_outcomes
                 },
                 headers: {'X-CSRFToken': csrf_token},
                 success: function(data) {
@@ -121,7 +123,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 data: {
                     object_type: object_type,
                     id: object_id,
-                    since_ts: last_ts
+                    since_ts: last_ts,
+                    exclude_outcomes: exclude_outcomes
                 },
                 headers: {'X-CSRFToken': csrf_token},
                 success: function(data) {
