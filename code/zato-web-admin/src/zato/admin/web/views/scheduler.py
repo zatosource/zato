@@ -214,9 +214,7 @@ def _create_interval_based(client, user_profile, cluster, params):
     response = client.invoke('zato.scheduler.job.create', input_dict)
     logger.debug('Successfully created an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    start_date = input_dict.get('start_date')
-    if start_date:
-        start_date = _get_start_date(start_date)
+    start_date = _get_start_date(input_dict['start_date'])
 
     repeats = params.get('create-interval_based-repeats')
     repeats = int(repeats) if repeats else None
@@ -257,9 +255,7 @@ def _edit_interval_based(client, user_profile, cluster, params):
     client.invoke('zato.scheduler.job.edit', input_dict)
     logger.debug('Successfully updated an interval_based job, cluster.id:`%s`, params:`%s`', cluster.id, params)
 
-    start_date = input_dict.get('start_date')
-    if start_date:
-        start_date = _get_start_date(start_date)
+    start_date = _get_start_date(input_dict['start_date'])
 
     repeats = params.get('edit-interval_based-repeats')
     repeats = int(repeats) if repeats else None
@@ -327,12 +323,12 @@ def index(req):
                         job_elem.repeats, job_elem.weeks, job_elem.days,
                         job_elem.hours, job_elem.minutes, job_elem.seconds)
 
-                    weeks = job_elem.weeks or ''
-                    days = job_elem.days or ''
-                    hours = job_elem.hours or ''
-                    minutes = job_elem.minutes or ''
-                    seconds = job_elem.seconds or ''
-                    repeats = job_elem.repeats or ''
+                    weeks = job_elem.weeks
+                    days = job_elem.days
+                    hours = job_elem.hours
+                    minutes = job_elem.minutes
+                    seconds = job_elem.seconds
+                    repeats = job_elem.repeats
 
                     ib_job = Bunch()
                     ib_job.weeks = weeks
@@ -343,10 +339,10 @@ def index(req):
                     ib_job.repeats = repeats
                     job.interval_based = ib_job
 
-                    job.jitter_ms = getattr(job_elem, 'jitter_ms', '') or ''
-                    job.timezone = getattr(job_elem, 'timezone', '') or ''
-                    job.on_missed = getattr(job_elem, 'on_missed', '') or ''
-                    job.max_execution_time_ms = getattr(job_elem, 'max_execution_time_ms', '') or ''
+                    job.jitter_ms = job_elem.jitter_ms
+                    job.timezone = job_elem.timezone
+                    job.on_missed = job_elem.on_missed
+                    job.max_execution_time_ms = job_elem.max_execution_time_ms
 
                 else:
                     msg = 'Unrecognized job type, name:`{}`, type:`{}`'.format(name, job_type)

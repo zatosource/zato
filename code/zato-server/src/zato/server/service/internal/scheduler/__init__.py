@@ -37,7 +37,7 @@ _new_params = ('jitter_ms', 'timezone', 'calendar', 'on_missed', 'max_execution_
 def _item_by_id(items, id_):
     sid = str(id_)
     for item in items:
-        if str(item.get('id')) == sid:
+        if str(item['id']) == sid:
             return item
     return None
 
@@ -51,7 +51,7 @@ class _SchedulerAdmin(AdminService):
 
     def _enrich_job(self, item):
         out = dict(item)
-        service_name = item.get('service')
+        service_name = item['service']
         if self._service_by_name(service_name):
             out['service_id'] = self.server.service_store.get_service_id_by_name(service_name)
             out['service_name'] = service_name
@@ -84,7 +84,7 @@ def _create_edit(self, action):
 
     def _other_same_name(jid):
         for j in jobs:
-            if j.get('name') == name and str(j.get('id')) != str(jid):
+            if j['name'] == name and str(j['id']) != str(jid):
                 return j
         return None
 
@@ -113,7 +113,7 @@ def _create_edit(self, action):
         old = _item_by_id(jobs, input.id)
         if not old:
             raise ZatoException(cid, 'Job `{}` not found'.format(input.id))
-        old_name = old.get('name')
+        old_name = old['name']
         data = dict(old)
     else:
         old_name = None
@@ -190,9 +190,12 @@ def _create_edit(self, action):
                     ib = IntervalBasedJob()
                     ib.job = job_row
                     session.add(ib)
-                for param in _ib_params:
-                    setattr(ib, param, data.get(param) or 0)
-                ib.repeats = data.get('repeats')
+                ib.weeks = data['weeks']
+                ib.days = data['days']
+                ib.hours = data['hours']
+                ib.minutes = data['minutes']
+                ib.seconds = data['seconds']
+                ib.repeats = data['repeats']
 
             session.commit()
 
@@ -264,12 +267,15 @@ class GetList(_Get):
                     'is_active': row.is_active,
                     'job_type': row.job_type,
                     'start_date': row.start_date.isoformat() if row.start_date else '',
-                    'service': row.service_name or '',
-                    'extra': row.extra or '',
+                    'service': row.service_name,
+                    'extra': row.extra,
                 }
-                for p in _ib_params:
-                    d[p] = getattr(row, p, 0) or 0
-                d['repeats'] = getattr(row, 'repeats', None)
+                d['weeks'] = row.weeks
+                d['days'] = row.days
+                d['hours'] = row.hours
+                d['minutes'] = row.minutes
+                d['seconds'] = row.seconds
+                d['repeats'] = row.repeats
                 items.append(self._enrich_job(d))
 
         self.response.payload = items
@@ -292,12 +298,15 @@ class GetByID(_Get):
             j = session.query(Job).filter_by(id=self.request.input.id).first()
             if j:
                 item = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
-                        'start_date': j.start_date.isoformat() if j.start_date else '', 'service': j.service.name if j.service else '',
-                        'extra': j.extra or ''}
+                        'start_date': j.start_date.isoformat(), 'service': j.service.name,
+                        'extra': j.extra}
                 ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
                 if ib:
-                    for p in _ib_params:
-                        item[p] = getattr(ib, p, 0) or 0
+                    item['weeks'] = ib.weeks
+                    item['days'] = ib.days
+                    item['hours'] = ib.hours
+                    item['minutes'] = ib.minutes
+                    item['seconds'] = ib.seconds
                     item['repeats'] = ib.repeats
         if not item:
             raise ZatoException(self.cid, 'Job not found')
@@ -321,12 +330,15 @@ class GetByName(_Get):
             j = session.query(Job).filter_by(name=self.request.input.name, cluster_id=self.server.cluster_id).first()
             if j:
                 item = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
-                        'start_date': j.start_date.isoformat() if j.start_date else '', 'service': j.service.name if j.service else '',
-                        'extra': j.extra or ''}
+                        'start_date': j.start_date.isoformat(), 'service': j.service.name,
+                        'extra': j.extra}
                 ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
                 if ib:
-                    for p in _ib_params:
-                        item[p] = getattr(ib, p, 0) or 0
+                    item['weeks'] = ib.weeks
+                    item['days'] = ib.days
+                    item['hours'] = ib.hours
+                    item['minutes'] = ib.minutes
+                    item['seconds'] = ib.seconds
                     item['repeats'] = ib.repeats
         if not item:
             raise ZatoException(self.cid, 'Job not found')
@@ -417,7 +429,7 @@ class GetHistory(_SchedulerAdmin):
         try:
             from zato_scheduler_core import scheduler_get_history_page, scheduler_get_history_since
 
-            job_id = str(self.request.input.id)
+            job_id = self.request.input.id
             since_ts = self.request.input.get('since_ts') or ''
             exclude_outcomes = self.request.input.get('exclude_outcomes') or None
 
@@ -435,8 +447,8 @@ class GetHistory(_SchedulerAdmin):
                     rows.append(rec)
                 self.response.payload = {'rows': rows}
             else:
-                page = int(self.request.input.get('page') or 1)
-                page_size = int(self.request.input.get('page_size') or 50)
+                page = self.request.input.get('page') or 1
+                page_size = self.request.input.get('page_size') or 50
                 offset = (page - 1) * page_size
 
                 result = scheduler_get_history_page(job_id, offset, page_size, exclude_outcomes)
@@ -566,7 +578,7 @@ class GetCurrentState(_SchedulerAdmin):
                 store_jobs = []
                 for j in job_rows:
                     d = {'id': str(j.id), 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
-                         'service': j.service.name if j.service else ''}
+                         'service': j.service.name}
                     store_jobs.append(d)
 
             runtime_by_id = {}
@@ -590,11 +602,11 @@ class GetCurrentState(_SchedulerAdmin):
             jobs = []
 
             for item in store_jobs:
-                job_id = str(item.get('id', ''))
-                is_active = item.get('is_active', False)
-                job_type = item.get('job_type', '')
-                service = item.get('service') or item.get('service_name') or ''
-                name = item.get('name', '')
+                job_id = item['id']
+                is_active = item['is_active']
+                job_type = item['job_type']
+                service = item['service']
+                name = item['name']
 
                 if is_active:
                     active_jobs += 1
@@ -612,12 +624,12 @@ class GetCurrentState(_SchedulerAdmin):
 
                 if history:
                     last_record = history[-1]
-                    last_outcome = last_record.get('outcome')
-                    last_duration_ms = last_record.get('duration_ms')
+                    last_outcome = last_record['outcome']
+                    last_duration_ms = last_record['duration_ms']
 
                     start_idx = max(0, len(history) - 10)
                     for rec in history[start_idx:]:
-                        recent_outcomes.append(rec.get('outcome', ''))
+                        recent_outcomes.append(rec['outcome'])
 
                 jobs.append({
                     'id': job_id,
@@ -643,15 +655,15 @@ class GetCurrentState(_SchedulerAdmin):
             for job_id, records in all_history.items():
                 job_name = ''
                 for item in store_jobs:
-                    if str(item.get('id', '')) == job_id:
-                        job_name = item.get('name', '')
+                    if item['id'] == job_id:
+                        job_name = item['name']
                         break
                 if not job_name:
                     summary = runtime_by_id.get(job_id, {})
                     job_name = summary.get('name', '')
 
                 for rec in records:
-                    outcome = rec.get('outcome', '')
+                    outcome = rec['outcome']
                     outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
                     if outcome in execution_outcomes:
                         total_executions += 1
@@ -660,7 +672,7 @@ class GetCurrentState(_SchedulerAdmin):
                     entry['job_name'] = job_name
                     history_timeline.append(entry)
 
-            history_timeline.sort(key=lambda x: x.get('actual_fire_time_iso', ''), reverse=True)
+            history_timeline.sort(key=lambda x: x['actual_fire_time_iso'], reverse=True)
 
             self.response.payload = {
                 'total_jobs': total_jobs,

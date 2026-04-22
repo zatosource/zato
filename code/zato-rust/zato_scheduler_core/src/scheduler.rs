@@ -204,10 +204,7 @@ pub fn collect_due_jobs(
 
     for id in job_ids {
         let calendars_ref = &state.calendars;
-        let running_job = match state.jobs.get_mut(&id) {
-            Some(running_job) => running_job,
-            None => continue,
-        };
+        let running_job = state.jobs.get_mut(&id).unwrap();
 
         if !running_job.is_active {
             continue;
@@ -326,10 +323,7 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
     let job_ids: Vec<String> = state.jobs.keys().cloned().collect();
 
     for id in job_ids {
-        let running_job = match state.jobs.get_mut(&id) {
-            Some(running_job) => running_job,
-            None => continue,
-        };
+        let running_job = state.jobs.get_mut(&id).unwrap();
 
         if !running_job.is_active || running_job.job_type == JobType::OneTime {
             continue;

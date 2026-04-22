@@ -331,8 +331,10 @@ fn scheduler_get_job_summaries(py: Python<'_>) -> PyResult<Py<PyList>> {
 }
 
 fn dict_to_scheduler_job(job_id: &str, d: &Bound<'_, PyDict>) -> PyResult<zato_server_core::model::SchedulerJob> {
-    let get_str = |key: &str| -> String {
-        d.get_item(key).ok().flatten().and_then(|v| v.extract::<String>().ok()).unwrap_or_default()
+    let get_str = |key: &str| -> PyResult<String> {
+        d.get_item(key)?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(key.to_string()))?
+            .extract::<String>()
     };
     let get_opt_str = |key: &str| -> Option<String> {
         d.get_item(key).ok().flatten().and_then(|v| v.extract::<String>().ok()).filter(|s| !s.is_empty())
@@ -343,17 +345,19 @@ fn dict_to_scheduler_job(job_id: &str, d: &Bound<'_, PyDict>) -> PyResult<zato_s
     let get_opt_u64 = |key: &str| -> Option<u64> {
         d.get_item(key).ok().flatten().and_then(|v| v.extract::<u64>().ok())
     };
-    let get_bool = |key: &str, default: bool| -> bool {
-        d.get_item(key).ok().flatten().and_then(|v| v.extract::<bool>().ok()).unwrap_or(default)
+    let get_bool = |key: &str| -> PyResult<bool> {
+        d.get_item(key)?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err(key.to_string()))?
+            .extract::<bool>()
     };
 
     Ok(zato_server_core::model::SchedulerJob {
         id: job_id.to_string(),
-        name: get_str("name"),
-        is_active: get_bool("is_active", true),
-        service: get_str("service"),
-        job_type: get_str("job_type"),
-        start_date: get_str("start_date"),
+        name: get_str("name")?,
+        is_active: get_bool("is_active")?,
+        service: get_str("service")?,
+        job_type: get_str("job_type")?,
+        start_date: get_str("start_date")?,
         extra: get_opt_str("extra"),
         weeks: get_opt_u32("weeks"),
         days: get_opt_u32("days"),

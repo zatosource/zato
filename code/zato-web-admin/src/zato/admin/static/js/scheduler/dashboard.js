@@ -920,11 +920,11 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     dash.render = function(data) {
         if (!data) return;
 
-        var total_jobs = data.total_jobs || 0;
-        var active_jobs = data.active_jobs || 0;
-        var paused_jobs = data.paused_jobs || 0;
+        var total_jobs = data.total_jobs;
+        var active_jobs = data.active_jobs;
+        var paused_jobs = data.paused_jobs;
 
-        var outcome_counts = data.outcome_counts || {};
+        var outcome_counts = data.outcome_counts;
         var failures_lifetime = (outcome_counts['error'] || 0) + (outcome_counts['timeout'] || 0);
 
         var buffers = dash._spark_buffers;
@@ -953,7 +953,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             $('#stat-failures').css('color', '#fff');
         }
 
-        var timeline = data.history_timeline || [];
+        var timeline = data.history_timeline;
         var timeline_total = 0;
         for (var ti = 0; ti < timeline.length; ti++) {
             var toc = timeline[ti].outcome;

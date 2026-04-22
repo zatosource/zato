@@ -328,7 +328,7 @@ impl RunningJob {
         if s.is_empty() {
             return None;
         }
-        let clean = s.split('+').next().unwrap_or(s).trim_end_matches('Z');
+        let clean = s.split('+').next().unwrap().trim_end_matches('Z');
         let formats = [
             "%Y-%m-%dT%H:%M:%S%.f",
             "%Y-%m-%dT%H:%M:%S",

@@ -112,17 +112,17 @@ def job_detail(req, job_id):
             else:
                 state_data = raw or {}
 
-            job_name = job_data.get('name', '')
+            job_name = job_data['name']
 
-            for entry in state_data.get('jobs', []):
-                if str(entry.get('id')) == str(job_id) or entry.get('name') == job_name:
-                    job_data['next_fire_utc'] = entry.get('next_fire_utc')
-                    job_data['is_running'] = entry.get('is_running')
-                    job_data['current_run'] = entry.get('current_run')
-                    job_data['interval_ms'] = entry.get('interval_ms')
-                    job_data['recent_outcomes'] = entry.get('recent_outcomes', [])
-                    job_data['last_outcome'] = entry.get('last_outcome')
-                    job_data['last_duration_ms'] = entry.get('last_duration_ms')
+            for entry in state_data['jobs']:
+                if entry['id'] == str(job_id) or entry['name'] == job_name:
+                    job_data['next_fire_utc'] = entry['next_fire_utc']
+                    job_data['is_running'] = entry['is_running']
+                    job_data['current_run'] = entry['current_run']
+                    job_data['interval_ms'] = entry['interval_ms']
+                    job_data['recent_outcomes'] = entry['recent_outcomes']
+                    job_data['last_outcome'] = entry['last_outcome']
+                    job_data['last_duration_ms'] = entry['last_duration_ms']
                     break
 
     except Exception as e:

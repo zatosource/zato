@@ -265,7 +265,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     var html = has_extra ? '<div class="detail-config-row">' : '';
     html += '<div class="' + cards_class + '">';
 
-    var config_service = job.service || job.service_name || '';
+    var config_service = job.service;
     var service_link = config_service
         ? '<a href="/zato/service/overview/' + encodeURIComponent(config_service) + '/?cluster=' + cluster_id + '">' + esc(config_service) + '</a>'
         : '-';
@@ -284,12 +284,11 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
 
     if (job.job_type === 'interval_based') {
         var parts = [];
-        var _iv = function(v) { return parseInt(v, 10) || 0; };
-        if (_iv(job.weeks)) parts.push(kit.format_number_full(_iv(job.weeks)) + (_iv(job.weeks) === 1 ? ' week' : ' weeks'));
-        if (_iv(job.days)) parts.push(kit.format_number_full(_iv(job.days)) + (_iv(job.days) === 1 ? ' day' : ' days'));
-        if (_iv(job.hours)) parts.push(kit.format_number_full(_iv(job.hours)) + (_iv(job.hours) === 1 ? ' hour' : ' hours'));
-        if (_iv(job.minutes)) parts.push(kit.format_number_full(_iv(job.minutes)) + (_iv(job.minutes) === 1 ? ' minute' : ' minutes'));
-        if (_iv(job.seconds)) parts.push(kit.format_number_full(_iv(job.seconds)) + (_iv(job.seconds) === 1 ? ' second' : ' seconds'));
+        if (job.weeks) parts.push(kit.format_number_full(job.weeks) + (job.weeks === 1 ? ' week' : ' weeks'));
+        if (job.days) parts.push(kit.format_number_full(job.days) + (job.days === 1 ? ' day' : ' days'));
+        if (job.hours) parts.push(kit.format_number_full(job.hours) + (job.hours === 1 ? ' hour' : ' hours'));
+        if (job.minutes) parts.push(kit.format_number_full(job.minutes) + (job.minutes === 1 ? ' minute' : ' minutes'));
+        if (job.seconds) parts.push(kit.format_number_full(job.seconds) + (job.seconds === 1 ? ' second' : ' seconds'));
         var interval_text = '-';
         if (parts.length === 1) {
             interval_text = parts[0];
