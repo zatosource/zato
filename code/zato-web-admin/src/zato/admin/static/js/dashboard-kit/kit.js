@@ -207,4 +207,130 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     kit.storage_set_json = function(key, value) {
         try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {}
     };
+
+    /* Build and inject the hero pill group HTML from a theme object.
+       theme:
+         name:            dashboard label, e.g. 'Scheduler'
+         pill_bg:         CSS colour for the name pill background
+         pill_color:      CSS colour for the name pill text
+         pill_link_bg:    CSS colour for the link pill backgrounds
+         pill_link_color: CSS colour for the link pill text
+         pill_links:      [{label, href}] shown below the name */
+    kit.init_hero_pill = function(selector, theme) {
+        var html = '<div class="dashboard-hero-pill-name" style="background:' +
+            theme.pill_bg + ';color:' + theme.pill_color + '">' + theme.name + '</div>';
+        if (theme.pill_links && theme.pill_links.length) {
+            for (var i = 0; i < theme.pill_links.length; i++) {
+                var link = theme.pill_links[i];
+                html += '<a href="' + link.href +
+                    '" class="dashboard-hero-pill-link" style="background:' +
+                    theme.pill_link_bg + ';color:' + theme.pill_link_color + '">' +
+                    link.label + '</a>';
+            }
+        }
+        $(selector).html(html);
+    };
+
+    /* Fade the dashboard into view after first render. */
+    kit.reveal = function(selector) {
+        $(selector || '.dashboard-page').css('opacity', '1');
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Spark buffer management
+    // ////////////////////////////////////////////////////////////////////////
+
+    kit.spark = {};
+
+    /* Create a new spark buffer set.
+       Returns a handle with push, values, seed, and data accessors.
+       config:
+         keys:       array of buffer names, e.g. ['total_jobs', 'active', ...]
+         window_ms:  rolling window in ms (default 60 * 60 * 1000)
+         bucket_count: number of time buckets for downsampling (default 60) */
+    kit.spark.create = function(config) {
+        var keys = config.keys || [];
+        var window_ms = config.window_ms || (60 * 60 * 1000);
+        var bucket_count = config.bucket_count || 60;
+        var seeded = false;
+
+        var buffers = {};
+        for (var i = 0; i < keys.length; i++) {
+            buffers[keys[i]] = [];
+        }
+
+        var push = function(key, value) {
+            var buf = buffers[key];
+            if (!buf) return;
+            var now = Date.now();
+            buf.push({ts: now, value: value});
+            var cutoff = now - window_ms;
+            while (buf.length > 0 && buf[0].ts < cutoff) {
+                buf.shift();
+            }
+        };
+
+        var values = function(key) {
+            var data = buffers[key];
+            if (!data) return [];
+
+            if (data.length <= bucket_count) {
+                var out = new Array(data.length);
+                for (var i = 0; i < data.length; i++) {
+                    out[i] = data[i].value;
+                }
+                return out;
+            }
+
+            var now = Date.now();
+            var w_start = now - window_ms;
+            var b_size = window_ms / bucket_count;
+            var buckets = new Array(bucket_count);
+            for (var b = 0; b < bucket_count; b++) {
+                buckets[b] = null;
+            }
+            for (var d = 0; d < data.length; d++) {
+                var idx = Math.floor((data[d].ts - w_start) / b_size);
+                if (idx < 0) idx = 0;
+                if (idx >= bucket_count) idx = bucket_count - 1;
+                buckets[idx] = data[d].value;
+            }
+            var last_val = buckets[0] !== null ? buckets[0] : 0;
+            for (var f = 0; f < bucket_count; f++) {
+                if (buckets[f] === null) {
+                    buckets[f] = last_val;
+                } else {
+                    last_val = buckets[f];
+                }
+            }
+            return buckets;
+        };
+
+        var seed_flat = function(flat_values) {
+            if (seeded) return;
+            var now = Date.now();
+            var b_size = window_ms / bucket_count;
+            var w_start = now - window_ms;
+            for (var key in flat_values) {
+                if (!flat_values.hasOwnProperty(key) || !buffers.hasOwnProperty(key)) continue;
+                var val = flat_values[key];
+                var arr = new Array(bucket_count);
+                for (var j = 0; j < bucket_count; j++) {
+                    arr[j] = {ts: w_start + (j + 1) * b_size, value: val};
+                }
+                buffers[key] = arr;
+            }
+            seeded = true;
+        };
+
+        return {
+            push: push,
+            values: values,
+            seed_flat: seed_flat,
+            data: function(key) { return buffers[key] || []; },
+            is_seeded: function() { return seeded; },
+            set_buffer: function(key, arr) { buffers[key] = arr; },
+            window_ms: function() { return window_ms; }
+        };
+    };
 })();

@@ -19,20 +19,23 @@ $.fn.zato.eda.dashboard = {};
     var dash = $.fn.zato.eda.dashboard;
     var kit = $.fn.zato.dashboard_kit;
 
-    /* Shared palette. Gauges (Topics / Subscribers / Depth) reuse the
-       scheduler dashboard's tile colour so the two pages feel like one
-       product. The two activity series get distinct hues so they stand
-       apart in the main chart's legend without fighting each other:
-         publishes  - green (the producer side)
-         deliveries - mid-blue (the consumer side; intentionally NOT
-                      the deep navy that used to swallow the whole chart) */
-    var TILE_BLUE = '#82ccff';
+    dash.theme = {
+        name: 'EDA',
+        spark_color:  '#82ccff',
+        spark_err:    '#ff6b6b',
+        pill_bg:        '#1a6fa0',
+        pill_color:     '#e0f0ff',
+        pill_link_bg:   '#0f4a6e',
+        pill_link_color: '#c0e2f5',
+        pill_links: []
+    };
+
     var PUBLISH_GREEN = '#3aaf6b';
     var DELIVERY_BLUE = '#3aa0e3';
     var PALETTE = {
-        'topics':      TILE_BLUE,
-        'subscribers': TILE_BLUE,
-        'depth':       TILE_BLUE,
+        'topics':      dash.theme.spark_color,
+        'subscribers': dash.theme.spark_color,
+        'depth':       dash.theme.spark_color,
         'publishes':   PUBLISH_GREEN,
         'deliveries':  DELIVERY_BLUE
     };
