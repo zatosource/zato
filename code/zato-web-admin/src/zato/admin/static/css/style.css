@@ -17,6 +17,9 @@
     --border-light: #e9ecef;
     --text-muted: #6c757d;
     --shadow-dark: var(--zato-seablue-light1);
+    --zato-badge-gold: #ffd700;
+    --zato-badge-shine: rgba(255, 255, 255, 0.15);
+    --zato-badge-border: rgba(255, 255, 255, 0.2);
 }
 
 @keyframes zato-spin {
@@ -567,7 +570,7 @@ a:not(.menu-link) {
     padding-bottom: 2px;
 }
 
-a:not(.menu-link):not(.chosen-single):hover {
+a:not(.menu-link):not(.chosen-single):not(.status-badge):hover {
     color: var(--zato-link-hover) !important;
     background-color: transparent;
     text-decoration: none;
@@ -1012,9 +1015,9 @@ div.action-panel a {
 .status-badge {
     display: inline;
     padding: 3px;
-    background: rgb(1, 40, 69);
+    background: var(--zato-seablue);
     color: #fff !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--zato-badge-border);
     border-radius: 3px;
     font-size: 12.32px;
     font-weight: 400;
@@ -1035,17 +1038,17 @@ div.action-panel a {
 }
 
 .status-badge.with-shine {
-    color: #ffd700 !important;
+    color: var(--zato-badge-gold) !important;
     background:
         linear-gradient(
             90deg,
             transparent 0%,
             transparent 40%,
-            rgba(255, 255, 255, 0.15) 50%,
+            var(--zato-badge-shine) 50%,
             transparent 60%,
             transparent 100%
         ),
-        rgb(1, 40, 69);
+        var(--zato-seablue);
     background-size: 200% 100%, 100% 100%;
     transition: all 0.25s ease;
     animation: shine 3s infinite;
@@ -1066,14 +1069,13 @@ div.action-panel a {
             90deg,
             transparent 0%,
             transparent 40%,
-            rgba(255, 255, 255, 0.15) 50%,
+            var(--zato-badge-shine) 50%,
             transparent 60%,
             transparent 100%
         ),
-        rgb(1, 50, 85);
+        var(--zato-seablue);
     background-size: 200% 100%, 100% 100%;
-    border-color: rgba(255, 255, 255, 0.25);
-    color: #ffd700 !important;
+    color: var(--zato-badge-gold) !important;
 }
 
 .status-badge.header-badge {

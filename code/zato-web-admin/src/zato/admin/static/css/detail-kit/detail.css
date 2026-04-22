@@ -594,7 +594,6 @@ a.detail-component-pill:visited {
 
 .detail-pagination-controls a {
     color: var(--detail-link-color);
-    padding: 0;
 }
 
 .detail-page-disabled {
