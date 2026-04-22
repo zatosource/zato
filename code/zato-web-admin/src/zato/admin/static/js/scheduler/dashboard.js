@@ -562,12 +562,19 @@ $.fn.zato.scheduler.dashboard.render_bar_chart = function(timeline) {
     var range_minutes = $.fn.zato.scheduler.dashboard._time_range_minutes;
     var range_names = {5: '5 min', 15: '15 min', 30: '30 min', 60: '1 hour', 360: '6 hours', 1440: 'Today', 2880: 'Yesterday', 10080: 'This week', 43200: 'This month', 525600: 'This year'};
     var range_label;
-    var filtered_count_label = filtered.length === 1
+    var filtered_exec_count = 0;
+    for (var fe = 0; fe < filtered.length; fe++) {
+        var foc = filtered[fe].outcome;
+        if (foc === 'ok' || foc === 'error' || foc === 'timeout') {
+            filtered_exec_count++;
+        }
+    }
+    var filtered_count_label = filtered_exec_count === 1
         ? '1 run'
-        : $.fn.zato.scheduler.dashboard._format_number_compact(filtered.length) + ' runs';
-    var filtered_count_full = filtered.length === 1
+        : $.fn.zato.scheduler.dashboard._format_number_compact(filtered_exec_count) + ' runs';
+    var filtered_count_full = filtered_exec_count === 1
         ? '1 run'
-        : $.fn.zato.scheduler.dashboard._format_number_full(filtered.length) + ' runs';
+        : $.fn.zato.scheduler.dashboard._format_number_full(filtered_exec_count) + ' runs';
     if (range_minutes > 0 && range_names[range_minutes]) {
         range_label = range_names[range_minutes] + ' \u00b7 ' + filtered_count_label;
     } else {
@@ -1485,10 +1492,18 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
         $('#stat-failures').css('color', '#fff');
     }
 
-    var runs_sub = fmt_compact(total_executions) + ' total';
+    var timeline = data.history_timeline || [];
+    var timeline_total = 0;
+    for (var ti = 0; ti < timeline.length; ti++) {
+        var toc = timeline[ti].outcome;
+        if (toc === 'ok' || toc === 'error' || toc === 'timeout') {
+            timeline_total++;
+        }
+    }
+    var runs_sub = fmt_compact(timeline_total) + ' total';
     $('#stat-runs-sublabel')
         .text(runs_sub)
-        .attr('title', fmt_full(total_executions) + ' total');
+        .attr('title', fmt_full(timeline_total) + ' total');
     var failures_sub = fmt_compact(failures_lifetime) + ' total';
     $('#stat-failures-sublabel')
         .text(failures_sub)
