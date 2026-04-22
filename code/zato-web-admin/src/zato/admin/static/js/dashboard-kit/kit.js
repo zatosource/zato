@@ -384,4 +384,34 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             window_ms: function() { return window_ms; }
         };
     };
+
+    // ////////////////////////////////////////////////////////////////////
+    // Recency gradient — highlight recently-arrived table rows
+    // ////////////////////////////////////////////////////////////////////
+
+    kit.recency = {};
+    kit.recency.STEPS = 8;
+    kit.recency.MAX_ALPHA = 0.18;
+
+    /* Apply a fading tint to recently-arrived rows.
+       config:
+         container:  jQuery selector for the parent holding <tr data-ts="...">
+         recent_ts:  array of timestamp strings, newest first, length <= STEPS
+         rgb:        base color as an "R, G, B" string (e.g. '218, 165, 32') */
+    kit.recency.apply = function(config) {
+        var $container = $(config.container);
+        $container.find('tr[data-ts]').css('background', '');
+
+        var ts_list = config.recent_ts || [];
+        var rgb = config.rgb || '218, 165, 32';
+        var steps = kit.recency.STEPS;
+        var max_a = kit.recency.MAX_ALPHA;
+
+        for (var i = 0; i < ts_list.length && i < steps; i++) {
+            var alpha = max_a * (1 - i / steps);
+            $container
+                .find('tr[data-ts="' + ts_list[i] + '"]')
+                .css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
+        }
+    };
 })();

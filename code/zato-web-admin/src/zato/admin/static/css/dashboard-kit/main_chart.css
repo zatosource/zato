@@ -172,35 +172,26 @@
 /* Auto-refresh badge */
 
 .dashboard-refresh-badge {
-    cursor: pointer;
     user-select: none;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
     transition: background 150ms ease, color 150ms ease;
 }
 
-.dashboard-refresh-badge::after {
-    content: ' \25BE';
-    font-size: 9px;
-    opacity: 0.5;
-}
-
 .dashboard-refresh-badge-live {
+    display: inline-flex;
+    align-items: center;
     background: rgba(40, 167, 69, 0.13);
     color: #1e7e34;
 }
 
 .dashboard-refresh-badge-live::before {
     content: '';
-    display: inline-block;
+    display: block;
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: #28a745;
     margin-right: 5px;
-    vertical-align: middle;
+    flex-shrink: 0;
     animation: dashboard-pulse-dot 1.5s ease-in-out infinite;
 }
 
@@ -212,24 +203,6 @@
 .dashboard-refresh-badge-paused {
     background: rgba(110, 110, 115, 0.10);
     color: var(--text-muted, #a0a0a5);
-}
-
-/* New-row glow (applied to <tr> elements added by a poll refresh) */
-
-.dashboard-row-glow {
-    animation: dashboard-row-glow-anim 1.3s ease-out;
-}
-
-@keyframes dashboard-row-glow-anim {
-    0% {
-        background: rgba(3, 122, 199, 0.18);
-    }
-    46% {
-        background: rgba(3, 122, 199, 0.18);
-    }
-    100% {
-        background: transparent;
-    }
 }
 
 /* SVG hit-area rectangles */

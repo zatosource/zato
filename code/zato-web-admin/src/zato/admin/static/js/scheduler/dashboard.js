@@ -22,7 +22,8 @@ $.fn.zato.scheduler.dashboard.theme = {
         {label: 'History', href: '#'},
         {label: 'Failures', href: '#'},
         {label: 'Upcoming', href: '#'}
-    ]
+    ],
+    row_recency_color: '218, 165, 32'
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -83,6 +84,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     var dash = $.fn.zato.scheduler.dashboard;
 
     dash._poll_interval_ms = 10000;
+    dash._recent_failure_ts = [];
 
     // Thin aliases so job_detail.js (and any future callers that used
     // the old scheduler-level API) keep working without changes.
@@ -1033,13 +1035,23 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 dash.render(data);
 
                 if (had_failures) {
+                    var new_list = [];
                     $('#dashboard-failures-body tr[data-ts]').each(function() {
                         var ts = $(this).attr('data-ts');
                         if (ts && !old_failure_ts[ts]) {
-                            $(this).addClass('dashboard-row-glow');
+                            new_list.push(ts);
                         }
                     });
+                    if (new_list.length > 0) {
+                        dash._recent_failure_ts = new_list.concat(dash._recent_failure_ts);
+                        dash._recent_failure_ts.length = Math.min(dash._recent_failure_ts.length, kit.recency.STEPS);
+                    }
                 }
+                kit.recency.apply({
+                    container: '#dashboard-failures-body tbody',
+                    recent_ts: dash._recent_failure_ts,
+                    rgb: dash.theme.row_recency_color
+                });
             },
             error: function() {}
         });
@@ -1174,7 +1186,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             menu: '#dashboard-refresh-menu',
             storage_key: 'zato_scheduler_refresh',
             url_param: 'refresh',
-            default_seconds: 10,
+            default_seconds: 5,
             on_tick: dash.poll
         });
 

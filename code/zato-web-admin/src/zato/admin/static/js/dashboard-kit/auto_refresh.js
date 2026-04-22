@@ -121,8 +121,29 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             start_timer();
         };
 
+        var lock_width = function() {
+            var longest = 'Paused';
+            for (var i = 0; i < intervals.length; i++) {
+                if (intervals[i].seconds > 0) {
+                    var candidate = 'Live \u00b7 ' + (intervals[i].short_label || intervals[i].seconds + 's');
+                    if (candidate.length > longest.length) longest = candidate;
+                }
+            }
+            var span = document.createElement('span');
+            var pill_cs = window.getComputedStyle($pill[0]);
+            span.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;' +
+                'font:' + pill_cs.font + ';letter-spacing:' + pill_cs.letterSpacing + ';' +
+                'padding:0 ' + pill_cs.paddingRight + ' 0 ' + pill_cs.paddingLeft;
+            span.textContent = longest;
+            document.body.appendChild(span);
+            var w = span.offsetWidth;
+            document.body.removeChild(span);
+            $pill.css({'min-width': w + 'px', 'text-align': 'center'});
+        };
+
         build_menu();
         update_pill();
+        lock_width();
         start_timer();
 
         $pill.on('click', function(event) {
