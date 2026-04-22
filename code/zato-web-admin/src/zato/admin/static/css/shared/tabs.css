@@ -24,6 +24,7 @@
     background: transparent none;
     background-image: none;
     border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
     border-radius: 0;
     box-shadow: none;
     text-shadow: none;
@@ -45,6 +46,7 @@
     background: transparent none;
     background-image: none;
     border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
     border-radius: 0;
     box-shadow: none;
     text-shadow: none;
