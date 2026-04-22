@@ -400,7 +400,7 @@ a {
     text-transform: uppercase;
     font-size: 10px;
     letter-spacing: 0.8px;
-    color: var(--text-muted);
+    color: var(--primary-dark);
     margin-bottom: 4px;
 }
 

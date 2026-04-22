@@ -18,6 +18,8 @@
 {% endblock %}
 {% block help_icon_id %}scheduler-job-help{% endblock %}
 
+{% block detail_page_class %}detail-page-scheduler{% endblock %}
+
 {% block detail_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time_range.js"></script>
@@ -131,6 +133,6 @@ $(document).ready(function() {
 </div>
 
 <div class="dashboard-tab-panel" id="dashboard-tab-panel-configuration" role="tabpanel" hidden>
-    <div class="detail-meta" id="detail-config-grid"></div>
+    <div id="detail-config-grid"></div>
 </div>
 {% endblock %}

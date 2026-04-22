@@ -11,7 +11,12 @@
     --zato-link-hover: #006fbf;
     --zato-link-dash: rgba(0, 0, 0, 0.35);
     --zato-row-hover: rgba(210, 195, 120, 0.15);
-    --primary-dark: #012845;
+    --primary-dark: var(--zato-seablue);
+    --background-light: #f8f9fa;
+    --white: #ffffff;
+    --border-light: #e9ecef;
+    --text-muted: #6c757d;
+    --shadow-dark: var(--zato-seablue-light1);
 }
 
 @keyframes zato-spin {

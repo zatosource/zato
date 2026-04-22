@@ -1,6 +1,5 @@
-@import url("../shared/tabs.css");
-
-/* Dashboard-specific tab layout overrides */
+/* Dashboard-specific tab layout overrides
+   (shared/tabs.css is loaded by the parent dashboard.css umbrella) */
 
 .dashboard-card-activity {
     display: flex;

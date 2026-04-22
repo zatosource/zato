@@ -15,6 +15,7 @@
 {% endblock %}
 
 {% block content_rows %}
+<div class="{% block detail_page_class %}{% endblock %}">
 {% block stat_cards %}{% endblock %}
 {% block actions %}{% endblock %}
 
@@ -23,4 +24,5 @@
 </div>
 
 {% block tab_panels %}{% endblock %}
+</div>
 {% endblock %}

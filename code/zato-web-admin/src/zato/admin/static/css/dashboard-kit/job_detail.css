@@ -3,14 +3,14 @@
 @import url("time_range.css");
 @import url("main_chart.css");
 
-:root {
+.detail-page-scheduler {
     --component-accent: var(--zato-seablue, #012845);
     --component-accent-light: #e0f0ff;
 }
 
 .detail-component-pill {
-    background: var(--component-accent-light);
-    color: var(--component-accent);
+    background: var(--component-accent-light, #e0f0ff);
+    color: var(--component-accent, #012845);
 }
 
 #btn-execute-now {
@@ -18,8 +18,54 @@
 }
 
 #detail-history-count {
-    background: var(--component-accent-light);
-    color: var(--component-accent);
+    background: var(--component-accent-light, #e0f0ff);
+    color: var(--component-accent, #012845);
+}
+
+.detail-config-row {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    margin-bottom: 24px;
+}
+
+.detail-config-row > .detail-config-cards {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+.detail-config-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.detail-config-cards-3col {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.detail-config-extra-card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--white);
+    border: 2px solid var(--primary-dark);
+    padding: 10px 16px;
+    box-shadow: 3px 3px 0px var(--shadow-dark);
+}
+
+.detail-config-extra-card > .meta-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    color: var(--primary-dark);
+    margin-bottom: 4px;
+    flex-shrink: 0;
 }
 
 .detail-config-extra {
@@ -27,13 +73,25 @@
     font-size: 12px;
     font-feature-settings: 'tnum' on, 'lnum' on;
     font-variant-numeric: tabular-nums lining-nums;
-    background: #f8f9fa;
-    padding: 12px;
-    margin: 4px 0 0;
-    white-space: pre-wrap;
-    word-break: break-all;
+    background: inherit;
+    padding: 0;
+    margin: 8px 0 0;
+    white-space: pre;
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+    color: var(--primary-dark);
+    line-height: 1.5;
+    tab-size: 2;
     border: none;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
-    border-radius: 6px;
-    color: #495057;
+    box-shadow: none;
 }
+
+.detail-config-extra .hl-key { color: #0550ae; }
+.detail-config-extra .hl-str { color: #116329; }
+.detail-config-extra .hl-num { color: #0550ae; }
+.detail-config-extra .hl-bool { color: #cf222e; }
+.detail-config-extra .hl-null { color: #cf222e; }
+.detail-config-extra .hl-punct { color: #6e7781; }
+.detail-config-extra .hl-tag { color: #116329; }
+.detail-config-extra .hl-comment { color: #6e7781; font-style: italic; }

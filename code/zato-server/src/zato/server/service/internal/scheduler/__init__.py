@@ -19,6 +19,7 @@ except ImportError:
 from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
+from zato.common.odb.model import Job
 from zato.server.service import Int, Bool
 from zato.server.service.internal import AdminService
 
@@ -240,29 +241,37 @@ class GetList(_Get):
     """ Returns a list of all jobs defined in the scheduler.
     """
     name = _service_name_prefix + 'get-list'
+    _filter_by = Job.name,
 
     input = '-cluster_id', Int('-cur_page'), Bool('-paginate'), '-query', '-service_name'
 
     def handle(self):
+        from contextlib import closing
+        from zato.common.odb.query import job_list
+
         input = self.request.input
         input.cluster_id = input.get('cluster_id') or self.server.cluster_id
-        from contextlib import closing
-        from zato.common.odb.model import Job, IntervalBasedJob
+
         with closing(self.odb.session()) as session:
-            job_rows = session.query(Job).filter_by(cluster_id=input.cluster_id).all()
+
+            search_result = self._search(job_list, session, input.cluster_id, input.get('service_name'), False)
+
             items = []
-            for j in job_rows:
-                d = {'id': j.id, 'name': j.name, 'is_active': j.is_active, 'job_type': j.job_type,
-                     'start_date': j.start_date.isoformat() if j.start_date else '', 'service': j.service.name if j.service else '',
-                     'extra': j.extra or ''}
-                ib = session.query(IntervalBasedJob).filter_by(job_id=j.id).first()
-                if ib:
-                    for p in _ib_params:
-                        d[p] = getattr(ib, p, 0) or 0
-                    d['repeats'] = ib.repeats
+            for row in search_result:
+                d = {
+                    'id': row.id,
+                    'name': row.name,
+                    'is_active': row.is_active,
+                    'job_type': row.job_type,
+                    'start_date': row.start_date.isoformat() if row.start_date else '',
+                    'service': row.service_name or '',
+                    'extra': row.extra or '',
+                }
+                for p in _ib_params:
+                    d[p] = getattr(row, p, 0) or 0
+                d['repeats'] = getattr(row, 'repeats', None)
                 items.append(self._enrich_job(d))
-        if input.get('service_name'):
-            items = [x for x in items if x.get('service_name') == input.service_name or x.get('service') == input.service_name]
+
         self.response.payload = items
 
 # ################################################################################################################################
