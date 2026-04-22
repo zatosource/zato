@@ -93,8 +93,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                       ', ' + x1.toFixed(2) + ' ' + y1.toFixed(2);
         }
 
-        var area_d = path_d + ' L ' + xs[n - 1].toFixed(2) + ' ' + (h - pad_bottom).toFixed(2) +
-                              ' L ' + xs[0].toFixed(2) + ' ' + (h - pad_bottom).toFixed(2) + ' Z';
+        var area_d = path_d + ' L ' + xs[n - 1].toFixed(2) + ' ' + h.toFixed(2) +
+                              ' L ' + xs[0].toFixed(2) + ' ' + h.toFixed(2) + ' Z';
 
         var svg = '<svg xmlns="http://www.w3.org/2000/svg" ';
         svg += 'width="' + w + '" height="' + h + '" ';
@@ -102,9 +102,9 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
         svg += '<defs>';
         svg += '<linearGradient id="' + grad_id + '" x1="0" y1="0" x2="0" y2="1">';
-        svg += '<stop offset="0" stop-color="' + color + '" stop-opacity="0.45"/>';
-        svg += '<stop offset="0.6" stop-color="' + color + '" stop-opacity="0.15"/>';
-        svg += '<stop offset="1" stop-color="' + color + '" stop-opacity="0"/>';
+        svg += '<stop offset="0" stop-color="' + color + '" stop-opacity="0.18"/>';
+        svg += '<stop offset="0.5" stop-color="' + color + '" stop-opacity="0.10"/>';
+        svg += '<stop offset="1" stop-color="' + color + '" stop-opacity="0.03"/>';
         svg += '</linearGradient>';
         svg += '</defs>';
 
