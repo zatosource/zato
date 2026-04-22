@@ -478,6 +478,20 @@ a {
     box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
 }
 
+.detail-table-header {
+    margin-bottom: 0;
+}
+
+.detail-card-scroll-body {
+    height: 480px;
+    overflow-y: scroll;
+}
+
+.detail-card-scroll-body > table {
+    margin: 0;
+    min-height: calc(100% + 1px);
+}
+
 .detail-header-row {
     display: flex;
     align-items: center;
@@ -548,7 +562,6 @@ a.detail-component-pill:visited {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
     padding: 8px 0;
     font-size: 13px;
 }
@@ -564,8 +577,28 @@ a.detail-component-pill:visited {
     word-wrap: break-word;
 }
 
+.detail-pagination-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.detail-page-prev,
+.detail-page-next {
+    display: inline-block;
+    min-width: 55px;
+    text-align: center;
+}
+
 .detail-pagination-controls a {
     color: var(--detail-link-color);
+}
+
+.detail-page-disabled {
+    color: var(--text-muted, #aaa);
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: default;
 }
 
 .detail-pagination-info {

@@ -30,27 +30,32 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var $c = $(selector);
             if (!$c.length) return;
             var tp = total_pages();
-            if (tp <= 1) {
-                $c.empty();
-                return;
-            }
-            var html = '';
-            if (current_page > 1) {
-                html += '<a href="#" class="detail-page-prev">Previous</a> ';
+            var has_prev = current_page > 1;
+            var has_next = current_page < tp;
+
+            var html = '<span class="detail-pagination-row">';
+            if (has_prev) {
+                html += '<a href="#" class="detail-page-prev">Previous</a>';
+            } else {
+                html += '<span class="detail-page-prev detail-page-disabled">Previous</span>';
             }
             html += '<span class="detail-pagination-info">Page ' +
                 kit.format_number_full(current_page) + ' of ' +
                 kit.format_number_full(tp) +
                 ' \u00b7 ' + kit.format_number_full(total_count) + ' total</span>';
-            if (current_page < tp) {
-                html += ' <a href="#" class="detail-page-next">Next</a>';
+            if (has_next) {
+                html += '<a href="#" class="detail-page-next">Next</a>';
+            } else {
+                html += '<span class="detail-page-next detail-page-disabled">Next</span>';
             }
+            html += '</span>';
+
             $c.html(html);
-            $c.find('.detail-page-prev').on('click', function(e) {
+            $c.find('a.detail-page-prev').on('click', function(e) {
                 e.preventDefault();
                 fetch_page(current_page - 1);
             });
-            $c.find('.detail-page-next').on('click', function(e) {
+            $c.find('a.detail-page-next').on('click', function(e) {
                 e.preventDefault();
                 fetch_page(current_page + 1);
             });

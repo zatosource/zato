@@ -107,7 +107,29 @@ $(document).ready(function() {
 
     <h3 class="section-title">Run history</h3>
     <div class="detail-pagination-controls" id="detail-history-pagination-top"></div>
-    <div class="detail-card-scroll">
+    <table class="detail-table detail-table-fixed detail-table-header" id="detail-history-table-head">
+        <colgroup>
+            <col style="width:18%">
+            <col style="width:18%">
+            <col style="width:8%">
+            <col style="width:8%">
+            <col style="width:14%">
+            <col style="width:6%">
+            <col style="width:28%">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>Planned time</th>
+                <th>Actual time</th>
+                <th style="text-align:center">Latency</th>
+                <th style="text-align:center">Duration</th>
+                <th style="text-align:center">Outcome</th>
+                <th>Run</th>
+                <th>Error</th>
+            </tr>
+        </thead>
+    </table>
+    <div class="detail-card-scroll-body">
         <table class="detail-table detail-table-fixed" id="detail-history-table">
             <colgroup>
                 <col style="width:18%">
@@ -118,17 +140,6 @@ $(document).ready(function() {
                 <col style="width:6%">
                 <col style="width:28%">
             </colgroup>
-            <thead>
-                <tr>
-                    <th>Planned time</th>
-                    <th>Actual time</th>
-                    <th style="text-align:center">Latency</th>
-                    <th style="text-align:center">Duration</th>
-                    <th style="text-align:center">Outcome</th>
-                    <th>Run</th>
-                    <th>Error</th>
-                </tr>
-            </thead>
             <tbody id="detail-history-table-body">
                 <tr class="detail-loading-row">
                     <td colspan="7">
