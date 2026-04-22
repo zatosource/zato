@@ -19,6 +19,17 @@ pub fn records_to_py_list<'py>(py: Python<'py>, records: &[ExecutionRecord]) -> 
     Ok(list.unbind())
 }
 
+pub fn records_page_to_py_dict(py: Python<'_>, records: &[ExecutionRecord], total: usize) -> PyResult<Py<PyDict>> {
+    let out = PyDict::new(py);
+    let list = PyList::empty(py);
+    for rec in records {
+        list.append(record_to_py_dict(py, rec)?)?;
+    }
+    out.set_item("records", list)?;
+    out.set_item("total", total)?;
+    Ok(out.unbind())
+}
+
 pub fn all_history_to_py_dict<'py>(
     py: Python<'py>,
     jobs: &std::collections::HashMap<String, crate::job::RunningJob>,

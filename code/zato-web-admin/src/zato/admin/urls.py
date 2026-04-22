@@ -54,6 +54,7 @@ from zato.admin.web.views.eda import topic_detail as eda_topic_detail
 from zato.admin.web.views.eda import queue_detail as eda_queue_detail
 from zato.admin.web.views.eda import messages as eda_messages
 from zato.admin.web.views.eda import publish as eda_publish
+from zato.admin.web.views import detail_poll
 from zato.admin.web.views import scheduler_dashboard
 from zato.admin.web.views.check_attr import check_attr_exists
 
@@ -235,6 +236,9 @@ urlpatterns += [
         login_required(scheduler.get_definition), name='scheduler-job-get-definition'),
 
     # Scheduler dashboard
+
+    url(r'^zato/dashboard/detail-poll/$',
+        login_required(detail_poll.detail_poll), name='dashboard-detail-poll'),
 
     url(r'^zato/scheduler/dashboard/$',
         login_required(scheduler_dashboard.index), name='scheduler-dashboard'),

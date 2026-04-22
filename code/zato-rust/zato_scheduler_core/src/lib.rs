@@ -242,6 +242,39 @@ fn scheduler_get_history(py: Python<'_>, job_id: &str) -> PyResult<Py<PyList>> {
 }
 
 #[pyfunction]
+#[pyo3(signature = (job_id, offset, limit))]
+fn scheduler_get_history_page(py: Python<'_>, job_id: &str, offset: usize, limit: usize) -> PyResult<Py<PyDict>> {
+    let shared = get_shared()?;
+    let state = shared.state.lock().unwrap();
+    if let Some(running_job) = state.jobs.get(job_id) {
+        let total = running_job.history.len();
+        let start = if offset >= total { total } else { total - offset };
+        let end = if limit >= start { 0 } else { start - limit };
+        let slice: Vec<ExecutionRecord> = running_job.history.range(end..start).rev().cloned().collect();
+        history::records_page_to_py_dict(py, &slice, total)
+    } else {
+        history::records_page_to_py_dict(py, &[], 0)
+    }
+}
+
+#[pyfunction]
+#[pyo3(signature = (job_id, since_iso))]
+fn scheduler_get_history_since(py: Python<'_>, job_id: &str, since_iso: &str) -> PyResult<Py<PyList>> {
+    let shared = get_shared()?;
+    let state = shared.state.lock().unwrap();
+    if let Some(running_job) = state.jobs.get(job_id) {
+        let records: Vec<ExecutionRecord> = running_job.history.iter()
+            .filter(|r| r.actual_fire_time_iso.as_str() > since_iso)
+            .rev()
+            .cloned()
+            .collect();
+        history::records_to_py_list(py, &records)
+    } else {
+        Ok(PyList::empty(py).unbind())
+    }
+}
+
+#[pyfunction]
 #[pyo3(signature = ())]
 fn scheduler_get_all_history(py: Python<'_>) -> PyResult<Py<PyDict>> {
     let shared = get_shared()?;
@@ -324,6 +357,8 @@ fn zato_scheduler_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(scheduler_mark_complete, m)?)?;
     m.add_function(wrap_pyfunction!(scheduler_reload, m)?)?;
     m.add_function(wrap_pyfunction!(scheduler_get_history, m)?)?;
+    m.add_function(wrap_pyfunction!(scheduler_get_history_page, m)?)?;
+    m.add_function(wrap_pyfunction!(scheduler_get_history_since, m)?)?;
     m.add_function(wrap_pyfunction!(scheduler_get_all_history, m)?)?;
     m.add_function(wrap_pyfunction!(scheduler_get_job_summaries, m)?)?;
     Ok(())

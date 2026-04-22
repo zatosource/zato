@@ -407,17 +407,51 @@ class Execute(_SchedulerAdmin):
 # ################################################################################################################################
 
 class GetHistory(_SchedulerAdmin):
-    """ Returns execution history for a scheduler job.
+    """ Returns paginated execution history for a scheduler job.
     """
     name = _service_name_prefix + 'get-history'
 
-    input = 'id',
+    input = 'id', '-page', '-page_size', '-since_ts'
 
     def handle(self):
         try:
-            from zato_scheduler_core import scheduler_get_history
+            from zato_scheduler_core import scheduler_get_history_page, scheduler_get_history_since
+
             job_id = str(self.request.input.id)
-            self.response.payload = scheduler_get_history(job_id)
+            since_ts = self.request.input.get('since_ts') or ''
+
+            from contextlib import closing
+            with closing(self.odb.session()) as session:
+                job_row = session.query(Job).filter_by(id=job_id).first()
+            job_name = job_row.name if job_row else ''
+
+            if since_ts:
+                records = scheduler_get_history_since(job_id, since_ts)
+                rows = []
+                for rec in records:
+                    rec['job_id'] = job_id
+                    rec['job_name'] = job_name
+                    rows.append(rec)
+                self.response.payload = {'rows': rows}
+            else:
+                page = int(self.request.input.get('page') or 1)
+                page_size = int(self.request.input.get('page_size') or 50)
+                offset = (page - 1) * page_size
+
+                result = scheduler_get_history_page(job_id, offset, page_size)
+                rows = []
+                for rec in result['records']:
+                    rec['job_id'] = job_id
+                    rec['job_name'] = job_name
+                    rows.append(rec)
+
+                self.response.payload = {
+                    'rows': rows,
+                    'total': result['total'],
+                    'page': page,
+                    'page_size': page_size,
+                }
+
         except Exception:
             self.logger.error('Could not get job history, e:`%s`', format_exc())
             raise
@@ -603,10 +637,6 @@ class GetCurrentState(_SchedulerAdmin):
             history_timeline = []
             total_executions = 0
 
-            # A history record represents an "execution" (as opposed to a
-            # scheduler-internal skip) when its outcome is one of these.
-            # Rust sets outcome = "ok" on dispatch and updates it to
-            # "error"/"timeout" on completion if it failed.
             execution_outcomes = {'ok', 'error', 'timeout'}
 
             for job_id, records in all_history.items():
@@ -622,10 +652,8 @@ class GetCurrentState(_SchedulerAdmin):
                 for rec in records:
                     outcome = rec.get('outcome', '')
                     outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
-
                     if outcome in execution_outcomes:
                         total_executions += 1
-
                     entry = dict(rec)
                     entry['job_id'] = job_id
                     entry['job_name'] = job_name

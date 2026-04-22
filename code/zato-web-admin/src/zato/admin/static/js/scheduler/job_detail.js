@@ -8,11 +8,11 @@ $.fn.zato.scheduler.job_detail._dashboard = function() {
 };
 
 $.fn.zato.scheduler.job_detail._time_range_minutes = 0;
-$.fn.zato.scheduler.job_detail._history_data = [];
 $.fn.zato.scheduler.job_detail._job_data = {};
 $.fn.zato.scheduler.job_detail._pagination = null;
 $.fn.zato.scheduler.job_detail._runs_rendered = false;
 $.fn.zato.scheduler.job_detail._object_id = '';
+$.fn.zato.scheduler.job_detail._poll_config = {};
 
 $.fn.zato.scheduler.job_detail._hidden_series_key = function() {
     return 'zato_hidden_series_' + ($.fn.zato.scheduler.job_detail._object_id || 'unknown');
@@ -127,29 +127,19 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
 // Render stats into the stat cards
 // ////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.job_detail.render_stats = function(job, history) {
+$.fn.zato.scheduler.job_detail.render_stats = function(job) {
     var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
     var dashboard = detail._dashboard();
-    var filtered = detail._filter_by_outcome(detail._filter_by_range(history));
 
-    var total_runs = filtered.length;
-    var error_count = 0;
-    var total_duration = 0;
-    var duration_count = 0;
-
-    for (var record_index = 0; record_index < filtered.length; record_index++) {
-        var record = filtered[record_index];
-        if (record.outcome === 'error') error_count++;
-        if (record.duration_ms !== null && record.duration_ms !== undefined) {
-            total_duration += parseInt(record.duration_ms, 10) || 0;
-            duration_count++;
-        }
-    }
-
-    var average_duration = duration_count > 0 ? Math.round(total_duration / duration_count) : null;
-
+    var total_runs = job.current_run || 0;
     $('#stat-total-runs').text(kit.format_number_full(total_runs));
+
+    var recent = job.recent_outcomes || [];
+    var error_count = 0;
+    for (var i = 0; i < recent.length; i++) {
+        if (recent[i] === 'error') error_count++;
+    }
     var $errors = $('#stat-errors');
     $errors.text(kit.format_number_full(error_count));
     if (error_count > 0) {
@@ -158,11 +148,11 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job, history) {
         $errors.css('color', '');
     }
 
-    $('#stat-avg-duration').text(dashboard.format_duration(average_duration));
+    $('#stat-avg-duration').text(dashboard.format_duration(job.last_duration_ms));
 
-    var next_fire = job.next_fire_time_iso || job.next_run_time;
+    var next_fire = job.next_fire_utc || job.next_fire_time_iso || job.next_run_time;
     if (next_fire) {
-        $('#stat-next-fire').text(dashboard.format_local_time(next_fire));
+        $('#stat-next-fire').text(kit.format_local_time(next_fire));
     } else {
         $('#stat-next-fire').text('-');
     }
@@ -583,85 +573,141 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 // Render history table (grouped, paginated)
 // ////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.job_detail.render_history_table = function(history) {
+$.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class) {
+    var kit = $.fn.zato.dashboard_kit;
+    var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
+    var planned_time = kit.format_local_time(record.planned_fire_time_iso);
+    var actual_time = kit.format_local_time(record.actual_fire_time_iso);
+    var dispatch_latency = (record.dispatch_latency_ms !== null && record.dispatch_latency_ms !== undefined)
+        ? kit.format_number_full(record.dispatch_latency_ms) + ' ms'
+        : '-';
+    var duration = dashboard.format_duration(record.duration_ms);
+    var outcome = dashboard.outcome_badge(record.outcome);
+    var run_number = (record.current_run !== null && record.current_run !== undefined)
+        ? kit.format_number_full(record.current_run) : '-';
+    var error_text = record.error || '';
+    var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
+
+    var row_ts = record.actual_fire_time_iso || record.planned_fire_time_iso || '';
+    var run_attr = (record.current_run !== null && record.current_run !== undefined) ? record.current_run : '';
+    var cls = extra_class ? ' class="' + extra_class + '"' : '';
+    var row = '<tr' + cls + ' data-ts="' + row_ts + '" data-run="' + run_attr + '">';
+    row += '<td class="dashboard-cell-mono">' + planned_time + '</td>';
+    row += '<td class="dashboard-cell-mono">' + actual_time + '</td>';
+    row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + dispatch_latency + '</td>';
+    row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + duration + '</td>';
+    row += '<td class="dashboard-cell-center">' + outcome + '</td>';
+    row += '<td class="dashboard-cell-mono-wrap">' + run_number + '</td>';
+    row += '<td title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
+    row += '</tr>';
+    return row;
+};
+
+$.fn.zato.scheduler.job_detail._render_group = function(group) {
+    var detail = $.fn.zato.scheduler.job_detail;
+    var html = '';
+    var primary_row = detail._render_single_row(group.primary, '');
+
+    if (group.extras.length > 0) {
+        var toggle_id = 'extras-' + group.run;
+        var label = '+ ' + group.extras.length + ' skipped';
+        primary_row = primary_row.replace('</td></tr>',
+            ' <span class="detail-run-extras-toggle" data-target=".' + toggle_id + '">' +
+            label + '</span></td></tr>');
+        html += primary_row;
+        for (var e = 0; e < group.extras.length; e++) {
+            html += detail._render_single_row(group.extras[e], 'detail-run-extras ' + toggle_id).replace('<tr', '<tr style="display:none"');
+        }
+    } else {
+        html += primary_row;
+    }
+    return html;
+};
+
+$.fn.zato.scheduler.job_detail._execution_outcomes = {'ok': true, 'error': true, 'timeout': true};
+
+$.fn.zato.scheduler.job_detail.render_history_table = function() {
     var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
-    var dashboard = detail._dashboard();
-    var filtered = detail._filter_by_outcome(detail._filter_by_range(history));
+    var poll_config = detail._poll_config;
 
-    if (!filtered || filtered.length === 0) {
-        $('#detail-history-table-body').html(
-            '<tr><td colspan="7" class="dashboard-inline-empty">No run history</td></tr>'
-        );
-        $('#detail-history-pagination-top').empty();
-        $('#detail-history-pagination-bottom').empty();
-        return;
-    }
-
-    var sorted = filtered.slice().sort(function(first, second) {
-        return (second.actual_fire_time_iso || '').localeCompare(first.actual_fire_time_iso || '');
-    });
-
-    var groups = detail._group_by_run(sorted);
-
-    var render_single_row = function(record, extra_class) {
-        var planned_time = kit.format_local_time(record.planned_fire_time_iso);
-        var actual_time = kit.format_local_time(record.actual_fire_time_iso);
-        var dispatch_latency = (record.dispatch_latency_ms !== null && record.dispatch_latency_ms !== undefined)
-            ? kit.format_number_full(record.dispatch_latency_ms) + ' ms'
-            : '-';
-        var duration = dashboard.format_duration(record.duration_ms);
-        var outcome = dashboard.outcome_badge(record.outcome);
-        var run_number = (record.current_run !== null && record.current_run !== undefined)
-            ? kit.format_number_full(record.current_run) : '-';
-        var error_text = record.error || '';
-        var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
-
-        var row_ts = record.actual_fire_time_iso || record.planned_fire_time_iso || '';
-        var cls = extra_class ? ' class="' + extra_class + '"' : '';
-        var row = '<tr' + cls + ' data-ts="' + row_ts + '">';
-        row += '<td class="dashboard-cell-mono">' + planned_time + '</td>';
-        row += '<td class="dashboard-cell-mono">' + actual_time + '</td>';
-        row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + dispatch_latency + '</td>';
-        row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + duration + '</td>';
-        row += '<td class="dashboard-cell-center">' + outcome + '</td>';
-        row += '<td class="dashboard-cell-mono-wrap">' + run_number + '</td>';
-        row += '<td title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
-        row += '</tr>';
-        return row;
-    };
-
-    var render_group = function(group) {
-        var html = '';
-        var primary_row = render_single_row(group.primary, '');
-
-        if (group.extras.length > 0) {
-            var toggle_id = 'extras-' + group.run;
-            var label = '+ ' + group.extras.length + ' skipped';
-            primary_row = primary_row.replace('</td></tr>',
-                ' <span class="detail-run-extras-toggle" data-target=".' + toggle_id + '">' +
-                label + '</span></td></tr>');
-            html += primary_row;
-            for (var e = 0; e < group.extras.length; e++) {
-                html += render_single_row(group.extras[e], 'detail-run-extras ' + toggle_id).replace('<tr', '<tr style="display:none"');
-            }
-        } else {
-            html += primary_row;
-        }
-        return html;
-    };
-
-    var initial_page = parseInt(kit.url_state.get('page', '1'), 10) || 1;
-
-    $.fn.zato.scheduler.job_detail._pagination = kit.pagination.init({
-        data: groups,
+    detail._pagination = kit.pagination.init({
+        poll_url: poll_config.poll_url,
+        object_type: poll_config.object_type,
+        object_id: detail._object_id,
         page_size: 50,
-        initial_page: initial_page,
         table_body: '#detail-history-table-body',
         container_top: '#detail-history-pagination-top',
         container_bottom: '#detail-history-pagination-bottom',
-        render_row: function(group) {
-            return render_group(group);
+        render_page: function($body, rows) {
+            $body.empty();
+            if (!rows || rows.length === 0) {
+                $body.html('<tr><td colspan="7" class="dashboard-inline-empty">No run history</td></tr>');
+                return;
+            }
+            var groups = detail._group_by_run(rows);
+            for (var i = 0; i < groups.length; i++) {
+                $body.append(detail._render_group(groups[i]));
+            }
+        },
+        render_new: function($body, rows, page_size) {
+            var exec_outcomes = detail._execution_outcomes;
+            var groups = detail._group_by_run(rows);
+
+            $body.find('.dashboard-inline-empty').closest('tr').remove();
+
+            var new_exec_elements = [];
+            for (var g = groups.length - 1; g >= 0; g--) {
+                var group = groups[g];
+                var run_key = group.run;
+
+                var $existing_primary = $body.find('tr[data-ts]').filter(function() {
+                    var row_run = $(this).data('run');
+                    return row_run !== undefined && String(row_run) === String(run_key);
+                }).first();
+
+                if ($existing_primary.length) {
+                    for (var e = 0; e < group.extras.length; e++) {
+                        var extra_rec = group.extras[e];
+                        var toggle_id = 'extras-' + run_key;
+                        var $extra = $(detail._render_single_row(extra_rec, 'detail-run-extras ' + toggle_id).replace('<tr', '<tr style="display:none"'));
+                        $existing_primary.after($extra);
+                    }
+                    var $toggle = $existing_primary.find('.detail-run-extras-toggle');
+                    if ($toggle.length) {
+                        var count = $body.find('.' + 'extras-' + run_key).length;
+                        $toggle.text('+ ' + count + ' skipped');
+                    }
+                } else {
+                    var html = detail._render_group(group);
+                    var $group_rows = $(html);
+                    $body.prepend($group_rows);
+
+                    if (exec_outcomes[group.primary.outcome]) {
+                        new_exec_elements.push($group_rows.first());
+                    }
+                }
+            }
+
+            var visible_groups = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
+            while (visible_groups.length > page_size) {
+                var $last = visible_groups.last();
+                var last_run = $last.data('run');
+                if (last_run !== undefined) {
+                    $body.find('.extras-' + last_run).remove();
+                }
+                $last.remove();
+                visible_groups = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
+            }
+
+            if (new_exec_elements.length > 0) {
+                var rgb = detail._dashboard().theme.row_recency_color;
+                var max_a = kit.recency.MAX_ALPHA;
+                for (var i = 0; i < new_exec_elements.length; i++) {
+                    var alpha = max_a * (1 - i / Math.max(new_exec_elements.length, kit.recency.STEPS));
+                    new_exec_elements[i].css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
+                }
+            }
         },
         on_page_change: function(page) {
             kit.url_state.set({page: page > 1 ? page : null});
@@ -731,8 +777,27 @@ $.fn.zato.scheduler.job_detail._ensure_runs_rendered = function() {
     var detail = $.fn.zato.scheduler.job_detail;
     if (detail._runs_rendered) return;
     detail._runs_rendered = true;
-    detail.render_timeline(detail._history_data);
-    detail.render_history_table(detail._history_data);
+    detail.render_history_table();
+
+    var poll_config = detail._poll_config;
+    $.ajax({
+        url: poll_config.poll_url,
+        type: 'POST',
+        data: {
+            object_type: poll_config.object_type,
+            id: detail._object_id,
+            page: 1,
+            page_size: 10000
+        },
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        success: function(data) {
+            if (typeof data === 'string') {
+                try { data = JSON.parse(data); } catch(e) { return; }
+            }
+            detail._chart_history = data.rows || [];
+            detail.render_timeline(detail._chart_history);
+        }
+    });
 };
 
 $.fn.zato.scheduler.job_detail.init_tabs = function() {
@@ -769,21 +834,16 @@ $.fn.zato.scheduler.job_detail.init_tabs = function() {
 };
 
 // ////////////////////////////////////////////////////////////////////////////
-// Poll (reuse the main dashboard endpoint, extract per-job data client-side)
+// Poll - incremental new rows via pagination handle + metadata via dashboard
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.poll = function() {
-    var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
     var job_id = String(detail._object_id);
     var job_name = (detail._job_data && detail._job_data.name) || '';
 
-    var old_ts_set = {};
-    if (detail._history_data) {
-        for (var k = 0; k < detail._history_data.length; k++) {
-            var ts_key = detail._history_data[k].actual_fire_time_iso || detail._history_data[k].planned_fire_time_iso || '';
-            if (ts_key) old_ts_set[ts_key] = true;
-        }
+    if (detail._pagination) {
+        detail._pagination.poll_new();
     }
 
     $.ajax({
@@ -809,31 +869,7 @@ $.fn.zato.scheduler.job_detail.poll = function() {
                     break;
                 }
             }
-            var history = [];
-            var new_ts_list = [];
-            var timeline = data.history_timeline || [];
-            for (var j = 0; j < timeline.length; j++) {
-                var h = timeline[j];
-                if (String(h.job_id) === job_id || h.job_name === job_name) {
-                    history.push(h);
-                    var hts = h.actual_fire_time_iso || h.planned_fire_time_iso || '';
-                    if (hts && !old_ts_set[hts]) {
-                        new_ts_list.push(hts);
-                    }
-                }
-            }
-            detail._history_data = history;
-            detail._redraw();
-
-            if (new_ts_list.length > 0) {
-                detail._recent_ts = new_ts_list.concat(detail._recent_ts);
-                detail._recent_ts.length = Math.min(detail._recent_ts.length, kit.recency.STEPS);
-            }
-            kit.recency.apply({
-                container: '#detail-history-table-body',
-                recent_ts: detail._recent_ts,
-                rgb: detail._dashboard().theme.row_recency_color
-            });
+            detail.render_stats(detail._job_data);
         },
         error: function() {}
     });
@@ -845,11 +881,12 @@ $.fn.zato.scheduler.job_detail.poll = function() {
 
 $.fn.zato.scheduler.job_detail._redraw = function() {
     var detail = $.fn.zato.scheduler.job_detail;
-    detail.render_stats(detail._job_data, detail._history_data);
-    detail._runs_rendered = false;
-    var $panel = $('#dashboard-tab-panel-executions');
-    if ($panel.length && !$panel.prop('hidden')) {
-        detail._ensure_runs_rendered();
+    detail.render_stats(detail._job_data);
+    if (detail._pagination) {
+        detail._pagination.fetch_page(1);
+    }
+    if (detail._chart_history) {
+        detail.render_timeline(detail._chart_history);
     }
 };
 
@@ -857,13 +894,13 @@ $.fn.zato.scheduler.job_detail._redraw = function() {
 // Main render
 // ////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.job_detail.render = function(job, history, job_id, cluster_id) {
+$.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
     var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
 
     detail.render_header(job);
     detail._build_legend();
-    detail.render_stats(job, history);
+    detail.render_stats(job);
     detail.render_config(job, cluster_id);
     detail.render_actions(job_id);
     detail.init_tabs();
@@ -937,16 +974,12 @@ $.fn.zato.scheduler.job_detail.render = function(job, history, job_id, cluster_i
 // Init
 // ////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.job_detail.init = function(job_data, history_data, job_id, cluster_id) {
+$.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, poll_config) {
     if (typeof job_data === 'string') {
         try { job_data = JSON.parse(job_data); } catch(parse_error) { job_data = {}; }
     }
-    if (typeof history_data === 'string') {
-        try { history_data = JSON.parse(history_data); } catch(parse_error) { history_data = []; }
-    }
     $.fn.zato.scheduler.job_detail._job_data = job_data;
-    $.fn.zato.scheduler.job_detail._history_data = history_data;
     $.fn.zato.scheduler.job_detail._object_id = job_id || '';
-    $.fn.zato.scheduler.job_detail._recent_ts = [];
-    $.fn.zato.scheduler.job_detail.render(job_data, history_data, job_id, cluster_id);
+    $.fn.zato.scheduler.job_detail._poll_config = poll_config || {};
+    $.fn.zato.scheduler.job_detail.render(job_data, job_id, cluster_id);
 };

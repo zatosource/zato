@@ -88,7 +88,6 @@ def job_detail(req, job_id):
     cluster_id = req.GET.get('cluster', req.GET.get('cluster_id', ''))
 
     job_data = {}
-    history_data = []
 
     try:
         response = req.zato.client.invoke('zato.scheduler.job.get-by-id', {
@@ -126,10 +125,6 @@ def job_detail(req, job_id):
                     job_data['last_duration_ms'] = entry.get('last_duration_ms')
                     break
 
-            for entry in state_data.get('history_timeline', []):
-                if str(entry.get('job_id')) == str(job_id) or entry.get('job_name') == job_name:
-                    history_data.append(entry)
-
     except Exception as e:
         logger.error('Scheduler job state error: %s', e)
 
@@ -137,7 +132,8 @@ def job_detail(req, job_id):
         'cluster_id': cluster_id,
         'job_id': job_id,
         'job_data': json.dumps(job_data if isinstance(job_data, dict) else {}),
-        'history_data': json.dumps(history_data if isinstance(history_data, list) else []),
+        'poll_url': '/zato/dashboard/detail-poll/',
+        'object_type': 'scheduler-job',
         'zato_clusters': True,
         'zato_template_name': 'zato/scheduler/job_detail.html',
     })

@@ -52,9 +52,12 @@
 $(document).ready(function() {
     $.fn.zato.scheduler.job_detail.init(
         {{ job_data|safe }},
-        {{ history_data|safe }},
         '{{ job_id }}',
-        '{{ cluster_id }}'
+        '{{ cluster_id }}',
+        {
+            poll_url: '{{ poll_url }}',
+            object_type: '{{ object_type }}'
+        }
     );
 });
 </script>
