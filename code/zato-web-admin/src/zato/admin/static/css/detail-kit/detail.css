@@ -49,9 +49,31 @@ a {
     letter-spacing: 0.5px;
 }
 
-.stat-card .dashboard-time-range-wrapper {
+.stat-card-has-menu {
+    position: relative;
+}
+
+.stat-card-inline-control {
+    font-weight: 400;
+    margin-left: 4px;
     display: inline-flex;
     vertical-align: middle;
+}
+
+.stat-card-inline-pill {
+    font-size: 10px;
+    padding: 1px 6px;
+}
+
+.stat-card-inline-btn {
+    font-size: 10px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-transform: none;
+    letter-spacing: 0;
+    border-radius: 3px;
 }
 
 .stat-card .dashboard-time-range-menu {
@@ -136,6 +158,10 @@ a {
     text-align: center;
     background: var(--detail-badge-bg);
     color: #fff;
+}
+
+.detail-badge-sm {
+    font-size: 11px;
 }
 
 .view-all-link {
@@ -508,6 +534,10 @@ a {
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 4px;
+}
+
+.detail-back-link {
+    font-size: 13px;
 }
 
 .detail-component-pill {

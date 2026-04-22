@@ -83,7 +83,7 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
     var type_label = dashboard.job_type_labels[job.job_type] || job.job_type;
     var status_text = job.is_active ? 'Active' : 'Paused';
-    var title = '<a href="/zato/scheduler/dashboard/?cluster=1" class="detail-component-pill menu-link" style="background:#1a6fa0;color:#e0f0ff">Scheduler</a> ' +
+    var title = '<a href="/zato/scheduler/dashboard/?cluster=1" class="detail-component-pill menu-link">Scheduler</a> ' +
         (job.name || 'Unknown job') +
         ' <span style="font-weight:400;font-size:13px;color:var(--text-muted)">' +
         type_label + ' \u00b7 ' + status_text + '</span>';
@@ -196,7 +196,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var filtered = $.fn.zato.scheduler.job_detail._filter_by_range(history);
 
     if (!filtered || filtered.length === 0) {
-        container.html('<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No execution history in this range</div>');
+        container.html('<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No run history in this range</div>');
         return;
     }
 
@@ -221,7 +221,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     }
 
     if (timestamps.length === 0) {
-        container.html('<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No execution history in this range</div>');
+        container.html('<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No run history in this range</div>');
         return;
     }
 
@@ -341,7 +341,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function(history) {
 
     if (!filtered || filtered.length === 0) {
         $('#detail-history-table-body').html(
-            '<tr><td colspan="7" style="color:var(--text-muted);padding:16px 12px">No execution history</td></tr>'
+            '<tr><td colspan="7" style="color:var(--text-muted);padding:16px 12px">No run history</td></tr>'
         );
         $('#detail-history-count').text('');
         $('#detail-history-pagination-top').empty();
@@ -457,7 +457,7 @@ $.fn.zato.scheduler.job_detail.render_actions = function(job_id) {
                     allowHTML: false,
                     theme: 'dark',
                     trigger: 'manual',
-                    placement: 'left',
+                    placement: 'right',
                     arrow: true,
                     interactive: false,
                     inertia: true,

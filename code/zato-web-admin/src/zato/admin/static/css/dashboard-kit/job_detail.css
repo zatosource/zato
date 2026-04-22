@@ -3,6 +3,31 @@
 @import url("time_range.css");
 @import url("main_chart.css");
 
+:root {
+    --component-accent: #1a6fa0;
+    --component-accent-light: #e0f0ff;
+}
+
+.detail-component-pill {
+    background: var(--component-accent);
+    color: var(--component-accent-light);
+}
+
+#btn-execute-now {
+    background: var(--component-accent);
+    color: var(--component-accent-light);
+}
+
+#btn-execute-now:hover {
+    background: var(--component-accent);
+    opacity: 0.9;
+}
+
+#detail-history-count {
+    background: var(--component-accent-light);
+    color: var(--component-accent);
+}
+
 .detail-config-extra {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     font-size: 12px;

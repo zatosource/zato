@@ -270,7 +270,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         var filtered = dash._filter_timeline_by_range(timeline);
 
         if (!filtered || filtered.length === 0) {
-            container.html('<div class="dashboard-no-data">No execution history yet</div>');
+            container.html('<div class="dashboard-no-data">No run history yet</div>');
             $('#dashboard-chart-legend').empty();
             $('#dashboard-exec-count').text('');
             return;
@@ -324,7 +324,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         }
 
         if (timestamps.length === 0) {
-            container.html('<div class="dashboard-no-data">No execution history yet</div>');
+            container.html('<div class="dashboard-no-data">No run history yet</div>');
             $('#dashboard-chart-legend').empty();
             $('#dashboard-exec-count').text('');
             return;
