@@ -10,8 +10,16 @@
        strip behind it uses. The 0.06 white wash on top reproduces the
        previous "glass over navy" look. */
     background:
+        repeating-linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.015) 0px,
+            rgba(255, 255, 255, 0.015) 1px,
+            transparent 1px,
+            transparent 6px
+        ),
         linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06)),
-        linear-gradient(180deg, var(--zato-seablue-light1) 0%, var(--zato-seablue) 100%);
+        linear-gradient(180deg, var(--zato-tile-dark1) 0%, var(--zato-tile-dark2) 100%),
+        radial-gradient(ellipse at 30% 80%, var(--zato-tile-darkblue) 0%, transparent 70%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     padding: 18px 20px 14px;
