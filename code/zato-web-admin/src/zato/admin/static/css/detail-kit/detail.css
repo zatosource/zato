@@ -485,7 +485,7 @@ a {
     background: transparent none;
     background-image: none;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 0;
     box-shadow: none;
     text-shadow: none;
     outline: 0;
@@ -504,7 +504,7 @@ a {
 .detail-tab:focus,
 .detail-tab:active {
     background-image: none;
-    border-radius: 6px;
+    border-radius: 0;
     box-shadow: none;
     text-shadow: none;
     outline: 0;
@@ -525,7 +525,7 @@ a {
     color: var(--primary-dark);
     background: #fff;
     border-color: rgba(0, 0, 0, 0.08);
-    border-bottom: 2px solid var(--primary-dark);
+    border-radius: 0;
     box-shadow:
         0 1px 3px rgba(0, 0, 0, 0.04),
         0 1px 1px rgba(0, 0, 0, 0.03);
