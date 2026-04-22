@@ -83,7 +83,7 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
     var type_label = dashboard.job_type_labels[job.job_type] || job.job_type;
     var status_text = job.is_active ? 'Active' : 'Paused';
-    var title = '<a href="/zato/scheduler/dashboard/?cluster=1" class="detail-component-pill" style="background:#1a6fa0;color:#e0f0ff">Scheduler</a> ' +
+    var title = '<a href="/zato/scheduler/dashboard/?cluster=1" class="detail-component-pill menu-link" style="background:#1a6fa0;color:#e0f0ff">Scheduler</a> ' +
         (job.name || 'Unknown job') +
         ' <span style="font-weight:400;font-size:13px;color:var(--text-muted)">' +
         type_label + ' \u00b7 ' + status_text + '</span>';
