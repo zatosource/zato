@@ -4,11 +4,26 @@ if (typeof $.fn.zato.scheduler === 'undefined') { $.fn.zato.scheduler = {}; }
 $.fn.zato.scheduler.dashboard = {};
 
 // ////////////////////////////////////////////////////////////////////////////
-// Outcome color map - tinted badge palette
+// Theme - all dashboard-specific colors in one place
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.dashboard.theme = {
+    name: 'Scheduler',
+    accent:       '#82ccff',
+    accent_light: '#b0dfff',
+    accent_dark:  '#2a7fbf',
+    spark_color:  '#82ccff',
+    spark_err:    '#ff6b6b',
+    pill_bg:      '#1a6fa0',
+    pill_color:   '#e0f0ff'
+};
+
+// ////////////////////////////////////////////////////////////////////////////
+// Outcome color map - tinted badge palette (uses theme accent for OK)
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.dashboard.outcome_colors = {
-    'ok': '#1b855e',
+    'ok': '#2a7fbf',
     'error': '#e0226e',
     'timeout': '#b35e00',
     'skipped_already_in_flight': '#6a4c93',
@@ -16,7 +31,7 @@ $.fn.zato.scheduler.dashboard.outcome_colors = {
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bg_colors = {
-    'ok': 'rgba(27, 133, 94, 0.12)',
+    'ok': 'rgba(42, 127, 191, 0.12)',
     'error': 'rgba(224, 34, 110, 0.12)',
     'timeout': 'rgba(179, 94, 0, 0.12)',
     'skipped_already_in_flight': 'rgba(106, 76, 147, 0.12)',
@@ -24,7 +39,7 @@ $.fn.zato.scheduler.dashboard.outcome_bg_colors = {
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bar_colors = {
-    'ok': '#2d8f45',
+    'ok': '#3a9ad9',
     'error': '#c0392b',
     'timeout': '#b45309',
     'skipped_already_in_flight': '#7c3aed',
@@ -32,7 +47,7 @@ $.fn.zato.scheduler.dashboard.outcome_bar_colors = {
 };
 
 $.fn.zato.scheduler.dashboard.outcome_bar_tints = {
-    'ok': '#d4edda',
+    'ok': '#d1e8f8',
     'error': '#f5d5d2',
     'timeout': '#fde8cd',
     'skipped_already_in_flight': '#ede5fb',
@@ -1238,11 +1253,11 @@ $.fn.zato.scheduler.dashboard.update_refresh_indicator = function() {
 $.fn.zato.scheduler.dashboard._tile_hover_ready = false;
 
 $.fn.zato.scheduler.dashboard._tile_hover_specs = [
-    {sel: '#spark-total-jobs', key: 'total_jobs', label: 'Total jobs', color: '#82ccff'},
-    {sel: '#spark-active', key: 'active', label: 'Active', color: '#82ccff'},
-    {sel: '#spark-paused', key: 'paused', label: 'Paused', color: '#82ccff'},
-    {sel: '#spark-runs', key: 'runs', label: 'Runs', color: '#82ccff'},
-    {sel: '#spark-failures', key: 'failures', label: 'Failures', color: '#ff6b6b'}
+    {sel: '#spark-total-jobs', key: 'total_jobs', label: 'Total jobs', color: $.fn.zato.scheduler.dashboard.theme.spark_color},
+    {sel: '#spark-active', key: 'active', label: 'Active', color: $.fn.zato.scheduler.dashboard.theme.spark_color},
+    {sel: '#spark-paused', key: 'paused', label: 'Paused', color: $.fn.zato.scheduler.dashboard.theme.spark_color},
+    {sel: '#spark-runs', key: 'runs', label: 'Runs', color: $.fn.zato.scheduler.dashboard.theme.spark_color},
+    {sel: '#spark-failures', key: 'failures', label: 'Failures', color: $.fn.zato.scheduler.dashboard.theme.spark_err}
 ];
 
 $.fn.zato.scheduler.dashboard._clear_tile_hover = function() {
@@ -1509,8 +1524,9 @@ $.fn.zato.scheduler.dashboard.render = function(data) {
         .text(failures_sub)
         .attr('title', fmt_full(failures_lifetime) + ' total');
 
-    var base_spark = {height: 36, color: '#82ccff', dot_color: '#82ccff', dot_radius: 3.5};
-    var base_spark_err = {height: 36, color: '#ff6b6b', dot_color: '#ff6b6b', dot_radius: 3.5};
+    var _theme = $.fn.zato.scheduler.dashboard.theme;
+    var base_spark = {height: 36, color: _theme.spark_color, dot_color: _theme.spark_color, dot_radius: 3.5};
+    var base_spark_err = {height: 36, color: _theme.spark_err, dot_color: _theme.spark_err, dot_radius: 3.5};
 
     var tile_specs = [
         {sel: '#spark-total-jobs', key: 'total_jobs', opts: base_spark, dot_style: 'filled_halo'},
@@ -1583,6 +1599,14 @@ $.fn.zato.scheduler.dashboard.init = function(initial_data) {
             initial_data = {};
         }
     }
+
+    var _t = $.fn.zato.scheduler.dashboard.theme;
+    $('#dashboard-hero-pill')
+        .text(_t.name)
+        .css({
+            'background': _t.pill_bg,
+            'color': _t.pill_color
+        });
 
     try {
         var stored_bars = localStorage.getItem('zato_scheduler_show_bars');
