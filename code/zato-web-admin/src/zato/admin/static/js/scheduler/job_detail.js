@@ -517,6 +517,10 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
         svg += '<path d="' + area + '" fill="url(#tlGrad_' + _sanitize(okey) + ')" />';
         svg += '<path d="' + top_path + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-opacity="0.7" stroke-linecap="round" stroke-linejoin="round" />';
 
+        var last_pt = top_pts[top_pts.length - 1];
+        svg += '<circle cx="' + last_pt.x.toFixed(2) + '" cy="' + last_pt.y.toFixed(2) + '" r="5.5" fill="none" stroke="' + color + '" stroke-opacity="0.35" stroke-width="1"/>';
+        svg += '<circle cx="' + last_pt.x.toFixed(2) + '" cy="' + last_pt.y.toFixed(2) + '" r="3.5" fill="' + color + '"/>';
+
         for (var si2 = 0; si2 < bucket_count; si2++) {
             cumulative[si2] += (buckets[si2][okey] || 0);
         }

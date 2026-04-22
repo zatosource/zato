@@ -390,8 +390,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     // ////////////////////////////////////////////////////////////////////
 
     kit.recency = {};
-    kit.recency.STEPS = 8;
-    kit.recency.MAX_ALPHA = 0.18;
+    kit.recency.STEPS = 10;
+    kit.recency.MAX_ALPHA = 0.38;
 
     /* Apply a fading tint to recently-arrived rows.
        config:
@@ -408,7 +408,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var max_a = kit.recency.MAX_ALPHA;
 
         for (var i = 0; i < ts_list.length && i < steps; i++) {
-            var alpha = max_a * (1 - i / steps);
+            var alpha = max_a * Math.pow(1 - i / steps, 1.5);
             $container
                 .find('tr[data-ts="' + ts_list[i] + '"]')
                 .css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
