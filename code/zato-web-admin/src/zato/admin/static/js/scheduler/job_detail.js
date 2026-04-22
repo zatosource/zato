@@ -467,7 +467,18 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var cumulative = [];
     for (var ci2 = 0; ci2 < bucket_count; ci2++) cumulative.push(0);
 
+    var _sanitize = function(k) { return String(k).replace(/[^A-Za-z0-9_]/g, '_'); };
+
     var svg = '<svg width="' + chart_width + '" height="' + chart_height + '" xmlns="http://www.w3.org/2000/svg">';
+    svg += '<defs>';
+    for (var gd = 0; gd < visible_keys.length; gd++) {
+        var gd_c = bar_colors[visible_keys[gd]] || '#ccc';
+        svg += '<linearGradient id="tlGrad_' + _sanitize(visible_keys[gd]) + '" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0" stop-color="' + gd_c + '" stop-opacity="0.25"/>' +
+            '<stop offset="1" stop-color="' + gd_c + '" stop-opacity="0.03"/>' +
+            '</linearGradient>';
+    }
+    svg += '</defs>';
 
     for (var li = 0; li < visible_keys.length; li++) {
         var okey = visible_keys[li];
@@ -503,7 +514,8 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
             bot_path.substring(bot_path.indexOf('C') - 1) +
             ' Z';
 
-        svg += '<path d="' + area + '" fill="' + color + '" opacity="0.75" />';
+        svg += '<path d="' + area + '" fill="url(#tlGrad_' + _sanitize(okey) + ')" />';
+        svg += '<path d="' + top_path + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-opacity="0.7" stroke-linecap="round" stroke-linejoin="round" />';
 
         for (var si2 = 0; si2 < bucket_count; si2++) {
             cumulative[si2] += (buckets[si2][okey] || 0);
