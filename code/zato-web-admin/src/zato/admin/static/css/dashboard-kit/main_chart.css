@@ -94,9 +94,6 @@
 }
 
 .dashboard-pill-clickable#dashboard-exec-count {
-    display: inline-flex;
-    align-items: center;
-    height: 22px;
     box-sizing: border-box;
 }
 

@@ -138,12 +138,13 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
 }
 
 .dashboard-pill {
-    display: inline-block;
-    padding: 2px 10px;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
     border-radius: var(--zato-pill-radius);
     font-size: 11px;
     font-weight: 700;
-    line-height: 1;
+    line-height: 1.15;
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     font-feature-settings: 'tnum' on, 'lnum' on;
     font-variant-numeric: tabular-nums lining-nums;
