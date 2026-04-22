@@ -58,8 +58,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         if (url_seconds !== null && !isNaN(url_seconds)) {
             current_seconds = url_seconds;
         } else {
-            var stored = parseInt(ns.storage_get(config.storage_key) || '0', 10);
-            current_seconds = isNaN(stored) ? (config.default_seconds || 0) : stored;
+            current_seconds = config.default_seconds || 0;
         }
 
         var build_menu = function() {

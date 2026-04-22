@@ -400,18 +400,33 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
          rgb:        base color as an "R, G, B" string (e.g. '218, 165, 32') */
     kit.recency.apply = function(config) {
         var $container = $(config.container);
-        $container.find('tr[data-ts]').css('background', '');
-
         var ts_list = config.recent_ts || [];
         var rgb = config.rgb || '218, 165, 32';
         var steps = kit.recency.STEPS;
         var max_a = kit.recency.MAX_ALPHA;
 
+        var ts_set = {};
+        for (var j = 0; j < ts_list.length && j < steps; j++) {
+            ts_set[ts_list[j]] = true;
+        }
+
+        $container.find('tr[data-ts]').each(function() {
+            var $row = $(this);
+            if (!ts_set[$row.attr('data-ts')]) {
+                $row.css('transition', 'background 1.5s ease');
+                $row.css('background', '');
+            }
+        });
+
         for (var i = 0; i < ts_list.length && i < steps; i++) {
-            var alpha = max_a * Math.pow(1 - i / steps, 1.5);
-            $container
-                .find('tr[data-ts="' + ts_list[i] + '"]')
-                .css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
+            var alpha = max_a * (1 - i / steps);
+            var $row = $container.find('tr[data-ts="' + ts_list[i] + '"]');
+            if (i === 0) {
+                $row.css('transition', 'none');
+            } else {
+                $row.css('transition', 'background 0.4s ease');
+            }
+            $row.css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
         }
     };
 })();
