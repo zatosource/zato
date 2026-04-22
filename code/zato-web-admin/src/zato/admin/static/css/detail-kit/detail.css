@@ -53,10 +53,10 @@ a {
     position: relative;
 }
 
-.stat-card-inline-control {
+.stat-card-label > .stat-card-inline-control {
     font-weight: 400;
     margin-left: 4px;
-    display: inline-flex;
+    display: inline-flex !important;
     vertical-align: middle;
 }
 
