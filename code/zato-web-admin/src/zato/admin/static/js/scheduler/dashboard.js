@@ -794,7 +794,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var error_text = failure.error || '';
             var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
 
-            html += '<tr>';
+            var f_ts = failure.actual_fire_time_iso || '';
+            html += '<tr data-ts="' + f_ts + '">';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
             html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(failure.job_id) + '/?cluster=' + cluster_id + '">' + (failure.job_name || failure.job_id) + '</a></td>';
             html += '<td>' + dash.outcome_badge(failure.outcome) + '</td>';
@@ -1013,6 +1014,13 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     // ////////////////////////////////////////////////////////////////////////
 
     dash.poll = function() {
+        var old_failure_ts = {};
+        $('#dashboard-failures-body tr[data-ts]').each(function() {
+            var ts = $(this).attr('data-ts');
+            if (ts) old_failure_ts[ts] = true;
+        });
+        var had_failures = Object.keys(old_failure_ts).length > 0;
+
         $.ajax({
             url: '/zato/scheduler/dashboard/poll/',
             type: 'POST',
@@ -1023,6 +1031,15 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                     try { data = JSON.parse(data); } catch(parse_error) { return; }
                 }
                 dash.render(data);
+
+                if (had_failures) {
+                    $('#dashboard-failures-body tr[data-ts]').each(function() {
+                        var ts = $(this).attr('data-ts');
+                        if (ts && !old_failure_ts[ts]) {
+                            $(this).addClass('dashboard-row-glow');
+                        }
+                    });
+                }
             },
             error: function() {}
         });
@@ -1151,7 +1168,22 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         dash.render(initial_data);
         kit.reveal();
-        setInterval(dash.poll, dash._poll_interval_ms);
+
+        dash._auto_refresh = kit.auto_refresh.init({
+            pill: '#dashboard-refresh-pill',
+            menu: '#dashboard-refresh-menu',
+            storage_key: 'zato_scheduler_refresh',
+            url_param: 'refresh',
+            default_seconds: 10,
+            on_tick: dash.poll
+        });
+
+        kit.url_state.on_pop(function(params) {
+            var refresh_val = parseInt(params.get('refresh') || '0', 10);
+            if (!isNaN(refresh_val)) {
+                dash._auto_refresh.set_seconds(refresh_val);
+            }
+        });
     };
 
 })();

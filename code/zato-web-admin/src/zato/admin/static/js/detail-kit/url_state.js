@@ -24,6 +24,17 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         }
         var qs = params.toString();
         var new_url = window.location.pathname + (qs ? '?' + qs : '');
-        history.replaceState(null, '', new_url);
+        history.pushState(null, '', new_url);
+    };
+
+    /* Register a callback for the browser back/forward button.
+       The callback receives the full URLSearchParams from the restored URL.
+       Multiple calls add multiple listeners (idempotent per callback). */
+    kit.url_state.on_pop = function(callback) {
+        window.addEventListener('popstate', function() {
+            if (typeof callback === 'function') {
+                callback(new URLSearchParams(window.location.search));
+            }
+        });
     };
 })();
