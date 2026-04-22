@@ -562,8 +562,8 @@ a.detail-component-pill:visited {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding: 8px 0;
-    font-size: 13px;
+    padding: 0.5rem 0;
+    font-size: 0.8125rem;
 }
 
 .detail-table-fixed {
@@ -580,18 +580,21 @@ a.detail-component-pill:visited {
 .detail-pagination-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0.75rem;
+    line-height: 1;
 }
 
 .detail-page-prev,
 .detail-page-next {
-    display: inline-block;
-    min-width: 55px;
+    min-width: 3.5rem;
     text-align: center;
+    font-size: 0.8125rem;
+    line-height: 1;
 }
 
 .detail-pagination-controls a {
     color: var(--detail-link-color);
+    padding: 0;
 }
 
 .detail-page-disabled {
@@ -603,6 +606,8 @@ a.detail-component-pill:visited {
 
 .detail-pagination-info {
     font-weight: 600;
+    font-size: 0.8125rem;
+    line-height: 1;
     color: var(--primary-dark);
 }
 
