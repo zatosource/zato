@@ -487,21 +487,21 @@ $.fn.zato.scheduler.job_detail.init_tabs = function() {
 
     var url_tab = kit.url_state.get('tab');
     if (url_tab) {
-        var $target = $('.detail-tab[data-tab="' + url_tab + '"]');
+        var $target = $('.dashboard-tab[data-tab="' + url_tab + '"]');
         if ($target.length) {
-            $('.detail-tab').removeClass('detail-tab-active').attr('aria-selected', 'false');
-            $target.addClass('detail-tab-active').attr('aria-selected', 'true');
-            $('.detail-tab-panel').attr('hidden', true);
-            $('#detail-tab-panel-' + url_tab).removeAttr('hidden');
+            $('.dashboard-tab').removeClass('dashboard-tab-active').attr('aria-selected', 'false');
+            $target.addClass('dashboard-tab-active').attr('aria-selected', 'true');
+            $('.dashboard-tab-panel').attr('hidden', true);
+            $('#dashboard-tab-panel-' + url_tab).removeAttr('hidden');
         }
     }
 
-    $('.detail-tab').on('click', function() {
+    $('.dashboard-tab').on('click', function() {
         var tab_name = $(this).data('tab');
-        $('.detail-tab').removeClass('detail-tab-active').attr('aria-selected', 'false');
-        $(this).addClass('detail-tab-active').attr('aria-selected', 'true');
-        $('.detail-tab-panel').attr('hidden', true);
-        $('#detail-tab-panel-' + tab_name).removeAttr('hidden');
+        $('.dashboard-tab').removeClass('dashboard-tab-active').attr('aria-selected', 'false');
+        $(this).addClass('dashboard-tab-active').attr('aria-selected', 'true');
+        $('.dashboard-tab-panel').attr('hidden', true);
+        $('#dashboard-tab-panel-' + tab_name).removeAttr('hidden');
         kit.url_state.set({tab: tab_name});
     });
 };

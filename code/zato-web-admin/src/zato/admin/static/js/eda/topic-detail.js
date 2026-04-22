@@ -179,12 +179,12 @@ $.fn.zato.eda.topic_detail = {};
             try { initial_data = JSON.parse(initial_data); } catch (e) { initial_data = {}; }
         }
 
-        $('.detail-tab').on('click', function() {
+        $('.dashboard-tab').on('click', function() {
             var tab_name = $(this).data('tab');
-            $('.detail-tab').removeClass('detail-tab-active').attr('aria-selected', 'false');
-            $(this).addClass('detail-tab-active').attr('aria-selected', 'true');
-            $('.detail-tab-panel').attr('hidden', true);
-            $('#detail-tab-panel-' + tab_name).removeAttr('hidden');
+            $('.dashboard-tab').removeClass('dashboard-tab-active').attr('aria-selected', 'false');
+            $(this).addClass('dashboard-tab-active').attr('aria-selected', 'true');
+            $('.dashboard-tab-panel').attr('hidden', true);
+            $('#dashboard-tab-panel-' + tab_name).removeAttr('hidden');
         });
 
         detail.render(initial_data);

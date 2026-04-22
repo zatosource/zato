@@ -84,12 +84,12 @@ $(document).ready(function() {
 {% block actions %}{% endblock %}
 
 {% block tabs %}
-    <button type="button" class="detail-tab detail-tab-active" data-tab="executions" role="tab" aria-selected="true">Runs</button>
-    <button type="button" class="detail-tab" data-tab="configuration" role="tab" aria-selected="false">Configuration</button>
+    <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="executions" role="tab" aria-selected="true">Runs</button>
+    <button type="button" class="dashboard-tab" data-tab="configuration" role="tab" aria-selected="false">Configuration</button>
 {% endblock %}
 
 {% block tab_panels %}
-<div class="detail-tab-panel" id="detail-tab-panel-executions" role="tabpanel">
+<div class="dashboard-tab-panel" id="dashboard-tab-panel-executions" role="tabpanel">
 
     <h3 class="section-title">Run timeline</h3>
     <div id="detail-timeline" style="min-height:60px"></div>
@@ -130,7 +130,7 @@ $(document).ready(function() {
     <div class="detail-pagination-controls" id="detail-history-pagination-bottom"></div>
 </div>
 
-<div class="detail-tab-panel" id="detail-tab-panel-configuration" role="tabpanel" hidden>
+<div class="dashboard-tab-panel" id="dashboard-tab-panel-configuration" role="tabpanel" hidden>
     <div class="detail-meta" id="detail-config-grid"></div>
 </div>
 {% endblock %}

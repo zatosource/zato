@@ -48,12 +48,12 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block tabs %}
-    <button type="button" class="detail-tab detail-tab-active" data-tab="queues" role="tab" aria-selected="true">Subscriber queues</button>
-    <button type="button" class="detail-tab" data-tab="messages" role="tab" aria-selected="false">Recent messages</button>
+    <button type="button" class="dashboard-tab dashboard-tab-active" data-tab="queues" role="tab" aria-selected="true">Subscriber queues</button>
+    <button type="button" class="dashboard-tab" data-tab="messages" role="tab" aria-selected="false">Recent messages</button>
 {% endblock %}
 
 {% block tab_panels %}
-<div class="detail-tab-panel" id="detail-tab-panel-queues" role="tabpanel">
+<div class="dashboard-tab-panel" id="dashboard-tab-panel-queues" role="tabpanel">
     <div class="detail-card-scroll">
         <table class="detail-table">
             <thead><tr><th>Subscriber</th><th>Pending</th></tr></thead>
@@ -62,7 +62,7 @@ $(document).ready(function() {
     </div>
 </div>
 
-<div class="detail-tab-panel" id="detail-tab-panel-messages" role="tabpanel" hidden>
+<div class="dashboard-tab-panel" id="dashboard-tab-panel-messages" role="tabpanel" hidden>
     <div class="detail-card-scroll">
         <table class="detail-table">
             <thead><tr><th>Message ID</th><th>Data</th><th>Size</th><th>Published</th></tr></thead>
