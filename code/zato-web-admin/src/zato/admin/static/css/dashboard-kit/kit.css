@@ -69,12 +69,9 @@
 
 .dashboard-hero-pill-link {
     font-size: 10px;
+    line-height: 10px;
+    padding-bottom: 5px !important;
     text-decoration: none;
-    padding: 5px 14px !important;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: color 150ms ease;
 }
 
