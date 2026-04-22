@@ -61,8 +61,9 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var instance_id = ns.sparkline._counter++;
         var grad_id = 'sparkArea_' + instance_id;
 
-        var max_points = Math.max(2, Math.floor(w / 8));
+        var max_points = Math.max(2, Math.floor(w / 9));
         if (data_points.length > max_points) {
+            var last_real = data_points[data_points.length - 1];
             var step = data_points.length / max_points;
             var resampled = [];
             for (var ri = 0; ri < max_points; ri++) {
@@ -74,12 +75,20 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 }
                 resampled.push(sum / (end_i - start_i));
             }
+            resampled[resampled.length - 1] = last_real;
             data_points = resampled;
         }
 
         var min_val = Math.min.apply(null, data_points);
         var max_val = Math.max.apply(null, data_points);
         var range = max_val - min_val;
+
+        if (range > 0) {
+            var mid = (min_val + max_val) / 2;
+            min_val = mid - range * 0.35;
+            max_val = mid + range * 0.35;
+            range = max_val - min_val;
+        }
 
         var draw_h = h - pad_top - pad_bottom;
         var draw_w = w - 2 * pad_x;
