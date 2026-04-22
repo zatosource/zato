@@ -111,6 +111,21 @@ a {
     text-decoration: none !important;
 }
 
+.section-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.section-title-row .section-title {
+    margin-right: 0;
+}
+
+.section-title-row .dashboard-chart-legend {
+    padding-top: 0;
+}
+
 .section-title {
     font-size: 16px;
     font-weight: 600;

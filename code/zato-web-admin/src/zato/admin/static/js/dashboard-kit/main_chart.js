@@ -368,31 +368,19 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
             setup_interactions($container, buckets, draw_width, bucket_count, draw_height, visible_keys, layer_points);
 
-            if (!state.skip_legend_rebuild) {
-                $legend.empty();
-                for (var gli = 0; gli < series_keys.length; gli++) {
-                    var legend_key = series_keys[gli];
-                    var is_hidden = !!hidden[legend_key];
-                    var dot_color = palette[legend_key] || '#888';
-                    var text_color = (config.legend_text_colors && config.legend_text_colors[legend_key]) || dot_color;
-                    var bg_color = (config.legend_bg_colors && config.legend_bg_colors[legend_key])
-                        || 'rgba(110,110,115,0.12)';
-                    var item = $('<span class="dashboard-legend-badge' + (is_hidden ? ' dashboard-legend-badge-off' : '') + '" data-key="' + legend_key + '"></span>');
-                    item.css({'color': text_color, 'background': bg_color});
-                    item.append('<span class="dashboard-legend-badge-dot" style="background:' + dot_color + '"></span>');
-                    item.append(labels[legend_key] || legend_key);
-                    $legend.append(item);
-                }
-                $legend.off('click.toggle').on('click.toggle', '.dashboard-legend-badge', function() {
-                    var $el = $(this);
-                    var key = $el.data('key');
-                    $el.toggleClass('dashboard-legend-badge-off');
-                    var h = get_hidden();
-                    if (h[key]) { delete h[key]; } else { h[key] = true; }
+            ns.build_legend({
+                container: config.legend,
+                series_keys: series_keys,
+                palette: palette,
+                labels: labels,
+                text_colors: config.legend_text_colors,
+                bg_colors: config.legend_bg_colors,
+                hidden: hidden,
+                on_toggle: function(_key, h) {
                     set_hidden(h);
                     redraw();
-                });
-            }
+                }
+            }, state.skip_legend_rebuild);
         };
 
         var redraw = function() {

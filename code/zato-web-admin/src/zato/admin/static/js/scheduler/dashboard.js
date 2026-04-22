@@ -564,37 +564,19 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         dash._setup_chart_interactions(container, buckets, padding_left, draw_width, bucket_count, padding_top, draw_height, padding_bottom, chart_height, visible_keys, layer_points, bar_colors);
 
-        if (!dash._skip_legend_rebuild) {
-            var legend_container = $('#dashboard-chart-legend');
-            var outcome_text_colors = dash.outcome_colors;
-            var outcome_bg = dash.outcome_bg_colors;
-            legend_container.empty();
-            for (var legend_index = 0; legend_index < outcome_keys.length; legend_index++) {
-                var legend_key = outcome_keys[legend_index];
-                var is_hidden = !!hidden_outcomes[legend_key];
-                var text_color = outcome_text_colors[legend_key] || '#6e6e73';
-                var bg_color = outcome_bg[legend_key] || 'rgba(110,110,115,0.12)';
-                var dot_color = bar_colors[legend_key];
-                var item = $('<span class="dashboard-legend-badge' + (is_hidden ? ' dashboard-legend-badge-off' : '') + '" data-outcome="' + legend_key + '"></span>');
-                item.css({'color': text_color, 'background': bg_color});
-                item.append('<span class="dashboard-legend-badge-dot" style="background:' + dot_color + '"></span>');
-                item.append(labels[legend_key]);
-                legend_container.append(item);
-            }
-            legend_container.off('click.toggle').on('click.toggle', '.dashboard-legend-badge', function() {
-                var el = $(this);
-                var key = el.data('outcome');
-                el.toggleClass('dashboard-legend-badge-off');
-                var hidden = dash._get_hidden_outcomes();
-                if (hidden[key]) {
-                    delete hidden[key];
-                } else {
-                    hidden[key] = true;
-                }
-                dash._set_hidden_outcomes(hidden);
+        kit.build_legend({
+            container: '#dashboard-chart-legend',
+            series_keys: outcome_keys,
+            palette: bar_colors,
+            labels: labels,
+            text_colors: dash.outcome_colors,
+            bg_colors: dash.outcome_bg_colors,
+            hidden: hidden_outcomes,
+            on_toggle: function(_key, h) {
+                dash._set_hidden_outcomes(h);
                 dash._redraw_chart_from_cache();
-            });
-        }
+            }
+        }, dash._skip_legend_rebuild);
     };
 
     // ////////////////////////////////////////////////////////////////////////

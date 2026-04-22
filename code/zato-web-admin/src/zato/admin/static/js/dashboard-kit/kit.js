@@ -208,6 +208,55 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {}
     };
 
+    /* Build legend badges into a container element.
+       config:
+         container:       jQuery selector or element for the legend row
+         series_keys:     array of all series keys in display order
+         palette:         { key: dot_colour }
+         labels:          { key: display_label }
+         text_colors:     { key: text_colour }   (optional, falls back to palette)
+         bg_colors:       { key: bg_colour }      (optional, falls back to muted grey)
+         hidden:          { key: true } map of currently hidden keys
+         on_toggle(key, hidden_map):  called after a badge is clicked
+       Skips rebuild if skip===true. */
+    kit.build_legend = function(config, skip) {
+        if (skip) return;
+        var $el = $(config.container);
+        $el.empty();
+        var keys = config.series_keys || [];
+        var palette = config.palette || {};
+        var labels = config.labels || {};
+        var hidden = config.hidden || {};
+        var text_colors = config.text_colors || {};
+        var bg_colors = config.bg_colors || {};
+
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            var is_off = !!hidden[k];
+            var dot = palette[k] || '#888';
+            var tc = text_colors[k] || dot;
+            var bg = bg_colors[k] || 'rgba(110,110,115,0.12)';
+            var badge = $('<span class="dashboard-legend-badge' +
+                (is_off ? ' dashboard-legend-badge-off' : '') +
+                '" data-key="' + k + '"></span>');
+            badge.css({'color': tc, 'background': bg});
+            badge.append('<span class="dashboard-legend-badge-dot" style="background:' + dot + '"></span>');
+            badge.append(labels[k] || k);
+            $el.append(badge);
+        }
+
+        $el.off('click.toggle').on('click.toggle', '.dashboard-legend-badge', function() {
+            var $badge = $(this);
+            var key = $badge.data('key');
+            $badge.toggleClass('dashboard-legend-badge-off');
+            var h = config.hidden || {};
+            if (h[key]) { delete h[key]; } else { h[key] = true; }
+            if (typeof config.on_toggle === 'function') {
+                config.on_toggle(key, h);
+            }
+        });
+    };
+
     /* Build and inject the hero pill group HTML from a theme object.
        theme:
          name:            dashboard label, e.g. 'Scheduler'

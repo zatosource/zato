@@ -93,7 +93,10 @@ $(document).ready(function() {
 {% block tab_panels %}
 <div class="dashboard-tab-panel" id="dashboard-tab-panel-executions" role="tabpanel">
 
-    <h3 class="section-title">Run timeline</h3>
+    <div class="section-title-row">
+        <h3 class="section-title">Run timeline</h3>
+        <div class="dashboard-chart-legend" id="detail-timeline-legend"></div>
+    </div>
     <div id="detail-timeline" style="min-height:60px"></div>
 
     <h3 class="section-title">Run history <span class="detail-badge detail-badge-sm" id="detail-history-count"></span></h3>
