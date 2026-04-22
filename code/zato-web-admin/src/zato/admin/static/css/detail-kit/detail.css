@@ -1,3 +1,5 @@
+@import url("../shared/tabs.css");
+
 :root {
     --detail-badge-bg: var(--zato-seablue-light1, #063c65);
     --detail-link-color: #037ac7;
@@ -460,8 +462,6 @@ a {
     z-index: 1;
     box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
 }
-
-@import url("../shared/tabs.css");
 
 .detail-header-row {
     display: flex;

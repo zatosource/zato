@@ -44,9 +44,7 @@
 .dashboard-tab:active {
     background: transparent none;
     background-image: none;
-    border-top: 0;
-    border-right: 0;
-    border-left: 0;
+    border: 1px solid transparent;
     border-radius: 0;
     box-shadow: none;
     text-shadow: none;
@@ -64,10 +62,12 @@
 }
 
 .dashboard-tab-active,
-.dashboard-tab-active:hover {
+.dashboard-tab-active:hover,
+.dashboard-tab-active:focus,
+.dashboard-tab-active:active {
     color: var(--primary-dark);
     background: #fff;
-    border-color: rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 0;
     box-shadow:
         0 1px 3px rgba(0, 0, 0, 0.04),
