@@ -66,11 +66,11 @@ a {
 }
 
 .stat-card-inline-btn {
-    font-size: 10px;
+    font-size: 11px;
     padding: 2px 8px;
     margin-left: 6px;
     white-space: nowrap;
-    vertical-align: middle;
+    vertical-align: 0.5px;
     text-transform: none;
     letter-spacing: 0;
     border-radius: 3px;
