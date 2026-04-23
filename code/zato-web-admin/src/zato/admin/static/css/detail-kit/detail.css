@@ -7,6 +7,23 @@
 
 .settings-panel {
     max-width: 1400px !important;
+    position: relative;
+}
+
+#detail-stat-cards {
+    position: absolute;
+    right: calc(100% + 18px);
+    top: 15px;
+    flex-direction: column;
+    width: 180px;
+    margin-bottom: 0;
+}
+
+#detail-stat-cards .stat-card {
+    min-width: 0;
+    flex: none;
+    height: auto;
+    padding: 10px 14px;
 }
 
 a {
