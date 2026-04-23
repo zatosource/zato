@@ -749,7 +749,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             }
             row += '<td><a href="' + detail_url + '">' + job.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
-            row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_fire_tooltip + '">' + next_fire_text + '</td>';
+            row += '<td data-countdown-target="' + (job.next_fire_utc || '') + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_fire_tooltip + '">' + next_fire_text + '</td>';
             row += '<td>' + dash.outcome_squares(job.recent_outcomes) + '</td>';
             row += '</tr>';
             table_body.append(row);
@@ -1194,6 +1194,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         });
 
         dash.render(initial_data);
+        kit.countdown.start();
         kit.reveal();
 
         dash._auto_refresh = kit.auto_refresh.init({

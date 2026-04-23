@@ -112,12 +112,17 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var now = Date.now();
         var diff_seconds = Math.floor((target - now) / 1000);
 
-        if (diff_seconds < 0) return 'Overdue';
-        if (diff_seconds === 0) return 'Now';
-        if (diff_seconds < 60) return 'In ' + diff_seconds + 's';
-        if (diff_seconds < 3600) return 'In ' + Math.floor(diff_seconds / 60) + 'm';
-        if (diff_seconds < 86400) return 'In ' + Math.floor(diff_seconds / 3600) + 'h';
-        return 'In ' + Math.floor(diff_seconds / 86400) + 'd';
+        if (diff_seconds <= 0) return 'Now';
+
+        var days = Math.floor(diff_seconds / 86400);
+        var hours = Math.floor((diff_seconds % 86400) / 3600);
+        var minutes = Math.floor((diff_seconds % 3600) / 60);
+        var seconds = diff_seconds % 60;
+
+        if (days > 0) return 'In ' + days + 'd ' + hours + 'h';
+        if (hours > 0) return 'In ' + hours + 'h ' + minutes + 'm';
+        if (minutes > 0) return 'In ' + minutes + 'm ' + seconds + 's';
+        return 'In ' + seconds + 's';
     };
 
     kit.relative_time_past = function(iso_string) {
@@ -367,6 +372,34 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     /* Fade the dashboard into view after first render. */
     kit.reveal = function(selector) {
         $(selector || '.dashboard-page').css('opacity', '1');
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Live countdown - ticks every second, updates elements with
+    // data-countdown-target="<ISO timestamp>" using relative_time_future.
+    // ////////////////////////////////////////////////////////////////////////
+
+    kit.countdown = {};
+    kit.countdown._interval_id = null;
+
+    kit.countdown._tick = function() {
+        $('[data-countdown-target]').each(function() {
+            var $cell = $(this);
+            var iso = $cell.attr('data-countdown-target');
+            $cell.text(kit.relative_time_future(iso));
+        });
+    };
+
+    kit.countdown.start = function() {
+        if (kit.countdown._interval_id) return;
+        kit.countdown._interval_id = setInterval(kit.countdown._tick, 1000);
+    };
+
+    kit.countdown.stop = function() {
+        if (kit.countdown._interval_id) {
+            clearInterval(kit.countdown._interval_id);
+            kit.countdown._interval_id = null;
+        }
     };
 
     // ////////////////////////////////////////////////////////////////////////
