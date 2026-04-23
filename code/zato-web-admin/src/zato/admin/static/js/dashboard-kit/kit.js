@@ -282,6 +282,63 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         $(selector).html(html);
     };
 
+    kit.set_fit_label = function(selector, label_text, action) {
+        var el = $(selector);
+        var font_size = 12;
+        var action_font_size = font_size * 0.92;
+        var line_height = 16;
+        var pad_x = 5;
+        var pad_y = 2;
+        var svg_el = el.find('.stat-card-label-svg');
+
+        if (svg_el.length === 0) {
+            var svg_html = '<svg class="stat-card-label-svg" viewBox="0 0 100 ' + line_height +
+                '" preserveAspectRatio="xMinYMid meet">' +
+                '<text x="0" y="' + font_size + '" style="font-size:' + font_size +
+                'px" class="stat-card-label-svg-text"></text>';
+            if (action) {
+                svg_html += '<rect class="stat-card-label-svg-action-bg" rx="2" ry="2"></rect>' +
+                    '<text y="' + font_size + '" style="font-size:' + action_font_size +
+                    'px;cursor:pointer" class="stat-card-label-svg-action"></text>';
+            }
+            svg_html += '</svg>';
+            svg_el = $(svg_html);
+            el.prepend(svg_el);
+
+            if (action) {
+                var action_group = svg_el.find('.stat-card-label-svg-action, .stat-card-label-svg-action-bg');
+                action_group.on('click', action.on_click);
+            }
+        }
+
+        var label_node = svg_el.find('.stat-card-label-svg-text');
+        label_node.text(label_text);
+        var label_width = label_node[0].getComputedTextLength();
+
+        var total_width = label_width;
+
+        if (action) {
+            var action_node = svg_el.find('.stat-card-label-svg-action');
+            action_node.text(action.text);
+            var gap = font_size * 0.5;
+            var text_width = action_node[0].getComputedTextLength();
+            var action_x = label_width + gap;
+            action_node.attr('x', action_x + pad_x);
+
+            var bg = svg_el.find('.stat-card-label-svg-action-bg');
+            var bg_height = action_font_size + pad_y * 2;
+            var bg_y = font_size - action_font_size - pad_y + 1;
+            bg.attr('x', action_x);
+            bg.attr('y', bg_y);
+            bg.attr('width', text_width + pad_x * 2);
+            bg.attr('height', bg_height);
+
+            total_width = action_x + text_width + pad_x * 2;
+        }
+
+        svg_el[0].setAttribute('viewBox', '0 0 ' + total_width + ' ' + line_height);
+    };
+
     kit.set_fit_value = function(selector, text) {
         var el = $(selector);
         var is_sm = el.hasClass('stat-card-value-sm');

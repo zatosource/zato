@@ -22,7 +22,6 @@
 #detail-stat-cards .stat-card {
     min-width: 0;
     flex: none;
-    height: auto;
     padding: 10px 14px;
 }
 
@@ -35,9 +34,35 @@
     min-width: 0;
 }
 
+
 .stat-card-fit-container .stat-card-value,
 .stat-card-fit-container .stat-card-value-sm {
     display: none;
+}
+
+.stat-card-fit-container .stat-card-label-svg {
+    display: block;
+    width: 100%;
+    height: 14px;
+    overflow: visible;
+}
+
+.stat-card-label-svg-text {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    fill: var(--primary-dark);
+}
+
+.stat-card-label-svg-action-bg {
+    fill: var(--component-accent-light, #e0f0ff);
+}
+
+.stat-card-label-svg-action {
+    fill: var(--component-accent, #012845);
+    font-weight: 600;
+    letter-spacing: 0;
+    cursor: pointer;
 }
 
 .stat-card-fit-container .stat-card-value-svg {
@@ -46,12 +71,9 @@
     overflow: visible;
 }
 
-.stat-card-fit-container .stat-card-value-svg.stat-card-value-svg-lg {
-    height: 28px;
-}
-
+.stat-card-fit-container .stat-card-value-svg.stat-card-value-svg-lg,
 .stat-card-fit-container .stat-card-value-svg.stat-card-value-svg-sm {
-    height: 16px;
+    height: 28px;
 }
 
 .stat-card-value-svg-text {

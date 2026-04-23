@@ -8,7 +8,14 @@ $.fn.zato.scheduler.job_detail.config = {
     default_tab: 'executions',
     default_time_range: 0,
     chart_width: 700,
-    fit_value_selectors: ['#stat-total-runs', '#stat-next-fire']
+    fit_value_selectors: ['#stat-total-runs', '#stat-next-fire'],
+    fit_label_selectors: {
+        '#stat-next-fire': {
+            text: 'Next fire',
+            action_text: 'Execute now',
+            action_target: '#btn-execute-now'
+        }
+    }
 };
 
 $.fn.zato.scheduler.job_detail._dashboard = function() {
@@ -20,6 +27,7 @@ $.fn.zato.scheduler.job_detail._job_data = {};
 $.fn.zato.scheduler.job_detail._pagination = null;
 $.fn.zato.scheduler.job_detail._runs_rendered = false;
 $.fn.zato.scheduler.job_detail._object_id = '';
+$.fn.zato.scheduler.job_detail._fit_labels_applied = {};
 $.fn.zato.scheduler.job_detail._poll_config = {};
 
 $.fn.zato.scheduler.job_detail._hidden_series_key = function() {
@@ -104,11 +112,23 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
     var dashboard = detail._dashboard();
 
     var fit = detail.config.fit_value_selectors;
+    var fit_labels = detail.config.fit_label_selectors;
     var set_value = function(selector, text) {
         if (fit.indexOf(selector) !== -1) {
             kit.set_fit_value(selector, text);
         } else {
             $(selector).text(text);
+        }
+
+        var label_cfg = fit_labels[selector];
+        if (label_cfg && !detail._fit_labels_applied[selector]) {
+            var container = $(selector).closest('.stat-card-fit-container');
+            container.find('.stat-card-label').hide();
+            kit.set_fit_label(container, label_cfg.text, {
+                text: label_cfg.action_text,
+                on_click: function() { $(label_cfg.action_target).trigger('click'); }
+            });
+            detail._fit_labels_applied[selector] = true;
         }
     };
 
@@ -657,7 +677,8 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
 
 $.fn.zato.scheduler.job_detail.render_actions = function(job_id) {
     $('#btn-execute-now').on('click', function() {
-        var btn = this;
+        var svg_action = document.querySelector('.stat-card-label-svg-action');
+        var tooltip_anchor = svg_action ? svg_action : this;
         var cluster_id = $.fn.zato.scheduler.job_detail.config.cluster_id;
         var url = '/zato/scheduler/execute/' + job_id + '/cluster/' + cluster_id + '/';
 
@@ -666,7 +687,7 @@ $.fn.zato.scheduler.job_detail.render_actions = function(job_id) {
             type: 'POST',
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
             success: function() {
-                var _tooltip = tippy(btn, {
+                var _tooltip = tippy(tooltip_anchor, {
                     content: 'OK, job executed',
                     allowHTML: false,
                     theme: 'dark',
