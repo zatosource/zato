@@ -679,6 +679,11 @@ a.detail-component-pill:visited {
     cursor: default;
 }
 
+.detail-page-sep {
+    font-size: 80%;
+    opacity: 0.5;
+}
+
 .detail-pagination-info {
     font-weight: 600;
     font-size: 0.8125rem;

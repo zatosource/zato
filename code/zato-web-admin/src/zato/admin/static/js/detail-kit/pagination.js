@@ -22,6 +22,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var current_page = 1;
         var total_count = 0;
         var last_ts = '';
+        var show_all = false;
 
         function total_pages() {
             return Math.ceil(total_count / page_size) || 1;
@@ -30,6 +31,22 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         function render_controls(selector) {
             var $c = $(selector);
             if (!$c.length) return;
+
+            if (show_all) {
+                var html = '<span class="detail-pagination-row">';
+                html += '<span class="detail-pagination-info">' +
+                    kit.format_number_full(total_count) + ' total</span>';
+                html += ' <span class="detail-page-sep">|</span> <a href="#" class="detail-page-paginate">Paginate</a>';
+                html += '</span>';
+                $c.html(html);
+                $c.find('a.detail-page-paginate').on('click', function(e) {
+                    e.preventDefault();
+                    show_all = false;
+                    fetch_page(1);
+                });
+                return;
+            }
+
             var tp = total_pages();
             var has_prev = current_page > 1;
             var has_next = current_page < tp;
@@ -49,6 +66,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             } else {
                 html += '<span class="detail-page-next detail-page-disabled">Next</span>';
             }
+            html += ' <span class="detail-page-sep">|</span> <a href="#" class="detail-page-show-all">Show all</a>';
             html += '</span>';
 
             $c.html(html);
@@ -59,6 +77,11 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $c.find('a.detail-page-next').on('click', function(e) {
                 e.preventDefault();
                 fetch_page(current_page + 1);
+            });
+            $c.find('a.detail-page-show-all').on('click', function(e) {
+                e.preventDefault();
+                show_all = true;
+                fetch_all();
             });
         }
 
@@ -100,7 +123,6 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     total_count = data.total || 0;
                     current_page = data.page || page;
 
-                    console.log('pagination.fetch_page: requested page_size=' + page_size + ', got rows=' + rows.length + ', total=' + total_count + ', page=' + current_page);
                     render_page($body, rows);
 
                     update_last_ts(rows);
@@ -113,9 +135,34 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             });
         }
 
+        function fetch_all() {
+            $.ajax({
+                url: poll_url,
+                type: 'POST',
+                data: {
+                    object_type: object_type,
+                    id: object_id,
+                    page: 1,
+                    page_size: 100000,
+                    exclude_outcomes: exclude_outcomes
+                },
+                headers: {'X-CSRFToken': csrf_token},
+                success: function(data) {
+                    if (typeof data === 'string') {
+                        data = JSON.parse(data);
+                    }
+                    var rows = data.rows;
+                    total_count = data.total || 0;
+                    render_page($body, rows);
+                    update_last_ts(rows);
+                    update_controls();
+                }
+            });
+        }
+
         function poll_new() {
             if (!last_ts) return;
-            if (current_page !== 1) return;
+            if (!show_all && current_page !== 1) return;
 
             $.ajax({
                 url: poll_url,
@@ -137,7 +184,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     update_last_ts(rows);
                     total_count += rows.length;
 
-                    render_new($body, rows, page_size);
+                    render_new($body, rows, show_all ? Infinity : page_size);
 
                     update_controls();
                 }

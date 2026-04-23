@@ -88,6 +88,17 @@
     box-shadow: none;
 }
 
+.detail-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.detail-section-header .section-title {
+    margin: 0;
+}
+
 .detail-config-extra .hl-key { color: #0550ae; }
 .detail-config-extra .hl-str { color: #116329; }
 .detail-config-extra .hl-num { color: #0550ae; }
