@@ -46,7 +46,7 @@ DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details']) # type
 
 # ################################################################################################################################
 
-to_ignore = {'demo.ping', 'demo.input-logger'}
+_to_ignore = {'demo.ping'}
 
 # ################################################################################################################################
 
@@ -101,14 +101,7 @@ class Index(_Index):
         }
 
     def handle_return_data(self, return_data:'any_') -> 'any_':
-        filtered_items = []
-        for item in self.items:
-            if item.name in to_ignore:
-                continue
-            if not item.name.startswith('demo.'):
-                continue
-            filtered_items.append(item)
-        return_data['items'] = filtered_items
+        return_data['items'] = [item for item in self.items if item.name not in _to_ignore]
         return return_data
 
 # ################################################################################################################################

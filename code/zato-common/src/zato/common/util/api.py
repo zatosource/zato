@@ -1971,6 +1971,10 @@ class _DemoPyFsLocations:
     pickup_incoming_full_path:'str'
     work_dir_full_path:'str'
 
+class _DemoExtraPyFsLocations:
+    pickup_incoming_full_path:'str'
+    work_dir_full_path:'str'
+
 def get_demo_py_fs_locations(base_dir:'str') -> '_DemoPyFsLocations':
 
     # Local variables
@@ -1978,7 +1982,20 @@ def get_demo_py_fs_locations(base_dir:'str') -> '_DemoPyFsLocations':
 
     out = _DemoPyFsLocations()
     out.pickup_incoming_full_path = os.path.join(base_dir, 'pickup', 'incoming', 'services', file_name)
-    out.work_dir_full_path = os.path.join(base_dir, 'work', 'hot-deploy', 'current', 'demo.py')
+    out.work_dir_full_path = os.path.join(base_dir, 'work', 'hot-deploy', 'current', file_name)
+
+    return out
+
+# ################################################################################################################################
+
+def get_demo_extra_py_fs_locations(base_dir:'str') -> '_DemoExtraPyFsLocations':
+
+    # Local variables
+    file_name = 'demo_extra.py'
+
+    out = _DemoExtraPyFsLocations()
+    out.pickup_incoming_full_path = os.path.join(base_dir, 'pickup', 'incoming', 'services', file_name)
+    out.work_dir_full_path = os.path.join(base_dir, 'work', 'hot-deploy', 'current', file_name)
 
     return out
 

@@ -13,10 +13,10 @@ from dataclasses import dataclass
 # Zato
 from zato.cli import common_odb_opts, common_scheduler_server_api_client_opts, common_scheduler_server_address_opts, \
     sql_conf_contents, ZatoCommand
-from zato.common.api import CONTENT_TYPE, Default_Service_File_Data, NotGiven, SCHEDULER
+from zato.common.api import CONTENT_TYPE, Default_Extra_Service_File_Data, Default_Service_File_Data, NotGiven, SCHEDULER
 from zato.common.crypto.api import ServerCryptoManager
 from zato.common.simpleio_ import simple_io_conf_contents
-from zato.common.util.api import as_bool, get_demo_py_fs_locations
+from zato.common.util.api import as_bool, get_demo_extra_py_fs_locations, get_demo_py_fs_locations
 from zato.common.util.config import get_scheduler_api_client_for_server_password, get_scheduler_api_client_for_server_username
 from zato.common.util.open_ import open_r, open_w
 
@@ -149,7 +149,6 @@ log_connection_info_sleep_time=5 # In seconds
 
 [startup_services]
 zato.updates.check-updates=
-demo.input-logger=Sample payload for a startup service
 
 [user_config]
 # All paths are either absolute or relative to the directory server.conf is in
@@ -428,6 +427,16 @@ class Create(ZatoCommand):
 
 # ################################################################################################################################
 
+    def _add_demo_extra_service(self, fs_location:'str', full_path:'str') -> 'None':
+
+        with open_w(fs_location) as f:
+            data = Default_Extra_Service_File_Data.format(**{
+                'full_path': full_path,
+            })
+            _ = f.write(data)
+
+# ################################################################################################################################
+
     def execute(
         self,
         args:'any_',
@@ -639,9 +648,14 @@ class Create(ZatoCommand):
             # Prepare paths for the demo service ..
             demo_py_fs = get_demo_py_fs_locations(self.target_dir)
 
-            # .. and create it now.
+            # .. and create it now ..
             self._add_demo_service(demo_py_fs.pickup_incoming_full_path, demo_py_fs.pickup_incoming_full_path)
             self._add_demo_service(demo_py_fs.work_dir_full_path, demo_py_fs.pickup_incoming_full_path)
+
+            # .. same for the extra demo services.
+            demo_extra_py_fs = get_demo_extra_py_fs_locations(self.target_dir)
+            self._add_demo_extra_service(demo_extra_py_fs.pickup_incoming_full_path, demo_extra_py_fs.pickup_incoming_full_path)
+            self._add_demo_extra_service(demo_extra_py_fs.work_dir_full_path, demo_extra_py_fs.pickup_incoming_full_path)
 
             # Initial info
             self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
