@@ -19,7 +19,7 @@ scheduler:
     job_type: interval_based
     seconds: 7
     is_active: true
-    extra: '{"seconds": 7, "source": "crm", "object_type": "case", "direction": "outbound", "priority": "normal"}'
+    extra: '{"seconds": 6, "source": "crm", "object_type": "case", "direction": "outbound", "priority": "normal"}'
 
   - name: crm.reconcile-invoices
     service: demo.sleep
@@ -33,11 +33,11 @@ scheduler:
     job_type: interval_based
     seconds: 8
     is_active: true
-    extra: '{"seconds": 3, "action": "purge", "target": "sessions", "max_age_hours": 48}'
+    extra: '{"seconds": 2, "action": "purge", "target": "sessions", "max_age_hours": 48}'
 
   - name: crm.slow-sftp-export
     service: demo.sleep
     job_type: interval_based
     seconds: 6
     is_active: true
-    extra: '{"seconds": 20, "host": "sftp.partner.example.com", "path": "/outbound/invoices"}'
+    extra: '{"seconds": 7, "host": "sftp.partner.example.com", "path": "/outbound/invoices"}'

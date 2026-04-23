@@ -1256,9 +1256,6 @@ $.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 $.fn.zato.data_table.service_text = function(service, cluster_id) {
-    if(service && $.fn.zato.data_table.internal_services[service]) {
-        return service;
-    }
     return String.format('<a href="/zato/service/ide/service/{0}/?cluster={1}">{0}</a>', service, cluster_id);
 }
 
