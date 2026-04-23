@@ -7,7 +7,8 @@ $.fn.zato.scheduler.dashboard.config = {
     cluster_id: '1',
     chart_width: 800,
     default_time_range: 0,
-    error_message: 'Error executing job'
+    error_message: 'Error executing job',
+    show_live_status: false
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -712,6 +713,9 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     // ////////////////////////////////////////////////////////////////////////
 
     dash.render_job_table = function(jobs) {
+        if (!dash.config.show_live_status) {
+            $('.dashboard-th-dot').hide();
+        }
         var table_body = $('#dashboard-job-table-body');
         table_body.empty();
 
@@ -742,9 +746,11 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 service_cell = '<a href="' + service_url + '">' + service_name + '</a>';
             }
 
-            var status = dash.status_dot(job);
             var row = '<tr data-href="' + detail_url + '">';
-            row += '<td data-tippy-content="' + status.tooltip + '" data-tippy-placement="left">' + status.html + '</td>';
+            if (dash.config.show_live_status) {
+                var status = dash.status_dot(job);
+                row += '<td data-tippy-content="' + status.tooltip + '" data-tippy-placement="left">' + status.html + '</td>';
+            }
             row += '<td><a href="' + detail_url + '">' + job.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
             row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_fire_tooltip + '">' + next_fire_text + '</td>';
