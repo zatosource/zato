@@ -675,6 +675,50 @@ $.fn.zato.scheduler.job_detail._render_tag_badges = function(run) {
     return html;
 };
 
+$.fn.zato.scheduler.job_detail._render_dark_tag_badges = function(run) {
+    var detail = $.fn.zato.scheduler.job_detail;
+    var tag_defs = detail.config.detail_tags;
+    var fake = detail._generate_fake_tags(run);
+    var tags = fake.tags;
+    var html = '';
+    for (var t = 0; t < tag_defs.length; t++) {
+        var def = tag_defs[t];
+        var count = tags[def.key];
+        if (count > 0) {
+            var style = 'color:' + def.dark_color + ';background:' + def.dark_bg;
+            if (def.dimmed) style += ';opacity:0.55';
+            html += '<span class="detail-tag" data-key="' + def.key + '" style="' + style + '">' +
+                def.label + ' x' + count + '</span>';
+        }
+    }
+    return html;
+};
+
+$.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
+    var kit = $.fn.zato.dashboard_kit;
+    var detail = $.fn.zato.scheduler.job_detail;
+    var cfg = detail.config.detail_panel;
+    var dashboard = detail._dashboard();
+
+    var actual_time = kit.format_local_time(record.actual_fire_time_iso);
+    var delay = (record.delay_ms !== null && record.delay_ms !== undefined && record.delay_ms > 0)
+        ? kit.format_number_full(record.delay_ms) + ' ms'
+        : '-';
+    var duration = dashboard.format_duration(record.duration_ms);
+    var outcome = dashboard.outcome_badge(record.outcome);
+    var run_number = (record.current_run !== null && record.current_run !== undefined)
+        ? kit.format_number_full(record.current_run) : '-';
+    var tag_html = detail._render_dark_tag_badges(record.current_run);
+
+    var html = '<div class="detail-log-line detail-log-mirror" style="border-bottom:1px solid ' + cfg.row_border + '">';
+    html += '<div class="detail-log-stripe" style="background:' + cfg.owner_color + '"></div>';
+    html += '<div class="detail-log-ts"><span class="detail-log-level" style="color:' + cfg.owner_color + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></div>';
+    html += '<div class="detail-log-level-col">' + outcome + '</div>';
+    html += '<div class="detail-log-msg" style="color:' + cfg.owner_color + '">' + actual_time + ' \u00b7 ' + duration + ' \u00b7 delay ' + delay + ' \u00b7 ' + tag_html + '</div>';
+    html += '</div>';
+    return html;
+};
+
 $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
     var detail = $.fn.zato.scheduler.job_detail;
     var cfg = detail.config.detail_panel;
@@ -694,9 +738,9 @@ $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
 
         html += '<div class="detail-log-line" style="' + border_style + '">';
         html += '<div class="detail-log-stripe" style="background:' + lc.stripe + '"></div>';
-        html += '<span class="detail-log-ts" style="color:' + cfg.ts_color + '">' + entry.timestamp + '</span>';
-        html += '<span class="detail-log-level" style="color:' + lc.badge_fg + ';background:' + lc.badge_bg + '">' + entry.level + '</span>';
-        html += '<span class="detail-log-msg" style="color:' + cfg.msg_color + '">' + entry.message + '</span>';
+        html += '<div class="detail-log-ts" style="color:' + cfg.ts_color + '">' + entry.timestamp + '</div>';
+        html += '<div class="detail-log-level-col"><span class="detail-log-level" style="color:' + lc.badge_fg + ';background:' + lc.badge_bg + '">' + entry.level + '</span></div>';
+        html += '<div class="detail-log-msg" style="color:' + cfg.msg_color + '">' + entry.message + '</div>';
         html += '</div>';
     }
 
@@ -735,52 +779,22 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
 };
 
 
-$.fn.zato.scheduler.job_detail._style_panel_owner = function($row, $panel, expanded) {
-    var detail = $.fn.zato.scheduler.job_detail;
-    var cfg = detail.config.detail_panel;
-    var tag_defs = detail.config.detail_tags;
-    var $cells = $row.children('td');
-    var $tags = $row.find('.detail-tag');
-    if (expanded) {
-        $cells.css({
-            'background': cfg.owner_bg,
-            'color': cfg.owner_color,
-            'border-bottom-color': cfg.owner_border
-        });
-        $row.css('box-shadow', cfg.shadow);
-        $panel.css('box-shadow', cfg.shadow);
-
-        // .. restyle badges to dark mode
-        $tags.each(function() {
-            var $tag = $(this);
-            var key = $tag.attr('data-key');
-            for (var t = 0; t < tag_defs.length; t++) {
-                if (tag_defs[t].key === key) {
-                    $tag.css({ 'color': tag_defs[t].dark_color, 'background': tag_defs[t].dark_bg });
-                    break;
-                }
-            }
-        });
+$.fn.zato.scheduler.job_detail._update_table_dim = function($body) {
+    var has_expanded = $body.find('tr.detail-panel-row.expanded').length > 0;
+    var $head = $('#detail-history-table-head');
+    if (has_expanded) {
+        $head.addClass('detail-dimmed');
+        $body.addClass('detail-dimmed');
     } else {
-        $cells.css({ 'background': '', 'color': '', 'border-bottom-color': '' });
-        $row.css('box-shadow', '');
-        $panel.css('box-shadow', '');
-
-        $tags.each(function() {
-            var $tag = $(this);
-            var key = $tag.attr('data-key');
-            for (var t = 0; t < tag_defs.length; t++) {
-                if (tag_defs[t].key === key) {
-                    $tag.css({ 'color': tag_defs[t].color, 'background': tag_defs[t].bg });
-                    break;
-                }
-            }
-        });
+        $head.removeClass('detail-dimmed');
+        $body.removeClass('detail-dimmed');
     }
 };
 
 $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
     var detail = $.fn.zato.scheduler.job_detail;
+    var cfg = detail.config.detail_panel;
+
     $body.find('.detail-tag-cell').off('click.panel').on('click.panel', function() {
         var $data_row = $(this).closest('tr');
         var run = $data_row.attr('data-run');
@@ -788,8 +802,32 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         if ($panel.length) {
             var is_expanding = !$panel.hasClass('expanded');
             $panel.toggleClass('expanded');
-            detail._style_panel_owner($data_row, $panel, is_expanding);
+
+            if (is_expanding) {
+                var record = $data_row.data('record');
+                var mirror_html = detail._render_mirror_row(record);
+                $panel.find('.detail-panel-log').prepend(mirror_html);
+                $data_row.css('display', 'none');
+                $panel.css('box-shadow', cfg.shadow);
+            } else {
+                $panel.find('.detail-log-mirror').remove();
+                $data_row.css('display', '');
+                $panel.css('box-shadow', '');
+            }
+            detail._update_table_dim($body);
         }
+    });
+
+    // .. also handle clicks on the mirror row itself to collapse (delegated)
+    $body.off('click.mirror').on('click.mirror', '.detail-log-mirror', function() {
+        var $panel = $(this).closest('tr.detail-panel-row');
+        var run = $panel.attr('data-run');
+        var $data_row = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
+        $panel.removeClass('expanded');
+        $panel.find('.detail-log-mirror').remove();
+        $data_row.css('display', '');
+        $panel.css('box-shadow', '');
+        detail._update_table_dim($body);
     });
 };
 
@@ -859,16 +897,19 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                 return;
             }
             for (var i = 0; i < rows.length; i++) {
-                $body.append(detail._render_single_row(rows[i], ''));
-                var run = rows[i].current_run;
-                if (run !== null && run !== undefined) {
-                    $body.append(detail._render_panel_row(run));
+                var rec = rows[i];
+                $body.append(detail._render_single_row(rec, ''));
+                var $appended = $body.find('tr[data-run="' + rec.current_run + '"]').not('.detail-panel-row');
+                $appended.data('record', rec);
+                if (rec.current_run !== null && rec.current_run !== undefined) {
+                    $body.append(detail._render_panel_row(rec.current_run));
                 }
             }
             detail._bind_panel_toggles($body);
         },
         render_new: function($body, rows, page_size) {
             var exec_outcomes = detail._execution_outcomes;
+            var cfg = detail.config.detail_panel;
 
             $body.find('.dashboard-inline-empty').closest('tr').remove();
 
@@ -878,21 +919,26 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                 var $existing = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
                 if ($existing.length) {
                     var was_running = $existing.find('.badge-running-spinner').length > 0;
+                    var is_hidden = $existing.css('display') === 'none';
                     var $panel = $existing.next('.detail-panel-row');
                     var new_html = detail._render_single_row(rec, '');
                     $existing.replaceWith(new_html);
+                    var $new_data_row = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
+                    $new_data_row.data('record', rec);
+
                     if (was_running && rec.outcome !== 'running') {
-                        var $new_row = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
-                        $new_row.find('.dashboard-outcome-badge').addClass('badge-puff')
+                        $new_data_row.find('.dashboard-outcome-badge').addClass('badge-puff')
                             .one('animationend', function() { $(this).removeClass('badge-puff'); });
                     }
-                    // .. re-insert detached panel after the replaced row,
-                    // .. and re-apply dark mode if the panel was expanded
+
+                    // .. re-insert detached panel after the replaced row
                     if ($panel.length) {
-                        var $new_data_row = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
                         $new_data_row.after($panel);
                         if ($panel.hasClass('expanded')) {
-                            detail._style_panel_owner($new_data_row, $panel, true);
+                            // .. row was hidden, keep it hidden and rebuild the mirror
+                            $new_data_row.css('display', 'none');
+                            $panel.find('.detail-log-mirror').replaceWith(detail._render_mirror_row(rec));
+                            $panel.css('box-shadow', cfg.shadow);
                         }
                     }
                 } else {
@@ -900,6 +946,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                     var panel_html = (run !== null && run !== undefined) ? detail._render_panel_row(run) : '';
                     $body.prepend(panel_html);
                     $body.prepend(row_html);
+                    $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row').data('record', rec);
                     detail._new_row_count++;
                 }
             }
