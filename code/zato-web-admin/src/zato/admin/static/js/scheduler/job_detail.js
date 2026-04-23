@@ -26,9 +26,13 @@ $.fn.zato.scheduler.job_detail._hidden_series_key = function() {
 };
 
 $.fn.zato.scheduler.job_detail._get_hidden_series = function() {
-    return $.fn.zato.dashboard_kit.storage_get_json(
+    var stored = $.fn.zato.dashboard_kit.storage_get_json(
         $.fn.zato.scheduler.job_detail._hidden_series_key()
     );
+    if (stored === null) {
+        stored = {};
+    }
+    return stored;
 };
 
 $.fn.zato.scheduler.job_detail._set_hidden_series = function(hidden) {
