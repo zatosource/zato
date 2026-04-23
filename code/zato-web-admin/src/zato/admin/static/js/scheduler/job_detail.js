@@ -759,7 +759,7 @@ $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
     var entries = fake.entries;
 
     var html = '<tr class="detail-panel-row" data-run="' + run + '">';
-    html += '<td colspan="6" style="padding:0">';
+    html += '<td colspan="6">';
     html += '<div class="detail-panel-grid">';
     html += '<div class="detail-panel-inner">';
     html += '<div class="detail-panel-log" style="background:' + cfg.bg + ';border:' + cfg.border + ';font-size:' + cfg.font_size + '">';
