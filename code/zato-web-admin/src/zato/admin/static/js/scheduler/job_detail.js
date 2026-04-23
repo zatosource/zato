@@ -8,6 +8,7 @@ $.fn.zato.scheduler.job_detail.config = {
     default_tab: 'executions',
     default_time_range: 0,
     chart_width: 700,
+    empty_history_text: 'No run history',
     fit_value_selectors: ['#stat-total-runs', '#stat-next-fire'],
     fit_label_selectors: {
         '#stat-next-fire': {
@@ -365,7 +366,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     detail._build_legend();
 
     if (!filtered || filtered.length === 0) {
-        container.html('<div class="dashboard-inline-empty">No run history in this range</div>');
+        container.html('<div class="dashboard-inline-empty">' + detail.config.empty_history_text + '</div>');
         return;
     }
 
@@ -381,7 +382,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     }
 
     if (timestamps.length === 0) {
-        container.html('<div class="dashboard-inline-empty">No run history in this range</div>');
+        container.html('<div class="dashboard-inline-empty">' + detail.config.empty_history_text + '</div>');
         return;
     }
 
@@ -610,6 +611,27 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         object_id: detail._object_id,
         page_size: 50,
         exclude_outcomes: 'skipped_already_in_flight,missed_catchup',
+        ts_field: 'actual_fire_time_iso',
+        on_new_rows: function(rows) {
+            if (!detail._chart_history) {
+                detail._chart_history = [];
+            }
+            for (var i = 0; i < rows.length; i++) {
+                var rec = rows[i];
+                var found = false;
+                for (var j = detail._chart_history.length - 1; j >= 0; j--) {
+                    if (detail._chart_history[j].current_run === rec.current_run) {
+                        detail._chart_history[j] = rec;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    detail._chart_history.push(rec);
+                }
+            }
+            detail.render_timeline(detail._chart_history);
+        },
         table_body: '#detail-history-table-body',
         container_top: '#detail-history-pagination-top',
         container_bottom: '#detail-history-pagination-bottom',
@@ -617,7 +639,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             $body.empty();
             new_row_count = 0;
             if (!rows || rows.length === 0) {
-                $body.html('<tr><td colspan="7" class="dashboard-inline-empty">No run history</td></tr>');
+                $body.html('<tr><td colspan="6" class="dashboard-inline-empty">' + detail.config.empty_history_text + '</td></tr>');
                 return;
             }
             for (var i = 0; i < rows.length; i++) {
