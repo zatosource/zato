@@ -733,7 +733,8 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
     // .. build outcome badge from brighter config colors
     var oc = cfg.outcome_colors[record.outcome] || cfg.outcome_colors['ok'];
     var outcome_label = record.outcome.replace(/_/g, ' ').toUpperCase();
-    var outcome_html = '<span class="dashboard-outcome-badge" style="color:' + oc.color + ';background:' + oc.bg + '">' + outcome_label + '</span>';
+    var outcome_prefix = (record.outcome === 'running') ? '<span class="badge-running-spinner"></span>' : '';
+    var outcome_html = '<span class="dashboard-outcome-badge" style="color:' + oc.color + ';background:' + oc.bg + '">' + outcome_prefix + outcome_label + '</span>';
 
     var tag_html = detail._render_dark_tag_badges(record.current_run);
 
