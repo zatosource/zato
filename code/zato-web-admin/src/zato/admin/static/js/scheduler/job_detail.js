@@ -43,7 +43,15 @@ $.fn.zato.scheduler.job_detail.config = {
             'SYSTEM': { stripe: '#888',    badge_bg: 'rgba(160, 160, 160, 0.12)', badge_fg: '#aaa' }
         },
         ts_color: '#9e9eaf',
-        msg_color: '#e0e0ea'
+        msg_color: '#e0e0ea',
+        outcome_colors: {
+            'ok':      { color: '#7ab8f0', bg: 'rgba(91, 155, 213, 0.22)' },
+            'error':   { color: '#f06060', bg: 'rgba(224, 82, 82, 0.22)' },
+            'timeout': { color: '#e8b830', bg: 'rgba(212, 160, 23, 0.22)' },
+            'running': { color: '#bbb',    bg: 'rgba(187, 187, 187, 0.15)' },
+            'skipped_already_in_flight': { color: '#c4a8e8', bg: 'rgba(167, 134, 213, 0.22)' },
+            'missed_catchup':            { color: '#d4b88a', bg: 'rgba(180, 150, 110, 0.22)' }
+        }
     }
 };
 
@@ -620,10 +628,30 @@ $.fn.zato.scheduler.job_detail._generate_fake_tags = function(run) {
     }
 
     var messages = {
-        'error': ['Connection refused', 'Timeout exceeded', 'Authentication failed', 'Disk full', 'Out of memory'],
-        'warn':  ['Slow response detected', 'Retrying connection', 'Queue depth high', 'Certificate expiring'],
-        'info':  ['Processing batch', 'Synced 142 records', 'Cache refreshed', 'Checkpoint saved', 'Heartbeat OK'],
-        'system': ['Job started', 'Job finished']
+        'error': [
+            'Traceback (most recent call last): File "/opt/zato/server/service.py", line 482, in _invoke File "/opt/zato/server/services/sync.py", line 137, in handle response = self.outgoing.plain_http["crm-api"].conn.post(cid, payload) File "/opt/zato/common/util/http_.py", line 94, in post raise ConnectionError("POST /api/v2/contacts failed: Connection refused (errno 111) to crm.internal:8443 after 3 retries, last attempt at 2026-04-23T22:03:14.881Z") ConnectionError: POST /api/v2/contacts failed: Connection refused',
+            'Traceback (most recent call last): File "/opt/zato/server/service.py", line 482, in _invoke File "/opt/zato/server/services/etl.py", line 58, in handle rows = session.execute(text("SELECT * FROM staging.events WHERE ts > :cutoff"), {"cutoff": cutoff}).fetchall() File "/opt/zato/lib/sqlalchemy/engine/result.py", line 1491, in fetchall sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) could not connect to server: Connection timed out. Is the server running on host "pg-replica-03" (10.0.8.47) and accepting TCP/IP connections on port 5432?',
+            'AuthenticationError: SASL SCRAM-SHA-256 authentication failed for user "zato_svc" on broker amqps://mq.prod.internal:5671/vhost_main - server says: PLAIN login refused (credentials expired at 2026-04-22T00:00:00Z), full context: {"vhost": "vhost_main", "channel": 7, "delivery_tag": null, "exchange": "events.fanout", "routing_key": "audit.login"}',
+            'OSError: [Errno 28] No space left on device: "/opt/zato/server/logs/audit/2026-04-23/batch-0041.json.gz" while rotating log segment 41 of 50 (segment size: 67108864 bytes, total written today: 2748842016 bytes, partition /dev/sda1 usage: 100%)',
+            'MemoryError: Unable to allocate 2.4 GiB for an array with shape (312847, 1024) and data type float64. RSS=7841MiB, VMS=15922MiB, swap_used=4093MiB. Triggered during: numpy.dot(embeddings_matrix, query_vector.T) in /opt/zato/server/services/ml_ranking.py:228'
+        ],
+        'warn': [
+            'Slow response from downstream: POST /api/v2/inventory/sync responded in 12847ms (threshold: 5000ms), payload size: 847KB, response: {"status": "partial", "synced": 4021, "failed": 17, "retry_after": 30, "rate_limit_remaining": 12, "request_id": "req-8a3f7c21-ef90-4b12-9dc1-cc7e8843a1bf"}',
+            'Retrying connection to redis-sentinel://sentinel-01:26379,sentinel-02:26379,sentinel-03:26379/mymaster (attempt 3/5, backoff 4.0s) after error: ReadOnlyError("READONLY You can not write against a read-only replica"), last master was 10.0.2.18:6379, failover may be in progress',
+            'Queue depth warning: channel="orders.process" depth=84729 consumers=3 rate=142msg/s eta_drain=596s threshold=50000. Consumer lag: [{"consumer": "worker-07", "lag": 34201, "last_ack": "2026-04-23T22:01:08Z"}, {"consumer": "worker-08", "lag": 28114, "last_ack": "2026-04-23T22:01:12Z"}, {"consumer": "worker-09", "lag": 22414, "last_ack": "2026-04-23T22:01:19Z"}]',
+            'TLS certificate for *.api.partner.com (CN=*.api.partner.com, issuer=DigiCert SHA2 Extended Validation Server CA, serial=0A:F2:81:E3:00:00:00:00:68:9B:4F:0E) expires in 6 days (2026-04-29T23:59:59Z), auto-renewal via ACME scheduled but last attempt failed: HTTP 429 rate limit from CA'
+        ],
+        'info': [
+            'Processing batch: {"batch_id": "batch-2026-04-23-0041", "source": "s3://data-lake-prod/incoming/contacts/2026/04/23/", "files": 847, "total_size_mb": 2341.7, "format": "parquet", "compression": "snappy", "schema_version": "v3.2.1", "started_at": "2026-04-23T22:03:14.012Z", "workers": 8, "partitions": 32}',
+            'Synced 142 records to CRM: {"endpoint": "https://crm.internal:8443/api/v2/contacts", "method": "PATCH", "created": 38, "updated": 97, "skipped": 7, "duration_ms": 3841, "avg_latency_ms": 27.0, "p99_latency_ms": 142, "rate_limited": false, "request_id": "sync-8f3a2c1e", "idempotency_key": "idem-20260423-0041"}',
+            'Cache refreshed: evicted 24,817 stale entries (older than 3600s), loaded 31,204 new entries from PostgreSQL materialized view "mv_product_catalog", memory delta: +48MiB (now 1.2GiB/4GiB), refresh took 2.8s, next scheduled at 2026-04-23T23:03:15Z',
+            'Checkpoint saved: {"checkpoint_id": "ckpt-0041", "offset": 847293, "partition": 7, "consumer_group": "etl-pipeline-v3", "topic": "events.enriched", "committed_at": "2026-04-23T22:03:15.441Z", "lag_after_commit": 12}',
+            'Heartbeat OK: cluster=zato-prod-east-1, node=worker-07, pid=48291, uptime=847291s, cpu=12.4%, rss=2841MiB, open_fds=847, active_connections={"http": 142, "amqp": 8, "redis": 24, "pg": 16}, requests_1m=4821, errors_1m=0'
+        ],
+        'system': [
+            'Job started: scheduler_tick=2026-04-23T22:03:14.001Z, planned_fire=2026-04-23T22:03:14.000Z, drift_ms=1, cid=zc8f3a2b, server=zato-prod-east-1/worker-07, pid=48291',
+            'Job finished: duration_ms=10841, outcome=ok, next_fire=2026-04-23T22:04:14.000Z, items_processed=142, peak_memory_mb=284'
+        ]
     };
 
     var entries = [];
@@ -698,23 +726,28 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
     var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
     var cfg = detail.config.detail_panel;
-    var dashboard = detail._dashboard();
 
-    var actual_time = kit.format_local_time(record.actual_fire_time_iso);
-    var delay = (record.delay_ms !== null && record.delay_ms !== undefined && record.delay_ms > 0)
-        ? kit.format_number_full(record.delay_ms) + ' ms'
-        : '-';
-    var duration = dashboard.format_duration(record.duration_ms);
-    var outcome = dashboard.outcome_badge(record.outcome);
     var run_number = (record.current_run !== null && record.current_run !== undefined)
         ? kit.format_number_full(record.current_run) : '-';
+
+    // .. build outcome badge from brighter config colors
+    var oc = cfg.outcome_colors[record.outcome] || cfg.outcome_colors['ok'];
+    var outcome_label = record.outcome.replace(/_/g, ' ');
+    outcome_label = outcome_label.charAt(0).toUpperCase() + outcome_label.slice(1);
+    var outcome_html = '<span class="dashboard-outcome-badge" style="color:' + oc.color + ';background:' + oc.bg + '">' + outcome_label + '</span>';
+
     var tag_html = detail._render_dark_tag_badges(record.current_run);
 
     var html = '<div class="detail-log-line detail-log-mirror" style="border-bottom:1px solid ' + cfg.row_border + '">';
     html += '<div class="detail-log-stripe" style="background:' + cfg.owner_color + '"></div>';
     html += '<div class="detail-log-ts"><span class="detail-log-level" style="color:' + cfg.owner_color + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></div>';
-    html += '<div class="detail-log-level-col">' + outcome + '</div>';
-    html += '<div class="detail-log-msg" style="color:' + cfg.owner_color + '">' + actual_time + ' \u00b7 ' + duration + ' \u00b7 delay ' + delay + ' \u00b7 ' + tag_html + '</div>';
+    html += '<div class="detail-log-level-col">' + outcome_html + '</div>';
+    var action_style = 'color:#aaa;background:rgba(255,255,255,0.08)';
+    html += '<div class="detail-log-msg" style="color:' + cfg.owner_color + '">' + tag_html + '</div>';
+    html += '<div class="detail-log-actions">';
+    html += '<span class="dashboard-panel-action-badge detail-action-copy-all" style="' + action_style + '">Copy</span>';
+    html += '<span class="dashboard-panel-action-badge detail-action-close" style="' + action_style + '">Close</span>';
+    html += '</div>';
     html += '</div>';
     return html;
 };
@@ -736,11 +769,13 @@ $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
         var lc = cfg.level_colors[entry.level];
         var border_style = (e < entries.length - 1) ? 'border-bottom:1px solid ' + cfg.row_border + ';' : '';
 
+        var escaped_msg = entry.message.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         html += '<div class="detail-log-line" style="' + border_style + '">';
         html += '<div class="detail-log-stripe" style="background:' + lc.stripe + '"></div>';
         html += '<div class="detail-log-ts" style="color:' + cfg.ts_color + '">' + entry.timestamp + '</div>';
         html += '<div class="detail-log-level-col"><span class="detail-log-level" style="color:' + lc.badge_fg + ';background:' + lc.badge_bg + '">' + entry.level + '</span></div>';
-        html += '<div class="detail-log-msg" style="color:' + cfg.msg_color + '">' + entry.message + '</div>';
+        html += '<div class="detail-log-msg" data-raw="' + escaped_msg + '" style="color:' + cfg.msg_color + '">' + entry.message + '</div>';
+        html += '<div class="detail-log-actions"><span class="dashboard-panel-action-badge detail-action-copy-row" style="color:#aaa;background:rgba(255,255,255,0.08)">Copy</span></div>';
         html += '</div>';
     }
 
@@ -791,12 +826,49 @@ $.fn.zato.scheduler.job_detail._update_table_dim = function($body) {
     }
 };
 
+$.fn.zato.scheduler.job_detail._build_enabled_levels = function() {
+    var levels = {};
+    var tag_defs = $.fn.zato.scheduler.job_detail.config.detail_tags;
+    for (var t = 0; t < tag_defs.length; t++) {
+        levels[tag_defs[t].key] = true;
+    }
+    return levels;
+};
+
+$.fn.zato.scheduler.job_detail._apply_level_filter = function($panel) {
+    var levels = $panel.data('enabled-levels');
+    var tag_defs = $.fn.zato.scheduler.job_detail.config.detail_tags;
+    $panel.find('.detail-log-line').not('.detail-log-mirror').each(function() {
+        var $line = $(this);
+        var level_text = $line.find('.detail-log-level').text().trim().toLowerCase();
+        $line.css('opacity', levels[level_text] ? '' : '0.15');
+    });
+
+    // .. update badge appearance
+    $panel.find('.detail-log-mirror .detail-tag').each(function() {
+        var $tag = $(this);
+        var key = $tag.attr('data-key');
+        if (levels[key]) {
+            var base_opacity = '';
+            for (var t = 0; t < tag_defs.length; t++) {
+                if (tag_defs[t].key === key && tag_defs[t].dimmed) {
+                    base_opacity = '0.55';
+                    break;
+                }
+            }
+            $tag.css({'opacity': base_opacity, 'text-decoration': ''});
+        } else {
+            $tag.css({'opacity': '0.3', 'text-decoration': 'line-through'});
+        }
+    });
+};
+
 $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
     var detail = $.fn.zato.scheduler.job_detail;
     var cfg = detail.config.detail_panel;
 
-    $body.find('.detail-tag-cell').off('click.panel').on('click.panel', function() {
-        var $data_row = $(this).closest('tr');
+    $body.find('tr[data-run]').not('.detail-panel-row').off('click.panel').on('click.panel', function() {
+        var $data_row = $(this);
         var run = $data_row.attr('data-run');
         var $panel = $body.find('tr.detail-panel-row[data-run="' + run + '"]');
         if ($panel.length) {
@@ -807,6 +879,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
                 var record = $data_row.data('record');
                 var mirror_html = detail._render_mirror_row(record);
                 $panel.find('.detail-panel-log').prepend(mirror_html);
+                $panel.data('enabled-levels', detail._build_enabled_levels());
                 $data_row.css('display', 'none');
                 $panel.css('box-shadow', cfg.shadow);
             } else {
@@ -818,8 +891,20 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         }
     });
 
-    // .. also handle clicks on the mirror row itself to collapse (delegated)
-    $body.off('click.mirror').on('click.mirror', '.detail-log-mirror', function() {
+    // .. level filter toggle (delegated)
+    $body.off('click.levelfilter').on('click.levelfilter', '.detail-log-mirror .detail-tag', function(e) {
+        e.stopPropagation();
+        var $tag = $(this);
+        var key = $tag.attr('data-key');
+        var $panel = $tag.closest('tr.detail-panel-row');
+        var levels = $panel.data('enabled-levels');
+        levels[key] = !levels[key];
+        detail._apply_level_filter($panel);
+    });
+
+    // .. close button (delegated)
+    $body.off('click.closeaction').on('click.closeaction', '.detail-action-close', function(e) {
+        e.stopPropagation();
         var $panel = $(this).closest('tr.detail-panel-row');
         var run = $panel.attr('data-run');
         var $data_row = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
@@ -828,6 +913,80 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         $data_row.css('display', '');
         $panel.css('box-shadow', '');
         detail._update_table_dim($body);
+    });
+
+    // .. copy-all badge on mirror row (delegated)
+    $body.off('click.copyall').on('click.copyall', '.detail-action-copy-all', function(e) {
+        e.stopPropagation();
+        var kit = $.fn.zato.dashboard_kit;
+        var $badge = $(this);
+        var $panel = $badge.closest('tr.detail-panel-row');
+        var $log = $panel.find('.detail-panel-log');
+        var run = $panel.attr('data-run');
+        var $data_row = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
+        var record = $data_row.data('record');
+        var dashboard = detail._dashboard();
+        var levels = $panel.data('enabled-levels');
+
+        var actual_time = kit.format_local_time(record.actual_fire_time_iso);
+        var duration = dashboard.format_duration(record.duration_ms);
+        var delay = (record.delay_ms !== null && record.delay_ms !== undefined && record.delay_ms > 0)
+            ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
+        var outcome_text = record.outcome ? record.outcome.toUpperCase() : '-';
+
+        var lines = [];
+        lines.push('Run #' + record.current_run + ' - ' + outcome_text + ' - ' + actual_time + ' - ' + duration + ' - delay ' + delay);
+        lines.push('---');
+
+        $log.find('.detail-log-line').not('.detail-log-mirror').each(function() {
+            var $line = $(this);
+            var level = $line.find('.detail-log-level').text().trim();
+            if (levels[level.toLowerCase()]) {
+                var ts = $line.find('.detail-log-ts').text().trim();
+                var $msg_clone = $line.find('.detail-log-msg').clone();
+                $msg_clone.find('.dashboard-panel-action-badge').remove();
+                lines.push(ts + '  ' + level + '  ' + $msg_clone.text().trim());
+            }
+        });
+
+        kit.copy_to_clipboard($badge[0], lines.join('\n'));
+    });
+
+    // .. per-row copy badge (delegated)
+    $body.off('click.copyrow').on('click.copyrow', '.detail-action-copy-row', function(e) {
+        e.stopPropagation();
+        var kit = $.fn.zato.dashboard_kit;
+        var $badge = $(this);
+        var $line = $badge.closest('.detail-log-line');
+        var ts = $line.find('.detail-log-ts').text().trim();
+        var level = $line.find('.detail-log-level').text().trim();
+        var $msg_clone = $line.find('.detail-log-msg').clone();
+        $msg_clone.find('.dashboard-panel-action-badge').remove();
+        kit.copy_to_clipboard($badge[0], ts + '  ' + level + '  ' + $msg_clone.text().trim());
+    });
+
+    // .. click log line to expand/collapse (delegated)
+    $body.off('click.expandline').on('click.expandline', '.detail-log-line:not(.detail-log-mirror)', function(e) {
+        if ($(e.target).closest('.dashboard-panel-action-badge').length) return;
+        var kit = $.fn.zato.dashboard_kit;
+        var $line = $(this);
+        var $msg = $line.find('.detail-log-msg');
+        var is_expanded = $line.hasClass('detail-log-line-expanded');
+
+        if (is_expanded) {
+            $line.removeClass('detail-log-line-expanded');
+        } else {
+            $line.addClass('detail-log-line-expanded');
+
+            // .. highlight on first expand
+            if (!$msg.data('highlighted')) {
+                var raw = $msg.attr('data-raw');
+                if (raw) {
+                    $msg.html(kit.syntax_highlight(raw));
+                    $msg.data('highlighted', true);
+                }
+            }
+        }
     });
 };
 

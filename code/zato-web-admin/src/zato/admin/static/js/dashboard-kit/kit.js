@@ -581,4 +581,214 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $row.css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
         }
     };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Clipboard copy with tippy tooltip
+    // ////////////////////////////////////////////////////////////////////////
+
+    kit.copy_to_clipboard = function(elem, text) {
+        navigator.clipboard.writeText(text).then(function() {
+            var tip = tippy(elem, {
+                content: 'Copied to clipboard',
+                trigger: 'manual',
+                placement: 'right',
+                duration: [100, 100]
+            });
+            tip.show();
+            setTimeout(function() { tip.hide(); tip.destroy(); }, 600);
+        });
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
+    // Syntax highlighting (pure JS, no deps)
+    // ////////////////////////////////////////////////////////////////////////
+
+    kit._esc_html = function(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
+
+    kit._highlight_json = function(text) {
+        var trimmed = text.trim();
+        try {
+            var parsed = JSON.parse(trimmed);
+            var pretty = JSON.stringify(parsed, null, 2);
+        } catch(e) {
+            return null;
+        }
+        var out = kit._esc_html(pretty);
+
+        // .. color JSON tokens: keys, strings, numbers, booleans, null, punctuation
+        out = out.replace(
+            /(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)\s*:/g,
+            '<span class="na">$1$2$3</span>:'
+        );
+        out = out.replace(
+            /:\s*(&quot;)((?:[^&]|&(?!quot;))*)(&quot;)/g,
+            ': <span class="s">$1$2$3</span>'
+        );
+        out = out.replace(
+            /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+            ': <span class="m">$1</span>'
+        );
+        out = out.replace(
+            /:\s*(true|false|null)/g,
+            ': <span class="kc">$1</span>'
+        );
+        out = out.replace(
+            /([{}\[\],])/g,
+            '<span class="p">$1</span>'
+        );
+        return out;
+    };
+
+    kit._highlight_traceback = function(text) {
+        var out = kit._esc_html(text);
+
+        // .. color File "path", line N
+        out = out.replace(
+            /(File\s+&quot;)(.*?)(&quot;,\s+line\s+)(\d+)/g,
+            '<span class="n">$1</span><span class="s">$2</span><span class="n">$3</span><span class="m">$4</span>'
+        );
+
+        // .. color exception class and message on the last line
+        out = out.replace(
+            /^(\w+(?:\.\w+)*(?:Error|Exception|Warning|Fault))(:.*)?$/gm,
+            function(match, cls, msg) {
+                var result = '<span class="ne">' + cls + '</span>';
+                if (msg) result += '<span class="n">' + msg + '</span>';
+                return result;
+            }
+        );
+
+        return out;
+    };
+
+    kit._highlight_xml = function(text) {
+        var out = kit._esc_html(text);
+
+        // .. color XML tags, attributes, values
+        out = out.replace(
+            /(&lt;\/?)([\w:.-]+)/g,
+            '$1<span class="nt">$2</span>'
+        );
+        out = out.replace(
+            /([\w:.-]+)(=)(&quot;)(.*?)(&quot;)/g,
+            '<span class="na">$1</span>$2<span class="s">$3$4$5</span>'
+        );
+        return out;
+    };
+
+    kit._highlight_mixed = function(text) {
+        var parts = [];
+        var remaining = text;
+
+        while (remaining.length) {
+            // .. find the first embedded JSON object or array
+            var json_start = -1;
+            var open_char = '';
+            var close_char = '';
+            var idx_obj = remaining.indexOf('{');
+            var idx_arr = remaining.indexOf('[');
+
+            if (idx_obj !== -1 && (idx_arr === -1 || idx_obj < idx_arr)) {
+                json_start = idx_obj;
+                open_char = '{';
+                close_char = '}';
+            } else if (idx_arr !== -1) {
+                json_start = idx_arr;
+                open_char = '[';
+                close_char = ']';
+            }
+
+            if (json_start === -1) {
+                parts.push(kit._esc_html(remaining));
+                break;
+            }
+
+            // .. find the matching closing bracket by counting depth
+            var depth = 0;
+            var in_string = false;
+            var escape_next = false;
+            var end_pos = -1;
+            for (var c = json_start; c < remaining.length; c++) {
+                var ch = remaining.charAt(c);
+                if (escape_next) {
+                    escape_next = false;
+                    continue;
+                }
+                if (ch === '\\' && in_string) {
+                    escape_next = true;
+                    continue;
+                }
+                if (ch === '"') {
+                    in_string = !in_string;
+                    continue;
+                }
+                if (in_string) continue;
+                if (ch === open_char) depth++;
+                else if (ch === close_char) {
+                    depth--;
+                    if (depth === 0) {
+                        end_pos = c;
+                        break;
+                    }
+                }
+            }
+
+            if (end_pos === -1) {
+                parts.push(kit._esc_html(remaining));
+                break;
+            }
+
+            var candidate = remaining.substring(json_start, end_pos + 1);
+            var highlighted = kit._highlight_json(candidate);
+
+            if (highlighted) {
+                if (json_start > 0) {
+                    parts.push(kit._esc_html(remaining.substring(0, json_start)));
+                }
+                parts.push(highlighted);
+                remaining = remaining.substring(end_pos + 1);
+            } else {
+                // .. not valid JSON, skip past this bracket
+                parts.push(kit._esc_html(remaining.substring(0, json_start + 1)));
+                remaining = remaining.substring(json_start + 1);
+            }
+        }
+
+        return parts.join('');
+    };
+
+    kit.syntax_highlight = function(text) {
+        var trimmed = text.trim();
+        var html = null;
+
+        // .. try pure JSON
+        if ((trimmed.charAt(0) === '{' && trimmed.charAt(trimmed.length - 1) === '}') ||
+            (trimmed.charAt(0) === '[' && trimmed.charAt(trimmed.length - 1) === ']')) {
+            html = kit._highlight_json(text);
+        }
+
+        // .. try Python traceback
+        if (!html && (trimmed.indexOf('Traceback') !== -1 || trimmed.indexOf('File "') !== -1)) {
+            html = kit._highlight_traceback(text);
+        }
+
+        // .. try XML
+        if (!html && trimmed.charAt(0) === '<') {
+            html = kit._highlight_xml(text);
+        }
+
+        // .. try mixed text with embedded JSON
+        if (!html && (trimmed.indexOf('{') !== -1 || trimmed.indexOf('[') !== -1)) {
+            html = kit._highlight_mixed(text);
+        }
+
+        // .. fallback
+        if (!html) {
+            html = kit._esc_html(text);
+        }
+
+        return '<span class="syntax-monokai">' + html + '</span>';
+    };
 })();

@@ -1,3 +1,5 @@
+@import url("../syntax_monokai.css");
+
 /* Dashboard kit - foundation.
    Page-level primitives shared by every dashboard: top nav override,
    hero strip, section wrappers, responsive breakpoints, skeleton
@@ -260,4 +262,15 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     .dashboard-stat-row {
         flex-wrap: wrap;
     }
+}
+
+.dashboard-panel-action-badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-left: 6px;
+    cursor: pointer;
+    vertical-align: middle;
 }

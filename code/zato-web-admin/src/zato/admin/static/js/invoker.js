@@ -1090,13 +1090,13 @@ $.fn.zato.invoker._format_xml = function(xml_text) {
 $.fn.zato.invoker._render_highlighted_response = function(pre_elem, text) {
     if (!text) {
         pre_elem.html('');
-        pre_elem.removeClass('invoker-pygments');
+        pre_elem.removeClass('syntax-monokai');
         $.fn.zato.invoker._update_line_numbers(pre_elem);
         return;
     }
 
     pre_elem.text(text);
-    pre_elem.removeClass('invoker-pygments');
+    pre_elem.removeClass('syntax-monokai');
     $.fn.zato.invoker._update_line_numbers(pre_elem);
 
     $.ajax({
@@ -1107,7 +1107,7 @@ $.fn.zato.invoker._render_highlighted_response = function(pre_elem, text) {
         success: function(data) {
             if (data.html) {
                 pre_elem.html(data.html);
-                pre_elem.addClass('invoker-pygments');
+                pre_elem.addClass('syntax-monokai');
                 $.fn.zato.invoker._update_line_numbers(pre_elem);
             }
         }

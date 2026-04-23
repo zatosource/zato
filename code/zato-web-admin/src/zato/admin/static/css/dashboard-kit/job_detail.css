@@ -151,7 +151,7 @@
     cursor: pointer;
 }
 
-.detail-tag-cell {
+tbody tr[data-run]:not(.detail-panel-row) {
     cursor: pointer;
 }
 
@@ -229,7 +229,20 @@
     min-width: 0;
 }
 
-.detail-log-mirror {
+.detail-log-actions {
+    flex-shrink: 0;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.detail-log-line-expanded .detail-log-msg {
+    white-space: pre-wrap;
+    overflow: visible;
+    text-overflow: unset;
+    word-break: break-all;
+}
+
+.detail-log-line:not(.detail-log-mirror) {
     cursor: pointer;
 }
 

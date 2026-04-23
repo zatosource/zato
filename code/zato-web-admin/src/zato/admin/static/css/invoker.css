@@ -615,75 +615,7 @@
     outline: none;
 }
 
-/* Pygments Monokai token colors (scoped to invoker) */
-.invoker-pygments .hll { background-color: #49483e }
-.invoker-pygments .c { color: #959077 }
-.invoker-pygments .err { color: #ed007e }
-.invoker-pygments .esc { color: #f8f8f2 }
-.invoker-pygments .g { color: #f8f8f2 }
-.invoker-pygments .k { color: #66d9ef }
-.invoker-pygments .l { color: #ae81ff }
-.invoker-pygments .n { color: #f8f8f2 }
-.invoker-pygments .o { color: #ff4689 }
-.invoker-pygments .x { color: #f8f8f2 }
-.invoker-pygments .p { color: #f8f8f2 }
-.invoker-pygments .ch { color: #959077 }
-.invoker-pygments .cm { color: #959077 }
-.invoker-pygments .cp { color: #959077 }
-.invoker-pygments .cpf { color: #959077 }
-.invoker-pygments .c1 { color: #959077 }
-.invoker-pygments .cs { color: #959077 }
-.invoker-pygments .gd { color: #ff4689 }
-.invoker-pygments .ge { color: #f8f8f2; font-style: italic }
-.invoker-pygments .gi { color: #a6e22e }
-.invoker-pygments .go { color: #66d9ef }
-.invoker-pygments .gp { color: #ff4689; font-weight: bold }
-.invoker-pygments .gs { color: #f8f8f2; font-weight: bold }
-.invoker-pygments .gu { color: #959077 }
-.invoker-pygments .kc { color: #66d9ef }
-.invoker-pygments .kd { color: #66d9ef }
-.invoker-pygments .kn { color: #ff4689 }
-.invoker-pygments .kp { color: #66d9ef }
-.invoker-pygments .kr { color: #66d9ef }
-.invoker-pygments .kt { color: #66d9ef }
-.invoker-pygments .ld { color: #e6db74 }
-.invoker-pygments .m { color: #ae81ff }
-.invoker-pygments .s { color: #e6db74 }
-.invoker-pygments .na { color: #a6e22e }
-.invoker-pygments .nb { color: #f8f8f2 }
-.invoker-pygments .nc { color: #a6e22e }
-.invoker-pygments .no { color: #66d9ef }
-.invoker-pygments .nd { color: #a6e22e }
-.invoker-pygments .ni { color: #f8f8f2 }
-.invoker-pygments .ne { color: #a6e22e }
-.invoker-pygments .nf { color: #a6e22e }
-.invoker-pygments .nl { color: #f8f8f2 }
-.invoker-pygments .nn { color: #f8f8f2 }
-.invoker-pygments .nt { color: #ff4689 }
-.invoker-pygments .nv { color: #f8f8f2 }
-.invoker-pygments .ow { color: #ff4689 }
-.invoker-pygments .w { color: #f8f8f2 }
-.invoker-pygments .mb { color: #ae81ff }
-.invoker-pygments .mf { color: #ae81ff }
-.invoker-pygments .mh { color: #ae81ff }
-.invoker-pygments .mi { color: #ae81ff }
-.invoker-pygments .mo { color: #ae81ff }
-.invoker-pygments .sa { color: #e6db74 }
-.invoker-pygments .sb { color: #e6db74 }
-.invoker-pygments .sc { color: #e6db74 }
-.invoker-pygments .dl { color: #e6db74 }
-.invoker-pygments .sd { color: #e6db74 }
-.invoker-pygments .s2 { color: #e6db74 }
-.invoker-pygments .se { color: #ae81ff }
-.invoker-pygments .sh { color: #e6db74 }
-.invoker-pygments .si { color: #e6db74 }
-.invoker-pygments .sx { color: #e6db74 }
-.invoker-pygments .sr { color: #e6db74 }
-.invoker-pygments .s1 { color: #e6db74 }
-.invoker-pygments .ss { color: #e6db74 }
-.invoker-pygments .bp { color: #f8f8f2 }
-.invoker-pygments .fm { color: #a6e22e }
-.invoker-pygments .il { color: #ae81ff }
+@import url("syntax_monokai.css");
 
 /* "More options" toggle block inside the invoker modal */
 
