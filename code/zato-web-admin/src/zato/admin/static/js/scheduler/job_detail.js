@@ -24,15 +24,18 @@ $.fn.zato.scheduler.job_detail.config = {
         { key: 'system', label: 'System', color: '#999',    bg: 'rgba(153, 153, 153, 0.08)', dimmed: true }
     ],
     detail_panel: {
-        bg: '#1e1e2e',
-        font_size: '11px',
-        columns: [
-            { key: 'timestamp', width: '90px',  color: '#6e6e73' },
-            { key: 'level',     width: '50px',  color_map: {
-                'ERROR': '#e05252', 'WARN': '#d4a017', 'INFO': '#5b9bd5', 'SYSTEM': '#666'
-            }},
-            { key: 'message',   width: 'auto',  color: '#ccc' }
-        ]
+        bg: '#1a1a2e',
+        row_border: '#2a2a3e',
+        row_hover: '#22223a',
+        font_size: '12px',
+        level_colors: {
+            'ERROR':  { stripe: '#e05252', badge_bg: 'rgba(224, 82, 82, 0.15)', badge_fg: '#e05252' },
+            'WARN':   { stripe: '#d4a017', badge_bg: 'rgba(212, 160, 23, 0.15)', badge_fg: '#d4a017' },
+            'INFO':   { stripe: '#5b9bd5', badge_bg: 'rgba(91, 155, 213, 0.15)', badge_fg: '#5b9bd5' },
+            'SYSTEM': { stripe: '#555',    badge_bg: 'rgba(85, 85, 85, 0.15)',    badge_fg: '#777' }
+        },
+        ts_color: '#6e6e7a',
+        msg_color: '#d0d0d8'
     }
 };
 
@@ -666,31 +669,30 @@ $.fn.zato.scheduler.job_detail._render_tag_badges = function(run) {
 
 $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
     var detail = $.fn.zato.scheduler.job_detail;
-    var panel_cfg = detail.config.detail_panel;
+    var cfg = detail.config.detail_panel;
     var fake = detail._generate_fake_tags(run);
     var entries = fake.entries;
 
-    var html = '<tr class="detail-panel-row expanded" data-run="' + run + '">';
+    var html = '<tr class="detail-panel-row" data-run="' + run + '">';
     html += '<td colspan="6" style="padding:0">';
     html += '<div class="detail-panel-grid">';
     html += '<div class="detail-panel-inner">';
-    html += '<table class="detail-panel-table" style="background:' + panel_cfg.bg + ';font-size:' + panel_cfg.font_size + '">';
+    html += '<div class="detail-panel-log" style="background:' + cfg.bg + ';font-size:' + cfg.font_size + '">';
 
     for (var e = 0; e < entries.length; e++) {
         var entry = entries[e];
-        html += '<tr>';
-        for (var c = 0; c < panel_cfg.columns.length; c++) {
-            var col = panel_cfg.columns[c];
-            var val = entry[col.key];
-            var col_color = col.color_map ? col.color_map[val] : col.color;
-            var w = col.width === 'auto' ? '' : 'width:' + col.width + ';';
-            var fw = col.color_map ? 'font-weight:700;' : '';
-            html += '<td style="' + w + 'color:' + col_color + ';' + fw + 'white-space:nowrap;padding:2px 8px">' + val + '</td>';
-        }
-        html += '</tr>';
+        var lc = cfg.level_colors[entry.level];
+        var border_style = (e < entries.length - 1) ? 'border-bottom:1px solid ' + cfg.row_border + ';' : '';
+
+        html += '<div class="detail-log-line" style="' + border_style + '" data-hover-bg="' + cfg.row_hover + '">';
+        html += '<div class="detail-log-stripe" style="background:' + lc.stripe + '"></div>';
+        html += '<span class="detail-log-ts" style="color:' + cfg.ts_color + '">' + entry.timestamp + '</span>';
+        html += '<span class="detail-log-level" style="color:' + lc.badge_fg + ';background:' + lc.badge_bg + '">' + entry.level + '</span>';
+        html += '<span class="detail-log-msg" style="color:' + cfg.msg_color + '">' + entry.message + '</span>';
+        html += '</div>';
     }
 
-    html += '</table>';
+    html += '</div>';
     html += '</div></div></td></tr>';
     return html;
 };

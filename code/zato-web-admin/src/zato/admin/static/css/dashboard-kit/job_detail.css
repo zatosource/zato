@@ -157,7 +157,6 @@
 
 .detail-panel-row > td {
     padding: 0;
-    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
 }
 
 .detail-panel-grid {
@@ -174,12 +173,51 @@
     overflow: hidden;
 }
 
-.detail-panel-table {
-    width: 100%;
-    border-collapse: collapse;
+.detail-panel-log {
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+    padding: 2px 0;
 }
 
-.detail-panel-table td {
-    padding: 2px 8px;
+.detail-log-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 10px 3px 0;
+    transition: background 0.1s;
+}
+
+.detail-log-line:hover {
+    filter: brightness(1.15);
+}
+
+.detail-log-stripe {
+    width: 3px;
+    align-self: stretch;
+    flex-shrink: 0;
+    border-radius: 1px;
+}
+
+.detail-log-ts {
+    flex-shrink: 0;
+    font-size: 0.92em;
+    letter-spacing: -0.02em;
+}
+
+.detail-log-level {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 3px;
+    letter-spacing: 0.3px;
+    min-width: 42px;
+    text-align: center;
+}
+
+.detail-log-msg {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
