@@ -5,6 +5,7 @@
 
 {% block detail_css %}
 <link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/job_detail.css">
+<style nonce="{{ CSP_NONCE }}">img.help-icon[id=""] { display: none; }</style>
 {% endblock %}
 
 {% block section_title %}
@@ -39,7 +40,7 @@
     <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="common detail-back-link">Go to dashboard</a>
 </div>
 {% endblock %}
-{% block help_icon_id %}scheduler-job-help{% endblock %}
+{% block help_icon_id %}{% endblock %}
 
 {% block detail_page_class %}detail-page-scheduler{% endblock %}
 

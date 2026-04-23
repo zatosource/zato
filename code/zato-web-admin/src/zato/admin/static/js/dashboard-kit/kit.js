@@ -403,6 +403,43 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     };
 
     // ////////////////////////////////////////////////////////////////////////
+    // Table header sorting
+    // ////////////////////////////////////////////////////////////////////////
+
+    kit.sortable_headers = function(table_selector, col_map) {
+        var $table = $(table_selector);
+        var sort_state = {col: null, asc: true};
+
+        $table.find('thead th').each(function() {
+            var $th = $(this);
+            var header_text = $th.text().trim();
+            if (col_map[header_text] !== undefined) {
+                $th.css('cursor', 'pointer');
+                $th.on('click', function() {
+                    var col_index = col_map[header_text];
+                    if (sort_state.col === col_index) {
+                        sort_state.asc = !sort_state.asc;
+                    } else {
+                        sort_state.col = col_index;
+                        sort_state.asc = true;
+                    }
+                    var $tbody = $table.find('tbody');
+                    var rows = $tbody.find('tr').get();
+                    rows.sort(function(a, b) {
+                        var a_text = $(a).children('td').eq(col_index).text().trim().toLowerCase();
+                        var b_text = $(b).children('td').eq(col_index).text().trim().toLowerCase();
+                        var cmp = a_text.localeCompare(b_text);
+                        return sort_state.asc ? cmp : -cmp;
+                    });
+                    $.each(rows, function(idx, row) {
+                        $tbody.append(row);
+                    });
+                });
+            }
+        });
+    };
+
+    // ////////////////////////////////////////////////////////////////////////
     // Spark buffer management
     // ////////////////////////////////////////////////////////////////////////
 

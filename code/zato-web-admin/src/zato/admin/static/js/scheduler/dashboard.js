@@ -241,9 +241,10 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         var tip_lines = [];
         for (var key in counts) {
             if (counts.hasOwnProperty(key)) {
+                var run_word = counts[key] === 1 ? 'run' : 'runs';
                 tip_lines.push('<div class="dashboard-tooltip-row">' +
                     '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[key] + '"></span>' +
-                    labels[key] + ': <b>' + counts[key] + '</b></div>');
+                    labels[key] + ': <b>' + counts[key] + '</b> ' + run_word + '</div>');
             }
         }
         var tip_html = '<div class="dashboard-tooltip-body">' + tip_lines.join('') + '</div>';
@@ -693,9 +694,10 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             for (var key_index = 0; key_index < visible_keys.length; key_index++) {
                 var key = visible_keys[key_index];
                 var count = bucket[key];
+                var chart_run_word = count === 1 ? 'run' : 'runs';
                 body_lines.push('<div class="dashboard-tooltip-row">' +
                     '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[key] + '"></span>' +
-                    labels[key] + ': <b>' + kit.format_number_full(count) + '</b></div>');
+                    labels[key] + ': <b>' + kit.format_number_full(count) + '</b> ' + chart_run_word + '</div>');
             }
             tooltip_html += '<div class="dashboard-tooltip-body">' + body_lines.join('') + '</div>';
 
@@ -760,10 +762,9 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var service_cell = service_name ? $.fn.zato.data_table.service_text(service_name, cluster_id) : '';
 
             var row = '<tr data-href="' + detail_url + '">';
-            if (dash.config.show_live_status) {
-                var status = dash.status_dot(job);
-                row += '<td data-tippy-content="' + status.tooltip + '" data-tippy-placement="left">' + status.html + '</td>';
-            }
+            var status = dash.status_dot(job);
+            row += '<td class="dashboard-td-dot" data-tippy-content="' + status.tooltip + '" data-tippy-placement="left"' +
+                (dash.config.show_live_status ? '' : ' style="display:none"') + '>' + status.html + '</td>';
             row += '<td><a href="' + detail_url + '">' + job.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
             row += '<td data-countdown-target="' + (job.next_fire_utc || '') + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_fire_tooltip + '">' + next_fire_text + '</td>';
@@ -788,6 +789,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             if ($(event.target).is('a')) return;
             window.location.href = $(this).data('href');
         });
+
+        kit.sortable_headers('#dashboard-job-table', {'Job name': 1, 'Service': 2});
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -808,46 +811,34 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         var cluster_id = dash.config.cluster_id;
 
-        var failures = [];
-        for (var record_index = 0; record_index < timeline.length; record_index++) {
-            var record = timeline[record_index];
-            if (record.outcome === 'error' || record.outcome === 'timeout') {
-                failures.push(record);
-            }
-        }
-
-        if (failures.length === 0) {
-            container.html(all_clear_html);
-            $('#dashboard-failures-count').text('0');
-            return;
-        }
-
-        kit.set_number($('#dashboard-failures-count'), failures.length);
+        kit.set_number($('#dashboard-failures-count'), timeline.length);
 
         var html = '<table class="zato-table"><thead><tr>';
-        html += '<th>Time</th><th>Job</th><th>Outcome</th><th>Error</th>';
+        html += '<th>Time</th><th>Job name</th><th>Outcome</th><th>Error</th>';
         html += '</tr></thead><tbody>';
 
-        var max_failures = Math.min(10, failures.length);
-        for (var failure_index = 0; failure_index < max_failures; failure_index++) {
-            var failure = failures[failure_index];
-            var time_text = kit.relative_time_past(failure.actual_fire_time_iso);
-            var time_tooltip = kit.format_local_time(failure.actual_fire_time_iso);
-            var error_text = failure.error;
+        var max_rows = Math.min(20, timeline.length);
+        for (var row_index = 0; row_index < max_rows; row_index++) {
+            var entry = timeline[row_index];
+            var time_text = kit.relative_time_past(entry.actual_fire_time_iso);
+            var time_tooltip = kit.format_local_time(entry.actual_fire_time_iso);
+            var error_text = entry.error;
             if (error_text === null) error_text = '';
             var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
 
-            var f_ts = failure.actual_fire_time_iso;
-            html += '<tr data-ts="' + f_ts + '">';
+            var row_ts = entry.actual_fire_time_iso;
+            html += '<tr data-ts="' + row_ts + '">';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
-            html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(failure.job_id) + '/?cluster=' + cluster_id + '">' + failure.job_name + '</a></td>';
-            html += '<td>' + dash.outcome_badge(failure.outcome) + '</td>';
+            html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '">' + entry.job_name + '</a></td>';
+            html += '<td>' + dash.outcome_badge(entry.outcome) + '</td>';
             html += '<td class="dashboard-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
             html += '</tr>';
         }
 
         html += '</tbody></table>';
         container.html(html);
+
+        kit.sortable_headers(container.find('table'), {'Job name': 1});
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -919,6 +910,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             row += '</tr>';
             table_body.append(row);
         }
+
+        kit.sortable_headers('#dashboard-upcoming-table', {'Job name': 1, 'Service': 2});
     };
 
     // ////////////////////////////////////////////////////////////////////////
