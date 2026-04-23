@@ -209,15 +209,15 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
     dash.status_dot = function(job) {
         if (job.is_running) {
-            return '<span class="dashboard-status-dot dashboard-status-running" title="Running"></span>';
+            return {html: '<span class="dashboard-status-dot dashboard-status-running"></span>', tooltip: 'Running'};
         }
         if (!job.is_active) {
-            return '<span class="dashboard-status-dot dashboard-status-paused" title="Paused"></span>';
+            return {html: '<span class="dashboard-status-dot dashboard-status-paused"></span>', tooltip: 'Paused'};
         }
         if (job.last_outcome === 'error' || job.last_outcome === 'timeout') {
-            return '<span class="dashboard-status-dot dashboard-status-failed" title="Last run failed"></span>';
+            return {html: '<span class="dashboard-status-dot dashboard-status-failed"></span>', tooltip: 'Last run failed'};
         }
-        return '<span class="dashboard-status-dot dashboard-status-ok" title="Active"></span>';
+        return {html: '<span class="dashboard-status-idle">-</span>', tooltip: 'Idle'};
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -742,8 +742,9 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 service_cell = '<a href="' + service_url + '">' + service_name + '</a>';
             }
 
+            var status = dash.status_dot(job);
             var row = '<tr data-href="' + detail_url + '">';
-            row += '<td>' + dash.status_dot(job) + '</td>';
+            row += '<td data-tippy-content="' + status.tooltip + '" data-tippy-placement="left">' + status.html + '</td>';
             row += '<td><a href="' + detail_url + '">' + job.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
             row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_fire_tooltip + '">' + next_fire_text + '</td>';
@@ -751,6 +752,12 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             row += '</tr>';
             table_body.append(row);
         }
+
+        tippy(table_body.find('[data-tippy-content]').toArray(), {
+            allowHTML: false,
+            theme: 'dark',
+            arrow: true
+        });
 
         table_body.find('tr[data-href]').on('click', function(event) {
             if ($(event.target).is('a')) return;

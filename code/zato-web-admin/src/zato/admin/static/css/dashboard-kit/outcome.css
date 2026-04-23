@@ -13,9 +13,14 @@
     position: relative;
 }
 
-.dashboard-status-ok {
-    background: #4caf50;
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+.dashboard-status-idle {
+    display: inline-block;
+    width: 10px;
+    text-align: center;
+    font-weight: 700;
+    color: #9e9e9e;
+    line-height: 10px;
+    cursor: default;
 }
 
 .dashboard-status-failed {
@@ -28,8 +33,8 @@
 }
 
 .dashboard-status-running {
-    background: #2196f3;
-    box-shadow: 0 0 8px rgba(33, 150, 243, 0.5);
+    background: #4caf50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
 }
 
 .dashboard-status-running::after {
@@ -40,7 +45,7 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    border: 1.5px solid #2196f3;
+    border: 1.5px solid #4caf50;
     box-sizing: border-box;
     transform-origin: center center;
     animation: dashboard-ring-pulse 2s ease-out infinite;
