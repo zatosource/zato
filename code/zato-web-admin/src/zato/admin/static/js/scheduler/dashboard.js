@@ -217,7 +217,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         if (job.last_outcome === 'error' || job.last_outcome === 'timeout') {
             return {html: '<span class="dashboard-status-dot dashboard-status-failed"></span>', tooltip: 'Last run failed'};
         }
-        return {html: '<span class="dashboard-status-idle">-</span>', tooltip: 'Idle'};
+        return {html: '<span class="dashboard-status-idle">-</span>', tooltip: 'Waiting for next run'};
     };
 
     // ////////////////////////////////////////////////////////////////////////
