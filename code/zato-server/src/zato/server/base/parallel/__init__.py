@@ -55,8 +55,10 @@ from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
+    publish_enmasse, publish_file, publish_user_conf, \
     register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.env import populate_environment_from_file
+from zato.common.file_transfer.listener import watch_directory as watch_pickup_directory
 from zato.common.util.file_transfer import path_string_list_to_list
 from zato.common.util.file_system import get_python_files
 from zato.common.util.hot_deploy_ import extract_pickup_from_items
@@ -968,6 +970,9 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         if self.deploy_auto_from:
             self.handle_enmasse_auto_from()
 
+        # Start watching the pickup directory for hot-deployment
+        self._start_file_watcher()
+
         # Start the Rust scheduler thread (in-process)
         self._start_scheduler()
 
@@ -1047,6 +1052,61 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             logger.info('Scheduler started')
         except Exception:
             logger.warning('Scheduler could not be started: %s', format_exc())
+
+# ################################################################################################################################
+
+    def _start_file_watcher(self) -> 'None':
+        """ Start a file-system watcher for the hot-deploy pickup directory.
+        Runs on a real OS thread (via gevent's native threadpool) so that blocking
+        inotify calls do not interfere with the gevent event loop.
+        """
+        import time as time_
+
+        pickup_dir = self.hot_deploy_config.pickup_dir
+
+        _main_hub = gevent.get_hub()
+
+        def _do_publish_file(event_path:'str') -> 'None':
+            """ Called on the gevent main loop to publish a broker message for a changed file.
+            """
+            cid = new_cid_server()
+            is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
+            is_static = event_path.endswith('.ini') or event_path.endswith('.zrules')
+
+            if is_enmasse:
+                publish_enmasse(self.broker_client, cid, event_path)
+            elif is_static:
+                publish_user_conf(self.broker_client, cid, event_path)
+            else:
+                publish_file(self.broker_client, cid, event_path)
+
+        def _on_file_ready(event_path:'str') -> 'None':
+            """ Called from the watchdog thread - bounces work to the gevent loop.
+            """
+            _main_hub.loop.run_callback(spawn, _do_publish_file, event_path)
+
+        def _run_watcher() -> 'None':
+            """ Runs on a native OS thread from gevent's threadpool.
+            """
+            matching_items = [pickup_dir]
+            observer = watch_pickup_directory(
+                pickup_dir,
+                matching_items,
+                on_file_ready=_on_file_ready,
+                event_types=None,
+                file_patterns=None,
+            )
+            observer.start()
+            logger.info('File watcher started for `%s`', pickup_dir)
+
+            # Block this native thread forever - the observer runs its own internal thread
+            while True:
+                time_.sleep(1)
+
+        try:
+            _ = gevent.get_hub().threadpool.spawn(_run_watcher)
+        except Exception:
+            logger.warning('File watcher could not be started: %s', format_exc())
 
 # ################################################################################################################################
 

@@ -21,9 +21,6 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 from watchdog.observers.inotify import InotifyObserver
 
-# Zato
-from zato.broker.client import BrokerClient
-from zato.common.util.api import new_cid, publish_file, publish_enmasse, publish_user_conf
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -31,7 +28,7 @@ from zato.common.util.api import new_cid, publish_file, publish_enmasse, publish
 if 0:
     from watchdog.events import FileSystemEvent
     from watchdog.observers.api import BaseObserver
-    from zato.common.typing_ import strlist, strlistnone
+    from zato.common.typing_ import callable_, strlist, strlistnone
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -229,12 +226,14 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
     def __init__(
         self,
         matching_dirs:'strlist',
+        on_file_ready:'callable_',
         event_types:'strlistnone',
         file_patterns:'strlistnone',
     ) -> 'None':
         """ Initialize with matching directories and event types to track.
         """
         self.matching_dirs = matching_dirs
+        self.on_file_ready = on_file_ready
 
         # Include default events if none provided
         self.event_types = event_types or ['created', 'deleted', 'modified', 'closed', 'closed_no_write']
@@ -253,9 +252,6 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
         # when a subsequent 'closed' event is received
         self.modified_files = set()
 
-        # Initialize broker client for publishing events
-        self.broker_client = BrokerClient()
-        self.broker_client.ping_connection()
         super().__init__()
 
 # ################################################################################################################################
@@ -363,22 +359,12 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 # ################################################################################################################################
 
     def publish_file_ready_event(self, event_path:'str') -> 'None':
-        """ Publish file-ready event to the broker.
+        """ Notify the server that a file is ready for deployment.
         """
         try:
-            cid = new_cid()
-            is_enmasse = 'enmasse' in event_path and ('.yml' in event_path or '.yaml' in event_path)
-            is_static = event_path.endswith('.ini') or event_path.endswith('.zrules')
-
-            if is_enmasse:
-                msg = publish_enmasse(self.broker_client, cid, event_path)
-            elif is_static:
-                msg = publish_user_conf(self.broker_client, cid, event_path)
-            else:
-                msg = publish_file(self.broker_client, cid, event_path)
-            logger.info('Sent msg -> %s', msg)
+            self.on_file_ready(event_path)
         except Exception as e:
-            logger.warning('Could not publish event to broker: %s -> %s', e, event_path)
+            logger.warning('Could not publish file-ready event: %s -> %s', e, event_path)
 
 # ################################################################################################################################
 
@@ -452,6 +438,7 @@ class ZatoFileSystemEventHandler(FileSystemEventHandler):
 def watch_directory(
     directory_path:'str',
     matching_items:'strlist',
+    on_file_ready:'callable_',
     event_types:'strlistnone',
     file_patterns:'strlistnone',
     observer_type:'str'='inotify',
@@ -467,18 +454,17 @@ def watch_directory(
         except Exception as e:
             logger.warning('Could not create InotifyObserver, falling back to default: %s', e)
             observer = Observer()
-    else: # 'auto' or any other value defaults to the system-specific observer
+    else:
         observer = Observer()
 
-    # Find the deepest common directory to watch
-    # This optimizes the observer to watch from the appropriate level
-    watch_directory = find_deepest_common_directory(matching_items)
+    # Find the deepest common directory to watch ..
+    watch_dir = find_deepest_common_directory(matching_items)
 
-    # Create event handler
-    event_handler = ZatoFileSystemEventHandler(matching_items, event_types, file_patterns)
+    # .. create the event handler ..
+    event_handler = ZatoFileSystemEventHandler(matching_items, on_file_ready, event_types, file_patterns)
 
-    # Schedule the observer
-    _ = observer.schedule(event_handler, watch_directory, recursive=True)
+    # .. and schedule the observer.
+    _ = observer.schedule(event_handler, watch_dir, recursive=True)
 
     return observer
 
@@ -548,14 +534,18 @@ if __name__ == '__main__':
             logger.info('Using file patterns: %s', file_patterns)
             logger.info('Using observer type: %s', observer_type)
 
+            def _standalone_on_file_ready(event_path):
+                logger.info('File ready for deployment: %s', event_path)
+
             # Automatically watch for changes
             try:
                 observer = watch_directory(
                     base_dir,
                     matching_items,
+                    on_file_ready=_standalone_on_file_ready,
                     event_types=None,
                     file_patterns=file_patterns,
-                    observer_type=observer_type
+                    observer_type=observer_type,
                 )
                 observer.start()
                 logger.info('Watching for changes, press Ctrl+C to stop...')
