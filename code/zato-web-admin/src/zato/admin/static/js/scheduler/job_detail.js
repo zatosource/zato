@@ -732,8 +732,7 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
 
     // .. build outcome badge from brighter config colors
     var oc = cfg.outcome_colors[record.outcome] || cfg.outcome_colors['ok'];
-    var outcome_label = record.outcome.replace(/_/g, ' ');
-    outcome_label = outcome_label.charAt(0).toUpperCase() + outcome_label.slice(1);
+    var outcome_label = record.outcome.replace(/_/g, ' ').toUpperCase();
     var outcome_html = '<span class="dashboard-outcome-badge" style="color:' + oc.color + ';background:' + oc.bg + '">' + outcome_label + '</span>';
 
     var tag_html = detail._render_dark_tag_badges(record.current_run);
@@ -753,6 +752,7 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
 };
 
 $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
+    var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
     var cfg = detail.config.detail_panel;
     var fake = detail._generate_fake_tags(run);
@@ -770,11 +770,12 @@ $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
         var border_style = (e < entries.length - 1) ? 'border-bottom:1px solid ' + cfg.row_border + ';' : '';
 
         var escaped_msg = entry.message.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var highlighted_msg = kit.syntax_highlight(entry.message);
         html += '<div class="detail-log-line" style="' + border_style + '">';
         html += '<div class="detail-log-stripe" style="background:' + lc.stripe + '"></div>';
         html += '<div class="detail-log-ts" style="color:' + cfg.ts_color + '">' + entry.timestamp + '</div>';
         html += '<div class="detail-log-level-col"><span class="detail-log-level" style="color:' + lc.badge_fg + ';background:' + lc.badge_bg + '">' + entry.level + '</span></div>';
-        html += '<div class="detail-log-msg" data-raw="' + escaped_msg + '" style="color:' + cfg.msg_color + '">' + entry.message + '</div>';
+        html += '<div class="detail-log-msg" data-raw="' + escaped_msg + '" style="color:' + cfg.msg_color + '">' + highlighted_msg + '</div>';
         html += '<div class="detail-log-actions"><span class="dashboard-panel-action-badge detail-action-copy-row" style="color:#aaa;background:rgba(255,255,255,0.08)">Copy</span></div>';
         html += '</div>';
     }
@@ -968,25 +969,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
     // .. click log line to expand/collapse (delegated)
     $body.off('click.expandline').on('click.expandline', '.detail-log-line:not(.detail-log-mirror)', function(e) {
         if ($(e.target).closest('.dashboard-panel-action-badge').length) return;
-        var kit = $.fn.zato.dashboard_kit;
-        var $line = $(this);
-        var $msg = $line.find('.detail-log-msg');
-        var is_expanded = $line.hasClass('detail-log-line-expanded');
-
-        if (is_expanded) {
-            $line.removeClass('detail-log-line-expanded');
-        } else {
-            $line.addClass('detail-log-line-expanded');
-
-            // .. highlight on first expand
-            if (!$msg.data('highlighted')) {
-                var raw = $msg.attr('data-raw');
-                if (raw) {
-                    $msg.html(kit.syntax_highlight(raw));
-                    $msg.data('highlighted', true);
-                }
-            }
-        }
+        $(this).toggleClass('detail-log-line-expanded');
     });
 };
 

@@ -273,4 +273,7 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     margin-left: 6px;
     cursor: pointer;
     vertical-align: middle;
+    min-width: 42px;
+    text-align: center;
+    box-sizing: border-box;
 }
