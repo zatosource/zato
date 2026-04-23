@@ -233,7 +233,7 @@ a {
 }
 
 .detail-table tbody tr:first-child td {
-    padding-top: 0.9rem;
+    padding-top: 0.5rem;
 }
 
 .detail-table tr:hover {
@@ -566,6 +566,7 @@ a {
 
 .detail-card-scroll-body > table {
     margin: 0;
+    width: 100%;
 }
 
 .detail-header-row {

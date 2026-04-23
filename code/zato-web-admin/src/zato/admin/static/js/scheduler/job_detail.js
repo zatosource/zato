@@ -388,10 +388,12 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 
     var min_time = Math.min.apply(null, timestamps);
     var max_time = Math.max.apply(null, timestamps);
+    var interval_ms = detail._job_data.interval_ms;
+    var min_span = interval_ms ? interval_ms * 10 : 3600000;
     var time_span = max_time - min_time;
-    if (time_span === 0) {
-        time_span = 3600000;
-        min_time = max_time - time_span;
+    if (time_span < min_span) {
+        min_time = max_time - min_span;
+        time_span = min_span;
     }
 
     var visible_keys = [];
@@ -661,7 +663,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                     if (old_outcome === 'Running' && rec.outcome !== 'running') {
                         var $replaced = $body.find('tr[data-run="' + rec.current_run + '"]');
                         $replaced.addClass('detail-row-puff');
-                        setTimeout(function($r) { $r.removeClass('detail-row-puff'); }, 300, $replaced);
+                        $replaced.one('animationend', function() { $(this).removeClass('detail-row-puff'); });
                     }
                 } else {
                     $body.prepend(detail._render_single_row(rec, ''));
@@ -683,11 +685,13 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             var limit = Math.min(new_row_count, steps);
             var primaries = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
             primaries.each(function(idx) {
+                var $row = $(this);
+                if ($row.hasClass('detail-row-puff')) return;
                 if (idx < limit) {
                     var alpha = max_a * Math.pow(1 - idx / steps, 2.5);
-                    $(this).css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
+                    $row.css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
                 } else {
-                    $(this).css('background', '');
+                    $row.css('background', '');
                 }
             });
         },
