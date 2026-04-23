@@ -284,7 +284,7 @@ fn scheduler_get_history_since(py: Python<'_>, job_id: i64, since_iso: &str, exc
             .map(|s| s.split(',').map(|v| v.trim()).filter(|v| !v.is_empty()).collect())
             .unwrap_or_default();
         let records: Vec<ExecutionRecord> = running_job.history.iter()
-            .filter(|r| r.actual_fire_time_iso.as_str() > since_iso)
+            .filter(|r| r.actual_fire_time_iso.as_str() >= since_iso)
             .filter(|r| excluded.is_empty() || !excluded.contains(&r.outcome.as_str()))
             .rev()
             .cloned()

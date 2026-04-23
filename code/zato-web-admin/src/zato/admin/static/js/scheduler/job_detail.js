@@ -632,7 +632,16 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             for (var i = rows.length - 1; i >= 0; i--) {
                 var rec = rows[i];
                 var $existing = $body.find('tr[data-run="' + rec.current_run + '"]');
-                if (!$existing.length) {
+                if ($existing.length) {
+                    var old_outcome = $existing.find('.dashboard-outcome-badge').text();
+                    var new_html = detail._render_single_row(rec, '');
+                    $existing.replaceWith(new_html);
+                    if (old_outcome === 'Running' && rec.outcome !== 'running') {
+                        var $replaced = $body.find('tr[data-run="' + rec.current_run + '"]');
+                        $replaced.addClass('detail-row-puff');
+                        setTimeout(function($r) { $r.removeClass('detail-row-puff'); }, 300, $replaced);
+                    }
+                } else {
                     $body.prepend(detail._render_single_row(rec, ''));
                     if (exec_outcomes[rec.outcome]) {
                         new_row_count++;
