@@ -1145,7 +1145,6 @@ Default_Extra_Service_File_Data = """
 # File path: {full_path}
 
 # stdlib
-import logging
 from time import sleep
 
 # Zato
@@ -1154,19 +1153,16 @@ from zato.server.service import Service
 # ################################################################################################################################
 # ################################################################################################################################
 
-class InputLogger(Service):
+class Echo(Service):
 
-    name = 'demo.input-logger'
+    name = 'demo.echo'
 
-    input = '-hello'
-    output = 'world'
+    output = 'echo'
 
     def handle(self):
-
-        self.logger.info(f'Received request: `{{self.request.raw_request}}`')
-        self.logger.info(f'Channel info: `{{self.channel.to_dict()}}`')
-
-        self.response.payload.world = f'{{self.name}} received your request.'
+        payload = self.request.payload
+        self.logger.info(f'Received request: `{{payload}}`')
+        self.response.payload.echo = payload
 
 # ################################################################################################################################
 # ################################################################################################################################

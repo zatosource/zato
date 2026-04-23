@@ -306,7 +306,7 @@ pubsub_subscription:
 
   - security: enmasse.basic_auth.3
     delivery_type: push
-    push_service: demo.input-logger
+    push_service: demo.echo
     max_retry_time: 30m
     topic_list:
       - enmasse.topic.3

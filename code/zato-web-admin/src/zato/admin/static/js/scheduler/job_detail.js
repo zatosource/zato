@@ -265,9 +265,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     html += '<div class="' + cards_class + '">';
 
     var config_service = job.service;
-    var service_link = config_service
-        ? '<a href="/zato/service/ide/service/' + encodeURIComponent(config_service) + '/?cluster=' + cluster_id + '">' + esc(config_service) + '</a>'
-        : '-';
+    var service_link = config_service ? $.fn.zato.data_table.service_text(config_service, cluster_id) : '-';
     html += card('Service', service_link, true);
 
     var type_label = dashboard.job_type_labels[job.job_type];

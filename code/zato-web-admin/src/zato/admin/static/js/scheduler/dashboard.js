@@ -740,11 +740,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var detail_url = '/zato/scheduler/dashboard/job/' + encodeURIComponent(job.id) + '/?cluster=' + cluster_id;
 
             var service_name = job.service;
-            var service_cell = '';
-            if (service_name) {
-                var service_url = '/zato/service/ide/service/' + encodeURIComponent(service_name) + '/?cluster=' + cluster_id;
-                service_cell = '<a href="' + service_url + '">' + service_name + '</a>';
-            }
+            var service_cell = service_name ? $.fn.zato.data_table.service_text(service_name, cluster_id) : '';
 
             var row = '<tr data-href="' + detail_url + '">';
             if (dash.config.show_live_status) {
@@ -891,11 +887,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var time_text = kit.relative_time_future(entry.time);
             var time_tooltip = kit.format_local_time(entry.time);
 
-            var service_cell = '';
-            if (entry.service) {
-                var service_url = '/zato/service/ide/service/' + encodeURIComponent(entry.service) + '/?cluster=' + cluster_id;
-                service_cell = '<a href="' + service_url + '">' + entry.service + '</a>';
-            }
+            var service_cell = entry.service ? $.fn.zato.data_table.service_text(entry.service, cluster_id) : '';
 
             var row = '<tr>';
             row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
