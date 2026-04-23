@@ -610,7 +610,6 @@ $.fn.zato.scheduler.job_detail._apply_recency_gradient = function($body) {
     var primaries = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
     primaries.each(function(idx) {
         var $row = $(this);
-        if ($row.hasClass('detail-row-puff')) return;
         if (idx < limit) {
             var alpha = max_a * Math.pow(1 - idx / steps, 2.5);
             $row.css('background', 'rgba(' + rgb + ', ' + alpha.toFixed(4) + ')');
@@ -681,12 +680,9 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                     var new_html = detail._render_single_row(rec, '');
                     $existing.replaceWith(new_html);
                     if (old_outcome === 'Running' && rec.outcome !== 'running') {
-                        var $replaced = $body.find('tr[data-run="' + rec.current_run + '"]');
-                        $replaced.addClass('detail-row-puff');
-                        $replaced.one('animationend', function() {
-                            $(this).removeClass('detail-row-puff');
-                            detail._apply_recency_gradient($body);
-                        });
+                        var $badge = $body.find('tr[data-run="' + rec.current_run + '"] .dashboard-outcome-badge');
+                        $badge.addClass('badge-puff');
+                        $badge.one('animationend', function() { $(this).removeClass('badge-puff'); });
                     }
                 } else {
                     $body.prepend(detail._render_single_row(rec, ''));

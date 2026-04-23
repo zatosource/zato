@@ -275,7 +275,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         var color = colors[outcome];
         var bg = bg_colors[outcome];
         var label = labels[outcome];
-        return '<span class="dashboard-outcome-badge" style="color:' + color + ';background:' + bg + '">' + label + '</span>';
+        var prefix = outcome === 'running' ? '<span class="badge-running-spinner"></span>' : '';
+        return '<span class="dashboard-outcome-badge" style="color:' + color + ';background:' + bg + '">' + prefix + label + '</span>';
     };
 
     // ////////////////////////////////////////////////////////////////////////

@@ -111,11 +111,29 @@
 .detail-config-extra .hl-tag { color: #116329; }
 .detail-config-extra .hl-comment { color: #6e7781; font-style: italic; }
 
-@keyframes detail-puff {
-    0%   { background: rgba(218, 165, 32, 0.35); }
-    100% { background: transparent; }
+@keyframes badge-spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.detail-row-puff {
-    animation: detail-puff 1.2s ease-out forwards;
+.badge-running-spinner {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid rgba(136, 136, 136, 0.3);
+    border-top-color: #888;
+    border-radius: 50%;
+    animation: badge-spin 0.4s linear infinite;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+@keyframes badge-puff {
+    0%   { transform: scale(1); background: rgba(218, 165, 32, 0.5); color: #7a5c00; }
+    50%  { transform: scale(1.12); background: rgba(218, 165, 32, 0.3); color: #7a5c00; }
+    100% { transform: scale(1); }
+}
+
+.badge-puff {
+    animation: badge-puff 0.7s ease-out;
 }
