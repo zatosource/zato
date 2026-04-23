@@ -24,18 +24,18 @@ $.fn.zato.scheduler.job_detail.config = {
         { key: 'system', label: 'System', color: '#999',    bg: 'rgba(153, 153, 153, 0.08)', dimmed: true }
     ],
     detail_panel: {
-        bg: '#1a1a2e',
-        row_border: '#2a2a3e',
-        row_hover: '#22223a',
+        bg: '#232336',
+        border: '1px solid #3a3a52',
+        row_border: '#3a3a52',
         font_size: '12px',
         level_colors: {
-            'ERROR':  { stripe: '#e05252', badge_bg: 'rgba(224, 82, 82, 0.15)', badge_fg: '#e05252' },
-            'WARN':   { stripe: '#d4a017', badge_bg: 'rgba(212, 160, 23, 0.15)', badge_fg: '#d4a017' },
-            'INFO':   { stripe: '#5b9bd5', badge_bg: 'rgba(91, 155, 213, 0.15)', badge_fg: '#5b9bd5' },
-            'SYSTEM': { stripe: '#555',    badge_bg: 'rgba(85, 85, 85, 0.15)',    badge_fg: '#777' }
+            'ERROR':  { stripe: '#e05252', badge_bg: 'rgba(224, 82, 82, 0.18)', badge_fg: '#f06060' },
+            'WARN':   { stripe: '#d4a017', badge_bg: 'rgba(212, 160, 23, 0.18)', badge_fg: '#e8b830' },
+            'INFO':   { stripe: '#5b9bd5', badge_bg: 'rgba(91, 155, 213, 0.18)', badge_fg: '#7ab8f0' },
+            'SYSTEM': { stripe: '#888',    badge_bg: 'rgba(160, 160, 160, 0.12)', badge_fg: '#aaa' }
         },
-        ts_color: '#6e6e7a',
-        msg_color: '#d0d0d8'
+        ts_color: '#9e9eaf',
+        msg_color: '#e0e0ea'
     }
 };
 
@@ -677,14 +677,14 @@ $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
     html += '<td colspan="6" style="padding:0">';
     html += '<div class="detail-panel-grid">';
     html += '<div class="detail-panel-inner">';
-    html += '<div class="detail-panel-log" style="background:' + cfg.bg + ';font-size:' + cfg.font_size + '">';
+    html += '<div class="detail-panel-log" style="background:' + cfg.bg + ';border:' + cfg.border + ';font-size:' + cfg.font_size + '">';
 
     for (var e = 0; e < entries.length; e++) {
         var entry = entries[e];
         var lc = cfg.level_colors[entry.level];
         var border_style = (e < entries.length - 1) ? 'border-bottom:1px solid ' + cfg.row_border + ';' : '';
 
-        html += '<div class="detail-log-line" style="' + border_style + '" data-hover-bg="' + cfg.row_hover + '">';
+        html += '<div class="detail-log-line" style="' + border_style + '">';
         html += '<div class="detail-log-stripe" style="background:' + lc.stripe + '"></div>';
         html += '<span class="detail-log-ts" style="color:' + cfg.ts_color + '">' + entry.timestamp + '</span>';
         html += '<span class="detail-log-level" style="color:' + lc.badge_fg + ';background:' + lc.badge_bg + '">' + entry.level + '</span>';

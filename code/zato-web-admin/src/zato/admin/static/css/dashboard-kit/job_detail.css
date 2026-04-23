@@ -176,6 +176,8 @@
 .detail-panel-log {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     padding: 2px 0;
+    border-radius: 4px;
+    margin: 4px 8px 6px;
 }
 
 .detail-log-line {
