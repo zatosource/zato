@@ -79,16 +79,10 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             data_points = resampled;
         }
 
-        var min_val = Math.min.apply(null, data_points);
+        var min_val = 0;
         var max_val = Math.max.apply(null, data_points);
+        if (max_val === 0) max_val = 1;
         var range = max_val - min_val;
-
-        if (range > 0) {
-            var mid = (min_val + max_val) / 2;
-            min_val = mid - range * 0.40;
-            max_val = mid + range * 0.40;
-            range = max_val - min_val;
-        }
 
         var draw_h = h - pad_top - pad_bottom;
         var draw_w = w - 2 * pad_x;
