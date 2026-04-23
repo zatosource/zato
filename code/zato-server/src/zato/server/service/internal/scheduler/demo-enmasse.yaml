@@ -5,40 +5,39 @@ scheduler:
     job_type: interval_based
     seconds: 3
     is_active: true
-    extra: '{"source": "crm", "object_type": "contact", "direction": "inbound"}'
+    extra: '{"seconds": 3, "source": "crm", "object_type": "contact", "direction": "inbound"}'
 
   - name: crm.sync-accounts
     service: demo.sleep
     job_type: interval_based
     seconds: 5
     is_active: true
-    extra: '{"source": "crm", "object_type": "account", "direction": "inbound", "batch_size": 200}'
+    extra: '{"seconds": 5, "source": "crm", "object_type": "account", "direction": "inbound", "batch_size": 200}'
 
   - name: crm.push-cases
     service: demo.sleep
     job_type: interval_based
     seconds: 7
     is_active: true
-    extra: '{"source": "crm", "object_type": "case", "direction": "outbound", "priority": "normal"}'
+    extra: '{"seconds": 7, "source": "crm", "object_type": "case", "direction": "outbound", "priority": "normal"}'
 
   - name: crm.reconcile-invoices
     service: demo.sleep
     job_type: interval_based
-    seconds: 8
+    seconds: 10
     is_active: true
-    extra: '{"source": "billing", "object_type": "invoice", "direction": "bidirectional"}'
+    extra: '{"seconds": 10, "source": "billing", "object_type": "invoice", "direction": "bidirectional"}'
 
   - name: crm.purge-stale-sessions
     service: demo.sleep
     job_type: interval_based
-    seconds: 10
+    seconds: 8
     is_active: true
-    extra: '{"action": "purge", "target": "sessions", "max_age_hours": 48}'
+    extra: '{"seconds": 3, "action": "purge", "target": "sessions", "max_age_hours": 48}'
 
   - name: crm.slow-sftp-export
     service: demo.sleep
     job_type: interval_based
-    seconds: 2
+    seconds: 6
     is_active: true
-    max_execution_time_ms: 3000
-    extra: '{"seconds": 10}'
+    extra: '{"seconds": 20, "host": "sftp.partner.example.com", "path": "/outbound/invoices"}'
