@@ -21,7 +21,7 @@ pub const MAX_MAX_EXECUTION_TIME_MS: u64 = 86_400_000;
 pub struct ExecutionRecord {
     pub planned_fire_time_iso: String,
     pub actual_fire_time_iso: String,
-    pub dispatch_latency_ms: u64,
+    pub delay_ms: u64,
     pub outcome: String,
     pub current_run: u32,
     pub duration_ms: Option<u64>,
@@ -33,7 +33,7 @@ impl ExecutionRecord {
         ExecutionRecord {
             planned_fire_time_iso: planned.to_string(),
             actual_fire_time_iso: actual.to_string(),
-            dispatch_latency_ms: 0,
+            delay_ms: 0,
             outcome: outcome.to_string(),
             current_run,
             duration_ms: None,
@@ -41,8 +41,8 @@ impl ExecutionRecord {
         }
     }
 
-    pub fn with_latency(mut self, latency_ms: u64) -> Self {
-        self.dispatch_latency_ms = latency_ms;
+    pub fn with_delay(mut self, delay_ms: u64) -> Self {
+        self.delay_ms = delay_ms;
         self
     }
 

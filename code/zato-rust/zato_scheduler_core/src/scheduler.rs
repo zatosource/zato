@@ -230,7 +230,7 @@ pub fn collect_due_jobs(
         running_job.in_flight_since = Some(Instant::now());
         running_job.in_flight_run = Some(running_job.current_run);
 
-        let latency = (now - fire_utc).num_milliseconds().max(0) as u64;
+        let delay = (now - fire_utc).num_milliseconds().max(0) as u64;
 
         batch.push(FireBatch {
             job_id: running_job.id.clone(),
@@ -243,7 +243,7 @@ pub fn collect_due_jobs(
 
         running_job.record_execution(
             ExecutionRecord::new(&planned, &actual, outcome::EXECUTED, running_job.current_run)
-                .with_latency(latency)
+                .with_delay(delay)
         );
 
         running_job.advance_to_next(now);

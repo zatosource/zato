@@ -568,10 +568,9 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class) {
     var kit = $.fn.zato.dashboard_kit;
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
-    var planned_time = kit.format_local_time(record.planned_fire_time_iso);
     var actual_time = kit.format_local_time(record.actual_fire_time_iso);
-    var dispatch_latency = (record.dispatch_latency_ms !== null && record.dispatch_latency_ms !== undefined)
-        ? kit.format_number_full(record.dispatch_latency_ms) + ' ms'
+    var delay = (record.delay_ms !== null && record.delay_ms !== undefined)
+        ? kit.format_number_full(record.delay_ms) + ' ms'
         : '-';
     var duration = dashboard.format_duration(record.duration_ms);
     var outcome = dashboard.outcome_badge(record.outcome);
@@ -585,12 +584,11 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     var run_attr = (record.current_run !== null && record.current_run !== undefined) ? record.current_run : '';
     var cls = extra_class ? ' class="' + extra_class + '"' : '';
     var row = '<tr' + cls + ' data-ts="' + row_ts + '" data-run="' + run_attr + '">';
-    row += '<td class="dashboard-cell-mono">' + planned_time + '</td>';
-    row += '<td class="dashboard-cell-mono">' + actual_time + '</td>';
-    row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + dispatch_latency + '</td>';
-    row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + duration + '</td>';
-    row += '<td class="dashboard-cell-center">' + outcome + '</td>';
     row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + run_number + '</td>';
+    row += '<td class="dashboard-cell-center">' + outcome + '</td>';
+    row += '<td class="dashboard-cell-mono">' + actual_time + '</td>';
+    row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + duration + '</td>';
+    row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + delay + '</td>';
     row += '<td title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
     row += '</tr>';
     return row;

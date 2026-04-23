@@ -205,7 +205,7 @@ a {
     font-size: 16px;
     font-weight: 600;
     color: var(--primary-dark);
-    margin: 24px 0 10px 0;
+    margin-bottom: 1rem;
     letter-spacing: 0.5px;
 }
 

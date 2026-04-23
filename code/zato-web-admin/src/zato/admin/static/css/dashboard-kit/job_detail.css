@@ -93,6 +93,9 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    margin-bottom: 0.5rem;
+    border-top: 1px solid #999;
+    padding-top: 0.8rem;
 }
 
 .detail-section-header .section-title {

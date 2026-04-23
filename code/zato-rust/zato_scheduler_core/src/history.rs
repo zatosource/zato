@@ -7,7 +7,7 @@ fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bo
     let d = PyDict::new(py);
     d.set_item("planned_fire_time_iso", &rec.planned_fire_time_iso)?;
     d.set_item("actual_fire_time_iso", &rec.actual_fire_time_iso)?;
-    d.set_item("dispatch_latency_ms", rec.dispatch_latency_ms)?;
+    d.set_item("delay_ms", rec.delay_ms)?;
     d.set_item("outcome", &rec.outcome)?;
     d.set_item("current_run", rec.current_run)?;
     match rec.duration_ms {
