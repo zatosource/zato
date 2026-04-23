@@ -177,7 +177,16 @@ def call_hook_with_service(hook:'callable_', service:'Service') -> 'None':
     except Exception:
         logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc())
 
-internal_invoke_keys = {'target', 'set_response_func', 'cid'}
+internal_invoke_keys = {
+    'as_bunch',
+    'cid',
+    'datadog_context',
+    'serialize',
+    'set_response_func',
+    'skip_response_elem',
+    'target',
+    'zato_response_headers_container',
+}
 
 # ################################################################################################################################
 
