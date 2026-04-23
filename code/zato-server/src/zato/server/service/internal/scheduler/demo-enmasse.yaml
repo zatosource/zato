@@ -3,9 +3,9 @@ scheduler:
   - name: crm.sync-contacts
     service: demo.sleep
     job_type: interval_based
-    seconds: 3
+    seconds: 4
     is_active: true
-    extra: '{"seconds": 3, "source": "crm", "object_type": "contact", "direction": "inbound"}'
+    extra: '{"seconds": 4, "source": "crm", "object_type": "contact", "direction": "inbound"}'
 
   - name: crm.sync-accounts
     service: demo.sleep

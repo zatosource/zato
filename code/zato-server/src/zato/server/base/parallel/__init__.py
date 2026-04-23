@@ -55,7 +55,7 @@ from zato.common.rules.api import RulesManager
 from zato.common.typing_ import cast_, intnone, optional
 from zato.common.util.api import absolutize, as_bool, get_config_from_file, get_user_config_name, \
     fs_safe_name, invoke_startup_services as _invoke_startup_services, make_list_from_string_list, new_cid_server, \
-    publish_enmasse, publish_file, publish_user_conf, \
+    parse_extra_into_dict, publish_enmasse, publish_file, publish_user_conf, \
     register_diag_handlers, spawn_greenlet, StaticConfig, utcnow
 from zato.common.util.env import populate_environment_from_file
 from zato.common.file_transfer.listener import watch_directory as watch_pickup_directory
@@ -1009,11 +1009,21 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             job_name = ctx['name']
             current_run = ctx['current_run']
 
+            extra = ctx['extra']
+            if extra and isinstance(extra, str):
+                try:
+                    extra = json_loads(extra)
+                except Exception:
+                    try:
+                        extra = parse_extra_into_dict(extra)
+                    except Exception:
+                        pass
+
             msg = Bunch({
                 'action': SCHEDULER_MSG.JOB_EXECUTED.value,
                 'name': ctx['name'],
                 'service': ctx['service'],
-                'payload': ctx['extra'],
+                'payload': extra,
                 'cid': new_cid_server(),
                 'job_type': ctx['job_type'],
                 'zato_ctx': {
