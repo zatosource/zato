@@ -7,7 +7,8 @@ $.fn.zato.scheduler.job_detail.config = {
     cluster_id: '1',
     default_tab: 'executions',
     default_time_range: 0,
-    chart_width: 700
+    chart_width: 700,
+    fit_value_selectors: ['#stat-total-runs', '#stat-next-fire']
 };
 
 $.fn.zato.scheduler.job_detail._dashboard = function() {
@@ -102,7 +103,16 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
     var detail = $.fn.zato.scheduler.job_detail;
     var dashboard = detail._dashboard();
 
-    kit.set_fit_value('#stat-total-runs', kit.format_number_full(job.current_run + 100000000000000000));
+    var fit = detail.config.fit_value_selectors;
+    var set_value = function(selector, text) {
+        if (fit.indexOf(selector) !== -1) {
+            kit.set_fit_value(selector, text);
+        } else {
+            $(selector).text(text);
+        }
+    };
+
+    set_value('#stat-total-runs', kit.format_number_full(job.current_run));
 
     var recent = job.recent_outcomes;
     var error_count = 0;
@@ -121,9 +131,9 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
 
     var next_fire = job.next_fire_utc;
     if (next_fire) {
-        $('#stat-next-fire').text(kit.format_local_time(next_fire));
+        set_value('#stat-next-fire', kit.format_local_time(next_fire));
     } else {
-        $('#stat-next-fire').text('-');
+        set_value('#stat-next-fire', '-');
     }
 };
 

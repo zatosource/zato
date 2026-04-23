@@ -35,21 +35,32 @@
     min-width: 0;
 }
 
-.stat-card-fit-container .stat-card-value {
+.stat-card-fit-container .stat-card-value,
+.stat-card-fit-container .stat-card-value-sm {
     display: none;
 }
 
 .stat-card-fit-container .stat-card-value-svg {
     display: block;
     width: 100%;
-    height: 28px;
     overflow: visible;
 }
 
+.stat-card-fit-container .stat-card-value-svg.stat-card-value-svg-lg {
+    height: 28px;
+}
+
+.stat-card-fit-container .stat-card-value-svg.stat-card-value-svg-sm {
+    height: 16px;
+}
+
 .stat-card-value-svg-text {
-    font-size: 22px;
     font-weight: 900;
     fill: var(--primary-dark);
+}
+
+.stat-card-value-svg-sm .stat-card-value-svg-text {
+    font-weight: 700;
 }
 
 a {

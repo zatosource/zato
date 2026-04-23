@@ -284,11 +284,18 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
     kit.set_fit_value = function(selector, text) {
         var el = $(selector);
+        var is_sm = el.hasClass('stat-card-value-sm');
+        var size_class = is_sm ? 'stat-card-value-svg-sm' : 'stat-card-value-svg-lg';
+        var font_size = is_sm ? 14 : 22;
+        var line_height = is_sm ? 16 : 24;
+
         var parent = el.closest('.stat-card-fit-container');
         var svg_el = parent.find('.stat-card-value-svg');
         if (svg_el.length === 0) {
-            svg_el = $('<svg class="stat-card-value-svg" viewBox="0 0 100 24" preserveAspectRatio="xMinYMid meet">' +
-                '<text x="0" y="20" class="stat-card-value-svg-text"></text></svg>');
+            svg_el = $('<svg class="stat-card-value-svg ' + size_class +
+                '" viewBox="0 0 100 ' + line_height +
+                '" preserveAspectRatio="xMinYMid meet">' +
+                '<text x="0" y="' + font_size + '" style="font-size:' + font_size + 'px" class="stat-card-value-svg-text"></text></svg>');
             parent.append(svg_el);
         }
         var text_node = svg_el.find('text');
@@ -297,8 +304,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var svg_dom = svg_el[0];
         var text_dom = text_node[0];
         var text_width = text_dom.getComputedTextLength();
-        var view_width = Math.max(text_width, 1);
-        svg_dom.setAttribute('viewBox', '0 0 ' + view_width + ' 24');
+        svg_dom.setAttribute('viewBox', '0 0 ' + text_width + ' ' + line_height);
     };
 
     /* Fade the dashboard into view after first render. */
