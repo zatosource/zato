@@ -266,7 +266,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
 
     var config_service = job.service;
     var service_link = config_service
-        ? '<a href="/zato/service/overview/' + encodeURIComponent(config_service) + '/?cluster=' + cluster_id + '">' + esc(config_service) + '</a>'
+        ? '<a href="/zato/service/ide/service/' + encodeURIComponent(config_service) + '/?cluster=' + cluster_id + '">' + esc(config_service) + '</a>'
         : '-';
     html += card('Service', service_link, true);
 

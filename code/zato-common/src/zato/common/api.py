@@ -1181,7 +1181,7 @@ class Sleep(Service):
         default = 3
         seconds = float(self.request.input.get('seconds') or default)
         sleep(seconds)
-        self.response.payload = f'OK, slept for {{seconds}}s'
+        self.response.payload.message = f'OK, slept for {{seconds}} seconds'
 """.lstrip()
 
 # ################################################################################################################################

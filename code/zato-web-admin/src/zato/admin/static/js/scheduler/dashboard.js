@@ -742,7 +742,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var service_name = job.service;
             var service_cell = '';
             if (service_name) {
-                var service_url = '/zato/service/overview/' + encodeURIComponent(service_name) + '/?cluster=' + cluster_id;
+                var service_url = '/zato/service/ide/service/' + encodeURIComponent(service_name) + '/?cluster=' + cluster_id;
                 service_cell = '<a href="' + service_url + '">' + service_name + '</a>';
             }
 
@@ -893,7 +893,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
             var service_cell = '';
             if (entry.service) {
-                var service_url = '/zato/service/overview/' + encodeURIComponent(entry.service) + '/?cluster=' + cluster_id;
+                var service_url = '/zato/service/ide/service/' + encodeURIComponent(entry.service) + '/?cluster=' + cluster_id;
                 service_cell = '<a href="' + service_url + '">' + entry.service + '</a>';
             }
 
