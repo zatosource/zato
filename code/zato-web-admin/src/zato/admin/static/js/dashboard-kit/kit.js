@@ -187,6 +187,12 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             }
         }
 
+        // .. drop the last (partial) bucket so the sparkline dot
+        // .. sits on the last complete time slice
+        if (series.length > 2) {
+            series.pop();
+        }
+
         return {series: series, total: total};
     };
 
