@@ -30,6 +30,16 @@
     display: none;
 }
 
+.stat-card-fit-container {
+    container-type: inline-size;
+    flex: 1;
+    min-width: 0;
+}
+
+.stat-card-fit-container .stat-card-value {
+    font-size: 14cqi;
+}
+
 a {
     text-decoration: none !important;
 }

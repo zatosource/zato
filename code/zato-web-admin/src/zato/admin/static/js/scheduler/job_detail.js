@@ -102,7 +102,7 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
     var detail = $.fn.zato.scheduler.job_detail;
     var dashboard = detail._dashboard();
 
-    $('#stat-total-runs').text(kit.format_number_full(job.current_run));
+    $('#stat-total-runs').text(kit.format_number_full(job.current_run + 1000000000000));
 
     var recent = job.recent_outcomes;
     var error_count = 0;
