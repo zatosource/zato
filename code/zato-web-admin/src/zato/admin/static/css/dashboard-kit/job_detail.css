@@ -140,3 +140,46 @@
 .badge-puff {
     animation: badge-puff 0.7s ease-out;
 }
+
+.detail-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-right: 4px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.detail-tag-cell {
+    cursor: pointer;
+}
+
+.detail-panel-row > td {
+    padding: 0;
+    font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+}
+
+.detail-panel-grid {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.15s ease-out;
+}
+
+.detail-panel-row:not(.expanded) .detail-panel-grid {
+    grid-template-rows: 0fr;
+}
+
+.detail-panel-inner {
+    overflow: hidden;
+}
+
+.detail-panel-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.detail-panel-table td {
+    padding: 2px 8px;
+    white-space: nowrap;
+}

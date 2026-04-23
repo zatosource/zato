@@ -16,6 +16,23 @@ $.fn.zato.scheduler.job_detail.config = {
             action_text: 'Execute now',
             action_target: '#btn-execute-now'
         }
+    },
+    detail_tags: [
+        { key: 'error',  label: 'Error',  color: '#c0392b', bg: 'rgba(192, 57, 43, 0.1)' },
+        { key: 'warn',   label: 'Warn',   color: '#b45309', bg: 'rgba(180, 83, 9, 0.1)' },
+        { key: 'info',   label: 'Info',   color: '#2a7fbf', bg: 'rgba(42, 127, 191, 0.1)' },
+        { key: 'system', label: 'System', color: '#999',    bg: 'rgba(153, 153, 153, 0.08)', dimmed: true }
+    ],
+    detail_panel: {
+        bg: '#1e1e2e',
+        font_size: '11px',
+        columns: [
+            { key: 'timestamp', width: '90px',  color: '#6e6e73' },
+            { key: 'level',     width: '50px',  color_map: {
+                'ERROR': '#e05252', 'WARN': '#d4a017', 'INFO': '#5b9bd5', 'SYSTEM': '#666'
+            }},
+            { key: 'message',   width: 'auto',  color: '#ccc' }
+        ]
     }
 };
 
@@ -565,38 +582,159 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 };
 
 // ////////////////////////////////////////////////////////////////////////////
+// Fake data generator (temporary, until backend provides real data)
+// ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.job_detail._generate_fake_tags = function(run) {
+    var detail = $.fn.zato.scheduler.job_detail;
+    var tag_defs = detail.config.detail_tags;
+    var panel_cfg = detail.config.detail_panel;
+
+    var seed = run * 2654435761;
+    var _next = function() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed; };
+
+    var tags = {};
+    for (var t = 0; t < tag_defs.length; t++) {
+        var n = _next() % 8;
+        if (tag_defs[t].key === 'system') n = 2;
+        if (tag_defs[t].key === 'info') n = Math.max(n, 1);
+        tags[tag_defs[t].key] = n;
+    }
+
+    var levels = [];
+    for (var key in tags) {
+        for (var c = 0; c < tags[key]; c++) {
+            levels.push(key);
+        }
+    }
+
+    var messages = {
+        'error': ['Connection refused', 'Timeout exceeded', 'Authentication failed', 'Disk full', 'Out of memory'],
+        'warn':  ['Slow response detected', 'Retrying connection', 'Queue depth high', 'Certificate expiring'],
+        'info':  ['Processing batch', 'Synced 142 records', 'Cache refreshed', 'Checkpoint saved', 'Heartbeat OK'],
+        'system': ['Job started', 'Job finished']
+    };
+
+    var entries = [];
+    var base_ts = new Date();
+    base_ts.setMinutes(base_ts.getMinutes() - run);
+
+    for (var e = 0; e < levels.length; e++) {
+        var level = levels[e];
+        var ms_offset = (_next() % 5000);
+        var ts = new Date(base_ts.getTime() + ms_offset);
+        var h = String(ts.getHours()).length < 2 ? '0' + ts.getHours() : String(ts.getHours());
+        var m = String(ts.getMinutes()).length < 2 ? '0' + ts.getMinutes() : String(ts.getMinutes());
+        var s = String(ts.getSeconds()).length < 2 ? '0' + ts.getSeconds() : String(ts.getSeconds());
+        var ms = String(ts.getMilliseconds());
+        while (ms.length < 3) ms = '0' + ms;
+        var ts_str = h + ':' + m + ':' + s + '.' + ms;
+
+        var pool = messages[level];
+        var msg = pool[_next() % pool.length];
+
+        entries.push({ timestamp: ts_str, level: level.toUpperCase(), message: msg });
+    }
+
+    entries.sort(function(a, b) { return a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0; });
+
+    return { tags: tags, entries: entries };
+};
+
+// ////////////////////////////////////////////////////////////////////////////
 // Render history table (grouped, paginated)
 // ////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.scheduler.job_detail._render_tag_badges = function(run) {
+    var detail = $.fn.zato.scheduler.job_detail;
+    var tag_defs = detail.config.detail_tags;
+    var fake = detail._generate_fake_tags(run);
+    var tags = fake.tags;
+    var html = '';
+    for (var t = 0; t < tag_defs.length; t++) {
+        var def = tag_defs[t];
+        var count = tags[def.key];
+        if (count > 0) {
+            var style = 'color:' + def.color + ';background:' + def.bg;
+            if (def.dimmed) style += ';opacity:0.55';
+            html += '<span class="detail-tag" style="' + style + '">' +
+                def.label + ' x' + count + '</span>';
+        }
+    }
+    return html;
+};
+
+$.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
+    var detail = $.fn.zato.scheduler.job_detail;
+    var panel_cfg = detail.config.detail_panel;
+    var fake = detail._generate_fake_tags(run);
+    var entries = fake.entries;
+
+    var html = '<tr class="detail-panel-row expanded" data-run="' + run + '">';
+    html += '<td colspan="6" style="padding:0">';
+    html += '<div class="detail-panel-grid">';
+    html += '<div class="detail-panel-inner">';
+    html += '<table class="detail-panel-table" style="background:' + panel_cfg.bg + ';font-size:' + panel_cfg.font_size + '">';
+
+    for (var e = 0; e < entries.length; e++) {
+        var entry = entries[e];
+        html += '<tr>';
+        for (var c = 0; c < panel_cfg.columns.length; c++) {
+            var col = panel_cfg.columns[c];
+            var val = entry[col.key];
+            var col_color = col.color_map ? col.color_map[val] : col.color;
+            var w = col.width === 'auto' ? '' : 'width:' + col.width + ';';
+            var fw = col.color_map ? 'font-weight:700;' : '';
+            html += '<td style="' + w + 'color:' + col_color + ';' + fw + 'white-space:nowrap;padding:2px 8px">' + val + '</td>';
+        }
+        html += '</tr>';
+    }
+
+    html += '</table>';
+    html += '</div></div></td></tr>';
+    return html;
+};
+
 $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class) {
     var kit = $.fn.zato.dashboard_kit;
-    var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
+    var detail = $.fn.zato.scheduler.job_detail;
+    var dashboard = detail._dashboard();
     var actual_time = kit.format_local_time(record.actual_fire_time_iso);
-    var delay = (record.delay_ms !== null && record.delay_ms !== undefined)
+    var delay = (record.delay_ms !== null && record.delay_ms !== undefined && record.delay_ms > 0)
         ? kit.format_number_full(record.delay_ms) + ' ms'
         : '-';
     var duration = dashboard.format_duration(record.duration_ms);
     var outcome = dashboard.outcome_badge(record.outcome);
     var run_number = (record.current_run !== null && record.current_run !== undefined)
         ? kit.format_number_full(record.current_run) : '-';
-    var error_text = record.error;
-    if (error_text === null) error_text = '';
-    var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
 
     var row_ts = record.actual_fire_time_iso;
     var run_attr = (record.current_run !== null && record.current_run !== undefined) ? record.current_run : '';
     var cls = extra_class ? ' class="' + extra_class + '"' : '';
+    var tag_html = detail._render_tag_badges(record.current_run);
+
     var row = '<tr' + cls + ' data-ts="' + row_ts + '" data-run="' + run_attr + '">';
     row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + run_number + '</td>';
     row += '<td class="dashboard-cell-center">' + outcome + '</td>';
     row += '<td class="dashboard-cell-mono">' + actual_time + '</td>';
     row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + duration + '</td>';
     row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + delay + '</td>';
-    row += '<td title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
+    row += '<td class="detail-tag-cell">' + tag_html + '</td>';
     row += '</tr>';
     return row;
 };
 
+
+$.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
+    $body.find('.detail-tag-cell').off('click.panel').on('click.panel', function() {
+        var $data_row = $(this).closest('tr');
+        var run = $data_row.attr('data-run');
+        var $panel = $body.find('tr.detail-panel-row[data-run="' + run + '"]');
+        if ($panel.length) {
+            $panel.toggleClass('expanded');
+        }
+    });
+};
 
 $.fn.zato.scheduler.job_detail._execution_outcomes = {'ok': true, 'error': true, 'timeout': true};
 
@@ -607,7 +745,7 @@ $.fn.zato.scheduler.job_detail._apply_recency_gradient = function($body) {
     var max_a = kit.recency.MAX_ALPHA;
     var steps = kit.recency.STEPS;
     var limit = Math.min(detail._new_row_count, steps);
-    var primaries = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty');
+    var primaries = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty').not('.detail-panel-row');
     primaries.each(function(idx) {
         var $row = $(this);
         if (idx < limit) {
@@ -665,7 +803,12 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             }
             for (var i = 0; i < rows.length; i++) {
                 $body.append(detail._render_single_row(rows[i], ''));
+                var run = rows[i].current_run;
+                if (run !== null && run !== undefined) {
+                    $body.append(detail._render_panel_row(run));
+                }
             }
+            detail._bind_panel_toggles($body);
         },
         render_new: function($body, rows, page_size) {
             var exec_outcomes = detail._execution_outcomes;
@@ -674,28 +817,41 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
 
             for (var i = rows.length - 1; i >= 0; i--) {
                 var rec = rows[i];
-                var $existing = $body.find('tr[data-run="' + rec.current_run + '"]');
+                var run = rec.current_run;
+                var $existing = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
                 if ($existing.length) {
                     var was_running = $existing.find('.badge-running-spinner').length > 0;
+                    var $panel = $existing.next('.detail-panel-row');
                     var new_html = detail._render_single_row(rec, '');
                     $existing.replaceWith(new_html);
                     if (was_running && rec.outcome !== 'running') {
-                        var $new_row = $body.find('tr[data-run="' + rec.current_run + '"]');
+                        var $new_row = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
                         $new_row.find('.dashboard-outcome-badge').addClass('badge-puff')
                             .one('animationend', function() { $(this).removeClass('badge-puff'); });
                     }
+                    // .. re-insert detached panel after the replaced row
+                    if ($panel.length) {
+                        $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row').after($panel);
+                    }
                 } else {
-                    $body.prepend(detail._render_single_row(rec, ''));
+                    var row_html = detail._render_single_row(rec, '');
+                    var panel_html = (run !== null && run !== undefined) ? detail._render_panel_row(run) : '';
+                    $body.prepend(panel_html);
+                    $body.prepend(row_html);
                     detail._new_row_count++;
                 }
             }
 
-            var visible_rows = $body.children('tr').not('.dashboard-inline-empty');
-            while (visible_rows.length > page_size) {
-                visible_rows.last().remove();
-                visible_rows = $body.children('tr').not('.dashboard-inline-empty');
+            // .. trim: count only data rows, remove panel together with its data row
+            var data_rows = $body.children('tr').not('.dashboard-inline-empty').not('.detail-panel-row');
+            while (data_rows.length > page_size) {
+                var $last = data_rows.last();
+                $last.next('.detail-panel-row').remove();
+                $last.remove();
+                data_rows = $body.children('tr').not('.dashboard-inline-empty').not('.detail-panel-row');
             }
 
+            detail._bind_panel_toggles($body);
             detail._apply_recency_gradient($body);
         },
         on_page_change: function(page) {

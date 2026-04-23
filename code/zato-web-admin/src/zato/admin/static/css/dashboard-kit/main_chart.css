@@ -138,7 +138,7 @@
 }
 
 .dashboard-tooltip-muted {
-    color: var(--text-muted, #a0a0a5);
+    color: rgba(255, 255, 255, 0.55);
 }
 
 /* Inline no-data message */
