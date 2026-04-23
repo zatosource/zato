@@ -433,8 +433,6 @@ class Invoke(AdminService):
 
     def _build_response(self, response:'any_') -> 'any_':
 
-        self.logger.info('_build_response input response=%r; type=%s', response, type(response).__name__)
-
         if not isinstance(response, str):
             if not isinstance(response, bytes):
                 if hasattr(response, 'to_dict'):

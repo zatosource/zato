@@ -838,9 +838,6 @@ class Service:
         if _zato_needs_response_wrapper is False:
             kwargs['skip_response_elem'] = True
 
-        logger.info('update_handle skip_response_elem=%s; has_keys=%s; response type=%s; response=%r',
-            kwargs.get('skip_response_elem'), hasattr(response, 'keys'), type(response).__name__, response)
-
         if kwargs.get('skip_response_elem') and hasattr(response, 'keys'):
 
             # If if has .keys, it means it is a dict.
