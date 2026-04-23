@@ -215,6 +215,12 @@ class SimpleIOPayload:
 
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
 
+        import logging as _logging
+        _logging.getLogger('zato.cy.payload').info(
+            'getvalue serialize=%s; data_format=%s; force_dict=%s; user_attrs_dict=%s; output_repeated=%s; value=%s',
+            serialize, self.data_format, force_dict_serialisation,
+            dict(self.user_attrs_dict), self.output_repeated, value)
+
         # Special-case internal services that return metadata (e.g GetList-like ones)
         if self.zato_meta:
 

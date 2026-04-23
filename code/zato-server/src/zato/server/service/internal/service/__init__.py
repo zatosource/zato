@@ -415,7 +415,7 @@ class Invoke(AdminService):
             transport,
             zato_response_headers_container=zato_response_headers_container,
             skip_response_elem=skip_response_elem,
-            serialize=True)
+            serialize=not skip_response_elem)
 
         if all_pids:
 
@@ -432,6 +432,8 @@ class Invoke(AdminService):
 # ################################################################################################################################
 
     def _build_response(self, response:'any_') -> 'any_':
+
+        self.logger.info('_build_response input response=%r; type=%s', response, type(response).__name__)
 
         if not isinstance(response, str):
             if not isinstance(response, bytes):

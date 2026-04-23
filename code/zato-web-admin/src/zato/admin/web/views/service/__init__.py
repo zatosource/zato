@@ -261,6 +261,8 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
         try:
             content['response_time_human'] = response.inner.headers.get('X-Zato-Response-Time-Human')
             if response.ok:
+                logger.info('invoke inner_service_response=%r; data_type=%s',
+                    response.inner_service_response, type(response.inner_service_response).__name__)
                 if data := response.inner_service_response:
                     try:
                         data = loads(data)
@@ -268,6 +270,7 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
                         pass
                 else:
                     data = '(None)'
+                logger.info('invoke final data=%r; data_type=%s', data, type(data).__name__)
                 status_code = HTTPStatus.OK
             else:
                 data = response.details

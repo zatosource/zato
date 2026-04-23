@@ -226,10 +226,6 @@ impl RunningJob {
                         let n = self.find_next_n(sd, now);
                         let base_ms = n * self.interval_ms;
                         let jitter = self.compute_jitter();
-                        log::info!(
-                            "compute_next_fire job_id={}; name={}; jitter_ms={:?}; computed_jitter={}; interval_ms={}; base_ms={}",
-                            self.id.0, self.name, self.jitter_ms, jitter, self.interval_ms, base_ms
-                        );
                         self.next_fire_utc = Some(sd + chrono::Duration::milliseconds((base_ms + jitter) as i64));
                     } else {
                         self.next_fire_utc = None;

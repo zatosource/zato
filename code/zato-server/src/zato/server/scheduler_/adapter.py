@@ -37,8 +37,6 @@ class SchedulerODBAdapter:
                 }
 
                 opaque = parse_instance_opaque_attr(job)
-                logger.info('Scheduler adapter job_id=%s; name=%s; raw opaque1=%r; parsed opaque=%s',
-                    job.id, job.name, job.opaque1, opaque)
                 entry.update(opaque)
 
                 interval = session.query(IntervalBasedJob).filter_by(job_id=job.id).first()
@@ -50,8 +48,6 @@ class SchedulerODBAdapter:
                     entry['seconds'] = interval.seconds if interval.seconds is not None else default_interval_value
                     entry['repeats'] = interval.repeats
 
-                logger.info('Scheduler adapter job_id=%s; name=%s; final entry jitter_ms=%s; entry keys=%s',
-                    job.id, job.name, entry.get('jitter_ms'), list(entry.keys()))
                 result[job.id] = entry
 
         return result
