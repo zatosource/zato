@@ -18,17 +18,23 @@ $.fn.zato.scheduler.job_detail.config = {
         }
     },
     detail_tags: [
-        { key: 'error',  label: 'Error',  color: '#c0392b', bg: 'rgba(192, 57, 43, 0.1)' },
-        { key: 'warn',   label: 'Warn',   color: '#b45309', bg: 'rgba(180, 83, 9, 0.1)' },
-        { key: 'info',   label: 'Info',   color: '#2a7fbf', bg: 'rgba(42, 127, 191, 0.1)' },
-        { key: 'system', label: 'System', color: '#999',    bg: 'rgba(153, 153, 153, 0.08)', dimmed: true }
+        { key: 'error',  label: 'Error',  color: '#c0392b', bg: 'rgba(192, 57, 43, 0.1)',
+          dark_color: '#f06060', dark_bg: 'rgba(224, 82, 82, 0.22)' },
+        { key: 'warn',   label: 'Warn',   color: '#b45309', bg: 'rgba(180, 83, 9, 0.1)',
+          dark_color: '#e8b830', dark_bg: 'rgba(212, 160, 23, 0.22)' },
+        { key: 'info',   label: 'Info',   color: '#2a7fbf', bg: 'rgba(42, 127, 191, 0.1)',
+          dark_color: '#7ab8f0', dark_bg: 'rgba(91, 155, 213, 0.22)' },
+        { key: 'system', label: 'System', color: '#999',    bg: 'rgba(153, 153, 153, 0.08)', dimmed: true,
+          dark_color: '#aaa', dark_bg: 'rgba(160, 160, 160, 0.15)' }
     ],
     detail_panel: {
         bg: '#232336',
         border: '1px solid #3a3a52',
         row_border: '#3a3a52',
-        owner_bg: 'rgba(91, 155, 213, 0.06)',
-        connector: '#5b9bd5',
+        owner_bg: '#232336',
+        owner_color: '#d0d0d8',
+        owner_border: '#3a3a52',
+        shadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
         font_size: '12px',
         level_colors: {
             'ERROR':  { stripe: '#e05252', badge_bg: 'rgba(224, 82, 82, 0.18)', badge_fg: '#f06060' },
@@ -662,7 +668,7 @@ $.fn.zato.scheduler.job_detail._render_tag_badges = function(run) {
         if (count > 0) {
             var style = 'color:' + def.color + ';background:' + def.bg;
             if (def.dimmed) style += ';opacity:0.55';
-            html += '<span class="detail-tag" style="' + style + '">' +
+            html += '<span class="detail-tag" data-key="' + def.key + '" style="' + style + '">' +
                 def.label + ' x' + count + '</span>';
         }
     }
@@ -729,7 +735,52 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
 };
 
 
+$.fn.zato.scheduler.job_detail._style_panel_owner = function($row, $panel, expanded) {
+    var detail = $.fn.zato.scheduler.job_detail;
+    var cfg = detail.config.detail_panel;
+    var tag_defs = detail.config.detail_tags;
+    var $cells = $row.children('td');
+    var $tags = $row.find('.detail-tag');
+    if (expanded) {
+        $cells.css({
+            'background': cfg.owner_bg,
+            'color': cfg.owner_color,
+            'border-bottom-color': cfg.owner_border
+        });
+        $row.css('box-shadow', cfg.shadow);
+        $panel.css('box-shadow', cfg.shadow);
+
+        // .. restyle badges to dark mode
+        $tags.each(function() {
+            var $tag = $(this);
+            var key = $tag.attr('data-key');
+            for (var t = 0; t < tag_defs.length; t++) {
+                if (tag_defs[t].key === key) {
+                    $tag.css({ 'color': tag_defs[t].dark_color, 'background': tag_defs[t].dark_bg });
+                    break;
+                }
+            }
+        });
+    } else {
+        $cells.css({ 'background': '', 'color': '', 'border-bottom-color': '' });
+        $row.css('box-shadow', '');
+        $panel.css('box-shadow', '');
+
+        $tags.each(function() {
+            var $tag = $(this);
+            var key = $tag.attr('data-key');
+            for (var t = 0; t < tag_defs.length; t++) {
+                if (tag_defs[t].key === key) {
+                    $tag.css({ 'color': tag_defs[t].color, 'background': tag_defs[t].bg });
+                    break;
+                }
+            }
+        });
+    }
+};
+
 $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
+    var detail = $.fn.zato.scheduler.job_detail;
     $body.find('.detail-tag-cell').off('click.panel').on('click.panel', function() {
         var $data_row = $(this).closest('tr');
         var run = $data_row.attr('data-run');
@@ -737,7 +788,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         if ($panel.length) {
             var is_expanding = !$panel.hasClass('expanded');
             $panel.toggleClass('expanded');
-            $data_row.toggleClass('detail-panel-owner', is_expanding);
+            detail._style_panel_owner($data_row, $panel, is_expanding);
         }
     });
 };
@@ -835,9 +886,14 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                         $new_row.find('.dashboard-outcome-badge').addClass('badge-puff')
                             .one('animationend', function() { $(this).removeClass('badge-puff'); });
                     }
-                    // .. re-insert detached panel after the replaced row
+                    // .. re-insert detached panel after the replaced row,
+                    // .. and re-apply dark mode if the panel was expanded
                     if ($panel.length) {
-                        $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row').after($panel);
+                        var $new_data_row = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
+                        $new_data_row.after($panel);
+                        if ($panel.hasClass('expanded')) {
+                            detail._style_panel_owner($new_data_row, $panel, true);
+                        }
                     }
                 } else {
                     var row_html = detail._render_single_row(rec, '');
