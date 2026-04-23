@@ -27,6 +27,8 @@ $.fn.zato.scheduler.job_detail.config = {
         bg: '#232336',
         border: '1px solid #3a3a52',
         row_border: '#3a3a52',
+        owner_bg: 'rgba(91, 155, 213, 0.06)',
+        connector: '#5b9bd5',
         font_size: '12px',
         level_colors: {
             'ERROR':  { stripe: '#e05252', badge_bg: 'rgba(224, 82, 82, 0.18)', badge_fg: '#f06060' },
@@ -733,7 +735,9 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         var run = $data_row.attr('data-run');
         var $panel = $body.find('tr.detail-panel-row[data-run="' + run + '"]');
         if ($panel.length) {
+            var is_expanding = !$panel.hasClass('expanded');
             $panel.toggleClass('expanded');
+            $data_row.toggleClass('detail-panel-owner', is_expanding);
         }
     });
 };

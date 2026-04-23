@@ -155,6 +155,10 @@
     cursor: pointer;
 }
 
+tr.detail-panel-owner {
+    background: var(--detail-owner-bg, rgba(91, 155, 213, 0.06));
+}
+
 .detail-panel-row > td {
     padding: 0;
 }
@@ -176,8 +180,7 @@
 .detail-panel-log {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     padding: 2px 0;
-    border-radius: 4px;
-    margin: 4px 8px 6px;
+    border-radius: 0 0 4px 4px;
 }
 
 .detail-log-line {
