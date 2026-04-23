@@ -573,7 +573,7 @@ a {
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 1rem;
 }
 
 .detail-header-controls {

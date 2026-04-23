@@ -160,9 +160,7 @@ fn scheduler_mark_complete(job_id: i64, outcome: &str, duration_ms: u64, current
             for rec in running_job.history.iter_mut().rev() {
                 if rec.current_run == current_run {
                     rec.duration_ms = Some(duration_ms);
-                    if outcome != "ok" {
-                        rec.outcome = outcome.to_string();
-                    }
+                    rec.outcome = outcome.to_string();
                     break;
                 }
             }

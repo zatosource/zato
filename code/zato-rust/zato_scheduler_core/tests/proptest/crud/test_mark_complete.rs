@@ -32,9 +32,7 @@ fn mark_complete(running_job: &mut RunningJob, outcome: &str, duration_ms: u64) 
     running_job.in_flight_since = None;
     if let Some(last) = running_job.history.back_mut() {
         last.duration_ms = Some(duration_ms);
-        if outcome != "executed" {
-            last.outcome = outcome.to_string();
-        }
+        last.outcome = outcome.to_string();
     }
 }
 
@@ -46,8 +44,8 @@ proptest! {
         let mut running_job = RunningJob::from_scheduler_job(&sj);
         running_job.in_flight = true;
         running_job.in_flight_since = Some(std::time::Instant::now());
-        running_job.record_execution(ExecutionRecord::new("p", "a", "executed", 1));
-        mark_complete(&mut running_job, "executed", duration_ms);
+        running_job.record_execution(ExecutionRecord::new("p", "a", "running", 1));
+        mark_complete(&mut running_job, "ok", duration_ms);
         prop_assert!(!running_job.in_flight);
         prop_assert!(running_job.in_flight_since.is_none());
     }
@@ -57,31 +55,31 @@ proptest! {
         let sj = make_job();
         let mut running_job = RunningJob::from_scheduler_job(&sj);
         running_job.in_flight = true;
-        running_job.record_execution(ExecutionRecord::new("p", "a", "executed", 1));
-        mark_complete(&mut running_job, "executed", duration_ms);
+        running_job.record_execution(ExecutionRecord::new("p", "a", "running", 1));
+        mark_complete(&mut running_job, "ok", duration_ms);
         let last = running_job.history.back().unwrap();
         prop_assert_eq!(last.duration_ms, Some(duration_ms));
     }
 
     #[test]
-    fn non_executed_outcome_overwrites(duration_ms in 0u64..100_000) {
+    fn outcome_set_to_timeout(duration_ms in 0u64..100_000) {
         let sj = make_job();
         let mut running_job = RunningJob::from_scheduler_job(&sj);
         running_job.in_flight = true;
-        running_job.record_execution(ExecutionRecord::new("p", "a", "executed", 1));
+        running_job.record_execution(ExecutionRecord::new("p", "a", "running", 1));
         mark_complete(&mut running_job, "timeout", duration_ms);
         let last = running_job.history.back().unwrap();
         prop_assert_eq!(&last.outcome, "timeout");
     }
 
     #[test]
-    fn executed_outcome_preserved(duration_ms in 0u64..100_000) {
+    fn outcome_set_to_ok(duration_ms in 0u64..100_000) {
         let sj = make_job();
         let mut running_job = RunningJob::from_scheduler_job(&sj);
         running_job.in_flight = true;
-        running_job.record_execution(ExecutionRecord::new("p", "a", "executed", 1));
-        mark_complete(&mut running_job, "executed", duration_ms);
+        running_job.record_execution(ExecutionRecord::new("p", "a", "running", 1));
+        mark_complete(&mut running_job, "ok", duration_ms);
         let last = running_job.history.back().unwrap();
-        prop_assert_eq!(&last.outcome, "executed");
+        prop_assert_eq!(&last.outcome, "ok");
     }
 }

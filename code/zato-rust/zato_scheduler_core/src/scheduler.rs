@@ -242,7 +242,7 @@ pub fn collect_due_jobs(
         });
 
         running_job.record_execution(
-            ExecutionRecord::new(&planned, &actual, outcome::EXECUTED, running_job.current_run)
+            ExecutionRecord::new(&planned, &actual, outcome::RUNNING, running_job.current_run)
                 .with_delay(delay)
         );
 

@@ -79,6 +79,7 @@ impl From<&str> for OnMissedPolicy {
 }
 
 pub mod outcome {
+    pub const RUNNING: &str = "running";
     pub const EXECUTED: &str = "ok";
     pub const SKIPPED_ALREADY_IN_FLIGHT: &str = "skipped_already_in_flight";
     pub const SKIPPED_HOLIDAY: &str = "skipped_holiday";
