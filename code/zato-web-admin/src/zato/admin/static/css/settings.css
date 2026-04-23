@@ -6,10 +6,11 @@
 }
 
 .settings-panel {
+    --settings-panel-border: 3px;
     max-width: 957px;
     margin: 0 auto;
     background: var(--white);
-    border: 3px solid var(--primary-dark);
+    border: var(--settings-panel-border) solid var(--primary-dark);
 }
 
 .settings-content {

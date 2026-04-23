@@ -13,9 +13,9 @@
 #detail-stat-cards {
     position: absolute;
     right: calc(100% + 18px);
-    top: 15px;
+    top: calc(-1 * var(--settings-panel-border));
     flex-direction: column;
-    width: 180px;
+    width: 162px;
     margin-bottom: 0;
 }
 
@@ -24,6 +24,10 @@
     flex: none;
     height: auto;
     padding: 10px 14px;
+}
+
+#detail-stat-cards .stat-card > div:last-child {
+    display: none;
 }
 
 a {

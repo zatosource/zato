@@ -131,8 +131,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     if (typeof data === 'string') {
                         data = JSON.parse(data);
                     }
-                    var rows = data.rows || [];
-                    console.log('pagination.poll_new: got rows=' + rows.length + ', since_ts=' + last_ts);
+                    var rows = data.rows;
                     if (rows.length === 0) return;
 
                     update_last_ts(rows);
