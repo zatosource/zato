@@ -358,7 +358,7 @@ class Invoke(AdminService):
 
         payload = payload[1:-1]
         payload = payload.replace('\\n', '\n')
-        payload = parse_extra_into_dict(payload)
+        payload = parse_extra_into_dict(payload, convert_bool=False)
 
         return payload
 

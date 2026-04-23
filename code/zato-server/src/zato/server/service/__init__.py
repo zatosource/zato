@@ -677,6 +677,9 @@ class Service:
         merge_channel_params = kwargs.get('merge_channel_params', True)
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
+        logger.info('update_handle service=%s; channel=%s; payload=%r (type=%s); raw_request=%r (type=%s)',
+            service.name, channel, payload, type(payload).__name__, raw_request, type(raw_request).__name__)
+
         service.update(service, channel, server, broker_client, # type: ignore
             worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
             job_type=job_type, channel_params=channel_params,
@@ -906,6 +909,10 @@ class Service:
             # gives us a set of keys that we do not know, i.e. the keys that are extra
             # and that can be turned into a payload.
             extra_keys = kwargs_keys - internal_invoke_keys
+
+            logger.info('invoke_by_impl_name impl=%s; payload=%r; kwargs_keys=%s; internal_invoke_keys=%s; extra_keys=%s; extra_values=%s',
+                impl_name, payload, kwargs_keys, internal_invoke_keys, extra_keys,
+                {k: kwargs[k] for k in extra_keys} if extra_keys else {})
 
             # Now, if the substraction did result in any keys, we can for sure build a dictionary with payload data.
             if extra_keys:
