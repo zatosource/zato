@@ -157,6 +157,10 @@ tbody tr[data-run]:not(.detail-panel-row) {
 
 .detail-panel-row > td {
     padding: 0;
+    border-bottom: none;
+}
+
+.detail-panel-row.expanded > td {
     border-bottom: 1px dashed #114;
 }
 
