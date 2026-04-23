@@ -31,13 +31,25 @@
 }
 
 .stat-card-fit-container {
-    container-type: inline-size;
     flex: 1;
     min-width: 0;
 }
 
 .stat-card-fit-container .stat-card-value {
-    font-size: 14cqi;
+    display: none;
+}
+
+.stat-card-fit-container .stat-card-value-svg {
+    display: block;
+    width: 100%;
+    height: 28px;
+    overflow: visible;
+}
+
+.stat-card-value-svg-text {
+    font-size: 22px;
+    font-weight: 900;
+    fill: var(--primary-dark);
 }
 
 a {

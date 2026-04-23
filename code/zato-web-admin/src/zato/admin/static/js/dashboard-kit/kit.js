@@ -282,6 +282,25 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         $(selector).html(html);
     };
 
+    kit.set_fit_value = function(selector, text) {
+        var el = $(selector);
+        var parent = el.closest('.stat-card-fit-container');
+        var svg_el = parent.find('.stat-card-value-svg');
+        if (svg_el.length === 0) {
+            svg_el = $('<svg class="stat-card-value-svg" viewBox="0 0 100 24" preserveAspectRatio="xMinYMid meet">' +
+                '<text x="0" y="20" class="stat-card-value-svg-text"></text></svg>');
+            parent.append(svg_el);
+        }
+        var text_node = svg_el.find('text');
+        text_node.text(text);
+
+        var svg_dom = svg_el[0];
+        var text_dom = text_node[0];
+        var text_width = text_dom.getComputedTextLength();
+        var view_width = Math.max(text_width, 1);
+        svg_dom.setAttribute('viewBox', '0 0 ' + view_width + ' 24');
+    };
+
     /* Fade the dashboard into view after first render. */
     kit.reveal = function(selector) {
         $(selector || '.dashboard-page').css('opacity', '1');
