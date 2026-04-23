@@ -676,13 +676,13 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                 var rec = rows[i];
                 var $existing = $body.find('tr[data-run="' + rec.current_run + '"]');
                 if ($existing.length) {
-                    var old_outcome = $existing.find('.dashboard-outcome-badge').text();
+                    var was_running = $existing.find('.badge-running-spinner').length > 0;
                     var new_html = detail._render_single_row(rec, '');
                     $existing.replaceWith(new_html);
-                    if (old_outcome === 'Running' && rec.outcome !== 'running') {
-                        var $badge = $body.find('tr[data-run="' + rec.current_run + '"] .dashboard-outcome-badge');
-                        $badge.addClass('badge-puff');
-                        $badge.one('animationend', function() { $(this).removeClass('badge-puff'); });
+                    if (was_running && rec.outcome !== 'running') {
+                        var $new_row = $body.find('tr[data-run="' + rec.current_run + '"]');
+                        $new_row.find('.dashboard-outcome-badge').addClass('badge-puff')
+                            .one('animationend', function() { $(this).removeClass('badge-puff'); });
                     }
                 } else {
                     $body.prepend(detail._render_single_row(rec, ''));
