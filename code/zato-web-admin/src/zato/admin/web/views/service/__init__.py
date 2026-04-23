@@ -261,11 +261,8 @@ def invoke(req:'HttpRequest', name:'str', cluster_id:'str') -> 'HttpResponse':
                 if data := response.inner_service_response:
                     try:
                         data = loads(data)
-                    except ValueError as e:
-                        print()
-                        print(111, e)
-                        print()
-                        raise
+                    except ValueError:
+                        pass
                 else:
                     data = '(None)'
                 status_code = HTTPStatus.OK
