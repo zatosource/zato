@@ -1144,6 +1144,10 @@ Default_Extra_Service_File_Data = """
 
 # File path: {full_path}
 
+# stdlib
+import logging
+from time import sleep
+
 # Zato
 from zato.server.service import Service
 
@@ -1159,12 +1163,9 @@ class InputLogger(Service):
 
     def handle(self):
 
-        # stdlib
-        import logging
+        self.logger.info(f'Received request: `{{self.request.raw_request}}`')
+        self.logger.info(f'Channel info: `{{self.channel.to_dict()}}`')
 
-        logger = logging.getLogger('zato')
-        logger.info(f'Received request: `{{self.request.raw_request}}`')
-        logger.info(f'Channel info: `{{self.channel.to_dict()}}`')
         self.response.payload.world = f'{{self.name}} received your request.'
 
 # ################################################################################################################################
@@ -1173,13 +1174,14 @@ class InputLogger(Service):
 class Sleep(Service):
 
     name = 'demo.sleep'
-
     input = '-seconds'
+    output = 'message'
 
     def handle(self):
-        from gevent import sleep as gsleep
-        seconds = float(self.request.input['seconds'])
-        gsleep(seconds)
+        default = 3
+        seconds = float(self.request.input.get('seconds') or default)
+        sleep(seconds)
+        self.response.payload = f'OK, slept for {{seconds}}s'
 """.lstrip()
 
 # ################################################################################################################################
