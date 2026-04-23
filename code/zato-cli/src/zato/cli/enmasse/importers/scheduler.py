@@ -194,7 +194,14 @@ class SchedulerImporter:
         session.flush()
 
         # Set any opaque attributes from the configuration
+        logger.info('Enmasse create job `%s` -> job_def keys: %s', job_name, list(job_def.keys()))
+        logger.info('Enmasse create job `%s` -> jitter_ms in job_def: %s, value: %s',
+            job_name, 'jitter_ms' in job_def, job_def.get('jitter_ms'))
+        logger.info('Enmasse create job `%s` -> opaque1 before set_instance_opaque_attrs: %s', job_name, job.opaque1)
+
         set_instance_opaque_attrs(job, job_def)
+
+        logger.info('Enmasse create job `%s` -> opaque1 after set_instance_opaque_attrs: %s', job_name, job.opaque1)
 
         return job
 

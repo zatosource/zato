@@ -351,9 +351,23 @@ pub fn dict_to_scheduler_job(job_id: i64, d: &Bound<'_, PyDict>) -> PyResult<zat
             .extract::<bool>()
     };
 
+    let jitter_ms = get_opt_u32("jitter_ms");
+    let name = get_str("name")?;
+
+    log::info!(
+        "dict_to_scheduler_job job_id={}; name={}; jitter_ms={:?}; raw jitter from dict={:?}",
+        job_id,
+        name,
+        jitter_ms,
+        d.get_item("jitter_ms").ok().flatten().map(|v| {
+            let type_name = v.get_type().name().map(|n| n.to_string()).unwrap_or_else(|_| "?".to_string());
+            format!("{} (type={})", v, type_name)
+        })
+    );
+
     Ok(zato_server_core::model::SchedulerJob {
         id: job_id,
-        name: get_str("name")?,
+        name,
         is_active: get_bool("is_active")?,
         service: get_str("service")?,
         job_type: get_str("job_type")?,
@@ -365,7 +379,7 @@ pub fn dict_to_scheduler_job(job_id: i64, d: &Bound<'_, PyDict>) -> PyResult<zat
         minutes: get_opt_u32("minutes"),
         seconds: get_opt_u32("seconds"),
         repeats: get_opt_u32("repeats"),
-        jitter_ms: get_opt_u32("jitter_ms"),
+        jitter_ms,
         timezone: get_opt_str("timezone"),
         calendar: get_opt_str("calendar"),
         on_missed: get_opt_str("on_missed"),
@@ -375,6 +389,7 @@ pub fn dict_to_scheduler_job(job_id: i64, d: &Bound<'_, PyDict>) -> PyResult<zat
 
 #[pymodule]
 fn zato_scheduler_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    pyo3_log::init();
     m.add_function(wrap_pyfunction!(scheduler_start, m)?)?;
     m.add_function(wrap_pyfunction!(scheduler_stop, m)?)?;
     m.add_function(wrap_pyfunction!(scheduler_create_job, m)?)?;

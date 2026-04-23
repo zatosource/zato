@@ -1145,10 +1145,17 @@ Default_Extra_Service_File_Data = """
 # File path: {full_path}
 
 # stdlib
+from random import uniform
 from time import sleep
 
 # Zato
 from zato.server.service import Service
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+_default_sleep_seconds = 3
+_default_sleep_jitter = 1.5
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -1170,14 +1177,23 @@ class Echo(Service):
 class Sleep(Service):
 
     name = 'demo.sleep'
-    input = '-seconds'
+    input = '-seconds', '-jitter'
     output = 'message'
 
     def handle(self):
-        default = 3
-        seconds = float(self.request.input.get('seconds') or default)
-        sleep(seconds)
-        self.response.payload.message = f'OK, slept for {{seconds}} seconds'
+
+        seconds = self.request.input.get('seconds') or _default_sleep_seconds
+        seconds = float(seconds)
+
+        jitter_range = self.request.input.get('jitter') or _default_sleep_jitter
+        jitter_range = float(jitter_range)
+
+        jitter = uniform(-jitter_range, jitter_range)
+        total = max(0.1, seconds + jitter)
+
+        sleep(total)
+
+        self.response.payload.message = f'OK, slept for {{total:.1f}}s (jitter={{jitter:+.1f}}s)'
 """.lstrip()
 
 # ################################################################################################################################
