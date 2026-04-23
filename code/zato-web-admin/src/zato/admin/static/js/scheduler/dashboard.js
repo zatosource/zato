@@ -231,13 +231,30 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         }
         var bar_colors = dash.outcome_bar_colors;
         var labels = dash.outcome_labels;
-        var html = '';
+
+        var counts = {};
         for (var index = 0; index < recent_outcomes.length; index++) {
             var outcome = recent_outcomes[index];
-            var color = bar_colors[outcome];
-            var label = labels[outcome];
-            html += '<span class="dashboard-outcome-square" style="background:' + color + '" title="' + label + '"></span>';
+            counts[outcome] = (counts[outcome] || 0) + 1;
         }
+
+        var tip_lines = [];
+        for (var key in counts) {
+            if (counts.hasOwnProperty(key)) {
+                tip_lines.push('<div class="dashboard-tooltip-row">' +
+                    '<span class="dashboard-tooltip-dot" style="background:' + bar_colors[key] + '"></span>' +
+                    labels[key] + ': <b>' + counts[key] + '</b></div>');
+            }
+        }
+        var tip_html = '<div class="dashboard-tooltip-body">' + tip_lines.join('') + '</div>';
+
+        var html = '<span class="dashboard-outcome-squares-group" data-tippy-content="' +
+            tip_html.replace(/"/g, '&quot;') + '">';
+        for (var sq_index = 0; sq_index < recent_outcomes.length; sq_index++) {
+            var sq_outcome = recent_outcomes[sq_index];
+            html += '<span class="dashboard-outcome-square" style="background:' + bar_colors[sq_outcome] + '"></span>';
+        }
+        html += '</span>';
         return html;
     };
 
@@ -755,8 +772,14 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             table_body.append(row);
         }
 
-        tippy(table_body.find('[data-tippy-content]').toArray(), {
+        tippy(table_body.find('td[data-tippy-content]').toArray(), {
             allowHTML: false,
+            theme: 'dark',
+            arrow: true
+        });
+
+        tippy(table_body.find('.dashboard-outcome-squares-group[data-tippy-content]').toArray(), {
+            allowHTML: true,
             theme: 'dark',
             arrow: true
         });
