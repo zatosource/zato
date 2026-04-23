@@ -161,7 +161,10 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         }
 
         function poll_new() {
-            if (!last_ts) return;
+            if (!last_ts) {
+                fetch_page(1);
+                return;
+            }
             if (!show_all && current_page !== 1) return;
 
             $.ajax({
