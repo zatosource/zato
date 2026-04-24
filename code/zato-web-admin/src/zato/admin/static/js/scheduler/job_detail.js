@@ -1353,7 +1353,8 @@ $.fn.zato.scheduler.job_detail.poll = function() {
                     break;
                 }
             }
-            detail.render_stats(detail._job_data);
+            var next_fire = detail._job_data.next_fire_utc;
+            $('#header-next-fire').text(next_fire ? kit.format_local_time(next_fire) : '-');
         },
         error: function() {}
     });
