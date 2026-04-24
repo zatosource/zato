@@ -6,13 +6,12 @@
 .detail-page-scheduler {
     --component-accent: var(--zato-seablue);
     --component-accent-light: #e0f0ff;
-    --detail-search-border: #ccc;
     --detail-search-icon-color: #8a8a8a;
 }
 
 .detail-component-pill {
-    background: var(--component-accent-light);
-    color: var(--component-accent);
+    background: #e0f0ff;
+    color: #012845;
 }
 
 #btn-execute-now {

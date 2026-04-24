@@ -14,7 +14,11 @@
         <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
         Job detail
     </span>
-    <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="common detail-header-right">Go to dashboard</a>
+    <span class="detail-header-right detail-header-next-fire">
+        <span class="detail-header-next-fire-label">Next fire:</span>
+        <span class="detail-header-next-fire-value" id="header-next-fire">-</span>
+        <button class="action-button detail-header-execute-btn" id="btn-execute-now">Execute now</button>
+    </span>
 </div>
 <div class="detail-header-row-2">
     <div class="detail-header-controls">
@@ -41,7 +45,7 @@
         <div class="dashboard-chart-legend" id="detail-timeline-legend"></div>
     </div>
     <div class="detail-search-group">
-        <span class="detail-search-icon" aria-hidden="true"><svg class="detail-search-icon-svg" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" focusable="false"><g transform="translate(-0.5 -0.5)"><circle cx="10.5" cy="10.5" r="6.5" stroke="var(--detail-search-icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="16" y1="16" x2="21" y2="21" stroke="var(--detail-search-icon-color)" stroke-width="2" stroke-linecap="round"/></g></svg></span>
+        <span class="detail-search-icon" aria-hidden="true"><svg class="detail-search-icon-svg" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" focusable="false"><g transform="translate(-0.5 -0.5)"><circle cx="10.5" cy="10.5" r="6.5" stroke="#8a8a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="16" y1="16" x2="21" y2="21" stroke="#8a8a8a" stroke-width="2" stroke-linecap="round"/></g></svg></span>
         <div class="detail-search-input-wrap">
             <input type="text" class="detail-search-input" placeholder="Search ..">
             <span class="detail-search-clear">&times;</span>
@@ -73,34 +77,7 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
-{% block stat_cards %}
-<div class="stat-cards" id="detail-stat-cards">
-    <div class="stat-card">
-        <div class="stat-card-fit-container">
-            <div class="stat-card-label">Runs</div>
-            <div class="stat-card-value" id="stat-total-runs">-</div>
-        </div>
-        <div></div>
-    </div>
-    <div class="stat-card">
-        <div><div class="stat-card-label">Errors</div><div class="stat-card-value" id="stat-errors">-</div></div>
-        <div></div>
-    </div>
-    <div class="stat-card">
-        <div><div class="stat-card-label">Avg duration</div><div class="stat-card-value-sm" id="stat-avg-duration">-</div></div>
-        <div></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-fit-container">
-            <div class="stat-card-label">Next fire
-                <button class="action-button stat-card-inline-btn" id="btn-execute-now">Execute now</button>
-            </div>
-            <div class="stat-card-value-sm" id="stat-next-fire">-</div>
-        </div>
-        <div></div>
-    </div>
-</div>
-{% endblock %}
+{% block stat_cards %}{% endblock %}
 
 {% block actions %}{% endblock %}
 
@@ -112,7 +89,14 @@ $(document).ready(function() {
 {% block tab_panels %}
 <div class="dashboard-tab-panel" id="dashboard-tab-panel-executions" role="tabpanel">
 
-    <h3 class="section-title">Run history</h3>
+    <h3 class="section-title detail-section-title-with-stats">
+        Run history
+        <span class="detail-inline-stats">
+            <span class="detail-inline-stat"><span class="detail-inline-stat-label">Runs</span> <span id="stat-total-runs">-</span></span>
+            <span class="detail-inline-stat"><span class="detail-inline-stat-label">Errors</span> <span id="stat-errors">-</span></span>
+            <span class="detail-inline-stat"><span class="detail-inline-stat-label">Avg</span> <span id="stat-avg-duration">-</span></span>
+        </span>
+    </h3>
     <div id="detail-timeline" style="min-height:60px"></div>
 
     <div class="detail-pagination-controls" id="detail-history-pagination-top"></div>

@@ -9,14 +9,6 @@ $.fn.zato.scheduler.job_detail.config = {
     default_time_range: 0,
     chart_width: 700,
     empty_history_text: 'No run history',
-    fit_value_selectors: ['#stat-total-runs', '#stat-next-fire'],
-    fit_label_selectors: {
-        '#stat-next-fire': {
-            text: 'Next fire',
-            action_text: 'Execute now',
-            action_target: '#btn-execute-now'
-        }
-    },
     detail_tags: [
         { key: 'error',  label: 'Error',  color: '#c0392b', bg: 'rgba(192, 57, 43, 0.1)',
           dark_color: '#f06060', dark_bg: 'rgba(224, 82, 82, 0.22)' },
@@ -64,7 +56,6 @@ $.fn.zato.scheduler.job_detail._job_data = {};
 $.fn.zato.scheduler.job_detail._pagination = null;
 $.fn.zato.scheduler.job_detail._runs_rendered = false;
 $.fn.zato.scheduler.job_detail._object_id = '';
-$.fn.zato.scheduler.job_detail._fit_labels_applied = {};
 $.fn.zato.scheduler.job_detail._poll_config = {};
 
 $.fn.zato.scheduler.job_detail._hidden_series_key = function() {
@@ -148,28 +139,7 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
     var detail = $.fn.zato.scheduler.job_detail;
     var dashboard = detail._dashboard();
 
-    var fit = detail.config.fit_value_selectors;
-    var fit_labels = detail.config.fit_label_selectors;
-    var set_value = function(selector, text) {
-        if (fit.indexOf(selector) !== -1) {
-            kit.set_fit_value(selector, text);
-        } else {
-            $(selector).text(text);
-        }
-
-        var label_cfg = fit_labels[selector];
-        if (label_cfg && !detail._fit_labels_applied[selector]) {
-            var container = $(selector).closest('.stat-card-fit-container');
-            container.find('.stat-card-label').hide();
-            kit.set_fit_label(container, label_cfg.text, {
-                text: label_cfg.action_text,
-                on_click: function() { $(label_cfg.action_target).trigger('click'); }
-            });
-            detail._fit_labels_applied[selector] = true;
-        }
-    };
-
-    set_value('#stat-total-runs', kit.format_number_full(job.current_run));
+    $('#stat-total-runs').text(kit.format_number_full(job.current_run));
 
     var recent = job.recent_outcomes;
     var error_count = 0;
@@ -187,11 +157,7 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
     $('#stat-avg-duration').text(dashboard.format_duration(job.last_duration_ms));
 
     var next_fire = job.next_fire_utc;
-    if (next_fire) {
-        set_value('#stat-next-fire', kit.format_local_time(next_fire));
-    } else {
-        set_value('#stat-next-fire', '-');
-    }
+    $('#header-next-fire').text(next_fire ? kit.format_local_time(next_fire) : '-');
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -1119,8 +1085,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
 
 $.fn.zato.scheduler.job_detail.render_actions = function(job_id) {
     $('#btn-execute-now').on('click', function() {
-        var svg_action = document.querySelector('.stat-card-label-svg-action');
-        var tooltip_anchor = svg_action ? svg_action : this;
+        var tooltip_anchor = this;
         var cluster_id = $.fn.zato.scheduler.job_detail.config.cluster_id;
         var url = '/zato/scheduler/execute/' + job_id + '/cluster/' + cluster_id + '/';
 
