@@ -188,11 +188,13 @@ fn scheduler_mark_complete(job_id: i64, outcome: &str, duration_ms: u64, current
                     _ => 150,
                 };
                 running_job.current_run += 1;
-                running_job.record_execution(
-                    ExecutionRecord::new(&now_iso, &now_iso, fake_outcome, running_job.current_run)
-                        .with_duration(fake_duration)
-                        .with_error(format!("TEST: synthetic {}", fake_outcome))
-                );
+                let mut rec = ExecutionRecord::new(&now_iso, &now_iso, fake_outcome, running_job.current_run)
+                    .with_duration(fake_duration)
+                    .with_error(format!("TEST: synthetic {}", fake_outcome));
+                if fake_outcome == types::outcome::SKIPPED_ALREADY_IN_FLIGHT {
+                    rec = rec.with_outcome_ctx(current_run.to_string());
+                }
+                running_job.record_execution(rec);
             }
         }
     });

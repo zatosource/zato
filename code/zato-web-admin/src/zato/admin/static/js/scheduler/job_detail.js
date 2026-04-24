@@ -1077,6 +1077,10 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         container_top: '#detail-history-pagination-top',
         container_bottom: '#detail-history-pagination-bottom',
         render_page: function($body, rows) {
+            if (rows && rows.length) {
+                detail._chart_history = rows.slice();
+                detail.render_timeline(detail._chart_history);
+            }
             $body.empty();
             detail._new_row_count = 0;
             if (!rows || rows.length === 0) {
@@ -1208,26 +1212,6 @@ $.fn.zato.scheduler.job_detail._ensure_runs_rendered = function() {
     if (detail._runs_rendered) return;
     detail._runs_rendered = true;
     detail.render_history_table();
-
-    var poll_config = detail._poll_config;
-    $.ajax({
-        url: poll_config.poll_url,
-        type: 'POST',
-        data: {
-            object_type: poll_config.object_type,
-            id: detail._object_id,
-            page: 1,
-            page_size: 10000
-        },
-        headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        success: function(data) {
-            if (typeof data === 'string') {
-                try { data = JSON.parse(data); } catch(e) { return; }
-            }
-            detail._chart_history = data.rows;
-            detail.render_timeline(detail._chart_history);
-        }
-    });
 };
 
 $.fn.zato.scheduler.job_detail.init_tabs = function() {
@@ -1330,6 +1314,7 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
 
     detail.render_header(job);
     detail._build_legend();
+    $('#detail-timeline').html('<div class="dashboard-inline-empty">' + detail.config.empty_history_text + '</div>');
     detail.render_stats(job);
     detail.render_config(job, cluster_id);
     detail.render_actions(job_id);
