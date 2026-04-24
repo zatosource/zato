@@ -212,8 +212,11 @@ $.fn.zato.scheduler.job_detail._update_filtered_stats = function(rows, filtered_
         $errors.css('color', '');
     }
 
-    var avg_ms = duration_count > 0 ? Math.round(duration_sum / duration_count) : 0;
-    $('#stat-avg-duration').text(dashboard.format_duration(avg_ms));
+    if (duration_count > 0) {
+        $('#stat-avg-duration').text(dashboard.format_duration(Math.round(duration_sum / duration_count)));
+    } else {
+        $('#stat-avg-duration').text('-');
+    }
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -1149,19 +1152,68 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             }
 
             detail._destroy_outcome_tooltips($body);
+
+            // .. collect running rows currently in the DOM so they survive the rebuild
+            var preserved_running = {};
+            $body.find('tr[data-run]').not('.detail-panel-row').each(function() {
+                var $row = $(this);
+                if ($row.find('.badge-running-spinner').length > 0) {
+                    var run_id = $row.attr('data-run');
+                    var $panel = $row.next('.detail-panel-row');
+                    preserved_running[run_id] = {$row: $row.detach(), $panel: $panel.length ? $panel.detach() : null};
+                }
+            });
+
             $body.empty();
             detail._new_row_count = 0;
-            if (!rows || rows.length === 0) {
+
+            var has_non_running = false;
+            if (rows) {
+                for (var idx = 0; idx < rows.length; idx++) {
+                    if (rows[idx].outcome !== 'running') {
+                        has_non_running = true;
+                        break;
+                    }
+                }
+            }
+
+            if ((!rows || rows.length === 0) && Object.keys(preserved_running).length === 0) {
                 $body.html('<tr><td colspan="6" class="dashboard-inline-empty">' + detail.config.empty_history_text + '</td></tr>');
                 return;
             }
-            for (var i = 0; i < rows.length; i++) {
-                var rec = rows[i];
-                $body.append(detail._render_single_row(rec, ''));
-                var $appended = $body.find('tr[data-run="' + rec.current_run + '"]').not('.detail-panel-row');
-                $appended.data('record', rec);
-                $body.append(detail._render_panel_row(rec.current_run));
+
+            if (!has_non_running && Object.keys(preserved_running).length === 0) {
+                $body.html('<tr><td colspan="6" class="dashboard-inline-empty">' + detail.config.empty_history_text + '</td></tr>');
             }
+
+            if (rows) {
+                for (var i = 0; i < rows.length; i++) {
+                    var rec = rows[i];
+                    var run_key = String(rec.current_run);
+                    if (preserved_running[run_key]) {
+                        // .. re-insert the preserved running row
+                        $body.append(preserved_running[run_key].$row);
+                        if (preserved_running[run_key].$panel) {
+                            $body.append(preserved_running[run_key].$panel);
+                        }
+                        delete preserved_running[run_key];
+                    } else {
+                        $body.append(detail._render_single_row(rec, ''));
+                        var $appended = $body.find('tr[data-run="' + rec.current_run + '"]').not('.detail-panel-row');
+                        $appended.data('record', rec);
+                        $body.append(detail._render_panel_row(rec.current_run));
+                    }
+                }
+            }
+
+            // .. any preserved running rows not in the response go at the top
+            for (var rk in preserved_running) {
+                if (preserved_running.hasOwnProperty(rk)) {
+                    $body.prepend(preserved_running[rk].$panel || '');
+                    $body.prepend(preserved_running[rk].$row);
+                }
+            }
+
             detail._init_outcome_tooltips($body);
             detail._bind_panel_toggles($body);
         },
