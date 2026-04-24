@@ -549,7 +549,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
     kit.recency = {};
     kit.recency.STEPS = 10;
-    kit.recency.MAX_ALPHA = 0.38;
+    kit.recency.MAX_ALPHA = 0.30;
 
     /* Apply a fading tint to recently-arrived rows.
        config:
