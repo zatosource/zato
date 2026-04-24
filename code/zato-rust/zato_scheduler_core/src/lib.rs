@@ -281,7 +281,10 @@ fn parse_outcome_filter(outcomes: &Bound<'_, PyAny>) -> PyResult<Option<Vec<Stri
         }
     }
     if let Ok(list) = outcomes.cast::<PyList>() {
-        let items: Vec<String> = list.iter().map(|item| item.extract::<String>()).collect::<PyResult<_>>()?;
+        let mut items: Vec<String> = list.iter().map(|item| item.extract::<String>()).collect::<PyResult<_>>()?;
+        if !items.iter().any(|v| v == types::outcome::RUNNING) {
+            items.push(types::outcome::RUNNING.to_string());
+        }
         return Ok(Some(items));
     }
     Ok(None)

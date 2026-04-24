@@ -80,6 +80,33 @@ $.fn.zato.scheduler.job_detail._set_hidden_series = function(hidden) {
     );
 };
 
+$.fn.zato.scheduler.job_detail._outcome_keys = ['ok', 'skipped_already_in_flight', 'missed_catchup', 'timeout', 'error'];
+
+$.fn.zato.scheduler.job_detail._visible_outcomes_from_hidden = function(hidden) {
+    var keys = $.fn.zato.scheduler.job_detail._outcome_keys;
+    var visible = [];
+    for (var idx = 0; idx < keys.length; idx++) {
+        if (!hidden[keys[idx]]) {
+            visible.push(keys[idx]);
+        }
+    }
+    return visible;
+};
+
+$.fn.zato.scheduler.job_detail._apply_outcome_filter = function(hidden) {
+    var detail = $.fn.zato.scheduler.job_detail;
+    var kit = $.fn.zato.dashboard_kit;
+    var visible = detail._visible_outcomes_from_hidden(hidden);
+
+    kit.url_state.set({page: null});
+    kit.url_state.set_list('outcomes', visible);
+
+    if (detail._pagination) {
+        detail._pagination.set_filters({outcomes: JSON.stringify(visible)});
+    }
+    detail._redraw();
+};
+
 // ////////////////////////////////////////////////////////////////////////////
 // Outcome priority for grouping (higher = more significant)
 // ////////////////////////////////////////////////////////////////////////////
@@ -353,7 +380,7 @@ $.fn.zato.scheduler.job_detail._build_legend = function() {
     var detail = $.fn.zato.scheduler.job_detail;
     var dashboard = detail._dashboard();
     var bar_colors = dashboard.outcome_bar_colors;
-    var outcome_keys = ['ok', 'skipped_already_in_flight', 'missed_catchup', 'timeout', 'error'];
+    var outcome_keys = detail._outcome_keys;
 
     $.fn.zato.dashboard_kit.build_legend({
         container: '#detail-timeline-legend',
@@ -365,22 +392,7 @@ $.fn.zato.scheduler.job_detail._build_legend = function() {
         hidden: detail._get_hidden_series(),
         on_toggle: function(_key, h) {
             detail._set_hidden_series(h);
-
-            var all_keys = ['ok', 'skipped_already_in_flight', 'missed_catchup', 'timeout', 'error'];
-            var visible = [];
-            for (var idx = 0; idx < all_keys.length; idx++) {
-                if (!h[all_keys[idx]]) {
-                    visible.push(all_keys[idx]);
-                }
-            }
-            var is_all = visible.length === all_keys.length;
-            var outcomes_value = is_all
-                ? $.fn.zato.scheduler.dashboard.Outcome_All
-                : JSON.stringify(visible);
-            if (detail._pagination) {
-                detail._pagination.set_filters({outcomes: outcomes_value});
-            }
-            detail._redraw();
+            detail._apply_outcome_filter(h);
         }
     }, detail._timeline_skip_legend);
 };
@@ -1083,12 +1095,27 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
     var detail = $.fn.zato.scheduler.job_detail;
     var poll_config = detail._poll_config;
 
+    var url_outcomes_list = kit.url_state.get_all('outcomes');
+    var initial_visible;
+    if (url_outcomes_list.length > 0) {
+        initial_visible = url_outcomes_list;
+        var hidden = {};
+        var keys = detail._outcome_keys;
+        for (var kidx = 0; kidx < keys.length; kidx++) {
+            hidden[keys[kidx]] = url_outcomes_list.indexOf(keys[kidx]) === -1;
+        }
+        detail._set_hidden_series(hidden);
+    } else {
+        initial_visible = detail._visible_outcomes_from_hidden(detail._get_hidden_series());
+    }
+    var initial_outcomes = JSON.stringify(initial_visible);
+
     detail._pagination = kit.pagination.init({
         poll_url: poll_config.poll_url,
         object_type: poll_config.object_type,
         object_id: detail._object_id,
         page_size: 50,
-        filters: {outcomes: $.fn.zato.scheduler.dashboard.Outcome_All},
+        filters: {outcomes: initial_outcomes},
         ts_field: 'actual_fire_time_iso',
         on_new_rows: function(rows) {
             if (!detail._chart_history) {
@@ -1114,10 +1141,8 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         container_top: '#detail-history-pagination-top',
         container_bottom: '#detail-history-pagination-bottom',
         render_page: function($body, rows, filtered_total) {
-            if (rows && rows.length) {
-                detail._chart_history = rows.slice();
-                detail.render_timeline(detail._chart_history);
-            }
+            detail._chart_history = (rows && rows.length) ? rows.slice() : [];
+            detail.render_timeline(detail._chart_history);
 
             if (filtered_total !== undefined) {
                 detail._update_filtered_stats(rows, filtered_total);
@@ -1161,8 +1186,29 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                     $new_data_row.data('record', rec);
 
                     if (was_running && rec.outcome !== 'running') {
-                        $new_data_row.find('.dashboard-outcome-badge').addClass('badge-puff')
-                            .one('animationend', function() { $(this).removeClass('badge-puff'); });
+                        var hidden = detail._get_hidden_series();
+                        if (hidden[rec.outcome]) {
+                            // .. outcome is filtered out, fade the row away
+                            $new_data_row.css({transition: 'opacity 0.3s', opacity: 1});
+                            var $fade_panel = $panel;
+                            requestAnimationFrame(function() {
+                                $new_data_row.css('opacity', 0);
+                                if ($fade_panel.length) {
+                                    $fade_panel.css({transition: 'opacity 0.3s', opacity: 0});
+                                }
+                                setTimeout(function() {
+                                    $new_data_row.remove();
+                                    $fade_panel.remove();
+                                    var remaining = $body.children('tr').not('.detail-panel-row').not('.dashboard-inline-empty');
+                                    if (remaining.length === 0) {
+                                        $body.html('<tr><td colspan="6" class="dashboard-inline-empty">' + detail.config.empty_history_text + '</td></tr>');
+                                    }
+                                }, 300);
+                            });
+                        } else {
+                            $new_data_row.find('.dashboard-outcome-badge').addClass('badge-puff')
+                                .one('animationend', function() { $(this).removeClass('badge-puff'); });
+                        }
                     }
 
                     // .. re-insert detached panel after the replaced row
@@ -1429,6 +1475,28 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
         var $m = $('#detail-timeline-range-menu');
         $m.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
         $m.find('.dashboard-time-range-option[data-minutes="' + range_val + '"]').addClass('dashboard-time-range-active');
+
+        var pop_list = params.getAll('outcomes');
+        var pop_hidden = {};
+        var pop_keys = detail._outcome_keys;
+        if (pop_list.length > 0 && pop_list[0] !== $.fn.zato.scheduler.dashboard.Outcome_All) {
+            for (var pidx = 0; pidx < pop_keys.length; pidx++) {
+                pop_hidden[pop_keys[pidx]] = pop_list.indexOf(pop_keys[pidx]) === -1;
+            }
+            detail._set_hidden_series(pop_hidden);
+            if (detail._pagination) {
+                detail._pagination.set_filters({outcomes: JSON.stringify(pop_list)});
+            }
+        } else {
+            for (var aidx = 0; aidx < pop_keys.length; aidx++) {
+                pop_hidden[pop_keys[aidx]] = false;
+            }
+            detail._set_hidden_series(pop_hidden);
+            if (detail._pagination) {
+                detail._pagination.set_filters({outcomes: $.fn.zato.scheduler.dashboard.Outcome_All});
+            }
+        }
+        detail._build_legend();
         detail._redraw();
 
         var refresh_val = parseInt(params.get('refresh'), 10);
