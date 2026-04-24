@@ -58,6 +58,7 @@ $.fn.zato.scheduler.job_detail._pagination = null;
 $.fn.zato.scheduler.job_detail._runs_rendered = false;
 $.fn.zato.scheduler.job_detail._object_id = '';
 $.fn.zato.scheduler.job_detail._poll_config = {};
+$.fn.zato.scheduler.job_detail._polling_paused_by_panel = false;
 
 $.fn.zato.scheduler.job_detail._hidden_series_key = function() {
     return 'zato_hidden_series_' + $.fn.zato.scheduler.job_detail._object_id;
@@ -821,14 +822,23 @@ $.fn.zato.scheduler.job_detail._init_outcome_tooltips = function($container) {
 };
 
 $.fn.zato.scheduler.job_detail._update_table_dim = function($body) {
+    var detail = $.fn.zato.scheduler.job_detail;
     var has_expanded = $body.find('tr.detail-panel-row.expanded').length > 0;
     var $head = $('#detail-history-table-head');
     if (has_expanded) {
         $head.addClass('detail-dimmed');
         $body.addClass('detail-dimmed');
+        if (detail._auto_refresh && !detail._polling_paused_by_panel) {
+            detail._polling_paused_by_panel = true;
+            detail._auto_refresh.stop();
+        }
     } else {
         $head.removeClass('detail-dimmed');
         $body.removeClass('detail-dimmed');
+        if (detail._auto_refresh && detail._polling_paused_by_panel) {
+            detail._polling_paused_by_panel = false;
+            detail._auto_refresh.start();
+        }
     }
 };
 
@@ -997,6 +1007,15 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         if ($(e.target).closest('.dashboard-panel-action-badge').length) return;
         $(this).toggleClass('detail-log-line-expanded');
     });
+};
+
+$.fn.zato.scheduler.job_detail._close_all_panels = function() {
+    var detail = $.fn.zato.scheduler.job_detail;
+    var $body = $('#detail-history-table-body');
+    $body.find('tr.detail-panel-row.expanded').each(function() {
+        $(this).find('.detail-action-close').trigger('click');
+    });
+    detail._update_table_dim($body);
 };
 
 $.fn.zato.scheduler.job_detail._execution_outcomes = {'ok': true, 'error': true, 'timeout': true};
@@ -1364,6 +1383,14 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
         on_tick: detail.poll
     });
 
+    // .. click outside .settings-content closes all expanded panels
+    $(document).off('click.closepanels').on('click.closepanels', function(e) {
+        if ($(e.target).closest('.settings-content').length) return;
+        var $body = $('#detail-history-table-body');
+        if ($body.find('tr.detail-panel-row.expanded').length) {
+            detail._close_all_panels();
+        }
+    });
 
     kit.url_state.on_pop(function(params) {
         var range_val = parseInt(params.get('range'), 10);
