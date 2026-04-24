@@ -284,14 +284,18 @@ class GetByID(_Get):
     """
     name = _service_name_prefix + 'get-by-id'
 
-    input = 'cluster_id', 'id'
+    input = Int('cluster_id'), Int('id')
 
-    def handle(self):
+    def handle(self) -> 'None':
         from contextlib import closing
         from zato.common.odb.model import Job, IntervalBasedJob
+        from zato_scheduler_core import scheduler_get_history_page
+
         item = None
+        job_id = self.request.input.id
+
         with closing(self.odb.session()) as session:
-            job = session.query(Job).filter_by(id=self.request.input.id).first()
+            job = session.query(Job).filter_by(id=job_id).first()
             if job:
                 item = {'id': job.id, 'name': job.name, 'is_active': job.is_active, 'job_type': job.job_type,
                         'start_date': job.start_date.isoformat(), 'service': job.service.name,
@@ -305,8 +309,36 @@ class GetByID(_Get):
                     item['minutes'] = ib.minutes
                     item['seconds'] = ib.seconds
                     item['repeats'] = ib.repeats
+
         if not item:
             raise ZatoException(self.cid, 'Job not found')
+
+        #  Build recent_outcomes, last_outcome and last_duration_ms
+        #  from the last 10 history records in Rust ..
+        last_outcome = None
+        last_duration_ms = None
+        recent_outcomes = [] # type: list
+
+        result = scheduler_get_history_page(job_id, 0, 10, '')
+        records = result['records']
+
+        if records:
+            last_record = records[-1]
+            last_outcome = last_record['outcome']
+
+            for idx in range(len(records) - 1, -1, -1):
+                rec_duration = records[idx]['duration_ms']
+                if rec_duration is not None:
+                    last_duration_ms = rec_duration
+                    break
+
+            for rec in records:
+                recent_outcomes.append(rec['outcome'])
+
+        item['last_outcome'] = last_outcome
+        item['last_duration_ms'] = last_duration_ms
+        item['recent_outcomes'] = recent_outcomes
+
         self.response.payload = self._enrich_job(item)
 
 # ################################################################################################################################
@@ -421,7 +453,7 @@ class GetHistory(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-history'
 
-    input = 'id', '-page', '-page_size', '-since_ts', '-exclude_outcomes'
+    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', '-exclude_outcomes'
 
     def handle(self):
         try:
@@ -673,7 +705,9 @@ class GetCurrentState(_SchedulerAdmin):
                 'ok': 0,
                 'error': 0,
                 'timeout': 0,
+                'running': 0,
                 'skipped_already_in_flight': 0,
+                'skipped_holiday': 0,
                 'missed_catchup': 0,
             }
             history_timeline = []
