@@ -120,10 +120,13 @@ impl RunningJob {
         let interval_ms = Self::compute_interval_ms(job);
         let tz: Option<Tz> = job.timezone.as_deref().and_then(|s| s.parse::<Tz>().ok());
         let tz_str = job.timezone.clone();
-        let start_date = Some(
-            Self::parse_start_date(&job.start_date, tz.as_ref())
-                .unwrap_or_else(|| Utc::now())
-        );
+        let start_date = match Self::parse_start_date(&job.start_date, tz.as_ref()) {
+            Some(dt) => Some(dt),
+            None => {
+                log::error!("Job `{}`: failed to parse start_date `{}`", job.name, job.start_date);
+                Some(Utc::now())
+            }
+        };
         let seed = job.id as u64;
         let jitter_rng = SmallRng::seed_from_u64(seed);
         let on_missed = OnMissedPolicy::from(
@@ -184,10 +187,13 @@ impl RunningJob {
 
         let new_interval = Self::compute_interval_ms(job);
         let new_tz: Option<Tz> = job.timezone.as_deref().and_then(|s| s.parse::<Tz>().ok());
-        let new_start = Some(
-            Self::parse_start_date(&job.start_date, new_tz.as_ref())
-                .unwrap_or_else(|| Utc::now())
-        );
+        let new_start = match Self::parse_start_date(&job.start_date, new_tz.as_ref()) {
+            Some(dt) => Some(dt),
+            None => {
+                log::error!("Job `{}`: failed to parse start_date `{}`", self.name, job.start_date);
+                Some(Utc::now())
+            }
+        };
 
         let schedule_changed = new_interval != self.interval_ms
             || new_start != self.start_date

@@ -83,7 +83,7 @@ fn scheduler_stop(timeout_s: f64) -> PyResult<()> {
     shared.stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
     shared.condvar.notify_all();
 
-    let handle = THREAD_HANDLE.lock().ok().and_then(|mut g| g.take());
+    let handle = THREAD_HANDLE.lock().unwrap().take();
     if let Some(h) = handle {
         let deadline = std::time::Instant::now() + Duration::from_secs_f64(timeout_s.min(30.0));
         while !h.is_finished() {

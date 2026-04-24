@@ -97,7 +97,7 @@ def _create_edit(self, action):
     if existing_one:
         if input.get('should_ignore_existing'):
             return
-        raise ZatoException(cid, f'Job `{name}` already exists on this cluster')
+        raise ZatoException(cid, f'Job `{name}` already exists')
 
     if not self._service_by_name(service_name):
         msg = f'Service `{service_name}` does not exist'
