@@ -892,17 +892,11 @@ $.fn.zato.scheduler.job_detail._update_table_dim = function($body) {
     if (has_expanded) {
         $head.addClass('detail-dimmed');
         $body.addClass('detail-dimmed');
-        if (detail._auto_refresh && !detail._polling_paused_by_panel) {
-            detail._polling_paused_by_panel = true;
-            detail._auto_refresh.stop();
-        }
+        detail._polling_paused_by_panel = true;
     } else {
         $head.removeClass('detail-dimmed');
         $body.removeClass('detail-dimmed');
-        if (detail._auto_refresh && detail._polling_paused_by_panel) {
-            detail._polling_paused_by_panel = false;
-            detail._auto_refresh.start();
-        }
+        detail._polling_paused_by_panel = false;
     }
 };
 
@@ -1130,6 +1124,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             return runs;
         },
         on_new_rows: function(rows) {
+            if (detail._polling_paused_by_panel) return;
             if (!detail._chart_history) {
                 detail._chart_history = [];
             }
@@ -1174,7 +1169,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             });
 
             $body.empty();
-            detail._new_row_count = 0;
+            detail._new_row_count = (rows && rows.length) ? rows.length : 0;
 
             var has_preserved = Object.keys(preserved_running).length > 0;
             var has_rows = rows && rows.length > 0;
@@ -1213,6 +1208,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
 
             detail._init_outcome_tooltips($body);
             detail._bind_panel_toggles($body);
+            detail._apply_recency_gradient($body);
         },
         render_new: function($body, rows, page_size) {
             var exec_outcomes = detail._execution_outcomes;
@@ -1231,8 +1227,9 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
 
                     if (was_running && rec.outcome !== 'running') {
                         var hidden = detail._get_hidden_series();
-                        if (hidden[rec.outcome]) {
-                            // .. outcome is filtered out, fade the running row away without replacing
+                        var is_expanded = $panel.length && $panel.hasClass('expanded');
+                        if (hidden[rec.outcome] && !is_expanded) {
+                            // .. outcome is filtered out and not expanded, fade the running row away
                             $existing.css({transition: 'opacity 0.3s', opacity: 1});
                             var $fade_panel = $panel;
                             var $fade_row = $existing;
@@ -1276,7 +1273,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                             $panel.css('box-shadow', cfg.shadow);
                         }
                     }
-                } else {
+                } else if (!detail._polling_paused_by_panel) {
                     var row_html = detail._render_single_row(rec, '');
                     var panel_html = detail._render_panel_row(run);
                     $body.prepend(panel_html);
