@@ -206,6 +206,7 @@ tbody tr[data-run]:not(.detail-panel-row) {
     align-self: stretch;
     flex-shrink: 0;
     border-radius: 1px;
+    margin-left: 6px;
 }
 
 .detail-log-ts {

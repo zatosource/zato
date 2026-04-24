@@ -23,6 +23,7 @@ $.fn.zato.scheduler.job_detail.config = {
         bg: '#232336',
         border: '1px solid #3a3a52',
         row_border: '#3a3a52',
+        mirror_accent: 'rgb(246, 166, 5)',
         owner_bg: '#232336',
         owner_color: '#d0d0d8',
         owner_border: '#3a3a52',
@@ -704,13 +705,15 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
 
     var tag_html = detail._render_dark_tag_badges(record.current_run);
 
+    var accent = cfg.mirror_accent;
     var html = '<div class="detail-log-line detail-log-mirror" style="border-bottom:1px solid ' + cfg.row_border + '">';
-    html += '<div class="detail-log-stripe" style="background:' + cfg.owner_color + '"></div>';
-    html += '<div class="detail-log-ts"><span class="detail-log-level" style="color:' + cfg.owner_color + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></div>';
+    html += '<div class="detail-log-stripe" style="background:' + accent + '"></div>';
+    html += '<div class="detail-log-ts"><span class="detail-log-level" style="color:' + accent + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></div>';
     html += '<div class="detail-log-level-col">' + outcome_html + '</div>';
     var action_style = 'color:#aaa;background:rgba(255,255,255,0.08)';
     html += '<div class="detail-log-msg" style="color:' + cfg.owner_color + '">' + tag_html + '</div>';
     html += '<div class="detail-log-actions">';
+    html += '<span class="dashboard-panel-action-badge detail-action-toggle-all" style="' + action_style + '">Toggle all</span>';
     html += '<span class="dashboard-panel-action-badge detail-action-copy-all" style="' + action_style + '">Copy</span>';
     html += '<span class="dashboard-panel-action-badge detail-action-close" style="' + action_style + '">Close</span>';
     html += '</div>';
@@ -887,6 +890,19 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
     $body.off('click.mirrorclose').on('click.mirrorclose', '.detail-log-mirror', function(e) {
         if ($(e.target).closest('.detail-tag, .dashboard-panel-action-badge, .dashboard-outcome-badge').length) return;
         $(this).closest('tr.detail-panel-row').find('.detail-action-close').trigger('click');
+    });
+
+    // .. toggle all log lines expanded/collapsed (delegated)
+    $body.off('click.toggleall').on('click.toggleall', '.detail-action-toggle-all', function(e) {
+        e.stopPropagation();
+        var $panel = $(this).closest('tr.detail-panel-row');
+        var $lines = $panel.find('.detail-log-line').not('.detail-log-mirror');
+        var any_expanded = $lines.filter('.detail-log-line-expanded').length > 0;
+        if (any_expanded) {
+            $lines.removeClass('detail-log-line-expanded');
+        } else {
+            $lines.addClass('detail-log-line-expanded');
+        }
     });
 
     // .. copy-all badge on mirror row (delegated)
