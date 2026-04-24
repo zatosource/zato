@@ -615,22 +615,20 @@ a {
 }
 
 .detail-search-group:focus-within {
-    border-color: var(--component-accent, #012845);
+    background: #f0fafe;
+    border-color: var(--component-accent, #3c82c9);
 }
 
 .detail-search-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-items: center;
     align-self: stretch;
-    padding: 0 6px 0 8px;
+    box-sizing: border-box;
+    padding: 0 7px;
+    min-width: 32px;
     flex-shrink: 0;
-    background: #dadada;
-}
-
-.detail-search-icon img {
-    display: block;
-    filter: brightness(0.4);
+    line-height: 0;
+    background: #eee;
 }
 
 .detail-search-input-wrap {

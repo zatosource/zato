@@ -1355,7 +1355,6 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
         }
     });
 
-    // .. search input clear button
     var $search_input = $('.detail-search-input');
     var $search_clear = $('.detail-search-clear');
 

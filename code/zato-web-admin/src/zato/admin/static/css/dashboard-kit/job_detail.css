@@ -6,6 +6,7 @@
 .detail-page-scheduler {
     --component-accent: var(--zato-seablue, #012845);
     --component-accent-light: #e0f0ff;
+    --detail-search-icon-color: #8a8a8a;
 }
 
 .detail-component-pill {
@@ -280,4 +281,9 @@ tbody.detail-dimmed > tr.detail-panel-row:not(.expanded) {
 
 tbody.detail-dimmed > tr.detail-panel-row.expanded {
     opacity: 1;
+}
+
+.detail-page-scheduler .detail-search-icon-svg {
+    display: block;
+    flex-shrink: 0;
 }
