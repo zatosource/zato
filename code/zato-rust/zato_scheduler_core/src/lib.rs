@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
 use chrono::Utc;
@@ -148,6 +149,15 @@ fn scheduler_execute_job(job_id: i64) -> PyResult<()> {
     Ok(())
 }
 
+// TEST: non-OK outcomes to inject after each real completion
+const TEST_INJECT_OUTCOMES: &[&str] = &[
+    types::outcome::TIMEOUT,
+    types::outcome::SKIPPED_ALREADY_IN_FLIGHT,
+    types::outcome::MISSED_CATCHUP,
+    types::outcome::TIMEOUT,
+];
+static TEST_INJECT_IDX: AtomicU32 = AtomicU32::new(0);
+
 #[pyfunction]
 #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
 fn scheduler_mark_complete(job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
@@ -163,6 +173,23 @@ fn scheduler_mark_complete(job_id: i64, outcome: &str, duration_ms: u64, current
                     rec.outcome = outcome.to_string();
                     break;
                 }
+            }
+
+            // TEST: inject 2 fake non-OK records right after the real one
+            let now_iso = Utc::now().to_rfc3339();
+            for _ in 0..2 {
+                let idx = TEST_INJECT_IDX.fetch_add(1, Ordering::Relaxed) as usize;
+                let fake_outcome = TEST_INJECT_OUTCOMES[idx % TEST_INJECT_OUTCOMES.len()];
+                let fake_duration = match fake_outcome {
+                    types::outcome::TIMEOUT => 32000,
+                    _ => 150,
+                };
+                running_job.current_run += 1;
+                running_job.record_execution(
+                    ExecutionRecord::new(&now_iso, &now_iso, fake_outcome, running_job.current_run)
+                        .with_duration(fake_duration)
+                        .with_error(format!("TEST: synthetic {}", fake_outcome))
+                );
             }
         }
     });
