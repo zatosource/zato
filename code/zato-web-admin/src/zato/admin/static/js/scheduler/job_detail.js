@@ -16,8 +16,8 @@ $.fn.zato.scheduler.job_detail.config = {
           dark_color: '#e8b830', dark_bg: 'rgba(212, 160, 23, 0.22)' },
         { key: 'info',   label: 'Info',   color: '#2a7fbf', bg: 'rgba(42, 127, 191, 0.1)',
           dark_color: '#7ab8f0', dark_bg: 'rgba(91, 155, 213, 0.22)' },
-        { key: 'system', label: 'System', color: '#999',    bg: 'rgba(153, 153, 153, 0.08)', dimmed: true,
-          dark_color: '#aaa', dark_bg: 'rgba(160, 160, 160, 0.15)' }
+        { key: 'system', label: 'System', color: '#777',    bg: 'rgba(119, 119, 119, 0.1)', dimmed: true,
+          dark_color: '#bbb', dark_bg: 'rgba(187, 187, 187, 0.18)' }
     ],
     detail_panel: {
         bg: '#232336',
@@ -661,7 +661,7 @@ $.fn.zato.scheduler.job_detail._render_tag_badges = function(run) {
         var count = tags[def.key];
         if (count > 0) {
             var style = 'color:' + def.color + ';background:' + def.bg;
-            if (def.dimmed) style += ';opacity:0.55';
+            if (def.dimmed) style += ';opacity:0.75';
             html += '<span class="detail-tag" data-key="' + def.key + '" style="' + style + '">' +
                 def.label + ' x' + count + '</span>';
         }
@@ -680,7 +680,7 @@ $.fn.zato.scheduler.job_detail._render_dark_tag_badges = function(run) {
         var count = tags[def.key];
         if (count > 0) {
             var style = 'color:' + def.dark_color + ';background:' + def.dark_bg;
-            if (def.dimmed) style += ';opacity:0.55';
+            if (def.dimmed) style += ';opacity:0.75';
             html += '<span class="detail-tag" data-key="' + def.key + '" style="' + style + '">' +
                 def.label + ' x' + count + '</span>';
         }
@@ -820,7 +820,7 @@ $.fn.zato.scheduler.job_detail._apply_level_filter = function($panel) {
             var base_opacity = '';
             for (var t = 0; t < tag_defs.length; t++) {
                 if (tag_defs[t].key === key && tag_defs[t].dimmed) {
-                    base_opacity = '0.55';
+                    base_opacity = '0.75';
                     break;
                 }
             }
@@ -881,6 +881,12 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         $data_row.css('display', '');
         $panel.css('box-shadow', '');
         detail._update_table_dim($body);
+    });
+
+    // .. click empty space in mirror row to close (delegated)
+    $body.off('click.mirrorclose').on('click.mirrorclose', '.detail-log-mirror', function(e) {
+        if ($(e.target).closest('.detail-tag, .dashboard-panel-action-badge, .dashboard-outcome-badge').length) return;
+        $(this).closest('tr.detail-panel-row').find('.detail-action-close').trigger('click');
     });
 
     // .. copy-all badge on mirror row (delegated)

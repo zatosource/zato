@@ -252,7 +252,7 @@ tbody tr[data-run]:not(.detail-panel-row) {
     word-break: break-all;
 }
 
-.detail-log-line:not(.detail-log-mirror) {
+.detail-log-line {
     cursor: pointer;
 }
 
