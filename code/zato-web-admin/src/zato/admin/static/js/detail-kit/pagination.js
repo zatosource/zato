@@ -188,14 +188,16 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     if (rows.length === 0) return;
 
                     update_last_ts(rows);
-                    total_count += rows.length;
+                    if (data.total !== undefined) {
+                        total_count = data.total;
+                    }
 
                     render_new($body, rows, show_all ? Infinity : page_size);
 
                     update_controls();
 
                     if (on_new_rows) {
-                        on_new_rows(rows);
+                        on_new_rows(rows, total_count);
                     }
                 }
             });

@@ -59,7 +59,6 @@ $.fn.zato.scheduler.job_detail._runs_rendered = false;
 $.fn.zato.scheduler.job_detail._object_id = '';
 $.fn.zato.scheduler.job_detail._poll_config = {};
 $.fn.zato.scheduler.job_detail._polling_paused_by_panel = false;
-$.fn.zato.scheduler.job_detail._filtered_total = 0;
 
 $.fn.zato.scheduler.job_detail._get_visible_outcomes = function() {
     var kit = $.fn.zato.dashboard_kit;
@@ -239,7 +238,6 @@ $.fn.zato.scheduler.job_detail._show_empty_history = function($exclude) {
         $body.html(empty_table);
         $('#detail-timeline').html(empty_chart);
         detail._chart_history = [];
-        detail._filtered_total = 0;
         detail._update_filtered_stats([], 0);
     }
 };
@@ -1187,7 +1185,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             });
             return runs;
         },
-        on_new_rows: function(rows) {
+        on_new_rows: function(rows, filtered_total) {
             if (detail._polling_paused_by_panel) return;
             if (!detail._chart_history) {
                 detail._chart_history = [];
@@ -1216,15 +1214,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                 detail.render_timeline(detail._chart_history);
             }
 
-            // .. count new non-running, non-hidden records to update filtered total
-            var new_completed = 0;
-            for (var ni = 0; ni < rows.length; ni++) {
-                if (rows[ni].outcome !== 'running' && !hidden[rows[ni].outcome]) {
-                    new_completed++;
-                }
-            }
-            if (new_completed > 0) {
-                detail._filtered_total += new_completed;
+            if (filtered_total !== undefined) {
                 var visible_rows = [];
                 $('#detail-history-table-body').find('tr[data-run]').not('.detail-panel-row').each(function() {
                     var rec_data = $(this).data('record');
@@ -1232,7 +1222,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                         visible_rows.push(rec_data);
                     }
                 });
-                detail._update_filtered_stats(visible_rows, detail._filtered_total);
+                detail._update_filtered_stats(visible_rows, filtered_total);
             }
         },
         table_body: '#detail-history-table-body',
@@ -1243,7 +1233,6 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             detail.render_timeline(detail._chart_history);
 
             if (filtered_total !== undefined) {
-                detail._filtered_total = filtered_total;
                 detail._update_filtered_stats(rows, filtered_total);
             }
 

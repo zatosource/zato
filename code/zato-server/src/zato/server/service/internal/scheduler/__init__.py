@@ -482,7 +482,8 @@ class GetHistory(_SchedulerAdmin):
                     rec['job_id'] = job_id
                     rec['job_name'] = job_name
                     rows.append(rec)
-                self.response.payload = {'rows': rows}
+                count_result = scheduler_get_history_page(job_id, 0, 0, outcomes)
+                self.response.payload = {'rows': rows, 'total': count_result['total']}
             else:
                 page = self.request.input.get('page')
                 if page is None:
