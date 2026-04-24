@@ -63,6 +63,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var tp = total_pages();
             var has_prev = current_page > 1;
             var has_next = current_page < tp;
+            var is_empty = total_count === 0;
 
             var html = '<span class="detail-pagination-row">';
             if (has_prev) {
@@ -70,16 +71,27 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             } else {
                 html += '<span class="detail-page-prev detail-page-disabled">Previous</span>';
             }
-            html += '<span class="detail-pagination-info">Page ' +
-                kit.format_number_full(current_page) + ' of ' +
-                kit.format_number_full(tp) +
-                ' \u00b7 ' + kit.format_number_full(total_count) + ' total</span>';
+            if (is_empty) {
+                html += '<span class="detail-pagination-info"><span class="detail-page-disabled">Page ' +
+                    kit.format_number_full(current_page) + ' of ' +
+                    kit.format_number_full(tp) + '</span>' +
+                    ' \u00b7 ' + kit.format_number_full(total_count) + ' total</span>';
+            } else {
+                html += '<span class="detail-pagination-info">Page ' +
+                    kit.format_number_full(current_page) + ' of ' +
+                    kit.format_number_full(tp) +
+                    ' \u00b7 ' + kit.format_number_full(total_count) + ' total</span>';
+            }
             if (has_next) {
                 html += '<a href="#" class="detail-page-next">Next</a>';
             } else {
                 html += '<span class="detail-page-next detail-page-disabled">Next</span>';
             }
-            html += ' <span class="detail-page-sep">|</span> <a href="#" class="detail-page-show-all">Show all</a>';
+            if (is_empty) {
+                html += ' <span class="detail-page-sep">|</span> <span class="detail-page-disabled">Show all</span>';
+            } else {
+                html += ' <span class="detail-page-sep">|</span> <a href="#" class="detail-page-show-all">Show all</a>';
+            }
             html += '</span>';
 
             $c.html(html);

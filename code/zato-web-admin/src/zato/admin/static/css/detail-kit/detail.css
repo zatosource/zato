@@ -812,6 +812,7 @@ a.detail-component-pill:visited {
     color: var(--text-muted, #aaa);
     opacity: 0.4;
     pointer-events: none;
+    font-weight: 400;
     cursor: default;
 }
 
