@@ -4,14 +4,15 @@
 @import url("main_chart.css");
 
 .detail-page-scheduler {
-    --component-accent: var(--zato-seablue, #012845);
+    --component-accent: var(--zato-seablue);
     --component-accent-light: #e0f0ff;
+    --detail-search-border: #ccc;
     --detail-search-icon-color: #8a8a8a;
 }
 
 .detail-component-pill {
-    background: var(--component-accent-light, #e0f0ff);
-    color: var(--component-accent, #012845);
+    background: var(--component-accent-light);
+    color: var(--component-accent);
 }
 
 #btn-execute-now {
@@ -19,8 +20,8 @@
 }
 
 #detail-history-count {
-    background: var(--component-accent-light, #e0f0ff);
-    color: var(--component-accent, #012845);
+    background: var(--component-accent-light);
+    color: var(--component-accent);
 }
 
 .detail-config-row {

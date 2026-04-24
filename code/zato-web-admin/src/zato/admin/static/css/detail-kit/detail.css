@@ -54,11 +54,11 @@
 }
 
 .stat-card-label-svg-action-bg {
-    fill: var(--component-accent-light, #e0f0ff);
+    fill: var(--component-accent-light);
 }
 
 .stat-card-label-svg-action {
-    fill: var(--component-accent, #012845);
+    fill: var(--component-accent);
     font-weight: 600;
     letter-spacing: 0;
     cursor: pointer;
@@ -157,8 +157,8 @@ a {
 .stat-card-inline-btn:hover,
 .stat-card-inline-btn:focus,
 .stat-card-inline-btn:active {
-    background: var(--component-accent-light, #e0f0ff) !important;
-    color: var(--component-accent, #012845) !important;
+    background: var(--component-accent-light) !important;
+    color: var(--component-accent) !important;
 }
 
 .stat-card .dashboard-time-range-menu {
@@ -608,15 +608,18 @@ a {
     flex: 1;
     min-width: 0;
     align-items: center;
-    border: 1px solid var(--zato-border, #ccc);
+    border: 1px solid var(--detail-search-border);
     border-radius: 4px;
     background: #fff;
     transition: border-color 0.15s;
 }
 
 .detail-search-group:focus-within {
+    border-color: var(--component-accent);
+}
+
+.detail-search-group:has(input:not(:placeholder-shown)) {
     background: #f0fafe;
-    border-color: var(--component-accent, #3c82c9);
 }
 
 .detail-search-icon {
@@ -629,6 +632,7 @@ a {
     flex-shrink: 0;
     line-height: 0;
     background: #eee;
+    border-radius: 3px 0 0 3px;
 }
 
 .detail-search-input-wrap {
@@ -658,6 +662,10 @@ input.detail-search-input[type="text"]:focus {
     outline: none;
     border: none;
     background: transparent;
+}
+
+input.detail-search-input::placeholder {
+    color: #999;
 }
 
 .detail-search-clear {
