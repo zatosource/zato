@@ -972,7 +972,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         var actual_time = kit.format_local_time(record.actual_fire_time_iso);
         var duration = dashboard.format_duration(record.duration_ms);
         var delay = record.delay_ms > 0 ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
-        var outcome_text = record.outcome ? record.outcome.toUpperCase() : '-';
+        var outcome_text = record.outcome.toUpperCase();
 
         var lines = [];
         lines.push('Run #' + record.current_run + ' - ' + outcome_text + ' - ' + actual_time + ' - ' + duration + ' - delay ' + delay);
