@@ -1355,6 +1355,24 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
         }
     });
 
+    // .. search input clear button
+    var $search_input = $('.detail-search-input');
+    var $search_clear = $('.detail-search-clear');
+
+    tippy($search_clear[0], {
+        content: 'Clear search criteria',
+        placement: 'bottom',
+        delay: [300, 0]
+    });
+
+    $search_input.on('input', function() {
+        $search_clear.css('display', this.value.length ? 'block' : 'none');
+    });
+
+    $search_clear.on('click', function() {
+        $search_input.val('').trigger('input');
+    });
+
 };
 
 // ////////////////////////////////////////////////////////////////////////////

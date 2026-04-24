@@ -9,11 +9,14 @@
 {% endblock %}
 
 {% block section_title %}
-<div class="detail-header-row">
+<div class="detail-header-row-1">
     <span id="detail-section-title">
         <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
         Job detail
     </span>
+    <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="common detail-header-right">Go to dashboard</a>
+</div>
+<div class="detail-header-row-2">
     <div class="detail-header-controls">
         <span class="dashboard-time-range-wrapper">
             <span class="dashboard-pill dashboard-pill-clickable dashboard-refresh-badge" id="detail-refresh-pill">Paused</span>
@@ -37,7 +40,13 @@
         </span>
         <div class="dashboard-chart-legend" id="detail-timeline-legend"></div>
     </div>
-    <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="common detail-back-link">Go to dashboard</a>
+    <div class="detail-search-group">
+        <span class="detail-search-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        <div class="detail-search-input-wrap">
+            <input type="text" class="detail-search-input" placeholder="Search ..">
+            <span class="detail-search-clear">&times;</span>
+        </div>
+    </div>
 </div>
 {% endblock %}
 {% block help_icon_id %}{% endblock %}
