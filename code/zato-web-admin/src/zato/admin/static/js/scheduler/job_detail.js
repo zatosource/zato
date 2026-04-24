@@ -59,17 +59,13 @@ $.fn.zato.scheduler.job_detail._runs_rendered = false;
 $.fn.zato.scheduler.job_detail._object_id = '';
 $.fn.zato.scheduler.job_detail._poll_config = {};
 
-// TEST: inject fake outcomes - first non-running row becomes error
+// TEST: inject fake mixed outcomes
 $.fn.zato.scheduler.job_detail._test_inject_outcomes = function(rows) {
-    var done = false;
+    var fake = ['ok', 'ok', 'error', 'ok', 'timeout', 'ok', 'ok', 'ok', 'error', 'ok',
+                'ok', 'skipped_already_in_flight', 'ok', 'ok', 'missed_catchup', 'ok', 'error', 'ok', 'ok', 'timeout'];
     for (var i = 0; i < rows.length; i++) {
         if (rows[i].outcome === 'running') continue;
-        if (!done) {
-            rows[i].outcome = 'error';
-            done = true;
-        } else {
-            rows[i].outcome = 'ok';
-        }
+        rows[i].outcome = fake[i % fake.length];
     }
 };
 
