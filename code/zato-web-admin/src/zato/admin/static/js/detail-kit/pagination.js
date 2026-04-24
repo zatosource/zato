@@ -129,7 +129,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     total_count = data.total || 0;
                     current_page = data.page || page;
 
-                    render_page($body, rows);
+                    render_page($body, rows, total_count);
 
                     update_last_ts(rows);
                     update_controls();

@@ -163,6 +163,39 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
 };
 
 // ////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.scheduler.job_detail._update_filtered_stats = function(rows, filtered_total) {
+    var kit = $.fn.zato.dashboard_kit;
+    var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
+
+    $('#stat-total-runs').text(kit.format_number_full(filtered_total));
+
+    var error_count = 0;
+    var duration_sum = 0;
+    var duration_count = 0;
+    for (var i = 0; i < rows.length; i++) {
+        if (rows[i].outcome === 'error') {
+            error_count++;
+        }
+        if (rows[i].duration_ms !== null) {
+            duration_sum += rows[i].duration_ms;
+            duration_count++;
+        }
+    }
+
+    var $errors = $('#stat-errors');
+    $errors.text(kit.format_number_full(error_count));
+    if (error_count > 0) {
+        $errors.css('color', '#e0226e');
+    } else {
+        $errors.css('color', '');
+    }
+
+    var avg_ms = duration_count > 0 ? Math.round(duration_sum / duration_count) : 0;
+    $('#stat-avg-duration').text(dashboard.format_duration(avg_ms));
+};
+
+// ////////////////////////////////////////////////////////////////////////////
 // Render config grid
 // ////////////////////////////////////////////////////////////////////////////
 
@@ -351,6 +384,21 @@ $.fn.zato.scheduler.job_detail._build_legend = function() {
         hidden: detail._get_hidden_series(),
         on_toggle: function(_key, h) {
             detail._set_hidden_series(h);
+
+            var all_keys = ['ok', 'skipped_already_in_flight', 'missed_catchup', 'timeout', 'error'];
+            var visible = [];
+            for (var idx = 0; idx < all_keys.length; idx++) {
+                if (!h[all_keys[idx]]) {
+                    visible.push(all_keys[idx]);
+                }
+            }
+            var outcomes_value = visible.length === all_keys.length
+                ? $.fn.zato.scheduler.dashboard.Outcome_All
+                : visible.join(',');
+
+            if (detail._pagination) {
+                detail._pagination.set_filters({outcomes: outcomes_value});
+            }
             detail._redraw();
         }
     }, detail._timeline_skip_legend);
@@ -1084,11 +1132,16 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         table_body: '#detail-history-table-body',
         container_top: '#detail-history-pagination-top',
         container_bottom: '#detail-history-pagination-bottom',
-        render_page: function($body, rows) {
+        render_page: function($body, rows, filtered_total) {
             if (rows && rows.length) {
                 detail._chart_history = rows.slice();
                 detail.render_timeline(detail._chart_history);
             }
+
+            if (filtered_total !== undefined) {
+                detail._update_filtered_stats(rows, filtered_total);
+            }
+
             detail._destroy_outcome_tooltips($body);
             $body.empty();
             detail._new_row_count = 0;
@@ -1305,7 +1358,6 @@ $.fn.zato.scheduler.job_detail.poll = function() {
 
 $.fn.zato.scheduler.job_detail._redraw = function() {
     var detail = $.fn.zato.scheduler.job_detail;
-    detail.render_stats(detail._job_data);
     if (detail._pagination) {
         detail._pagination.fetch_page(1);
     }
