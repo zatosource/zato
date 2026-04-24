@@ -309,7 +309,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
         html += card('Interval', interval_text, false);
     }
 
-    if (job.repeats !== null && job.repeats !== undefined) {
+    if (job.repeats !== null) {
         html += card('Repeats', job.repeats === 0 ? 'Unlimited' : kit.format_number_full(job.repeats), false);
     }
 
@@ -723,8 +723,7 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
     var detail = $.fn.zato.scheduler.job_detail;
     var cfg = detail.config.detail_panel;
 
-    var run_number = (record.current_run !== null && record.current_run !== undefined)
-        ? kit.format_number_full(record.current_run) : '-';
+    var run_number = kit.format_number_full(record.current_run);
 
     // .. build outcome badge from brighter config colors
     var dashboard = detail._dashboard();
@@ -805,16 +804,13 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     var detail = $.fn.zato.scheduler.job_detail;
     var dashboard = detail._dashboard();
     var actual_time = kit.format_local_time(record.actual_fire_time_iso);
-    var delay = (record.delay_ms !== null && record.delay_ms !== undefined && record.delay_ms > 0)
-        ? kit.format_number_full(record.delay_ms) + ' ms'
-        : '-';
+    var delay = record.delay_ms > 0 ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
     var duration = dashboard.format_duration(record.duration_ms);
     var outcome = dashboard.outcome_badge(record.outcome, record);
-    var run_number = (record.current_run !== null && record.current_run !== undefined)
-        ? kit.format_number_full(record.current_run) : '-';
+    var run_number = kit.format_number_full(record.current_run);
 
     var row_ts = record.actual_fire_time_iso;
-    var run_attr = (record.current_run !== null && record.current_run !== undefined) ? record.current_run : '';
+    var run_attr = record.current_run;
     var cls = extra_class ? ' class="' + extra_class + '"' : '';
     var tag_html = detail._render_tag_badges(record.current_run);
 
@@ -975,8 +971,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
 
         var actual_time = kit.format_local_time(record.actual_fire_time_iso);
         var duration = dashboard.format_duration(record.duration_ms);
-        var delay = (record.delay_ms !== null && record.delay_ms !== undefined && record.delay_ms > 0)
-            ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
+        var delay = record.delay_ms > 0 ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
         var outcome_text = record.outcome ? record.outcome.toUpperCase() : '-';
 
         var lines = [];
@@ -1089,9 +1084,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                 $body.append(detail._render_single_row(rec, ''));
                 var $appended = $body.find('tr[data-run="' + rec.current_run + '"]').not('.detail-panel-row');
                 $appended.data('record', rec);
-                if (rec.current_run !== null && rec.current_run !== undefined) {
-                    $body.append(detail._render_panel_row(rec.current_run));
-                }
+                $body.append(detail._render_panel_row(rec.current_run));
             }
             detail._init_outcome_tooltips($body);
             detail._bind_panel_toggles($body);
@@ -1134,7 +1127,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                     }
                 } else {
                     var row_html = detail._render_single_row(rec, '');
-                    var panel_html = (run !== null && run !== undefined) ? detail._render_panel_row(run) : '';
+                    var panel_html = detail._render_panel_row(run);
                     $body.prepend(panel_html);
                     $body.prepend(row_html);
                     $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row').data('record', rec);
