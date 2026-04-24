@@ -189,7 +189,7 @@ $.fn.zato.scheduler.job_detail._update_filtered_stats = function(rows, filtered_
     var kit = $.fn.zato.dashboard_kit;
     var dashboard = $.fn.zato.scheduler.job_detail._dashboard();
 
-    $('#stat-total-runs').text(kit.format_number_full(filtered_total));
+    $('#stat-total-runs').text(filtered_total > 0 ? kit.format_number_full(filtered_total) : '-');
 
     var error_count = 0;
     var duration_sum = 0;
@@ -205,10 +205,15 @@ $.fn.zato.scheduler.job_detail._update_filtered_stats = function(rows, filtered_
     }
 
     var $errors = $('#stat-errors');
-    $errors.text(kit.format_number_full(error_count));
-    if (error_count > 0) {
-        $errors.css('color', '#e0226e');
+    if (filtered_total > 0) {
+        $errors.text(kit.format_number_full(error_count));
+        if (error_count > 0) {
+            $errors.css('color', '#e0226e');
+        } else {
+            $errors.css('color', '');
+        }
     } else {
+        $errors.text('-');
         $errors.css('color', '');
     }
 
@@ -216,6 +221,23 @@ $.fn.zato.scheduler.job_detail._update_filtered_stats = function(rows, filtered_
         $('#stat-avg-duration').text(dashboard.format_duration(Math.round(duration_sum / duration_count)));
     } else {
         $('#stat-avg-duration').text('-');
+    }
+};
+
+$.fn.zato.scheduler.job_detail._show_empty_history = function($exclude) {
+    var detail = $.fn.zato.scheduler.job_detail;
+    var msg = detail.config.empty_history_text;
+    var empty_table = '<tr><td colspan="6" class="dashboard-inline-empty">' + msg + '</td></tr>';
+    var empty_chart = '<div class="dashboard-inline-empty">' + msg + '</div>';
+    var $body = $('#detail-history-table-body');
+    var remaining = $body.children('tr[data-run]').not('.detail-panel-row');
+    if ($exclude) {
+        remaining = remaining.not($exclude);
+    }
+    if (remaining.length === 0) {
+        $body.html(empty_table);
+        $('#detail-timeline').html(empty_chart);
+        detail._chart_history = [];
     }
 };
 
@@ -963,6 +985,25 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
                 $panel.css('box-shadow', '');
             }
             detail._update_table_dim($body);
+
+            if (!is_expanding) {
+                var record = $data_row.data('record');
+                if (record && record.outcome !== 'running') {
+                    var hidden_t = detail._get_hidden_series();
+                    if (hidden_t[record.outcome]) {
+                        detail._show_empty_history($data_row);
+                        $data_row.css({transition: 'opacity 0.3s', opacity: 1});
+                        requestAnimationFrame(function() {
+                            $data_row.css('opacity', 0);
+                            $panel.css({transition: 'opacity 0.3s', opacity: 0});
+                            setTimeout(function() {
+                                $data_row.remove();
+                                $panel.remove();
+                            }, 300);
+                        });
+                    }
+                }
+            }
         }
     });
 
@@ -988,6 +1029,24 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         $data_row.css('display', '');
         $panel.css('box-shadow', '');
         detail._update_table_dim($body);
+
+        // .. if the row's outcome is filtered out, fade it away
+        var record = $data_row.data('record');
+        if (record && record.outcome !== 'running') {
+            var hidden_c = detail._get_hidden_series();
+            if (hidden_c[record.outcome]) {
+                detail._show_empty_history($data_row);
+                $data_row.css({transition: 'opacity 0.3s', opacity: 1});
+                requestAnimationFrame(function() {
+                    $data_row.css('opacity', 0);
+                    $panel.css({transition: 'opacity 0.3s', opacity: 0});
+                    setTimeout(function() {
+                        $data_row.remove();
+                        $panel.remove();
+                    }, 300);
+                });
+            }
+        }
     });
 
     // .. click empty space in mirror row to close (delegated)
@@ -1085,7 +1144,9 @@ $.fn.zato.scheduler.job_detail._apply_recency_gradient = function($body) {
     var max_a = kit.recency.MAX_ALPHA;
     var steps = kit.recency.STEPS;
     var limit = Math.min(detail._new_row_count, steps);
-    var primaries = $body.children('tr').not('.detail-run-extras').not('.dashboard-inline-empty').not('.detail-panel-row');
+    var primaries = $body.children('tr').not('.detail-run-extras').not('.detail-panel-row').filter(function() {
+        return !$(this).find('.dashboard-inline-empty').length;
+    });
     primaries.each(function(idx) {
         var $row = $(this);
         if (idx < limit) {
@@ -1128,27 +1189,35 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             if (!detail._chart_history) {
                 detail._chart_history = [];
             }
+            var hidden = detail._get_hidden_series();
+            var changed = false;
             for (var i = 0; i < rows.length; i++) {
                 var rec = rows[i];
+                if (rec.outcome === 'running') continue;
+                if (hidden[rec.outcome]) continue;
                 var found = false;
                 for (var j = detail._chart_history.length - 1; j >= 0; j--) {
                     if (detail._chart_history[j].current_run === rec.current_run) {
                         detail._chart_history[j] = rec;
                         found = true;
+                        changed = true;
                         break;
                     }
                 }
                 if (!found) {
                     detail._chart_history.push(rec);
+                    changed = true;
                 }
             }
-            detail.render_timeline(detail._chart_history);
+            if (changed) {
+                detail.render_timeline(detail._chart_history);
+            }
         },
         table_body: '#detail-history-table-body',
         container_top: '#detail-history-pagination-top',
         container_bottom: '#detail-history-pagination-bottom',
         render_page: function($body, rows, filtered_total) {
-            detail._chart_history = (rows && rows.length) ? rows.slice() : [];
+            detail._chart_history = rows ? rows.filter(function(r) { return r.outcome !== 'running'; }) : [];
             detail.render_timeline(detail._chart_history);
 
             if (filtered_total !== undefined) {
@@ -1175,7 +1244,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             var has_rows = rows && rows.length > 0;
 
             if (!has_rows && !has_preserved) {
-                $body.html('<tr><td colspan="6" class="dashboard-inline-empty">' + detail.config.empty_history_text + '</td></tr>');
+                detail._show_empty_history();
                 return;
             }
 
@@ -1229,7 +1298,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                         var hidden = detail._get_hidden_series();
                         var is_expanded = $panel.length && $panel.hasClass('expanded');
                         if (hidden[rec.outcome] && !is_expanded) {
-                            // .. outcome is filtered out and not expanded, fade the running row away
+                            detail._show_empty_history($existing);
                             $existing.css({transition: 'opacity 0.3s', opacity: 1});
                             var $fade_panel = $panel;
                             var $fade_row = $existing;
@@ -1241,10 +1310,6 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                                 setTimeout(function() {
                                     $fade_row.remove();
                                     $fade_panel.remove();
-                                    var remaining = $body.children('tr').not('.detail-panel-row').not('.dashboard-inline-empty');
-                                    if (remaining.length === 0) {
-                                        $body.html('<tr><td colspan="6" class="dashboard-inline-empty">' + detail.config.empty_history_text + '</td></tr>');
-                                    }
                                 }, 300);
                             });
                             continue;
