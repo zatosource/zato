@@ -59,7 +59,6 @@ $.fn.zato.scheduler.job_detail._runs_rendered = false;
 $.fn.zato.scheduler.job_detail._object_id = '';
 $.fn.zato.scheduler.job_detail._poll_config = {};
 $.fn.zato.scheduler.job_detail._polling_paused_by_panel = false;
-$.fn.zato.scheduler.job_detail._filter_active = false;
 
 $.fn.zato.scheduler.job_detail._hidden_series_key = function() {
     return 'zato_hidden_series_' + $.fn.zato.scheduler.job_detail._object_id;
@@ -139,32 +138,9 @@ $.fn.zato.scheduler.job_detail.render_header = function(job) {
 
 $.fn.zato.scheduler.job_detail.render_stats = function(job) {
     var kit = $.fn.zato.dashboard_kit;
-    var detail = $.fn.zato.scheduler.job_detail;
-    var dashboard = detail._dashboard();
 
     var next_fire = job.next_fire_utc;
     $('#header-next-fire').text(next_fire ? kit.format_local_time(next_fire) : '-');
-
-    if (detail._filter_active) {
-        return;
-    }
-
-    $('#stat-total-runs').text(kit.format_number_full(job.current_run));
-
-    var recent = job.recent_outcomes;
-    var error_count = 0;
-    for (var i = 0; i < recent.length; i++) {
-        if (recent[i] === 'error') error_count++;
-    }
-    var $errors = $('#stat-errors');
-    $errors.text(kit.format_number_full(error_count));
-    if (error_count > 0) {
-        $errors.css('color', '#e0226e');
-    } else {
-        $errors.css('color', '');
-    }
-
-    $('#stat-avg-duration').text(dashboard.format_duration(job.last_duration_ms));
 };
 
 // ////////////////////////////////////////////////////////////////////////////
@@ -401,8 +377,6 @@ $.fn.zato.scheduler.job_detail._build_legend = function() {
             var outcomes_value = is_all
                 ? $.fn.zato.scheduler.dashboard.Outcome_All
                 : visible.join(',');
-            detail._filter_active = !is_all;
-
             if (detail._pagination) {
                 detail._pagination.set_filters({outcomes: outcomes_value});
             }
