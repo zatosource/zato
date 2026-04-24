@@ -60,24 +60,29 @@ $.fn.zato.scheduler.job_detail._object_id = '';
 $.fn.zato.scheduler.job_detail._poll_config = {};
 $.fn.zato.scheduler.job_detail._polling_paused_by_panel = false;
 
-$.fn.zato.scheduler.job_detail._hidden_series_key = function() {
-    return 'zato_hidden_series_' + $.fn.zato.scheduler.job_detail._object_id;
+$.fn.zato.scheduler.job_detail._get_visible_outcomes = function() {
+    var kit = $.fn.zato.dashboard_kit;
+    var detail = $.fn.zato.scheduler.job_detail;
+    var Outcome_All = $.fn.zato.scheduler.dashboard.Outcome_All;
+    var url_list = kit.url_state.get_all('outcomes');
+
+    if (url_list.length === 0) {
+        return [];
+    }
+    if (url_list.length === 1 && url_list[0] === Outcome_All) {
+        return detail._outcome_keys.slice();
+    }
+    return url_list;
 };
 
 $.fn.zato.scheduler.job_detail._get_hidden_series = function() {
-    var stored = $.fn.zato.dashboard_kit.storage_get_json(
-        $.fn.zato.scheduler.job_detail._hidden_series_key()
-    );
-    if (stored === null) {
-        stored = {};
+    var keys = $.fn.zato.scheduler.job_detail._outcome_keys;
+    var visible = $.fn.zato.scheduler.job_detail._get_visible_outcomes();
+    var hidden = {};
+    for (var idx = 0; idx < keys.length; idx++) {
+        hidden[keys[idx]] = visible.indexOf(keys[idx]) === -1;
     }
-    return stored;
-};
-
-$.fn.zato.scheduler.job_detail._set_hidden_series = function(hidden) {
-    $.fn.zato.dashboard_kit.storage_set_json(
-        $.fn.zato.scheduler.job_detail._hidden_series_key(), hidden
-    );
+    return hidden;
 };
 
 $.fn.zato.scheduler.job_detail._outcome_keys = ['ok', 'skipped_already_in_flight', 'missed_catchup', 'timeout', 'error'];
@@ -96,10 +101,18 @@ $.fn.zato.scheduler.job_detail._visible_outcomes_from_hidden = function(hidden) 
 $.fn.zato.scheduler.job_detail._apply_outcome_filter = function(hidden) {
     var detail = $.fn.zato.scheduler.job_detail;
     var kit = $.fn.zato.dashboard_kit;
+    var Outcome_All = $.fn.zato.scheduler.dashboard.Outcome_All;
     var visible = detail._visible_outcomes_from_hidden(hidden);
+    var is_all = visible.length === detail._outcome_keys.length;
 
     kit.url_state.set({page: null});
-    kit.url_state.set_list('outcomes', visible);
+    if (is_all) {
+        kit.url_state.set_list('outcomes', [Outcome_All]);
+    } else if (visible.length === 0) {
+        kit.url_state.set_list('outcomes', []);
+    } else {
+        kit.url_state.set_list('outcomes', visible);
+    }
 
     if (detail._pagination) {
         detail._pagination.set_filters({outcomes: JSON.stringify(visible)});
@@ -391,7 +404,6 @@ $.fn.zato.scheduler.job_detail._build_legend = function() {
         bg_colors: dashboard.outcome_bg_colors,
         hidden: detail._get_hidden_series(),
         on_toggle: function(_key, h) {
-            detail._set_hidden_series(h);
             detail._apply_outcome_filter(h);
         }
     }, detail._timeline_skip_legend);
@@ -1095,19 +1107,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
     var detail = $.fn.zato.scheduler.job_detail;
     var poll_config = detail._poll_config;
 
-    var url_outcomes_list = kit.url_state.get_all('outcomes');
-    var initial_visible;
-    if (url_outcomes_list.length > 0) {
-        initial_visible = url_outcomes_list;
-        var hidden = {};
-        var keys = detail._outcome_keys;
-        for (var kidx = 0; kidx < keys.length; kidx++) {
-            hidden[keys[kidx]] = url_outcomes_list.indexOf(keys[kidx]) === -1;
-        }
-        detail._set_hidden_series(hidden);
-    } else {
-        initial_visible = detail._visible_outcomes_from_hidden(detail._get_hidden_series());
-    }
+    var initial_visible = detail._get_visible_outcomes();
     var initial_outcomes = JSON.stringify(initial_visible);
 
     detail._pagination = kit.pagination.init({
@@ -1476,25 +1476,9 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
         $m.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
         $m.find('.dashboard-time-range-option[data-minutes="' + range_val + '"]').addClass('dashboard-time-range-active');
 
-        var pop_list = params.getAll('outcomes');
-        var pop_hidden = {};
-        var pop_keys = detail._outcome_keys;
-        if (pop_list.length > 0 && pop_list[0] !== $.fn.zato.scheduler.dashboard.Outcome_All) {
-            for (var pidx = 0; pidx < pop_keys.length; pidx++) {
-                pop_hidden[pop_keys[pidx]] = pop_list.indexOf(pop_keys[pidx]) === -1;
-            }
-            detail._set_hidden_series(pop_hidden);
-            if (detail._pagination) {
-                detail._pagination.set_filters({outcomes: JSON.stringify(pop_list)});
-            }
-        } else {
-            for (var aidx = 0; aidx < pop_keys.length; aidx++) {
-                pop_hidden[pop_keys[aidx]] = false;
-            }
-            detail._set_hidden_series(pop_hidden);
-            if (detail._pagination) {
-                detail._pagination.set_filters({outcomes: $.fn.zato.scheduler.dashboard.Outcome_All});
-            }
+        var pop_visible = detail._get_visible_outcomes();
+        if (detail._pagination) {
+            detail._pagination.set_filters({outcomes: JSON.stringify(pop_visible)});
         }
         detail._build_legend();
         detail._redraw();

@@ -463,7 +463,7 @@ class GetHistory(_SchedulerAdmin):
             job_id = self.request.input.id
             since_ts = self.request.input.get('since_ts')
             outcomes_raw = self.request.input.get('outcomes')
-            if outcomes_raw is None or outcomes_raw == SCHEDULER.OUTCOME.All:
+            if outcomes_raw is None:
                 outcomes = SCHEDULER.OUTCOME.All
             else:
                 outcomes = json.loads(outcomes_raw)

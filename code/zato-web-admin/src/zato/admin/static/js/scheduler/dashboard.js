@@ -788,7 +788,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var job = jobs[job_index];
             var next_fire_text = kit.relative_time_future(job.next_fire_utc);
             var next_fire_tooltip = kit.format_local_time(job.next_fire_utc);
-            var detail_url = '/zato/scheduler/dashboard/job/' + encodeURIComponent(job.id) + '/?cluster=' + cluster_id;
+            var detail_url = '/zato/scheduler/dashboard/job/' + encodeURIComponent(job.id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All;
 
             var service_name = job.service;
             var service_cell = service_name ? $.fn.zato.data_table.service_text(service_name, cluster_id) : '';
@@ -866,7 +866,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var row_ts = entry.actual_fire_time_iso;
             html += '<tr data-ts="' + row_ts + '">';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
-            html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '">' + entry.job_name + '</a></td>';
+            html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All + '">' + entry.job_name + '</a></td>';
             html += '<td>' + dash.outcome_badge(entry.outcome, entry) + '</td>';
             html += '<td class="dashboard-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
             html += '</tr>';
@@ -948,7 +948,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
             var row = '<tr>';
             row += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
-            row += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '">' + entry.name + '</a></td>';
+            row += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All + '">' + entry.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
             row += '</tr>';
             table_body.append(row);
