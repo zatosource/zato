@@ -454,7 +454,7 @@ class GetHistory(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-history'
 
-    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', '-outcomes'
+    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', '-outcomes', '-running_runs'
 
     def handle(self) -> 'None':
         try:
@@ -474,7 +474,9 @@ class GetHistory(_SchedulerAdmin):
             job_name = job_row.name
 
             if since_ts:
-                records = scheduler_get_history_since(job_id, since_ts, outcomes)
+                running_runs_raw = self.request.input.get('running_runs')
+                running_runs = json.loads(running_runs_raw) if running_runs_raw else []
+                records = scheduler_get_history_since(job_id, since_ts, outcomes, running_runs)
                 rows = []
                 for rec in records:
                     rec['job_id'] = job_id

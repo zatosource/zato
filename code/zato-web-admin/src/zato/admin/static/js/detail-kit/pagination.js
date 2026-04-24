@@ -19,6 +19,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var on_page_change = config.on_page_change;
         var ts_field = config.ts_field;
         var on_new_rows = config.on_new_rows;
+        var get_running_runs = config.get_running_runs;
 
         var current_page = 1;
         var total_count = 0;
@@ -167,10 +168,17 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             }
             if (!show_all && current_page !== 1) return;
 
+            var poll_extra = {since_ts: last_ts};
+            if (get_running_runs) {
+                var running = get_running_runs();
+                if (running.length > 0) {
+                    poll_extra.running_runs = JSON.stringify(running);
+                }
+            }
             $.ajax({
                 url: poll_url,
                 type: 'POST',
-                data: build_request({since_ts: last_ts}),
+                data: build_request(poll_extra),
                 headers: {'X-CSRFToken': csrf_token},
                 success: function(data) {
                     if (typeof data === 'string') {

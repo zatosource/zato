@@ -324,17 +324,19 @@ fn scheduler_get_history_page(py: Python<'_>, job_id: i64, offset: usize, limit:
 }
 
 #[pyfunction]
-#[pyo3(signature = (job_id, since_iso, outcomes))]
-fn scheduler_get_history_since(py: Python<'_>, job_id: i64, since_iso: &str, outcomes: Bound<'_, PyAny>) -> PyResult<Py<PyList>> {
+#[pyo3(signature = (job_id, since_iso, outcomes, running_runs))]
+fn scheduler_get_history_since(py: Python<'_>, job_id: i64, since_iso: &str, outcomes: Bound<'_, PyAny>, running_runs: Vec<u32>) -> PyResult<Py<PyList>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
     if let Some(running_job) = state.jobs.get(&job_id) {
         let filter = parse_outcome_filter(&outcomes)?;
         let records: Vec<ExecutionRecord> = running_job.history.iter()
-            .filter(|r| r.actual_fire_time_iso.as_str() >= since_iso)
+            .filter(|r| r.actual_fire_time_iso.as_str() >= since_iso
+                || running_runs.contains(&r.current_run))
             .filter(|r| match &filter {
                 None => true,
-                Some(allowed) => allowed.iter().any(|a| a == &r.outcome),
+                Some(allowed) => allowed.iter().any(|a| a == &r.outcome)
+                    || running_runs.contains(&r.current_run),
             })
             .rev()
             .cloned()
