@@ -245,6 +245,7 @@ tbody tr[data-run]:not(.detail-panel-row) {
     flex-shrink: 0;
     margin-left: auto;
     white-space: nowrap;
+    padding-left: 50px;
 }
 
 .detail-log-line-expanded .detail-log-msg {

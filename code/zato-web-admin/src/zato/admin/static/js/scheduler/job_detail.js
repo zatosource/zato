@@ -888,7 +888,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
 
     // .. click empty space in mirror row to close (delegated)
     $body.off('click.mirrorclose').on('click.mirrorclose', '.detail-log-mirror', function(e) {
-        if ($(e.target).closest('.detail-tag, .dashboard-panel-action-badge, .dashboard-outcome-badge').length) return;
+        if ($(e.target).closest('.detail-tag, .dashboard-panel-action-badge, .dashboard-outcome-badge, .detail-log-actions').length) return;
         $(this).closest('tr.detail-panel-row').find('.detail-action-close').trigger('click');
     });
 
