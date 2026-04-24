@@ -59,6 +59,15 @@ $.fn.zato.scheduler.job_detail._runs_rendered = false;
 $.fn.zato.scheduler.job_detail._object_id = '';
 $.fn.zato.scheduler.job_detail._poll_config = {};
 
+// TEST: inject fake mixed outcomes into rows
+$.fn.zato.scheduler.job_detail._test_inject_outcomes = function(rows) {
+    var fake_outcomes = ['ok', 'error', 'timeout', 'ok', 'ok', 'error', 'ok', 'timeout', 'ok', 'ok'];
+    for (var i = 0; i < rows.length; i++) {
+        if (rows[i].outcome === 'running') continue;
+        rows[i].outcome = fake_outcomes[i % fake_outcomes.length];
+    }
+};
+
 $.fn.zato.scheduler.job_detail._hidden_series_key = function() {
     return 'zato_hidden_series_' + $.fn.zato.scheduler.job_detail._object_id;
 };
@@ -374,9 +383,9 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     }
 
     var chart_width = container.width();
-    var chart_height = 28;
-    var pad_top = 1;
-    var pad_bot = 1;
+    var chart_height = 36;
+    var pad_top = 7;
+    var pad_bot = 2;
     var draw_h = chart_height - pad_top - pad_bot;
 
     var timestamps = [];
@@ -1000,6 +1009,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         exclude_outcomes: 'skipped_already_in_flight,missed_catchup',
         ts_field: 'actual_fire_time_iso',
         on_new_rows: function(rows) {
+            detail._test_inject_outcomes(rows);
             if (!detail._chart_history) {
                 detail._chart_history = [];
             }
@@ -1023,6 +1033,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         container_top: '#detail-history-pagination-top',
         container_bottom: '#detail-history-pagination-bottom',
         render_page: function($body, rows) {
+            if (rows) detail._test_inject_outcomes(rows);
             $body.empty();
             detail._new_row_count = 0;
             if (!rows || rows.length === 0) {
@@ -1041,6 +1052,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             detail._bind_panel_toggles($body);
         },
         render_new: function($body, rows, page_size) {
+            detail._test_inject_outcomes(rows);
             var exec_outcomes = detail._execution_outcomes;
             var cfg = detail.config.detail_panel;
 
@@ -1170,6 +1182,7 @@ $.fn.zato.scheduler.job_detail._ensure_runs_rendered = function() {
                 try { data = JSON.parse(data); } catch(e) { return; }
             }
             detail._chart_history = data.rows;
+            detail._test_inject_outcomes(detail._chart_history);
             detail.render_timeline(detail._chart_history);
         }
     });
