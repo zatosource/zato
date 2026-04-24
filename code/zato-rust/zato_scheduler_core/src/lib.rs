@@ -282,7 +282,7 @@ fn parse_outcome_filter(outcomes: &Bound<'_, PyAny>) -> PyResult<Option<Vec<Stri
     }
     if let Ok(list) = outcomes.cast::<PyList>() {
         let mut items: Vec<String> = list.iter().map(|item| item.extract::<String>()).collect::<PyResult<_>>()?;
-        if !items.is_empty() && !items.iter().any(|v| v == types::outcome::RUNNING) {
+        if !items.iter().any(|v| v == types::outcome::RUNNING) {
             items.push(types::outcome::RUNNING.to_string());
         }
         return Ok(Some(items));
@@ -299,8 +299,9 @@ fn scheduler_get_history_page(py: Python<'_>, job_id: i64, offset: usize, limit:
         let filter = parse_outcome_filter(&outcomes)?;
         match filter {
             None => {
-                let total = running_job.history.len();
-                let start = if offset >= total { total } else { total - offset };
+                let total = running_job.history.iter().filter(|r| r.outcome != types::outcome::RUNNING).count();
+                let all_len = running_job.history.len();
+                let start = if offset >= all_len { all_len } else { all_len - offset };
                 let end = if limit >= start { 0 } else { start - limit };
                 let slice: Vec<ExecutionRecord> = running_job.history.range(end..start).rev().cloned().collect();
                 history::records_page_to_py_dict(py, &slice, total)
@@ -310,8 +311,8 @@ fn scheduler_get_history_page(py: Python<'_>, job_id: i64, offset: usize, limit:
                     .filter(|r| allowed.iter().any(|a| a == &r.outcome))
                     .cloned()
                     .collect();
-                let total = filtered.len();
-                let start = if offset >= total { total } else { total - offset };
+                let total = filtered.iter().filter(|r| r.outcome != types::outcome::RUNNING).count();
+                let start = if offset >= filtered.len() { filtered.len() } else { filtered.len() - offset };
                 let end = if limit >= start { 0 } else { start - limit };
                 let slice: Vec<ExecutionRecord> = filtered[end..start].iter().rev().cloned().collect();
                 history::records_page_to_py_dict(py, &slice, total)
