@@ -621,7 +621,13 @@ class GetCurrentState(_SchedulerAdmin):
                 if history:
                     last_record = history[-1]
                     last_outcome = last_record['outcome']
-                    last_duration_ms = last_record['duration_ms']
+
+                    # .. walk backwards to find the most recent completed record's duration ..
+                    for idx in range(len(history) - 1, -1, -1):
+                        rec_duration = history[idx]['duration_ms']
+                        if rec_duration is not None:
+                            last_duration_ms = rec_duration
+                            break
 
                     start_idx = max(0, len(history) - 10)
                     for rec in history[start_idx:]:

@@ -668,9 +668,10 @@ a {
     transition: border-color 0.15s;
 }
 
-.detail-search-group:focus-within {
-    border-color: var(--component-accent, #012845);
-    background: var(--detail-search-focus-bg, #f0fafe);
+.detail-search-group:focus-within,
+.detail-search-group:has(input:not(:placeholder-shown)) {
+    border-color: #012845;
+    background: #f0fafe;
 }
 
 .detail-search-icon {
