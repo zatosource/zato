@@ -792,14 +792,12 @@ a.detail-component-pill:visited {
 .detail-pagination-row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.4rem;
     line-height: 1;
 }
 
 .detail-page-prev,
 .detail-page-next {
-    min-width: 3.5rem;
-    text-align: center;
     font-size: 0.8125rem;
     line-height: 1;
 }

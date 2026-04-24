@@ -49,7 +49,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 var html = '<span class="detail-pagination-row">';
                 html += '<span class="detail-pagination-info">' +
                     kit.format_number_full(total_count) + ' total</span>';
-                html += ' <span class="detail-page-sep">|</span> <a href="#" class="detail-page-paginate">Paginate</a>';
+                html += '<span class="detail-page-sep">|</span><a href="#" class="detail-page-paginate">Paginate</a>';
                 html += '</span>';
                 $c.html(html);
                 $c.find('a.detail-page-paginate').on('click', function(e) {
@@ -88,9 +88,9 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 html += '<span class="detail-page-next detail-page-disabled">Next</span>';
             }
             if (is_empty) {
-                html += ' <span class="detail-page-sep">|</span> <span class="detail-page-disabled">Show all</span>';
+                html += '<span class="detail-page-sep">|</span><span class="detail-page-disabled">Show all</span>';
             } else {
-                html += ' <span class="detail-page-sep">|</span> <a href="#" class="detail-page-show-all">Show all</a>';
+                html += '<span class="detail-page-sep">|</span><a href="#" class="detail-page-show-all">Show all</a>';
             }
             html += '</span>';
 
