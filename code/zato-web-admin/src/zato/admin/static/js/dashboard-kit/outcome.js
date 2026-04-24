@@ -1,9 +1,8 @@
 
 /* Dashboard kit - outcome helpers.
    Injectable palette-driven helpers for rendering small status dots,
-   per-run outcome squares, and tinted outcome badges. The scheduler
-   dashboard uses them with its {ok, error, timeout, skipped_already_in_flight,
-   missed_catchup} palette; any other dashboard can plug its own. */
+   per-run outcome squares, and tinted outcome badges. Each dashboard
+   plugs its own palette (colors, labels, short_labels, tooltips). */
 
 if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
 if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = {}; }
@@ -17,42 +16,54 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
        every helper below closes over the palette passed in. */
     ns.outcome.make_palette = function(palette) {
         return {
-            colors:     palette.colors     || {},
-            bg_colors:  palette.bg_colors  || {},
-            bar_colors: palette.bar_colors || {},
-            labels:     palette.labels     || {}
+            colors:       palette.colors,
+            bg_colors:    palette.bg_colors,
+            bar_colors:   palette.bar_colors,
+            labels:       palette.labels,
+            short_labels: palette.short_labels,
+            tooltips:     palette.tooltips
         };
     };
 
     /* Render the fixed-size coloured squares showing the last N
-       outcomes for a given run list. Unknown keys fall back to a neutral
-       grey. */
+       outcomes for a given run list. */
     ns.outcome.squares = function(recent_outcomes, palette) {
         if (!recent_outcomes || recent_outcomes.length === 0) {
             return '<span style="color:#a0a0a5">-</span>';
         }
-        var bar_colors = palette.bar_colors || {};
-        var labels = palette.labels || {};
+        var bar_colors = palette.bar_colors;
+        var labels = palette.labels;
         var html = '';
         for (var index = 0; index < recent_outcomes.length; index++) {
             var outcome = recent_outcomes[index];
-            var color = bar_colors[outcome] || '#ccc';
-            var label = labels[outcome] || outcome;
+            var color = bar_colors[outcome];
+            var label = labels[outcome];
             html += '<span class="dashboard-outcome-square" style="background:' + color + '" title="' + label + '"></span>';
         }
         return html;
     };
 
-    /* Render a pill-shaped badge with a tinted background (used in the
-       Recent failures table). */
-    ns.outcome.badge = function(outcome, palette) {
-        var colors = palette.colors || {};
-        var bg_colors = palette.bg_colors || {};
-        var labels = palette.labels || {};
-        var color = colors[outcome] || '#6e6e73';
-        var bg = bg_colors[outcome] || 'rgba(110,110,115,0.12)';
-        var label = labels[outcome] || outcome;
-        return '<span class="dashboard-outcome-badge" style="color:' + color + ';background:' + bg + '">' + label + '</span>';
+    /* Render a pill-shaped badge with a tinted background.
+       Optional record param enables short_labels and tooltips from the palette. */
+    ns.outcome.badge = function(outcome, palette, record) {
+        var color = palette.colors[outcome];
+        var bg = palette.bg_colors[outcome];
+        var label = palette.labels[outcome];
+        var tooltip_attr = '';
+
+        if (record) {
+            if (palette.short_labels[outcome]) {
+                label = palette.short_labels[outcome];
+            }
+            if (record.outcome_ctx !== null) {
+                if (palette.tooltips[outcome]) {
+                    var tooltip_text = palette.tooltips[outcome].replace('{ctx}', record.outcome_ctx);
+                    tooltip_attr = ' data-tippy-content="' + tooltip_text + '"';
+                }
+            }
+        }
+
+        return '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + color + ';background:' + bg + '">' + label + '</span>';
     };
 
     /* Render a small status dot. `state` is one of 'running', 'paused',

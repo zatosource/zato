@@ -26,6 +26,7 @@ pub struct ExecutionRecord {
     pub current_run: u32,
     pub duration_ms: Option<u64>,
     pub error: Option<String>,
+    pub outcome_ctx: Option<String>,
 }
 
 impl ExecutionRecord {
@@ -38,11 +39,17 @@ impl ExecutionRecord {
             current_run,
             duration_ms: None,
             error: None,
+            outcome_ctx: None,
         }
     }
 
     pub fn with_delay(mut self, delay_ms: u64) -> Self {
         self.delay_ms = delay_ms;
+        self
+    }
+
+    pub fn with_outcome_ctx(mut self, ctx: String) -> Self {
+        self.outcome_ctx = Some(ctx);
         self
     }
 

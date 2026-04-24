@@ -84,6 +84,14 @@ $.fn.zato.scheduler.dashboard.outcome_labels = {
     'missed_catchup': 'Missed catchup'
 };
 
+$.fn.zato.scheduler.dashboard.outcome_short_labels = {
+    'skipped_already_in_flight': 'Skipped'
+};
+
+$.fn.zato.scheduler.dashboard.outcome_tooltips = {
+    'skipped_already_in_flight': 'Skipped because run #{ctx} was already in flight'
+};
+
 $.fn.zato.scheduler.dashboard.job_type_labels = {
     'one_time': 'One-time',
     'interval_based': 'Interval-based'
@@ -268,7 +276,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     // Outcome badge (tinted background)
     // ////////////////////////////////////////////////////////////////////////
 
-    dash.outcome_badge = function(outcome) {
+    dash.outcome_badge = function(outcome, record) {
         var colors = dash.outcome_colors;
         var bg_colors = dash.outcome_bg_colors;
         var labels = dash.outcome_labels;
@@ -276,7 +284,23 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         var bg = bg_colors[outcome];
         var label = labels[outcome];
         var prefix = outcome === 'running' ? '<span class="badge-running-spinner"></span>' : '';
-        return '<span class="dashboard-outcome-badge" style="color:' + color + ';background:' + bg + '">' + prefix + label + '</span>';
+        var tooltip_attr = '';
+
+        if (record) {
+            var short_labels = dash.outcome_short_labels;
+            if (short_labels[outcome]) {
+                label = short_labels[outcome];
+            }
+            if (record.outcome_ctx !== null) {
+                var tooltips = dash.outcome_tooltips;
+                if (tooltips[outcome]) {
+                    var tooltip_text = tooltips[outcome].replace('{ctx}', record.outcome_ctx);
+                    tooltip_attr = ' data-tippy-content="' + tooltip_text + '"';
+                }
+            }
+        }
+
+        return '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + color + ';background:' + bg + '">' + prefix + label + '</span>';
     };
 
     // ////////////////////////////////////////////////////////////////////////

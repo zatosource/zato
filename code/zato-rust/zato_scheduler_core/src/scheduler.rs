@@ -211,8 +211,10 @@ pub fn collect_due_jobs(
         running_job.current_run += 1;
 
         if running_job.in_flight {
+            let in_flight_run = running_job.in_flight_run.unwrap();
             running_job.record_execution(
                 ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_ALREADY_IN_FLIGHT, running_job.current_run)
+                    .with_outcome_ctx(in_flight_run.to_string())
             );
             running_job.advance_to_next(now);
             continue;

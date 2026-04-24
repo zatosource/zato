@@ -18,6 +18,10 @@ fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bo
         Some(e) => d.set_item("error", e)?,
         None => d.set_item("error", py.None())?,
     }
+    match &rec.outcome_ctx {
+        Some(ctx) => d.set_item("outcome_ctx", ctx)?,
+        None => d.set_item("outcome_ctx", py.None())?,
+    }
     Ok(d)
 }
 

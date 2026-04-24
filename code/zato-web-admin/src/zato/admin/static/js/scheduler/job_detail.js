@@ -727,10 +727,26 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
         ? kit.format_number_full(record.current_run) : '-';
 
     // .. build outcome badge from brighter config colors
-    var oc = cfg.outcome_colors[record.outcome] || cfg.outcome_colors['ok'];
+    var dashboard = detail._dashboard();
+    var oc = cfg.outcome_colors[record.outcome];
     var outcome_label = record.outcome.replace(/_/g, ' ').toUpperCase();
+    var tooltip_attr = '';
+    var short_labels = dashboard.outcome_short_labels;
+
+    if (short_labels[record.outcome]) {
+        outcome_label = short_labels[record.outcome].toUpperCase();
+    }
+
+    if (record.outcome_ctx !== null) {
+        var tooltips = dashboard.outcome_tooltips;
+        if (tooltips[record.outcome]) {
+            var tooltip_text = tooltips[record.outcome].replace('{ctx}', record.outcome_ctx);
+            tooltip_attr = ' data-tippy-content="' + tooltip_text + '"';
+        }
+    }
+
     var outcome_prefix = (record.outcome === 'running') ? '<span class="badge-running-spinner"></span>' : '';
-    var outcome_html = '<span class="dashboard-outcome-badge" style="color:' + oc.color + ';background:' + oc.bg + '">' + outcome_prefix + outcome_label + '</span>';
+    var outcome_html = '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + oc.color + ';background:' + oc.bg + '">' + outcome_prefix + outcome_label + '</span>';
 
     var tag_html = detail._render_dark_tag_badges(record.current_run);
 
@@ -793,7 +809,7 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
         ? kit.format_number_full(record.delay_ms) + ' ms'
         : '-';
     var duration = dashboard.format_duration(record.duration_ms);
-    var outcome = dashboard.outcome_badge(record.outcome);
+    var outcome = dashboard.outcome_badge(record.outcome, record);
     var run_number = (record.current_run !== null && record.current_run !== undefined)
         ? kit.format_number_full(record.current_run) : '-';
 
@@ -813,6 +829,13 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     return row;
 };
 
+$.fn.zato.scheduler.job_detail._init_outcome_tooltips = function($container) {
+    $container.find('.dashboard-outcome-badge[data-tippy-content]').each(function() {
+        if (!this._tippy) {
+            tippy(this, {placement: 'top', delay: [200, 0], theme: 'dark'});
+        }
+    });
+};
 
 $.fn.zato.scheduler.job_detail._update_table_dim = function($body) {
     var has_expanded = $body.find('tr.detail-panel-row.expanded').length > 0;
@@ -879,6 +902,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
                 var record = $data_row.data('record');
                 var mirror_html = detail._render_mirror_row(record);
                 $panel.find('.detail-panel-log').prepend(mirror_html);
+                detail._init_outcome_tooltips($panel);
                 $panel.data('enabled-levels', detail._build_enabled_levels());
                 $data_row.css('display', 'none');
                 $panel.css('box-shadow', cfg.shadow);
@@ -1069,6 +1093,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                     $body.append(detail._render_panel_row(rec.current_run));
                 }
             }
+            detail._init_outcome_tooltips($body);
             detail._bind_panel_toggles($body);
         },
         render_new: function($body, rows, page_size) {
@@ -1103,6 +1128,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                             // .. row was hidden, keep it hidden and rebuild the mirror
                             $new_data_row.css('display', 'none');
                             $panel.find('.detail-log-mirror').replaceWith(detail._render_mirror_row(rec));
+                            detail._init_outcome_tooltips($panel);
                             $panel.css('box-shadow', cfg.shadow);
                         }
                     }
@@ -1125,6 +1151,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                 data_rows = $body.children('tr').not('.dashboard-inline-empty').not('.detail-panel-row');
             }
 
+            detail._init_outcome_tooltips($body);
             detail._bind_panel_toggles($body);
             detail._apply_recency_gradient($body);
         },
