@@ -106,8 +106,10 @@ def _create_edit(self, action):
         logger.info(msg)
         raise ServiceMissingException(cid, msg)
 
-    extra = (input.extra or u'').encode('utf-8')
-    extra_str = extra.decode('utf8')
+    extra = input.extra
+    if extra is None:
+        extra = ''
+    extra_str = extra
     is_active = input.is_active
     start_date = parse_datetime(input.start_date)
     start_iso = start_date.isoformat()
@@ -128,7 +130,7 @@ def _create_edit(self, action):
         'job_type': job_type,
         'start_date': start_iso,
         'service': service_name,
-        'extra': extra_str or None,
+        'extra': extra_str if extra_str else None,
     })
 
     for k in _ib_params + ('repeats',):
@@ -153,7 +155,10 @@ def _create_edit(self, action):
             value = input.get(param)
             if value == ZATO_NONE:
                 value = None
-            data[param] = int(value) if value else 0
+            if value is None:
+                data[param] = 0
+            else:
+                data[param] = int(value)
     else:
         for param in _ib_params + ('repeats',):
             data[param] = None
@@ -173,7 +178,7 @@ def _create_edit(self, action):
                 job_row.job_type = job_type
                 job_row.start_date = start_date
                 job_row.service = service_row
-                job_row.extra = extra_str or None
+                job_row.extra = extra_str if extra_str else None
             else:
                 cluster_row = session.query(Cluster).filter_by(id=input.cluster_id).first()
                 job_row = Job()
@@ -183,7 +188,7 @@ def _create_edit(self, action):
                 job_row.start_date = start_date
                 job_row.service = service_row
                 job_row.cluster = cluster_row
-                job_row.extra = extra_str or None
+                job_row.extra = extra_str if extra_str else None
                 session.add(job_row)
                 session.flush()
 
@@ -268,8 +273,8 @@ class GetList(_Get):
 
             items = []
             for row in data:
-                row['service'] = row.pop('service_name', row.get('service', ''))
-                row['start_date'] = row['start_date'].isoformat() if row['start_date'] else ''
+                row['service'] = row.pop('service_name')
+                row['start_date'] = row['start_date'].isoformat()
                 items.append(self._enrich_job(row))
 
         self.response.payload = items
@@ -431,8 +436,8 @@ class GetHistory(_SchedulerAdmin):
 
             from contextlib import closing
             with closing(self.odb.session()) as session:
-                job_row = session.query(Job).filter_by(id=job_id).first()
-            job_name = job_row.name if job_row else ''
+                job_row = session.query(Job).filter_by(id=job_id).one()
+            job_name = job_row.name
 
             if since_ts:
                 records = scheduler_get_history_since(job_id, since_ts, exclude_outcomes)
@@ -443,8 +448,13 @@ class GetHistory(_SchedulerAdmin):
                     rows.append(rec)
                 self.response.payload = {'rows': rows}
             else:
-                page = int(self.request.input.get('page') or default_page)
-                page_size = int(self.request.input.get('page_size') or default_page_size)
+                page = self.request.input.get('page')
+                if page is None:
+                    page = default_page
+
+                page_size = self.request.input.get('page_size')
+                if page_size is None:
+                    page_size = default_page_size
                 offset = (page - 1) * page_size
 
                 result = scheduler_get_history_page(job_id, offset, page_size, exclude_outcomes)
@@ -609,10 +619,24 @@ class GetCurrentState(_SchedulerAdmin):
                 else:
                     paused_jobs += 1
 
-                runtime = runtime_by_id.get(job_id, runtime_by_name.get(name, {}))
-                is_running = runtime.get('in_flight', False)
+                runtime = runtime_by_id.get(job_id)
+                if runtime is None:
+                    runtime = runtime_by_name.get(name)
 
-                history = all_history.get(job_id, history_by_name.get(name, []))
+                history = all_history.get(job_id)
+                if history is None:
+                    history = history_by_name.get(name)
+
+                if runtime is not None:
+                    is_running = runtime['in_flight']
+                    next_fire_utc = runtime['next_fire_utc']
+                    current_run = runtime['current_run']
+                    interval_ms = runtime['interval_ms']
+                else:
+                    is_running = False
+                    next_fire_utc = None
+                    current_run = 0
+                    interval_ms = 0
 
                 last_outcome = None
                 last_duration_ms = None
@@ -639,10 +663,10 @@ class GetCurrentState(_SchedulerAdmin):
                     'is_active': is_active,
                     'job_type': job_type,
                     'service': service,
-                    'next_fire_utc': runtime.get('next_fire_utc'),
+                    'next_fire_utc': next_fire_utc,
                     'is_running': is_running,
-                    'current_run': runtime.get('current_run', 0),
-                    'interval_ms': runtime.get('interval_ms', 0),
+                    'current_run': current_run,
+                    'interval_ms': interval_ms,
                     'last_outcome': last_outcome,
                     'last_duration_ms': last_duration_ms,
                     'recent_outcomes': recent_outcomes,
@@ -667,12 +691,13 @@ class GetCurrentState(_SchedulerAdmin):
                         job_name = item['name']
                         break
                 if not job_name:
-                    summary = runtime_by_id.get(job_id, {})
-                    job_name = summary.get('name', '')
+                    summary = runtime_by_id.get(job_id)
+                    if summary is not None:
+                        job_name = summary['name']
 
                 for rec in records:
                     outcome = rec['outcome']
-                    outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+                    outcome_counts[outcome] += 1
                     if outcome in execution_outcomes:
                         total_executions += 1
                     entry = dict(rec)
