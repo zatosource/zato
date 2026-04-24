@@ -368,7 +368,7 @@ $.fn.zato.scheduler.job_detail._build_legend = function() {
 $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var detail = $.fn.zato.scheduler.job_detail;
     var container = $('#detail-timeline');
-    var filtered = detail._filter_by_outcome(detail._filter_by_range(history));
+    var filtered = detail._filter_by_range(history);
     var kit = $.fn.zato.dashboard_kit;
     var dashboard = detail._dashboard();
     var bar_colors = dashboard.outcome_bar_colors;
@@ -438,8 +438,8 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var max_stack = 0;
     for (var ms = 0; ms < buckets.length; ms++) {
         var stack_sum = 0;
-        for (var sv = 0; sv < visible_keys.length; sv++) {
-            stack_sum += buckets[ms][visible_keys[sv]];
+        for (var sv = 0; sv < outcome_keys.length; sv++) {
+            stack_sum += buckets[ms][outcome_keys[sv]];
         }
         if (stack_sum > max_stack) max_stack = stack_sum;
     }
@@ -462,8 +462,36 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
         return d;
     };
 
+    // .. precompute cumulative stacking positions for ALL series
+    var series_top = {};
+    var series_bot = {};
     var cumulative = [];
     for (var ci2 = 0; ci2 < bucket_count; ci2++) cumulative.push(0);
+
+    for (var pre = 0; pre < outcome_keys.length; pre++) {
+        var pre_key = outcome_keys[pre];
+        var pre_tops = [];
+        var pre_bots = [];
+        for (var pb = 0; pb < bucket_count; pb++) {
+            var x_pre = pb * seg_w + seg_w / 2;
+            var val_pre = buckets[pb][pre_key];
+            var prev_cum = cumulative[pb];
+            var new_cum = prev_cum + val_pre;
+
+            var y_bot_pre = baseline - (prev_cum / max_stack) * draw_h;
+            var y_top_pre = baseline - (new_cum / max_stack) * draw_h;
+
+            if (val_pre > 0 && (y_bot_pre - y_top_pre) < 6) {
+                y_top_pre = y_bot_pre - 6;
+            }
+
+            pre_tops.push({x: x_pre, y: y_top_pre});
+            pre_bots.push({x: x_pre, y: y_bot_pre});
+            cumulative[pb] = new_cum;
+        }
+        series_top[pre_key] = pre_tops;
+        series_bot[pre_key] = pre_bots;
+    }
 
     var _sanitize = function(k) { return String(k).replace(/[^A-Za-z0-9_]/g, '_'); };
 
@@ -481,28 +509,14 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     for (var li = 0; li < visible_keys.length; li++) {
         var okey = visible_keys[li];
         var color = bar_colors[okey];
+        var top_pts = series_top[okey];
+        var bot_pts = series_bot[okey];
 
         var has_any = false;
         for (var chk = 0; chk < bucket_count; chk++) {
             if (buckets[chk][okey] > 0) { has_any = true; break; }
         }
         if (!has_any) continue;
-
-        var top_pts = [];
-        var bot_pts = [];
-
-        for (var si = 0; si < bucket_count; si++) {
-            var x = si * seg_w + seg_w / 2;
-            var val = buckets[si][okey];
-            var prev_cum = cumulative[si];
-            var new_cum = prev_cum + val;
-
-            var y_bot = baseline - (prev_cum / max_stack) * draw_h;
-            var y_top = baseline - (new_cum / max_stack) * draw_h;
-
-            top_pts.push({x: x, y: y_top});
-            bot_pts.push({x: x, y: y_bot});
-        }
 
         var top_path = _bezier(top_pts);
         var bot_rev = bot_pts.slice().reverse();
@@ -514,7 +528,6 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 
         svg += '<path d="' + area + '" fill="url(#tlGrad_' + _sanitize(okey) + ')" />';
 
-        // .. stroke line only through non-zero buckets, dropping to baseline for zero buckets
         var stroke_pts = [];
         for (var sp = 0; sp < bucket_count; sp++) {
             if (buckets[sp][okey] > 0) {
@@ -528,10 +541,6 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
         var last_pt = top_pts[top_pts.length - 1];
         svg += '<circle cx="' + last_pt.x.toFixed(2) + '" cy="' + last_pt.y.toFixed(2) + '" r="5.5" fill="none" stroke="' + color + '" stroke-opacity="0.35" stroke-width="1"/>';
         svg += '<circle cx="' + last_pt.x.toFixed(2) + '" cy="' + last_pt.y.toFixed(2) + '" r="3.5" fill="' + color + '"/>';
-
-        for (var si2 = 0; si2 < bucket_count; si2++) {
-            cumulative[si2] += buckets[si2][okey];
-        }
     }
 
     for (var hi = 0; hi < bucket_count; hi++) {
