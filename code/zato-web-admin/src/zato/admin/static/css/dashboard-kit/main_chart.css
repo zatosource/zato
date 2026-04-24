@@ -37,12 +37,17 @@
 }
 
 .dashboard-legend-badge:hover {
-    opacity: 0.85;
+    filter: brightness(1.15);
 }
 
 .dashboard-legend-badge-off {
     opacity: 0.3;
     text-decoration: line-through;
+}
+
+.dashboard-legend-badge-off:hover {
+    opacity: 0.4;
+    filter: brightness(1.15);
 }
 
 .dashboard-legend-badge-dot {

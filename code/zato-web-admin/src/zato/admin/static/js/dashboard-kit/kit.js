@@ -261,9 +261,14 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         $el.off('click.toggle').on('click.toggle', '.dashboard-legend-badge', function() {
             var $badge = $(this);
             var key = $badge.data('key');
-            $badge.toggleClass('dashboard-legend-badge-off');
             var h = config.hidden || {};
-            if (h[key]) { delete h[key]; } else { h[key] = true; }
+            if (h[key]) {
+                delete h[key];
+                $badge.removeClass('dashboard-legend-badge-off');
+            } else {
+                h[key] = true;
+                $badge.addClass('dashboard-legend-badge-off');
+            }
             if (typeof config.on_toggle === 'function') {
                 config.on_toggle(key, h);
             }
