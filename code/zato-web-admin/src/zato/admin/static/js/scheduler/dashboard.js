@@ -831,6 +831,11 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
     dash.render_failures = function(timeline) {
         var container = $('#dashboard-failures-body');
+        container.find('.dashboard-outcome-badge').each(function() {
+            if (this._tippy) {
+                this._tippy.destroy();
+            }
+        });
         container.empty();
 
         var all_clear_html = '<div class="dashboard-all-clear"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#1b855e" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#1b855e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>All clear</div>';

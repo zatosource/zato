@@ -813,6 +813,14 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     return row;
 };
 
+$.fn.zato.scheduler.job_detail._destroy_outcome_tooltips = function($container) {
+    $container.find('.dashboard-outcome-badge').each(function() {
+        if (this._tippy) {
+            this._tippy.destroy();
+        }
+    });
+};
+
 $.fn.zato.scheduler.job_detail._init_outcome_tooltips = function($container) {
     $container.find('.dashboard-outcome-badge[data-tippy-content]').each(function() {
         if (!this._tippy) {
@@ -1081,6 +1089,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                 detail._chart_history = rows.slice();
                 detail.render_timeline(detail._chart_history);
             }
+            detail._destroy_outcome_tooltips($body);
             $body.empty();
             detail._new_row_count = 0;
             if (!rows || rows.length === 0) {
@@ -1111,6 +1120,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                     var was_running = $existing.find('.badge-running-spinner').length > 0;
                     var is_hidden = $existing.css('display') === 'none';
                     var $panel = $existing.next('.detail-panel-row');
+                    detail._destroy_outcome_tooltips($existing);
                     var new_html = detail._render_single_row(rec, '');
                     $existing.replaceWith(new_html);
                     var $new_data_row = $body.find('tr[data-run="' + run + '"]').not('.detail-panel-row');
