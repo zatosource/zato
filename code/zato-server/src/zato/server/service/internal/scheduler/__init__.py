@@ -55,13 +55,11 @@ class _SchedulerAdmin(AdminService):
     def _enrich_job(self, item):
         out = dict(item)
         service_name = item['service']
+        out['service_name'] = service_name
         if self._service_by_name(service_name):
             out['service_id'] = self.server.service_store.get_service_id_by_name(service_name)
-            out['service_name'] = service_name
-
         else:
             out['service_id'] = None
-            out['service_name'] = service_name
         return out
 
 # ################################################################################################################################
@@ -79,7 +77,7 @@ def _create_edit(self, action):
     cid = self.cid
 
     if job_type not in (SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED):
-        msg = 'Unrecognized job type [{}]'.format(job_type)
+        msg = f'Unrecognized job type [{job_type}]'
         logger.error(msg)
         raise ZatoException(cid, msg)
 
@@ -99,17 +97,16 @@ def _create_edit(self, action):
     if existing_one:
         if input.get('should_ignore_existing'):
             return
-        raise ZatoException(cid, 'Job `{}` already exists on this cluster'.format(name))
+        raise ZatoException(cid, f'Job `{name}` already exists on this cluster')
 
     if not self._service_by_name(service_name):
-        msg = 'Service `{}` does not exist in this cluster'.format(service_name)
+        msg = f'Service `{service_name}` does not exist'
         logger.info(msg)
         raise ServiceMissingException(cid, msg)
 
     extra = input.extra
     if extra is None:
         extra = ''
-    extra_str = extra
     is_active = input.is_active
     start_date = parse_datetime(input.start_date)
     start_iso = start_date.isoformat()
@@ -117,7 +114,7 @@ def _create_edit(self, action):
     if action == 'edit':
         old = _item_by_id(jobs, input.id)
         if not old:
-            raise ZatoException(cid, 'Job `{}` not found'.format(input.id))
+            raise ZatoException(cid, f'Job `{input.id}` not found')
         old_name = old['name']
         data = dict(old)
     else:
@@ -130,7 +127,7 @@ def _create_edit(self, action):
         'job_type': job_type,
         'start_date': start_iso,
         'service': service_name,
-        'extra': extra_str if extra_str else None,
+        'extra': extra if extra else None,
     })
 
     for k in _ib_params + ('repeats',):
@@ -167,18 +164,18 @@ def _create_edit(self, action):
         with closing(self.odb.session()) as session:
             service_row = session.query(ServiceModel).filter_by(name=service_name, cluster_id=input.cluster_id).first()
             if not service_row:
-                raise ZatoException(cid, 'Service `{}` not found in ODB'.format(service_name))
+                raise ZatoException(cid, f'Service `{service_name}` not found in ODB')
 
             if action == 'edit':
                 job_row = session.query(Job).filter_by(id=input.id).first()
                 if not job_row:
-                    raise ZatoException(cid, 'Job `{}` not found'.format(input.id))
+                    raise ZatoException(cid, f'Job `{input.id}` not found')
                 job_row.name = name
                 job_row.is_active = is_active
                 job_row.job_type = job_type
                 job_row.start_date = start_date
                 job_row.service = service_row
-                job_row.extra = extra_str if extra_str else None
+                job_row.extra = extra if extra else None
             else:
                 cluster_row = session.query(Cluster).filter_by(id=input.cluster_id).first()
                 job_row = Job()
@@ -188,7 +185,7 @@ def _create_edit(self, action):
                 job_row.start_date = start_date
                 job_row.service = service_row
                 job_row.cluster = cluster_row
-                job_row.extra = extra_str if extra_str else None
+                job_row.extra = extra if extra else None
                 session.add(job_row)
                 session.flush()
 
