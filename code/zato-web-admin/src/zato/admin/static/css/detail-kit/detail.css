@@ -624,9 +624,13 @@ a {
     justify-content: center;
     align-self: stretch;
     padding: 0 6px 0 8px;
-    opacity: 0.4;
     flex-shrink: 0;
     background: #dadada;
+}
+
+.detail-search-icon img {
+    display: block;
+    filter: brightness(0.4);
 }
 
 .detail-search-input-wrap {
