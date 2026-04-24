@@ -150,6 +150,7 @@
     margin-right: 4px;
     font-weight: 600;
     cursor: pointer;
+    user-select: none;
 }
 
 tbody tr[data-run]:not(.detail-panel-row) {
@@ -255,6 +256,7 @@ tbody tr[data-run]:not(.detail-panel-row) {
 
 .detail-log-line {
     cursor: pointer;
+    user-select: none;
 }
 
 #detail-history-table-head.detail-dimmed {
