@@ -862,7 +862,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             html += '<tr data-ts="' + row_ts + '">';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
             html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '">' + entry.job_name + '</a></td>';
-            html += '<td>' + dash.outcome_badge(entry.outcome) + '</td>';
+            html += '<td>' + dash.outcome_badge(entry.outcome, entry) + '</td>';
             html += '<td class="dashboard-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
             html += '</tr>';
         }
@@ -871,6 +871,12 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         container.html(html);
 
         kit.sortable_headers(container.find('table'), {'Job name': 1});
+
+        container.find('.dashboard-outcome-badge[data-tippy-content]').each(function() {
+            if (!this._tippy) {
+                tippy(this, {placement: 'top', delay: [0, 0], theme: 'dark'});
+            }
+        });
     };
 
     // ////////////////////////////////////////////////////////////////////////
