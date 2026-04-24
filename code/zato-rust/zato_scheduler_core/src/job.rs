@@ -118,7 +118,16 @@ impl RunningJob {
 
     pub fn from_scheduler_job(job: &SchedulerJob) -> Self {
         let interval_ms = Self::compute_interval_ms(job);
-        let tz: Option<Tz> = job.timezone.as_deref().and_then(|s| s.parse::<Tz>().ok());
+        let tz: Option<Tz> = match job.timezone.as_deref() {
+            Some(s) => match s.parse::<Tz>() {
+                Ok(tz) => Some(tz),
+                Err(_) => {
+                    log::error!("Job `{}`: invalid timezone `{}`", job.name, s);
+                    None
+                }
+            },
+            None => None,
+        };
         let tz_str = job.timezone.clone();
         let start_date = match Self::parse_start_date(&job.start_date, tz.as_ref()) {
             Some(dt) => Some(dt),
@@ -186,7 +195,16 @@ impl RunningJob {
         self.repeats = job.repeats;
 
         let new_interval = Self::compute_interval_ms(job);
-        let new_tz: Option<Tz> = job.timezone.as_deref().and_then(|s| s.parse::<Tz>().ok());
+        let new_tz: Option<Tz> = match job.timezone.as_deref() {
+            Some(s) => match s.parse::<Tz>() {
+                Ok(tz) => Some(tz),
+                Err(_) => {
+                    log::error!("Job `{}`: invalid timezone `{}`", self.name, s);
+                    None
+                }
+            },
+            None => None,
+        };
         let new_start = match Self::parse_start_date(&job.start_date, new_tz.as_ref()) {
             Some(dt) => Some(dt),
             None => {
