@@ -151,9 +151,9 @@ fn scheduler_execute_job(job_id: i64) -> PyResult<()> {
 
 // TEST: non-OK outcomes to inject after each real completion
 const TEST_INJECT_OUTCOMES: &[&str] = &[
+    "error",
     types::outcome::TIMEOUT,
-    types::outcome::SKIPPED_ALREADY_IN_FLIGHT,
-    types::outcome::MISSED_CATCHUP,
+    "error",
     types::outcome::TIMEOUT,
 ];
 static TEST_INJECT_IDX: AtomicU32 = AtomicU32::new(0);
@@ -175,7 +175,8 @@ fn scheduler_mark_complete(job_id: i64, outcome: &str, duration_ms: u64, current
                 }
             }
 
-            // TEST: inject 2 fake non-OK records right after the real one
+            // TEST: inject 2 fake non-OK records right after the real one,
+            //  using sequential run numbers so the next real run follows naturally.
             let now_iso = Utc::now().to_rfc3339();
             for _ in 0..2 {
                 let idx = TEST_INJECT_IDX.fetch_add(1, Ordering::Relaxed) as usize;
