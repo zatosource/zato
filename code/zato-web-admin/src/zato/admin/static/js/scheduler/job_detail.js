@@ -59,12 +59,17 @@ $.fn.zato.scheduler.job_detail._runs_rendered = false;
 $.fn.zato.scheduler.job_detail._object_id = '';
 $.fn.zato.scheduler.job_detail._poll_config = {};
 
-// TEST: inject fake mixed outcomes into rows
+// TEST: inject fake outcomes - first non-running row becomes error
 $.fn.zato.scheduler.job_detail._test_inject_outcomes = function(rows) {
-    var fake_outcomes = ['ok', 'error', 'timeout', 'ok', 'ok', 'error', 'ok', 'timeout', 'ok', 'ok'];
+    var done = false;
     for (var i = 0; i < rows.length; i++) {
         if (rows[i].outcome === 'running') continue;
-        rows[i].outcome = fake_outcomes[i % fake_outcomes.length];
+        if (!done) {
+            rows[i].outcome = 'error';
+            done = true;
+        } else {
+            rows[i].outcome = 'ok';
+        }
     }
 };
 
@@ -512,7 +517,17 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
             ' Z';
 
         svg += '<path d="' + area + '" fill="url(#tlGrad_' + _sanitize(okey) + ')" />';
-        svg += '<path d="' + top_path + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-opacity="0.7" stroke-linecap="round" stroke-linejoin="round" />';
+
+        // .. stroke line only through non-zero buckets, dropping to baseline for zero buckets
+        var stroke_pts = [];
+        for (var sp = 0; sp < bucket_count; sp++) {
+            if (buckets[sp][okey] > 0) {
+                stroke_pts.push(top_pts[sp]);
+            } else {
+                stroke_pts.push({x: top_pts[sp].x, y: baseline});
+            }
+        }
+        svg += '<path d="' + _bezier(stroke_pts) + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-opacity="0.7" stroke-linecap="round" stroke-linejoin="round" />';
 
         var last_pt = top_pts[top_pts.length - 1];
         svg += '<circle cx="' + last_pt.x.toFixed(2) + '" cy="' + last_pt.y.toFixed(2) + '" r="5.5" fill="none" stroke="' + color + '" stroke-opacity="0.35" stroke-width="1"/>';
