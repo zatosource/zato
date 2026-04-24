@@ -457,7 +457,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
 
     var _sanitize = function(k) { return String(k).replace(/[^A-Za-z0-9_]/g, '_'); };
 
-    var svg = '<svg width="' + chart_width + '" height="' + chart_height + '" xmlns="http://www.w3.org/2000/svg">';
+    var svg = '<svg width="' + chart_width + '" height="' + chart_height + '" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">';
     svg += '<defs>';
     for (var gd = 0; gd < visible_keys.length; gd++) {
         var gd_c = bar_colors[visible_keys[gd]];
