@@ -7,6 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import json
 from traceback import format_exc
 
 # ciso8601
@@ -461,7 +462,11 @@ class GetHistory(_SchedulerAdmin):
 
             job_id = self.request.input.id
             since_ts = self.request.input.get('since_ts')
-            outcomes = self.request.input.get('outcomes') or SCHEDULER.OUTCOME.All
+            outcomes_raw = self.request.input.get('outcomes')
+            if outcomes_raw is None or outcomes_raw == SCHEDULER.OUTCOME.All:
+                outcomes = SCHEDULER.OUTCOME.All
+            else:
+                outcomes = json.loads(outcomes_raw)
 
             from contextlib import closing
             with closing(self.odb.session()) as session:

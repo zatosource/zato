@@ -274,21 +274,26 @@ fn scheduler_get_history(py: Python<'_>, job_id: i64) -> PyResult<Py<PyList>> {
     }
 }
 
-fn parse_outcome_filter(outcomes: &str) -> Option<Vec<&str>> {
-    if outcomes == types::outcome::ALL {
-        None
-    } else {
-        Some(outcomes.split(',').map(|v| v.trim()).filter(|v| !v.is_empty()).collect())
+fn parse_outcome_filter(outcomes: &Bound<'_, PyAny>) -> PyResult<Option<Vec<String>>> {
+    if let Ok(s) = outcomes.extract::<String>() {
+        if s == types::outcome::ALL {
+            return Ok(None);
+        }
     }
+    if let Ok(list) = outcomes.cast::<PyList>() {
+        let items: Vec<String> = list.iter().map(|item| item.extract::<String>()).collect::<PyResult<_>>()?;
+        return Ok(Some(items));
+    }
+    Ok(None)
 }
 
 #[pyfunction]
 #[pyo3(signature = (job_id, offset, limit, outcomes))]
-fn scheduler_get_history_page(py: Python<'_>, job_id: i64, offset: usize, limit: usize, outcomes: &str) -> PyResult<Py<PyDict>> {
+fn scheduler_get_history_page(py: Python<'_>, job_id: i64, offset: usize, limit: usize, outcomes: Bound<'_, PyAny>) -> PyResult<Py<PyDict>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
     if let Some(running_job) = state.jobs.get(&job_id) {
-        let filter = parse_outcome_filter(outcomes);
+        let filter = parse_outcome_filter(&outcomes)?;
         match filter {
             None => {
                 let total = running_job.history.len();
@@ -299,7 +304,7 @@ fn scheduler_get_history_page(py: Python<'_>, job_id: i64, offset: usize, limit:
             }
             Some(allowed) => {
                 let filtered: Vec<ExecutionRecord> = running_job.history.iter()
-                    .filter(|r| allowed.contains(&r.outcome.as_str()))
+                    .filter(|r| allowed.iter().any(|a| a == &r.outcome))
                     .cloned()
                     .collect();
                 let total = filtered.len();
@@ -316,16 +321,16 @@ fn scheduler_get_history_page(py: Python<'_>, job_id: i64, offset: usize, limit:
 
 #[pyfunction]
 #[pyo3(signature = (job_id, since_iso, outcomes))]
-fn scheduler_get_history_since(py: Python<'_>, job_id: i64, since_iso: &str, outcomes: &str) -> PyResult<Py<PyList>> {
+fn scheduler_get_history_since(py: Python<'_>, job_id: i64, since_iso: &str, outcomes: Bound<'_, PyAny>) -> PyResult<Py<PyList>> {
     let shared = get_shared()?;
     let state = shared.state.lock().unwrap();
     if let Some(running_job) = state.jobs.get(&job_id) {
-        let filter = parse_outcome_filter(outcomes);
+        let filter = parse_outcome_filter(&outcomes)?;
         let records: Vec<ExecutionRecord> = running_job.history.iter()
             .filter(|r| r.actual_fire_time_iso.as_str() >= since_iso)
             .filter(|r| match &filter {
                 None => true,
-                Some(allowed) => allowed.contains(&r.outcome.as_str()),
+                Some(allowed) => allowed.iter().any(|a| a == &r.outcome),
             })
             .rev()
             .cloned()

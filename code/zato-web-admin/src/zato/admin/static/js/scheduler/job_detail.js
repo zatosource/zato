@@ -376,7 +376,7 @@ $.fn.zato.scheduler.job_detail._build_legend = function() {
             var is_all = visible.length === all_keys.length;
             var outcomes_value = is_all
                 ? $.fn.zato.scheduler.dashboard.Outcome_All
-                : visible.join(',');
+                : JSON.stringify(visible);
             if (detail._pagination) {
                 detail._pagination.set_filters({outcomes: outcomes_value});
             }
@@ -1328,7 +1328,7 @@ $.fn.zato.scheduler.job_detail.poll = function() {
                 }
             }
             var next_fire = detail._job_data.next_fire_utc;
-            $('#header-next-fire').text(next_fire ? kit.format_local_time(next_fire) : '-');
+            $('#header-next-fire').text(next_fire ? $.fn.zato.dashboard_kit.format_local_time(next_fire) : '-');
         },
         error: function() {}
     });
