@@ -153,8 +153,10 @@ fn scheduler_execute_job(job_id: i64) -> PyResult<()> {
 const TEST_INJECT_OUTCOMES: &[&str] = &[
     "error",
     types::outcome::TIMEOUT,
+    types::outcome::SKIPPED_ALREADY_IN_FLIGHT,
     "error",
     types::outcome::TIMEOUT,
+    "error",
 ];
 static TEST_INJECT_IDX: AtomicU32 = AtomicU32::new(0);
 
