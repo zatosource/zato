@@ -916,10 +916,16 @@ $.fn.zato.scheduler.job_detail._update_table_dim = function($body) {
         $head.addClass('detail-dimmed');
         $body.addClass('detail-dimmed');
         detail._polling_paused_by_panel = true;
+        if (detail._auto_refresh) {
+            detail._auto_refresh.show_paused();
+        }
     } else {
         $head.removeClass('detail-dimmed');
         $body.removeClass('detail-dimmed');
         detail._polling_paused_by_panel = false;
+        if (detail._auto_refresh) {
+            detail._auto_refresh.show_live();
+        }
     }
 };
 

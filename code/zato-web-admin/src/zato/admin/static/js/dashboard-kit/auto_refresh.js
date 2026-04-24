@@ -168,6 +168,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         return {
             start: function() { paused = false; update_pill(); start_timer(); },
             stop: function() { paused = true; update_pill(); clear_timer(); },
+            show_paused: function() { paused = true; update_pill(); },
+            show_live: function() { paused = false; update_pill(); },
             toggle: function() {
                 if (current_seconds > 0) {
                     paused = !paused;
