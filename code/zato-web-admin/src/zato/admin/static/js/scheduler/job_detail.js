@@ -897,11 +897,13 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         e.stopPropagation();
         var $panel = $(this).closest('tr.detail-panel-row');
         var $lines = $panel.find('.detail-log-line').not('.detail-log-mirror');
-        var any_expanded = $lines.filter('.detail-log-line-expanded').length > 0;
-        if (any_expanded) {
+        var last_action = $panel.data('toggle-all-last');
+        if (last_action === 'expand') {
             $lines.removeClass('detail-log-line-expanded');
+            $panel.data('toggle-all-last', 'collapse');
         } else {
             $lines.addClass('detail-log-line-expanded');
+            $panel.data('toggle-all-last', 'expand');
         }
     });
 
