@@ -816,7 +816,7 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
 $.fn.zato.scheduler.job_detail._init_outcome_tooltips = function($container) {
     $container.find('.dashboard-outcome-badge[data-tippy-content]').each(function() {
         if (!this._tippy) {
-            tippy(this, {placement: 'top', delay: [200, 0], theme: 'dark'});
+            tippy(this, {placement: 'top', delay: [0, 0], theme: 'dark'});
         }
     });
 };

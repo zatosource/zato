@@ -239,6 +239,7 @@ tbody tr[data-run]:not(.detail-panel-row) {
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
+    padding: 4px 0;
 }
 
 .detail-log-actions {
