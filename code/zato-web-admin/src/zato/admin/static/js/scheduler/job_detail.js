@@ -1051,7 +1051,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         object_type: poll_config.object_type,
         object_id: detail._object_id,
         page_size: 50,
-        exclude_outcomes: 'skipped_already_in_flight,missed_catchup',
+        filters: {outcomes: $.fn.zato.scheduler.dashboard.Outcome_All},
         ts_field: 'actual_fire_time_iso',
         on_new_rows: function(rows) {
             if (!detail._chart_history) {

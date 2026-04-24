@@ -11,7 +11,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var object_type = config.object_type;
         var object_id = config.object_id;
         var page_size = config.page_size;
-        var exclude_outcomes = config.exclude_outcomes;
+        var filters = config.filters || {};
         var $body = $(config.table_body);
         var csrf_token = $.cookie('csrftoken');
         var render_page = config.render_page;
@@ -24,6 +24,17 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var total_count = 0;
         var last_ts = '';
         var show_all = false;
+
+        function build_request(extra) {
+            var data = {object_type: object_type, id: object_id};
+            for (var fk in filters) {
+                data[fk] = filters[fk];
+            }
+            for (var ek in extra) {
+                data[ek] = extra[ek];
+            }
+            return data;
+        }
 
         function total_pages() {
             return Math.ceil(total_count / page_size) || 1;
@@ -108,13 +119,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $.ajax({
                 url: poll_url,
                 type: 'POST',
-                data: {
-                    object_type: object_type,
-                    id: object_id,
-                    page: page,
-                    page_size: page_size,
-                    exclude_outcomes: exclude_outcomes
-                },
+                data: build_request({page: page, page_size: page_size}),
                 headers: {'X-CSRFToken': csrf_token},
                 success: function(data) {
                     if (typeof data === 'string') {
@@ -140,13 +145,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $.ajax({
                 url: poll_url,
                 type: 'POST',
-                data: {
-                    object_type: object_type,
-                    id: object_id,
-                    page: 1,
-                    page_size: 100000,
-                    exclude_outcomes: exclude_outcomes
-                },
+                data: build_request({page: 1, page_size: 100000}),
                 headers: {'X-CSRFToken': csrf_token},
                 success: function(data) {
                     if (typeof data === 'string') {
@@ -171,12 +170,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $.ajax({
                 url: poll_url,
                 type: 'POST',
-                data: {
-                    object_type: object_type,
-                    id: object_id,
-                    since_ts: last_ts,
-                    exclude_outcomes: exclude_outcomes
-                },
+                data: build_request({since_ts: last_ts}),
                 headers: {'X-CSRFToken': csrf_token},
                 success: function(data) {
                     if (typeof data === 'string') {
@@ -199,11 +193,18 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             });
         }
 
+        function set_filters(new_filters) {
+            for (var key in new_filters) {
+                filters[key] = new_filters[key];
+            }
+        }
+
         fetch_page(1);
 
         return {
             fetch_page: fetch_page,
             poll_new: poll_new,
+            set_filters: set_filters,
             current_page: function() { return current_page; },
             total_pages: total_pages,
             get_last_ts: function() { return last_ts; },

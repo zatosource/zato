@@ -319,7 +319,7 @@ class GetByID(_Get):
         last_duration_ms = None
         recent_outcomes = [] # type: list
 
-        result = scheduler_get_history_page(job_id, 0, 10, '')
+        result = scheduler_get_history_page(job_id, 0, 10, SCHEDULER.OUTCOME.All)
         records = result['records']
 
         if records:
@@ -453,15 +453,15 @@ class GetHistory(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-history'
 
-    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', '-exclude_outcomes'
+    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', '-outcomes'
 
-    def handle(self):
+    def handle(self) -> 'None':
         try:
             from zato_scheduler_core import scheduler_get_history_page, scheduler_get_history_since
 
             job_id = self.request.input.id
             since_ts = self.request.input.get('since_ts')
-            exclude_outcomes = self.request.input.get('exclude_outcomes')
+            outcomes = self.request.input.get('outcomes') or SCHEDULER.OUTCOME.All
 
             from contextlib import closing
             with closing(self.odb.session()) as session:
@@ -469,7 +469,7 @@ class GetHistory(_SchedulerAdmin):
             job_name = job_row.name
 
             if since_ts:
-                records = scheduler_get_history_since(job_id, since_ts, exclude_outcomes)
+                records = scheduler_get_history_since(job_id, since_ts, outcomes)
                 rows = []
                 for rec in records:
                     rec['job_id'] = job_id
@@ -486,7 +486,7 @@ class GetHistory(_SchedulerAdmin):
                     page_size = default_page_size
                 offset = (page - 1) * page_size
 
-                result = scheduler_get_history_page(job_id, offset, page_size, exclude_outcomes)
+                result = scheduler_get_history_page(job_id, offset, page_size, outcomes)
                 rows = []
                 for rec in result['records']:
                     rec['job_id'] = job_id
