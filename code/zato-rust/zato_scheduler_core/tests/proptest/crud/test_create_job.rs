@@ -1,8 +1,8 @@
-use proptest::prelude::*;
 use chrono::{Duration, Utc};
+use proptest::prelude::*;
 use zato_scheduler_core::job::RunningJob;
-use zato_scheduler_core::scheduler::SchedulerState;
 use zato_scheduler_core::model::SchedulerJob;
+use zato_scheduler_core::scheduler::SchedulerState;
 
 fn make_job(id: i64, job_type: &str, is_active: bool, minutes: u32, future_start: bool) -> SchedulerJob {
     let start = if future_start {
@@ -18,7 +18,9 @@ fn make_job(id: i64, job_type: &str, is_active: bool, minutes: u32, future_start
         job_type: job_type.into(),
         start_date: start,
         extra: None,
-        weeks: None, days: None, hours: None,
+        weeks: None,
+        days: None,
+        hours: None,
         minutes: Some(minutes),
         seconds: None,
         repeats: None,

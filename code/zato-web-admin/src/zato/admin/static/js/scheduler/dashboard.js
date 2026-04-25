@@ -5,7 +5,6 @@ $.fn.zato.scheduler.dashboard = {};
 
 $.fn.zato.scheduler.dashboard.config = {
     cluster_id: '1',
-    chart_width: 800,
     default_time_range: 0,
     error_message: 'Error executing job',
     show_live_status: false
@@ -107,13 +106,11 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     var kit = $.fn.zato.dashboard_kit;
     var dash = $.fn.zato.scheduler.dashboard;
 
-    dash._poll_interval_ms = 10000;
     dash._recent_failure_ts = [];
 
     // Thin aliases so job_detail.js (and any future callers that used
     // the old scheduler-level API) keep working without changes.
     dash.format_duration = kit.format_duration_ms;
-    dash.format_local_time = kit.format_local_time;
     dash.relative_time_future = kit.relative_time_future;
     dash.relative_time_past = kit.relative_time_past;
 
@@ -958,34 +955,6 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     };
 
     // ////////////////////////////////////////////////////////////////////////
-    // Execute job
-    // ////////////////////////////////////////////////////////////////////////
-
-    dash.execute_job = function(job_id, trigger_elem) {
-        var cluster_id = dash.config.cluster_id;
-        var url = '/zato/scheduler/execute/' + job_id + '/cluster/' + cluster_id + '/';
-
-        $.ajax({
-            url: url,
-            type: 'POST',
-            headers: {'X-CSRFToken': $.cookie('csrftoken')},
-            success: function() {
-                $.fn.zato.user_message(true, 'OK, job executed');
-            },
-            error: function(xhr) {
-                $.fn.zato.user_message(false, xhr.responseText);
-            }
-        });
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-    // Update refresh indicator
-    // ////////////////////////////////////////////////////////////////////////
-
-    dash.update_refresh_indicator = function() {
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
     // Main render
     // ////////////////////////////////////////////////////////////////////////
 
@@ -1080,8 +1049,6 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 failures_total === 0 ? 'upcoming' : 'failures'
             );
         }
-
-        dash.update_refresh_indicator();
     };
 
     // ////////////////////////////////////////////////////////////////////////

@@ -1,8 +1,8 @@
 //! Scheduler core loop and supporting functions.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use chrono::Utc;
@@ -98,12 +98,7 @@ pub struct SchedulerCallbacks {
 
 /// Main scheduler loop, meant to run on a dedicated thread.
 #[expect(clippy::needless_pass_by_value, reason = "thread entry point owns these values")]
-pub fn scheduler_loop(
-    shared: Arc<SchedulerShared>,
-    odb_adapter: PyObject,
-    callbacks: SchedulerCallbacks,
-    initial_sleep_time: f64,
-) {
+pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callbacks: SchedulerCallbacks, initial_sleep_time: f64) {
     if initial_sleep_time > 0.0 {
         std::thread::sleep(Duration::from_secs_f64(initial_sleep_time));
     }
@@ -174,10 +169,7 @@ pub fn scheduler_loop(
 /// Returns a `PyErr` if the adapter call or dict extraction fails.
 pub fn load_jobs(
     adapter: &Bound<'_, PyAny>,
-) -> PyResult<(
-    Vec<crate::model::SchedulerJob>,
-    HashMap<String, crate::model::HolidayCalendar>,
-)> {
+) -> PyResult<(Vec<crate::model::SchedulerJob>, HashMap<String, crate::model::HolidayCalendar>)> {
     use pyo3::types::PyDict;
 
     let jobs_dict: Bound<'_, PyDict> = adapter.call_method0("get_scheduler_jobs")?.cast_into()?;
@@ -235,11 +227,7 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
 }
 
 /// Collects all jobs whose next fire time falls within the coalesce window.
-pub fn collect_due_jobs(
-    state: &mut SchedulerState,
-    now: chrono::DateTime<Utc>,
-    coalesce_window_ms: i64,
-) -> Vec<FireBatch> {
+pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, coalesce_window_ms: i64) -> Vec<FireBatch> {
     let threshold = now + chrono::Duration::milliseconds(coalesce_window_ms);
     let mut batch = Vec::new();
 
@@ -268,16 +256,19 @@ pub fn collect_due_jobs(
             let in_flight_run = running_job.in_flight_run.unwrap_or(0);
             running_job.record_execution(
                 ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_ALREADY_IN_FLIGHT, running_job.current_run)
-                    .with_outcome_ctx(in_flight_run.to_string())
+                    .with_outcome_ctx(in_flight_run.to_string()),
             );
             running_job.advance_to_next(now);
             continue;
         }
 
         if running_job.is_holiday_today(calendars_ref) {
-            running_job.record_execution(
-                ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_HOLIDAY, running_job.current_run)
-            );
+            running_job.record_execution(ExecutionRecord::new(
+                &planned,
+                &actual,
+                outcome::SKIPPED_HOLIDAY,
+                running_job.current_run,
+            ));
             running_job.advance_to_next(now);
             continue;
         }
@@ -299,8 +290,7 @@ pub fn collect_due_jobs(
         });
 
         running_job.record_execution(
-            ExecutionRecord::new(&planned, &actual, outcome::RUNNING, running_job.current_run)
-                .with_delay(delay_ms_unsigned)
+            ExecutionRecord::new(&planned, &actual, outcome::RUNNING, running_job.current_run).with_delay(delay_ms_unsigned),
         );
 
         running_job.advance_to_next(now);
@@ -310,12 +300,7 @@ pub fn collect_due_jobs(
 }
 
 /// Dispatches a batch of due jobs to the Python callback.
-fn dispatch_jobs(
-    batch: &[FireBatch],
-    run_cb: &PyObject,
-    spawn_fn: &PyObject,
-    on_job_executed_cb: &PyObject,
-) {
+fn dispatch_jobs(batch: &[FireBatch], run_cb: &PyObject, spawn_fn: &PyObject, on_job_executed_cb: &PyObject) {
     let _attached = Python::try_attach(|py| {
         for item in batch {
             let ctx_dict = PyDict::new(py);
@@ -329,7 +314,10 @@ fn dispatch_jobs(
             if let Err(err) = run_cb.call1(py, (spawn_fn, on_job_executed_cb, py_ctx)) {
                 log::error!(
                     "Failed to dispatch job `{}` (service=`{}`, run={}): {}",
-                    item.name, item.service, item.current_run, err
+                    item.name,
+                    item.service,
+                    item.current_run,
+                    err
                 );
             }
         }
@@ -354,7 +342,7 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
             running_job.record_execution(
                 ExecutionRecord::new("", &Utc::now().to_rfc3339(), outcome::TIMEOUT, timed_out_run)
                     .with_duration(elapsed_ms)
-                    .with_error(format!("exceeded max_execution_time_ms={}", running_job.max_execution_time_ms))
+                    .with_error(format!("exceeded max_execution_time_ms={}", running_job.max_execution_time_ms)),
             );
         }
     }
@@ -392,16 +380,15 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
             }
             OnMissedPolicy::RunOnce => {
                 if let Some(fire) = running_job.next_fire_utc
-                    && fire < now {
+                    && fire < now
+                {
                     running_job.current_run += 1;
-                    running_job.record_execution(
-                        ExecutionRecord::new(
-                            &fire.to_rfc3339(),
-                            &now.to_rfc3339(),
-                            outcome::MISSED_CATCHUP,
-                            running_job.current_run,
-                        )
-                    );
+                    running_job.record_execution(ExecutionRecord::new(
+                        &fire.to_rfc3339(),
+                        &now.to_rfc3339(),
+                        outcome::MISSED_CATCHUP,
+                        running_job.current_run,
+                    ));
                     running_job.next_fire_utc = Some(now);
                     running_job.sync_instant_from_utc_pub(now);
                 }

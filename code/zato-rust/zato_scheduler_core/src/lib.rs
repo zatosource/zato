@@ -11,7 +11,7 @@ use pyo3::types::{PyDict, PyList};
 /// Calendar holiday support.
 pub mod calendar;
 
-/// Execution-history serialisation helpers.
+/// Execution-history serialization helpers.
 pub mod history;
 
 /// Running-job state machine.
@@ -30,33 +30,16 @@ pub mod types;
 #[doc(hidden)]
 pub mod test_support {
     pub use crate::job::clamp_max_execution_time;
-    pub use crate::reload_jobs;
     pub use crate::reload_calendars;
+    pub use crate::reload_jobs;
 }
 
 use calendar::CalendarData;
-use job::{ExecutionRecord, RunningJob};
+use job::{ExecutionRecord, LogEntry, RunningJob};
 use scheduler::SchedulerShared;
 
 /// Convenience alias so the rest of the module can say `PyObject`.
 type PyObject = Py<PyAny>;
-
-/// Lazily-initialised reference to the shared scheduler core.
-static SHARED: std::sync::OnceLock<Arc<SchedulerShared>> = std::sync::OnceLock::new();
-
-/// Lazily-initialised reference to the Python ODB adapter.
-static ODB_ADAPTER: std::sync::OnceLock<PyObject> = std::sync::OnceLock::new();
-
-/// Handle for the background scheduler thread.
-static THREAD_HANDLE: parking_lot::Mutex<Option<std::thread::JoinHandle<()>>> =
-    parking_lot::Mutex::new(None);
-
-/// Returns a reference to the shared scheduler state, or a Python error if not yet started.
-fn get_shared() -> PyResult<&'static Arc<SchedulerShared>> {
-    SHARED.get().ok_or_else(|| {
-        pyo3::exceptions::PyException::new_err("scheduler not started")
-    })
-}
 
 /// Acquires the state lock, applies `func`, marks the state dirty and wakes the condvar.
 fn with_state_mut<F, R>(shared: &SchedulerShared, func: F) -> R
@@ -69,122 +52,6 @@ where
     drop(state);
     shared.condvar.notify_one();
     result
-}
-
-/// Starts the scheduler background thread from a config dict.
-///
-/// The dict must contain keys: `odb_adapter`, `run_cb`, `spawn_fn`,
-/// `on_job_executed_cb`, and `initial_sleep_time`.
-#[pyfunction]
-fn scheduler_start(py: Python<'_>, config: &Bound<'_, PyDict>) -> PyResult<()> {
-    let odb_adapter: PyObject = config.get_item("odb_adapter")?.ok_or_else(||
-        pyo3::exceptions::PyKeyError::new_err("missing odb_adapter"))?.unbind();
-    let run_cb: PyObject = config.get_item("run_cb")?.ok_or_else(||
-        pyo3::exceptions::PyKeyError::new_err("missing run_cb"))?.unbind();
-    let spawn_fn: PyObject = config.get_item("spawn_fn")?.ok_or_else(||
-        pyo3::exceptions::PyKeyError::new_err("missing spawn_fn"))?.unbind();
-    let on_job_executed_cb: PyObject = config.get_item("on_job_executed_cb")?.ok_or_else(||
-        pyo3::exceptions::PyKeyError::new_err("missing on_job_executed_cb"))?.unbind();
-    let initial_sleep_time: f64 = config.get_item("initial_sleep_time")?.ok_or_else(||
-        pyo3::exceptions::PyKeyError::new_err("missing initial_sleep_time"))?.extract()?;
-
-    let shared = Arc::new(SchedulerShared::new());
-    SHARED.set(Arc::clone(&shared)).ok();
-    ODB_ADAPTER.set(odb_adapter.clone_ref(py)).ok();
-
-    let adapter = odb_adapter.clone_ref(py);
-
-    let handle = std::thread::Builder::new()
-        .name("zato-scheduler".into())
-        .spawn(move || {
-            let callbacks = scheduler::SchedulerCallbacks { run_cb, spawn_fn, on_job_executed_cb };
-            scheduler::scheduler_loop(shared, adapter, callbacks, initial_sleep_time);
-        })
-        .map_err(|err| pyo3::exceptions::PyException::new_err(format!("spawn failed: {err}")))?;
-
-    {
-        let mut guard = THREAD_HANDLE.lock();
-        *guard = Some(handle);
-    }
-
-    Ok(())
-}
-
-/// Requests a graceful stop and waits up to `timeout_s` seconds.
-#[pyfunction]
-#[pyo3(signature = (timeout_s,))]
-fn scheduler_stop(timeout_s: f64) -> PyResult<()> {
-    let shared = get_shared()?;
-    shared.stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
-    shared.condvar.notify_all();
-
-    let handle = THREAD_HANDLE.lock().take();
-    if let Some(thread_handle) = handle {
-        let deadline = std::time::Instant::now() + Duration::from_secs_f64(timeout_s.min(30.0));
-        while !thread_handle.is_finished() {
-            let remaining = deadline.saturating_duration_since(std::time::Instant::now());
-            if remaining.is_zero() {
-                break;
-            }
-            std::thread::sleep(remaining.min(Duration::from_millis(50)));
-        }
-    }
-    Ok(())
-}
-
-/// Creates a new job from a Python dict and inserts it into the scheduler state.
-#[pyfunction]
-#[pyo3(signature = (job_id, job_data))]
-fn scheduler_create_job(_py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
-    let shared = get_shared()?;
-    let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
-    let running_job = RunningJob::from_scheduler_job(&scheduler_job);
-    with_state_mut(shared, |state| {
-        state.jobs.insert(job_id, running_job);
-    });
-    Ok(())
-}
-
-/// Edits an existing job or inserts a new one if not found.
-#[pyfunction]
-#[pyo3(signature = (job_id, job_data))]
-fn scheduler_edit_job(_py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
-    let shared = get_shared()?;
-    let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
-    with_state_mut(shared, |state| {
-        if let Some(existing) = state.jobs.get_mut(&job_id) {
-            existing.update_from_job(&scheduler_job);
-        } else {
-            let running_job = RunningJob::from_scheduler_job(&scheduler_job);
-            state.jobs.insert(job_id, running_job);
-        }
-    });
-    Ok(())
-}
-
-/// Removes a job from the scheduler state.
-#[pyfunction]
-#[pyo3(signature = (job_id,))]
-fn scheduler_delete_job(job_id: i64) -> PyResult<()> {
-    let shared = get_shared()?;
-    with_state_mut(shared, |state| {
-        state.jobs.remove(&job_id);
-    });
-    Ok(())
-}
-
-/// Forces immediate execution of the given job.
-#[pyfunction]
-#[pyo3(signature = (job_id,))]
-fn scheduler_execute_job(job_id: i64) -> PyResult<()> {
-    let shared = get_shared()?;
-    with_state_mut(shared, |state| {
-        if let Some(running_job) = state.jobs.get_mut(&job_id) {
-            running_job.next_fire_utc = Some(Utc::now());
-            running_job.sync_instant_from_utc_pub(Utc::now());
-        }
-    });
-    Ok(())
 }
 
 /// Non-OK outcomes injected after each real completion during testing.
@@ -200,70 +67,513 @@ const TEST_INJECT_OUTCOMES: &[&str] = &[
 /// Monotonically increasing index into `TEST_INJECT_OUTCOMES`.
 static TEST_INJECT_IDX: AtomicU32 = AtomicU32::new(0);
 
-/// Marks a job execution as complete and injects synthetic test records.
-#[pyfunction]
-#[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
-fn scheduler_mark_complete(job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
-    let shared = get_shared()?;
-    with_state_mut(shared, |state| {
+/// The scheduler runtime, exposed to Python as a `#[pyclass]`.
+///
+/// Owns all scheduler state so that each instance is independent.
+#[pyclass]
+pub struct Scheduler {
+    /// Shared state accessed by both the background thread and API methods.
+    shared: Arc<SchedulerShared>,
+    /// Reference to the Python ODB adapter for reload operations.
+    odb_adapter: PyObject,
+    /// Handle for the background scheduler thread.
+    thread_handle: parking_lot::Mutex<Option<std::thread::JoinHandle<()>>>,
+}
+
+#[pymethods]
+impl Scheduler {
+    /// Creates a new scheduler instance with no background thread running.
+    #[new]
+    fn new(py: Python<'_>) -> Self {
+        Self {
+            shared: Arc::new(SchedulerShared::new()),
+            odb_adapter: py.None(),
+            thread_handle: parking_lot::Mutex::new(None),
+        }
+    }
+
+    /// Starts the scheduler background thread from a config dict.
+    ///
+    /// The dict must contain keys: `odb_adapter`, `run_cb`, `spawn_fn`,
+    /// `on_job_executed_cb`, and `initial_sleep_time`.
+    fn start(&mut self, py: Python<'_>, config: &Bound<'_, PyDict>) -> PyResult<()> {
+        let odb_adapter: PyObject = config
+            .get_item("odb_adapter")?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("missing odb_adapter"))?
+            .unbind();
+        let run_cb: PyObject = config
+            .get_item("run_cb")?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("missing run_cb"))?
+            .unbind();
+        let spawn_fn: PyObject = config
+            .get_item("spawn_fn")?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("missing spawn_fn"))?
+            .unbind();
+        let on_job_executed_cb: PyObject = config
+            .get_item("on_job_executed_cb")?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("missing on_job_executed_cb"))?
+            .unbind();
+        let initial_sleep_time: f64 = config
+            .get_item("initial_sleep_time")?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("missing initial_sleep_time"))?
+            .extract()?;
+
+        self.odb_adapter = odb_adapter.clone_ref(py);
+        let adapter = odb_adapter.clone_ref(py);
+        let shared = Arc::clone(&self.shared);
+
+        let handle = std::thread::Builder::new()
+            .name("zato-scheduler".into())
+            .spawn(move || {
+                let callbacks = scheduler::SchedulerCallbacks {
+                    run_cb,
+                    spawn_fn,
+                    on_job_executed_cb,
+                };
+                scheduler::scheduler_loop(shared, adapter, callbacks, initial_sleep_time);
+            })
+            .map_err(|err| pyo3::exceptions::PyException::new_err(format!("spawn failed: {err}")))?;
+
+        *self.thread_handle.lock() = Some(handle);
+
+        Ok(())
+    }
+
+    /// Requests a graceful stop and waits up to `timeout_s` seconds.
+    #[pyo3(signature = (timeout_s,))]
+    #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
+    fn stop(&self, timeout_s: f64) -> PyResult<()> {
+        self.shared.stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
+        self.shared.condvar.notify_all();
+
+        let handle = self.thread_handle.lock().take();
+        if let Some(thread_handle) = handle {
+            let deadline = std::time::Instant::now() + Duration::from_secs_f64(timeout_s.min(30.0));
+            while !thread_handle.is_finished() {
+                let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+                if remaining.is_zero() {
+                    break;
+                }
+                std::thread::sleep(remaining.min(Duration::from_millis(50)));
+            }
+        }
+        Ok(())
+    }
+
+    /// Creates a new job from a Python dict and inserts it into the scheduler state.
+    #[pyo3(signature = (job_id, job_data))]
+    fn create_job(&self, _py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
+        let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
+        let running_job = RunningJob::from_scheduler_job(&scheduler_job);
+        with_state_mut(&self.shared, |state| {
+            state.jobs.insert(job_id, running_job);
+        });
+        Ok(())
+    }
+
+    /// Edits an existing job or inserts a new one if not found.
+    #[pyo3(signature = (job_id, job_data))]
+    fn edit_job(&self, _py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
+        let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
+        with_state_mut(&self.shared, |state| {
+            if let Some(existing) = state.jobs.get_mut(&job_id) {
+                existing.update_from_job(&scheduler_job);
+            } else {
+                let running_job = RunningJob::from_scheduler_job(&scheduler_job);
+                state.jobs.insert(job_id, running_job);
+            }
+        });
+        Ok(())
+    }
+
+    /// Removes a job from the scheduler state.
+    #[pyo3(signature = (job_id,))]
+    #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
+    fn delete_job(&self, job_id: i64) -> PyResult<()> {
+        with_state_mut(&self.shared, |state| {
+            state.jobs.remove(&job_id);
+        });
+        Ok(())
+    }
+
+    /// Forces immediate execution of the given job.
+    #[pyo3(signature = (job_id,))]
+    #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
+    fn execute_job(&self, job_id: i64) -> PyResult<()> {
+        with_state_mut(&self.shared, |state| {
+            if let Some(running_job) = state.jobs.get_mut(&job_id) {
+                let now = Utc::now();
+                running_job.next_fire_utc = Some(now);
+                running_job.sync_instant_from_utc_pub(now);
+            }
+        });
+        Ok(())
+    }
+
+    /// Marks a job execution as complete and injects synthetic test records.
+    #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
+    #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
+    fn mark_complete(&self, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
+        with_state_mut(&self.shared, |state| {
+            if let Some(running_job) = state.jobs.get_mut(&job_id) {
+                running_job.in_flight = false;
+                running_job.in_flight_since = None;
+                running_job.in_flight_run = None;
+                for rec in running_job.history.iter_mut().rev() {
+                    if rec.current_run == current_run {
+                        rec.duration_ms = Some(duration_ms);
+                        rec.outcome = outcome.to_string();
+                        break;
+                    }
+                }
+
+                let now_iso = Utc::now().to_rfc3339();
+                for _ in 0..2 {
+                    let raw_idx = TEST_INJECT_IDX.fetch_add(1, Ordering::Relaxed);
+                    let wrapped_idx = usize::try_from(raw_idx).map_or(0, |idx| idx % TEST_INJECT_OUTCOMES.len());
+                    let fake_outcome = TEST_INJECT_OUTCOMES.get(wrapped_idx).copied().unwrap_or("error");
+                    let fake_duration = if fake_outcome == types::outcome::TIMEOUT { 32000 } else { 150 };
+                    running_job.current_run += 1;
+                    let mut rec = ExecutionRecord::new(&now_iso, &now_iso, fake_outcome, running_job.current_run)
+                        .with_duration(fake_duration)
+                        .with_error(format!("TEST: synthetic {fake_outcome}"));
+                    if fake_outcome == types::outcome::SKIPPED_ALREADY_IN_FLIGHT {
+                        rec = rec.with_outcome_ctx(current_run.to_string());
+                    }
+
+                    rec.log_entries.push(LogEntry {
+                        timestamp_iso: now_iso.clone(),
+                        level: "SYSTEM".into(),
+                        message: format!("Synthetic test record: {fake_outcome}"),
+                    });
+                    rec.log_entries.push(LogEntry {
+                        timestamp_iso: now_iso.clone(),
+                        level: "INFO".into(),
+                        message: format!("Injected by TEST_INJECT_OUTCOMES[{wrapped_idx}]"),
+                    });
+
+                    running_job.record_execution(rec);
+                }
+            }
+        });
+        Ok(())
+    }
+
+    /// Reloads all jobs from the ODB adapter.
+    #[pyo3(signature = ())]
+    fn reload(&self, py: Python<'_>) -> PyResult<()> {
+        let adapter_bound = self.odb_adapter.bind(py);
+        let (new_jobs, _cals) = scheduler::load_jobs(adapter_bound)?;
+        with_state_mut(&self.shared, |state| {
+            reload_jobs(state, &new_jobs);
+        });
+        Ok(())
+    }
+
+    /// Returns a page of execution-history records for a single job.
+    #[pyo3(signature = (job_id, offset, limit, outcomes))]
+    #[expect(clippy::needless_pass_by_value, reason = "PyO3 requires owned Bound for extraction")]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "PyO3 method with 4 Python-visible args called from multiple files"
+    )]
+    fn get_history_page(
+        &self,
+        py: Python<'_>,
+        job_id: i64,
+        offset: usize,
+        limit: usize,
+        outcomes: Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyDict>> {
+        let state = self.shared.state.lock();
+        if let Some(running_job) = state.jobs.get(&job_id) {
+            let filter = parse_outcome_filter(&outcomes)?;
+            filter.map_or_else(
+                || {
+                    let total = running_job
+                        .history
+                        .iter()
+                        .filter(|rec| rec.outcome != types::outcome::RUNNING)
+                        .count();
+                    let all_len = running_job.history.len();
+                    let start = if offset >= all_len { all_len } else { all_len - offset };
+                    let end = start.saturating_sub(limit);
+                    let slice: Vec<&ExecutionRecord> = running_job.history.range(end..start).rev().collect();
+                    history::records_page_to_py_dict(py, &slice, total)
+                },
+                |allowed| {
+                    let is_allowed = |rec: &&ExecutionRecord| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome);
+
+                    let total = running_job
+                        .history
+                        .iter()
+                        .filter(is_allowed)
+                        .filter(|rec| rec.outcome != types::outcome::RUNNING)
+                        .count();
+
+                    let page: Vec<&ExecutionRecord> = running_job
+                        .history
+                        .iter()
+                        .rev()
+                        .filter(is_allowed)
+                        .skip(offset)
+                        .take(limit)
+                        .collect();
+                    history::records_page_to_py_dict(py, &page, total)
+                },
+            )
+        } else {
+            history::records_page_to_py_dict(py, &[], 0)
+        }
+    }
+
+    /// Returns records added since a given ISO timestamp, optionally filtered by outcome.
+    ///
+    /// Also returns the total count for the given outcome filter so that the
+    /// Python caller does not need a second round-trip for the total.
+    #[pyo3(signature = (job_id, since_iso, outcomes, running_runs))]
+    #[expect(clippy::needless_pass_by_value, reason = "PyO3 requires owned Bound and Vec for extraction")]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "PyO3 method with 4 Python-visible args called from multiple files"
+    )]
+    fn get_history_since(
+        &self,
+        py: Python<'_>,
+        job_id: i64,
+        since_iso: &str,
+        outcomes: Bound<'_, PyAny>,
+        running_runs: Vec<u32>,
+    ) -> PyResult<Py<PyDict>> {
+        let state = self.shared.state.lock();
+        if let Some(running_job) = state.jobs.get(&job_id) {
+            let filter = parse_outcome_filter(&outcomes)?;
+            let records: Vec<&ExecutionRecord> = running_job
+                .history
+                .iter()
+                .filter(|rec| rec.actual_fire_time_iso.as_str() >= since_iso || running_runs.contains(&rec.current_run))
+                .filter(|rec| {
+                    filter.as_ref().is_none_or(|allowed| {
+                        allowed.iter().any(|allowed_val| allowed_val == &rec.outcome) || running_runs.contains(&rec.current_run)
+                    })
+                })
+                .rev()
+                .collect();
+
+            let total = filter.as_ref().map_or_else(
+                || {
+                    running_job
+                        .history
+                        .iter()
+                        .filter(|rec| rec.outcome != types::outcome::RUNNING)
+                        .count()
+                },
+                |allowed| {
+                    running_job
+                        .history
+                        .iter()
+                        .filter(|rec| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome))
+                        .filter(|rec| rec.outcome != types::outcome::RUNNING)
+                        .count()
+                },
+            );
+
+            let out = PyDict::new(py);
+            out.set_item("rows", history::records_to_py_list(py, &records)?)?;
+            out.set_item("total", total)?;
+            Ok(out.unbind())
+        } else {
+            let out = PyDict::new(py);
+            out.set_item("rows", PyList::empty(py))?;
+            out.set_item("total", 0)?;
+            Ok(out.unbind())
+        }
+    }
+
+    /// Returns a summary list of all jobs including history-derived fields.
+    ///
+    /// Each dict contains: `id`, `name`, `is_active`, `service`, `job_type`, `in_flight`,
+    /// `current_run`, `interval_ms`, `next_fire_utc`, `last_outcome`, `last_duration_ms`,
+    /// `recent_outcomes` (last 10), and per-job `outcome_counts`.
+    #[pyo3(signature = ())]
+    fn get_job_summaries(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
+        let state = self.shared.state.lock();
+        let list = PyList::empty(py);
+        for (job_id, running_job) in &state.jobs {
+            let dict = PyDict::new(py);
+            dict.set_item("id", *job_id)?;
+            dict.set_item("name", running_job.name.as_str())?;
+            dict.set_item("is_active", running_job.is_active)?;
+            dict.set_item("service", running_job.service.as_ref())?;
+            dict.set_item("job_type", running_job.job_type.as_str())?;
+            dict.set_item("in_flight", running_job.in_flight)?;
+            dict.set_item("current_run", running_job.current_run)?;
+            dict.set_item("interval_ms", running_job.interval_ms)?;
+            match running_job.next_fire_utc {
+                Some(fire_dt) => dict.set_item("next_fire_utc", fire_dt.to_rfc3339())?,
+                None => dict.set_item("next_fire_utc", py.None())?,
+            }
+
+            let history = &running_job.history;
+
+            let last_outcome = history.back().map(|rec| rec.outcome.as_str());
+            match last_outcome {
+                Some(val) => dict.set_item("last_outcome", val)?,
+                None => dict.set_item("last_outcome", py.None())?,
+            }
+
+            let last_duration_ms = history.iter().rev().find_map(|rec| rec.duration_ms);
+            match last_duration_ms {
+                Some(val) => dict.set_item("last_duration_ms", val)?,
+                None => dict.set_item("last_duration_ms", py.None())?,
+            }
+
+            let recent_start = history.len().saturating_sub(10);
+            let recent_outcomes = PyList::empty(py);
+            for rec in history.range(recent_start..) {
+                recent_outcomes.append(rec.outcome.as_str())?;
+            }
+            dict.set_item("recent_outcomes", recent_outcomes)?;
+
+            let outcome_counts = PyDict::new(py);
+            let mut ok_count: usize = 0;
+            let mut error_count: usize = 0;
+            let mut timeout_count: usize = 0;
+            let mut running_count: usize = 0;
+            let mut skipped_flight_count: usize = 0;
+            let mut skipped_holiday_count: usize = 0;
+            let mut missed_catchup_count: usize = 0;
+            for rec in history {
+                match rec.outcome.as_str() {
+                    "ok" => ok_count += 1,
+                    "error" => error_count += 1,
+                    "timeout" => timeout_count += 1,
+                    "running" => running_count += 1,
+                    "skipped_already_in_flight" => skipped_flight_count += 1,
+                    "skipped_holiday" => skipped_holiday_count += 1,
+                    "missed_catchup" => missed_catchup_count += 1,
+                    _ => {}
+                }
+            }
+            outcome_counts.set_item("ok", ok_count)?;
+            outcome_counts.set_item("error", error_count)?;
+            outcome_counts.set_item("timeout", timeout_count)?;
+            outcome_counts.set_item("running", running_count)?;
+            outcome_counts.set_item("skipped_already_in_flight", skipped_flight_count)?;
+            outcome_counts.set_item("skipped_holiday", skipped_holiday_count)?;
+            outcome_counts.set_item("missed_catchup", missed_catchup_count)?;
+            dict.set_item("outcome_counts", outcome_counts)?;
+
+            list.append(dict)?;
+        }
+        drop(state);
+        Ok(list.unbind())
+    }
+
+    /// Returns a lightweight timeline of execution events for the dashboard chart.
+    ///
+    /// Each dict contains: `outcome`, `actual_fire_time_iso`, `job_id`, `job_name`, `duration_ms`.
+    /// Returns at most `max_events` records (default 1000), taking the most recent from each job.
+    #[pyo3(signature = (max_events=1000))]
+    fn get_timeline_events(&self, py: Python<'_>, max_events: usize) -> PyResult<Py<PyList>> {
+        let state = self.shared.state.lock();
+
+        let total: usize = state.jobs.values().map(|running_job| running_job.history.len()).sum();
+        let skip = total.saturating_sub(max_events);
+
+        let mut skipped: usize = 0;
+        let list = PyList::empty(py);
+        for (job_id, running_job) in &state.jobs {
+            let job_len = running_job.history.len();
+            if skipped + job_len <= skip {
+                skipped += job_len;
+                continue;
+            }
+            let job_skip = skip.saturating_sub(skipped);
+            skipped += job_skip;
+
+            for rec in running_job.history.iter().skip(job_skip) {
+                let dict = PyDict::new(py);
+                dict.set_item("outcome", rec.outcome.as_str())?;
+                dict.set_item("actual_fire_time_iso", rec.actual_fire_time_iso.as_str())?;
+                dict.set_item("job_id", *job_id)?;
+                dict.set_item("job_name", running_job.name.as_str())?;
+                match rec.duration_ms {
+                    Some(duration) => dict.set_item("duration_ms", duration)?,
+                    None => dict.set_item("duration_ms", py.None())?,
+                }
+                match &rec.error {
+                    Some(error_text) => dict.set_item("error", error_text)?,
+                    None => dict.set_item("error", py.None())?,
+                }
+                match &rec.outcome_ctx {
+                    Some(outcome_ctx) => dict.set_item("outcome_ctx", outcome_ctx)?,
+                    None => dict.set_item("outcome_ctx", py.None())?,
+                }
+                dict.set_item("current_run", rec.current_run)?;
+                dict.set_item("planned_fire_time_iso", rec.planned_fire_time_iso.as_str())?;
+                list.append(dict)?;
+            }
+        }
+        drop(state);
+        Ok(list.unbind())
+    }
+
+    /// Appends a log entry to the execution record for a given job and run number.
+    #[pyo3(signature = (job_id, current_run, timestamp_iso, level, message))]
+    #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "PyO3 method with 5 Python-visible args called from Python log handler"
+    )]
+    fn append_log_entry(&self, job_id: i64, current_run: u32, timestamp_iso: &str, level: &str, message: &str) -> PyResult<()> {
+        let mut state = self.shared.state.lock();
         if let Some(running_job) = state.jobs.get_mut(&job_id) {
-            running_job.in_flight = false;
-            running_job.in_flight_since = None;
-            running_job.in_flight_run = None;
             for rec in running_job.history.iter_mut().rev() {
                 if rec.current_run == current_run {
-                    rec.duration_ms = Some(duration_ms);
-                    rec.outcome = outcome.to_string();
+                    rec.log_entries.push(LogEntry {
+                        timestamp_iso: timestamp_iso.to_string(),
+                        level: level.to_string(),
+                        message: message.to_string(),
+                    });
                     break;
                 }
             }
+        }
+        drop(state);
+        Ok(())
+    }
 
-            let now_iso = Utc::now().to_rfc3339();
-            for _ in 0..2 {
-                let raw_idx = TEST_INJECT_IDX.fetch_add(1, Ordering::Relaxed);
-                let wrapped_idx = usize::try_from(raw_idx).map_or(0, |idx| idx % TEST_INJECT_OUTCOMES.len());
-                let fake_outcome = TEST_INJECT_OUTCOMES.get(wrapped_idx).copied().unwrap_or("error");
-                let fake_duration = if fake_outcome == types::outcome::TIMEOUT { 32000 } else { 150 };
-                running_job.current_run += 1;
-                let mut rec = ExecutionRecord::new(&now_iso, &now_iso, fake_outcome, running_job.current_run)
-                    .with_duration(fake_duration)
-                    .with_error(format!("TEST: synthetic {fake_outcome}"));
-                if fake_outcome == types::outcome::SKIPPED_ALREADY_IN_FLIGHT {
-                    rec = rec.with_outcome_ctx(current_run.to_string());
+    /// Returns log entries for a specific execution record.
+    ///
+    /// When `since_idx` is 0, returns all entries (initial panel expand).
+    /// When it is greater than zero, returns only entries added after that index
+    /// (incremental poll while the panel is open).
+    #[pyo3(signature = (job_id, current_run, since_idx))]
+    fn get_log_entries(&self, py: Python<'_>, job_id: i64, current_run: u32, since_idx: usize) -> PyResult<Py<PyList>> {
+        let state = self.shared.state.lock();
+        let list = PyList::empty(py);
+        if let Some(running_job) = state.jobs.get(&job_id) {
+            for rec in running_job.history.iter().rev() {
+                if rec.current_run == current_run {
+                    for entry in rec.log_entries.iter().skip(since_idx) {
+                        let dict = PyDict::new(py);
+                        dict.set_item("timestamp_iso", entry.timestamp_iso.as_str())?;
+                        dict.set_item("level", entry.level.as_str())?;
+                        dict.set_item("message", entry.message.as_str())?;
+                        list.append(dict)?;
+                    }
+                    break;
                 }
-                running_job.record_execution(rec);
             }
         }
-    });
-    Ok(())
-}
-
-/// Reloads all jobs from the ODB adapter.
-#[pyfunction]
-#[pyo3(signature = ())]
-fn scheduler_reload() -> PyResult<()> {
-    let shared = get_shared()?;
-    let adapter = ODB_ADAPTER.get().ok_or_else(|| {
-        pyo3::exceptions::PyException::new_err("scheduler not started")
-    })?;
-
-    Python::try_attach(|py| {
-        let adapter_bound = adapter.bind(py);
-        let (new_jobs, _cals) = scheduler::load_jobs(adapter_bound)?;
-        with_state_mut(shared, |state| {
-            reload_jobs(state, &new_jobs);
-        });
-        Ok::<_, PyErr>(())
-    }).ok_or_else(|| pyo3::exceptions::PyException::new_err("GIL not available"))??;
-
-    Ok(())
+        drop(state);
+        Ok(list.unbind())
+    }
 }
 
 /// Reconciles the running-job map with a freshly loaded list of scheduler jobs.
-pub fn reload_jobs(
-    state: &mut scheduler::SchedulerState,
-    new_jobs: &[crate::model::SchedulerJob],
-) {
+pub fn reload_jobs(state: &mut scheduler::SchedulerState, new_jobs: &[crate::model::SchedulerJob]) {
     let new_ids: std::collections::HashSet<i64> = new_jobs.iter().map(|job| job.id).collect();
     let old_ids: std::collections::HashSet<i64> = state.jobs.keys().copied().collect();
 
@@ -284,10 +594,7 @@ pub fn reload_jobs(
 
 /// Replaces the calendar map in scheduler state with newly loaded calendars.
 #[expect(clippy::implicit_hasher, reason = "callers always use the default hasher")]
-pub fn reload_calendars(
-    state: &mut scheduler::SchedulerState,
-    new_cals: std::collections::HashMap<String, crate::model::HolidayCalendar>,
-) {
+pub fn reload_calendars(state: &mut scheduler::SchedulerState, new_cals: std::collections::HashMap<String, crate::model::HolidayCalendar>) {
     state.calendars.clear();
     for (name, cal) in new_cals {
         let mut calendar_data = CalendarData::new(name.clone());
@@ -302,25 +609,11 @@ pub fn reload_calendars(
     }
 }
 
-/// Returns the full execution history for a single job as a Python list.
-#[pyfunction]
-#[pyo3(signature = (job_id,))]
-fn scheduler_get_history(py: Python<'_>, job_id: i64) -> PyResult<Py<PyList>> {
-    let shared = get_shared()?;
-    let state = shared.state.lock();
-    state.jobs.get(&job_id).map_or_else(
-        || Ok(PyList::empty(py).unbind()),
-        |running_job| {
-            let records: Vec<ExecutionRecord> = running_job.history.iter().cloned().collect();
-            history::records_to_py_list(py, &records)
-        },
-    )
-}
-
 /// Parses the `outcomes` argument into an optional allow-list of outcome strings.
 fn parse_outcome_filter(outcomes: &Bound<'_, PyAny>) -> PyResult<Option<Vec<String>>> {
     if let Ok(text) = outcomes.extract::<String>()
-        && text == types::outcome::ALL {
+        && text == types::outcome::ALL
+    {
         return Ok(None);
     }
     if let Ok(list) = outcomes.cast::<PyList>() {
@@ -331,106 +624,6 @@ fn parse_outcome_filter(outcomes: &Bound<'_, PyAny>) -> PyResult<Option<Vec<Stri
         return Ok(Some(items));
     }
     Ok(None)
-}
-
-/// Returns a page of execution-history records for a single job.
-#[pyfunction]
-#[pyo3(signature = (job_id, offset, limit, outcomes))]
-#[expect(clippy::needless_pass_by_value, reason = "PyO3 requires owned Bound for extraction")]
-fn scheduler_get_history_page(py: Python<'_>, job_id: i64, offset: usize, limit: usize, outcomes: Bound<'_, PyAny>) -> PyResult<Py<PyDict>> {
-    let shared = get_shared()?;
-    let state = shared.state.lock();
-    if let Some(running_job) = state.jobs.get(&job_id) {
-        let filter = parse_outcome_filter(&outcomes)?;
-        filter.map_or_else(
-            || {
-                let total = running_job.history.iter().filter(|rec| rec.outcome != types::outcome::RUNNING).count();
-                let all_len = running_job.history.len();
-                let start = if offset >= all_len { all_len } else { all_len - offset };
-                let end = start.saturating_sub(limit);
-                let slice: Vec<ExecutionRecord> = running_job.history.range(end..start).rev().cloned().collect();
-                history::records_page_to_py_dict(py, &slice, total)
-            },
-            |allowed| {
-                let filtered: Vec<ExecutionRecord> = running_job.history.iter()
-                    .filter(|rec| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome))
-                    .cloned()
-                    .collect();
-                let total = filtered.iter().filter(|rec| rec.outcome != types::outcome::RUNNING).count();
-                let start = if offset >= filtered.len() { filtered.len() } else { filtered.len() - offset };
-                let end = start.saturating_sub(limit);
-                let slice: Vec<ExecutionRecord> = filtered.get(end..start)
-                    .unwrap_or(&[])
-                    .iter()
-                    .rev()
-                    .cloned()
-                    .collect();
-                history::records_page_to_py_dict(py, &slice, total)
-            },
-        )
-    } else {
-        history::records_page_to_py_dict(py, &[], 0)
-    }
-}
-
-/// Returns records added since a given ISO timestamp, optionally filtered by outcome.
-#[pyfunction]
-#[pyo3(signature = (job_id, since_iso, outcomes, running_runs))]
-#[expect(clippy::needless_pass_by_value, reason = "PyO3 requires owned Bound and Vec for extraction")]
-fn scheduler_get_history_since(py: Python<'_>, job_id: i64, since_iso: &str, outcomes: Bound<'_, PyAny>, running_runs: Vec<u32>) -> PyResult<Py<PyList>> {
-    let shared = get_shared()?;
-    let state = shared.state.lock();
-    if let Some(running_job) = state.jobs.get(&job_id) {
-        let filter = parse_outcome_filter(&outcomes)?;
-        let records: Vec<ExecutionRecord> = running_job.history.iter()
-            .filter(|rec| rec.actual_fire_time_iso.as_str() >= since_iso
-                || running_runs.contains(&rec.current_run))
-            .filter(|rec| filter.as_ref().is_none_or(|allowed|
-                allowed.iter().any(|allowed_val| allowed_val == &rec.outcome)
-                    || running_runs.contains(&rec.current_run)))
-            .rev()
-            .cloned()
-            .collect();
-        history::records_to_py_list(py, &records)
-    } else {
-        Ok(PyList::empty(py).unbind())
-    }
-}
-
-/// Returns the full execution history for every job, keyed by job id.
-#[pyfunction]
-#[pyo3(signature = ())]
-fn scheduler_get_all_history(py: Python<'_>) -> PyResult<Py<PyDict>> {
-    let shared = get_shared()?;
-    let state = shared.state.lock();
-    history::all_history_to_py_dict(py, &state.jobs)
-}
-
-/// Returns a summary list of all jobs (id, name, active, service, etc.).
-#[pyfunction]
-#[pyo3(signature = ())]
-fn scheduler_get_job_summaries(py: Python<'_>) -> PyResult<Py<PyList>> {
-    let shared = get_shared()?;
-    let state = shared.state.lock();
-    let list = PyList::empty(py);
-    for (job_id, running_job) in &state.jobs {
-        let dict = PyDict::new(py);
-        dict.set_item("id", *job_id)?;
-        dict.set_item("name", running_job.name.as_str())?;
-        dict.set_item("is_active", running_job.is_active)?;
-        dict.set_item("service", running_job.service.as_ref())?;
-        dict.set_item("job_type", running_job.job_type.as_str())?;
-        dict.set_item("in_flight", running_job.in_flight)?;
-        dict.set_item("current_run", running_job.current_run)?;
-        dict.set_item("interval_ms", running_job.interval_ms)?;
-        match running_job.next_fire_utc {
-            Some(fire_dt) => dict.set_item("next_fire_utc", fire_dt.to_rfc3339())?,
-            None => dict.set_item("next_fire_utc", py.None())?,
-        }
-        list.append(dict)?;
-    }
-    drop(state);
-    Ok(list.unbind())
 }
 
 /// Converts a Python dict into a `SchedulerJob` model.
@@ -448,7 +641,11 @@ pub fn dict_to_scheduler_job(job_id: i64, dict: &Bound<'_, PyDict>) -> PyResult<
 
     /// Extracts an optional non-empty string from the dict.
     fn get_opt_str(dict: &Bound<'_, PyDict>, key: &str) -> Option<String> {
-        dict.get_item(key).ok().flatten().and_then(|val| val.extract::<String>().ok()).filter(|text| !text.is_empty())
+        dict.get_item(key)
+            .ok()
+            .flatten()
+            .and_then(|val| val.extract::<String>().ok())
+            .filter(|text| !text.is_empty())
     }
 
     /// Extracts an optional u32 from the dict.
@@ -490,22 +687,10 @@ pub fn dict_to_scheduler_job(job_id: i64, dict: &Bound<'_, PyDict>) -> PyResult<
     })
 }
 
-/// `PyO3` module entry point - registers all scheduler functions.
+/// `PyO3` module entry point - registers the `Scheduler` class.
 #[pymodule]
 fn zato_scheduler_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
-    module.add_function(wrap_pyfunction!(scheduler_start, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_stop, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_create_job, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_edit_job, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_delete_job, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_execute_job, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_mark_complete, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_reload, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_get_history, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_get_history_page, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_get_history_since, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_get_all_history, module)?)?;
-    module.add_function(wrap_pyfunction!(scheduler_get_job_summaries, module)?)?;
+    module.add_class::<Scheduler>()?;
     Ok(())
 }

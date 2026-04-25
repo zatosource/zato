@@ -1,5 +1,5 @@
-use proptest::prelude::*;
 use chrono::{Duration, Utc};
+use proptest::prelude::*;
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::model::SchedulerJob;
 

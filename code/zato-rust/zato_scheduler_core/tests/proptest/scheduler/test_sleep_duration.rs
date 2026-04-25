@@ -1,9 +1,9 @@
-use std::time::Duration;
-use proptest::prelude::*;
 use chrono::{Duration as CDuration, Utc};
+use proptest::prelude::*;
+use std::time::Duration;
 use zato_scheduler_core::job::RunningJob;
-use zato_scheduler_core::scheduler::{SchedulerState, compute_sleep_duration};
 use zato_scheduler_core::model::SchedulerJob;
+use zato_scheduler_core::scheduler::{SchedulerState, compute_sleep_duration};
 
 fn make_job_at_offset(id: i64, offset_secs: i64) -> SchedulerJob {
     let start = (Utc::now() + CDuration::seconds(offset_secs))

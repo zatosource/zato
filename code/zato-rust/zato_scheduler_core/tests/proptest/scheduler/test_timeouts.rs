@@ -1,14 +1,12 @@
+use chrono::Utc;
 use proptest::prelude::*;
 use std::time::Instant;
-use chrono::Utc;
-use zato_scheduler_core::job::{RunningJob, ExecutionRecord};
-use zato_scheduler_core::scheduler::{SchedulerState, check_in_flight_timeouts};
+use zato_scheduler_core::job::{ExecutionRecord, RunningJob};
 use zato_scheduler_core::model::SchedulerJob;
+use zato_scheduler_core::scheduler::{SchedulerState, check_in_flight_timeouts};
 
 fn make_active_job() -> SchedulerJob {
-    let start = (Utc::now() - chrono::Duration::hours(1))
-        .format("%Y-%m-%dT%H:%M:%S")
-        .to_string();
+    let start = (Utc::now() - chrono::Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
     SchedulerJob {
         id: 1,
         name: "test".into(),

@@ -17,9 +17,8 @@ except ImportError:
     from dateutil.parser import parse as parse_datetime
 
 # Zato
-from zato.common.api import scheduler_date_time_format, SCHEDULER, ZATO_NONE
+from zato.common.api import SCHEDULER, ZATO_NONE
 from zato.common.defaults import default_cluster_id
-from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Job
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
@@ -116,10 +115,8 @@ def _create_edit(self, action):
         old = _item_by_id(jobs, input.id)
         if not old:
             raise ZatoException(cid, f'Job `{input.id}` not found')
-        old_name = old['name']
         data = dict(old)
     else:
-        old_name = None
         data = {}
 
     data.update({
@@ -210,11 +207,10 @@ def _create_edit(self, action):
             data['id'] = job_row.id
             job_id = job_row.id
 
-        from zato_scheduler_core import scheduler_create_job, scheduler_edit_job
         if action == 'create':
-            scheduler_create_job(job_id, data)
+            self.server._scheduler.create_job(job_id, data)
         else:
-            scheduler_edit_job(job_id, data)
+            self.server._scheduler.edit_job(job_id, data)
 
         self.response.payload.id = job_row.id
         self.response.payload.name = input.name
@@ -290,7 +286,6 @@ class GetByID(_Get):
     def handle(self) -> 'None':
         from contextlib import closing
         from zato.common.odb.model import Job, IntervalBasedJob
-        from zato_scheduler_core import scheduler_get_history_page
 
         item = None
         job_id = self.request.input.id
@@ -314,14 +309,12 @@ class GetByID(_Get):
         if not item:
             raise ZatoException(self.cid, 'Job not found')
 
-        #  Build recent_outcomes, last_outcome and last_duration_ms
-        #  from the last 10 history records in Rust ..
+        result = self.server._scheduler.get_history_page(job_id, 0, 10, SCHEDULER.OUTCOME.All)
+        records = result['records']
+
         last_outcome = None
         last_duration_ms = None
         recent_outcomes = [] # type: list
-
-        result = scheduler_get_history_page(job_id, 0, 10, SCHEDULER.OUTCOME.All)
-        records = result['records']
 
         if records:
             last_record = records[-1]
@@ -415,8 +408,7 @@ class Delete(_SchedulerAdmin):
                 session.delete(job_row)
                 session.commit()
 
-            from zato_scheduler_core import scheduler_delete_job
-            scheduler_delete_job(job_id)
+            self.server._scheduler.delete_job(job_id)
         except Exception:
             self.logger.error('Could not delete the job, e:`%s`', format_exc())
             raise
@@ -440,8 +432,7 @@ class Execute(_SchedulerAdmin):
             if not job_row:
                 raise ZatoException(self.cid, 'Job not found')
 
-            from zato_scheduler_core import scheduler_execute_job
-            scheduler_execute_job(job_row.id)
+            self.server._scheduler.execute_job(job_row.id)
         except Exception:
             self.logger.error('Could not execute the job, e:`%s`', format_exc())
             raise
@@ -458,8 +449,6 @@ class GetHistory(_SchedulerAdmin):
 
     def handle(self) -> 'None':
         try:
-            from zato_scheduler_core import scheduler_get_history_page, scheduler_get_history_since
-
             job_id = self.request.input.id
             since_ts = self.request.input.get('since_ts')
             outcomes_raw = self.request.input.get('outcomes')
@@ -473,17 +462,20 @@ class GetHistory(_SchedulerAdmin):
                 job_row = session.query(Job).filter_by(id=job_id).one()
             job_name = job_row.name
 
+            scheduler = self.server._scheduler
+
             if since_ts:
                 running_runs_raw = self.request.input.get('running_runs')
                 running_runs = json.loads(running_runs_raw) if running_runs_raw else []
-                records = scheduler_get_history_since(job_id, since_ts, outcomes, running_runs)
+
+                # .. get_history_since now returns both rows and total in a single call ..
+                result = scheduler.get_history_since(job_id, since_ts, outcomes, running_runs)
                 rows = []
-                for rec in records:
+                for rec in result['rows']:
                     rec['job_id'] = job_id
                     rec['job_name'] = job_name
                     rows.append(rec)
-                count_result = scheduler_get_history_page(job_id, 0, 0, outcomes)
-                self.response.payload = {'rows': rows, 'total': count_result['total']}
+                self.response.payload = {'rows': rows, 'total': result['total']}
             else:
                 page = self.request.input.get('page')
                 if page is None:
@@ -494,7 +486,7 @@ class GetHistory(_SchedulerAdmin):
                     page_size = default_page_size
                 offset = (page - 1) * page_size
 
-                result = scheduler_get_history_page(job_id, offset, page_size, outcomes)
+                result = scheduler.get_history_page(job_id, offset, page_size, outcomes)
                 rows = []
                 for rec in result['records']:
                     rec['job_id'] = job_id
@@ -515,17 +507,25 @@ class GetHistory(_SchedulerAdmin):
 # ################################################################################################################################
 # ################################################################################################################################
 
-class GetAllHistory(_SchedulerAdmin):
-    """ Returns execution history for all scheduler jobs.
+class GetLogEntries(_SchedulerAdmin):
+    """ Returns log entries for a specific execution record, supporting incremental fetching.
     """
-    name = _service_name_prefix + 'get-all-history'
+    name = _service_name_prefix + 'get-log-entries'
 
-    def handle(self):
+    input = Int('job_id'), Int('current_run'), Int('-since_idx')
+
+    def handle(self) -> 'None':
         try:
-            from zato_scheduler_core import scheduler_get_all_history
-            self.response.payload = scheduler_get_all_history()
+            job_id = self.request.input.job_id
+            current_run = self.request.input.current_run
+            since_idx = self.request.input.get('since_idx')
+            if since_idx is None:
+                since_idx = 0
+
+            entries = self.server._scheduler.get_log_entries(job_id, current_run, since_idx)
+            self.response.payload = {'entries': entries}
         except Exception:
-            self.logger.error('Could not get all job history, e:`%s`', format_exc())
+            self.logger.error('Could not get log entries, e:`%s`', format_exc())
             raise
 
 # ################################################################################################################################
@@ -610,33 +610,31 @@ class GetCurrentState(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-current-state'
 
-    def handle(self):
+    def handle(self) -> 'None':
         try:
-            from zato_scheduler_core import scheduler_get_all_history, scheduler_get_job_summaries
-
             from contextlib import closing
-            from zato.common.odb.model import Job, IntervalBasedJob
+
+            scheduler = self.server._scheduler
+
             with closing(self.odb.session()) as session:
                 job_rows = session.query(Job).filter_by(cluster_id=default_cluster_id).all()
                 store_jobs = []
                 for job in job_rows:
-                    d = {'id': job.id, 'name': job.name, 'is_active': job.is_active, 'job_type': job.job_type,
-                         'service': job.service.name}
-                    store_jobs.append(d)
+                    store_jobs.append({
+                        'id': job.id,
+                        'name': job.name,
+                        'is_active': job.is_active,
+                        'job_type': job.job_type,
+                        'service': job.service.name,
+                    })
 
+            # .. get_job_summaries now includes last_outcome, last_duration_ms,
+            # .. recent_outcomes, and per-job outcome_counts ..
             runtime_by_id = {}
             runtime_by_name = {}
-            for s in scheduler_get_job_summaries():
-                runtime_by_id[s['id']] = s
-                runtime_by_name[s['name']] = s
-
-            all_history = scheduler_get_all_history()
-
-            history_by_name = {}
-            for summary in runtime_by_name.values():
-                summary_id = summary['id']
-                if summary_id in all_history:
-                    history_by_name[summary['name']] = all_history[summary_id]
+            for summary in scheduler.get_job_summaries():
+                runtime_by_id[summary['id']] = summary
+                runtime_by_name[summary['name']] = summary
 
             total_jobs = len(store_jobs)
             active_jobs = 0
@@ -647,8 +645,6 @@ class GetCurrentState(_SchedulerAdmin):
             for item in store_jobs:
                 job_id = item['id']
                 is_active = item['is_active']
-                job_type = item['job_type']
-                service = item['service']
                 name = item['name']
 
                 if is_active:
@@ -660,55 +656,38 @@ class GetCurrentState(_SchedulerAdmin):
                 if runtime is None:
                     runtime = runtime_by_name.get(name)
 
-                history = all_history.get(job_id)
-                if history is None:
-                    history = history_by_name.get(name)
-
                 if runtime is not None:
-                    is_running = runtime['in_flight']
-                    next_fire_utc = runtime['next_fire_utc']
-                    current_run = runtime['current_run']
-                    interval_ms = runtime['interval_ms']
+                    jobs.append({
+                        'id': job_id,
+                        'name': name,
+                        'is_active': is_active,
+                        'job_type': item['job_type'],
+                        'service': item['service'],
+                        'next_fire_utc': runtime['next_fire_utc'],
+                        'is_running': runtime['in_flight'],
+                        'current_run': runtime['current_run'],
+                        'interval_ms': runtime['interval_ms'],
+                        'last_outcome': runtime['last_outcome'],
+                        'last_duration_ms': runtime['last_duration_ms'],
+                        'recent_outcomes': runtime['recent_outcomes'],
+                    })
                 else:
-                    is_running = False
-                    next_fire_utc = None
-                    current_run = 0
-                    interval_ms = 0
+                    jobs.append({
+                        'id': job_id,
+                        'name': name,
+                        'is_active': is_active,
+                        'job_type': item['job_type'],
+                        'service': item['service'],
+                        'next_fire_utc': None,
+                        'is_running': False,
+                        'current_run': 0,
+                        'interval_ms': 0,
+                        'last_outcome': None,
+                        'last_duration_ms': None,
+                        'recent_outcomes': [],
+                    })
 
-                last_outcome = None
-                last_duration_ms = None
-                recent_outcomes = []
-
-                if history:
-                    last_record = history[-1]
-                    last_outcome = last_record['outcome']
-
-                    # .. walk backwards to find the most recent completed record's duration ..
-                    for idx in range(len(history) - 1, -1, -1):
-                        rec_duration = history[idx]['duration_ms']
-                        if rec_duration is not None:
-                            last_duration_ms = rec_duration
-                            break
-
-                    start_idx = max(0, len(history) - 10)
-                    for rec in history[start_idx:]:
-                        recent_outcomes.append(rec['outcome'])
-
-                jobs.append({
-                    'id': job_id,
-                    'name': name,
-                    'is_active': is_active,
-                    'job_type': job_type,
-                    'service': service,
-                    'next_fire_utc': next_fire_utc,
-                    'is_running': is_running,
-                    'current_run': current_run,
-                    'interval_ms': interval_ms,
-                    'last_outcome': last_outcome,
-                    'last_duration_ms': last_duration_ms,
-                    'recent_outcomes': recent_outcomes,
-                })
-
+            # .. outcome_counts and total_executions are summed from per-job summaries ..
             outcome_counts = {
                 'ok': 0,
                 'error': 0,
@@ -718,33 +697,19 @@ class GetCurrentState(_SchedulerAdmin):
                 'skipped_holiday': 0,
                 'missed_catchup': 0,
             }
-            history_timeline = []
+            execution_outcomes = {'ok', 'error', 'timeout'}
             total_executions = 0
 
-            execution_outcomes = {'ok', 'error', 'timeout'}
+            for summary in runtime_by_id.values():
+                per_job = summary['outcome_counts']
+                for key in outcome_counts:
+                    outcome_counts[key] += per_job[key]
+                for outcome_key in execution_outcomes:
+                    total_executions += per_job[outcome_key]
 
-            for job_id, records in all_history.items():
-                job_name = ''
-                for item in store_jobs:
-                    if item['id'] == job_id:
-                        job_name = item['name']
-                        break
-                if not job_name:
-                    summary = runtime_by_id.get(job_id)
-                    if summary is not None:
-                        job_name = summary['name']
-
-                for rec in records:
-                    outcome = rec['outcome']
-                    outcome_counts[outcome] += 1
-                    if outcome in execution_outcomes:
-                        total_executions += 1
-                    entry = dict(rec)
-                    entry['job_id'] = job_id
-                    entry['job_name'] = job_name
-                    history_timeline.append(entry)
-
-            history_timeline.sort(key=lambda x: x['actual_fire_time_iso'], reverse=True)
+            # .. get_timeline_events returns lightweight dicts already sorted by Rust ..
+            history_timeline = scheduler.get_timeline_events()
+            history_timeline.sort(key=lambda entry: entry['actual_fire_time_iso'], reverse=True)
 
             self.response.payload = {
                 'total_jobs': total_jobs,

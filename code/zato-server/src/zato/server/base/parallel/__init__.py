@@ -990,7 +990,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         from zato.common.api import SCHEDULER
         from zato.common.broker_message import SCHEDULER as SCHEDULER_MSG
-        from zato_scheduler_core import scheduler_start
+        from zato_scheduler_core import Scheduler as RustScheduler
 
         self._scheduler_started = False
 
@@ -1002,7 +1002,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         def _on_job_executed(ctx:'anydict') -> 'None':
             import time as _time
             from bunch import Bunch
-            from zato_scheduler_core import scheduler_mark_complete
 
             job_id = ctx['id']
             job_name = ctx['name']
@@ -1027,6 +1026,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'job_type': ctx['job_type'],
                 'zato_ctx': {
                     'scheduler_job_id': ctx['id'],
+                    'scheduler_current_run': current_run,
                 },
             })
 
@@ -1041,7 +1041,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             duration_ms = int((_time.monotonic() - _t0) * 1000)
 
             try:
-                scheduler_mark_complete(job_id, outcome, duration_ms, current_run)
+                self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
                 logger.info('Scheduler job_id=%s; name=%s; outcome=%s; duration=%sms', job_id, job_name, outcome, duration_ms)
             except Exception:
                 logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
@@ -1050,7 +1050,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             from zato.server.scheduler_.adapter import SchedulerODBAdapter
             scheduler_adapter = SchedulerODBAdapter(self.odb, self.cluster_id)
 
-            scheduler_start({
+            self._scheduler = RustScheduler()
+            self._scheduler.start({
                 'odb_adapter': scheduler_adapter,
                 'run_cb': _scheduler_run_cb,
                 'spawn_fn': spawn,
@@ -1237,8 +1238,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         # .. reload the Rust scheduler if it was started ..
         if getattr(self, '_scheduler_started', False):
-            from zato_scheduler_core import scheduler_reload
-            scheduler_reload()
+            self._scheduler.reload()
 
         # .. finally, log what happened.
         logger.info('⭐ Config loaded OK')

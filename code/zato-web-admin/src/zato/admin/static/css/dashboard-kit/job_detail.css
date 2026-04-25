@@ -132,14 +132,23 @@
     to { transform: rotate(1turn); }
 }
 
-@keyframes badge-puff {
+@keyframes kit-puff {
     0%   { transform: scale(1); background: rgba(218, 165, 32, 0.5); color: #7a5c00; }
     50%  { transform: scale(1.12); background: rgba(218, 165, 32, 0.3); color: #7a5c00; }
     100% { transform: scale(1); }
 }
 
-.badge-puff {
-    animation: badge-puff 0.7s ease-out;
+.kit-puff {
+    animation: kit-puff 0.7s ease-out;
+}
+
+@keyframes kit-fade-in {
+    from { opacity: 0; transform: translateY(-2px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.kit-fade-in {
+    animation: kit-fade-in 0.35s ease-out;
 }
 
 .detail-tag {

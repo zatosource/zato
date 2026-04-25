@@ -1,12 +1,10 @@
-use proptest::prelude::*;
 use chrono::{Duration, Utc};
-use zato_scheduler_core::job::{RunningJob, ExecutionRecord};
+use proptest::prelude::*;
+use zato_scheduler_core::job::{ExecutionRecord, RunningJob};
 use zato_scheduler_core::model::SchedulerJob;
 
 fn make_job() -> SchedulerJob {
-    let start = (Utc::now() - Duration::hours(1))
-        .format("%Y-%m-%dT%H:%M:%S")
-        .to_string();
+    let start = (Utc::now() - Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string();
     SchedulerJob {
         id: 1,
         name: "test".into(),
@@ -15,7 +13,9 @@ fn make_job() -> SchedulerJob {
         job_type: "interval_based".into(),
         start_date: start,
         extra: None,
-        weeks: None, days: None, hours: None,
+        weeks: None,
+        days: None,
+        hours: None,
         minutes: Some(5),
         seconds: None,
         repeats: None,

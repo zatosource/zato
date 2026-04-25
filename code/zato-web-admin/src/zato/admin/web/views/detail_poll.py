@@ -30,11 +30,30 @@ _service_registry = {
     'pubsub-queue': 'zato.broker.queue.get-detail',
 }
 
+_action_registry = {
+    'get-log-entries': 'zato.scheduler.job.get-log-entries',
+}
+
 # ################################################################################################################################
 # ################################################################################################################################
 
 @method_allowed('POST')
 def detail_poll(req):
+    content_type = req.content_type or ''
+
+    if 'application/json' in content_type:
+        body = json.loads(req.body)
+        action = body.get('action')
+        if action and action in _action_registry:
+            service_name = _action_registry[action]
+            service_payload = {
+                'job_id': body['job_id'],
+                'current_run': body['current_run'],
+                'since_idx': body.get('since_idx', 0),
+            }
+            response = req.zato.client.invoke(service_name, service_payload)
+            return HttpResponse(json.dumps(response.data), content_type='application/json')
+
     service_name = _service_registry[req.POST['object_type']]
     response = req.zato.client.invoke(service_name, req.POST.dict())
     return HttpResponse(json.dumps(response.data), content_type='application/json')

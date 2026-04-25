@@ -159,6 +159,30 @@ _utcnow = utcnow
 
 # ################################################################################################################################
 
+class SchedulerLogCapture(logging.Handler):
+    """ Captures service log entries and forwards them to the Rust scheduler log store.
+    """
+
+    def __init__(self, scheduler:'any_', job_id:'int', current_run:'int') -> 'None':
+        super().__init__()
+        self._scheduler = scheduler
+        self._job_id = job_id
+        self._current_run = current_run
+
+    def emit(self, record:'any_') -> 'None':
+        try:
+            self._scheduler.append_log_entry(
+                self._job_id,
+                self._current_run,
+                datetime.fromtimestamp(record.created).isoformat(),
+                record.levelname,
+                self.format(record),
+            )
+        except Exception:
+            self.handleError(record)
+
+# ################################################################################################################################
+
 before_handle_hooks = ('before_handle',)
 after_handle_hooks = ('after_handle',)
 
@@ -767,8 +791,22 @@ class Service:
                 if service.call_hooks and service.before_handle: # type: ignore
                     call_hook_no_service(service.before_handle)
 
-                # This is the place where the service is invoked
-                self._invoke(service, channel)
+                # .. attach scheduler log capture handler if this is a scheduler-initiated invocation ..
+                _scheduler_log_handler = None
+                _scheduler_zato_ctx = wsgi_environ.get('zato.zato_ctx') or {}
+                _scheduler_job_id = _scheduler_zato_ctx.get('scheduler_job_id')
+                _scheduler_current_run = _scheduler_zato_ctx.get('scheduler_current_run')
+                if _scheduler_job_id is not None and _scheduler_current_run is not None:
+                    _scheduler_log_handler = SchedulerLogCapture(
+                        server._scheduler, _scheduler_job_id, _scheduler_current_run)
+                    service.logger.addHandler(_scheduler_log_handler)
+
+                try:
+                    # This is the place where the service is invoked
+                    self._invoke(service, channel)
+                finally:
+                    if _scheduler_log_handler is not None:
+                        service.logger.removeHandler(_scheduler_log_handler)
 
                 # Called after .handle - catches exceptions
                 if service.call_hooks and service.after_handle: # type: ignore

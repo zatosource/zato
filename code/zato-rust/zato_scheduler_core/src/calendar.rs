@@ -39,8 +39,7 @@ impl CalendarData {
         if self.dates.contains(&date) {
             return true;
         }
-        u8::try_from(date.weekday().num_days_from_monday())
-            .is_ok_and(|weekday_num| self.weekdays.contains(&weekday_num))
+        u8::try_from(date.weekday().num_days_from_monday()).is_ok_and(|weekday_num| self.weekdays.contains(&weekday_num))
     }
 }
 
@@ -54,12 +53,10 @@ mod tests {
     #[test]
     fn test_date_exclusion() -> TestResult {
         let mut cal = CalendarData::new("test".into());
-        let christmas = NaiveDate::from_ymd_opt(2026, 12, 25)
-            .ok_or("invalid date: 2026-12-25")?;
+        let christmas = NaiveDate::from_ymd_opt(2026, 12, 25).ok_or("invalid date: 2026-12-25")?;
         cal.dates.insert(christmas);
         assert!(cal.is_excluded(christmas));
-        let day_after = NaiveDate::from_ymd_opt(2026, 12, 26)
-            .ok_or("invalid date: 2026-12-26")?;
+        let day_after = NaiveDate::from_ymd_opt(2026, 12, 26).ok_or("invalid date: 2026-12-26")?;
         assert!(!cal.is_excluded(day_after));
         Ok(())
     }
@@ -69,12 +66,9 @@ mod tests {
         let mut cal = CalendarData::new("test".into());
         cal.weekdays.push(5); // Saturday
         cal.weekdays.push(6); // Sunday
-        let sat = NaiveDate::from_ymd_opt(2026, 4, 11)
-            .ok_or("invalid date: 2026-04-11")?;
-        let sun = NaiveDate::from_ymd_opt(2026, 4, 12)
-            .ok_or("invalid date: 2026-04-12")?;
-        let mon = NaiveDate::from_ymd_opt(2026, 4, 13)
-            .ok_or("invalid date: 2026-04-13")?;
+        let sat = NaiveDate::from_ymd_opt(2026, 4, 11).ok_or("invalid date: 2026-04-11")?;
+        let sun = NaiveDate::from_ymd_opt(2026, 4, 12).ok_or("invalid date: 2026-04-12")?;
+        let mon = NaiveDate::from_ymd_opt(2026, 4, 13).ok_or("invalid date: 2026-04-13")?;
         assert!(cal.is_excluded(sat));
         assert!(cal.is_excluded(sun));
         assert!(!cal.is_excluded(mon));

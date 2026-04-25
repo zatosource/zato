@@ -1,8 +1,8 @@
-use proptest::prelude::*;
 use chrono::{Duration, Utc};
+use proptest::prelude::*;
 use zato_scheduler_core::job::RunningJob;
-use zato_scheduler_core::scheduler::{SchedulerState, collect_due_jobs};
 use zato_scheduler_core::model::SchedulerJob;
+use zato_scheduler_core::scheduler::{SchedulerState, collect_due_jobs};
 
 fn make_due_job(id: i64, minutes_ago: u32) -> SchedulerJob {
     let start = (Utc::now() - Duration::minutes(i64::from(minutes_ago) + 60))

@@ -1,13 +1,12 @@
-use proptest::prelude::*;
-use proptest::collection::hash_set;
 use chrono::NaiveDate;
+use proptest::collection::hash_set;
+use proptest::prelude::*;
 use zato_scheduler_core::calendar::CalendarData;
 
 fn arb_naive_date() -> impl Strategy<Value = NaiveDate> {
-    (2000i32..2100, 1u32..13, 1u32..29).prop_filter_map(
-        "year/month/day must form a valid date",
-        |(year, month, day)| NaiveDate::from_ymd_opt(year, month, day),
-    )
+    (2000i32..2100, 1u32..13, 1u32..29).prop_filter_map("year/month/day must form a valid date", |(year, month, day)| {
+        NaiveDate::from_ymd_opt(year, month, day)
+    })
 }
 
 proptest! {

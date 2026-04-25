@@ -1176,6 +1176,7 @@ class WorkerStore(_WorkerStoreBase):
 
         if zato_ctx:
             wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
+            wsgi_environ['zato.zato_ctx'] = zato_ctx
 
         data_format = msg.get('data_format') or _data_format_dict
         transport = msg.get('transport')

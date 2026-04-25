@@ -3,14 +3,14 @@
 // Copyright (C) 2026, Zato Source s.r.o. https://zato.io
 // Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 
-use std::hash::BuildHasher;
-
 use crate::job::ExecutionRecord;
 
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
 /// Converts a single execution record into a Python dictionary.
+///
+/// Includes a `log_summary` dict with per-level counts (cheap, no message bodies).
 ///
 /// # Errors
 ///
@@ -34,15 +34,35 @@ fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bo
         Some(outcome_ctx) => out.set_item("outcome_ctx", outcome_ctx)?,
         None => out.set_item("outcome_ctx", py.None())?,
     }
+
+    let log_summary = PyDict::new(py);
+    let mut system_count: usize = 0;
+    let mut info_count: usize = 0;
+    let mut warn_count: usize = 0;
+    let mut error_count: usize = 0;
+    for entry in &rec.log_entries {
+        match entry.level.as_str() {
+            "SYSTEM" => system_count += 1,
+            "WARNING" | "WARN" => warn_count += 1,
+            "ERROR" | "CRITICAL" => error_count += 1,
+            _ => info_count += 1,
+        }
+    }
+    log_summary.set_item("system", system_count)?;
+    log_summary.set_item("info", info_count)?;
+    log_summary.set_item("warn", warn_count)?;
+    log_summary.set_item("error", error_count)?;
+    out.set_item("log_summary", log_summary)?;
+
     Ok(out)
 }
 
-/// Converts a slice of execution records into a Python list of dictionaries.
+/// Converts a slice of execution record references into a Python list of dictionaries.
 ///
 /// # Errors
 ///
 /// Returns a `PyErr` if record conversion or list insertion fails.
-pub fn records_to_py_list(py: Python<'_>, records: &[ExecutionRecord]) -> PyResult<Py<PyList>> {
+pub fn records_to_py_list(py: Python<'_>, records: &[&ExecutionRecord]) -> PyResult<Py<PyList>> {
     let list = PyList::empty(py);
     for rec in records {
         list.append(record_to_py_dict(py, rec)?)?;
@@ -50,13 +70,13 @@ pub fn records_to_py_list(py: Python<'_>, records: &[ExecutionRecord]) -> PyResu
     Ok(list.unbind())
 }
 
-/// Converts a page of execution records and total count into a Python dictionary
+/// Converts a page of execution record references and total count into a Python dictionary
 /// with `records` and `total` keys.
 ///
 /// # Errors
 ///
 /// Returns a `PyErr` if record conversion or dict insertion fails.
-pub fn records_page_to_py_dict(py: Python<'_>, records: &[ExecutionRecord], total: usize) -> PyResult<Py<PyDict>> {
+pub fn records_page_to_py_dict(py: Python<'_>, records: &[&ExecutionRecord], total: usize) -> PyResult<Py<PyDict>> {
     let out = PyDict::new(py);
     let list = PyList::empty(py);
     for rec in records {
@@ -64,26 +84,5 @@ pub fn records_page_to_py_dict(py: Python<'_>, records: &[ExecutionRecord], tota
     }
     out.set_item("records", list)?;
     out.set_item("total", total)?;
-    Ok(out.unbind())
-}
-
-/// Converts all job histories into a Python dictionary keyed by job ID,
-/// where each value is a list of execution record dictionaries.
-///
-/// # Errors
-///
-/// Returns a `PyErr` if record conversion or dict insertion fails.
-pub fn all_history_to_py_dict<S: BuildHasher>(
-    py: Python<'_>,
-    jobs: &std::collections::HashMap<i64, crate::job::RunningJob, S>,
-) -> PyResult<Py<PyDict>> {
-    let out = PyDict::new(py);
-    for (id, running_job) in jobs {
-        let list = PyList::empty(py);
-        for rec in &running_job.history {
-            list.append(record_to_py_dict(py, rec)?)?;
-        }
-        out.set_item(*id, list)?;
-    }
     Ok(out.unbind())
 }
