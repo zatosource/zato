@@ -29,7 +29,6 @@ $.fn.zato.arena.logs.config = {
         children: '/zato/arena/logs/children/',
         by_attr: '/zato/arena/logs/by-attr/',
         by_range: '/zato/arena/logs/by-range/',
-        by_float_range: '/zato/arena/logs/by-float-range/',
         by_text: '/zato/arena/logs/by-text/'
     },
 

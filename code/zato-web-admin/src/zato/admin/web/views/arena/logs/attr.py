@@ -51,22 +51,4 @@ def by_range(req) -> 'HttpResponse':
     return HttpResponse(dumps(response.data), content_type='application/json')
 
 # ################################################################################################################################
-
-@method_allowed('POST')
-def by_float_range(req) -> 'HttpResponse':
-    """ Float range query on a floating-point attribute.
-    """
-    key = req.POST['key']
-    min_val = float(req.POST['min'])
-    max_val = float(req.POST['max'])
-
-    response = req.zato.client.invoke('zato.arena.logs.by-float-range', {
-        'key': key,
-        'min': min_val,
-        'max': max_val,
-    })
-
-    return HttpResponse(dumps(response.data), content_type='application/json')
-
-# ################################################################################################################################
 # ################################################################################################################################

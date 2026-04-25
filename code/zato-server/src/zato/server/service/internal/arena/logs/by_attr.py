@@ -44,21 +44,4 @@ class ByRange(Service):
         self.response.payload = result
 
 # ################################################################################################################################
-
-class ByFloatRange(Service):
-    """ Float range query on a floating-point attribute.
-    """
-    name = 'zato.arena.logs.by-float-range'
-
-    def handle(self) -> 'None':
-        key:'str' = self.request.input['key']
-        min_val:'float' = self.request.input['min']
-        max_val:'float' = self.request.input['max']
-
-        arena = self.server.work_arena
-        result = arena.by_float_range(key, min_val, max_val)
-
-        self.response.payload = result
-
-# ################################################################################################################################
 # ################################################################################################################################
