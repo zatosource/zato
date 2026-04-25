@@ -3,35 +3,55 @@ use pyo3::types::{PyDict, PyList, PyString, PyTuple};
 use crate::inference::{infer_type, ElemType};
 use crate::compat::{Elem, Bool, Int, Secret, Text, AsIs, Float, CSV, Date, DateTime, Decimal, Dict, DictList, List, UTC, UUID};
 
+/// Shorthand for a heap-allocated Python object reference.
 type PyObject = Py<PyAny>;
 
+/// Holds parsed metadata about a single SIO element - its name, inferred
+/// or explicit type, and whether the element is required on input/output.
 #[derive(Clone)]
 pub struct ElemInfo {
+    /// Element name as declared in the service class.
     pub name: String,
+
+    /// Resolved element type used for coercion and serialisation.
     pub elem_type: ElemType,
+
+    /// Whether the element must be present (true) or is optional (false).
     pub is_required: bool,
 }
 
+/// Processes SIO declarations on Zato service classes, parsing input/output
+/// element definitions and handling type coercion between Python and the
+/// wire format during request/response processing.
 #[pyclass]
 pub struct SIOProcessor {
+    /// Parsed input element descriptors for the attached service.
     input_elems: Vec<ElemInfo>,
+
+    /// Parsed output element descriptors for the attached service.
     output_elems: Vec<ElemInfo>,
 
+    /// Whether the service uses a Python dataclass for its input/output model.
     #[pyo3(get)]
     pub is_dataclass: bool,
 
+    /// Whether the service declared any input elements.
     #[pyo3(get)]
     pub has_input_declared: bool,
 
+    /// Whether the service declared any output elements.
     #[pyo3(get)]
     pub has_output_declared: bool,
 
+    /// Reference to the Python service class this processor is attached to.
     #[pyo3(get, set)]
     pub service_class: Option<PyObject>,
 }
 
 impl SIOProcessor {
 
+    /// Resolves the `ElemType` for a bound Python object by checking whether
+    /// it is an instance of one of the known SIO element classes.
     fn elem_type_from_instance(item: &Bound<'_, PyAny>) -> Option<ElemType> {
         if item.is_instance_of::<Bool>() { return Some(ElemType::Bool); }
         if item.is_instance_of::<Int>() { return Some(ElemType::Int); }
@@ -55,6 +75,8 @@ impl SIOProcessor {
         None
     }
 
+    /// Parses a single SIO element from either an Elem instance or a bare
+    /// string name, extracting the element name, type, and required flag.
     fn parse_single_elem(item: &Bound<'_, PyAny>) -> PyResult<ElemInfo> {
         if let Some(elem_type) = Self::elem_type_from_instance(item) {
             let name: String = item.getattr("name")?.extract()?;
@@ -81,19 +103,19 @@ impl SIOProcessor {
         })
     }
 
-    fn parse_elem_list(_py: Python<'_>, items: &Bound<'_, PyAny>) -> PyResult<Vec<ElemInfo>> {
+    /// Parses a Python value into a list of `ElemInfo` descriptors, handling
+    /// single Elem instances, bare strings, and iterables (tuples, lists).
+    fn parse_elem_list(py: Python<'_>, items: &Bound<'_, PyAny>) -> PyResult<Vec<ElemInfo>> {
+        let _py = py;
 
-        // Single Elem instance (e.g. input = AsIs('data'))
         if Self::elem_type_from_instance(items).is_some() {
             return Ok(vec![Self::parse_single_elem(items)?]);
         }
 
-        // Single bare string (e.g. input = 'name') - do not iterate chars
         if items.is_instance_of::<PyString>() {
             return Ok(vec![Self::parse_single_elem(items)?]);
         }
 
-        // Iterable (tuple or list)
         let mut elems = Vec::new();
         for item in items.try_iter()? {
             let item = item?;
@@ -106,6 +128,7 @@ impl SIOProcessor {
 #[pymethods]
 impl SIOProcessor {
 
+    /// Creates a new, empty SIO processor with no declared elements.
     #[new]
     fn new() -> Self {
         Self {
@@ -118,25 +141,27 @@ impl SIOProcessor {
         }
     }
 
+    /// Inspects a Python service class for `input`/`output` attributes, builds
+    /// element metadata, and attaches the resulting processor as `_sio` on the class.
     #[staticmethod]
     fn attach_sio(py: Python<'_>, _server: &Bound<'_, PyAny>, _server_config: &Bound<'_, PyAny>, class: &Bound<'_, PyAny>) -> PyResult<()> {
         let sio_input = class.getattr("input").ok();
         let sio_output = class.getattr("output").ok();
 
-        let has_input = sio_input.as_ref().is_some_and(|v| !v.is_none());
-        let has_output = sio_output.as_ref().is_some_and(|v| !v.is_none());
+        let has_input = sio_input.as_ref().is_some_and(|val| !val.is_none());
+        let has_output = sio_output.as_ref().is_some_and(|val| !val.is_none());
 
         if !has_input && !has_output {
             return Ok(());
         }
 
-        let mut proc = SIOProcessor::new();
+        let mut proc = Self::new();
         proc.has_input_declared = has_input;
         proc.has_output_declared = has_output;
         proc.service_class = Some(class.clone().unbind());
 
-        if has_input {
-            let input = sio_input.unwrap();
+        if let Some(input) = sio_input.filter(|val| !val.is_none()) {
+            proc.has_input_declared = true;
             if input.getattr("__dataclass_fields__").is_ok() {
                 proc.is_dataclass = true;
             } else {
@@ -144,8 +169,8 @@ impl SIOProcessor {
             }
         }
 
-        if has_output {
-            let output = sio_output.unwrap();
+        if let Some(output) = sio_output.filter(|val| !val.is_none()) {
+            proc.has_output_declared = true;
             if output.getattr("__dataclass_fields__").is_ok() {
                 proc.is_dataclass = true;
             } else {
@@ -158,6 +183,8 @@ impl SIOProcessor {
         Ok(())
     }
 
+    /// Converts a bare element name into the appropriate typed Elem instance
+    /// (Bool, Int, Secret, or Text) based on name-based type inference.
     fn convert_to_elem_instance<'py>(&self, py: Python<'py>, name: String, _is_required: bool) -> PyResult<Bound<'py, PyAny>> {
         let clean_name = if let Some(stripped) = name.strip_prefix('-') {
             stripped.to_string()
@@ -187,8 +214,10 @@ impl SIOProcessor {
         }
     }
 
+    /// Parses raw input data against the declared input elements, coercing
+    /// values to their declared types and raising on missing required elements.
     #[pyo3(signature = (data, data_format, extra=None, service=None))]
-    #[allow(unused_variables)]
+    #[expect(unused_variables, reason = "extra and service parameters reserved for future use")]
     fn parse_input(
         &self,
         py: Python<'_>,
@@ -218,27 +247,27 @@ impl SIOProcessor {
             let mut value: Option<Bound<'_, PyAny>> = None;
 
             if let Some(extra_dict) = extra {
-                if let Some(v) = extra_dict.get_item(&elem.name)? {
-                    value = Some(v);
+                if let Some(val) = extra_dict.get_item(&elem.name)? {
+                    value = Some(val);
                 }
             }
 
             if value.is_none() {
                 if let Ok(dict) = parsed.cast::<PyDict>() {
-                    if let Some(v) = dict.get_item(&elem.name)? {
-                        value = Some(v);
+                    if let Some(val) = dict.get_item(&elem.name)? {
+                        value = Some(val);
                     }
                 } else {
                     let py_name = PyString::new(py, &elem.name);
-                    if let Ok(v) = parsed.getattr(&py_name) {
-                        value = Some(v);
+                    if let Ok(val) = parsed.getattr(&py_name) {
+                        value = Some(val);
                     }
                 }
             }
 
             match value {
-                Some(v) => {
-                    let coerced = self.coerce_value(py, &v, elem.elem_type)?;
+                Some(val) => {
+                    let coerced = self.coerce_value(py, &val, elem.elem_type)?;
                     result_dict.set_item(&elem.name, coerced.bind(py))?;
                 }
                 None => {
@@ -255,6 +284,8 @@ impl SIOProcessor {
         Ok(result_dict.into_any().unbind())
     }
 
+    /// Filters a response value through the declared output elements, keeping
+    /// only the fields that appear in the output declaration.
     fn get_output<'py>(&self, py: Python<'py>, value: &Bound<'py, PyAny>) -> PyResult<PyObject> {
         if self.output_elems.is_empty() {
             return Ok(value.clone().unbind());
@@ -277,16 +308,20 @@ impl SIOProcessor {
         Ok(value.clone().unbind())
     }
 
+    /// Returns the names of all declared output elements.
     #[getter]
     fn all_output_elem_names(&self) -> Vec<String> {
-        self.output_elems.iter().map(|e| e.name.clone()).collect()
+        self.output_elems.iter().map(|elem| elem.name.clone()).collect()
     }
 
+    /// Returns the names of all declared input elements.
     #[getter]
     fn all_input_elem_names(&self) -> Vec<String> {
-        self.input_elems.iter().map(|e| e.name.clone()).collect()
+        self.input_elems.iter().map(|elem| elem.name.clone()).collect()
     }
 
+    /// Evaluates and coerces a single element value according to its inferred
+    /// type, optionally encrypting secrets via a caller-supplied function.
     #[pyo3(signature = (elem_name, value, encrypt_func=None))]
     fn eval_<'py>(
         &self,
@@ -300,15 +335,15 @@ impl SIOProcessor {
         match elem_type {
             ElemType::Bool => {
                 if value.is_none() || (value.is_instance_of::<PyString>() && value.str()?.to_string().is_empty()) {
-                    let b = false;
-                    return Ok(b.into_pyobject(py)?.to_owned().into_any().unbind());
+                    let bool_val = false;
+                    return Ok(bool_val.into_pyobject(py)?.to_owned().into_any().unbind());
                 }
                 if value.is_instance_of::<pyo3::types::PyBool>() {
                     return Ok(value.clone().unbind());
                 }
-                let s = value.str()?.to_string().to_lowercase();
-                let b = matches!(s.as_str(), "true" | "1" | "yes" | "t" | "on");
-                Ok(b.into_pyobject(py)?.to_owned().into_any().unbind())
+                let text = value.str()?.to_string().to_lowercase();
+                let bool_val = matches!(text.as_str(), "true" | "1" | "yes" | "t" | "on");
+                Ok(bool_val.into_pyobject(py)?.to_owned().into_any().unbind())
             }
             ElemType::Int => {
                 if value.is_none() || (value.is_instance_of::<PyString>() && value.str()?.to_string().is_empty()) {
@@ -342,6 +377,7 @@ impl SIOProcessor {
 }
 
 impl SIOProcessor {
+    /// Coerces a Python value to the target element type (int, bool, or pass-through).
     fn coerce_value(&self, py: Python<'_>, value: &Bound<'_, PyAny>, elem_type: ElemType) -> PyResult<PyObject> {
         if value.is_none() {
             return Ok(py.None());
@@ -361,27 +397,29 @@ impl SIOProcessor {
                 if value.is_instance_of::<pyo3::types::PyBool>() {
                     return Ok(value.clone().unbind());
                 }
-                let s = value.str()?.to_string().to_lowercase();
-                let b = matches!(s.as_str(), "true" | "1" | "yes");
-                Ok(b.into_pyobject(py)?.to_owned().into_any().unbind())
+                let text = value.str()?.to_string().to_lowercase();
+                let bool_val = matches!(text.as_str(), "true" | "1" | "yes");
+                Ok(bool_val.into_pyobject(py)?.to_owned().into_any().unbind())
             }
             _ => Ok(value.clone().unbind()),
         }
     }
 
+    /// Extracts only the declared output elements from a dict or object,
+    /// returning a filtered Python dict.
     fn filter_dict_to_output(&self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<PyObject> {
         let out = PyDict::new(py);
         if let Ok(dict) = value.cast::<PyDict>() {
             for elem in &self.output_elems {
-                if let Some(v) = dict.get_item(&elem.name)? {
-                    out.set_item(&elem.name, v)?;
+                if let Some(val) = dict.get_item(&elem.name)? {
+                    out.set_item(&elem.name, val)?;
                 }
             }
         } else {
             for elem in &self.output_elems {
                 let py_name = PyString::new(py, &elem.name);
-                if let Ok(v) = value.getattr(&py_name) {
-                    out.set_item(&elem.name, v)?;
+                if let Ok(val) = value.getattr(&py_name) {
+                    out.set_item(&elem.name, val)?;
                 }
             }
         }

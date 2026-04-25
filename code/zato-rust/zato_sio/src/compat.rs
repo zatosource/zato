@@ -1,24 +1,42 @@
 use pyo3::prelude::*;
+use pyo3::Borrowed;
+
 use crate::inference::ElemType;
 
-#[pyclass(subclass, from_py_object)]
+/// Base SIO element exposed to Python, carrying the element name, whether it
+/// is required, and the inferred (or explicit) element type.
+#[expect(clippy::struct_field_names, reason = "elem_type clearly describes the field purpose")]
+#[pyclass(subclass, skip_from_py_object)]
 #[derive(Clone)]
 pub struct Elem {
+    /// Element name as declared by the Zato service.
     #[pyo3(get, set)]
     pub name: String,
+    /// Whether the element is required (`true`) or optional (name prefixed with `-`).
     #[pyo3(get, set)]
     pub is_required: bool,
+    /// Resolved SIO type for this element.
     pub elem_type: ElemType,
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for Elem {
+    type Error = PyErr;
+
+    /// Extracts an `Elem` by cloning the Rust struct out of its Python wrapper.
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let borrowed: Borrowed<'a, 'py, Elem> = obj.cast()?;
+        Ok(borrowed.borrow().clone())
+    }
 }
 
 #[pymethods]
 impl Elem {
+    /// Creates a new `Elem`, stripping a leading `-` to mark the element as optional.
     #[new]
     fn new(name: String) -> Self {
-        let (is_required, clean_name) = if let Some(stripped) = name.strip_prefix('-') {
-            (false, stripped.to_string())
-        } else {
-            (true, name)
+        let (is_required, clean_name) = match name.strip_prefix('-') {
+            Some(stripped) => (false, stripped.to_string()),
+            None => (true, name),
         };
         Self {
             name: clean_name,
@@ -27,23 +45,26 @@ impl Elem {
         }
     }
 
+    /// Python `repr()` showing the element name and whether it is required.
     fn __repr__(&self) -> String {
         format!("Elem(name='{}', required={})", self.name, self.is_required)
     }
 }
 
+/// Defines a concrete SIO element subtype exposed to Python that extends `Elem`.
 macro_rules! define_elem_type {
     ($name:ident, $variant:expr) => {
-        #[pyclass(extends=Elem, from_py_object)]
+        #[allow(clippy::upper_case_acronyms, reason = "Python-visible type names must match existing API")]
+        #[pyclass(extends=Elem, skip_from_py_object)]
         #[derive(Clone)]
         pub struct $name;
 
         impl $name {
+            /// Builds the subtype together with its parent `Elem`, handling the optional `-` prefix.
             pub fn create(name: String) -> (Self, Elem) {
-                let (is_required, clean_name) = if let Some(stripped) = name.strip_prefix('-') {
-                    (false, stripped.to_string())
-                } else {
-                    (true, name)
+                let (is_required, clean_name) = match name.strip_prefix('-') {
+                    Some(stripped) => (false, stripped.to_string()),
+                    None => (true, name),
                 };
                 ($name, Elem {
                     name: clean_name,
@@ -55,6 +76,7 @@ macro_rules! define_elem_type {
 
         #[pymethods]
         impl $name {
+            /// Creates a new instance from the element name, delegating to `create`.
             #[new]
             fn new(name: String) -> (Self, Elem) {
                 Self::create(name)
