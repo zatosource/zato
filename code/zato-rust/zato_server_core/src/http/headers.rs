@@ -1,23 +1,31 @@
+//! HTTP header parsing and WSGI environ key mapping.
+
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyString};
 use pyo3::intern;
 
 use crate::logging::transform_header_key;
 
+/// Converts a WSGI environ dict into a Zato-style HTTP headers dict
+/// by stripping the `HTTP_` prefix and lowercasing.
 #[pyfunction]
 pub fn extract_headers(environ: &Bound<'_, PyDict>) -> PyResult<Py<PyDict>> {
     let py = environ.py();
     let headers = PyDict::new(py);
     for (key, value) in environ.iter() {
         let key_str: &Bound<'_, PyString> = key.cast_exact()?;
-        let k = key_str.to_str()?;
-        if let Some(header) = transform_header_key(k) {
+        let key_text = key_str.to_str()?;
+        if let Some(header) = transform_header_key(key_text) {
             headers.set_item(header, value)?;
         }
     }
     Ok(headers.unbind())
 }
 
+/// Maps a single HTTP header name/value pair into the WSGI environ dict format.
+///
+/// Well-known headers (Content-Type, Authorization, etc.) are mapped to their canonical keys,
+/// everything else becomes `HTTP_<UPPERCASED_UNDERSCORED>`.
 #[inline]
 pub(super) fn set_header(py: Python<'_>, dict: &Bound<'_, PyDict>, name: &str, value: &[u8]) -> PyResult<()> {
     let val = String::from_utf8_lossy(value);
@@ -38,8 +46,8 @@ pub(super) fn set_header(py: Python<'_>, dict: &Bound<'_, PyDict>, name: &str, v
     } else {
         let mut key = String::with_capacity(5 + name.len());
         key.push_str("HTTP_");
-        for b in name.bytes() {
-            key.push(if b == b'-' { '_' } else { (b as char).to_ascii_uppercase() });
+        for byte in name.bytes() {
+            key.push(if byte == b'-' { '_' } else { char::from(byte).to_ascii_uppercase() });
         }
         dict.set_item(key, &*val)
     }

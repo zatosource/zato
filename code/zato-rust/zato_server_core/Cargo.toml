@@ -3,6 +3,11 @@ name = "zato_server_core"
 version = "4.1.0"
 edition = "2024"
 license = "AGPL-3.0-only"
+description = "Core server utilities for Zato - API, ESB, SOA, iPaaS, integration platform, middleware, rule engine"
+repository = "https://github.com/zatosource/zato"
+readme = "README.md"
+keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
+categories = ["development-tools"]
 
 [lib]
 name = "zato_server_core"
@@ -17,7 +22,9 @@ pyo3 = { version = "0.28.3", features = ["multiple-pymethods"] }
 http = "1.4.0"
 httparse = "1"
 libc = "0.2.184"
+prctl = "1.0.0"
 log = "0.4.29"
+parking_lot = "0.12"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
 chrono = "0.4.44"

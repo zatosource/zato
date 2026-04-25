@@ -1,6 +1,18 @@
-use serde::{Deserialize, Serialize};
-use super::*;
+//! Top-level enmasse configuration that aggregates all object types into a single deployable unit.
 
+use serde::{Deserialize, Serialize};
+use super::security::{SecurityDef, SecurityGroup};
+use super::channels::{ChannelRest, ChannelOpenApi};
+use super::outgoing::{OutgoingRest, OutgoingSoap, OutgoingSql, OutgoingOdoo};
+use super::scheduler::{SchedulerJob, HolidayCalendar};
+use super::pubsub::{PubSubTopic, PubSubPermission, PubSubSubscription};
+use super::services::ElasticSearchDef;
+use super::cache::CacheBuiltinDef;
+use super::email::{EmailSmtp, EmailImap};
+use super::generic::GenericConnection;
+
+/// Root of an enmasse YAML document - each field corresponds to an object category
+/// that Zato imports as a batch.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EnmasseConfig {
     #[serde(default)]

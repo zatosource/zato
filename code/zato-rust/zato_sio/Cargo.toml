@@ -3,6 +3,11 @@ name = "zato_sio"
 version = "4.1.0"
 edition = "2024"
 license = "AGPL-3.0-only"
+description = "SimpleIO serialisation layer for Zato - API, ESB, SOA, iPaaS, integration platform, middleware, rule engine"
+repository = "https://github.com/zatosource/zato"
+readme = "README.md"
+keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
+categories = ["development-tools"]
 
 [lib]
 name = "zato_sio"

@@ -3,6 +3,11 @@ name = "zato_scheduler_core"
 version = "4.1.0"
 edition = "2024"
 license = "AGPL-3.0-only"
+description = "Core scheduler utilities for Zato - API, ESB, SOA, iPaaS, integration platform, middleware, rule engine"
+repository = "https://github.com/zatosource/zato"
+readme = "README.md"
+keywords = ["zato", "api", "integration-platform", "ipaas", "rule-engine"]
+categories = ["development-tools"]
 
 [lib]
 name = "zato_scheduler_core"

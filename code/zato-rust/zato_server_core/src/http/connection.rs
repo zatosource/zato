@@ -1,3 +1,6 @@
+//! HTTP connection handler - reads requests, parses with `httparse`, dispatches to
+//! the Python request handler, and writes responses back over the same fd.
+
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 use pyo3::intern;
@@ -7,6 +10,13 @@ use super::headers::set_header;
 use super::io::{fd_read, fd_write_all, parse_content_length, header_value_eq};
 use super::response::build_response;
 
+/// Drives one HTTP keep-alive connection.
+///
+/// Reads requests in a loop, parses them, dispatches to the Python handler,
+/// and writes back the response. Returns when the client closes the connection
+/// or `Connection: close` is seen.
+#[expect(clippy::too_many_arguments, reason = "all parameters are needed to handle a connection")]
+#[expect(clippy::indexing_slicing, reason = "path slice indices come from find('?') and httparse header_len which guarantee bounds")]
 pub(super) fn handle_connection(
     py: Python<'_>,
     fd: i32,
@@ -23,8 +33,8 @@ pub(super) fn handle_connection(
 
     loop {
         if buf.is_empty() {
-            let n = fd_read(py, fd, &mut buf, &hub, &loop_obj)?;
-            if n == 0 { return Ok(()); }
+            let bytes_read = fd_read(py, fd, &mut buf, &hub, &loop_obj)?;
+            if bytes_read == 0 { return Ok(()); }
         }
 
         let (header_len, content_length, keep_alive, version, dict) = loop {
@@ -39,9 +49,9 @@ pub(super) fn handle_connection(
 
                     let dict = PyDict::new(py);
                     dict.set_item(intern!(py, "REQUEST_METHOD"), method)?;
-                    if let Some(q) = path.find('?') {
-                        dict.set_item(intern!(py, "PATH_INFO"), &path[..q])?;
-                        dict.set_item(intern!(py, "QUERY_STRING"), &path[q + 1..])?;
+                    if let Some(query_pos) = path.find('?') {
+                        dict.set_item(intern!(py, "PATH_INFO"), &path[..query_pos])?;
+                        dict.set_item(intern!(py, "QUERY_STRING"), &path[query_pos + 1..])?;
                     } else {
                         dict.set_item(intern!(py, "PATH_INFO"), path)?;
                         dict.set_item(intern!(py, "QUERY_STRING"), "")?;
@@ -53,24 +63,24 @@ pub(super) fn handle_connection(
                     dict.set_item(intern!(py, "REMOTE_ADDR"), remote_addr)?;
                     dict.set_item(intern!(py, "REMOTE_PORT"), remote_port)?;
 
-                    let mut cl: usize = 0;
-                    let mut ka = ver >= 1;
-                    for h in req.headers.iter() {
-                        set_header(py, &dict, h.name, h.value)?;
-                        if h.name.eq_ignore_ascii_case("content-length") {
-                            cl = parse_content_length(h.value);
-                        } else if h.name.eq_ignore_ascii_case("connection") {
-                            ka = header_value_eq(h.value, b"keep-alive");
+                    let mut content_len: usize = 0;
+                    let mut keep_alive_flag = ver >= 1;
+                    for header in req.headers.iter() {
+                        set_header(py, &dict, header.name, header.value)?;
+                        if header.name.eq_ignore_ascii_case("content-length") {
+                            content_len = parse_content_length(header.value);
+                        } else if header.name.eq_ignore_ascii_case("connection") {
+                            keep_alive_flag = header_value_eq(header.value, b"keep-alive");
                         }
                     }
-                    break (hlen, cl, ka, ver, dict);
+                    break (hlen, content_len, keep_alive_flag, ver, dict);
                 }
                 Ok(httparse::Status::Partial) => {
                     if buf.len() >= MAX_REQUEST_SIZE {
                         return Err(pyo3::exceptions::PyValueError::new_err("request too large"));
                     }
-                    let n = fd_read(py, fd, &mut buf, &hub, &loop_obj)?;
-                    if n == 0 {
+                    let bytes_read = fd_read(py, fd, &mut buf, &hub, &loop_obj)?;
+                    if bytes_read == 0 {
                         return Err(pyo3::exceptions::PyConnectionError::new_err("closed"));
                     }
                 }
@@ -82,8 +92,8 @@ pub(super) fn handle_connection(
 
         let end = header_len + content_length;
         while buf.len() < end {
-            let n = fd_read(py, fd, &mut buf, &hub, &loop_obj)?;
-            if n == 0 {
+            let bytes_read = fd_read(py, fd, &mut buf, &hub, &loop_obj)?;
+            if bytes_read == 0 {
                 return Err(pyo3::exceptions::PyConnectionError::new_err("closed"));
             }
         }
