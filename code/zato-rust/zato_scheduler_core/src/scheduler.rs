@@ -69,6 +69,8 @@ pub struct SchedulerState {
     pub dirty: bool,
     /// Pending synthetic log drips in a min-heap ordered by `due_at`.
     pub synthetic_drips: BinaryHeap<Reverse<SyntheticDrip>>,
+    /// Whether synthetic test data injection is enabled.
+    pub with_test_data: bool,
 }
 
 impl Default for SchedulerState {
@@ -86,6 +88,7 @@ impl SchedulerState {
             calendars: HashMap::new(),
             dirty: false,
             synthetic_drips: BinaryHeap::new(),
+            with_test_data: false,
         }
     }
 }

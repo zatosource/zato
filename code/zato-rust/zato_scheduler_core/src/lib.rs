@@ -194,6 +194,15 @@ impl Scheduler {
             .get_item("initial_sleep_time")?
             .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("missing initial_sleep_time"))?
             .extract()?;
+        let with_test_data: bool = config
+            .get_item("with_test_data")?
+            .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("missing with_test_data"))?
+            .extract()?;
+
+        {
+            let mut state = self.shared.state.lock();
+            state.with_test_data = with_test_data;
+        }
 
         self.odb_adapter = odb_adapter.clone_ref(py);
         let adapter = odb_adapter.clone_ref(py);
@@ -287,7 +296,7 @@ impl Scheduler {
         Ok(())
     }
 
-    /// Marks a job execution as complete and injects synthetic test records.
+    /// Marks a job execution as complete, optionally injecting synthetic test records.
     #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn mark_complete(&self, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
@@ -301,61 +310,69 @@ impl Scheduler {
                     if rec.current_run == current_run {
                         rec.duration_ms = Some(duration_ms);
                         rec.outcome = outcome.to_string();
-                        populate_synthetic_logs(rec, &Utc::now().to_rfc3339(), outcome);
-                        log::warn!(
-                            "[DRIP] populated real rec run={current_run} with {} log entries",
-                            rec.log_entries.len()
-                        );
                         break;
                     }
                 }
 
-                let now_iso = Utc::now().to_rfc3339();
-                let now_inst = Instant::now();
-                let mut drip_base_ms: u64 = 0;
-
-                for iter_idx in 0..2u8 {
-                    let raw_idx = TEST_INJECT_IDX.fetch_add(1, Ordering::Relaxed);
-                    let wrapped_idx = usize::try_from(raw_idx).map_or(0, |idx| idx % TEST_INJECT_OUTCOMES.len());
-                    let fake_outcome = TEST_INJECT_OUTCOMES.get(wrapped_idx).copied().unwrap_or(types::outcome::ERROR);
-                    let fake_duration = if fake_outcome == types::outcome::TIMEOUT { 32000 } else { 150 };
-                    running_job.current_run += 1;
-                    let run = running_job.current_run;
-
-                    log::warn!("[DRIP] creating synthetic running rec iter={iter_idx} run={run} fake_outcome={fake_outcome}");
-
-                    let mut rec = ExecutionRecord::new(&now_iso, &now_iso, types::outcome::RUNNING, run);
-                    if fake_outcome == types::outcome::SKIPPED_ALREADY_IN_FLIGHT {
-                        rec = rec.with_outcome_ctx(current_run.to_string());
+                if state.with_test_data {
+                    for rec in running_job.history.iter_mut().rev() {
+                        if rec.current_run == current_run {
+                            populate_synthetic_logs(rec, &Utc::now().to_rfc3339(), outcome);
+                            log::warn!(
+                                "[DRIP] populated real rec run={current_run} with {} log entries",
+                                rec.log_entries.len()
+                            );
+                            break;
+                        }
                     }
-                    running_job.record_execution(rec);
 
-                    let drip_entries = build_synthetic_drip_entries(&now_iso, fake_outcome);
-                    let drip_count = drip_entries.len();
-                    log::warn!("[DRIP] queuing {drip_count} drips for run={run}, drip_base_ms={drip_base_ms}");
-                    for (drip_idx, entry) in drip_entries.into_iter().enumerate() {
-                        let offset_ms = drip_base_ms + (u64::try_from(drip_idx).unwrap_or(0) + 1) * 5500;
-                        let is_last = drip_idx == drip_count - 1;
-                        log::warn!(
-                            "[DRIP]   drip {drip_idx}/{drip_count} offset_ms={offset_ms} level={} finalize={} due_at=now+{offset_ms}ms",
-                            entry.level,
-                            is_last
-                        );
-                        state.synthetic_drips.push(std::cmp::Reverse(SyntheticDrip {
-                            due_at: now_inst + Duration::from_millis(offset_ms),
-                            job_id,
-                            current_run: run,
-                            entry,
-                            finalize: if is_last {
-                                Some((fake_outcome.to_string(), fake_duration))
-                            } else {
-                                None
-                            },
-                        }));
+                    let now_iso = Utc::now().to_rfc3339();
+                    let now_inst = Instant::now();
+                    let mut drip_base_ms: u64 = 0;
+
+                    for iter_idx in 0..2u8 {
+                        let raw_idx = TEST_INJECT_IDX.fetch_add(1, Ordering::Relaxed);
+                        let wrapped_idx = usize::try_from(raw_idx).map_or(0, |idx| idx % TEST_INJECT_OUTCOMES.len());
+                        let fake_outcome = TEST_INJECT_OUTCOMES.get(wrapped_idx).copied().unwrap_or(types::outcome::ERROR);
+                        let fake_duration = if fake_outcome == types::outcome::TIMEOUT { 32000 } else { 150 };
+                        running_job.current_run += 1;
+                        let run = running_job.current_run;
+
+                        log::warn!("[DRIP] creating synthetic running rec iter={iter_idx} run={run} fake_outcome={fake_outcome}");
+
+                        let mut rec = ExecutionRecord::new(&now_iso, &now_iso, types::outcome::RUNNING, run);
+                        if fake_outcome == types::outcome::SKIPPED_ALREADY_IN_FLIGHT {
+                            rec = rec.with_outcome_ctx(current_run.to_string());
+                        }
+                        running_job.record_execution(rec);
+
+                        let drip_entries = build_synthetic_drip_entries(&now_iso, fake_outcome);
+                        let drip_count = drip_entries.len();
+                        log::warn!("[DRIP] queuing {drip_count} drips for run={run}, drip_base_ms={drip_base_ms}");
+                        for (drip_idx, entry) in drip_entries.into_iter().enumerate() {
+                            let offset_ms = drip_base_ms + (u64::try_from(drip_idx).unwrap_or(0) + 1) * 5500;
+                            let is_last = drip_idx == drip_count - 1;
+                            log::warn!(
+                                "[DRIP]   drip {drip_idx}/{drip_count} offset_ms={offset_ms} level={} finalize={} due_at=now+{offset_ms}ms",
+                                entry.level,
+                                is_last
+                            );
+                            state.synthetic_drips.push(std::cmp::Reverse(SyntheticDrip {
+                                due_at: now_inst + Duration::from_millis(offset_ms),
+                                job_id,
+                                current_run: run,
+                                entry,
+                                finalize: if is_last {
+                                    Some((fake_outcome.to_string(), fake_duration))
+                                } else {
+                                    None
+                                },
+                            }));
+                        }
+                        drip_base_ms += u64::try_from(drip_count).unwrap_or(0) * 5500;
                     }
-                    drip_base_ms += u64::try_from(drip_count).unwrap_or(0) * 5500;
+                    log::warn!("[DRIP] total drips queued: {}", state.synthetic_drips.len());
                 }
-                log::warn!("[DRIP] total drips queued: {}", state.synthetic_drips.len());
             } else {
                 log::warn!("[DRIP] mark_complete: job_id={job_id} NOT found in state");
             }

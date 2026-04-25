@@ -1057,6 +1057,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'spawn_fn': spawn,
                 'on_job_executed_cb': _on_job_executed,
                 'initial_sleep_time': 0.5,
+                'with_test_data': self.with_test_data,
             })
             self._scheduler_started = True
             logger.info('Scheduler started')

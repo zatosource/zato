@@ -501,6 +501,7 @@ def run(base_dir:'str', start_gunicorn_app:'bool'=True, options:'dictnone'=None)
     server.user_config.update(server_config.user_config_items)
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
+    server.with_test_data = asbool(options.get('with_test_data'))
     server.env_manager = env_manager
     server.startup_callable_tool = startup_callable_tool
     server.stop_after = stop_after # type: ignore
