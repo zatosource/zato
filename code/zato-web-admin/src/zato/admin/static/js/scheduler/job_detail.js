@@ -802,7 +802,8 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
     var accent = cfg.mirror_accent;
     var html = '<div class="detail-log-line detail-log-mirror" style="border-bottom:1px solid ' + cfg.row_border + '">';
     html += '<div class="detail-log-stripe" style="background:' + accent + '"></div>';
-    html += '<div class="detail-log-ts"><span class="detail-log-level" style="color:' + accent + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></div>';
+    var mirror_run_href = '/zato/scheduler/dashboard/job/' + encodeURIComponent(detail._object_id) + '/run/' + encodeURIComponent(record.current_run) + '/?cluster=' + detail.config.cluster_id;
+    html += '<div class="detail-log-ts"><a href="' + mirror_run_href + '" class="detail-run-link" style="text-decoration:none"><span class="detail-log-level" style="color:' + accent + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></a></div>';
     html += '<div class="detail-log-level-col">' + outcome_html + '</div>';
     var action_style = 'color:#aaa;background:rgba(255,255,255,0.08)';
     html += '<div class="detail-log-msg" style="color:' + cfg.owner_color + '">' + tag_html + '</div>';
@@ -904,8 +905,9 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     var is_skipped = record.outcome.indexOf('skipped') === 0;
     var tag_html = is_skipped ? '-' : detail._render_tag_badges(record);
 
+    var run_href = '/zato/scheduler/dashboard/job/' + encodeURIComponent(detail._object_id) + '/run/' + encodeURIComponent(record.current_run) + '/?cluster=' + detail.config.cluster_id;
     var row = '<tr' + cls + ' data-ts="' + row_ts + '" data-run="' + run_attr + '">';
-    row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + run_number + '</td>';
+    row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center"><a href="' + run_href + '" class="detail-run-link">' + run_number + '</a></td>';
     row += '<td class="dashboard-cell-center">' + outcome + '</td>';
     row += '<td class="dashboard-cell-mono">' + actual_time + '</td>';
     row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + duration + '</td>';
@@ -1035,7 +1037,8 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
     var detail = $.fn.zato.scheduler.job_detail;
     var cfg = detail.config.detail_panel;
 
-    $body.find('tr[data-run]').not('.detail-panel-row').off('click.panel').on('click.panel', function() {
+    $body.find('tr[data-run]').not('.detail-panel-row').off('click.panel').on('click.panel', function(e) {
+        if ($(e.target).closest('a.detail-run-link').length) return;
         var $data_row = $(this);
         var run = $data_row.attr('data-run');
         var $panel = $body.find('tr.detail-panel-row[data-run="' + run + '"]');
@@ -1128,7 +1131,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
 
     // .. click empty space in mirror row to close (delegated)
     $body.off('click.mirrorclose').on('click.mirrorclose', '.detail-log-mirror', function(e) {
-        if ($(e.target).closest('.detail-tag, .dashboard-panel-action-badge, .dashboard-outcome-badge, .detail-log-actions').length) return;
+        if ($(e.target).closest('.detail-tag, .dashboard-panel-action-badge, .dashboard-outcome-badge, .detail-log-actions, a.detail-run-link').length) return;
         $(this).closest('tr.detail-panel-row').find('.detail-action-close').trigger('click');
     });
 
