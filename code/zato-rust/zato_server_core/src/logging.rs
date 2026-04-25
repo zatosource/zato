@@ -24,23 +24,28 @@ impl LogWriter {
         Ok(Self { file, path, written, max_bytes })
     }
 
-    fn rotate(&mut self) -> std::io::Result<()> {
-        let backup2 = self.path.with_extension("log.2");
-        let backup1 = self.path.with_extension("log.1");
-
-        if backup1.exists() {
-            std::fs::rename(&backup1, &backup2)?;
-        }
-        std::fs::rename(&self.path, &backup1)?;
-
-        self.file = Self::open(&self.path)?;
-        self.written = 0;
-        Ok(())
-    }
 
     pub fn write_line(&mut self, line: &[u8]) -> std::io::Result<()> {
         if self.max_bytes > 0 && self.written + line.len() as u64 > self.max_bytes {
-            self.rotate()?;
+            let backup2 = self.path.with_extension("log.2");
+            let backup1 = self.path.with_extension("log.1");
+
+            if backup1.exists() {
+                std::fs::rename(&backup1, &backup2)?;
+            }
+            std::fs::rename(&self.path, &backup1)?;
+
+            let new_file = Self::open(&self.path)?;
+            // .. write into the new file first, only commit state if it succeeds.
+            {
+                let mut temp = std::io::BufWriter::new(&new_file);
+                temp.write_all(line)?;
+                temp.flush()?;
+            }
+
+            self.file = new_file;
+            self.written = line.len() as u64;
+            return Ok(());
         }
         self.file.write_all(line)?;
         self.written += line.len() as u64;

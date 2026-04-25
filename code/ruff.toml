@@ -1,4 +1,4 @@
-line-length = 160
+line-length    = 160
 target-version = "py310"
 
 extend-exclude = [
@@ -8,79 +8,8 @@ extend-exclude = [
     "**/src/zato/common/py23_",
 ]
 
-[lint]
-select = [
-    "E",
-    "F",
-    "W",
-    "B",
-    "C4",
-    "Q",
-    "N",
-]
-
-ignore = [
-    "B008",
-    "B010",
-    "B012",
-    "B026",
-    "C416",
-    "E402",
-    "E501",
-    "E711",
-    "E712",
-    "E713",
-    "E721",
-    "E722",
-    "E731",
-    "E741",
-    "F401",
-    "F403",
-    "F405",
-    "F811",
-    "F821",
-    "F841",
-    "N801",
-    "N802",
-    "N803",
-    "N806",
-    "N815",
-    "N816",
-    "Q003",
-    "W291",
-    "W293",
-    "W605",
-]
-
-[lint.per-file-ignores]
-"__init__.py" = ["F401", "F403"]
-"test_*.py"   = ["E501", "F401", "F811"]
-
-"src/zato/admin/settings.py"        = ["F401", "Q000"]
-"src/zato/admin/web/util.py"        = ["F821", "Q000"]
-
-"src/zato/cli/_prev.py"             = ["B023"]
-"src/zato/cli/enmasse.py"           = ["B023"]
-
-"src/zato/common/odb/api.py"            = ["F841"]
-"src/zato/common/odb/query/__init__.py" = ["E711", "E712"]
-"src/zato/common/odb/query/generic.py"  = ["E501"]
-"src/zato/common/rules/parser.py"       = ["Q000"]
-"src/zato/common/rules/perf_utils.py"   = ["B007", "C401", "E501", "Q000"]
-"src/zato/common/util/http.py"          = ["Q000"]
-
-"src/zato/cy/simpleio.py" = ["E222"]
-
-"src/zato/distlock/__init__.py" = []
-
-"src/zato/server/connection/web_socket/__init__.py" = ["E265"]
-
-"test/zato/common/rules/zrules/generate_perf_rules.py" = ["Q000"]
-"test/zato/common/rules/test_match_defaults.py"        = ["B007"]
-"test/zato/common/rules/test_perf.py"                  = ["Q000"]
-
 [lint.flake8-quotes]
-inline-quotes = "single"
+inline-quotes    = "single"
 multiline-quotes = "single"
 docstring-quotes = "double"
 
