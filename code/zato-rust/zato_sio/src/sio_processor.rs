@@ -13,7 +13,7 @@ pub struct ElemInfo {
     /// Element name as declared in the service class.
     pub name: String,
 
-    /// Resolved element type used for coercion and serialisation.
+    /// Resolved element type used for coercion and serialization.
     pub elem_type: ElemType,
 
     /// Whether the element must be present (true) or is optional (false).
@@ -84,12 +84,13 @@ impl SIOProcessor {
             return Ok(ElemInfo { name, elem_type, is_required });
         }
 
-        let name_str: String = item.extract().map_err(|_| {
+        let name_str: String = item.extract().map_err(|_extract_err| {
             pyo3::exceptions::PyTypeError::new_err(
                 format!("SIO element must be a string or Elem instance, got {}", item.get_type())
             )
         })?;
 
+        #[expect(clippy::option_if_let_else, reason = "strip_prefix borrows name_str, preventing move into closure")]
         let (is_required, clean_name) = if let Some(stripped) = name_str.strip_prefix('-') {
             (false, stripped.to_string())
         } else {
@@ -105,8 +106,7 @@ impl SIOProcessor {
 
     /// Parses a Python value into a list of `ElemInfo` descriptors, handling
     /// single Elem instances, bare strings, and iterables (tuples, lists).
-    fn parse_elem_list(py: Python<'_>, items: &Bound<'_, PyAny>) -> PyResult<Vec<ElemInfo>> {
-        let _py = py;
+    fn parse_elem_list(_py: Python<'_>, items: &Bound<'_, PyAny>) -> PyResult<Vec<ElemInfo>> {
 
         if Self::elem_type_from_instance(items).is_some() {
             return Ok(vec![Self::parse_single_elem(items)?]);
@@ -130,7 +130,7 @@ impl SIOProcessor {
 
     /// Creates a new, empty SIO processor with no declared elements.
     #[new]
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             input_elems: Vec::new(),
             output_elems: Vec::new(),
@@ -185,12 +185,12 @@ impl SIOProcessor {
 
     /// Converts a bare element name into the appropriate typed Elem instance
     /// (Bool, Int, Secret, or Text) based on name-based type inference.
+    #[expect(clippy::unused_self, reason = "PyO3 method signature requires &self")]
     fn convert_to_elem_instance<'py>(&self, py: Python<'py>, name: String, _is_required: bool) -> PyResult<Bound<'py, PyAny>> {
-        let clean_name = if let Some(stripped) = name.strip_prefix('-') {
-            stripped.to_string()
-        } else {
-            name.clone()
-        };
+        let clean_name = name.strip_prefix('-').map_or_else(
+            || name.clone(),
+            ToString::to_string,
+        );
 
         let elem_type = infer_type(&clean_name);
 
@@ -217,7 +217,8 @@ impl SIOProcessor {
     /// Parses raw input data against the declared input elements, coercing
     /// values to their declared types and raising on missing required elements.
     #[pyo3(signature = (data, data_format, extra=None, service=None))]
-    #[expect(unused_variables, reason = "extra and service parameters reserved for future use")]
+    #[expect(unused_variables, reason = "data_format and service parameters reserved for future use")]
+    #[expect(clippy::too_many_arguments, reason = "PyO3 method signature mirrors the Python API")]
     fn parse_input(
         &self,
         py: Python<'_>,
@@ -244,13 +245,12 @@ impl SIOProcessor {
         let result_dict = PyDict::new(py);
 
         for elem in &self.input_elems {
-            let mut value: Option<Bound<'_, PyAny>> = None;
-
-            if let Some(extra_dict) = extra {
-                if let Some(val) = extra_dict.get_item(&elem.name)? {
-                    value = Some(val);
-                }
-            }
+            let mut value: Option<Bound<'_, PyAny>> = if let Some(extra_dict) = extra
+                && let Some(val) = extra_dict.get_item(&elem.name)? {
+                Some(val)
+            } else {
+                None
+            };
 
             if value.is_none() {
                 if let Ok(dict) = parsed.cast::<PyDict>() {
@@ -265,19 +265,16 @@ impl SIOProcessor {
                 }
             }
 
-            match value {
-                Some(val) => {
-                    let coerced = self.coerce_value(py, &val, elem.elem_type)?;
-                    result_dict.set_item(&elem.name, coerced.bind(py))?;
+            if let Some(val) = value {
+                let coerced = Self::coerce_value(py, &val, elem.elem_type)?;
+                result_dict.set_item(&elem.name, coerced.bind(py))?;
+            } else {
+                if elem.is_required {
+                    return Err(pyo3::exceptions::PyValueError::new_err(
+                        format!("Missing required input element: {}", elem.name)
+                    ));
                 }
-                None => {
-                    if elem.is_required {
-                        return Err(pyo3::exceptions::PyValueError::new_err(
-                            format!("Missing required input element: {}", elem.name)
-                        ));
-                    }
-                    result_dict.set_item(&elem.name, py.None())?;
-                }
+                result_dict.set_item(&elem.name, py.None())?;
             }
         }
 
@@ -323,6 +320,7 @@ impl SIOProcessor {
     /// Evaluates and coerces a single element value according to its inferred
     /// type, optionally encrypting secrets via a caller-supplied function.
     #[pyo3(signature = (elem_name, value, encrypt_func=None))]
+    #[expect(clippy::unused_self, reason = "PyO3 method signature requires &self")]
     fn eval_<'py>(
         &self,
         py: Python<'py>,
@@ -378,7 +376,7 @@ impl SIOProcessor {
 
 impl SIOProcessor {
     /// Coerces a Python value to the target element type (int, bool, or pass-through).
-    fn coerce_value(&self, py: Python<'_>, value: &Bound<'_, PyAny>, elem_type: ElemType) -> PyResult<PyObject> {
+    fn coerce_value(py: Python<'_>, value: &Bound<'_, PyAny>, elem_type: ElemType) -> PyResult<PyObject> {
         if value.is_none() {
             return Ok(py.None());
         }

@@ -1,13 +1,13 @@
-//! Zato SimpleIO (SIO) - type-aware serialisation layer for Zato service definitions.
+//! Zato `SimpleIO` (SIO) - type-aware serialization layer for Zato service definitions.
 //!
 //! Provides element types (`Bool`, `Int`, `Text`, etc.) that Zato services use
 //! to declare their input/output contracts and a processor that drives
-//! serialisation, deserialisation, and type inference at runtime.
+//! serialization, deserialization, and type inference at runtime.
 
 /// Name-based type inference for SIO element names.
 mod inference;
 
-/// Backward-compatible Python element types exposed via PyO3.
+/// Backward-compatible Python element types exposed via `PyO3`.
 pub mod compat;
 
 /// Internal service-input handling.

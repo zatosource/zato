@@ -116,10 +116,10 @@ impl ServiceInput {
     /// Returns the value for a key, falling back to `default` (or `None`) if absent.
     #[pyo3(signature = (key, default=None))]
     fn get(&self, py: Python<'_>, key: &str, default: Option<PyObject>) -> PyObject {
-        match self.data.get(key) {
-            Some(val) => val.clone_ref(py),
-            None => default.unwrap_or_else(|| py.None()),
-        }
+        self.data.get(key).map_or_else(
+            || default.unwrap_or_else(|| py.None()),
+            |val| val.clone_ref(py),
+        )
     }
 
     /// Returns all key names as a list of strings.

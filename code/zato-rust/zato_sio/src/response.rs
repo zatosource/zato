@@ -7,11 +7,11 @@ type PyObject = Py<PyAny>;
 
 /// Wraps HTTP response metadata and payload for a Zato service invocation.
 ///
-/// Exposes result status, headers, content type, and the serialised payload
-/// to Python callers via PyO3 getter/setter attributes.
+/// Exposes result status, headers, content type, and the serialized payload
+/// to Python callers via `PyO3` getter/setter attributes.
 #[pyclass]
 pub struct Response {
-    /// ZATO_OK / ZATO_ERROR result indicator.
+    /// `ZATO_OK` / `ZATO_ERROR` result indicator.
     #[pyo3(get, set)]
     pub result: String,
 
@@ -19,7 +19,7 @@ pub struct Response {
     #[pyo3(get, set)]
     pub result_details: String,
 
-    /// Serialised payload body, either a raw Python object or a `Payload` instance.
+    /// Serialized payload body, either a raw Python object or a `Payload` instance.
     payload_inner: PyObject,
 
     /// Optional content encoding applied to the response body (e.g. gzip).
@@ -85,12 +85,11 @@ impl Response {
         })
     }
 
-    /// Initialises the response with a correlation id, SIO processor, and data format,
+    /// Initializes the response with a correlation id, SIO processor, and data format,
     /// building a `Payload` from output element names when SIO output is declared.
-    #[expect(clippy::too_many_arguments, reason = "PyO3 __init__ wiring requires all fields")]
     fn init(&mut self, py: Python<'_>, cid: Option<String>, sio: Option<&Bound<'_, PyAny>>, data_format: Option<String>) -> PyResult<()> {
         self.cid = cid;
-        self.data_format = data_format.clone();
+        self.data_format.clone_from(&data_format);
 
         if let Some(sio_obj) = sio {
             let is_dataclass = sio_obj.getattr("is_dataclass")
@@ -167,11 +166,8 @@ impl Response {
     }
 
     /// Returns the length of the inner payload, or 0 if the payload has no length.
-    fn __len__(&self, py: Python<'_>) -> PyResult<usize> {
+    fn __len__(&self, py: Python<'_>) -> usize {
         let payload = self.payload_inner.bind(py);
-        match payload.len() {
-            Ok(length) => Ok(length),
-            Err(_) => Ok(0),
-        }
+        payload.len().unwrap_or(0)
     }
 }

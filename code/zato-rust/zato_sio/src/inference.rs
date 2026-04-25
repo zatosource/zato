@@ -17,7 +17,7 @@ const SECRET_EXACT: &[&str] = &[
     "xApiKey",
 ];
 
-/// The type of a SimpleIO element, inferred from its name or declared explicitly.
+/// The type of a `SimpleIO` element, inferred from its name or declared explicitly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ElemType {
     /// Boolean value (Python `bool`).

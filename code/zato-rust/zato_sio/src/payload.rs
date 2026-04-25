@@ -9,7 +9,7 @@ type PyObject = Py<PyAny>;
 ///
 /// Supports both dict and list output modes - dict mode stores named
 /// attributes while list mode collects ordered result rows. Handles
-/// serialisation via `getvalue` and optional `_meta` envelope wrapping.
+/// serialization via `getvalue` and optional `_meta` envelope wrapping.
 #[pyclass]
 pub struct Payload {
     /// Declared output element names that govern which attributes are extracted.
@@ -29,7 +29,7 @@ pub struct Payload {
     #[pyo3(get)]
     pub cid: Option<String>,
 
-    /// Data format hint (e.g. `"dict"`) controlling serialisation behaviour.
+    /// Data format hint (e.g. `"dict"`) controlling serialization behavior.
     #[pyo3(get)]
     pub data_format: Option<String>,
 }
@@ -95,7 +95,7 @@ impl Payload {
                         py_dict.set_item(key_name, val.bind(py))?;
                     }
                 } else {
-                    let extracted = self.extract_obj_attrs(py, &item)?;
+                    let extracted = self.extract_obj_attrs(py, &item);
                     for (key_name, val) in &extracted {
                         py_dict.set_item(key_name, val.bind(py))?;
                     }
@@ -117,7 +117,7 @@ impl Payload {
         Ok(())
     }
 
-    /// Serialises and returns the payload value, optionally as JSON.
+    /// Serializes and returns the payload value, optionally as JSON.
     #[pyo3(signature = (serialize=None, force_dict_serialisation=true))]
     fn getvalue(&self, py: Python<'_>, serialize: Option<bool>, force_dict_serialisation: bool) -> PyResult<PyObject> {
         let do_serialize = match serialize {
@@ -209,30 +209,24 @@ impl Payload {
     }
 
     /// Sets an item by key (string) or replaces a slice range (for list-mode output).
+    #[expect(clippy::as_conversions, reason = "Python slice protocol requires isize/usize conversions")]
+    #[expect(clippy::cast_possible_wrap, reason = "Python list length is within isize range")]
+    #[expect(clippy::cast_sign_loss, reason = "Python normalizes slice indices to non-negative values")]
     fn __setitem__(&mut self, py: Python<'_>, key: &Bound<'_, PyAny>, value: PyObject) -> PyResult<()> {
         if key.is_instance_of::<pyo3::types::PySlice>() {
             let slice: &Bound<'_, pyo3::types::PySlice> = key.cast()?;
-
-            #[expect(clippy::cast_possible_wrap, reason = "Python list length is within isize range")]
             let list_len = self.user_attrs_list.len() as isize;
-
             let indices = slice.indices(list_len)?;
-
-            #[expect(clippy::cast_sign_loss, reason = "Python normalizes slice indices to non-negative values")]
             let start = indices.start as usize;
-
-            #[expect(clippy::cast_sign_loss, reason = "Python normalizes slice indices to non-negative values")]
             let stop = indices.stop as usize;
-
             let items: Vec<PyObject> = value.bind(py).try_iter()?.map(|result| result.map(Bound::unbind)).collect::<PyResult<_>>()?;
             self.user_attrs_list.splice(start..stop, items);
             self.is_list_output = true;
-            Ok(())
         } else {
             let key_name: String = key.extract()?;
             self.user_attrs_dict.insert(key_name, value);
-            Ok(())
         }
+        Ok(())
     }
 
     /// Returns the value for the given key, delegating to `__getattr__`.
@@ -281,7 +275,7 @@ impl Payload {
     }
 
     /// Extracts declared output element values from a Python object's attributes into a list of pairs.
-    fn extract_obj_attrs(&self, py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<Vec<(String, PyObject)>> {
+    fn extract_obj_attrs(&self, py: Python<'_>, obj: &Bound<'_, PyAny>) -> Vec<(String, PyObject)> {
         let mut out = Vec::new();
         for name in &self.output_elem_names {
             let py_name = PyString::new(py, name);
@@ -289,7 +283,7 @@ impl Payload {
                 out.push((name.clone(), value.unbind()));
             }
         }
-        Ok(out)
+        out
     }
 
     /// Builds the final output value as either a Python list or dict.

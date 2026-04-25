@@ -19,12 +19,12 @@ pub struct Elem {
     pub elem_type: ElemType,
 }
 
-impl<'a, 'py> FromPyObject<'a, 'py> for Elem {
+impl<'obj, 'py> FromPyObject<'obj, 'py> for Elem {
     type Error = PyErr;
 
     /// Extracts an `Elem` by cloning the Rust struct out of its Python wrapper.
-    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        let borrowed: Borrowed<'a, 'py, Elem> = obj.cast()?;
+    fn extract(obj: Borrowed<'obj, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let borrowed: Borrowed<'obj, 'py, Self> = obj.cast()?;
         Ok(borrowed.borrow().clone())
     }
 }
@@ -33,10 +33,12 @@ impl<'a, 'py> FromPyObject<'a, 'py> for Elem {
 impl Elem {
     /// Creates a new `Elem`, stripping a leading `-` to mark the element as optional.
     #[new]
+    #[expect(clippy::option_if_let_else, reason = "strip_prefix borrows name, preventing move into closure")]
     fn new(name: String) -> Self {
-        let (is_required, clean_name) = match name.strip_prefix('-') {
-            Some(stripped) => (false, stripped.to_string()),
-            None => (true, name),
+        let (is_required, clean_name) = if let Some(stripped) = name.strip_prefix('-') {
+            (false, stripped.to_string())
+        } else {
+            (true, name)
         };
         Self {
             name: clean_name,
@@ -54,6 +56,7 @@ impl Elem {
 /// Defines a concrete SIO element subtype exposed to Python that extends `Elem`.
 macro_rules! define_elem_type {
     ($name:ident, $variant:expr) => {
+        #[doc = concat!("SIO element subtype `", stringify!($name), "` exposed to Python.")]
         #[allow(clippy::upper_case_acronyms, reason = "Python-visible type names must match existing API")]
         #[pyclass(extends=Elem, skip_from_py_object)]
         #[derive(Clone)]
@@ -62,9 +65,10 @@ macro_rules! define_elem_type {
         impl $name {
             /// Builds the subtype together with its parent `Elem`, handling the optional `-` prefix.
             pub fn create(name: String) -> (Self, Elem) {
-                let (is_required, clean_name) = match name.strip_prefix('-') {
-                    Some(stripped) => (false, stripped.to_string()),
-                    None => (true, name),
+                let (is_required, clean_name) = if let Some(stripped) = name.strip_prefix('-') {
+                    (false, stripped.to_string())
+                } else {
+                    (true, name)
                 };
                 ($name, Elem {
                     name: clean_name,
