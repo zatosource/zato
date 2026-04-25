@@ -855,10 +855,10 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         kit.set_number($('#dashboard-failures-count'), exec_count);
 
         var html = '<table class="zato-table"><thead><tr>';
-        html += '<th>Time</th><th>Job name</th><th>Outcome</th><th>Error</th>';
+        html += '<th>Run</th><th>Time</th><th>Job name</th><th>Outcome</th><th>Error</th>';
         html += '</tr></thead><tbody>';
 
-        var max_rows = Math.min(20, timeline.length);
+        var max_rows = Math.min(100, timeline.length);
         for (var row_index = 0; row_index < max_rows; row_index++) {
             var entry = timeline[row_index];
             var time_text = kit.relative_time_past(entry.actual_fire_time_iso);
@@ -866,9 +866,11 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var error_text = entry.error;
             if (error_text === null) error_text = '';
             var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
+            var run_number = entry.current_run !== undefined ? entry.current_run : '';
 
             var row_ts = entry.actual_fire_time_iso;
             html += '<tr data-ts="' + row_ts + '">';
+            html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;text-align:center">' + run_number + '</td>';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
             html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All + '">' + entry.job_name + '</a></td>';
             html += '<td>' + dash.outcome_badge(entry.outcome, entry) + '</td>';
@@ -879,7 +881,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         html += '</tbody></table>';
         container.html(html);
 
-        kit.sortable_headers(container.find('table'), {'Job name': 1});
+        kit.sortable_headers(container.find('table'), {'Job name': 2});
 
         container.find('.dashboard-outcome-badge[data-tippy-content]').each(function() {
             if (!this._tippy) {
@@ -936,7 +938,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             return first.time.localeCompare(second.time);
         });
 
-        var max_upcoming = Math.min(15, upcoming.length);
+        var max_upcoming = Math.min(100, upcoming.length);
         $('#dashboard-upcoming-count').text(upcoming.length);
         if (max_upcoming === 0) {
             table_body.append('<tr><td colspan="3" class="dashboard-no-data">No upcoming runs</td></tr>');
