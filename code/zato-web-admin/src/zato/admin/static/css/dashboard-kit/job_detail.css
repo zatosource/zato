@@ -220,11 +220,10 @@ tbody tr[data-run]:not(.detail-panel-row) {
 }
 
 .detail-log-ts {
-    flex: 0 0 80px;
+    flex: none;
+    white-space: nowrap;
     font-size: 0.92em;
     letter-spacing: -0.02em;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .detail-log-level-col {

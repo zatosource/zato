@@ -54,6 +54,11 @@ where
     result
 }
 
+/// Formats a duration in milliseconds into a human-readable string.
+fn humanize_ms(millis: u64) -> String {
+    humantime::format_duration(Duration::from_millis(millis)).to_string()
+}
+
 /// Populates an already-completed synthetic execution record with realistic log entries.
 fn populate_synthetic_logs(rec: &mut ExecutionRecord, now_iso: &str, fake_outcome: &str) {
     rec.log_entries.push(LogEntry {
@@ -300,7 +305,7 @@ impl Scheduler {
     #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn mark_complete(&self, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
-        log::warn!("[DRIP] mark_complete called: job_id={job_id} outcome={outcome} current_run={current_run}");
+        log::info!("mark_complete called: job_id={job_id} outcome={outcome} current_run={current_run}");
         with_state_mut(&self.shared, |state| {
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
                 running_job.in_flight = false;
@@ -310,6 +315,11 @@ impl Scheduler {
                     if rec.current_run == current_run {
                         rec.duration_ms = Some(duration_ms);
                         rec.outcome = outcome.to_string();
+                        rec.log_entries.push(LogEntry {
+                            timestamp_iso: Utc::now().to_rfc3339(),
+                            level: "SYSTEM".into(),
+                            message: format!("Job completed, outcome: {outcome}, duration: {}", humanize_ms(duration_ms)),
+                        });
                         break;
                     }
                 }
@@ -318,10 +328,7 @@ impl Scheduler {
                     for rec in running_job.history.iter_mut().rev() {
                         if rec.current_run == current_run {
                             populate_synthetic_logs(rec, &Utc::now().to_rfc3339(), outcome);
-                            log::warn!(
-                                "[DRIP] populated real rec run={current_run} with {} log entries",
-                                rec.log_entries.len()
-                            );
+                            log::info!("Populated real rec run={current_run} with {} log entries", rec.log_entries.len());
                             break;
                         }
                     }
@@ -338,7 +345,7 @@ impl Scheduler {
                         running_job.current_run += 1;
                         let run = running_job.current_run;
 
-                        log::warn!("[DRIP] creating synthetic running rec iter={iter_idx} run={run} fake_outcome={fake_outcome}");
+                        log::info!("Creating synthetic running rec iter={iter_idx} run={run} fake_outcome={fake_outcome}");
 
                         let mut rec = ExecutionRecord::new(&now_iso, &now_iso, types::outcome::RUNNING, run);
                         if fake_outcome == types::outcome::SKIPPED_ALREADY_IN_FLIGHT {
@@ -348,12 +355,12 @@ impl Scheduler {
 
                         let drip_entries = build_synthetic_drip_entries(&now_iso, fake_outcome);
                         let drip_count = drip_entries.len();
-                        log::warn!("[DRIP] queuing {drip_count} drips for run={run}, drip_base_ms={drip_base_ms}");
+                        log::info!("Queuing {drip_count} drips for run={run}, drip_base_ms={drip_base_ms}");
                         for (drip_idx, entry) in drip_entries.into_iter().enumerate() {
                             let offset_ms = drip_base_ms + (u64::try_from(drip_idx).unwrap_or(0) + 1) * 5500;
                             let is_last = drip_idx == drip_count - 1;
-                            log::warn!(
-                                "[DRIP]   drip {drip_idx}/{drip_count} offset_ms={offset_ms} level={} finalize={} due_at=now+{offset_ms}ms",
+                            log::info!(
+                                "  drip {drip_idx}/{drip_count} offset_ms={offset_ms} level={} finalize={} due_at=now+{offset_ms}ms",
                                 entry.level,
                                 is_last
                             );
@@ -371,10 +378,10 @@ impl Scheduler {
                         }
                         drip_base_ms += u64::try_from(drip_count).unwrap_or(0) * 5500;
                     }
-                    log::warn!("[DRIP] total drips queued: {}", state.synthetic_drips.len());
+                    log::info!("Total drips queued: {}", state.synthetic_drips.len());
                 }
             } else {
-                log::warn!("[DRIP] mark_complete: job_id={job_id} NOT found in state");
+                log::info!("mark_complete: job_id={job_id} not found in state");
             }
         });
         Ok(())
@@ -648,19 +655,12 @@ impl Scheduler {
     /// (incremental poll while the panel is open).
     #[pyo3(signature = (job_id, current_run, since_idx))]
     fn get_log_entries(&self, py: Python<'_>, job_id: i64, current_run: u32, since_idx: usize) -> PyResult<Py<PyList>> {
-        log::warn!("[DRIP] get_log_entries: job_id={job_id} current_run={current_run} since_idx={since_idx}");
+        log::info!("get_log_entries: job_id={job_id} current_run={current_run} since_idx={since_idx}");
         let state = self.shared.state.lock();
-        log::warn!("[DRIP] get_log_entries: pending drips={}", state.synthetic_drips.len());
         let list = PyList::empty(py);
         if let Some(running_job) = state.jobs.get(&job_id) {
             for rec in running_job.history.iter().rev() {
                 if rec.current_run == current_run {
-                    log::warn!(
-                        "[DRIP] get_log_entries: found run={current_run} outcome={} total_log_entries={} returning={}",
-                        rec.outcome,
-                        rec.log_entries.len(),
-                        rec.log_entries.len().saturating_sub(since_idx)
-                    );
                     for entry in rec.log_entries.iter().skip(since_idx) {
                         let dict = PyDict::new(py);
                         dict.set_item("timestamp_iso", entry.timestamp_iso.as_str())?;
