@@ -1650,6 +1650,15 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
     });
 
     kit.url_state.on_pop(function(params) {
+        var tab_name = params.get('tab') || detail.config.default_tab;
+        $('.dashboard-tab').removeClass('dashboard-tab-active').attr('aria-selected', 'false');
+        $('.dashboard-tab[data-tab="' + tab_name + '"]').addClass('dashboard-tab-active').attr('aria-selected', 'true');
+        $('.dashboard-tab-panel').attr('hidden', true);
+        $('#dashboard-tab-panel-' + tab_name).removeAttr('hidden');
+        if (tab_name === 'executions') {
+            detail._ensure_runs_rendered();
+        }
+
         var range_val = parseInt(params.get('range'), 10);
         if (isNaN(range_val)) range_val = detail.config.default_time_range;
         detail._time_range_minutes = range_val;

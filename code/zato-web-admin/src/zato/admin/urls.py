@@ -246,6 +246,8 @@ urlpatterns += [
         login_required(scheduler_dashboard.poll), name='scheduler-dashboard-poll'),
     path('zato/scheduler/dashboard/job/<int:job_id>/',
         login_required(scheduler_dashboard.job_detail), name='scheduler-job-detail'),
+    path('zato/scheduler/dashboard/job/<int:job_id>/run/<int:run_number>/',
+        login_required(scheduler_dashboard.run_detail), name='scheduler-run-detail'),
 
     # Scheduler import demo config
 

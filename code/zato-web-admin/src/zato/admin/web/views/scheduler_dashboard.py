@@ -120,3 +120,34 @@ def job_detail(req, job_id:'int'):
 
 # ################################################################################################################################
 # ################################################################################################################################
+
+@method_allowed('GET')
+def run_detail(req, job_id:'int', run_number:'int'):
+    """ Shows the log entries for a single execution record of a scheduler job.
+    """
+
+    job_data = {}
+
+    try:
+        response = req.zato.client.invoke('zato.scheduler.job.get-by-id', {
+            'cluster_id': default_cluster_id,
+            'id': job_id,
+        })
+        if response.ok:
+            job_data = response.data
+    except Exception as e:
+        logger.error('Scheduler run detail error: %s', e)
+
+    return TemplateResponse(req, 'zato/scheduler/run_detail.html', {
+        'cluster_id': default_cluster_id,
+        'job_id': job_id,
+        'run_number': run_number,
+        'job_data': json.dumps(job_data),
+        'poll_url': '/zato/dashboard/detail-poll/',
+        'object_type': 'scheduler-job',
+        'zato_clusters': True,
+        'zato_template_name': 'zato/scheduler/run_detail.html',
+    })
+
+# ################################################################################################################################
+# ################################################################################################################################

@@ -868,7 +868,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
             var row_ts = entry.actual_fire_time_iso;
             html += '<tr data-ts="' + row_ts + '">';
-            html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73">' + run_number + '</td>';
+            var run_href = '/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/run/' + encodeURIComponent(entry.current_run) + '/?cluster=' + cluster_id;
+            html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on"><a href="' + run_href + '">' + run_number + '</a></td>';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
             html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All + '">' + entry.job_name + '</a></td>';
             html += '<td>' + dash.outcome_badge(entry.outcome, entry) + '</td>';
@@ -1220,13 +1221,21 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             }
         });
 
-        // Tabs — delegated to kit
+        // Tabs - delegated to kit, synced to URL
         dash._tabs_handle = kit.tabs.init({
             tab_selector: '.dashboard-tab',
             panel_prefix: 'dashboard-tab-panel-',
             storage_key: 'zato_scheduler_activity_tab',
-            default_tab: 'failures'
+            default_tab: 'failures',
+            on_change: function(tab_name) {
+                kit.url_state.set({tab: tab_name});
+            }
         });
+
+        var url_tab = kit.url_state.get('tab');
+        if (url_tab) {
+            dash._tabs_handle.set_tab(url_tab, true);
+        }
 
         dash.render(initial_data);
         kit.countdown.start();
@@ -1242,6 +1251,11 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         });
 
         kit.url_state.on_pop(function(params) {
+            var pop_tab = params.get('tab');
+            if (pop_tab) {
+                dash._tabs_handle.set_tab(pop_tab, true);
+            }
+
             var refresh_val = parseInt(params.get('refresh'), 10);
             if (!isNaN(refresh_val)) {
                 dash._auto_refresh.set_seconds(refresh_val);

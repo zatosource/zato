@@ -31,6 +31,7 @@ _service_registry = {
 }
 
 _action_registry = {
+    'get-history': 'zato.scheduler.job.get-history',
     'get-log-entries': 'zato.scheduler.job.get-log-entries',
 }
 
@@ -46,11 +47,9 @@ def detail_poll(req):
         action = body['action']
         if action in _action_registry:
             service_name = _action_registry[action]
-            service_payload = {
-                'job_id': body['job_id'],
-                'current_run': body['current_run'],
-                'since_idx': body['since_idx'],
-            }
+
+            # .. forward all body fields except 'action' itself
+            service_payload = {key: value for key, value in body.items() if key != 'action'}
             response = req.zato.client.invoke(service_name, service_payload)
             return HttpResponse(json.dumps(response.data), content_type='application/json')
 

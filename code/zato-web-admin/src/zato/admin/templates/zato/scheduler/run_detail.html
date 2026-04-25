@@ -1,0 +1,110 @@
+{% extends "zato/detail_base.html" %}
+{% load extras %}
+
+{% block page_title %}Run detail{% endblock %}
+
+{% block detail_css %}
+<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/job_detail.css">
+<style nonce="{{ CSP_NONCE }}">img.help-icon[id=""] { display: none; }</style>
+{% endblock %}
+
+{% block section_title %}
+<div class="detail-header-row-1">
+    <span id="detail-section-title">
+        <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
+        <a href="/zato/scheduler/dashboard/job/{{ job_id }}/?cluster={{ cluster_id }}" class="detail-component-pill menu-link" id="run-detail-job-link">Job detail</a>
+        <span id="record-detail-title">Run detail</span>
+    </span>
+</div>
+{% endblock %}
+{% block help_icon_id %}{% endblock %}
+
+{% block detail_page_class %}detail-page-scheduler{% endblock %}
+
+{% block detail_js %}
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/record_detail.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/job_detail.js"></script>
+<script nonce="{{ CSP_NONCE }}">
+$(document).ready(function() {
+
+    var kit = $.fn.zato.dashboard_kit;
+    var detail = $.fn.zato.scheduler.job_detail;
+    var dash = $.fn.zato.scheduler.dashboard;
+    var panel_cfg = detail.config.detail_panel;
+    var tag_defs = detail.config.detail_tags;
+
+    kit.record_detail.init({
+        cluster_id: '{{ cluster_id }}',
+        record_id: '{{ job_id }}',
+        run_number: {{ run_number }},
+        title_prefix: 'Run detail:',
+        poll_url: '{{ poll_url }}',
+        history_action: 'get-history',
+        log_action: 'get-log-entries',
+        poll_interval_ms: 5000,
+        panel: panel_cfg,
+        tag_defs: tag_defs,
+
+        render_mirror: function(record) {
+            var run_number = kit.format_number_full(record.current_run);
+            var oc = panel_cfg.outcome_colors[record.outcome];
+            var outcome_label = record.outcome.replace(/_/g, ' ').toUpperCase();
+            var short_labels = dash.outcome_short_labels;
+            if (short_labels[record.outcome]) {
+                outcome_label = short_labels[record.outcome].toUpperCase();
+            }
+            var tooltip_attr = '';
+            if (record.outcome_ctx !== null) {
+                var tooltips = dash.outcome_tooltips;
+                if (tooltips[record.outcome]) {
+                    tooltip_attr = ' data-tippy-content="' + tooltips[record.outcome].replace('{ctx}', record.outcome_ctx) + '"';
+                }
+            }
+            var outcome_prefix = (record.outcome === 'running') ? '<span class="badge-running-spinner"></span>' : '';
+            var outcome_html = '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + oc.color + ';background:' + oc.bg + '">' + outcome_prefix + outcome_label + '</span>';
+
+            var tag_html = kit.record_detail.render_dark_tags(record, tag_defs);
+            var accent = panel_cfg.mirror_accent;
+
+            var html = '<div class="detail-log-line detail-log-mirror" style="border-bottom:1px solid ' + panel_cfg.row_border + '">';
+            html += '<div class="detail-log-stripe" style="background:' + accent + '"></div>';
+            html += '<div class="detail-log-ts"><span class="detail-log-level" style="color:' + accent + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></div>';
+            html += '<div class="detail-log-level-col">' + outcome_html + '</div>';
+            var action_style = 'color:#aaa;background:rgba(255,255,255,0.08)';
+            html += '<div class="detail-log-msg" style="color:' + panel_cfg.owner_color + '">' + tag_html + '</div>';
+            html += '<div class="detail-log-actions">';
+            html += '<span class="dashboard-panel-action-badge detail-action-toggle-all" style="' + action_style + '">Toggle all</span>';
+            html += '<span class="dashboard-panel-action-badge detail-action-copy-all" style="' + action_style + '">Copy</span>';
+            html += '</div>';
+            html += '</div>';
+            return html;
+        },
+
+        find_record: function(data, run_number) {
+            var rows = data.rows;
+            if (!rows) return null;
+            for (var idx = 0; idx < rows.length; idx++) {
+                if (rows[idx].current_run === run_number) {
+                    return rows[idx];
+                }
+            }
+            return null;
+        }
+    });
+
+});
+</script>
+{% endblock %}
+
+{% block stat_cards %}{% endblock %}
+{% block actions %}{% endblock %}
+{% block tabs %}{% endblock %}
+
+{% block tab_panels %}
+<div id="record-detail-log">
+    <div class="detail-panel-log" data-since-idx="0" style="background:{{ '#232336' }};border:1px solid {{ '#3a3a52' }};font-size:12px;border-radius:4px;min-height:100px">
+    </div>
+</div>
+{% endblock %}
