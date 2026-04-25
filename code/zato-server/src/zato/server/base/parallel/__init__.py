@@ -996,15 +996,14 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
         _main_hub = gevent.get_hub()
 
-        def _scheduler_run_cb(spawn_fn, on_job_executed_cb, ctx_json):
-            _main_hub.loop.run_callback(spawn, on_job_executed_cb, ctx_json)
+        def _scheduler_run_cb(spawn_fn:'callable_', on_job_executed_cb:'callable_', ctx:'anydict') -> 'None':
+            _main_hub.loop.run_callback(spawn, on_job_executed_cb, ctx)
 
-        def _on_job_executed(ctx_json):
+        def _on_job_executed(ctx:'anydict') -> 'None':
             import time as _time
             from bunch import Bunch
             from zato_scheduler_core import scheduler_mark_complete
 
-            ctx = json_loads(ctx_json)
             job_id = ctx['id']
             job_name = ctx['name']
             current_run = ctx['current_run']
