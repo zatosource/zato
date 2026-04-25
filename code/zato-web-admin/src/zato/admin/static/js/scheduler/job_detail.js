@@ -9,6 +9,7 @@ $.fn.zato.scheduler.job_detail.config = {
     default_time_range: 0,
     empty_history_text: 'No run history',
     show_search: false,
+    min_visible_delay_ms: 200,
     stat_error_color: '#e0226e',
     detail_tags: [
         { key: 'error',  label: 'Error',  color: '#c0392b', bg: 'rgba(192, 57, 43, 0.1)',
@@ -888,7 +889,7 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     var detail = $.fn.zato.scheduler.job_detail;
     var dashboard = detail._dashboard();
     var actual_time = kit.format_local_time(record.actual_fire_time_iso);
-    var delay = record.delay_ms > 0 ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
+    var delay = record.delay_ms >= detail.config.min_visible_delay_ms ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
     var duration = dashboard.format_duration(record.duration_ms);
     var outcome = dashboard.outcome_badge(record.outcome, record);
     var run_number = kit.format_number_full(record.current_run);
@@ -1115,7 +1116,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
 
         var actual_time = kit.format_local_time(record.actual_fire_time_iso);
         var duration = dashboard.format_duration(record.duration_ms);
-        var delay = record.delay_ms > 0 ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
+        var delay = record.delay_ms >= detail.config.min_visible_delay_ms ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
         var outcome_text = record.outcome.toUpperCase();
 
         var lines = [];
