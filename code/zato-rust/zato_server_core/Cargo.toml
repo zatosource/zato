@@ -25,12 +25,8 @@ libc = "0.2.184"
 prctl = "1.0.0"
 log = "0.4.29"
 parking_lot = "0.12"
-serde = { version = "1", features = ["derive"] }
-serde_yaml = "0.9"
 chrono = "0.4.44"
 rand = "0.10.1"
-serde_json = "1"
-subtle = "2"
 
 [dev-dependencies]
 proptest = "1.11.0"

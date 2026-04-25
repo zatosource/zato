@@ -2,7 +2,7 @@ use proptest::prelude::*;
 use chrono::{Duration, Utc};
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::scheduler::{SchedulerState, apply_missed_catchup};
-use zato_server_core::model::SchedulerJob;
+use zato_scheduler_core::model::SchedulerJob;
 
 fn make_interval_job(on_missed: &str, past_hours: u32) -> SchedulerJob {
     let start = (Utc::now() - Duration::hours(i64::from(past_hours) + 2))

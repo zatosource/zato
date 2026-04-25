@@ -1,7 +1,7 @@
 use proptest::prelude::*;
 use chrono::{Duration, Utc};
 use zato_scheduler_core::job::RunningJob;
-use zato_server_core::model::SchedulerJob;
+use zato_scheduler_core::model::SchedulerJob;
 
 fn make_jitter_job(jitter_ms: u32) -> SchedulerJob {
     let start = (Utc::now() - Duration::hours(1)).format("%Y-%m-%dT%H:%M:%S").to_string();

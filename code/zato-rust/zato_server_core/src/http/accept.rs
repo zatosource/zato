@@ -91,7 +91,7 @@ pub(super) fn accept_loop(
                 continue;
             }
 
-            setsockopt_logged(client_fd, libc::IPPROTO_TCP, libc::TCP_NODELAY, 1, "TCP_NODELAY");
+            setsockopt_logged(client_fd, libc::IPPROTO_TCP, libc::TCP_NODELAY, 1, "TCP_NODELAY")?;
 
             let remote_addr = format!(
                 "{}.{}.{}.{}",

@@ -1,6 +1,7 @@
-//! Main `handle_http_request` Python entrypoint - timestamps the request,
-//! dispatches to the worker, logs access/REST summaries, collects Prometheus metrics,
-//! and returns `(status, headers, body)`.
+//! Main `handle_http_request` Python entrypoint.
+//!
+//! Timestamps the request, dispatches to the worker, logs access/REST summaries,
+//! collects Prometheus metrics, and returns `(status, headers, body)`.
 
 use std::sync::OnceLock;
 
@@ -57,8 +58,9 @@ fn get_cached_attrs(server: &Bound<'_, PyAny>) -> PyResult<&'static CachedServer
     })
 }
 
-/// Truncates an internal correlation ID to its first four dash-separated segments
-/// for external visibility (e.g. in the `X-Zato-CID` response header).
+/// Truncates an internal correlation ID for external visibility.
+///
+/// Keeps only the first four dash-separated segments (e.g. for `X-Zato-CID`).
 pub fn make_cid_public(cid: &str) -> String {
     cid.splitn(5, '-').take(4).collect::<Vec<_>>().join("-")
 }

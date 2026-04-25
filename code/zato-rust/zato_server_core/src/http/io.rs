@@ -112,8 +112,9 @@ pub fn parse_content_length(raw: &[u8]) -> usize {
     result
 }
 
-/// Case-insensitive comparison of an HTTP header value against a target byte string,
-/// with leading/trailing optional whitespace (OWS) stripped.
+/// Case-insensitive HTTP header value comparison.
+///
+/// Strips leading/trailing optional whitespace (OWS) before comparing.
 #[inline]
 pub fn header_value_eq(raw: &[u8], target: &[u8]) -> bool {
     let trimmed = trim_ows(raw);

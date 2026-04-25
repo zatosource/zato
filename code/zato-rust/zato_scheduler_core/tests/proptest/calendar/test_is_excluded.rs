@@ -38,7 +38,7 @@ proptest! {
         use chrono::Datelike;
         let mut cal = CalendarData::new("test".into());
         cal.weekdays = weekdays.iter().copied().collect();
-        let wd = date.weekday().num_days_from_monday() as u8;
+        let wd = u8::try_from(date.weekday().num_days_from_monday()).unwrap();
         if weekdays.contains(&wd) {
             prop_assert!(cal.is_excluded(date));
         }
@@ -59,7 +59,7 @@ proptest! {
         let mut cal = CalendarData::new("test".into());
         let other_date = NaiveDate::from_ymd_opt(1999, 1, 1).unwrap();
         cal.dates.insert(other_date);
-        let wd = date.weekday().num_days_from_monday() as u8;
+        let wd = u8::try_from(date.weekday().num_days_from_monday()).unwrap();
         let excluded_wd = (wd + 1) % 7;
         cal.weekdays = vec![excluded_wd];
         if date != other_date && wd != excluded_wd {

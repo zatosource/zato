@@ -1,23 +1,31 @@
-//! Rust core of the Zato server - exposes HTTP handling, logging and ID generation to Python via `PyO3`.
+//! Rust core of the Zato server.
+//!
+//! Exposes HTTP handling, logging and ID generation to Python via `PyO3`.
 
-/// Data model for enmasse YAML configuration (channels, security, outgoing connections, etc.).
-pub mod model;
-
-/// HTTP/1.x server built on raw `libc` sockets with gevent cooperative scheduling.
+/// HTTP/1.x server built on raw `libc` sockets.
+///
+/// Uses gevent cooperative scheduling.
 pub mod http;
 
 /// Rotating file loggers for REST summary and access logs.
 pub mod logging;
 
+/// Utility functions shared across the crate.
+pub mod utils;
+
 use pyo3::prelude::*;
 
-/// Generates a unique correlation ID by combining a UTC timestamp with a random hex suffix.
+/// Generates a unique correlation ID.
+///
+/// Combines a UTC timestamp with a random hex suffix.
 #[pyfunction]
 fn next_id() -> String {
-    model::next_id()
+    utils::next_id()
 }
 
-/// `PyO3` module initializer - registers all classes and functions exported to Python.
+/// `PyO3` module initializer.
+///
+/// Registers all classes and functions exported to Python.
 #[pymodule]
 fn zato_server_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<http::HTTPServer>()?;

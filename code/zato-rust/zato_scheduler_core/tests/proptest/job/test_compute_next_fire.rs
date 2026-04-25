@@ -1,7 +1,7 @@
 use proptest::prelude::*;
 use chrono::{Duration, Utc};
 use zato_scheduler_core::job::RunningJob;
-use zato_server_core::model::SchedulerJob;
+use zato_scheduler_core::model::SchedulerJob;
 
 fn make_interval_job(minutes: u32, future_start: bool, is_active: bool) -> SchedulerJob {
     let start = if future_start {
@@ -61,11 +61,10 @@ proptest! {
     fn future_start_fires_at_start(minutes in 1u32..120) {
         let job = make_interval_job(minutes, true, true);
         let running_job = RunningJob::from_scheduler_job(&job);
-        if let Some(fire) = running_job.next_fire_utc {
-            if let Some(sd) = running_job.start_date {
-                let diff = (fire - sd).num_milliseconds().abs();
-                prop_assert!(diff < running_job.jitter_ms.unwrap_or(0) as i64 + 1000);
-            }
+        if let Some(fire) = running_job.next_fire_utc
+            && let Some(sd) = running_job.start_date {
+            let diff = (fire - sd).num_milliseconds().abs();
+            prop_assert!(diff < i64::from(running_job.jitter_ms.unwrap_or(0)) + 1000);
         }
     }
 }

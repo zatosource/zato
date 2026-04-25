@@ -1,9 +1,12 @@
+//! Scheduler core loop and supporting functions.
+
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use chrono::Utc;
+use parking_lot::{Condvar, Mutex};
 use pyo3::prelude::*;
 use pyo3::types::PyString;
 
@@ -11,20 +14,37 @@ use crate::calendar::CalendarData;
 use crate::job::{ExecutionRecord, RunningJob};
 use crate::types::{FireBatch, JobType, OnMissedPolicy, outcome};
 
+/// Re-export of `Py<PyAny>` for brevity.
 type PyObject = Py<PyAny>;
 
+/// Default threshold (ms) for detecting wall-clock jumps relative to monotonic time.
 const DEFAULT_CLOCK_JUMP_THRESHOLD_MS: i64 = 5_000;
+
+/// Default coalesce window (ms) - jobs whose fire time falls within this
+/// window ahead of "now" are collected in the same tick.
 const DEFAULT_COALESCE_WINDOW_MS: i64 = 50;
 
+/// Mutable state guarded by the scheduler mutex.
 pub struct SchedulerState {
+    /// Map of job id to its runtime representation.
     pub jobs: HashMap<i64, RunningJob>,
+    /// Holiday / exclusion calendars keyed by name.
     pub calendars: HashMap<String, CalendarData>,
+    /// Flag set whenever the state is mutated from outside the loop.
     pub dirty: bool,
 }
 
+impl Default for SchedulerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SchedulerState {
+    /// Creates a new empty scheduler state.
+    #[must_use]
     pub fn new() -> Self {
-        SchedulerState {
+        Self {
             jobs: HashMap::new(),
             calendars: HashMap::new(),
             dirty: false,
@@ -32,17 +52,31 @@ impl SchedulerState {
     }
 }
 
+/// Shared data visible to both the scheduler thread and the Python API.
 pub struct SchedulerShared {
+    /// Mutex-protected mutable state.
     pub state: Mutex<SchedulerState>,
+    /// Condvar used to wake the scheduler thread early.
     pub condvar: Condvar,
+    /// When set, the scheduler thread exits at the next opportunity.
     pub stop_flag: AtomicBool,
+    /// Threshold (ms) for detecting wall-clock vs. monotonic drift.
     pub clock_jump_threshold_ms: i64,
+    /// Window (ms) for coalescing nearly-due jobs into one tick.
     pub coalesce_window_ms: i64,
 }
 
+impl Default for SchedulerShared {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SchedulerShared {
+    /// Creates a new `SchedulerShared` with default thresholds.
+    #[must_use]
     pub fn new() -> Self {
-        SchedulerShared {
+        Self {
             state: Mutex::new(SchedulerState::new()),
             condvar: Condvar::new(),
             stop_flag: AtomicBool::new(false),
@@ -52,6 +86,8 @@ impl SchedulerShared {
     }
 }
 
+/// Main scheduler loop, meant to run on a dedicated thread.
+#[expect(clippy::needless_pass_by_value, reason = "thread entry point owns these values")]
 pub fn scheduler_loop(
     shared: Arc<SchedulerShared>,
     odb_adapter: PyObject,
@@ -71,7 +107,7 @@ pub fn scheduler_loop(
     load_initial_jobs(&shared, &odb_adapter);
 
     {
-        let mut state = shared.state.lock().unwrap();
+        let mut state = shared.state.lock();
         let now = Utc::now();
         apply_missed_catchup(&mut state, now);
     }
@@ -85,13 +121,13 @@ pub fn scheduler_loop(
         }
 
         let sleep_duration = {
-            let state = shared.state.lock().unwrap();
+            let state = shared.state.lock();
             compute_sleep_duration(&state)
         };
 
         {
-            let state = shared.state.lock().unwrap();
-            let _unused = shared.condvar.wait_timeout(state, sleep_duration).unwrap();
+            let mut state = shared.state.lock();
+            let _timed_out = shared.condvar.wait_for(&mut state, sleep_duration);
         }
 
         if shared.stop_flag.load(Ordering::Relaxed) {
@@ -101,10 +137,10 @@ pub fn scheduler_loop(
         let now_wall = Utc::now();
         let now_mono = Instant::now();
         let wall_delta_ms = (now_wall - last_wall).num_milliseconds();
-        let mono_delta_ms = now_mono.duration_since(last_mono).as_millis() as i64;
+        let mono_delta_ms = i64::try_from(now_mono.duration_since(last_mono).as_millis()).unwrap_or(i64::MAX);
 
         if (wall_delta_ms - mono_delta_ms).abs() > shared.clock_jump_threshold_ms {
-            let mut state = shared.state.lock().unwrap();
+            let mut state = shared.state.lock();
             reanchor_all_jobs(&mut state, now_wall);
         }
 
@@ -112,7 +148,7 @@ pub fn scheduler_loop(
         last_mono = now_mono;
 
         let fire_batch = {
-            let mut state = shared.state.lock().unwrap();
+            let mut state = shared.state.lock();
             check_in_flight_timeouts(&mut state);
             collect_due_jobs(&mut state, now_wall, shared.coalesce_window_ms)
         };
@@ -123,11 +159,16 @@ pub fn scheduler_loop(
     }
 }
 
+/// Load jobs from the ODB adapter, returning parsed job models and calendar models.
+///
+/// # Errors
+///
+/// Returns a `PyErr` if the adapter call or dict extraction fails.
 pub fn load_jobs(
     adapter: &Bound<'_, PyAny>,
 ) -> PyResult<(
-    Vec<zato_server_core::model::SchedulerJob>,
-    HashMap<String, zato_server_core::model::HolidayCalendar>,
+    Vec<crate::model::SchedulerJob>,
+    HashMap<String, crate::model::HolidayCalendar>,
 )> {
     use pyo3::types::PyDict;
 
@@ -136,32 +177,35 @@ pub fn load_jobs(
     for (key, value) in jobs_dict.iter() {
         let job_id: i64 = key.extract()?;
         let job_data: Bound<'_, PyDict> = value.cast_into()?;
-        let sj = crate::dict_to_scheduler_job(job_id, &job_data)?;
-        jobs.push(sj);
+        let scheduler_job = crate::dict_to_scheduler_job(job_id, &job_data)?;
+        jobs.push(scheduler_job);
     }
 
     let cals = HashMap::new();
     Ok((jobs, cals))
 }
 
+/// Loads jobs from the ODB adapter into the shared state at startup.
 fn load_initial_jobs(shared: &SchedulerShared, odb_adapter: &PyObject) {
-    Python::try_attach(|py| {
+    let _attached = Python::try_attach(|py| {
         let adapter = odb_adapter.bind(py);
         match load_jobs(adapter) {
             Ok((jobs, _cals)) => {
-                let mut state = shared.state.lock().unwrap();
+                let mut state = shared.state.lock();
                 for job in &jobs {
                     let running_job = RunningJob::from_scheduler_job(job);
                     state.jobs.insert(job.id, running_job);
                 }
             }
-            Err(e) => {
-                log::error!("Failed to load jobs: {}", e);
+            Err(err) => {
+                log::error!("Failed to load jobs: {err}");
             }
         }
     });
 }
 
+/// Computes how long the scheduler loop should sleep before the next tick.
+#[must_use]
 pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
     let now = Utc::now();
     let mut min_ms: i64 = 60_000;
@@ -178,9 +222,11 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
         }
     }
 
-    Duration::from_millis(min_ms.max(1) as u64)
+    let clamped = min_ms.max(1);
+    Duration::from_millis(u64::try_from(clamped).unwrap_or(1))
 }
 
+/// Collects all jobs whose next fire time falls within the coalesce window.
 pub fn collect_due_jobs(
     state: &mut SchedulerState,
     now: chrono::DateTime<Utc>,
@@ -189,11 +235,11 @@ pub fn collect_due_jobs(
     let threshold = now + chrono::Duration::milliseconds(coalesce_window_ms);
     let mut batch = Vec::new();
 
-    let job_ids: Vec<i64> = state.jobs.keys().cloned().collect();
+    let job_ids: Vec<i64> = state.jobs.keys().copied().collect();
 
-    for id in job_ids {
+    for job_id in job_ids {
         let calendars_ref = &state.calendars;
-        let running_job = state.jobs.get_mut(&id).unwrap();
+        let Some(running_job) = state.jobs.get_mut(&job_id) else { continue };
 
         if !running_job.is_active {
             continue;
@@ -211,7 +257,7 @@ pub fn collect_due_jobs(
         running_job.current_run += 1;
 
         if running_job.in_flight {
-            let in_flight_run = running_job.in_flight_run.unwrap();
+            let in_flight_run = running_job.in_flight_run.unwrap_or(0);
             running_job.record_execution(
                 ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_ALREADY_IN_FLIGHT, running_job.current_run)
                     .with_outcome_ctx(in_flight_run.to_string())
@@ -232,10 +278,11 @@ pub fn collect_due_jobs(
         running_job.in_flight_since = Some(Instant::now());
         running_job.in_flight_run = Some(running_job.current_run);
 
-        let delay = (now - fire_utc).num_milliseconds().max(0) as u64;
+        let delay_ms = (now - fire_utc).num_milliseconds().max(0);
+        let delay_ms_unsigned = u64::try_from(delay_ms).unwrap_or(0);
 
         batch.push(FireBatch {
-            job_id: running_job.id.clone(),
+            job_id: running_job.id,
             name: running_job.name.clone(),
             service: running_job.service.clone(),
             extra: running_job.extra.clone(),
@@ -245,7 +292,7 @@ pub fn collect_due_jobs(
 
         running_job.record_execution(
             ExecutionRecord::new(&planned, &actual, outcome::RUNNING, running_job.current_run)
-                .with_delay(delay)
+                .with_delay(delay_ms_unsigned)
         );
 
         running_job.advance_to_next(now);
@@ -254,13 +301,14 @@ pub fn collect_due_jobs(
     batch
 }
 
+/// Dispatches a batch of due jobs to the Python callback.
 fn dispatch_jobs(
     batch: &[FireBatch],
     run_cb: &PyObject,
     spawn_fn: &PyObject,
     on_job_executed_cb: &PyObject,
 ) {
-    Python::try_attach(|py| {
+    let _attached = Python::try_attach(|py| {
         for item in batch {
             let ctx = serde_json::json!({
                 "id": item.job_id.0,
@@ -272,16 +320,17 @@ fn dispatch_jobs(
             });
             let ctx_str = ctx.to_string();
             let py_ctx = PyString::new(py, &ctx_str).into_any().unbind();
-            if let Err(e) = run_cb.call1(py, (spawn_fn, on_job_executed_cb, py_ctx)) {
+            if let Err(err) = run_cb.call1(py, (spawn_fn, on_job_executed_cb, py_ctx)) {
                 log::error!(
                     "Failed to dispatch job `{}` (service=`{}`, run={}): {}",
-                    item.name, item.service, item.current_run, e
+                    item.name, item.service, item.current_run, err
                 );
             }
         }
     });
 }
 
+/// Checks all in-flight jobs for execution-time timeouts and marks them accordingly.
 pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
     let now_instant = Instant::now();
 
@@ -290,14 +339,14 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
             continue;
         }
         let Some(since) = running_job.in_flight_since else { continue };
-        let elapsed_ms = now_instant.duration_since(since).as_millis() as u64;
+        let elapsed_ms = u64::try_from(now_instant.duration_since(since).as_millis()).unwrap_or(u64::MAX);
         if elapsed_ms > running_job.max_execution_time_ms {
-            let run = running_job.in_flight_run.unwrap();
+            let timed_out_run = running_job.in_flight_run.unwrap_or(0);
             running_job.in_flight = false;
             running_job.in_flight_since = None;
             running_job.in_flight_run = None;
             running_job.record_execution(
-                ExecutionRecord::new("", &Utc::now().to_rfc3339(), outcome::TIMEOUT, run)
+                ExecutionRecord::new("", &Utc::now().to_rfc3339(), outcome::TIMEOUT, timed_out_run)
                     .with_duration(elapsed_ms)
                     .with_error(format!("exceeded max_execution_time_ms={}", running_job.max_execution_time_ms))
             );
@@ -305,6 +354,7 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
     }
 }
 
+/// Recomputes `next_fire_utc` for every active job after a clock jump.
 pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
     for running_job in state.jobs.values_mut() {
         if running_job.is_active {
@@ -314,11 +364,12 @@ pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>)
     apply_missed_catchup(state, now);
 }
 
+/// Applies catchup logic for jobs that missed their fire time.
 pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
-    let job_ids: Vec<i64> = state.jobs.keys().cloned().collect();
+    let job_ids: Vec<i64> = state.jobs.keys().copied().collect();
 
-    for id in job_ids {
-        let running_job = state.jobs.get_mut(&id).unwrap();
+    for job_id in job_ids {
+        let Some(running_job) = state.jobs.get_mut(&job_id) else { continue };
 
         if !running_job.is_active || running_job.job_type == JobType::OneTime {
             continue;
@@ -334,20 +385,19 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
                 running_job.compute_next_fire(now);
             }
             OnMissedPolicy::RunOnce => {
-                if let Some(fire) = running_job.next_fire_utc {
-                    if fire < now {
-                        running_job.current_run += 1;
-                        running_job.record_execution(
-                            ExecutionRecord::new(
-                                &fire.to_rfc3339(),
-                                &now.to_rfc3339(),
-                                outcome::MISSED_CATCHUP,
-                                running_job.current_run,
-                            )
-                        );
-                        running_job.next_fire_utc = Some(now);
-                        running_job.sync_instant_from_utc_pub(now);
-                    }
+                if let Some(fire) = running_job.next_fire_utc
+                    && fire < now {
+                    running_job.current_run += 1;
+                    running_job.record_execution(
+                        ExecutionRecord::new(
+                            &fire.to_rfc3339(),
+                            &now.to_rfc3339(),
+                            outcome::MISSED_CATCHUP,
+                            running_job.current_run,
+                        )
+                    );
+                    running_job.next_fire_utc = Some(now);
+                    running_job.sync_instant_from_utc_pub(now);
                 }
             }
         }

@@ -1,7 +1,7 @@
 use proptest::prelude::*;
 use chrono::{Duration, Utc};
 use zato_scheduler_core::job::RunningJob;
-use zato_server_core::model::SchedulerJob;
+use zato_scheduler_core::model::SchedulerJob;
 
 fn make_interval_job(minutes: u32) -> SchedulerJob {
     let start = (Utc::now() - Duration::hours(2)).format("%Y-%m-%dT%H:%M:%S").to_string();

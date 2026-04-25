@@ -69,7 +69,10 @@ impl LogWriter {
     }
 }
 
-/// Formats a Zato REST summary log line with timestamp, PID, CID, status, timing and response size.
+/// Formats a Zato REST summary log line.
+///
+/// Includes timestamp, PID, CID, status, timing and response size.
+#[expect(clippy::too_many_arguments, reason = "REST log format requires all these fields to produce the line")]
 pub fn format_rest_line(pid: u32, cid: &str, status_code: &str, delta_sec: i64, delta_usec: i32, response_size: usize) -> String {
     let now = Local::now();
     format!(
@@ -93,13 +96,14 @@ pub fn format_access_line(
     )
 }
 
-/// Converts a WSGI environ key like `HTTP_USER_AGENT` back to its HTTP header form `user-agent`.
-/// Returns `None` if the key does not start with `HTTP_`.
+/// Converts a WSGI environ key back to HTTP header form.
+///
+/// E.g. `HTTP_USER_AGENT` becomes `user-agent`. Returns `None` if the key lacks the `HTTP_` prefix.
 pub fn transform_header_key(wsgi_key: &str) -> Option<String> {
     let rest = wsgi_key.strip_prefix("HTTP_")?;
     let mut header = String::with_capacity(rest.len());
     for byte in rest.bytes() {
-        header.push(if byte == b'_' { '-' } else { (byte as char).to_ascii_lowercase() });
+        header.push(if byte == b'_' { '-' } else { char::from(byte).to_ascii_lowercase() });
     }
     Some(header)
 }

@@ -2,7 +2,7 @@ use proptest::prelude::*;
 use chrono::{Duration, Utc};
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::scheduler::SchedulerState;
-use zato_server_core::model::SchedulerJob;
+use zato_scheduler_core::model::SchedulerJob;
 
 fn make_job(id: i64, job_type: &str, is_active: bool, minutes: u32, future_start: bool) -> SchedulerJob {
     let start = if future_start {
@@ -63,7 +63,7 @@ proptest! {
     fn interval_ms_matches_expected(minutes in 1u32..60) {
         let sj = make_job(1, "interval_based", true, minutes, false);
         let running_job = RunningJob::from_scheduler_job(&sj);
-        prop_assert_eq!(running_job.interval_ms, minutes as u64 * 60_000);
+        prop_assert_eq!(running_job.interval_ms, u64::from(minutes) * 60_000);
     }
 
     #[test]

@@ -1,3 +1,5 @@
+//! Runtime job representation and schedule computation.
+
 use std::collections::VecDeque;
 use std::time::Instant;
 
@@ -6,32 +8,51 @@ use chrono_tz::Tz;
 use rand::rngs::SmallRng;
 use rand::{RngExt, SeedableRng};
 
-use zato_server_core::model::SchedulerJob;
+use crate::model::SchedulerJob;
 
 use crate::types::{JobId, JobType, OnMissedPolicy, ServiceName};
 
+/// Default maximum execution time for a job (1 hour in ms).
 pub const DEFAULT_MAX_EXECUTION_TIME_MS: u64 = 3_600_000;
+
+/// Default maximum number of history records kept per job.
 pub const DEFAULT_MAX_HISTORY: usize = 10_000;
+
+/// Default `on_missed` policy string.
 pub const DEFAULT_ON_MISSED: &str = "run_once";
 
+/// Minimum allowed `max_execution_time_ms` (1 second).
 pub const MIN_MAX_EXECUTION_TIME_MS: u64 = 1_000;
+
+/// Maximum allowed `max_execution_time_ms` (24 hours).
 pub const MAX_MAX_EXECUTION_TIME_MS: u64 = 86_400_000;
 
+/// A single execution history record for a job firing.
 #[derive(Debug, Clone)]
 pub struct ExecutionRecord {
+    /// ISO timestamp of the planned fire time.
     pub planned_fire_time_iso: String,
+    /// ISO timestamp of the actual fire time.
     pub actual_fire_time_iso: String,
+    /// Delay between planned and actual fire times (ms).
     pub delay_ms: u64,
+    /// Outcome label for this execution.
     pub outcome: String,
+    /// Run counter at the time of this execution.
     pub current_run: u32,
+    /// Wall-clock duration of the execution (ms), if completed.
     pub duration_ms: Option<u64>,
+    /// Error message, if the execution failed.
     pub error: Option<String>,
+    /// Additional context for the outcome.
     pub outcome_ctx: Option<String>,
 }
 
 impl ExecutionRecord {
+    /// Creates a new record with the given planned/actual times, outcome and run number.
+    #[must_use]
     pub fn new(planned: &str, actual: &str, outcome: &str, current_run: u32) -> Self {
-        ExecutionRecord {
+        Self {
             planned_fire_time_iso: planned.to_string(),
             actual_fire_time_iso: actual.to_string(),
             delay_ms: 0,
@@ -43,71 +64,103 @@ impl ExecutionRecord {
         }
     }
 
-    pub fn with_delay(mut self, delay_ms: u64) -> Self {
+    /// Sets the delay and returns `self` for chaining.
+    #[must_use]
+    pub const fn with_delay(mut self, delay_ms: u64) -> Self {
         self.delay_ms = delay_ms;
         self
     }
 
+    /// Sets the outcome context and returns `self` for chaining.
+    #[must_use]
     pub fn with_outcome_ctx(mut self, ctx: String) -> Self {
         self.outcome_ctx = Some(ctx);
         self
     }
 
-    pub fn with_duration(mut self, duration_ms: u64) -> Self {
+    /// Sets the duration and returns `self` for chaining.
+    #[must_use]
+    pub const fn with_duration(mut self, duration_ms: u64) -> Self {
         self.duration_ms = Some(duration_ms);
         self
     }
 
+    /// Sets the error message and returns `self` for chaining.
+    #[must_use]
     pub fn with_error(mut self, error: String) -> Self {
         self.error = Some(error);
         self
     }
-
 }
 
+/// A job that is actively managed by the scheduler runtime.
 #[derive(Debug)]
 pub struct RunningJob {
+    /// Unique job identifier.
     pub id: JobId,
+    /// Human-readable job name.
     pub name: String,
+    /// Whether the job is enabled.
     pub is_active: bool,
+    /// Zato service to invoke.
     pub service: ServiceName,
+    /// Opaque payload passed to the service.
     pub extra: Option<String>,
+    /// Whether this is a one-time or interval-based job.
     pub job_type: JobType,
+    /// UTC datetime of the first firing.
     pub start_date: Option<DateTime<Utc>>,
+    /// Computed interval between firings (ms).
     pub interval_ms: u64,
+    /// Maximum number of firings allowed.
     pub repeats: Option<u32>,
+    /// Random jitter added to each firing (ms).
     pub jitter_ms: Option<u32>,
+    /// IANA timezone for schedule evaluation.
     pub timezone: Option<Tz>,
+    /// String representation of the timezone.
     pub timezone_str: Option<String>,
+    /// Name of the holiday calendar to honour.
     pub calendar: Option<String>,
+    /// Policy when a firing is missed.
     pub on_missed: OnMissedPolicy,
+    /// Kill threshold for long-running invocations (ms).
     pub max_execution_time_ms: u64,
 
+    /// Next scheduled fire time in UTC.
     pub next_fire_utc: Option<DateTime<Utc>>,
+    /// Monotonic instant corresponding to `next_fire_utc`.
     pub next_fire_instant: Option<Instant>,
+    /// Whether the job is currently executing.
     pub in_flight: bool,
+    /// Monotonic instant when in-flight execution started.
     pub in_flight_since: Option<Instant>,
+    /// Run number of the in-flight execution.
     pub in_flight_run: Option<u32>,
+    /// Number of times this job has fired.
     pub current_run: u32,
 
+    /// Circular buffer of execution history records.
     pub history: VecDeque<ExecutionRecord>,
+    /// Maximum number of history records to retain.
     pub max_history: usize,
 
+    /// PRNG used to compute per-firing jitter.
     jitter_rng: SmallRng,
 }
 
+/// Clamps `raw` to the allowed `[MIN, MAX]` execution-time range, logging if clamped.
+#[must_use]
 pub fn clamp_max_execution_time(raw: u64, job_name: &str) -> u64 {
     if raw < MIN_MAX_EXECUTION_TIME_MS {
         log::warn!(
-            "Job `{}`: max_execution_time_ms={} below minimum, clamped to {}",
-            job_name, raw, MIN_MAX_EXECUTION_TIME_MS
+            "Job `{job_name}`: max_execution_time_ms={raw} below minimum, clamped to {MIN_MAX_EXECUTION_TIME_MS}"
         );
         return MIN_MAX_EXECUTION_TIME_MS;
     }
     if raw > MAX_MAX_EXECUTION_TIME_MS {
         log::warn!(
-            "Job `{}`: max_execution_time_ms={} above maximum, clamped to {}",
-            job_name, raw, MAX_MAX_EXECUTION_TIME_MS
+            "Job `{job_name}`: max_execution_time_ms={raw} above maximum, clamped to {MAX_MAX_EXECUTION_TIME_MS}"
         );
         return MAX_MAX_EXECUTION_TIME_MS;
     }
@@ -116,27 +169,28 @@ pub fn clamp_max_execution_time(raw: u64, job_name: &str) -> u64 {
 
 impl RunningJob {
 
+    /// Constructs a `RunningJob` from a `SchedulerJob` definition.
+    #[must_use]
     pub fn from_scheduler_job(job: &SchedulerJob) -> Self {
         let interval_ms = Self::compute_interval_ms(job);
-        let tz: Option<Tz> = match job.timezone.as_deref() {
-            Some(s) => match s.parse::<Tz>() {
-                Ok(tz) => Some(tz),
-                Err(_) => {
-                    log::error!("Job `{}`: invalid timezone `{}`", job.name, s);
+        let tz: Option<Tz> = job.timezone.as_deref().and_then(|tz_str| {
+            tz_str.parse::<Tz>().map_or_else(
+                |_| {
+                    log::error!("Job `{}`: invalid timezone `{tz_str}`", job.name);
                     None
-                }
-            },
-            None => None,
-        };
+                },
+                Some,
+            )
+        });
         let tz_str = job.timezone.clone();
-        let start_date = match Self::parse_start_date(&job.start_date, tz.as_ref()) {
-            Some(dt) => Some(dt),
-            None => {
+        let start_date = Self::parse_start_date(&job.start_date, tz.as_ref()).map_or_else(
+            || {
                 log::error!("Job `{}`: failed to parse start_date `{}`", job.name, job.start_date);
                 Some(Utc::now())
-            }
-        };
-        let seed = job.id as u64;
+            },
+            Some,
+        );
+        let seed = job.id.unsigned_abs();
         let jitter_rng = SmallRng::seed_from_u64(seed);
         let on_missed = OnMissedPolicy::from(
             job.on_missed.as_deref().unwrap_or(DEFAULT_ON_MISSED)
@@ -146,7 +200,7 @@ impl RunningJob {
             &job.name,
         );
 
-        let mut running_job = RunningJob {
+        let mut running_job = Self {
             id: JobId(job.id),
             name: job.name.clone(),
             is_active: job.is_active,
@@ -178,13 +232,14 @@ impl RunningJob {
         running_job
     }
 
+    /// Applies changes from an updated `SchedulerJob` definition, recomputing the schedule if needed.
     pub fn update_from_job(&mut self, job: &SchedulerJob) {
-        self.name = job.name.clone();
+        self.name.clone_from(&job.name);
         self.is_active = job.is_active;
         self.service = ServiceName(job.service.clone());
-        self.extra = job.extra.clone();
+        self.extra.clone_from(&job.extra);
         self.job_type = JobType::from(job.job_type.as_str());
-        self.calendar = job.calendar.clone();
+        self.calendar.clone_from(&job.calendar);
         self.on_missed = OnMissedPolicy::from(
             job.on_missed.as_deref().unwrap_or(DEFAULT_ON_MISSED)
         );
@@ -195,23 +250,22 @@ impl RunningJob {
         self.repeats = job.repeats;
 
         let new_interval = Self::compute_interval_ms(job);
-        let new_tz: Option<Tz> = match job.timezone.as_deref() {
-            Some(s) => match s.parse::<Tz>() {
-                Ok(tz) => Some(tz),
-                Err(_) => {
-                    log::error!("Job `{}`: invalid timezone `{}`", self.name, s);
+        let new_tz: Option<Tz> = job.timezone.as_deref().and_then(|tz_str| {
+            tz_str.parse::<Tz>().map_or_else(
+                |_| {
+                    log::error!("Job `{}`: invalid timezone `{tz_str}`", self.name);
                     None
-                }
-            },
-            None => None,
-        };
-        let new_start = match Self::parse_start_date(&job.start_date, new_tz.as_ref()) {
-            Some(dt) => Some(dt),
-            None => {
+                },
+                Some,
+            )
+        });
+        let new_start = Self::parse_start_date(&job.start_date, new_tz.as_ref()).map_or_else(
+            || {
                 log::error!("Job `{}`: failed to parse start_date `{}`", self.name, job.start_date);
                 Some(Utc::now())
-            }
-        };
+            },
+            Some,
+        );
 
         let schedule_changed = new_interval != self.interval_ms
             || new_start != self.start_date
@@ -220,12 +274,12 @@ impl RunningJob {
 
         self.interval_ms = new_interval;
         self.timezone = new_tz;
-        self.timezone_str = job.timezone.clone();
+        self.timezone_str.clone_from(&job.timezone);
         self.start_date = new_start;
 
         if job.jitter_ms != self.jitter_ms {
             self.jitter_ms = job.jitter_ms;
-            self.jitter_rng = SmallRng::seed_from_u64(self.id.0 as u64);
+            self.jitter_rng = SmallRng::seed_from_u64(self.id.0.unsigned_abs());
         }
 
         if schedule_changed && self.is_active {
@@ -236,6 +290,8 @@ impl RunningJob {
         }
     }
 
+    /// Computes the next fire time from `now` based on job type and interval.
+    #[expect(clippy::cast_possible_wrap, reason = "u64 ms values are far below i64::MAX")]
     pub fn compute_next_fire(&mut self, now: DateTime<Utc>) {
         match self.job_type {
             JobType::OneTime => {
@@ -254,8 +310,8 @@ impl RunningJob {
             JobType::IntervalBased => {
                 if self.interval_ms > 0 {
                     if let Some(sd) = self.start_date {
-                        let n = self.find_next_n(sd, now);
-                        let base_ms = n * self.interval_ms;
+                        let nth = self.find_next_n(sd, now);
+                        let base_ms = nth * self.interval_ms;
                         let jitter = self.compute_jitter();
                         self.next_fire_utc = Some(sd + chrono::Duration::milliseconds((base_ms + jitter) as i64));
                     } else {
@@ -269,22 +325,23 @@ impl RunningJob {
         self.sync_instant_from_utc(now);
     }
 
+    /// Advances to the next fire time after the current run completes.
     pub fn advance_to_next(&mut self, now: DateTime<Utc>) {
         if self.job_type == JobType::OneTime {
             self.next_fire_utc = None;
             self.next_fire_instant = None;
             return;
         }
-        if let Some(max) = self.repeats {
-            if self.current_run >= max {
-                self.next_fire_utc = None;
-                self.next_fire_instant = None;
-                return;
-            }
+        if let Some(max) = self.repeats
+            && self.current_run >= max {
+            self.next_fire_utc = None;
+            self.next_fire_instant = None;
+            return;
         }
         self.compute_next_fire(now);
     }
 
+    /// Appends a record to the execution history, evicting the oldest if at capacity.
     pub fn record_execution(&mut self, record: ExecutionRecord) {
         if self.history.len() >= self.max_history {
             self.history.pop_front();
@@ -292,38 +349,46 @@ impl RunningJob {
         self.history.push_back(record);
     }
 
+    /// Returns `true` if today is a holiday according to the job's calendar.
+    #[must_use]
     pub fn is_holiday_today(&self, calendars: &std::collections::HashMap<String, super::calendar::CalendarData>) -> bool {
         let Some(ref cal_name) = self.calendar else { return false };
         let Some(cal) = calendars.get(cal_name) else { return false };
-        let today: chrono::NaiveDate = if let Some(ref tz) = self.timezone {
-            Utc::now().with_timezone(tz).date_naive()
-        } else {
-            Utc::now().date_naive()
-        };
+        let today: chrono::NaiveDate = self.timezone.as_ref().map_or_else(
+            || Utc::now().date_naive(),
+            |tz| Utc::now().with_timezone(tz).date_naive(),
+        );
         cal.is_excluded(today)
     }
 
+    /// Public wrapper around `sync_instant_from_utc`.
     pub fn sync_instant_from_utc_pub(&mut self, now: DateTime<Utc>) {
         self.sync_instant_from_utc(now);
     }
 
+    /// Finds the next interval multiple `n` such that `start + n * interval > now`.
+    #[expect(clippy::cast_sign_loss, reason = "elapsed_ms is non-negative after .max(0)")]
+    #[expect(clippy::cast_possible_wrap, reason = "interval product is far below i64::MAX")]
     fn find_next_n(&self, start: DateTime<Utc>, now: DateTime<Utc>) -> u64 {
         if now <= start {
             return 0;
         }
         let elapsed_ms = (now - start).num_milliseconds().max(0) as u64;
-        let n = elapsed_ms / self.interval_ms;
-        let candidate = start + chrono::Duration::milliseconds((n * self.interval_ms) as i64);
-        if candidate <= now { n + 1 } else { n }
+        let nth = elapsed_ms / self.interval_ms;
+        let candidate = start + chrono::Duration::milliseconds((nth * self.interval_ms) as i64);
+        if candidate <= now { nth + 1 } else { nth }
     }
 
+    /// Computes a random jitter value in `[0, jitter_ms)`, or 0 if jitter is not configured.
     fn compute_jitter(&mut self) -> u64 {
         match self.jitter_ms {
-            Some(j) if j > 0 => self.jitter_rng.random_range(0..j as u64),
+            Some(jitter) if jitter > 0 => self.jitter_rng.random_range(0..u64::from(jitter)),
             _ => 0,
         }
     }
 
+    /// Converts `next_fire_utc` to a monotonic `Instant` relative to `now`.
+    #[expect(clippy::cast_sign_loss, reason = "diff_ms is non-negative after .max(0)")]
     fn sync_instant_from_utc(&mut self, now: DateTime<Utc>) {
         self.next_fire_instant = self.next_fire_utc.map(|fire_utc| {
             let diff_ms = (fire_utc - now).num_milliseconds().max(0) as u64;
@@ -331,20 +396,23 @@ impl RunningJob {
         });
     }
 
+    /// Computes the total interval in milliseconds from the individual time components.
+    #[must_use]
     pub fn compute_interval_ms(job: &SchedulerJob) -> u64 {
-        let w = job.weeks.unwrap_or(0) as u64 * 7 * 86_400_000;
-        let d = job.days.unwrap_or(0) as u64 * 86_400_000;
-        let h = job.hours.unwrap_or(0) as u64 * 3_600_000;
-        let m = job.minutes.unwrap_or(0) as u64 * 60_000;
-        let s = job.seconds.unwrap_or(0) as u64 * 1_000;
-        w + d + h + m + s
+        let weeks_ms  = u64::from(job.weeks.unwrap_or(0))   * 7 * 86_400_000;
+        let days_ms   = u64::from(job.days.unwrap_or(0))    * 86_400_000;
+        let hours_ms  = u64::from(job.hours.unwrap_or(0))   * 3_600_000;
+        let mins_ms   = u64::from(job.minutes.unwrap_or(0)) * 60_000;
+        let secs_ms   = u64::from(job.seconds.unwrap_or(0)) * 1_000;
+        weeks_ms + days_ms + hours_ms + mins_ms + secs_ms
     }
 
-    fn parse_start_date(s: &str, tz: Option<&Tz>) -> Option<DateTime<Utc>> {
-        if s.is_empty() {
+    /// Parses a start-date string into a UTC `DateTime`, optionally interpreting it in `tz`.
+    fn parse_start_date(raw: &str, tz: Option<&Tz>) -> Option<DateTime<Utc>> {
+        if raw.is_empty() {
             return None;
         }
-        let clean = s.split('+').next().unwrap().trim_end_matches('Z');
+        let clean = raw.split('+').next().unwrap_or(raw).trim_end_matches('Z');
         let formats = [
             "%Y-%m-%dT%H:%M:%S%.f",
             "%Y-%m-%dT%H:%M:%S",
@@ -354,7 +422,7 @@ impl RunningJob {
         for fmt in &formats {
             if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(clean, fmt) {
                 if let Some(tz_ref) = tz {
-                    return Self::naive_to_utc_in_tz(naive, tz_ref);
+                    return Some(Self::naive_to_utc_in_tz(naive, *tz_ref));
                 }
                 return Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
             }
@@ -362,6 +430,7 @@ impl RunningJob {
         None
     }
 
+    /// Converts a `LocalResult` to a UTC `DateTime`, picking the earliest for ambiguous results.
     fn local_result_to_utc(lr: LocalResult<DateTime<Tz>>) -> Option<DateTime<Utc>> {
         match lr {
             LocalResult::Single(dt) | LocalResult::Ambiguous(dt, _) => Some(dt.with_timezone(&Utc)),
@@ -369,17 +438,17 @@ impl RunningJob {
         }
     }
 
-    fn naive_to_utc_in_tz(naive: chrono::NaiveDateTime, tz: &Tz) -> Option<DateTime<Utc>> {
+    /// Converts a naive datetime to UTC by interpreting it in `tz`, with a DST-gap fallback.
+    fn naive_to_utc_in_tz(naive: chrono::NaiveDateTime, tz: Tz) -> DateTime<Utc> {
         if let Some(utc) = Self::local_result_to_utc(tz.from_local_datetime(&naive)) {
-            return Some(utc);
+            return utc;
         }
         let advanced = naive + chrono::Duration::hours(1);
         if let Some(utc) = Self::local_result_to_utc(tz.from_local_datetime(&advanced)) {
-            return Some(utc);
+            return utc;
         }
-        Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc))
+        DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc)
     }
-
 }
 
 #[cfg(test)]
@@ -398,7 +467,7 @@ mod tests {
             on_missed: None, max_execution_time_ms: None,
         };
         let ms = RunningJob::compute_interval_ms(&job);
-        let expected = 1u64 * 7 * 86_400_000
+        let expected = 7u64 * 86_400_000
             + 2 * 86_400_000
             + 3 * 3_600_000
             + 4 * 60_000
@@ -411,5 +480,4 @@ mod tests {
         let dt = RunningJob::parse_start_date("2026-04-10T12:00:00", None);
         assert!(dt.is_some());
     }
-
 }

@@ -3,7 +3,7 @@ use std::time::Instant;
 use chrono::Utc;
 use zato_scheduler_core::job::{RunningJob, ExecutionRecord};
 use zato_scheduler_core::scheduler::{SchedulerState, check_in_flight_timeouts};
-use zato_server_core::model::SchedulerJob;
+use zato_scheduler_core::model::SchedulerJob;
 
 fn make_active_job() -> SchedulerJob {
     let start = (Utc::now() - chrono::Duration::hours(1))

@@ -16,13 +16,13 @@ proptest! {
     }
 
     #[test]
-    fn rest_line_ends_with_newline(cid in "[a-z]{1,10}", size in 0usize..100000) {
+    fn rest_line_ends_with_newline(cid in "[a-z]{1,10}", size in 0usize..100_000) {
         let line = format_rest_line(1, &cid, "200", 0, 0, size);
         prop_assert!(line.ends_with('\n'));
     }
 
     #[test]
-    fn rest_line_contains_rest_marker(sec in 0i64..3600, usec in 0i32..999999) {
+    fn rest_line_contains_rest_marker(sec in 0i64..3600, usec in 0i32..999_999) {
         let line = format_rest_line(1, "cid", "200", sec, usec, 0);
         prop_assert!(line.contains("REST cha"));
         prop_assert!(line.contains("zato_rest:0"));
@@ -30,18 +30,18 @@ proptest! {
 
     #[test]
     fn access_line_contains_all_fields(
-        ip in "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}",
+        addr in "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}",
         cid in "[a-z0-9]{5,15}",
         method in "(GET|POST|PUT|DELETE)",
         path in "/[a-z/]{1,20}",
         status in "(200|404|500)",
         size in 0usize..10000,
-        ua in "[a-zA-Z0-9/. ]{1,30}",
+        agent in "[a-zA-Z0-9/. ]{1,30}",
     ) {
-        let line = format_access_line(1, &ip, &cid, "0.001", "test-chan",
+        let line = format_access_line(1, &addr, &cid, "0.001", "test-chan",
             "14/Apr/2026:00:00:00 +0200", &method, &path, "HTTP/1.1",
-            &status, size, &ua);
-        prop_assert!(line.contains(&ip));
+            &status, size, &agent);
+        prop_assert!(line.contains(&addr));
         prop_assert!(line.contains(&cid));
         prop_assert!(line.contains(&method));
         prop_assert!(line.contains(&path));
@@ -52,7 +52,7 @@ proptest! {
 
     #[test]
     fn transform_header_key_http_prefix(suffix in "[A-Z_]{1,20}") {
-        let key = format!("HTTP_{}", suffix);
+        let key = format!("HTTP_{suffix}");
         let result = transform_header_key(&key);
         prop_assert!(result.is_some());
         let header = result.unwrap();
@@ -70,7 +70,7 @@ proptest! {
 
     #[test]
     fn transform_header_key_preserves_length(suffix in "[A-Z_]{1,30}") {
-        let key = format!("HTTP_{}", suffix);
+        let key = format!("HTTP_{suffix}");
         let header = transform_header_key(&key).unwrap();
         prop_assert_eq!(header.len(), suffix.len());
     }
@@ -83,7 +83,7 @@ proptest! {
         let mut expected: u64 = 0;
         for line in &lines {
             writer.write_line(line.as_bytes()).unwrap();
-            expected += line.len() as u64;
+            expected += u64::try_from(line.len()).unwrap();
         }
         prop_assert_eq!(writer.written, expected);
     }

@@ -7,7 +7,9 @@ use super::{LISTEN_FD, ACCEPT_WATCHER, PyObject};
 use super::accept::accept_loop;
 use super::socket::create_listen_socket;
 
-/// Main Python-visible HTTP server class that binds a TCP listener and dispatches requests via gevent.
+/// Main Python-visible HTTP server class.
+///
+/// Binds a TCP listener and dispatches requests via gevent.
 #[pyclass]
 pub struct HTTPServer {
     /// Python callable that receives `(environ_dict,)` and returns `(status, headers, body)`.
@@ -57,7 +59,7 @@ impl Drop for HTTPServer {
 
 /// Sets the Linux process name to `zato-server` for visibility in `ps`/`top`.
 fn set_process_name() {
-    let _ = prctl::set_name("zato-server");
+    let _result = prctl::set_name("zato-server");
 }
 
 /// Atomically swaps `LISTEN_FD` to -1 and closes the old fd if it was valid.

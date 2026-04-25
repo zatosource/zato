@@ -1,5 +1,7 @@
-//! HTTP connection handler - reads requests, parses with `httparse`, dispatches to
-//! the Python request handler, and writes responses back over the same fd.
+//! HTTP connection handler.
+//!
+//! Reads requests, parses with `httparse`, dispatches to the Python request handler,
+//! and writes responses back over the same fd.
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
@@ -113,7 +115,7 @@ pub(super) fn handle_connection(
             let body: &[u8] = body_obj.extract()?;
 
             let py_headers = hdrs.cast::<PyDict>().ok();
-            build_response(version, status, py_headers.as_deref(), body, keep_alive, &mut resp)?;
+            build_response(version, status, py_headers, body, keep_alive, &mut resp)?;
         }
 
         fd_write_all(py, fd, &resp, &hub, &loop_obj)?;

@@ -2,7 +2,7 @@ use proptest::prelude::*;
 use chrono::{Duration, Utc};
 use zato_scheduler_core::job::RunningJob;
 use zato_scheduler_core::scheduler::SchedulerState;
-use zato_server_core::model::SchedulerJob;
+use zato_scheduler_core::model::SchedulerJob;
 
 fn make_job(id: i64) -> SchedulerJob {
     let start = (Utc::now() - Duration::hours(1))
@@ -37,7 +37,7 @@ proptest! {
     ) {
         let n_delete = n_delete.min(n_total - 1);
         let mut state = SchedulerState::new();
-        let ids: Vec<i64> = (0..n_total).map(|i| i as i64).collect();
+        let ids: Vec<i64> = (0..n_total).map(|idx| i64::try_from(idx).unwrap()).collect();
         for &id in &ids {
             let sj = make_job(id);
             let running_job = RunningJob::from_scheduler_job(&sj);
@@ -57,8 +57,8 @@ proptest! {
         n in 1usize..5,
     ) {
         let mut state = SchedulerState::new();
-        for i in 0..n {
-            let id = i as i64;
+        for idx in 0..n {
+            let id = i64::try_from(idx).unwrap();
             let sj = make_job(id);
             let running_job = RunningJob::from_scheduler_job(&sj);
             state.jobs.insert(id, running_job);

@@ -1,6 +1,6 @@
 use proptest::prelude::*;
 use zato_scheduler_core::job::RunningJob;
-use zato_server_core::model::SchedulerJob;
+use zato_scheduler_core::model::SchedulerJob;
 
 fn make_job(weeks: u32, days: u32, hours: u32, minutes: u32, seconds: u32) -> SchedulerJob {
     SchedulerJob {
@@ -29,19 +29,19 @@ proptest! {
 
     #[test]
     fn interval_ms_equals_expected_sum(
-        w in 0u32..53,
-        d in 0u32..366,
-        h in 0u32..24,
-        m in 0u32..60,
-        s in 0u32..60,
+        weeks in 0u32..53,
+        days in 0u32..366,
+        hours in 0u32..24,
+        mins in 0u32..60,
+        secs in 0u32..60,
     ) {
-        let job = make_job(w, d, h, m, s);
+        let job = make_job(weeks, days, hours, mins, secs);
         let ms = RunningJob::compute_interval_ms(&job);
-        let expected = w as u64 * 7 * 86_400_000
-            + d as u64 * 86_400_000
-            + h as u64 * 3_600_000
-            + m as u64 * 60_000
-            + s as u64 * 1_000;
+        let expected = u64::from(weeks) * 7 * 86_400_000
+            + u64::from(days) * 86_400_000
+            + u64::from(hours) * 3_600_000
+            + u64::from(mins) * 60_000
+            + u64::from(secs) * 1_000;
         prop_assert_eq!(ms, expected);
     }
 

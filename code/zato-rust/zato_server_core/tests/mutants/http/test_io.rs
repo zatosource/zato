@@ -9,14 +9,14 @@ fn parse_content_length_zero() {
 
 #[test]
 fn parse_content_length_exact_max() {
-    let s = MAX_REQUEST_SIZE.to_string();
-    assert_eq!(parse_content_length(s.as_bytes()), MAX_REQUEST_SIZE);
+    let text = MAX_REQUEST_SIZE.to_string();
+    assert_eq!(parse_content_length(text.as_bytes()), MAX_REQUEST_SIZE);
 }
 
 #[test]
 fn parse_content_length_above_max_clamps() {
-    let s = (MAX_REQUEST_SIZE + 1).to_string();
-    assert_eq!(parse_content_length(s.as_bytes()), MAX_REQUEST_SIZE);
+    let text = (MAX_REQUEST_SIZE + 1).to_string();
+    assert_eq!(parse_content_length(text.as_bytes()), MAX_REQUEST_SIZE);
 }
 
 #[test]
