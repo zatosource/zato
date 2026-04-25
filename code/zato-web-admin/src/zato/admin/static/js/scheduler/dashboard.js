@@ -3,11 +3,13 @@ if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
 if (typeof $.fn.zato.scheduler === 'undefined') { $.fn.zato.scheduler = {}; }
 $.fn.zato.scheduler.dashboard = {};
 
+// Dashboard configuration. Each key can be overridden by per-page dashboards.
 $.fn.zato.scheduler.dashboard.config = {
     cluster_id: '1',
     default_time_range: 0,
     error_message: 'Error executing job',
     show_live_status: false,
+    // Whether to display numeric pills on the Recent runs / Upcoming runs tabs.
     show_tab_counts: false
 };
 
@@ -824,7 +826,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     };
 
     // ////////////////////////////////////////////////////////////////////////
-    // Render failures
+    // Render recent runs table (capped to 100 rows, with Run number column)
     // ////////////////////////////////////////////////////////////////////////
 
     dash.render_failures = function(timeline) {
@@ -886,7 +888,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     };
 
     // ////////////////////////////////////////////////////////////////////////
-    // Render upcoming runs table
+    // Render upcoming runs table (capped to 100 rows, projects future fires)
     // ////////////////////////////////////////////////////////////////////////
 
     dash.render_upcoming_table = function(jobs) {

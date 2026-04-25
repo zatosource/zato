@@ -321,7 +321,9 @@ impl Scheduler {
         Ok(())
     }
 
-    /// Marks a job execution as complete, optionally injecting synthetic test records.
+    /// Marks a job execution as complete, records the final outcome and duration,
+    /// and catches up any interval fires that were missed while the job was in flight.
+    /// When test data is enabled, also injects synthetic history records and drip-fed log entries.
     #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn mark_complete(&self, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {

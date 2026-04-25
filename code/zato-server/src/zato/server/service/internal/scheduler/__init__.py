@@ -48,11 +48,17 @@ def _item_by_id(items, id_):
 # ################################################################################################################################
 
 class _SchedulerAdmin(AdminService):
+    """ Base class for scheduler administration services.
+    """
 
     def _service_by_name(self, service_name):
+        """ Returns True if the service is deployed on this server.
+        """
         return service_name in self.server.service_store.name_to_impl_name
 
     def _enrich_job(self, item):
+        """ Adds resolved service_name and service_id to a job dict.
+        """
         out = dict(item)
         service_name = item['service']
         out['service_name'] = service_name
@@ -248,6 +254,8 @@ class _CreateEdit(_SchedulerAdmin):
 # ################################################################################################################################
 
 class _Get(_SchedulerAdmin):
+    """ Base class for services that return scheduler job data.
+    """
     output = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name', \
         '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition', \
         '-jitter_ms', '-timezone', '-calendar', '-on_missed', '-max_execution_time_ms'
@@ -551,6 +559,8 @@ class GetLogEntries(_SchedulerAdmin):
 _cal_service_prefix = 'zato.scheduler.holiday-calendar.'
 
 class _HolidayCalendarAdmin(AdminService):
+    """ Base class for holiday calendar administration services.
+    """
     pass
 
 # ################################################################################################################################

@@ -3,12 +3,14 @@ if (typeof $.fn.zato === 'undefined') { $.fn.zato = {}; }
 if (typeof $.fn.zato.scheduler === 'undefined') { $.fn.zato.scheduler = {}; }
 $.fn.zato.scheduler.job_detail = {};
 
+// Job detail page configuration.
 $.fn.zato.scheduler.job_detail.config = {
     cluster_id: '1',
     default_tab: 'executions',
     default_time_range: 0,
     empty_history_text: 'No run history',
     show_search: false,
+    // Delays below this threshold are hidden (shown as "-") to reduce noise.
     min_visible_delay_ms: 200,
     stat_error_color: '#e0226e',
     detail_tags: [

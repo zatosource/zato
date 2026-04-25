@@ -273,6 +273,9 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
 }
 
 /// Collects all jobs whose next fire time falls within the coalesce window.
+///
+/// Jobs that are currently in flight are silently skipped; missed-fire catchup
+/// for long-running jobs is handled in `Scheduler::mark_complete` instead.
 pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, coalesce_window_ms: i64) -> Vec<FireBatch> {
     let threshold = now + chrono::Duration::milliseconds(coalesce_window_ms);
     let mut batch = Vec::new();

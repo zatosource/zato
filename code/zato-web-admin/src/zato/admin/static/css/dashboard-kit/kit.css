@@ -188,6 +188,7 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     border-radius: 0;
 }
 
+/* Alternating row striping, consistent with the main #data-table style */
 .dashboard-card .zato-table tbody tr:nth-child(even) {
     background-color: rgba(6, 60, 101, 0.025);
 }

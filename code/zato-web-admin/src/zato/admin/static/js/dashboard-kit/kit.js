@@ -89,6 +89,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         return kit.format_compact_duration(seconds) + ' ago';
     };
 
+    // Formats a duration in milliseconds into a human-readable string.
+    // Returns "< 1 ms" for zero, "N ms" under 1s, "N.N s" under 1m, "N.N min" above.
     kit.format_duration_ms = function(duration_ms) {
         if (duration_ms === null || duration_ms === undefined || duration_ms === '') {
             return '-';
