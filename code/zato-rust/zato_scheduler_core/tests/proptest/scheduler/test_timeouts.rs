@@ -35,8 +35,8 @@ proptest! {
 
     #[test]
     fn non_in_flight_jobs_not_touched(_n in 0u32..50) {
-        let sj = make_active_job();
-        let running_job = RunningJob::from_scheduler_job(&sj);
+        let scheduler_job = make_active_job();
+        let running_job = RunningJob::from_scheduler_job(&scheduler_job);
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
         check_in_flight_timeouts(&mut state);
@@ -47,9 +47,9 @@ proptest! {
 
     #[test]
     fn recent_in_flight_not_timed_out(max_exec in 10_000u64..100_000) {
-        let mut sj = make_active_job();
-        sj.max_execution_time_ms = Some(max_exec);
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        let mut scheduler_job = make_active_job();
+        scheduler_job.max_execution_time_ms = Some(max_exec);
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.in_flight = true;
         running_job.in_flight_since = Some(Instant::now());
         running_job.record_execution(ExecutionRecord::new("p", "a", "executed", 1));

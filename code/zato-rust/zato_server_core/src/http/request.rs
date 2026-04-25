@@ -9,7 +9,7 @@ use chrono::{Datelike, FixedOffset, Timelike, Utc};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDateTime, PyDict, PyString, PyTuple, PyTzInfo};
 
-use crate::logging::{log_access, log_rest_summary};
+use crate::logging::{AccessLogEntry, RestLogEntry, log_access, log_rest_summary};
 
 /// Sentinel used when no remote address can be determined from headers.
 const NO_REMOTE_ADDRESS: &str = "(None)";
@@ -264,10 +264,20 @@ pub fn handle_http_request(
             let http_version: String = http_environ.get_item("SERVER_PROTOCOL")?
                 .map_or_else(|| Ok(String::new()), |val| val.extract())?;
 
-            log_access(
-                &remote_addr, &cid, &resp_time, &channel_name, &req_ts_str,
-                &method, &path_info, &http_version, status_code, response_size, &user_agent,
-            );
+            log_access(&AccessLogEntry {
+                pid: std::process::id(),
+                remote_ip: &remote_addr,
+                cid: &cid,
+                resp_time: &resp_time,
+                channel_name: &channel_name,
+                req_timestamp: &req_ts_str,
+                method: &method,
+                path: &path_info,
+                http_version: &http_version,
+                status_code,
+                response_size,
+                user_agent: &user_agent,
+            });
         }
     }
 
@@ -301,7 +311,14 @@ pub fn handle_http_request(
         let delta_sec = delta.num_seconds();
         #[expect(clippy::as_conversions, reason = "modulo 1_000_000 guarantees the result fits in i32")]
         let delta_usec = (delta.num_microseconds().unwrap_or(0) % 1_000_000) as i32;
-        log_rest_summary(&cid, status_code, delta_sec, delta_usec, response_size);
+        log_rest_summary(&RestLogEntry {
+            pid: std::process::id(),
+            cid: &cid,
+            status_code,
+            delta_sec,
+            delta_usec,
+            response_size,
+        });
     }
 
     Ok(PyTuple::new(py, &[

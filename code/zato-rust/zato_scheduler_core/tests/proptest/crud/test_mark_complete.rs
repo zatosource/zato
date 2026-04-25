@@ -40,8 +40,8 @@ proptest! {
 
     #[test]
     fn clears_in_flight(duration_ms in 0u64..100_000) {
-        let sj = make_job();
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        let scheduler_job = make_job();
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.in_flight = true;
         running_job.in_flight_since = Some(std::time::Instant::now());
         running_job.record_execution(ExecutionRecord::new("p", "a", "running", 1));
@@ -52,8 +52,8 @@ proptest! {
 
     #[test]
     fn records_duration(duration_ms in 1u64..100_000) {
-        let sj = make_job();
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        let scheduler_job = make_job();
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.in_flight = true;
         running_job.record_execution(ExecutionRecord::new("p", "a", "running", 1));
         mark_complete(&mut running_job, "ok", duration_ms);
@@ -63,8 +63,8 @@ proptest! {
 
     #[test]
     fn outcome_set_to_timeout(duration_ms in 0u64..100_000) {
-        let sj = make_job();
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        let scheduler_job = make_job();
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.in_flight = true;
         running_job.record_execution(ExecutionRecord::new("p", "a", "running", 1));
         mark_complete(&mut running_job, "timeout", duration_ms);
@@ -74,8 +74,8 @@ proptest! {
 
     #[test]
     fn outcome_set_to_ok(duration_ms in 0u64..100_000) {
-        let sj = make_job();
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        let scheduler_job = make_job();
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.in_flight = true;
         running_job.record_execution(ExecutionRecord::new("p", "a", "running", 1));
         mark_complete(&mut running_job, "ok", duration_ms);

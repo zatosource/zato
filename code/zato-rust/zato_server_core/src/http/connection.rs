@@ -9,33 +9,40 @@ use pyo3::intern;
 
 use super::{PyObject, MAX_HEADERS, MAX_REQUEST_SIZE};
 use super::headers::set_header;
-use super::io::{fd_read, fd_write_all, parse_content_length, header_value_eq};
-use super::response::build_response;
+use super::io::{GeventLoop, fd_read, fd_write_all, parse_content_length, header_value_eq};
+use super::response::{ResponseParts, build_response};
+
+/// Context for handling a single HTTP connection.
+pub(super) struct ConnectionCtx<'conn> {
+    /// File descriptor for the accepted socket.
+    pub fd: i32,
+    /// Remote client IP address.
+    pub remote_addr: &'conn str,
+    /// Remote client port.
+    pub remote_port: &'conn str,
+    /// Python callback that processes parsed requests.
+    pub request_handler: &'conn PyObject,
+    /// Server software string for the `Server` response header.
+    pub server_software: &'conn str,
+}
 
 /// Drives one HTTP keep-alive connection.
 ///
 /// Reads requests in a loop, parses them, dispatches to the Python handler,
 /// and writes back the response. Returns when the client closes the connection
 /// or `Connection: close` is seen.
-#[expect(clippy::too_many_arguments, reason = "all parameters are needed to handle a connection")]
 #[expect(clippy::indexing_slicing, reason = "path slice indices come from find('?') and httparse header_len which guarantee bounds")]
-pub(super) fn handle_connection(
-    py: Python<'_>,
-    fd: i32,
-    remote_addr: &str,
-    remote_port: &str,
-    request_handler: &PyObject,
-    server_software: &str,
-) -> PyResult<()> {
+pub(super) fn handle_connection(py: Python<'_>, ctx: &ConnectionCtx<'_>) -> PyResult<()> {
     let hub = py.import("gevent")?.call_method0("get_hub")?;
     let loop_obj = hub.getattr(intern!(py, "loop"))?;
+    let gev = GeventLoop { hub, loop_obj };
 
     let mut buf: Vec<u8> = Vec::with_capacity(4096);
     let mut resp: Vec<u8> = Vec::with_capacity(512);
 
     loop {
         if buf.is_empty() {
-            let bytes_read = fd_read(py, fd, &mut buf, &hub, &loop_obj)?;
+            let bytes_read = fd_read(py, ctx.fd, &mut buf, &gev)?;
             if bytes_read == 0 { return Ok(()); }
         }
 
@@ -61,9 +68,9 @@ pub(super) fn handle_connection(
                     dict.set_item(intern!(py, "RAW_URI"), path)?;
                     dict.set_item(intern!(py, "SERVER_PROTOCOL"),
                         if ver == 0 { "HTTP/1.0" } else { "HTTP/1.1" })?;
-                    dict.set_item(intern!(py, "SERVER_SOFTWARE"), server_software)?;
-                    dict.set_item(intern!(py, "REMOTE_ADDR"), remote_addr)?;
-                    dict.set_item(intern!(py, "REMOTE_PORT"), remote_port)?;
+                    dict.set_item(intern!(py, "SERVER_SOFTWARE"), ctx.server_software)?;
+                    dict.set_item(intern!(py, "REMOTE_ADDR"), ctx.remote_addr)?;
+                    dict.set_item(intern!(py, "REMOTE_PORT"), ctx.remote_port)?;
 
                     let mut content_len: usize = 0;
                     let mut keep_alive_flag = ver >= 1;
@@ -81,7 +88,7 @@ pub(super) fn handle_connection(
                     if buf.len() >= MAX_REQUEST_SIZE {
                         return Err(pyo3::exceptions::PyValueError::new_err("request too large"));
                     }
-                    let bytes_read = fd_read(py, fd, &mut buf, &hub, &loop_obj)?;
+                    let bytes_read = fd_read(py, ctx.fd, &mut buf, &gev)?;
                     if bytes_read == 0 {
                         return Err(pyo3::exceptions::PyConnectionError::new_err("closed"));
                     }
@@ -94,7 +101,7 @@ pub(super) fn handle_connection(
 
         let end = header_len + content_length;
         while buf.len() < end {
-            let bytes_read = fd_read(py, fd, &mut buf, &hub, &loop_obj)?;
+            let bytes_read = fd_read(py, ctx.fd, &mut buf, &gev)?;
             if bytes_read == 0 {
                 return Err(pyo3::exceptions::PyConnectionError::new_err("closed"));
             }
@@ -104,7 +111,7 @@ pub(super) fn handle_connection(
             PyBytes::new(py, &buf[header_len..end]),
         )?;
 
-        let result = request_handler.call1(py, (&dict,))?;
+        let result = ctx.request_handler.call1(py, (&dict,))?;
 
         {
             let tup = result.bind(py);
@@ -115,10 +122,16 @@ pub(super) fn handle_connection(
             let body: &[u8] = body_obj.extract()?;
 
             let py_headers = hdrs.cast::<PyDict>().ok();
-            build_response(version, status, py_headers, body, keep_alive, &mut resp)?;
+            build_response(&ResponseParts {
+                version,
+                status_str: status,
+                py_headers,
+                body,
+                keep_alive,
+            }, &mut resp)?;
         }
 
-        fd_write_all(py, fd, &resp, &hub, &loop_obj)?;
+        fd_write_all(py, ctx.fd, &resp, &gev)?;
 
         if !keep_alive { return Ok(()); }
 

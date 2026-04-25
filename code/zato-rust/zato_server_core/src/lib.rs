@@ -32,8 +32,6 @@ fn zato_server_core(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(next_id, module)?)?;
     module.add_function(wrap_pyfunction!(logging::init_rest_log, module)?)?;
     module.add_function(wrap_pyfunction!(logging::init_access_log, module)?)?;
-    module.add_function(wrap_pyfunction!(logging::log_rest_summary, module)?)?;
-    module.add_function(wrap_pyfunction!(logging::log_access, module)?)?;
     module.add_function(wrap_pyfunction!(http::extract_headers, module)?)?;
     module.add_function(wrap_pyfunction!(http::handle_http_request, module)?)?;
     Ok(())

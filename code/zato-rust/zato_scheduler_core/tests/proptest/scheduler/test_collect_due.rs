@@ -34,9 +34,9 @@ proptest! {
 
     #[test]
     fn inactive_jobs_never_collected(minutes in 1u32..60) {
-        let mut sj = make_due_job(1, minutes);
-        sj.is_active = false;
-        let running_job = RunningJob::from_scheduler_job(&sj);
+        let mut scheduler_job = make_due_job(1, minutes);
+        scheduler_job.is_active = false;
+        let running_job = RunningJob::from_scheduler_job(&scheduler_job);
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
         let now = Utc::now();
@@ -46,8 +46,8 @@ proptest! {
 
     #[test]
     fn in_flight_jobs_skipped(minutes in 1u32..30) {
-        let sj = make_due_job(1, minutes);
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        let scheduler_job = make_due_job(1, minutes);
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.next_fire_utc = Some(Utc::now() - Duration::seconds(1));
         running_job.sync_instant_from_utc_pub(Utc::now());
         running_job.in_flight = true;

@@ -1,29 +1,29 @@
 use proptest::prelude::*;
-use zato_server_core::logging::{LogWriter, format_rest_line, format_access_line, transform_header_key};
+use zato_server_core::logging::{AccessLogEntry, LogWriter, RestLogEntry, format_rest_line, format_access_line, transform_header_key};
 
 proptest! {
 
     #[test]
     fn rest_line_contains_cid(cid in "[a-zA-Z0-9-]{1,40}") {
-        let line = format_rest_line(1234, &cid, "200", 0, 500, 42);
+        let line = format_rest_line(&RestLogEntry { pid: 1234, cid: &cid, status_code: "200", delta_sec: 0, delta_usec: 500, response_size: 42 });
         prop_assert!(line.contains(&cid));
     }
 
     #[test]
     fn rest_line_contains_status(code in "(200|201|400|404|500)") {
-        let line = format_rest_line(1234, "test-cid", &code, 0, 0, 0);
+        let line = format_rest_line(&RestLogEntry { pid: 1234, cid: "test-cid", status_code: &code, delta_sec: 0, delta_usec: 0, response_size: 0 });
         prop_assert!(line.contains(&code));
     }
 
     #[test]
     fn rest_line_ends_with_newline(cid in "[a-z]{1,10}", size in 0usize..100_000) {
-        let line = format_rest_line(1, &cid, "200", 0, 0, size);
+        let line = format_rest_line(&RestLogEntry { pid: 1, cid: &cid, status_code: "200", delta_sec: 0, delta_usec: 0, response_size: size });
         prop_assert!(line.ends_with('\n'));
     }
 
     #[test]
     fn rest_line_contains_rest_marker(sec in 0i64..3600, usec in 0i32..999_999) {
-        let line = format_rest_line(1, "cid", "200", sec, usec, 0);
+        let line = format_rest_line(&RestLogEntry { pid: 1, cid: "cid", status_code: "200", delta_sec: sec, delta_usec: usec, response_size: 0 });
         prop_assert!(line.contains("REST cha"));
         prop_assert!(line.contains("zato_rest:0"));
     }
@@ -38,9 +38,11 @@ proptest! {
         size in 0usize..10000,
         agent in "[a-zA-Z0-9/. ]{1,30}",
     ) {
-        let line = format_access_line(1, &addr, &cid, "0.001", "test-chan",
-            "14/Apr/2026:00:00:00 +0200", &method, &path, "HTTP/1.1",
-            &status, size, &agent);
+        let line = format_access_line(&AccessLogEntry {
+            pid: 1, remote_ip: &addr, cid: &cid, resp_time: "0.001", channel_name: "test-chan",
+            req_timestamp: "14/Apr/2026:00:00:00 +0200", method: &method, path: &path,
+            http_version: "HTTP/1.1", status_code: &status, response_size: size, user_agent: &agent,
+        });
         prop_assert!(line.contains(&addr));
         prop_assert!(line.contains(&cid));
         prop_assert!(line.contains(&method));

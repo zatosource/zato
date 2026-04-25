@@ -31,9 +31,9 @@ proptest! {
 
     #[test]
     fn edit_updates_non_schedule_fields(minutes in 1u32..60) {
-        let sj = make_job(minutes, true);
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
-        let mut edited = sj;
+        let scheduler_job = make_job(minutes, true);
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
+        let mut edited = scheduler_job;
         edited.name = "edited-name".into();
         edited.service = "svc-edited".into();
         edited.extra = Some("new-extra".into());
@@ -45,10 +45,10 @@ proptest! {
 
     #[test]
     fn deactivate_clears_fire(minutes in 1u32..60) {
-        let sj = make_job(minutes, true);
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        let scheduler_job = make_job(minutes, true);
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         prop_assert!(running_job.next_fire_utc.is_some());
-        let mut edited = sj;
+        let mut edited = scheduler_job;
         edited.is_active = false;
         running_job.update_from_job(&edited);
         prop_assert!(running_job.next_fire_utc.is_none());
@@ -59,9 +59,9 @@ proptest! {
         old_min in 1u32..30,
         new_min in 31u32..60,
     ) {
-        let sj = make_job(old_min, true);
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
-        let mut edited = sj;
+        let scheduler_job = make_job(old_min, true);
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
+        let mut edited = scheduler_job;
         edited.minutes = Some(new_min);
         running_job.update_from_job(&edited);
         prop_assert!(running_job.next_fire_utc.is_some());

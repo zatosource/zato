@@ -34,8 +34,8 @@ proptest! {
 
     #[test]
     fn skip_policy_recomputes_to_future(past_hours in 1u32..24) {
-        let sj = make_interval_job("skip", past_hours);
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        let scheduler_job = make_interval_job("skip", past_hours);
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.next_fire_utc = Some(Utc::now() - Duration::hours(1));
         running_job.sync_instant_from_utc_pub(Utc::now());
         let mut state = SchedulerState::new();
@@ -53,7 +53,7 @@ proptest! {
         let start = (Utc::now() - Duration::hours(1))
             .format("%Y-%m-%dT%H:%M:%S")
             .to_string();
-        let sj = SchedulerJob {
+        let scheduler_job = SchedulerJob {
             id: 1,
             name: "test".into(),
             is_active: true,
@@ -66,7 +66,7 @@ proptest! {
             on_missed: Some("skip".into()),
             max_execution_time_ms: None,
         };
-        let running_job = RunningJob::from_scheduler_job(&sj);
+        let running_job = RunningJob::from_scheduler_job(&scheduler_job);
         let fire_before = running_job.next_fire_utc;
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
@@ -77,9 +77,9 @@ proptest! {
 
     #[test]
     fn inactive_jobs_ignored(_n in 0u32..50) {
-        let mut sj = make_interval_job("skip", 1);
-        sj.is_active = false;
-        let running_job = RunningJob::from_scheduler_job(&sj);
+        let mut scheduler_job = make_interval_job("skip", 1);
+        scheduler_job.is_active = false;
+        let running_job = RunningJob::from_scheduler_job(&scheduler_job);
         let mut state = SchedulerState::new();
         state.jobs.insert(1, running_job);
         apply_missed_catchup(&mut state, Utc::now());

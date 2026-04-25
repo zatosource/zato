@@ -7,7 +7,7 @@ use std::sync::atomic::Ordering::Relaxed;
 
 use super::{LISTEN_FD, ACCEPT_WATCHER, PyObject, MAX_BATCH_ACCEPT, GEVENT_IO_READ};
 use super::socket::setsockopt_logged;
-use super::connection::handle_connection;
+use super::connection::{ConnectionCtx, handle_connection};
 
 /// Checks if a Python exception is a transient connection error that should be silently dropped.
 fn is_connection_error(py_err: &PyErr) -> bool {
@@ -109,7 +109,13 @@ pub(super) fn accept_loop(
                 py, None, None,
                 move |args: &Bound<'_, PyTuple>, _kw: Option<&Bound<'_, PyDict>>| -> PyResult<()> {
                     let py = args.py();
-                    let conn_result = handle_connection(py, client_fd, &remote_addr, &remote_port, &handler_ref, &software);
+                    let conn_result = handle_connection(py, &ConnectionCtx {
+                        fd: client_fd,
+                        remote_addr: &remote_addr,
+                        remote_port: &remote_port,
+                        request_handler: &handler_ref,
+                        server_software: &software,
+                    });
                     // SAFETY: client_fd is a valid socket obtained from accept4 above.
                     // The closure owns the fd and this is the only place it is closed.
                     unsafe { libc::close(client_fd); }

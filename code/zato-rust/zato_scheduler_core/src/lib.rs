@@ -71,28 +71,34 @@ where
     result
 }
 
-/// Starts the scheduler background thread.
+/// Starts the scheduler background thread from a config dict.
+///
+/// The dict must contain keys: `odb_adapter`, `run_cb`, `spawn_fn`,
+/// `on_job_executed_cb`, and `initial_sleep_time`.
 #[pyfunction]
-#[pyo3(signature = (odb_adapter, run_cb, spawn_fn, on_job_executed_cb, initial_sleep_time))]
-#[expect(clippy::needless_pass_by_value, reason = "PyO3 requires by-value arguments for #[pyfunction]")]
-fn scheduler_start(
-    py: Python<'_>,
-    odb_adapter: PyObject,
-    run_cb: PyObject,
-    spawn_fn: PyObject,
-    on_job_executed_cb: PyObject,
-    initial_sleep_time: f64,
-) -> PyResult<()> {
+fn scheduler_start(py: Python<'_>, config: &Bound<'_, PyDict>) -> PyResult<()> {
+    let odb_adapter: PyObject = config.get_item("odb_adapter")?.ok_or_else(||
+        pyo3::exceptions::PyKeyError::new_err("missing odb_adapter"))?.unbind();
+    let run_cb: PyObject = config.get_item("run_cb")?.ok_or_else(||
+        pyo3::exceptions::PyKeyError::new_err("missing run_cb"))?.unbind();
+    let spawn_fn: PyObject = config.get_item("spawn_fn")?.ok_or_else(||
+        pyo3::exceptions::PyKeyError::new_err("missing spawn_fn"))?.unbind();
+    let on_job_executed_cb: PyObject = config.get_item("on_job_executed_cb")?.ok_or_else(||
+        pyo3::exceptions::PyKeyError::new_err("missing on_job_executed_cb"))?.unbind();
+    let initial_sleep_time: f64 = config.get_item("initial_sleep_time")?.ok_or_else(||
+        pyo3::exceptions::PyKeyError::new_err("missing initial_sleep_time"))?.extract()?;
+
     let shared = Arc::new(SchedulerShared::new());
-    let _ = SHARED.set(Arc::clone(&shared));
-    let _ = ODB_ADAPTER.set(odb_adapter.clone_ref(py));
+    SHARED.set(Arc::clone(&shared)).ok();
+    ODB_ADAPTER.set(odb_adapter.clone_ref(py)).ok();
 
     let adapter = odb_adapter.clone_ref(py);
 
     let handle = std::thread::Builder::new()
         .name("zato-scheduler".into())
         .spawn(move || {
-            scheduler::scheduler_loop(shared, adapter, run_cb, spawn_fn, on_job_executed_cb, initial_sleep_time);
+            let callbacks = scheduler::SchedulerCallbacks { run_cb, spawn_fn, on_job_executed_cb };
+            scheduler::scheduler_loop(shared, adapter, callbacks, initial_sleep_time);
         })
         .map_err(|err| pyo3::exceptions::PyException::new_err(format!("spawn failed: {err}")))?;
 

@@ -8,14 +8,20 @@ use pyo3::intern;
 
 use super::{READ_BUF, MAX_REQUEST_SIZE, GEVENT_IO_READ, GEVENT_IO_WRITE};
 
+/// Gevent event loop references needed for non-blocking I/O.
+pub(super) struct GeventLoop<'py> {
+    /// The gevent hub instance.
+    pub hub: Bound<'py, PyAny>,
+    /// The underlying event loop from the hub.
+    pub loop_obj: Bound<'py, PyAny>,
+}
+
 /// Retries a raw fd operation, yielding to gevent on `EWOULDBLOCK` and retrying on `EINTR`.
-#[expect(clippy::too_many_arguments, reason = "fd, event, hub, loop, and op are all required for gevent IO integration")]
 fn with_gevent_io<F>(
     py: Python<'_>,
     fd: i32,
     event: i32,
-    hub: &Bound<'_, PyAny>,
-    loop_obj: &Bound<'_, PyAny>,
+    gev: &GeventLoop<'_>,
     mut op_fn: F,
 ) -> PyResult<isize>
 where
@@ -28,8 +34,8 @@ where
         }
         let err = std::io::Error::last_os_error();
         if err.kind() == std::io::ErrorKind::WouldBlock {
-            let io_watcher = loop_obj.call_method1(intern!(py, "io"), (fd, event))?;
-            hub.call_method1(intern!(py, "wait"), (&io_watcher,))?;
+            let io_watcher = gev.loop_obj.call_method1(intern!(py, "io"), (fd, event))?;
+            gev.hub.call_method1(intern!(py, "wait"), (&io_watcher,))?;
             continue;
         }
         if err.raw_os_error() == Some(libc::EINTR) {
@@ -47,11 +53,10 @@ pub(super) fn fd_read(
     py: Python<'_>,
     fd: i32,
     buf: &mut Vec<u8>,
-    hub: &Bound<'_, PyAny>,
-    loop_obj: &Bound<'_, PyAny>,
+    gev: &GeventLoop<'_>,
 ) -> PyResult<usize> {
     let mut read_buf = [0u8; READ_BUF];
-    let bytes_read = with_gevent_io(py, fd, GEVENT_IO_READ, hub, loop_obj, || {
+    let bytes_read = with_gevent_io(py, fd, GEVENT_IO_READ, gev, || {
         // SAFETY: fd is a valid socket, read_buf is a stack-local array whose pointer
         // and length are correctly passed. libc::read returns -1 on error (handled above)
         // or the number of bytes read.
@@ -70,12 +75,11 @@ pub(super) fn fd_write_all(
     py: Python<'_>,
     fd: i32,
     data: &[u8],
-    hub: &Bound<'_, PyAny>,
-    loop_obj: &Bound<'_, PyAny>,
+    gev: &GeventLoop<'_>,
 ) -> PyResult<()> {
     let mut offset = 0;
     while offset < data.len() {
-        let written = with_gevent_io(py, fd, GEVENT_IO_WRITE, hub, loop_obj, || {
+        let written = with_gevent_io(py, fd, GEVENT_IO_WRITE, gev, || {
             // SAFETY: fd is a valid socket, data[offset..] is a valid slice whose pointer
             // and remaining length are correctly passed. libc::write returns -1 on error
             // (handled above) or the number of bytes written.

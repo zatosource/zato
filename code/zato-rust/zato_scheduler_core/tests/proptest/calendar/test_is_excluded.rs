@@ -4,9 +4,10 @@ use chrono::NaiveDate;
 use zato_scheduler_core::calendar::CalendarData;
 
 fn arb_naive_date() -> impl Strategy<Value = NaiveDate> {
-    (2000i32..2100, 1u32..13, 1u32..29).prop_map(|(y, m, d)| {
-        NaiveDate::from_ymd_opt(y, m, d).unwrap()
-    })
+    (2000i32..2100, 1u32..13, 1u32..29).prop_filter_map(
+        "year/month/day must form a valid date",
+        |(year, month, day)| NaiveDate::from_ymd_opt(year, month, day),
+    )
 }
 
 proptest! {
@@ -22,11 +23,11 @@ proptest! {
         dates in hash_set(arb_naive_date(), 1..10),
     ) {
         let mut cal = CalendarData::new("test".into());
-        for d in &dates {
-            cal.dates.insert(*d);
+        for date in &dates {
+            cal.dates.insert(*date);
         }
-        for d in &dates {
-            prop_assert!(cal.is_excluded(*d));
+        for date in &dates {
+            prop_assert!(cal.is_excluded(*date));
         }
     }
 
@@ -38,8 +39,8 @@ proptest! {
         use chrono::Datelike;
         let mut cal = CalendarData::new("test".into());
         cal.weekdays = weekdays.iter().copied().collect();
-        let wd = u8::try_from(date.weekday().num_days_from_monday()).unwrap();
-        if weekdays.contains(&wd) {
+        let weekday_num = u8::try_from(date.weekday().num_days_from_monday()).unwrap();
+        if weekdays.contains(&weekday_num) {
             prop_assert!(cal.is_excluded(date));
         }
     }
@@ -59,10 +60,10 @@ proptest! {
         let mut cal = CalendarData::new("test".into());
         let other_date = NaiveDate::from_ymd_opt(1999, 1, 1).unwrap();
         cal.dates.insert(other_date);
-        let wd = u8::try_from(date.weekday().num_days_from_monday()).unwrap();
-        let excluded_wd = (wd + 1) % 7;
-        cal.weekdays = vec![excluded_wd];
-        if date != other_date && wd != excluded_wd {
+        let weekday_num = u8::try_from(date.weekday().num_days_from_monday()).unwrap();
+        let excluded_weekday = (weekday_num + 1) % 7;
+        cal.weekdays = vec![excluded_weekday];
+        if date != other_date && weekday_num != excluded_weekday {
             prop_assert!(!cal.is_excluded(date));
         }
     }

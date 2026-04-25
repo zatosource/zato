@@ -86,15 +86,22 @@ impl SchedulerShared {
     }
 }
 
+/// Python callbacks used by the scheduler to dispatch and report job execution.
+pub struct SchedulerCallbacks {
+    /// Called to run a job via the gevent event loop.
+    pub run_cb: PyObject,
+    /// The gevent spawn function used to schedule greenlets.
+    pub spawn_fn: PyObject,
+    /// Called after a job finishes executing to record the result.
+    pub on_job_executed_cb: PyObject,
+}
+
 /// Main scheduler loop, meant to run on a dedicated thread.
 #[expect(clippy::needless_pass_by_value, reason = "thread entry point owns these values")]
-#[expect(clippy::too_many_arguments, reason = "all Python callbacks are required by the scheduler protocol")]
 pub fn scheduler_loop(
     shared: Arc<SchedulerShared>,
     odb_adapter: PyObject,
-    run_cb: PyObject,
-    spawn_fn: PyObject,
-    on_job_executed_cb: PyObject,
+    callbacks: SchedulerCallbacks,
     initial_sleep_time: f64,
 ) {
     if initial_sleep_time > 0.0 {
@@ -155,7 +162,7 @@ pub fn scheduler_loop(
         };
 
         if !fire_batch.is_empty() {
-            dispatch_jobs(&fire_batch, &run_cb, &spawn_fn, &on_job_executed_cb);
+            dispatch_jobs(&fire_batch, &callbacks.run_cb, &callbacks.spawn_fn, &callbacks.on_job_executed_cb);
         }
     }
 }
@@ -312,12 +319,12 @@ fn dispatch_jobs(
     let _attached = Python::try_attach(|py| {
         for item in batch {
             let ctx_dict = PyDict::new(py);
-            let _ = ctx_dict.set_item("id", item.job_id.0);
-            let _ = ctx_dict.set_item("name", &item.name);
-            let _ = ctx_dict.set_item("service", item.service.as_ref());
-            let _ = ctx_dict.set_item("extra", &item.extra);
-            let _ = ctx_dict.set_item("job_type", item.job_type.as_str());
-            let _ = ctx_dict.set_item("current_run", item.current_run);
+            ctx_dict.set_item("id", item.job_id.0).ok();
+            ctx_dict.set_item("name", &item.name).ok();
+            ctx_dict.set_item("service", item.service.as_ref()).ok();
+            ctx_dict.set_item("extra", &item.extra).ok();
+            ctx_dict.set_item("job_type", item.job_type.as_str()).ok();
+            ctx_dict.set_item("current_run", item.current_run).ok();
             let py_ctx = ctx_dict.into_any().unbind();
             if let Err(err) = run_cb.call1(py, (spawn_fn, on_job_executed_cb, py_ctx)) {
                 log::error!(

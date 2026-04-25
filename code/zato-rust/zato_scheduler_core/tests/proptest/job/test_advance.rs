@@ -69,16 +69,16 @@ proptest! {
         let now = Utc::now();
         let first_fire = running_job.next_fire_utc;
         running_job.advance_to_next(now);
-        if let (Some(f1), Some(f2)) = (first_fire, running_job.next_fire_utc) {
-            prop_assert!(f2 >= f1);
+        if let (Some(first_fire_time), Some(next_fire_time)) = (first_fire, running_job.next_fire_utc) {
+            prop_assert!(next_fire_time >= first_fire_time);
         }
     }
 
     #[test]
     fn exhausted_repeats_clears_fire(minutes in 1u32..60) {
-        let mut sj = make_interval_job(minutes);
-        sj.repeats = Some(1);
-        let mut running_job = RunningJob::from_scheduler_job(&sj);
+        let mut scheduler_job = make_interval_job(minutes);
+        scheduler_job.repeats = Some(1);
+        let mut running_job = RunningJob::from_scheduler_job(&scheduler_job);
         running_job.current_run = 1;
         running_job.advance_to_next(Utc::now());
         prop_assert!(running_job.next_fire_utc.is_none());

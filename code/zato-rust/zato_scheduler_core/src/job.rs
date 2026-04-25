@@ -4,7 +4,8 @@ use std::collections::VecDeque;
 use std::time::Instant;
 
 use chrono::{DateTime, LocalResult, TimeZone, Utc};
-use chrono_tz::Tz as Timezone;
+/// Alias for the chrono timezone type.
+type Timezone = chrono_tz::Tz;
 use rand::rngs::SmallRng;
 use rand::{RngExt, SeedableRng};
 
@@ -291,7 +292,6 @@ impl RunningJob {
     }
 
     /// Computes the next fire time from `now` based on job type and interval.
-    #[expect(clippy::cast_possible_wrap, reason = "u64 ms values are far below i64::MAX")]
     pub fn compute_next_fire(&mut self, now: DateTime<Utc>) {
         match self.job_type {
             JobType::OneTime => {
@@ -313,8 +313,7 @@ impl RunningJob {
                         let nth = self.find_next_n(start, now);
                         let base_ms = nth * self.interval_ms;
                         let jitter = self.compute_jitter();
-                        #[expect(clippy::cast_possible_wrap, reason = "interval ms values are far below i64::MAX")]
-                        let total_ms = (base_ms + jitter) as i64;
+                        let total_ms = i64::try_from(base_ms + jitter).unwrap_or(i64::MAX);
                         self.next_fire_utc = Some(start + chrono::Duration::milliseconds(total_ms));
                     } else {
                         self.next_fire_utc = None;
@@ -369,14 +368,14 @@ impl RunningJob {
     }
 
     /// Finds the next interval multiple `n` such that `start + n * interval > now`.
-    #[expect(clippy::cast_possible_wrap, reason = "interval product is far below i64::MAX")]
     fn find_next_n(&self, start: DateTime<Utc>, now: DateTime<Utc>) -> u64 {
         if now <= start {
             return 0;
         }
         let elapsed_ms = (now - start).num_milliseconds().unsigned_abs();
         let nth = elapsed_ms / self.interval_ms;
-        let candidate = start + chrono::Duration::milliseconds((nth * self.interval_ms) as i64);
+        let offset_ms = i64::try_from(nth * self.interval_ms).unwrap_or(i64::MAX);
+        let candidate = start + chrono::Duration::milliseconds(offset_ms);
         if candidate <= now { nth + 1 } else { nth }
     }
 

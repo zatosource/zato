@@ -69,26 +69,82 @@ impl LogWriter {
     }
 }
 
+/// Fields needed to format a REST summary log line.
+pub struct RestLogEntry<'entry> {
+    /// OS process ID.
+    pub pid: u32,
+    /// Correlation ID for the request.
+    pub cid: &'entry str,
+    /// HTTP status code as a string.
+    pub status_code: &'entry str,
+    /// Elapsed whole seconds.
+    pub delta_sec: i64,
+    /// Elapsed microseconds remainder.
+    pub delta_usec: i32,
+    /// Response body size in bytes.
+    pub response_size: usize,
+}
+
 /// Formats a Zato REST summary log line.
 ///
 /// Includes timestamp, PID, CID, status, timing and response size.
-#[expect(clippy::too_many_arguments, reason = "REST log format requires all these fields to produce the line")]
-pub fn format_rest_line(pid: u32, cid: &str, status_code: &str, delta_sec: i64, delta_usec: i32, response_size: usize) -> String {
+pub fn format_rest_line(entry: &RestLogEntry<'_>) -> String {
     let now = Local::now();
+    let pid = entry.pid;
+    let cid = entry.cid;
+    let status_code = entry.status_code;
+    let delta_sec = entry.delta_sec;
+    let delta_usec = entry.delta_usec;
+    let response_size = entry.response_size;
     format!(
         "{} - INFO - {pid}:Dummy - zato_rest:0 - REST cha \u{2190} cid={cid}; {status_code} time=0:{delta_sec:02}.{delta_usec:06}; len={response_size}\n",
         now.format("%Y-%m-%d %H:%M:%S,%3f"),
     )
 }
 
+/// Fields needed to format an access log line.
+pub struct AccessLogEntry<'entry> {
+    /// OS process ID.
+    pub pid: u32,
+    /// Client IP address.
+    pub remote_ip: &'entry str,
+    /// Correlation ID.
+    pub cid: &'entry str,
+    /// Response time as a string.
+    pub resp_time: &'entry str,
+    /// Channel name the request arrived on.
+    pub channel_name: &'entry str,
+    /// Request timestamp as a string.
+    pub req_timestamp: &'entry str,
+    /// HTTP method (GET, POST, etc.).
+    pub method: &'entry str,
+    /// Request path.
+    pub path: &'entry str,
+    /// HTTP version (HTTP/1.0, HTTP/1.1).
+    pub http_version: &'entry str,
+    /// HTTP status code as a string.
+    pub status_code: &'entry str,
+    /// Response body size in bytes.
+    pub response_size: usize,
+    /// User-Agent header value.
+    pub user_agent: &'entry str,
+}
+
 /// Formats a Zato access log line in combined log format.
-#[expect(clippy::too_many_arguments, reason = "access log format requires all these fields")]
-pub fn format_access_line(
-    pid: u32, remote_ip: &str, cid: &str, resp_time: &str, channel_name: &str,
-    req_timestamp: &str, method: &str, path: &str, http_version: &str,
-    status_code: &str, response_size: usize, user_agent: &str,
-) -> String {
+pub fn format_access_line(entry: &AccessLogEntry<'_>) -> String {
     let now = Local::now();
+    let pid = entry.pid;
+    let remote_ip = entry.remote_ip;
+    let cid = entry.cid;
+    let resp_time = entry.resp_time;
+    let channel_name = entry.channel_name;
+    let req_timestamp = entry.req_timestamp;
+    let method = entry.method;
+    let path = entry.path;
+    let http_version = entry.http_version;
+    let status_code = entry.status_code;
+    let response_size = entry.response_size;
+    let user_agent = entry.user_agent;
     format!(
         "{} - INFO - {pid}:Dummy - zato_access_log:0 - \
         {remote_ip} {cid}/{resp_time} \"{channel_name}\" [{req_timestamp}] \"{method} {path} {http_version}\" {status_code} {response_size} \"-\" \"{user_agent}\"\n",
@@ -138,37 +194,17 @@ pub fn init_access_log(path: &str, max_bytes: u64) -> PyResult<()> {
 }
 
 /// Writes a formatted REST summary line. Silently drops errors (logging must not crash the server).
-#[pyfunction]
-#[pyo3(signature = (cid, status_code, delta_sec, delta_usec, response_size))]
-pub fn log_rest_summary(cid: &str, status_code: &str, delta_sec: i64, delta_usec: i32, response_size: usize) {
+pub fn log_rest_summary(entry: &RestLogEntry<'_>) {
     let Some(writer_lock) = REST_WRITER.get() else { return };
     let mut writer = writer_lock.lock();
-    let line = format_rest_line(std::process::id(), cid, status_code, delta_sec, delta_usec, response_size);
+    let line = format_rest_line(entry);
     let _io_result = writer.write_line(line.as_bytes());
 }
 
 /// Writes a formatted access log line. Silently drops errors (logging must not crash the server).
-#[pyfunction]
-#[pyo3(signature = (remote_ip, cid, resp_time, channel_name, req_timestamp, method, path, http_version, status_code, response_size, user_agent))]
-#[expect(clippy::too_many_arguments, reason = "access log format requires all these fields")]
-pub fn log_access(
-    remote_ip: &str,
-    cid: &str,
-    resp_time: &str,
-    channel_name: &str,
-    req_timestamp: &str,
-    method: &str,
-    path: &str,
-    http_version: &str,
-    status_code: &str,
-    response_size: usize,
-    user_agent: &str,
-) {
+pub fn log_access(entry: &AccessLogEntry<'_>) {
     let Some(writer_lock) = ACCESS_WRITER.get() else { return };
     let mut writer = writer_lock.lock();
-    let line = format_access_line(
-        std::process::id(), remote_ip, cid, resp_time, channel_name,
-        req_timestamp, method, path, http_version, status_code, response_size, user_agent,
-    );
+    let line = format_access_line(entry);
     let _io_result = writer.write_line(line.as_bytes());
 }

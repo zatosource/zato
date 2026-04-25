@@ -10,23 +10,29 @@ pub fn parse_status_code(status_str: &str) -> StatusCode {
     code_str.parse::<StatusCode>().unwrap_or(StatusCode::OK)
 }
 
+/// Parts of an HTTP response to serialize.
+pub(super) struct ResponseParts<'resp, 'py> {
+    /// HTTP version: 0 for HTTP/1.0, 1 for HTTP/1.1.
+    pub version: u8,
+    /// Status string like `"200 OK"`.
+    pub status_str: &'resp str,
+    /// Optional Python dict of response headers.
+    pub py_headers: Option<&'resp Bound<'py, PyDict>>,
+    /// Response body bytes.
+    pub body: &'resp [u8],
+    /// Whether to include `Connection: keep-alive`.
+    pub keep_alive: bool,
+}
+
 /// Serializes a complete HTTP response (status line, headers, body) into `buf`.
 ///
 /// Adds `Content-Length` and `Connection` headers if not already present.
-#[expect(clippy::too_many_arguments, reason = "all parts of an HTTP response are needed to serialize it")]
-pub(super) fn build_response(
-    version: u8,
-    status_str: &str,
-    py_headers: Option<&Bound<'_, PyDict>>,
-    body: &[u8],
-    keep_alive: bool,
-    buf: &mut Vec<u8>,
-) -> PyResult<()> {
-    let status = parse_status_code(status_str);
+pub(super) fn build_response(parts: &ResponseParts<'_, '_>, buf: &mut Vec<u8>) -> PyResult<()> {
+    let status = parse_status_code(parts.status_str);
 
     buf.clear();
 
-    let version_part = if version == 0 {
+    let version_part = if parts.version == 0 {
         http::Version::HTTP_10
     } else {
         http::Version::HTTP_11
@@ -44,7 +50,7 @@ pub(super) fn build_response(
     let mut has_content_length = false;
     let mut has_connection = false;
 
-    if let Some(headers_dict) = py_headers {
+    if let Some(headers_dict) = parts.py_headers {
         for (key_obj, val_obj) in headers_dict.iter() {
             let header_name: &str = key_obj.extract()?;
             let header_value: &str = val_obj.extract()?;
@@ -66,11 +72,11 @@ pub(super) fn build_response(
 
     if !has_content_length {
         buf.extend_from_slice(b"content-length: ");
-        let _fmt = std::io::Write::write_fmt(buf, format_args!("{}", body.len()));
+        let _fmt = std::io::Write::write_fmt(buf, format_args!("{}", parts.body.len()));
         buf.extend_from_slice(b"\r\n");
     }
     if !has_connection {
-        let conn_header: &[u8] = if keep_alive {
+        let conn_header: &[u8] = if parts.keep_alive {
             b"connection: keep-alive\r\n"
         } else {
             b"connection: close\r\n"
@@ -78,7 +84,7 @@ pub(super) fn build_response(
         buf.extend_from_slice(conn_header);
     }
     buf.extend_from_slice(b"\r\n");
-    buf.extend_from_slice(body);
+    buf.extend_from_slice(parts.body);
 
     Ok(())
 }
