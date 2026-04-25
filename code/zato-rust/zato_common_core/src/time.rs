@@ -1,7 +1,10 @@
+//! Time utilities for converting chrono timestamps to Python datetime objects.
+
 use chrono::{Datelike, Timelike, Utc};
 use pyo3::prelude::*;
 use pyo3::types::{PyDateTime, PyTzInfo};
 
+/// Returns the current UTC time as a Python `datetime.datetime` with `datetime.timezone.utc` tzinfo.
 #[pyfunction]
 pub fn utc_now(py: Python<'_>) -> PyResult<Bound<'_, PyDateTime>> {
     let now = Utc::now();
@@ -10,6 +13,9 @@ pub fn utc_now(py: Python<'_>) -> PyResult<Bound<'_, PyDateTime>> {
         .getattr("timezone")?
         .getattr("utc")?
         .cast_into()?;
+
+    #[expect(clippy::cast_possible_truncation, reason = "month/day/hour/minute/second always fit in u8")]
+    #[expect(clippy::as_conversions, reason = "chrono returns u32 for values guaranteed to be in 1..=12, 1..=31, 0..=23, 0..=59 range")]
     PyDateTime::new(
         py,
         now.year(),
