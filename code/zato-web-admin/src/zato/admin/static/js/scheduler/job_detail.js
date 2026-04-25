@@ -831,7 +831,7 @@ $.fn.zato.scheduler.job_detail._render_log_entry = function(entry, is_last) {
     var level_key = entry.level.toUpperCase();
     if (level_key === 'WARNING') level_key = 'WARN';
     if (level_key === 'CRITICAL') level_key = 'ERROR';
-    var lc = cfg.level_colors[level_key] || cfg.level_colors['INFO'];
+    var lc = cfg.level_colors[level_key];
     var border_style = is_last ? '' : 'border-bottom:1px solid ' + cfg.row_border + ';';
 
     var escaped_msg = entry.message.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

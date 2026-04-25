@@ -43,7 +43,7 @@ def detail_poll(req):
 
     if 'application/json' in content_type:
         body = json.loads(req.body)
-        action = body.get('action')
+        action = body['action']
         if action in _action_registry:
             service_name = _action_registry[action]
             service_payload = {

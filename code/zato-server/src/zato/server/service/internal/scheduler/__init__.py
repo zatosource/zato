@@ -512,15 +512,13 @@ class GetLogEntries(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-log-entries'
 
-    input = Int('job_id'), Int('current_run'), Int('-since_idx')
+    input = Int('job_id'), Int('current_run'), Int('since_idx')
 
     def handle(self) -> 'None':
         try:
             job_id = self.request.input.job_id
             current_run = self.request.input.current_run
-            since_idx = self.request.input.get('since_idx')
-            if since_idx is None:
-                since_idx = 0
+            since_idx = self.request.input.since_idx
 
             entries = self.server._scheduler.get_log_entries(job_id, current_run, since_idx)
             self.response.payload = {'entries': entries}

@@ -793,12 +793,12 @@ class Service:
 
                 # .. attach scheduler log capture handler if this is a scheduler-initiated invocation ..
                 _scheduler_log_handler = None
-                _scheduler_zato_ctx = wsgi_environ.get('zato.zato_ctx') or {}
-                _scheduler_job_id = _scheduler_zato_ctx.get('scheduler_job_id')
-                _scheduler_current_run = _scheduler_zato_ctx.get('scheduler_current_run')
-                if _scheduler_job_id is not None and _scheduler_current_run is not None:
+                _scheduler_zato_ctx = wsgi_environ.get('zato.zato_ctx')
+                if _scheduler_zato_ctx is not None and 'scheduler_job_id' in _scheduler_zato_ctx:
                     _scheduler_log_handler = SchedulerLogCapture(
-                        server._scheduler, _scheduler_job_id, _scheduler_current_run)
+                        server._scheduler,
+                        _scheduler_zato_ctx['scheduler_job_id'],
+                        _scheduler_zato_ctx['scheduler_current_run'])
                     service.logger.addHandler(_scheduler_log_handler)
 
                 try:
