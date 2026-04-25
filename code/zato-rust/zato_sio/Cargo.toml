@@ -2,7 +2,7 @@
 name = "zato_sio"
 version = "4.1.0"
 edition = "2024"
-license = "AGPL-3.0"
+license = "AGPL-3.0-only"
 
 [lib]
 name = "zato_sio"

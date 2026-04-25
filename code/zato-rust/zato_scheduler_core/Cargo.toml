@@ -2,7 +2,7 @@
 name = "zato_scheduler_core"
 version = "4.1.0"
 edition = "2024"
-license = "AGPL-3.0"
+license = "AGPL-3.0-only"
 
 [lib]
 name = "zato_scheduler_core"
@@ -18,10 +18,10 @@ pyo3-log = "0.13.3"
 chrono = { version = "0.4.44", features = ["serde"] }
 chrono-tz = "0.10.4"
 log = "0.4.29"
-rand = "0.10.0"
+rand = "0.10.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-zato_server_core = { path = "../zato_server_core" }
+zato_server_core = { path = "../zato_server_core", version = "4.1.0" }
 
 [dev-dependencies]
 pyo3 = { version = "0.28.3", features = ["auto-initialize"] }
