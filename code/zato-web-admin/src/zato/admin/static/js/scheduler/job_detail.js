@@ -896,7 +896,8 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     var row_ts = record.actual_fire_time_iso;
     var run_attr = record.current_run;
     var cls = extra_class ? ' class="' + extra_class + '"' : '';
-    var tag_html = detail._render_tag_badges(record);
+    var is_skipped = record.outcome.indexOf('skipped') === 0;
+    var tag_html = is_skipped ? '-' : detail._render_tag_badges(record);
 
     var row = '<tr' + cls + ' data-ts="' + row_ts + '" data-run="' + run_attr + '">';
     row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center">' + run_number + '</td>';

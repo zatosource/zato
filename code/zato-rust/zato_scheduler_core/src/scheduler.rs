@@ -293,20 +293,19 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
             continue;
         }
 
+        if running_job.in_flight {
+            continue;
+        }
+
         let planned = fire_utc.to_rfc3339();
         let actual = now.to_rfc3339();
 
+        let prev_run = running_job.current_run;
         running_job.current_run += 1;
-
-        if running_job.in_flight {
-            let in_flight_run = running_job.in_flight_run.unwrap_or(0);
-            running_job.record_execution(
-                ExecutionRecord::new(&planned, &actual, outcome::SKIPPED_ALREADY_IN_FLIGHT, running_job.current_run)
-                    .with_outcome_ctx(in_flight_run.to_string()),
-            );
-            running_job.advance_to_next(now);
-            continue;
-        }
+        log::info!(
+            "collect_due_jobs: job_id={} name={} prev_run={} new_run={} fire_utc={}",
+            job_id, running_job.name, prev_run, running_job.current_run, fire_utc,
+        );
 
         if running_job.is_holiday_today(calendars_ref) {
             running_job.record_execution(ExecutionRecord::new(
@@ -467,7 +466,12 @@ pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Ut
                 if let Some(fire) = running_job.next_fire_utc
                     && fire < now
                 {
+                    let prev_run = running_job.current_run;
                     running_job.current_run += 1;
+                    log::info!(
+                        "apply_missed_catchup: job_id={job_id} name={} prev_run={prev_run} new_run={} fire={fire}",
+                        running_job.name, running_job.current_run,
+                    );
                     running_job.record_execution(ExecutionRecord::new(
                         &fire.to_rfc3339(),
                         &now.to_rfc3339(),

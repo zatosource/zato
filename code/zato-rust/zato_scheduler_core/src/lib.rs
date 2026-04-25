@@ -56,6 +56,9 @@ where
 
 /// Formats a duration in milliseconds into a human-readable string.
 fn humanize_ms(millis: u64) -> String {
+    if millis == 0 {
+        return "< 1ms".to_string();
+    }
     humantime::format_duration(Duration::from_millis(millis)).to_string()
 }
 
@@ -255,6 +258,10 @@ impl Scheduler {
     #[pyo3(signature = (job_id, job_data))]
     fn create_job(&self, _py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
         let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
+        log::info!(
+            "create_job: job_id={job_id} seconds={:?} is_active={} repeats={:?} service={}",
+            scheduler_job.seconds, scheduler_job.is_active, scheduler_job.repeats, scheduler_job.service,
+        );
         let running_job = RunningJob::from_scheduler_job(&scheduler_job);
         with_state_mut(&self.shared, |state| {
             state.jobs.insert(job_id, running_job);
@@ -266,10 +273,23 @@ impl Scheduler {
     #[pyo3(signature = (job_id, job_data))]
     fn edit_job(&self, _py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
         let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
+        log::info!(
+            "edit_job: job_id={job_id} seconds={:?} is_active={} repeats={:?} service={}",
+            scheduler_job.seconds, scheduler_job.is_active, scheduler_job.repeats, scheduler_job.service,
+        );
         with_state_mut(&self.shared, |state| {
             if let Some(existing) = state.jobs.get_mut(&job_id) {
+                log::info!(
+                    "edit_job: updating existing job_id={job_id} old_interval_ms={} old_current_run={} old_next_fire={:?}",
+                    existing.interval_ms, existing.current_run, existing.next_fire_utc,
+                );
                 existing.update_from_job(&scheduler_job);
+                log::info!(
+                    "edit_job: after update job_id={job_id} new_interval_ms={} new_current_run={} new_next_fire={:?}",
+                    existing.interval_ms, existing.current_run, existing.next_fire_utc,
+                );
             } else {
+                log::info!("edit_job: inserting new job_id={job_id}");
                 let running_job = RunningJob::from_scheduler_job(&scheduler_job);
                 state.jobs.insert(job_id, running_job);
             }
@@ -305,9 +325,15 @@ impl Scheduler {
     #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn mark_complete(&self, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
-        log::info!("mark_complete called: job_id={job_id} outcome={outcome} current_run={current_run}");
+        log::info!(
+            "mark_complete called: job_id={job_id} outcome={outcome} current_run={current_run} duration_ms={duration_ms}",
+        );
         with_state_mut(&self.shared, |state| {
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
+                log::info!(
+                    "mark_complete: job_id={job_id} job.current_run={} with_test_data={}",
+                    running_job.current_run, state.with_test_data,
+                );
                 running_job.in_flight = false;
                 running_job.in_flight_since = None;
                 running_job.in_flight_run = None;
@@ -321,6 +347,26 @@ impl Scheduler {
                             message: format!("Job completed, outcome: {outcome}, duration: {}", humanize_ms(duration_ms)),
                         });
                         break;
+                    }
+                }
+
+                if running_job.interval_ms > 0 && duration_ms >= running_job.interval_ms {
+                    let now = Utc::now();
+                    while let Some(fire) = running_job.next_fire_utc {
+                        if fire >= now {
+                            break;
+                        }
+                        running_job.current_run += 1;
+                        let skipped_run = running_job.current_run;
+                        running_job.record_execution(
+                            ExecutionRecord::new(
+                                &fire.to_rfc3339(),
+                                &now.to_rfc3339(),
+                                types::outcome::SKIPPED_ALREADY_IN_FLIGHT,
+                                skipped_run,
+                            ).with_outcome_ctx(current_run.to_string()),
+                        );
+                        running_job.advance_to_next(now);
                     }
                 }
 

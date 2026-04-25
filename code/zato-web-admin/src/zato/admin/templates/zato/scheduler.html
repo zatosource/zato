@@ -43,8 +43,8 @@
             '_job_type',
             '_definition_text',
             'service',
-            '_execute',
             '_statistics',
+            '_execute',
             '_edit',
             '_delete',
             'id',
@@ -135,8 +135,8 @@
                         <td style="text-align:center">{{ job.job_type_friendly }}</td>
                         <td style="text-align:center">{{ job.definition_text|safe }}</td>
                         <td><a href="{% url "service-ide" "service" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
-                        <td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.execute('{{ job.id }}', this)">Execute</a></td>
                         <td><a href="{% url "scheduler-job-detail" job.id %}?cluster={{ cluster_id }}&outcomes=all">Statistics</a></td>
+                        <td><a href="javascript:void(0)" onclick="$.fn.zato.scheduler.execute('{{ job.id }}', this)">Execute</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', '{{ job.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.delete_('{{ job.id }}');">Delete</a></td>
                         <td class='ignore job_id_{{ job.id }}'>{{ job.id }}</td>

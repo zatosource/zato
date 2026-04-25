@@ -7,7 +7,8 @@ $.fn.zato.scheduler.dashboard.config = {
     cluster_id: '1',
     default_time_range: 0,
     error_message: 'Error executing job',
-    show_live_status: false
+    show_live_status: false,
+    show_tab_counts: false
 };
 
 $.fn.zato.scheduler.dashboard.Outcome_All = 'all';
@@ -835,10 +836,8 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         });
         container.empty();
 
-        var all_clear_html = '<div class="dashboard-all-clear"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#1b855e" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#1b855e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>All clear</div>';
-
         if (!timeline || timeline.length === 0) {
-            container.html(all_clear_html);
+            container.html('<div class="dashboard-no-data">No recent runs</div>');
             $('#dashboard-failures-count').text('0');
             return;
         }
@@ -855,7 +854,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         kit.set_number($('#dashboard-failures-count'), exec_count);
 
         var html = '<table class="zato-table"><thead><tr>';
-        html += '<th>Run</th><th>Time</th><th>Job name</th><th>Outcome</th><th>Error</th>';
+        html += '<th>Run</th><th>Time</th><th>Job name</th><th>Outcome</th>';
         html += '</tr></thead><tbody>';
 
         var max_rows = Math.min(100, timeline.length);
@@ -863,18 +862,14 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var entry = timeline[row_index];
             var time_text = kit.relative_time_past(entry.actual_fire_time_iso);
             var time_tooltip = kit.format_local_time(entry.actual_fire_time_iso);
-            var error_text = entry.error;
-            if (error_text === null) error_text = '';
-            var error_short = error_text.length > 80 ? error_text.substring(0, 80) + '...' : error_text;
             var run_number = entry.current_run !== undefined ? entry.current_run : '';
 
             var row_ts = entry.actual_fire_time_iso;
             html += '<tr data-ts="' + row_ts + '">';
-            html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;text-align:center">' + run_number + '</td>';
+            html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73">' + run_number + '</td>';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
             html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All + '">' + entry.job_name + '</a></td>';
             html += '<td>' + dash.outcome_badge(entry.outcome, entry) + '</td>';
-            html += '<td class="dashboard-error-cell" title="' + error_text.replace(/"/g, '&quot;') + '">' + error_short + '</td>';
             html += '</tr>';
         }
 
@@ -1116,6 +1111,10 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         }
 
         $('#dashboard-hero-pill-group').hide();
+
+        if (!dash.config.show_tab_counts) {
+            $('.dashboard-pill').hide();
+        }
 
         // Chart type toggle
         dash.show_bars = false;

@@ -1007,6 +1007,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             job_name = ctx['name']
             current_run = ctx['current_run']
 
+            logger.info('_on_job_executed: job_id=%s name=%s current_run=%s ctx=%s', job_id, job_name, current_run, ctx)
+
             extra = ctx['extra']
             if extra and isinstance(extra, str):
                 try:
@@ -1060,7 +1062,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'with_test_data': self.with_test_data,
             })
             self._scheduler_started = True
-            logger.info('Scheduler started')
+            logger.info('Scheduler started, with_test_data=%s', self.with_test_data)
         except Exception:
             logger.warning('Scheduler could not be started: %s', format_exc())
 

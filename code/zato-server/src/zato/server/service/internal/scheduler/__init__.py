@@ -74,6 +74,8 @@ def _create_edit(self, action):
     input = self.request.input
     input.cluster_id = default_cluster_id
 
+    self.logger.info('_create_edit: action=%s raw_input=%s', action, input)
+
     job_type = input.job_type
     name = input.name
     service_name = input.service
@@ -212,10 +214,14 @@ def _create_edit(self, action):
             data['id'] = job_row.id
             job_id = job_row.id
 
+        logger.info('_create_edit action=%s job_id=%s data=%s', action, job_id, data)
+
         if action == 'create':
             self.server._scheduler.create_job(job_id, data)
+            logger.info('_create_edit: create_job returned for job_id=%s', job_id)
         else:
             self.server._scheduler.edit_job(job_id, data)
+            logger.info('_create_edit: edit_job returned for job_id=%s', job_id)
 
         self.response.payload.id = job_row.id
         self.response.payload.name = input.name
@@ -312,7 +318,9 @@ class GetByID(_Get):
                     item['repeats'] = ib.repeats
 
         if not item:
-            raise ZatoException(self.cid, 'Job not found')
+            self.logger.info('Job %s not found in ODB, returning empty response', job_id)
+            self.response.payload = {}
+            return
 
         result = self.server._scheduler.get_history_page(job_id, 0, 10, SCHEDULER.OUTCOME.All)
         records = result['records']
@@ -464,7 +472,11 @@ class GetHistory(_SchedulerAdmin):
 
             from contextlib import closing
             with closing(self.odb.session()) as session:
-                job_row = session.query(Job).filter_by(id=job_id).one()
+                job_row = session.query(Job).filter_by(id=job_id).first()
+            if not job_row:
+                self.logger.info('Job %s not found in ODB, returning empty response', job_id)
+                self.response.payload = {'rows': [], 'total': 0}
+                return
             job_name = job_row.name
 
             scheduler = self.server._scheduler

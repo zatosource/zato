@@ -97,6 +97,9 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         if (isNaN(ms)) {
             return '-';
         }
+        if (ms === 0) {
+            return '< 1 ms';
+        }
         if (ms < 1000) {
             return ms + ' ms';
         }
