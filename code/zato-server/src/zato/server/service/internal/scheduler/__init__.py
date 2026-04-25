@@ -197,6 +197,7 @@ def _create_edit(self, action):
                     ib = IntervalBasedJob()
                     ib.job = job_row
                     session.add(ib)
+
                 ib.weeks = data['weeks']
                 ib.days = data['days']
                 ib.hours = data['hours']

@@ -164,13 +164,9 @@ pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callb
             break;
         }
 
-        let sleep_duration = {
-            let state = shared.state.lock();
-            compute_sleep_duration(&state)
-        };
-
         {
             let mut state = shared.state.lock();
+            let sleep_duration = compute_sleep_duration(&state);
             let _timed_out = shared.condvar.wait_for(&mut state, sleep_duration);
         }
 

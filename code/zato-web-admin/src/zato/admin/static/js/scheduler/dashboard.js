@@ -845,7 +845,14 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         var cluster_id = dash.config.cluster_id;
 
-        kit.set_number($('#dashboard-failures-count'), timeline.length);
+        var exec_count = 0;
+        for (var idx = 0; idx < timeline.length; idx++) {
+            var outcome = timeline[idx].outcome;
+            if (outcome === 'ok' || outcome === 'error' || outcome === 'timeout') {
+                exec_count++;
+            }
+        }
+        kit.set_number($('#dashboard-failures-count'), exec_count);
 
         var html = '<table class="zato-table"><thead><tr>';
         html += '<th>Time</th><th>Job name</th><th>Outcome</th><th>Error</th>';
@@ -1106,8 +1113,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             try { initial_data = JSON.parse(initial_data); } catch(parse_error) { initial_data = {}; }
         }
 
-        // Hero pill — delegated to kit
-        kit.init_hero_pill('#dashboard-hero-pill-group', dash.theme);
+        $('#dashboard-hero-pill-group').hide();
 
         // Chart type toggle
         dash.show_bars = false;

@@ -842,7 +842,7 @@ div.page_prompt a:not(.common) {
     box-shadow: 2px 2px 2px #d3d3d3;
 }
 
-div.page_prompt a:not(.common):hover {
+div.page_prompt a:not(.common):not(.menu-link):not(.chosen-single):not(.status-badge):hover {
     background-color: #ffc311;
     color: #000 !important;
 }

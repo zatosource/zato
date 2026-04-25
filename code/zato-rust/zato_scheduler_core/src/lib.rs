@@ -783,7 +783,7 @@ pub fn dict_to_scheduler_job(job_id: i64, dict: &Bound<'_, PyDict>) -> PyResult<
         hours: get_opt_u32(dict, "hours"),
         minutes: get_opt_u32(dict, "minutes"),
         seconds: get_opt_u32(dict, "seconds"),
-        repeats: get_opt_u32(dict, "repeats"),
+        repeats: get_opt_u32(dict, "repeats").filter(|&val| val > 0),
         jitter_ms: get_opt_u32(dict, "jitter_ms"),
         timezone: get_opt_str(dict, "timezone"),
         calendar: get_opt_str(dict, "calendar"),

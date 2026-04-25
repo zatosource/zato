@@ -172,6 +172,8 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, actio
 
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
+            var tr = $('#tr_' + json.id);
+            $.fn.zato.data_table._bounce_row(tr);
         }
         else {
             var tr = $.fn.zato.data_table.row_updated(json.id);
@@ -264,6 +266,7 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format('<td style="text-align:center">{0}</td>', data.definition_text);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.scheduler.execute('{0}', this)\">Execute</a>", job.id));
+    row += String.format('<td><a href="/zato/scheduler/dashboard/job/{0}/?cluster={1}&outcomes=all">Statistics</a></td>', job.id, cluster_id);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job.job_type, job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.delete_('{0}');\">Delete</a>", job.id));
     row += String.format("<td class='ignore job_id_{0}'>{0}</td>", job.id);
@@ -272,12 +275,12 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", job.start_date);
     row += String.format("<td class='ignore'>{0}</td>", job.extra);
 
-    weeks = job.weeks ? 'weeks' in job : '';
-    days = job.days ? 'days' in job : '';
-    hours = job.hours ? 'hours' in job : '';
-    minutes = job.minutes ? 'minutes' in job : '';
-    seconds = job.seconds ? 'seconds' in job : '';
-    repeats = job.repeats ? 'repeats' in job : '';
+    weeks = job.weeks;
+    days = job.days;
+    hours = job.hours;
+    minutes = job.minutes;
+    seconds = job.seconds;
+    repeats = job.repeats;
 
     row += String.format("<td class='ignore'>{0}</td>", weeks);
     row += String.format("<td class='ignore'>{0}</td>", days);
