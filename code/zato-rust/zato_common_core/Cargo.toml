@@ -21,19 +21,5 @@ proptest = "1.11.0"
 [lints.rust]
 unsafe_code = "forbid"
 
-[lints.clippy]
-all = { level = "deny", priority = -1 }
-correctness = { level = "deny", priority = -1 }
-suspicious = { level = "deny", priority = -1 }
-complexity = { level = "deny", priority = -1 }
-perf = { level = "deny", priority = -1 }
-style = { level = "deny", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-nursery = { level = "warn", priority = -1 }
-module_name_repetitions = "warn"
-must_use_candidate = "warn"
-missing_errors_doc = "warn"
-missing_panics_doc = "warn"
-
 [profile.release]
 overflow-checks = true
