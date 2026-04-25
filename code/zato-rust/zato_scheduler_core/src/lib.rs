@@ -56,12 +56,12 @@ where
 
 /// Non-OK outcomes injected after each real completion during testing.
 const TEST_INJECT_OUTCOMES: &[&str] = &[
-    "error",
+    types::outcome::ERROR,
     types::outcome::TIMEOUT,
     types::outcome::SKIPPED_ALREADY_IN_FLIGHT,
-    "error",
+    types::outcome::ERROR,
     types::outcome::TIMEOUT,
-    "error",
+    types::outcome::ERROR,
 ];
 
 /// Monotonically increasing index into `TEST_INJECT_OUTCOMES`.
@@ -231,7 +231,7 @@ impl Scheduler {
                 for _ in 0..2 {
                     let raw_idx = TEST_INJECT_IDX.fetch_add(1, Ordering::Relaxed);
                     let wrapped_idx = usize::try_from(raw_idx).map_or(0, |idx| idx % TEST_INJECT_OUTCOMES.len());
-                    let fake_outcome = TEST_INJECT_OUTCOMES.get(wrapped_idx).copied().unwrap_or("error");
+                    let fake_outcome = TEST_INJECT_OUTCOMES.get(wrapped_idx).copied().unwrap_or(types::outcome::ERROR);
                     let fake_duration = if fake_outcome == types::outcome::TIMEOUT { 32000 } else { 150 };
                     running_job.current_run += 1;
                     let mut rec = ExecutionRecord::new(&now_iso, &now_iso, fake_outcome, running_job.current_run)
@@ -302,23 +302,25 @@ impl Scheduler {
                     history::records_page_to_py_dict(py, &slice, total)
                 },
                 |allowed| {
-                    let is_allowed = |rec: &&ExecutionRecord| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome);
+                    let mut total: usize = 0;
+                    let mut page: Vec<&ExecutionRecord> = Vec::with_capacity(limit);
+                    let mut skipped: usize = 0;
 
-                    let total = running_job
-                        .history
-                        .iter()
-                        .filter(is_allowed)
-                        .filter(|rec| rec.outcome != types::outcome::RUNNING)
-                        .count();
-
-                    let page: Vec<&ExecutionRecord> = running_job
-                        .history
-                        .iter()
-                        .rev()
-                        .filter(is_allowed)
-                        .skip(offset)
-                        .take(limit)
-                        .collect();
+                    for rec in running_job.history.iter().rev() {
+                        if !allowed.iter().any(|allowed_val| allowed_val == &rec.outcome) {
+                            continue;
+                        }
+                        if rec.outcome != types::outcome::RUNNING {
+                            total += 1;
+                        }
+                        if page.len() < limit {
+                            if skipped < offset {
+                                skipped += 1;
+                            } else {
+                                page.push(rec);
+                            }
+                        }
+                    }
                     history::records_page_to_py_dict(py, &page, total)
                 },
             )
@@ -348,35 +350,26 @@ impl Scheduler {
         let state = self.shared.state.lock();
         if let Some(running_job) = state.jobs.get(&job_id) {
             let filter = parse_outcome_filter(&outcomes)?;
-            let records: Vec<&ExecutionRecord> = running_job
-                .history
-                .iter()
-                .filter(|rec| rec.actual_fire_time_iso.as_str() >= since_iso || running_runs.contains(&rec.current_run))
-                .filter(|rec| {
-                    filter.as_ref().is_none_or(|allowed| {
-                        allowed.iter().any(|allowed_val| allowed_val == &rec.outcome) || running_runs.contains(&rec.current_run)
-                    })
-                })
-                .rev()
-                .collect();
+            let mut records: Vec<&ExecutionRecord> = Vec::new();
+            let mut total: usize = 0;
 
-            let total = filter.as_ref().map_or_else(
-                || {
-                    running_job
-                        .history
-                        .iter()
-                        .filter(|rec| rec.outcome != types::outcome::RUNNING)
-                        .count()
-                },
-                |allowed| {
-                    running_job
-                        .history
-                        .iter()
-                        .filter(|rec| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome))
-                        .filter(|rec| rec.outcome != types::outcome::RUNNING)
-                        .count()
-                },
-            );
+            for rec in &running_job.history {
+                let outcome_allowed = filter
+                    .as_ref()
+                    .is_none_or(|allowed| allowed.iter().any(|allowed_val| allowed_val == &rec.outcome));
+
+                if outcome_allowed && rec.outcome != types::outcome::RUNNING {
+                    total += 1;
+                }
+
+                let run_override = running_runs.contains(&rec.current_run);
+                let is_since = rec.actual_fire_time_iso.as_str() >= since_iso || run_override;
+                if is_since && (outcome_allowed || run_override) {
+                    records.push(rec);
+                }
+            }
+
+            records.reverse();
 
             let out = PyDict::new(py);
             out.set_item("rows", history::records_to_py_list(py, &records)?)?;
@@ -436,32 +429,18 @@ impl Scheduler {
             dict.set_item("recent_outcomes", recent_outcomes)?;
 
             let outcome_counts = PyDict::new(py);
-            let mut ok_count: usize = 0;
-            let mut error_count: usize = 0;
-            let mut timeout_count: usize = 0;
-            let mut running_count: usize = 0;
-            let mut skipped_flight_count: usize = 0;
-            let mut skipped_holiday_count: usize = 0;
-            let mut missed_catchup_count: usize = 0;
+            let countable = types::outcome::COUNTABLE;
+            let mut counts = vec![0usize; countable.len()];
             for rec in history {
-                match rec.outcome.as_str() {
-                    "ok" => ok_count += 1,
-                    "error" => error_count += 1,
-                    "timeout" => timeout_count += 1,
-                    "running" => running_count += 1,
-                    "skipped_already_in_flight" => skipped_flight_count += 1,
-                    "skipped_holiday" => skipped_holiday_count += 1,
-                    "missed_catchup" => missed_catchup_count += 1,
-                    _ => {}
+                if let Some(pos) = countable.iter().position(|label| *label == rec.outcome)
+                    && let Some(slot) = counts.get_mut(pos)
+                {
+                    *slot += 1;
                 }
             }
-            outcome_counts.set_item("ok", ok_count)?;
-            outcome_counts.set_item("error", error_count)?;
-            outcome_counts.set_item("timeout", timeout_count)?;
-            outcome_counts.set_item("running", running_count)?;
-            outcome_counts.set_item("skipped_already_in_flight", skipped_flight_count)?;
-            outcome_counts.set_item("skipped_holiday", skipped_holiday_count)?;
-            outcome_counts.set_item("missed_catchup", missed_catchup_count)?;
+            for (label, count) in countable.iter().zip(&counts) {
+                outcome_counts.set_item(*label, *count)?;
+            }
             dict.set_item("outcome_counts", outcome_counts)?;
 
             list.append(dict)?;
@@ -473,47 +452,44 @@ impl Scheduler {
     /// Returns a lightweight timeline of execution events for the dashboard chart.
     ///
     /// Each dict contains: `outcome`, `actual_fire_time_iso`, `job_id`, `job_name`, `duration_ms`.
-    /// Returns at most `max_events` records (default 1000), taking the most recent from each job.
+    /// Returns at most `max_events` records (default 1000), sorted by timestamp descending
+    /// (most recent first) so the Python side does not need to re-sort.
     #[pyo3(signature = (max_events=1000))]
     fn get_timeline_events(&self, py: Python<'_>, max_events: usize) -> PyResult<Py<PyList>> {
         let state = self.shared.state.lock();
 
-        let total: usize = state.jobs.values().map(|running_job| running_job.history.len()).sum();
-        let skip = total.saturating_sub(max_events);
-
-        let mut skipped: usize = 0;
-        let list = PyList::empty(py);
+        let mut refs: Vec<(i64, &str, &ExecutionRecord)> = Vec::new();
         for (job_id, running_job) in &state.jobs {
-            let job_len = running_job.history.len();
-            if skipped + job_len <= skip {
-                skipped += job_len;
-                continue;
+            for rec in &running_job.history {
+                refs.push((*job_id, running_job.name.as_str(), rec));
             }
-            let job_skip = skip.saturating_sub(skipped);
-            skipped += job_skip;
+        }
 
-            for rec in running_job.history.iter().skip(job_skip) {
-                let dict = PyDict::new(py);
-                dict.set_item("outcome", rec.outcome.as_str())?;
-                dict.set_item("actual_fire_time_iso", rec.actual_fire_time_iso.as_str())?;
-                dict.set_item("job_id", *job_id)?;
-                dict.set_item("job_name", running_job.name.as_str())?;
-                match rec.duration_ms {
-                    Some(duration) => dict.set_item("duration_ms", duration)?,
-                    None => dict.set_item("duration_ms", py.None())?,
-                }
-                match &rec.error {
-                    Some(error_text) => dict.set_item("error", error_text)?,
-                    None => dict.set_item("error", py.None())?,
-                }
-                match &rec.outcome_ctx {
-                    Some(outcome_ctx) => dict.set_item("outcome_ctx", outcome_ctx)?,
-                    None => dict.set_item("outcome_ctx", py.None())?,
-                }
-                dict.set_item("current_run", rec.current_run)?;
-                dict.set_item("planned_fire_time_iso", rec.planned_fire_time_iso.as_str())?;
-                list.append(dict)?;
+        refs.sort_unstable_by(|lhs, rhs| rhs.2.actual_fire_time_iso.cmp(&lhs.2.actual_fire_time_iso));
+        refs.truncate(max_events);
+
+        let list = PyList::empty(py);
+        for (job_id, job_name, rec) in &refs {
+            let dict = PyDict::new(py);
+            dict.set_item("outcome", rec.outcome.as_str())?;
+            dict.set_item("actual_fire_time_iso", rec.actual_fire_time_iso.as_str())?;
+            dict.set_item("job_id", *job_id)?;
+            dict.set_item("job_name", *job_name)?;
+            match rec.duration_ms {
+                Some(duration) => dict.set_item("duration_ms", duration)?,
+                None => dict.set_item("duration_ms", py.None())?,
             }
+            match &rec.error {
+                Some(error_text) => dict.set_item("error", error_text)?,
+                None => dict.set_item("error", py.None())?,
+            }
+            match &rec.outcome_ctx {
+                Some(outcome_ctx) => dict.set_item("outcome_ctx", outcome_ctx)?,
+                None => dict.set_item("outcome_ctx", py.None())?,
+            }
+            dict.set_item("current_run", rec.current_run)?;
+            dict.set_item("planned_fire_time_iso", rec.planned_fire_time_iso.as_str())?;
+            list.append(dict)?;
         }
         drop(state);
         Ok(list.unbind())

@@ -9,6 +9,7 @@ $.fn.zato.scheduler.job_detail.config = {
     default_time_range: 0,
     empty_history_text: 'No run history',
     show_search: false,
+    stat_error_color: '#e0226e',
     detail_tags: [
         { key: 'error',  label: 'Error',  color: '#c0392b', bg: 'rgba(192, 57, 43, 0.1)',
           dark_color: '#f06060', dark_bg: 'rgba(224, 82, 82, 0.22)' },
@@ -188,7 +189,7 @@ $.fn.zato.scheduler.job_detail._update_filtered_stats = function(rows, filtered_
     if (filtered_total > 0) {
         $errors.text(kit.format_number_full(error_count));
         if (error_count > 0) {
-            $errors.css('color', '#e0226e');
+            $errors.css('color', $.fn.zato.scheduler.job_detail.config.stat_error_color);
         } else {
             $errors.css('color', '');
         }
@@ -729,11 +730,11 @@ $.fn.zato.scheduler.job_detail._generate_fake_tags = function(run) {
 $.fn.zato.scheduler.job_detail._render_tag_badges = function(record) {
     var detail = $.fn.zato.scheduler.job_detail;
     var tag_defs = detail.config.detail_tags;
-    var tags = record.log_summary || {};
+    var tags = record.log_summary;
     var html = '';
     for (var t = 0; t < tag_defs.length; t++) {
         var def = tag_defs[t];
-        var count = tags[def.key] || 0;
+        var count = tags[def.key];
         if (count > 0) {
             var style = 'color:' + def.color + ';background:' + def.bg;
             if (def.dimmed) style += ';opacity:0.75';
@@ -747,11 +748,11 @@ $.fn.zato.scheduler.job_detail._render_tag_badges = function(record) {
 $.fn.zato.scheduler.job_detail._render_dark_tag_badges = function(record) {
     var detail = $.fn.zato.scheduler.job_detail;
     var tag_defs = detail.config.detail_tags;
-    var tags = record.log_summary || {};
+    var tags = record.log_summary;
     var html = '';
     for (var t = 0; t < tag_defs.length; t++) {
         var def = tag_defs[t];
-        var count = tags[def.key] || 0;
+        var count = tags[def.key];
         if (count > 0) {
             var style = 'color:' + def.dark_color + ';background:' + def.dark_bg;
             if (def.dimmed) style += ';opacity:0.75';
@@ -861,7 +862,7 @@ $.fn.zato.scheduler.job_detail._fetch_and_render_log_entries = function($panel_l
         }),
         contentType: 'application/json',
         success: function(data) {
-            var entries = data.entries || [];
+            var entries = data.entries;
             if (entries.length === 0) return;
             for (var idx = 0; idx < entries.length; idx++) {
                 var is_last = (idx === entries.length - 1) && ($panel_log.children().length === 0 || idx === entries.length - 1);
@@ -1305,7 +1306,9 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             // .. any preserved running rows not in the response go at the top
             for (var rk in preserved_running) {
                 if (preserved_running.hasOwnProperty(rk)) {
-                    $body.prepend(preserved_running[rk].$panel || '');
+                    if (preserved_running[rk].$panel !== null) {
+                        $body.prepend(preserved_running[rk].$panel);
+                    }
                     $body.prepend(preserved_running[rk].$row);
                 }
             }
@@ -1363,11 +1366,11 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                     // .. puff tag badges if log_summary counts changed ..
                     var old_record = $existing.data && $existing.data('record');
                     if (old_record && rec.log_summary) {
-                        var old_summary = old_record.log_summary || {};
+                        var old_summary = old_record.log_summary;
                         var tag_defs = detail.config.detail_tags;
                         for (var td = 0; td < tag_defs.length; td++) {
                             var tag_key = tag_defs[td].key;
-                            if ((rec.log_summary[tag_key] || 0) !== (old_summary[tag_key] || 0)) {
+                            if (rec.log_summary[tag_key] !== old_summary[tag_key]) {
                                 $new_data_row.find('.detail-tag[data-key="' + tag_key + '"]').addClass('kit-puff')
                                     .one('animationend', function() { $(this).removeClass('kit-puff'); });
                             }

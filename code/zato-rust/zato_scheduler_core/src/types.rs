@@ -109,6 +109,8 @@ pub mod outcome {
     pub const RUNNING: &str = "running";
     /// The job executed successfully.
     pub const EXECUTED: &str = "ok";
+    /// The job failed with an error.
+    pub const ERROR: &str = "error";
     /// The job was skipped because a previous invocation is still in flight.
     pub const SKIPPED_ALREADY_IN_FLIGHT: &str = "skipped_already_in_flight";
     /// The job was skipped because the date falls on a holiday calendar.
@@ -117,6 +119,17 @@ pub mod outcome {
     pub const TIMEOUT: &str = "timeout";
     /// The job was missed and caught up.
     pub const MISSED_CATCHUP: &str = "missed_catchup";
+
+    /// All countable outcome labels, in the order used for summary dicts.
+    pub const COUNTABLE: &[&str] = &[
+        EXECUTED,
+        ERROR,
+        TIMEOUT,
+        RUNNING,
+        SKIPPED_ALREADY_IN_FLIGHT,
+        SKIPPED_HOLIDAY,
+        MISSED_CATCHUP,
+    ];
 }
 
 /// A batch of fire information for a single job invocation.

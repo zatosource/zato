@@ -39,17 +39,17 @@ _action_registry = {
 
 @method_allowed('POST')
 def detail_poll(req):
-    content_type = req.content_type or ''
+    content_type = req.content_type
 
     if 'application/json' in content_type:
         body = json.loads(req.body)
         action = body.get('action')
-        if action and action in _action_registry:
+        if action in _action_registry:
             service_name = _action_registry[action]
             service_payload = {
                 'job_id': body['job_id'],
                 'current_run': body['current_run'],
-                'since_idx': body.get('since_idx', 0),
+                'since_idx': body['since_idx'],
             }
             response = req.zato.client.invoke(service_name, service_payload)
             return HttpResponse(json.dumps(response.data), content_type='application/json')

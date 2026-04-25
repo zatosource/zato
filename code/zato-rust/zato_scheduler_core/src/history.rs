@@ -16,6 +16,8 @@ use pyo3::types::{PyDict, PyList};
 ///
 /// Returns a `PyErr` if any dict key/value insertion fails.
 fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bound<'py, PyDict>> {
+    const LOG_KEYS: [&str; 4] = ["system", "info", "warn", "error"];
+
     let out = PyDict::new(py);
     out.set_item("planned_fire_time_iso", &rec.planned_fire_time_iso)?;
     out.set_item("actual_fire_time_iso", &rec.actual_fire_time_iso)?;
@@ -36,22 +38,21 @@ fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bo
     }
 
     let log_summary = PyDict::new(py);
-    let mut system_count: usize = 0;
-    let mut info_count: usize = 0;
-    let mut warn_count: usize = 0;
-    let mut error_count: usize = 0;
+    let mut log_counts = [0usize; 4];
     for entry in &rec.log_entries {
-        match entry.level.as_str() {
-            "SYSTEM" => system_count += 1,
-            "WARNING" | "WARN" => warn_count += 1,
-            "ERROR" | "CRITICAL" => error_count += 1,
-            _ => info_count += 1,
+        let bucket = match entry.level.as_str() {
+            "SYSTEM" => 0,
+            "WARNING" | "WARN" => 2,
+            "ERROR" | "CRITICAL" => 3,
+            _ => 1,
+        };
+        if let Some(slot) = log_counts.get_mut(bucket) {
+            *slot += 1;
         }
     }
-    log_summary.set_item("system", system_count)?;
-    log_summary.set_item("info", info_count)?;
-    log_summary.set_item("warn", warn_count)?;
-    log_summary.set_item("error", error_count)?;
+    for (key, count) in LOG_KEYS.iter().zip(&log_counts) {
+        log_summary.set_item(*key, *count)?;
+    }
     out.set_item("log_summary", log_summary)?;
 
     Ok(out)

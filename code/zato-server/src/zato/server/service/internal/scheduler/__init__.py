@@ -531,7 +531,6 @@ class GetLogEntries(_SchedulerAdmin):
 # ################################################################################################################################
 # ################################################################################################################################
 
-_cal_entity_type = 'holiday_calendar'
 _cal_service_prefix = 'zato.scheduler.holiday-calendar.'
 
 class _HolidayCalendarAdmin(AdminService):
@@ -656,36 +655,32 @@ class GetCurrentState(_SchedulerAdmin):
                 if runtime is None:
                     runtime = runtime_by_name.get(name)
 
+                entry = {
+                    'id': job_id,
+                    'name': name,
+                    'is_active': is_active,
+                    'job_type': item['job_type'],
+                    'service': item['service'],
+                }
+
                 if runtime is not None:
-                    jobs.append({
-                        'id': job_id,
-                        'name': name,
-                        'is_active': is_active,
-                        'job_type': item['job_type'],
-                        'service': item['service'],
-                        'next_fire_utc': runtime['next_fire_utc'],
-                        'is_running': runtime['in_flight'],
-                        'current_run': runtime['current_run'],
-                        'interval_ms': runtime['interval_ms'],
-                        'last_outcome': runtime['last_outcome'],
-                        'last_duration_ms': runtime['last_duration_ms'],
-                        'recent_outcomes': runtime['recent_outcomes'],
-                    })
+                    entry['next_fire_utc'] = runtime['next_fire_utc']
+                    entry['is_running'] = runtime['in_flight']
+                    entry['current_run'] = runtime['current_run']
+                    entry['interval_ms'] = runtime['interval_ms']
+                    entry['last_outcome'] = runtime['last_outcome']
+                    entry['last_duration_ms'] = runtime['last_duration_ms']
+                    entry['recent_outcomes'] = runtime['recent_outcomes']
                 else:
-                    jobs.append({
-                        'id': job_id,
-                        'name': name,
-                        'is_active': is_active,
-                        'job_type': item['job_type'],
-                        'service': item['service'],
-                        'next_fire_utc': None,
-                        'is_running': False,
-                        'current_run': 0,
-                        'interval_ms': 0,
-                        'last_outcome': None,
-                        'last_duration_ms': None,
-                        'recent_outcomes': [],
-                    })
+                    entry['next_fire_utc'] = None
+                    entry['is_running'] = False
+                    entry['current_run'] = 0
+                    entry['interval_ms'] = 0
+                    entry['last_outcome'] = None
+                    entry['last_duration_ms'] = None
+                    entry['recent_outcomes'] = []
+
+                jobs.append(entry)
 
             # .. outcome_counts and total_executions are summed from per-job summaries ..
             outcome_counts = {
@@ -707,9 +702,8 @@ class GetCurrentState(_SchedulerAdmin):
                 for outcome_key in execution_outcomes:
                     total_executions += per_job[outcome_key]
 
-            # .. get_timeline_events returns lightweight dicts already sorted by Rust ..
+            # .. get_timeline_events returns dicts pre-sorted by timestamp descending in Rust ..
             history_timeline = scheduler.get_timeline_events()
-            history_timeline.sort(key=lambda entry: entry['actual_fire_time_iso'], reverse=True)
 
             self.response.payload = {
                 'total_jobs': total_jobs,
