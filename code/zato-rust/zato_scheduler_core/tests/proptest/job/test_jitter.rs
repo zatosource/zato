@@ -35,8 +35,8 @@ proptest! {
     ) {
         let job = make_jitter_job(0);
         let running_job = RunningJob::from_scheduler_job(&job);
-        if let (Some(fire), Some(sd)) = (running_job.next_fire_utc, running_job.start_date) {
-            let diff_ms = (fire - sd).num_milliseconds();
+        if let (Some(fire), Some(start)) = (running_job.next_fire_utc, running_job.start_date) {
+            let diff_ms = (fire - start).num_milliseconds();
             prop_assert!(diff_ms >= 0);
             prop_assert_eq!(diff_ms % (5 * 60_000), 0);
         }

@@ -62,8 +62,8 @@ proptest! {
         let job = make_interval_job(minutes, true, true);
         let running_job = RunningJob::from_scheduler_job(&job);
         if let Some(fire) = running_job.next_fire_utc
-            && let Some(sd) = running_job.start_date {
-            let diff = (fire - sd).num_milliseconds().abs();
+            && let Some(start) = running_job.start_date {
+            let diff = (fire - start).num_milliseconds().abs();
             prop_assert!(diff < i64::from(running_job.jitter_ms.unwrap_or(0)) + 1000);
         }
     }

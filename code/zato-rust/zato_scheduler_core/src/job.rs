@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use std::time::Instant;
 
 use chrono::{DateTime, LocalResult, TimeZone, Utc};
-use chrono_tz::Tz;
+use chrono_tz::Tz as Timezone;
 use rand::rngs::SmallRng;
 use rand::{RngExt, SeedableRng};
 
@@ -117,7 +117,7 @@ pub struct RunningJob {
     /// Random jitter added to each firing (ms).
     pub jitter_ms: Option<u32>,
     /// IANA timezone for schedule evaluation.
-    pub timezone: Option<Tz>,
+    pub timezone: Option<Timezone>,
     /// String representation of the timezone.
     pub timezone_str: Option<String>,
     /// Name of the holiday calendar to honour.
@@ -173,8 +173,8 @@ impl RunningJob {
     #[must_use]
     pub fn from_scheduler_job(job: &SchedulerJob) -> Self {
         let interval_ms = Self::compute_interval_ms(job);
-        let tz: Option<Tz> = job.timezone.as_deref().and_then(|tz_str| {
-            tz_str.parse::<Tz>().map_or_else(
+        let timezone: Option<Timezone> = job.timezone.as_deref().and_then(|tz_str| {
+            tz_str.parse::<Timezone>().map_or_else(
                 |_| {
                     log::error!("Job `{}`: invalid timezone `{tz_str}`", job.name);
                     None
@@ -183,7 +183,7 @@ impl RunningJob {
             )
         });
         let tz_str = job.timezone.clone();
-        let start_date = Self::parse_start_date(&job.start_date, tz.as_ref()).map_or_else(
+        let start_date = Self::parse_start_date(&job.start_date, timezone.as_ref()).map_or_else(
             || {
                 log::error!("Job `{}`: failed to parse start_date `{}`", job.name, job.start_date);
                 Some(Utc::now())
@@ -211,7 +211,7 @@ impl RunningJob {
             interval_ms,
             repeats: job.repeats,
             jitter_ms: job.jitter_ms,
-            timezone: tz,
+            timezone,
             timezone_str: tz_str,
             calendar: job.calendar.clone(),
             on_missed,
@@ -250,8 +250,8 @@ impl RunningJob {
         self.repeats = job.repeats;
 
         let new_interval = Self::compute_interval_ms(job);
-        let new_tz: Option<Tz> = job.timezone.as_deref().and_then(|tz_str| {
-            tz_str.parse::<Tz>().map_or_else(
+        let new_timezone: Option<Timezone> = job.timezone.as_deref().and_then(|tz_str| {
+            tz_str.parse::<Timezone>().map_or_else(
                 |_| {
                     log::error!("Job `{}`: invalid timezone `{tz_str}`", self.name);
                     None
@@ -259,7 +259,7 @@ impl RunningJob {
                 Some,
             )
         });
-        let new_start = Self::parse_start_date(&job.start_date, new_tz.as_ref()).map_or_else(
+        let new_start = Self::parse_start_date(&job.start_date, new_timezone.as_ref()).map_or_else(
             || {
                 log::error!("Job `{}`: failed to parse start_date `{}`", self.name, job.start_date);
                 Some(Utc::now())
@@ -269,11 +269,11 @@ impl RunningJob {
 
         let schedule_changed = new_interval != self.interval_ms
             || new_start != self.start_date
-            || new_tz != self.timezone
+            || new_timezone != self.timezone
             || job.jitter_ms != self.jitter_ms;
 
         self.interval_ms = new_interval;
-        self.timezone = new_tz;
+        self.timezone = new_timezone;
         self.timezone_str.clone_from(&job.timezone);
         self.start_date = new_start;
 
@@ -295,9 +295,9 @@ impl RunningJob {
     pub fn compute_next_fire(&mut self, now: DateTime<Utc>) {
         match self.job_type {
             JobType::OneTime => {
-                if let Some(sd) = self.start_date {
-                    if sd > now {
-                        self.next_fire_utc = Some(sd);
+                if let Some(start) = self.start_date {
+                    if start > now {
+                        self.next_fire_utc = Some(start);
                     } else if self.current_run == 0 {
                         self.next_fire_utc = Some(now);
                     } else {
@@ -309,11 +309,13 @@ impl RunningJob {
             }
             JobType::IntervalBased => {
                 if self.interval_ms > 0 {
-                    if let Some(sd) = self.start_date {
-                        let nth = self.find_next_n(sd, now);
+                    if let Some(start) = self.start_date {
+                        let nth = self.find_next_n(start, now);
                         let base_ms = nth * self.interval_ms;
                         let jitter = self.compute_jitter();
-                        self.next_fire_utc = Some(sd + chrono::Duration::milliseconds((base_ms + jitter) as i64));
+                        #[expect(clippy::cast_possible_wrap, reason = "interval ms values are far below i64::MAX")]
+                        let total_ms = (base_ms + jitter) as i64;
+                        self.next_fire_utc = Some(start + chrono::Duration::milliseconds(total_ms));
                     } else {
                         self.next_fire_utc = None;
                     }
@@ -356,7 +358,7 @@ impl RunningJob {
         let Some(cal) = calendars.get(cal_name) else { return false };
         let today: chrono::NaiveDate = self.timezone.as_ref().map_or_else(
             || Utc::now().date_naive(),
-            |tz| Utc::now().with_timezone(tz).date_naive(),
+            |zone| Utc::now().with_timezone(zone).date_naive(),
         );
         cal.is_excluded(today)
     }
@@ -367,13 +369,12 @@ impl RunningJob {
     }
 
     /// Finds the next interval multiple `n` such that `start + n * interval > now`.
-    #[expect(clippy::cast_sign_loss, reason = "elapsed_ms is non-negative after .max(0)")]
     #[expect(clippy::cast_possible_wrap, reason = "interval product is far below i64::MAX")]
     fn find_next_n(&self, start: DateTime<Utc>, now: DateTime<Utc>) -> u64 {
         if now <= start {
             return 0;
         }
-        let elapsed_ms = (now - start).num_milliseconds().max(0) as u64;
+        let elapsed_ms = (now - start).num_milliseconds().unsigned_abs();
         let nth = elapsed_ms / self.interval_ms;
         let candidate = start + chrono::Duration::milliseconds((nth * self.interval_ms) as i64);
         if candidate <= now { nth + 1 } else { nth }
@@ -388,10 +389,9 @@ impl RunningJob {
     }
 
     /// Converts `next_fire_utc` to a monotonic `Instant` relative to `now`.
-    #[expect(clippy::cast_sign_loss, reason = "diff_ms is non-negative after .max(0)")]
     fn sync_instant_from_utc(&mut self, now: DateTime<Utc>) {
         self.next_fire_instant = self.next_fire_utc.map(|fire_utc| {
-            let diff_ms = (fire_utc - now).num_milliseconds().max(0) as u64;
+            let diff_ms = (fire_utc - now).num_milliseconds().unsigned_abs();
             Instant::now() + std::time::Duration::from_millis(diff_ms)
         });
     }
@@ -407,8 +407,8 @@ impl RunningJob {
         weeks_ms + days_ms + hours_ms + mins_ms + secs_ms
     }
 
-    /// Parses a start-date string into a UTC `DateTime`, optionally interpreting it in `tz`.
-    fn parse_start_date(raw: &str, tz: Option<&Tz>) -> Option<DateTime<Utc>> {
+    /// Parses a start-date string into a UTC `DateTime`, optionally interpreting it in a timezone.
+    fn parse_start_date(raw: &str, zone: Option<&Timezone>) -> Option<DateTime<Utc>> {
         if raw.is_empty() {
             return None;
         }
@@ -421,7 +421,7 @@ impl RunningJob {
         ];
         for fmt in &formats {
             if let Ok(naive) = chrono::NaiveDateTime::parse_from_str(clean, fmt) {
-                if let Some(tz_ref) = tz {
+                if let Some(tz_ref) = zone {
                     return Some(Self::naive_to_utc_in_tz(naive, *tz_ref));
                 }
                 return Some(DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
@@ -431,20 +431,20 @@ impl RunningJob {
     }
 
     /// Converts a `LocalResult` to a UTC `DateTime`, picking the earliest for ambiguous results.
-    fn local_result_to_utc(lr: LocalResult<DateTime<Tz>>) -> Option<DateTime<Utc>> {
-        match lr {
+    fn local_result_to_utc(local_result: LocalResult<DateTime<Timezone>>) -> Option<DateTime<Utc>> {
+        match local_result {
             LocalResult::Single(dt) | LocalResult::Ambiguous(dt, _) => Some(dt.with_timezone(&Utc)),
             LocalResult::None => None,
         }
     }
 
-    /// Converts a naive datetime to UTC by interpreting it in `tz`, with a DST-gap fallback.
-    fn naive_to_utc_in_tz(naive: chrono::NaiveDateTime, tz: Tz) -> DateTime<Utc> {
-        if let Some(utc) = Self::local_result_to_utc(tz.from_local_datetime(&naive)) {
+    /// Converts a naive datetime to UTC by interpreting it in a timezone, with a DST-gap fallback.
+    fn naive_to_utc_in_tz(naive: chrono::NaiveDateTime, zone: Timezone) -> DateTime<Utc> {
+        if let Some(utc) = Self::local_result_to_utc(zone.from_local_datetime(&naive)) {
             return utc;
         }
         let advanced = naive + chrono::Duration::hours(1);
-        if let Some(utc) = Self::local_result_to_utc(tz.from_local_datetime(&advanced)) {
+        if let Some(utc) = Self::local_result_to_utc(zone.from_local_datetime(&advanced)) {
             return utc;
         }
         DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc)
@@ -466,13 +466,13 @@ mod tests {
             jitter_ms: None, timezone: None, calendar: None,
             on_missed: None, max_execution_time_ms: None,
         };
-        let ms = RunningJob::compute_interval_ms(&job);
+        let interval = RunningJob::compute_interval_ms(&job);
         let expected = 7u64 * 86_400_000
             + 2 * 86_400_000
             + 3 * 3_600_000
             + 4 * 60_000
             + 5 * 1_000;
-        assert_eq!(ms, expected);
+        assert_eq!(interval, expected);
     }
 
     #[test]

@@ -15,7 +15,7 @@ use pyo3::types::{PyDict, PyList};
 /// # Errors
 ///
 /// Returns a `PyErr` if any dict key/value insertion fails.
-fn record_to_py_dict<'a>(py: Python<'a>, rec: &ExecutionRecord) -> PyResult<Bound<'a, PyDict>> {
+fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
     out.set_item("planned_fire_time_iso", &rec.planned_fire_time_iso)?;
     out.set_item("actual_fire_time_iso", &rec.actual_fire_time_iso)?;

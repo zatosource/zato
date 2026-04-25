@@ -36,13 +36,13 @@ proptest! {
         secs in 0u32..60,
     ) {
         let job = make_job(weeks, days, hours, mins, secs);
-        let ms = RunningJob::compute_interval_ms(&job);
+        let interval = RunningJob::compute_interval_ms(&job);
         let expected = u64::from(weeks) * 7 * 86_400_000
             + u64::from(days) * 86_400_000
             + u64::from(hours) * 3_600_000
             + u64::from(mins) * 60_000
             + u64::from(secs) * 1_000;
-        prop_assert_eq!(ms, expected);
+        prop_assert_eq!(interval, expected);
     }
 
     #[test]

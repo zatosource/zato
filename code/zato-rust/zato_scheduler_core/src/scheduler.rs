@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use chrono::Utc;
 use parking_lot::{Condvar, Mutex};
 use pyo3::prelude::*;
-use pyo3::types::PyString;
+use pyo3::types::PyDict;
 
 use crate::calendar::CalendarData;
 use crate::job::{ExecutionRecord, RunningJob};
@@ -88,6 +88,7 @@ impl SchedulerShared {
 
 /// Main scheduler loop, meant to run on a dedicated thread.
 #[expect(clippy::needless_pass_by_value, reason = "thread entry point owns these values")]
+#[expect(clippy::too_many_arguments, reason = "all Python callbacks are required by the scheduler protocol")]
 pub fn scheduler_loop(
     shared: Arc<SchedulerShared>,
     odb_adapter: PyObject,
@@ -310,16 +311,14 @@ fn dispatch_jobs(
 ) {
     let _attached = Python::try_attach(|py| {
         for item in batch {
-            let ctx = serde_json::json!({
-                "id": item.job_id.0,
-                "name": item.name,
-                "service": item.service.as_ref(),
-                "extra": item.extra,
-                "job_type": item.job_type.as_str(),
-                "current_run": item.current_run,
-            });
-            let ctx_str = ctx.to_string();
-            let py_ctx = PyString::new(py, &ctx_str).into_any().unbind();
+            let ctx_dict = PyDict::new(py);
+            let _ = ctx_dict.set_item("id", item.job_id.0);
+            let _ = ctx_dict.set_item("name", &item.name);
+            let _ = ctx_dict.set_item("service", item.service.as_ref());
+            let _ = ctx_dict.set_item("extra", &item.extra);
+            let _ = ctx_dict.set_item("job_type", item.job_type.as_str());
+            let _ = ctx_dict.set_item("current_run", item.current_run);
+            let py_ctx = ctx_dict.into_any().unbind();
             if let Err(err) = run_cb.call1(py, (spawn_fn, on_job_executed_cb, py_ctx)) {
                 log::error!(
                     "Failed to dispatch job `{}` (service=`{}`, run={}): {}",
