@@ -12,8 +12,8 @@
 <div class="detail-header-row-1">
     <span id="detail-section-title">
         <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
-        <a href="/zato/scheduler/dashboard/job/{{ job_id }}/?cluster={{ cluster_id }}" class="detail-component-pill menu-link" id="run-detail-job-link">Job detail</a>
-        <span id="record-detail-title">Run detail</span>
+        <a href="/zato/scheduler/dashboard/job/{{ job_id }}/?cluster={{ cluster_id }}" class="detail-component-pill menu-link" id="run-detail-job-link"></a>
+        <span id="record-detail-title"></span>
     </span>
 </div>
 {% endblock %}
@@ -34,12 +34,16 @@ $(document).ready(function() {
     var dash = $.fn.zato.scheduler.dashboard;
     var panel_cfg = detail.config.detail_panel;
     var tag_defs = detail.config.detail_tags;
+    var job_data = {{ job_data|safe }};
+
+    var job_name = job_data.name || 'Job {{ job_id }}';
+    $('#run-detail-job-link').text(job_name);
+    $('#record-detail-title').text('Run ' + kit.format_number_full({{ run_number }}));
 
     kit.record_detail.init({
         cluster_id: '{{ cluster_id }}',
         record_id: '{{ job_id }}',
         run_number: {{ run_number }},
-        title_prefix: 'Run detail:',
         poll_url: '{{ poll_url }}',
         history_action: 'get-history',
         log_action: 'get-log-entries',

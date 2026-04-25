@@ -172,9 +172,6 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         _cfg = config;
 
         var $container = $('#record-detail-log');
-        var $title = $('#record-detail-title');
-
-        $title.text(_cfg.title_prefix + ' #' + kit.format_number_full(_cfg.run_number));
 
         kit.record_detail._fetch_record(function(data) {
             var record = _cfg.find_record(data, _cfg.run_number);
