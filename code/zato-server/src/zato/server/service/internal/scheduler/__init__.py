@@ -20,7 +20,7 @@ except ImportError:
 from zato.common.api import SCHEDULER, ZATO_NONE
 from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException, ZatoException
-from zato.common.odb.model import Job
+from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
 from zato.server.service import Int, Bool
 from zato.server.service.internal import AdminService
@@ -66,7 +66,11 @@ class _SchedulerAdmin(AdminService):
 # ################################################################################################################################
 
 def _create_edit(self, action):
-    """Creating and updating a job using Rust config store."""
+    """Creating and updating a job using ODB."""
+
+    # stdlib
+    from contextlib import closing
+
     input = self.request.input
     input.cluster_id = default_cluster_id
 
@@ -81,7 +85,9 @@ def _create_edit(self, action):
         logger.error(msg)
         raise ZatoException(cid, msg)
 
-    jobs = store.get_list(_entity_type)
+    with closing(self.odb.session()) as session:
+        job_rows = session.query(Job.id, Job.name).filter_by(cluster_id=default_cluster_id).all()
+        jobs = [{'id': row.id, 'name': row.name} for row in job_rows]
 
     def _other_same_name(jid):
         for job in jobs:
@@ -148,9 +154,7 @@ def _create_edit(self, action):
             raise ZatoException(cid, msg)
         for param in _ib_params + ('repeats',):
             value = input.get(param)
-            if value == ZATO_NONE:
-                value = None
-            if value is None:
+            if value == ZATO_NONE or value is None or value == '':
                 data[param] = 0
             else:
                 data[param] = int(value)

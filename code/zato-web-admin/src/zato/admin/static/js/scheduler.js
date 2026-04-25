@@ -176,6 +176,8 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, actio
         else {
             var tr = $.fn.zato.data_table.row_updated(json.id);
             tr.html(row);
+            tr.addClass('updated');
+            $.fn.zato.data_table._bounce_row(tr);
         }
     }
 
@@ -196,6 +198,8 @@ $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
             return $.fn.zato.scheduler.data_table.on_submit_complete(data,
                 status, action, job_type);
         }
+    var label = action === 'create' ? 'Creating ...' : 'Saving ...';
+    $.fn.zato.show_action_overlay(label);
     return $.fn.zato.data_table._on_submit(form, callback);
 }
 
