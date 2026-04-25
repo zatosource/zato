@@ -1,6 +1,7 @@
 //! Scheduler core loop and supporting functions.
 
-use std::collections::HashMap;
+use std::cmp::Reverse;
+use std::collections::{BinaryHeap, HashMap};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -11,7 +12,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use crate::calendar::CalendarData;
-use crate::job::{ExecutionRecord, RunningJob};
+use crate::job::{ExecutionRecord, LogEntry, RunningJob};
 use crate::types::{FireBatch, JobType, OnMissedPolicy, outcome};
 
 /// Re-export of `Py<PyAny>` for brevity.
@@ -24,6 +25,40 @@ const DEFAULT_CLOCK_JUMP_THRESHOLD_MS: i64 = 5_000;
 /// window ahead of "now" are collected in the same tick.
 const DEFAULT_COALESCE_WINDOW_MS: i64 = 50;
 
+/// A single pending synthetic log entry to be drip-fed into a running execution record.
+pub struct SyntheticDrip {
+    /// When this drip becomes due.
+    pub due_at: Instant,
+    /// Target job.
+    pub job_id: i64,
+    /// Target execution run number.
+    pub current_run: u32,
+    /// Log entry to append.
+    pub entry: LogEntry,
+    /// If set, finalize the record with this outcome and duration after appending.
+    pub finalize: Option<(String, u64)>,
+}
+
+impl PartialEq for SyntheticDrip {
+    fn eq(&self, other: &Self) -> bool {
+        self.due_at == other.due_at
+    }
+}
+
+impl Eq for SyntheticDrip {}
+
+impl PartialOrd for SyntheticDrip {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for SyntheticDrip {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.due_at.cmp(&other.due_at)
+    }
+}
+
 /// Mutable state guarded by the scheduler mutex.
 pub struct SchedulerState {
     /// Map of job id to its runtime representation.
@@ -32,6 +67,8 @@ pub struct SchedulerState {
     pub calendars: HashMap<String, CalendarData>,
     /// Flag set whenever the state is mutated from outside the loop.
     pub dirty: bool,
+    /// Pending synthetic log drips in a min-heap ordered by `due_at`.
+    pub synthetic_drips: BinaryHeap<Reverse<SyntheticDrip>>,
 }
 
 impl Default for SchedulerState {
@@ -48,6 +85,7 @@ impl SchedulerState {
             jobs: HashMap::new(),
             calendars: HashMap::new(),
             dirty: false,
+            synthetic_drips: BinaryHeap::new(),
         }
     }
 }
@@ -153,6 +191,7 @@ pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callb
         let fire_batch = {
             let mut state = shared.state.lock();
             check_in_flight_timeouts(&mut state);
+            drain_synthetic_drips(&mut state);
             collect_due_jobs(&mut state, now_wall, shared.coalesce_window_ms)
         };
 
@@ -219,6 +258,14 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
             if diff < min_ms {
                 min_ms = diff;
             }
+        }
+    }
+
+    if let Some(Reverse(front)) = state.synthetic_drips.peek() {
+        let drip_ms = i64::try_from(front.due_at.saturating_duration_since(Instant::now()).as_millis()).unwrap_or(i64::MAX);
+        if drip_ms < min_ms {
+            log::warn!("[DRIP] compute_sleep: drip shortens sleep from {min_ms}ms to {drip_ms}ms");
+            min_ms = drip_ms;
         }
     }
 
@@ -345,6 +392,77 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
                     .with_error(format!("exceeded max_execution_time_ms={}", running_job.max_execution_time_ms)),
             );
         }
+    }
+}
+
+/// Processes any due synthetic log drips, appending entries and optionally finalizing records.
+pub fn drain_synthetic_drips(state: &mut SchedulerState) {
+    let now = Instant::now();
+    let pending = state.synthetic_drips.len();
+    if pending > 0 {
+        let front_due = state
+            .synthetic_drips
+            .peek()
+            .map(|Reverse(front)| front.due_at.saturating_duration_since(now).as_millis());
+        log::warn!("[DRIP] drain_synthetic_drips: pending={pending} front_due_in_ms={front_due:?}");
+    }
+    let mut drained: usize = 0;
+    while let Some(Reverse(front)) = state.synthetic_drips.peek() {
+        if front.due_at > now {
+            log::warn!(
+                "[DRIP] drain: next drip not due yet, remaining_ms={}",
+                front.due_at.duration_since(now).as_millis()
+            );
+            break;
+        }
+        let Some(Reverse(drip)) = state.synthetic_drips.pop() else { break };
+        log::warn!(
+            "[DRIP] drain: processing drip for job_id={} run={} level={} finalize={}",
+            drip.job_id,
+            drip.current_run,
+            drip.entry.level,
+            drip.finalize.is_some()
+        );
+        if let Some(running_job) = state.jobs.get_mut(&drip.job_id) {
+            let mut found = false;
+            for rec in running_job.history.iter_mut().rev() {
+                if rec.current_run == drip.current_run {
+                    found = true;
+                    rec.log_entries.push(drip.entry);
+                    log::warn!(
+                        "[DRIP] drain: appended entry to run={}, now has {} log entries, outcome={}",
+                        drip.current_run,
+                        rec.log_entries.len(),
+                        rec.outcome
+                    );
+                    if let Some((ref final_outcome, final_duration)) = drip.finalize {
+                        log::warn!(
+                            "[DRIP] drain: finalizing run={} outcome={final_outcome} duration={final_duration}",
+                            drip.current_run
+                        );
+                        rec.outcome.clone_from(final_outcome);
+                        rec.duration_ms = Some(final_duration);
+                    }
+                    break;
+                }
+            }
+            if !found {
+                log::warn!(
+                    "[DRIP] drain: run={} NOT found in history for job_id={}",
+                    drip.current_run,
+                    drip.job_id
+                );
+            }
+        } else {
+            log::warn!("[DRIP] drain: job_id={} NOT found in state", drip.job_id);
+        }
+        drained += 1;
+    }
+    if drained > 0 {
+        log::warn!(
+            "[DRIP] drain_synthetic_drips: drained {drained} drips, remaining={}",
+            state.synthetic_drips.len()
+        );
     }
 }
 

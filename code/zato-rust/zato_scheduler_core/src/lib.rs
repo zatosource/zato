@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use pyo3::prelude::*;
@@ -36,7 +36,7 @@ pub mod test_support {
 
 use calendar::CalendarData;
 use job::{ExecutionRecord, LogEntry, RunningJob};
-use scheduler::SchedulerShared;
+use scheduler::{SchedulerShared, SyntheticDrip};
 
 /// Convenience alias so the rest of the module can say `PyObject`.
 type PyObject = Py<PyAny>;
@@ -52,6 +52,83 @@ where
     drop(state);
     shared.condvar.notify_one();
     result
+}
+
+/// Populates an already-completed synthetic execution record with realistic log entries.
+fn populate_synthetic_logs(rec: &mut ExecutionRecord, now_iso: &str, fake_outcome: &str) {
+    rec.log_entries.push(LogEntry {
+        timestamp_iso: now_iso.into(),
+        level: "SYSTEM".into(),
+        message: format!("Scheduler fired job, outcome={fake_outcome}"),
+    });
+    rec.log_entries.push(LogEntry {
+        timestamp_iso: now_iso.into(),
+        level: "INFO".into(),
+        message: "Connecting to backend service endpoint".into(),
+    });
+    rec.log_entries.push(LogEntry {
+        timestamp_iso: now_iso.into(),
+        level: "INFO".into(),
+        message: "Processing 42 items from input queue".into(),
+    });
+    if fake_outcome == types::outcome::ERROR || fake_outcome == types::outcome::TIMEOUT {
+        rec.log_entries.push(LogEntry {
+            timestamp_iso: now_iso.into(),
+            level: "WARNING".into(),
+            message: "Retry threshold reached, escalating".into(),
+        });
+        rec.log_entries.push(LogEntry {
+            timestamp_iso: now_iso.into(),
+            level: "ERROR".into(),
+            message: format!("Service failed with outcome `{fake_outcome}`: connection refused"),
+        });
+    } else {
+        rec.log_entries.push(LogEntry {
+            timestamp_iso: now_iso.into(),
+            level: "INFO".into(),
+            message: "All items processed successfully".into(),
+        });
+    }
+}
+
+/// Builds the sequence of `LogEntry` items to drip-feed into a running synthetic record.
+fn build_synthetic_drip_entries(now_iso: &str, fake_outcome: &str) -> Vec<LogEntry> {
+    let mut entries = vec![
+        LogEntry {
+            timestamp_iso: now_iso.into(),
+            level: "SYSTEM".into(),
+            message: "Scheduler fired job, starting execution".into(),
+        },
+        LogEntry {
+            timestamp_iso: now_iso.into(),
+            level: "INFO".into(),
+            message: "Connecting to backend service endpoint".into(),
+        },
+        LogEntry {
+            timestamp_iso: now_iso.into(),
+            level: "INFO".into(),
+            message: "Processing 42 items from input queue".into(),
+        },
+    ];
+    if fake_outcome == types::outcome::ERROR || fake_outcome == types::outcome::TIMEOUT {
+        entries.push(LogEntry {
+            timestamp_iso: now_iso.into(),
+            level: "WARNING".into(),
+            message: "Retry threshold reached, escalating".into(),
+        });
+        entries.push(LogEntry {
+            timestamp_iso: now_iso.into(),
+            level: "ERROR".into(),
+            message: format!("Service failed with outcome `{fake_outcome}`: connection refused"),
+        });
+    } else {
+        entries.push(LogEntry {
+            timestamp_iso: now_iso.into(),
+            level: "INFO".into(),
+            message: "All items processed successfully".into(),
+        });
+    }
+    entries
 }
 
 /// Non-OK outcomes injected after each real completion during testing.
@@ -214,6 +291,7 @@ impl Scheduler {
     #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn mark_complete(&self, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
+        log::warn!("[DRIP] mark_complete called: job_id={job_id} outcome={outcome} current_run={current_run}");
         with_state_mut(&self.shared, |state| {
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
                 running_job.in_flight = false;
@@ -223,37 +301,63 @@ impl Scheduler {
                     if rec.current_run == current_run {
                         rec.duration_ms = Some(duration_ms);
                         rec.outcome = outcome.to_string();
+                        populate_synthetic_logs(rec, &Utc::now().to_rfc3339(), outcome);
+                        log::warn!(
+                            "[DRIP] populated real rec run={current_run} with {} log entries",
+                            rec.log_entries.len()
+                        );
                         break;
                     }
                 }
 
                 let now_iso = Utc::now().to_rfc3339();
-                for _ in 0..2 {
+                let now_inst = Instant::now();
+                let mut drip_base_ms: u64 = 0;
+
+                for iter_idx in 0..2u8 {
                     let raw_idx = TEST_INJECT_IDX.fetch_add(1, Ordering::Relaxed);
                     let wrapped_idx = usize::try_from(raw_idx).map_or(0, |idx| idx % TEST_INJECT_OUTCOMES.len());
                     let fake_outcome = TEST_INJECT_OUTCOMES.get(wrapped_idx).copied().unwrap_or(types::outcome::ERROR);
                     let fake_duration = if fake_outcome == types::outcome::TIMEOUT { 32000 } else { 150 };
                     running_job.current_run += 1;
-                    let mut rec = ExecutionRecord::new(&now_iso, &now_iso, fake_outcome, running_job.current_run)
-                        .with_duration(fake_duration)
-                        .with_error(format!("TEST: synthetic {fake_outcome}"));
+                    let run = running_job.current_run;
+
+                    log::warn!("[DRIP] creating synthetic running rec iter={iter_idx} run={run} fake_outcome={fake_outcome}");
+
+                    let mut rec = ExecutionRecord::new(&now_iso, &now_iso, types::outcome::RUNNING, run);
                     if fake_outcome == types::outcome::SKIPPED_ALREADY_IN_FLIGHT {
                         rec = rec.with_outcome_ctx(current_run.to_string());
                     }
-
-                    rec.log_entries.push(LogEntry {
-                        timestamp_iso: now_iso.clone(),
-                        level: "SYSTEM".into(),
-                        message: format!("Synthetic test record: {fake_outcome}"),
-                    });
-                    rec.log_entries.push(LogEntry {
-                        timestamp_iso: now_iso.clone(),
-                        level: "INFO".into(),
-                        message: format!("Injected by TEST_INJECT_OUTCOMES[{wrapped_idx}]"),
-                    });
-
                     running_job.record_execution(rec);
+
+                    let drip_entries = build_synthetic_drip_entries(&now_iso, fake_outcome);
+                    let drip_count = drip_entries.len();
+                    log::warn!("[DRIP] queuing {drip_count} drips for run={run}, drip_base_ms={drip_base_ms}");
+                    for (drip_idx, entry) in drip_entries.into_iter().enumerate() {
+                        let offset_ms = drip_base_ms + (u64::try_from(drip_idx).unwrap_or(0) + 1) * 5500;
+                        let is_last = drip_idx == drip_count - 1;
+                        log::warn!(
+                            "[DRIP]   drip {drip_idx}/{drip_count} offset_ms={offset_ms} level={} finalize={} due_at=now+{offset_ms}ms",
+                            entry.level,
+                            is_last
+                        );
+                        state.synthetic_drips.push(std::cmp::Reverse(SyntheticDrip {
+                            due_at: now_inst + Duration::from_millis(offset_ms),
+                            job_id,
+                            current_run: run,
+                            entry,
+                            finalize: if is_last {
+                                Some((fake_outcome.to_string(), fake_duration))
+                            } else {
+                                None
+                            },
+                        }));
+                    }
+                    drip_base_ms += u64::try_from(drip_count).unwrap_or(0) * 5500;
                 }
+                log::warn!("[DRIP] total drips queued: {}", state.synthetic_drips.len());
+            } else {
+                log::warn!("[DRIP] mark_complete: job_id={job_id} NOT found in state");
             }
         });
         Ok(())
@@ -527,11 +631,19 @@ impl Scheduler {
     /// (incremental poll while the panel is open).
     #[pyo3(signature = (job_id, current_run, since_idx))]
     fn get_log_entries(&self, py: Python<'_>, job_id: i64, current_run: u32, since_idx: usize) -> PyResult<Py<PyList>> {
+        log::warn!("[DRIP] get_log_entries: job_id={job_id} current_run={current_run} since_idx={since_idx}");
         let state = self.shared.state.lock();
+        log::warn!("[DRIP] get_log_entries: pending drips={}", state.synthetic_drips.len());
         let list = PyList::empty(py);
         if let Some(running_job) = state.jobs.get(&job_id) {
             for rec in running_job.history.iter().rev() {
                 if rec.current_run == current_run {
+                    log::warn!(
+                        "[DRIP] get_log_entries: found run={current_run} outcome={} total_log_entries={} returning={}",
+                        rec.outcome,
+                        rec.log_entries.len(),
+                        rec.log_entries.len().saturating_sub(since_idx)
+                    );
                     for entry in rec.log_entries.iter().skip(since_idx) {
                         let dict = PyDict::new(py);
                         dict.set_item("timestamp_iso", entry.timestamp_iso.as_str())?;

@@ -850,9 +850,12 @@ $.fn.zato.scheduler.job_detail._fetch_and_render_log_entries = function($panel_l
     var detail = $.fn.zato.scheduler.job_detail;
     var since_idx = parseInt($panel_log.attr('data-since-idx'), 10);
 
+    console.log('[DRIP-JS] _fetch_and_render_log_entries: job_id=' + job_id + ' current_run=' + current_run + ' since_idx=' + since_idx);
+
     $.ajax({
         type: 'POST',
         url: detail._poll_config.poll_url,
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
         data: JSON.stringify({
             action: 'get-log-entries',
             job_id: job_id,
@@ -861,8 +864,12 @@ $.fn.zato.scheduler.job_detail._fetch_and_render_log_entries = function($panel_l
             cluster_id: detail.config.cluster_id
         }),
         contentType: 'application/json',
+        error: function(xhr, status, err) {
+            console.error('[DRIP-JS] AJAX error: status=' + xhr.status + ' err=' + err + ' body=' + xhr.responseText);
+        },
         success: function(data) {
             var entries = data.entries;
+            console.log('[DRIP-JS] response for run=' + current_run + ': ' + entries.length + ' entries, since_idx was ' + since_idx);
             if (entries.length === 0) return;
             for (var idx = 0; idx < entries.length; idx++) {
                 var is_last = (idx === entries.length - 1) && ($panel_log.children().length === 0 || idx === entries.length - 1);

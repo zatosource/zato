@@ -520,7 +520,9 @@ class GetLogEntries(_SchedulerAdmin):
             current_run = self.request.input.current_run
             since_idx = self.request.input.since_idx
 
+            self.logger.warning('[DRIP] GetLogEntries.handle: job_id=%s current_run=%s since_idx=%s', job_id, current_run, since_idx)
             entries = self.server._scheduler.get_log_entries(job_id, current_run, since_idx)
+            self.logger.warning('[DRIP] GetLogEntries.handle: returning %s entries', len(entries))
             self.response.payload = {'entries': entries}
         except Exception:
             self.logger.error('Could not get log entries, e:`%s`', format_exc())
