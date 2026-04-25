@@ -503,12 +503,16 @@ class GetHistory(_SchedulerAdmin):
                 self.response.payload = {'rows': rows, 'total': result['total']}
             else:
                 page = self.request.input.get('page')
-                if page is None:
+                if not page:
                     page = default_page
+                else:
+                    page = int(page)
 
                 page_size = self.request.input.get('page_size')
-                if page_size is None:
+                if not page_size:
                     page_size = default_page_size
+                else:
+                    page_size = int(page_size)
                 offset = (page - 1) * page_size
 
                 result = scheduler.get_history_page(job_id, offset, page_size, outcomes)
