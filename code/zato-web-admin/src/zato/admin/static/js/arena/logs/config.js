@@ -19,12 +19,6 @@ $.fn.zato.arena.logs.config = {
             display_name: 'Pub/Sub',
             aliases: ['topic', 'ep', 'endpoint', 'queue', 'q'],
             default_limit: 50
-        },
-        services: {
-            name: 'services',
-            display_name: 'Services',
-            aliases: ['svc', 'service', 'status', 'env'],
-            default_limit: 50
         }
     },
 
@@ -34,7 +28,9 @@ $.fn.zato.arena.logs.config = {
         series: '/zato/arena/logs/series/',
         children: '/zato/arena/logs/children/',
         by_attr: '/zato/arena/logs/by-attr/',
-        by_range: '/zato/arena/logs/by-range/'
+        by_range: '/zato/arena/logs/by-range/',
+        by_float_range: '/zato/arena/logs/by-float-range/',
+        by_text: '/zato/arena/logs/by-text/'
     },
 
     pagination: {

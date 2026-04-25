@@ -44,7 +44,7 @@ $.fn.zato.arena.logs.pagination = {
             $select.append('<option value="' + size + '"' + selected + '>' + size + ' per page</option>');
         }
         $select.on('change', function() {
-            $.fn.zato.arena.logs.search.set_page_size(parseInt($(this).val()));
+            $.fn.zato.arena.logs.search.set_page_size(parseInt($(this).val(), 10));
         });
         $container.append($select);
     }
