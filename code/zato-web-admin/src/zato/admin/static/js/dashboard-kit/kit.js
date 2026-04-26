@@ -892,16 +892,20 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var $ths = $table.find('thead th');
         if (!$ths.length) return;
         var key = table_selector;
-        if (!kit._locked_widths[key]) {
-            kit._locked_widths[key] = [];
+        if (kit._locked_widths[key]) {
+            var stored = kit._locked_widths[key];
+            $ths.each(function(i) {
+                if (stored[i]) {
+                    $(this).css('min-width', stored[i] + 'px');
+                }
+            });
+            return;
         }
-        var stored = kit._locked_widths[key];
+        kit._locked_widths[key] = [];
         $ths.each(function(i) {
             var w = $(this).outerWidth();
-            if (!stored[i] || w > stored[i]) {
-                stored[i] = w;
-            }
-            $(this).css('min-width', stored[i] + 'px');
+            kit._locked_widths[key][i] = w;
+            $(this).css('min-width', w + 'px');
         });
     };
 })();
