@@ -178,10 +178,7 @@ fn watchdog_loop(registry: &WatchdogRegistry) {
 fn log_diagnostics(registry: &WatchdogRegistry) {
     log::error!("watchdog: --- begin diagnostics ---");
 
-    log::error!(
-        "watchdog: stop_flag={}",
-        registry.shared.stop_flag.load(Ordering::Relaxed),
-    );
+    log::error!("watchdog: stop_flag={}", registry.shared.stop_flag.load(Ordering::Relaxed));
 
     let mutex_held = registry.shared.state.try_lock().is_none();
     log::error!("watchdog: state mutex currently held={mutex_held}");
@@ -202,10 +199,7 @@ fn log_proc_thread_info() {
     };
 
     for entry in task_dir {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(_) => continue,
-        };
+        let Ok(entry) = entry else { continue };
         let tid = entry.file_name();
         let tid_str = tid.to_string_lossy();
 
@@ -215,12 +209,7 @@ fn log_proc_thread_info() {
         let status_path = format!("/proc/self/task/{tid_str}/status");
         let state_line = std::fs::read_to_string(&status_path)
             .ok()
-            .and_then(|contents| {
-                contents
-                    .lines()
-                    .find(|line| line.starts_with("State:"))
-                    .map(String::from)
-            })
+            .and_then(|contents| contents.lines().find(|line| line.starts_with("State:")).map(String::from))
             .unwrap_or_else(|| "State: ?".into());
 
         log::error!("watchdog: tid={tid_str} wchan={wchan} {state_line}");

@@ -583,17 +583,10 @@ class Service:
 
     def set_response_data(self, service:'Service', **kwargs:'any_') -> 'any_':
         response = service.response.payload
-        _srd_logger = _get_logger('zato')
-        _srd_logger.info('SEC-SRD-ENTRY payload_type=%s, serialize=%s, service=%s',
-            type(response).__name__, kwargs.get('serialize'), service.name)
         if not isinstance(response, _response_raw_types):
 
             if hasattr(response, 'getvalue'):
                 response = response.getvalue(serialize=kwargs.get('serialize'))
-                _srd_logger.info('SEC-SRD-GETVALUE result_type=%s', type(response).__name__)
-                if isinstance(response, list) and response:
-                    sample = response[0]
-                    _srd_logger.info('SEC-SRD-GETVALUE sample_type=%s, sample=%r', type(sample).__name__, sample)
                 if kwargs.get('as_bunch'):
                     response = bunchify(response)
 

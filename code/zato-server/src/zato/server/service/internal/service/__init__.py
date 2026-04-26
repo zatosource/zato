@@ -37,9 +37,6 @@ from zato.common.util.sql import elems_with_opaque, set_instance_opaque_attrs
 from zato.server.service import Boolean, Integer, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
-from logging import getLogger as _getLogger
-_sec_logger = _getLogger('zato')
-
 # ################################################################################################################################
 # ################################################################################################################################
 
@@ -438,13 +435,6 @@ class Invoke(AdminService):
 
         if not isinstance(response, str):
             if not isinstance(response, bytes):
-                resp_type = type(response).__name__
-                if isinstance(response, list) and response:
-                    sample = response[0]
-                    _sec_logger.info('SEC-BUILD-RESP type=%s, len=%d, sample_type=%s, sample=%r',
-                        resp_type, len(response), type(sample).__name__, sample)
-                else:
-                    _sec_logger.info('SEC-BUILD-RESP type=%s, value=%r', resp_type, response)
                 if hasattr(response, 'to_dict'):
                     response = response.to_dict() # type: ignore
                 response = json_dumps(response)

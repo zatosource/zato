@@ -201,7 +201,7 @@ tbody tr[data-run]:not(.detail-panel-row) {
 }
 
 .detail-log-level-col {
-    flex: 0 0 90px;
+    flex: 0 0 auto;
     text-align: left;
 }
 

@@ -286,19 +286,7 @@ impl RunningJob {
             jitter_rng,
         };
         if running_job.is_active {
-            let now = Utc::now();
-            log::info!(
-                "from_scheduler_job: job={} interval_ms={interval_ms} start_date={:?} jitter_ms={:?} computing initial next_fire at now={now}",
-                running_job.name,
-                running_job.start_date,
-                running_job.jitter_ms,
-            );
-            running_job.compute_next_fire(now);
-            log::info!(
-                "from_scheduler_job: job={} initial next_fire_utc={:?}",
-                running_job.name,
-                running_job.next_fire_utc,
-            );
+            running_job.compute_next_fire(Utc::now());
         }
         running_job
     }
@@ -343,7 +331,6 @@ impl RunningJob {
 
     /// Computes the next fire time from `now` based on job type and interval.
     pub fn compute_next_fire(&mut self, now: DateTime<Utc>) {
-        let old_fire = self.next_fire_utc;
         match self.job_type {
             JobType::OneTime => {
                 if let Some(start) = self.start_date {
@@ -366,20 +353,6 @@ impl RunningJob {
                         let jitter = self.compute_jitter();
                         let total_ms = i64::try_from(base_ms + jitter).unwrap_or(i64::MAX);
                         let new_fire = start + chrono::Duration::milliseconds(total_ms);
-                        log::info!(
-                            "compute_next_fire: job={} current_run={} now={} start={} interval_ms={} nth={} base_ms={} jitter={} total_ms={} old_fire={:?} new_fire={}",
-                            self.name,
-                            self.current_run,
-                            now,
-                            start,
-                            self.interval_ms,
-                            nth,
-                            base_ms,
-                            jitter,
-                            total_ms,
-                            old_fire,
-                            new_fire,
-                        );
                         self.next_fire_utc = Some(new_fire);
                     } else {
                         self.next_fire_utc = None;

@@ -913,6 +913,7 @@ $.fn.zato.scheduler.job_detail._flush_buffered_rows = function($body) {
 };
 
 $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
+    var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
     var cfg = detail.config.detail_panel;
 

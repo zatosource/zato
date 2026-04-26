@@ -318,13 +318,6 @@ impl Scheduler {
     #[pyo3(signature = (job_id, job_data))]
     fn create_job(&self, py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
         let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
-        log::info!(
-            "create_job: job_id={job_id} seconds={:?} is_active={} repeats={:?} service={}",
-            scheduler_job.seconds,
-            scheduler_job.is_active,
-            scheduler_job.repeats,
-            scheduler_job.service,
-        );
         let running_job = RunningJob::from_scheduler_job(&scheduler_job);
         with_state_mut(py, &self.shared, |state, _deferred| {
             state.jobs.insert(job_id, running_job);
@@ -336,30 +329,10 @@ impl Scheduler {
     #[pyo3(signature = (job_id, job_data))]
     fn edit_job(&self, py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
         let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
-        log::info!(
-            "edit_job: job_id={job_id} seconds={:?} is_active={} repeats={:?} service={}",
-            scheduler_job.seconds,
-            scheduler_job.is_active,
-            scheduler_job.repeats,
-            scheduler_job.service,
-        );
-        with_state_mut(py, &self.shared, |state, deferred| {
+        with_state_mut(py, &self.shared, |state, _deferred| {
             if let Some(existing) = state.jobs.get_mut(&job_id) {
-                deferred_log!(deferred, log::Level::Info,
-                    "edit_job: updating existing job_id={job_id} old_interval_ms={} old_current_run={} old_next_fire={:?}",
-                    existing.interval_ms,
-                    existing.current_run,
-                    existing.next_fire_utc,
-                );
                 existing.update_from_job(&scheduler_job);
-                deferred_log!(deferred, log::Level::Info,
-                    "edit_job: after update job_id={job_id} new_interval_ms={} new_current_run={} new_next_fire={:?}",
-                    existing.interval_ms,
-                    existing.current_run,
-                    existing.next_fire_utc,
-                );
             } else {
-                deferred_log!(deferred, log::Level::Info, "edit_job: inserting new job_id={job_id}");
                 let running_job = RunningJob::from_scheduler_job(&scheduler_job);
                 state.jobs.insert(job_id, running_job);
             }
@@ -398,20 +371,10 @@ impl Scheduler {
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn mark_complete(&self, py: Python<'_>, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
         let outcome_owned = outcome.to_string();
-        log::info!("mark_complete called: job_id={job_id} outcome={outcome_owned} current_run={current_run} duration_ms={duration_ms}");
+        log::info!("mark_complete: job_id={job_id} outcome={outcome_owned} run={current_run} duration_ms={duration_ms}");
         with_state_mut(py, &self.shared, |state, deferred| {
             let outcome = outcome_owned.as_str();
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
-                deferred_log!(deferred, log::Level::Info,
-                    "mark_complete: job_id={job_id} name={} job.current_run={} in_flight={} in_flight_run={:?} next_fire_utc={:?} interval_ms={} with_test_data={}",
-                    running_job.name,
-                    running_job.current_run,
-                    running_job.in_flight,
-                    running_job.in_flight_run,
-                    running_job.next_fire_utc,
-                    running_job.interval_ms,
-                    state.with_test_data,
-                );
                 running_job.in_flight = false;
                 running_job.in_flight_since = None;
                 running_job.in_flight_run = None;
@@ -427,41 +390,26 @@ impl Scheduler {
                             message: format!("Job completed, outcome: {outcome}, duration: {}", humanize_ms(duration_ms)),
                         });
                         found_rec = true;
-                        deferred_log!(deferred, log::Level::Info,
-                            "mark_complete: job_id={job_id} updated history rec for run={current_run} planned={} actual={}",
-                            rec.planned_fire_time_iso,
-                            rec.actual_fire_time_iso,
-                        );
                         break;
                     }
                 }
                 if !found_rec {
-                    deferred_log!(deferred, log::Level::Warn,
-                        "mark_complete: job_id={job_id} name={} could not find history rec for run={current_run}, history_len={}",
+                    deferred_log!(
+                        deferred,
+                        log::Level::Warn,
+                        "mark_complete: job_id={job_id} name={} no history rec for run={current_run}",
                         running_job.name,
-                        running_job.history.len(),
                     );
                 }
 
-                let catchup_eligible = running_job.interval_ms > 0 && duration_ms >= running_job.interval_ms;
-                deferred_log!(deferred, log::Level::Info,
-                    "mark_complete: job_id={job_id} catchup_eligible={catchup_eligible} (duration_ms={duration_ms} >= interval_ms={})",
-                    running_job.interval_ms,
-                );
-                if catchup_eligible {
+                if running_job.interval_ms > 0 && duration_ms >= running_job.interval_ms {
                     let now = Utc::now();
-                    let mut catchup_count: u32 = 0;
                     while let Some(fire) = running_job.next_fire_utc {
                         if fire >= now {
-                            deferred_log!(deferred, log::Level::Info,
-                                "mark_complete: job_id={job_id} catchup loop done, fire={fire} >= now={now}, caught_up={catchup_count}",
-                            );
                             break;
                         }
                         running_job.current_run += 1;
-                        catchup_count += 1;
                         let skipped_run = running_job.current_run;
-                        deferred_log!(deferred, log::Level::Info, "mark_complete: job_id={job_id} catchup skip run={skipped_run} fire={fire} now={now}");
                         running_job.record_execution(
                             ExecutionRecord::new(
                                 &fire.to_rfc3339(),
@@ -473,18 +421,12 @@ impl Scheduler {
                         );
                         running_job.advance_to_next(now);
                     }
-                    deferred_log!(deferred, log::Level::Info,
-                        "mark_complete: job_id={job_id} catchup finished, total_caught_up={catchup_count} final_current_run={} final_next_fire={:?}",
-                        running_job.current_run,
-                        running_job.next_fire_utc,
-                    );
                 }
 
                 if state.with_test_data {
                     for rec in running_job.history.iter_mut().rev() {
                         if rec.current_run == current_run {
                             populate_synthetic_logs(rec, &Utc::now().to_rfc3339(), outcome);
-                            deferred_log!(deferred, log::Level::Info, "Populated real rec run={current_run} with {} log entries", rec.log_entries.len());
                             break;
                         }
                     }
@@ -493,15 +435,13 @@ impl Scheduler {
                     let now_inst = Instant::now();
                     let mut drip_base_ms: u64 = 0;
 
-                    for iter_idx in 0..2u8 {
+                    for _iter_idx in 0..2u8 {
                         let raw_idx = TEST_INJECT_IDX.fetch_add(1, Ordering::Relaxed);
                         let wrapped_idx = usize::try_from(raw_idx).map_or(0, |idx| idx % TEST_INJECT_OUTCOMES.len());
                         let fake_outcome = TEST_INJECT_OUTCOMES.get(wrapped_idx).copied().unwrap_or(types::outcome::ERROR);
                         let fake_duration = if fake_outcome == types::outcome::TIMEOUT { 32000 } else { 150 };
                         running_job.current_run += 1;
                         let run = running_job.current_run;
-
-                        deferred_log!(deferred, log::Level::Info, "Creating synthetic running rec iter={iter_idx} run={run} fake_outcome={fake_outcome}");
 
                         let mut rec = ExecutionRecord::new(&now_iso, &now_iso, types::outcome::RUNNING, run);
                         if fake_outcome == types::outcome::SKIPPED_ALREADY_IN_FLIGHT {
@@ -511,15 +451,9 @@ impl Scheduler {
 
                         let drip_entries = build_synthetic_drip_entries(&now_iso, fake_outcome);
                         let drip_count = drip_entries.len();
-                        deferred_log!(deferred, log::Level::Info, "Queuing {drip_count} drips for run={run}, drip_base_ms={drip_base_ms}");
                         for (drip_idx, entry) in drip_entries.into_iter().enumerate() {
                             let offset_ms = drip_base_ms + (u64::try_from(drip_idx).unwrap_or(0) + 1) * 5500;
                             let is_last = drip_idx == drip_count - 1;
-                            deferred_log!(deferred, log::Level::Info,
-                                "  drip {drip_idx}/{drip_count} offset_ms={offset_ms} level={} finalize={} due_at=now+{offset_ms}ms",
-                                entry.level,
-                                is_last
-                            );
                             state.synthetic_drips.push(std::cmp::Reverse(SyntheticDrip {
                                 due_at: now_inst + Duration::from_millis(offset_ms),
                                 job_id,
@@ -534,10 +468,7 @@ impl Scheduler {
                         }
                         drip_base_ms += u64::try_from(drip_count).unwrap_or(0) * 5500;
                     }
-                    deferred_log!(deferred, log::Level::Info, "Total drips queued: {}", state.synthetic_drips.len());
                 }
-            } else {
-                deferred_log!(deferred, log::Level::Info, "mark_complete: job_id={job_id} not found in state");
             }
         });
         Ok(())
@@ -836,7 +767,15 @@ impl Scheduler {
     /// since those borrows are tied to the GIL lifetime.
     #[pyo3(signature = (job_id, current_run, timestamp_iso, level, message))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
-    fn append_log_entry(&self, py: Python<'_>, job_id: i64, current_run: u32, timestamp_iso: &str, level: &str, message: &str) -> PyResult<()> {
+    fn append_log_entry(
+        &self,
+        py: Python<'_>,
+        job_id: i64,
+        current_run: u32,
+        timestamp_iso: &str,
+        level: &str,
+        message: &str,
+    ) -> PyResult<()> {
         let entry = LogEntry {
             timestamp_iso: timestamp_iso.to_string(),
             level: level.to_string(),
@@ -863,8 +802,6 @@ impl Scheduler {
     /// (incremental poll while the panel is open).
     #[pyo3(signature = (job_id, current_run, since_idx))]
     fn get_log_entries(&self, py: Python<'_>, job_id: i64, current_run: u32, since_idx: usize) -> PyResult<Py<PyList>> {
-        log::info!("get_log_entries: job_id={job_id} current_run={current_run} since_idx={since_idx}");
-
         let entries: Vec<LogEntry> = py.detach(|| {
             let state = self.shared.state.lock();
             state.jobs.get(&job_id).map_or_else(Vec::new, |running_job| {
