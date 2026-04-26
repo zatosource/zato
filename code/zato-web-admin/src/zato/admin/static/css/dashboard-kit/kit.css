@@ -305,11 +305,11 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
 }
 
 .countdown-now {
-    animation: countdown-now-pulse 0.9s ease-in-out 1 forwards;
+    animation: countdown-now-pulse 1.17s ease-in-out 1 forwards;
 }
 
 @keyframes countdown-now-pulse {
     0% { opacity: 0.3; }
     50% { opacity: 1; }
-    100% { opacity: 0.3; }
+    100% { opacity: 1; }
 }
