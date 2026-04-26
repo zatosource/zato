@@ -31,6 +31,7 @@ const GRACE: Duration = Duration::from_secs(2);
 /// and `set_expected_sleep` / `clear_expected_sleep` around legitimate
 /// blocking operations.
 pub struct HeartbeatHandle {
+    /// Shared atomic state for heartbeat timestamps and expected sleep.
     inner: Arc<HeartbeatInner>,
 }
 
@@ -68,14 +69,19 @@ impl HeartbeatHandle {
 
 /// Metadata for a single registered thread.
 struct Registration {
+    /// Human-readable thread name for diagnostics.
     name: String,
+    /// Shared atomic state for heartbeat timestamps and expected sleep.
     inner: Arc<HeartbeatInner>,
 }
 
 /// Registry shared between the watchdog thread and callers of `register`.
 pub struct WatchdogRegistry {
+    /// Monotonic reference point for computing heartbeat timestamps.
     epoch: Instant,
+    /// Registered threads with their heartbeat handles.
     threads: Mutex<Vec<Registration>>,
+    /// Shared scheduler state used for diagnostic checks.
     shared: Arc<SchedulerShared>,
 }
 
@@ -112,14 +118,17 @@ impl WatchdogRegistry {
     }
 }
 
-/// Starts the watchdog thread. Returns the join handle.
+/// Starts the watchdog thread.
 ///
 /// The watchdog runs until the scheduler's stop flag is set.
-pub fn start_watchdog(registry: Arc<WatchdogRegistry>) -> std::thread::JoinHandle<()> {
-    std::thread::Builder::new()
+/// If the thread cannot be spawned, an error is logged.
+pub fn start_watchdog(registry: Arc<WatchdogRegistry>) {
+    let result = std::thread::Builder::new()
         .name("zato-watchdog".into())
-        .spawn(move || watchdog_loop(&registry))
-        .expect("failed to spawn watchdog thread")
+        .spawn(move || watchdog_loop(&registry));
+    if let Err(err) = result {
+        log::error!("watchdog: failed to spawn thread: {err}");
+    }
 }
 
 /// Main watchdog loop.

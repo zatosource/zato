@@ -10,6 +10,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     var kit = $.fn.zato.dashboard_kit;
     kit.record_detail = {};
 
+    var FADE_MS = 100;
+
     kit.record_detail.render_log_entry = function(entry, is_last, panel) {
         var level_key = entry.level.toUpperCase();
         if (level_key === 'WARNING') level_key = 'WARN';
@@ -116,7 +118,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         });
     };
 
-    kit.record_detail._fetch_run = function(config, callback) {
+    kit.record_detail._fetch_run = function(config, run_number, callback) {
         $.ajax({
             type: 'POST',
             url: config.poll_url,
@@ -124,7 +126,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             data: JSON.stringify({
                 action: config.run_action,
                 job_id: config.record_id,
-                current_run: config.run_number,
+                current_run: run_number,
                 cluster_id: config.cluster_id
             }),
             contentType: 'application/json',
@@ -137,21 +139,31 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         });
     };
 
-    function render_run_nav($container, prev_run, next_run, build_run_url) {
+    function render_run_nav($container, prev_run, next_run, navigate_fn) {
         var html = '<span class="detail-pagination-row">';
         if (prev_run !== null) {
-            html += '<a href="' + build_run_url(prev_run) + '" class="detail-page-prev">Previous run</a>';
+            html += '<a href="#" class="detail-page-prev" data-run="' + prev_run + '">Previous run</a>';
         } else {
             html += '<span class="detail-page-prev detail-page-disabled">Previous run</span>';
         }
         html += '<span class="detail-page-sep">|</span>';
         if (next_run !== null) {
-            html += '<a href="' + build_run_url(next_run) + '" class="detail-page-next">Next run</a>';
+            html += '<a href="#" class="detail-page-next" data-run="' + next_run + '">Next run</a>';
         } else {
             html += '<span class="detail-page-next detail-page-disabled">Next run</span>';
         }
         html += '</span>';
         $container.html(html);
+        $container.find('a[data-run]').on('click', function(e) {
+            e.preventDefault();
+            var target_run = parseInt($(this).attr('data-run'), 10);
+            navigate_fn(target_run);
+        });
+    }
+
+    function update_all_nav($tops, $bottoms, prev_run, next_run, navigate_fn) {
+        if ($tops) render_run_nav($tops, prev_run, next_run, navigate_fn);
+        if ($bottoms) render_run_nav($bottoms, prev_run, next_run, navigate_fn);
     }
 
     kit.record_detail.bind_panel_actions = function($container, tag_defs) {
@@ -247,72 +259,111 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
     kit.record_detail.init = function(config) {
         var $container = $(config.container);
+        var $nav_top = config.nav_container_top ? $(config.nav_container_top) : null;
+        var $nav_bottom = config.nav_container_bottom ? $(config.nav_container_bottom) : null;
         var record_poll_timer = null;
+        var log_poll_timer = null;
+        var current_run = config.run_number;
+        var actions_bound = false;
 
-        kit.record_detail._fetch_run(config, function(data) {
-            var record = data.record;
-            if (record === null) {
-                $container.html('<div style="padding:16px;color:#aaa">No data for this run.</div>');
-                return;
-            }
+        function stop_timers() {
+            if (record_poll_timer) { clearInterval(record_poll_timer); record_poll_timer = null; }
+            if (log_poll_timer) { clearInterval(log_poll_timer); log_poll_timer = null; }
+        }
 
-            var $panel_log = $container.find('.detail-panel-log');
+        function navigate_to(run_number) {
+            stop_timers();
+            var new_url = config.build_run_url(run_number);
+            history.pushState({run: run_number}, '', new_url);
+            current_run = run_number;
+            $('#record-detail-title').text('Run ' + kit.format_number_full(run_number));
+            crossfade_load(run_number);
+        }
 
-            var mirror_html = config.render_mirror(record);
-            $panel_log.prepend(mirror_html);
+        function crossfade_load(run_number) {
+            $container.css({transition: 'opacity ' + FADE_MS + 'ms', opacity: 0});
+            setTimeout(function() {
+                var $panel_log = $container.find('.detail-panel-log');
+                $panel_log.children().remove();
+                $panel_log.attr('data-since-idx', '0');
+                load_run(run_number);
+            }, FADE_MS);
+        }
 
-            var enabled_levels = kit.record_detail.bind_panel_actions($container, config.tag_defs);
+        function load_run(run_number) {
+            kit.record_detail._fetch_run(config, run_number, function(data) {
+                var record = data.record;
+                if (record === null) {
+                    $container.html('<div style="padding:16px;color:#aaa">No data for this run.</div>');
+                    $container.css({opacity: 1});
+                    return;
+                }
 
-            var fetch_params = {
-                object_id: config.record_id,
-                run_id: config.run_number,
-                since_idx: 0
-            };
-            kit.record_detail._fetch_logs($panel_log, fetch_params, config);
+                var $panel_log = $container.find('.detail-panel-log');
+                var mirror_html = config.render_mirror(record);
+                $panel_log.prepend(mirror_html);
 
-            if (config.poll_interval_ms > 0) {
-                setInterval(function() {
-                    var since_idx = parseInt($panel_log.attr('data-since-idx'), 10);
-                    kit.record_detail._fetch_logs($panel_log, {
-                        object_id: config.record_id,
-                        run_id: config.run_number,
-                        since_idx: since_idx
-                    }, config);
-                }, config.poll_interval_ms);
-            }
+                if (!actions_bound) {
+                    kit.record_detail.bind_panel_actions($container, config.tag_defs);
+                    actions_bound = true;
+                }
 
-            if (config.nav_container_top) {
-                render_run_nav($(config.nav_container_top), data.prev_run, data.next_run, config.build_run_url);
-            }
-            if (config.nav_container_bottom) {
-                render_run_nav($(config.nav_container_bottom), data.prev_run, data.next_run, config.build_run_url);
-            }
+                kit.record_detail._fetch_logs($panel_log, {
+                    object_id: config.record_id,
+                    run_id: run_number,
+                    since_idx: 0
+                }, config);
 
-            if (record.outcome === 'running') {
-                record_poll_timer = setInterval(function() {
-                    kit.record_detail._fetch_run(config, function(fresh_data) {
-                        var fresh = fresh_data.record;
-                        if (fresh === null) return;
-                        if (fresh.outcome !== 'running') {
-                            clearInterval(record_poll_timer);
-                            record_poll_timer = null;
-                            var $badge = $container.find('.dashboard-outcome-badge').first();
-                            var new_badge_html = kit.outcome.badge(fresh.outcome, config.panel.outcome_palette, fresh);
-                            $badge.replaceWith($(new_badge_html).addClass('kit-puff').one('animationend', function() {
-                                $(this).removeClass('kit-puff');
-                            }));
-                            var new_tags = kit.record_detail.render_dark_tags(fresh, config.tag_defs);
-                            $container.find('.detail-log-mirror .detail-log-msg').html(new_tags);
-                        }
-                        if (config.nav_container_top) {
-                            render_run_nav($(config.nav_container_top), fresh_data.prev_run, fresh_data.next_run, config.build_run_url);
-                        }
-                        if (config.nav_container_bottom) {
-                            render_run_nav($(config.nav_container_bottom), fresh_data.prev_run, fresh_data.next_run, config.build_run_url);
-                        }
-                    });
-                }, config.poll_interval_ms);
+                if (config.poll_interval_ms > 0) {
+                    log_poll_timer = setInterval(function() {
+                        var since_idx = parseInt($panel_log.attr('data-since-idx'), 10);
+                        kit.record_detail._fetch_logs($panel_log, {
+                            object_id: config.record_id,
+                            run_id: run_number,
+                            since_idx: since_idx
+                        }, config);
+                    }, config.poll_interval_ms);
+                }
+
+                update_all_nav($nav_top, $nav_bottom, data.prev_run, data.next_run, navigate_to);
+
+                $container.css({opacity: 1});
+
+                if (record.outcome === 'running') {
+                    record_poll_timer = setInterval(function() {
+                        kit.record_detail._fetch_run(config, run_number, function(fresh_data) {
+                            var fresh = fresh_data.record;
+                            if (fresh === null) return;
+                            if (fresh.outcome !== 'running') {
+                                clearInterval(record_poll_timer);
+                                record_poll_timer = null;
+                                var $badge = $container.find('.dashboard-outcome-badge').first();
+                                var new_badge_html = kit.outcome.badge(fresh.outcome, config.panel.outcome_palette, fresh);
+                                $badge.replaceWith($(new_badge_html).addClass('kit-puff').one('animationend', function() {
+                                    $(this).removeClass('kit-puff');
+                                }));
+                                var new_tags = kit.record_detail.render_dark_tags(fresh, config.tag_defs);
+                                $container.find('.detail-log-mirror .detail-log-msg').html(new_tags);
+                            }
+                            update_all_nav($nav_top, $nav_bottom, fresh_data.prev_run, fresh_data.next_run, navigate_to);
+                        });
+                    }, config.poll_interval_ms);
+                }
+            });
+        }
+
+        $(window).on('popstate', function(e) {
+            var state = e.originalEvent.state;
+            if (state && state.run) {
+                stop_timers();
+                current_run = state.run;
+                $('#record-detail-title').text('Run ' + kit.format_number_full(state.run));
+                crossfade_load(state.run);
             }
         });
+
+        history.replaceState({run: current_run}, '', window.location.href);
+
+        load_run(current_run);
     };
 })();

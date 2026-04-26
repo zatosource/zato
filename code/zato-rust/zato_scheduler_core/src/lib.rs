@@ -44,23 +44,67 @@ use scheduler::{SchedulerShared, SyntheticDrip};
 /// Convenience alias so the rest of the module can say `PyObject`.
 type PyObject = Py<PyAny>;
 
+/// Collects log messages while the state mutex is held so they can be
+/// flushed after the lock is released, avoiding `pyo3_log`'s blocking
+/// `Python::attach` call that would otherwise deadlock with the GIL.
+pub struct DeferredLog {
+    /// Buffered messages with their log level.
+    entries: Vec<(log::Level, String)>,
+}
+
+impl Default for DeferredLog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DeferredLog {
+    /// Creates an empty buffer.
+    pub const fn new() -> Self {
+        Self { entries: Vec::new() }
+    }
+
+    /// Flushes all buffered messages through `log::log!`.
+    ///
+    /// Must be called only when no mutex is held.
+    pub fn flush(self) {
+        for (level, msg) in self.entries {
+            log::log!(level, "{msg}");
+        }
+    }
+}
+
+/// Buffers a formatted log message into a `DeferredLog` instead of calling `log::` directly.
+macro_rules! deferred_log {
+    ($dl:expr, $level:expr, $($arg:tt)*) => {
+        $dl.entries.push(($level, format!($($arg)*)))
+    };
+}
+
+pub(crate) use deferred_log;
+
 /// Releases the GIL, acquires the state lock, applies `func`, marks the state dirty and wakes the condvar.
 ///
 /// The GIL is released before locking the mutex so that the two locks are never
 /// held at the same time, preventing deadlocks with the scheduler thread.
+/// The closure receives a `DeferredLog` to buffer log messages; they are
+/// flushed after the mutex and the GIL detachment are both released.
 fn with_state_mut<F, R>(py: Python<'_>, shared: &SchedulerShared, func: F) -> R
 where
-    F: FnOnce(&mut scheduler::SchedulerState) -> R + Send,
+    F: FnOnce(&mut scheduler::SchedulerState, &mut DeferredLog) -> R + Send,
     R: Send,
 {
-    py.detach(|| {
+    let (result, deferred) = py.detach(|| {
         let mut state = shared.state.lock();
-        let result = func(&mut state);
+        let mut deferred = DeferredLog::new();
+        let result = func(&mut state, &mut deferred);
         state.dirty = true;
         drop(state);
         shared.condvar.notify_one();
-        result
-    })
+        (result, deferred)
+    });
+    deferred.flush();
+    result
 }
 
 /// Formats a duration in milliseconds into a human-readable string.
@@ -282,7 +326,7 @@ impl Scheduler {
             scheduler_job.service,
         );
         let running_job = RunningJob::from_scheduler_job(&scheduler_job);
-        with_state_mut(py, &self.shared, |state| {
+        with_state_mut(py, &self.shared, |state, _deferred| {
             state.jobs.insert(job_id, running_job);
         });
         Ok(())
@@ -299,23 +343,23 @@ impl Scheduler {
             scheduler_job.repeats,
             scheduler_job.service,
         );
-        with_state_mut(py, &self.shared, |state| {
+        with_state_mut(py, &self.shared, |state, deferred| {
             if let Some(existing) = state.jobs.get_mut(&job_id) {
-                log::info!(
+                deferred_log!(deferred, log::Level::Info,
                     "edit_job: updating existing job_id={job_id} old_interval_ms={} old_current_run={} old_next_fire={:?}",
                     existing.interval_ms,
                     existing.current_run,
                     existing.next_fire_utc,
                 );
                 existing.update_from_job(&scheduler_job);
-                log::info!(
+                deferred_log!(deferred, log::Level::Info,
                     "edit_job: after update job_id={job_id} new_interval_ms={} new_current_run={} new_next_fire={:?}",
                     existing.interval_ms,
                     existing.current_run,
                     existing.next_fire_utc,
                 );
             } else {
-                log::info!("edit_job: inserting new job_id={job_id}");
+                deferred_log!(deferred, log::Level::Info, "edit_job: inserting new job_id={job_id}");
                 let running_job = RunningJob::from_scheduler_job(&scheduler_job);
                 state.jobs.insert(job_id, running_job);
             }
@@ -327,7 +371,7 @@ impl Scheduler {
     #[pyo3(signature = (job_id,))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn delete_job(&self, py: Python<'_>, job_id: i64) -> PyResult<()> {
-        with_state_mut(py, &self.shared, |state| {
+        with_state_mut(py, &self.shared, |state, _deferred| {
             state.jobs.remove(&job_id);
         });
         Ok(())
@@ -337,7 +381,7 @@ impl Scheduler {
     #[pyo3(signature = (job_id,))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
     fn execute_job(&self, py: Python<'_>, job_id: i64) -> PyResult<()> {
-        with_state_mut(py, &self.shared, |state| {
+        with_state_mut(py, &self.shared, |state, _deferred| {
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
                 let now = Utc::now();
                 running_job.next_fire_utc = Some(now);
@@ -355,10 +399,10 @@ impl Scheduler {
     fn mark_complete(&self, py: Python<'_>, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
         let outcome_owned = outcome.to_string();
         log::info!("mark_complete called: job_id={job_id} outcome={outcome_owned} current_run={current_run} duration_ms={duration_ms}");
-        with_state_mut(py, &self.shared, |state| {
+        with_state_mut(py, &self.shared, |state, deferred| {
             let outcome = outcome_owned.as_str();
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
-                log::info!(
+                deferred_log!(deferred, log::Level::Info,
                     "mark_complete: job_id={job_id} name={} job.current_run={} in_flight={} in_flight_run={:?} next_fire_utc={:?} interval_ms={} with_test_data={}",
                     running_job.name,
                     running_job.current_run,
@@ -383,7 +427,7 @@ impl Scheduler {
                             message: format!("Job completed, outcome: {outcome}, duration: {}", humanize_ms(duration_ms)),
                         });
                         found_rec = true;
-                        log::info!(
+                        deferred_log!(deferred, log::Level::Info,
                             "mark_complete: job_id={job_id} updated history rec for run={current_run} planned={} actual={}",
                             rec.planned_fire_time_iso,
                             rec.actual_fire_time_iso,
@@ -392,7 +436,7 @@ impl Scheduler {
                     }
                 }
                 if !found_rec {
-                    log::warn!(
+                    deferred_log!(deferred, log::Level::Warn,
                         "mark_complete: job_id={job_id} name={} could not find history rec for run={current_run}, history_len={}",
                         running_job.name,
                         running_job.history.len(),
@@ -400,7 +444,7 @@ impl Scheduler {
                 }
 
                 let catchup_eligible = running_job.interval_ms > 0 && duration_ms >= running_job.interval_ms;
-                log::info!(
+                deferred_log!(deferred, log::Level::Info,
                     "mark_complete: job_id={job_id} catchup_eligible={catchup_eligible} (duration_ms={duration_ms} >= interval_ms={})",
                     running_job.interval_ms,
                 );
@@ -409,7 +453,7 @@ impl Scheduler {
                     let mut catchup_count: u32 = 0;
                     while let Some(fire) = running_job.next_fire_utc {
                         if fire >= now {
-                            log::info!(
+                            deferred_log!(deferred, log::Level::Info,
                                 "mark_complete: job_id={job_id} catchup loop done, fire={fire} >= now={now}, caught_up={catchup_count}",
                             );
                             break;
@@ -417,7 +461,7 @@ impl Scheduler {
                         running_job.current_run += 1;
                         catchup_count += 1;
                         let skipped_run = running_job.current_run;
-                        log::info!("mark_complete: job_id={job_id} catchup skip run={skipped_run} fire={fire} now={now}");
+                        deferred_log!(deferred, log::Level::Info, "mark_complete: job_id={job_id} catchup skip run={skipped_run} fire={fire} now={now}");
                         running_job.record_execution(
                             ExecutionRecord::new(
                                 &fire.to_rfc3339(),
@@ -429,7 +473,7 @@ impl Scheduler {
                         );
                         running_job.advance_to_next(now);
                     }
-                    log::info!(
+                    deferred_log!(deferred, log::Level::Info,
                         "mark_complete: job_id={job_id} catchup finished, total_caught_up={catchup_count} final_current_run={} final_next_fire={:?}",
                         running_job.current_run,
                         running_job.next_fire_utc,
@@ -440,7 +484,7 @@ impl Scheduler {
                     for rec in running_job.history.iter_mut().rev() {
                         if rec.current_run == current_run {
                             populate_synthetic_logs(rec, &Utc::now().to_rfc3339(), outcome);
-                            log::info!("Populated real rec run={current_run} with {} log entries", rec.log_entries.len());
+                            deferred_log!(deferred, log::Level::Info, "Populated real rec run={current_run} with {} log entries", rec.log_entries.len());
                             break;
                         }
                     }
@@ -457,7 +501,7 @@ impl Scheduler {
                         running_job.current_run += 1;
                         let run = running_job.current_run;
 
-                        log::info!("Creating synthetic running rec iter={iter_idx} run={run} fake_outcome={fake_outcome}");
+                        deferred_log!(deferred, log::Level::Info, "Creating synthetic running rec iter={iter_idx} run={run} fake_outcome={fake_outcome}");
 
                         let mut rec = ExecutionRecord::new(&now_iso, &now_iso, types::outcome::RUNNING, run);
                         if fake_outcome == types::outcome::SKIPPED_ALREADY_IN_FLIGHT {
@@ -467,11 +511,11 @@ impl Scheduler {
 
                         let drip_entries = build_synthetic_drip_entries(&now_iso, fake_outcome);
                         let drip_count = drip_entries.len();
-                        log::info!("Queuing {drip_count} drips for run={run}, drip_base_ms={drip_base_ms}");
+                        deferred_log!(deferred, log::Level::Info, "Queuing {drip_count} drips for run={run}, drip_base_ms={drip_base_ms}");
                         for (drip_idx, entry) in drip_entries.into_iter().enumerate() {
                             let offset_ms = drip_base_ms + (u64::try_from(drip_idx).unwrap_or(0) + 1) * 5500;
                             let is_last = drip_idx == drip_count - 1;
-                            log::info!(
+                            deferred_log!(deferred, log::Level::Info,
                                 "  drip {drip_idx}/{drip_count} offset_ms={offset_ms} level={} finalize={} due_at=now+{offset_ms}ms",
                                 entry.level,
                                 is_last
@@ -490,10 +534,10 @@ impl Scheduler {
                         }
                         drip_base_ms += u64::try_from(drip_count).unwrap_or(0) * 5500;
                     }
-                    log::info!("Total drips queued: {}", state.synthetic_drips.len());
+                    deferred_log!(deferred, log::Level::Info, "Total drips queued: {}", state.synthetic_drips.len());
                 }
             } else {
-                log::info!("mark_complete: job_id={job_id} not found in state");
+                deferred_log!(deferred, log::Level::Info, "mark_complete: job_id={job_id} not found in state");
             }
         });
         Ok(())
@@ -504,7 +548,7 @@ impl Scheduler {
     fn reload(&self, py: Python<'_>) -> PyResult<()> {
         let adapter_bound = self.odb_adapter.bind(py);
         let (new_jobs, _cals) = scheduler::load_jobs(adapter_bound)?;
-        with_state_mut(py, &self.shared, |state| {
+        with_state_mut(py, &self.shared, |state, _deferred| {
             reload_jobs(state, &new_jobs);
         });
         Ok(())

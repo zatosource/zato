@@ -11,6 +11,8 @@ use parking_lot::{Condvar, Mutex};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
+use crate::DeferredLog;
+use crate::deferred_log;
 use crate::calendar::CalendarData;
 use crate::job::{ExecutionRecord, LogEntry, RunningJob};
 use crate::types::{FireBatch, outcome};
@@ -157,8 +159,8 @@ pub fn scheduler_loop(
     let mut last_mono = Instant::now();
 
     loop {
-        if let Some(hb) = &heartbeat {
-            hb.beat();
+        if let Some(handle) = &heartbeat {
+            handle.beat();
         }
 
         if shared.stop_flag.load(Ordering::Relaxed) {
@@ -167,15 +169,18 @@ pub fn scheduler_loop(
 
         {
             let mut state = shared.state.lock();
-            let sleep_duration = compute_sleep_duration(&state);
-            if let Some(hb) = &heartbeat {
-                hb.set_expected_sleep(sleep_duration);
+            let mut deferred = DeferredLog::new();
+            let sleep_duration = compute_sleep_duration(&state, &mut deferred);
+            if let Some(handle) = &heartbeat {
+                handle.set_expected_sleep(sleep_duration);
             }
             let _timed_out = shared.condvar.wait_for(&mut state, sleep_duration);
+            drop(state);
+            deferred.flush();
         }
 
-        if let Some(hb) = &heartbeat {
-            hb.beat();
+        if let Some(handle) = &heartbeat {
+            handle.beat();
         }
 
         if shared.stop_flag.load(Ordering::Relaxed) {
@@ -195,18 +200,27 @@ pub fn scheduler_loop(
 
         if drift_ms > shared.clock_jump_threshold_ms {
             log::warn!("scheduler_loop: clock jump detected (drift_ms={drift_ms}), reanchoring all jobs");
-            let mut state = shared.state.lock();
-            reanchor_all_jobs(&mut state, now_wall);
+            let mut deferred = DeferredLog::new();
+            {
+                let mut state = shared.state.lock();
+                reanchor_all_jobs(&mut state, now_wall, &mut deferred);
+            }
+            deferred.flush();
         }
 
         last_wall = now_wall;
         last_mono = now_mono;
 
         let fire_batch = {
-            let mut state = shared.state.lock();
-            check_in_flight_timeouts(&mut state);
-            drain_synthetic_drips(&mut state);
-            collect_due_jobs(&mut state, now_wall, shared.coalesce_window_ms)
+            let mut deferred = DeferredLog::new();
+            let batch = {
+                let mut state = shared.state.lock();
+                check_in_flight_timeouts(&mut state, &mut deferred);
+                drain_synthetic_drips(&mut state, &mut deferred);
+                collect_due_jobs(&mut state, now_wall, shared.coalesce_window_ms, &mut deferred)
+            };
+            deferred.flush();
+            batch
         };
 
         if !fire_batch.is_empty() {
@@ -249,7 +263,7 @@ pub fn load_jobs(
 
 /// Computes how long the scheduler loop should sleep before the next tick.
 #[must_use]
-pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
+pub fn compute_sleep_duration(state: &SchedulerState, deferred: &mut DeferredLog) -> Duration {
     let now = Utc::now();
     let now_instant = Instant::now();
     let mut min_ms: i64 = 60_000;
@@ -285,14 +299,14 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
     if let Some(Reverse(front)) = state.synthetic_drips.peek() {
         let drip_ms = i64::try_from(front.due_at.saturating_duration_since(Instant::now()).as_millis()).unwrap_or(i64::MAX);
         if drip_ms < min_ms {
-            log::info!("compute_sleep: drip shortens sleep from {min_ms}ms to {drip_ms}ms");
+            deferred_log!(deferred, log::Level::Info, "compute_sleep: drip shortens sleep from {min_ms}ms to {drip_ms}ms");
             min_ms = drip_ms;
             closest_reason = Some("synthetic_drip");
         }
     }
 
     let clamped = min_ms.max(1);
-    log::info!("compute_sleep: now={now} min_ms={min_ms} clamped={clamped} closest={closest_reason:?}");
+    deferred_log!(deferred, log::Level::Info, "compute_sleep: now={now} min_ms={min_ms} clamped={clamped} closest={closest_reason:?}");
     Duration::from_millis(u64::try_from(clamped).unwrap_or(1))
 }
 
@@ -300,13 +314,13 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
 ///
 /// Jobs that are currently in flight are silently skipped; missed-fire catchup
 /// for long-running jobs is handled in `Scheduler::mark_complete` instead.
-pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, coalesce_window_ms: i64) -> Vec<FireBatch> {
+pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, coalesce_window_ms: i64, deferred: &mut DeferredLog) -> Vec<FireBatch> {
     let threshold = now + chrono::Duration::milliseconds(coalesce_window_ms);
     let mut batch = Vec::new();
 
     let job_ids: Vec<i64> = state.jobs.keys().copied().collect();
 
-    log::info!(
+    deferred_log!(deferred, log::Level::Info,
         "collect_due_jobs: now={now} threshold={threshold} coalesce_window_ms={coalesce_window_ms} job_count={}",
         job_ids.len()
     );
@@ -316,12 +330,12 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
         let Some(running_job) = state.jobs.get_mut(&job_id) else { continue };
 
         if !running_job.is_active {
-            log::info!("collect_due_jobs: job_id={job_id} name={} skipped (not active)", running_job.name);
+            deferred_log!(deferred, log::Level::Info, "collect_due_jobs: job_id={job_id} name={} skipped (not active)", running_job.name);
             continue;
         }
 
         let Some(fire_utc) = running_job.next_fire_utc else {
-            log::info!(
+            deferred_log!(deferred, log::Level::Info,
                 "collect_due_jobs: job_id={job_id} name={} skipped (no next_fire_utc)",
                 running_job.name
             );
@@ -330,7 +344,7 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
 
         if fire_utc > threshold {
             let diff_ms = (fire_utc - now).num_milliseconds();
-            log::info!(
+            deferred_log!(deferred, log::Level::Info,
                 "collect_due_jobs: job_id={job_id} name={} skipped (not due) fire_utc={fire_utc} threshold={threshold} diff_ms={diff_ms}",
                 running_job.name,
             );
@@ -338,7 +352,7 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
         }
 
         if running_job.in_flight {
-            log::info!(
+            deferred_log!(deferred, log::Level::Info,
                 "collect_due_jobs: job_id={job_id} name={} skipped (in_flight) in_flight_run={:?} fire_utc={fire_utc}",
                 running_job.name,
                 running_job.in_flight_run,
@@ -354,7 +368,7 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
         let delay_ms = (now - fire_utc).num_milliseconds().max(0);
         let delay_ms_unsigned = u64::try_from(delay_ms).unwrap_or(0);
 
-        log::info!(
+        deferred_log!(deferred, log::Level::Info,
             "collect_due_jobs: FIRING job_id={job_id} name={} prev_run={prev_run} new_run={} fire_utc={fire_utc} now={now} delay_ms={delay_ms} interval_ms={} start_date={:?}",
             running_job.name,
             running_job.current_run,
@@ -363,7 +377,7 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
         );
 
         if running_job.is_holiday_today(calendars_ref) {
-            log::info!("collect_due_jobs: job_id={job_id} name={} skipped (holiday)", running_job.name);
+            deferred_log!(deferred, log::Level::Info, "collect_due_jobs: job_id={job_id} name={} skipped (holiday)", running_job.name);
             running_job.record_execution(ExecutionRecord::new(
                 &planned,
                 &actual,
@@ -397,20 +411,20 @@ pub fn collect_due_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, 
 
         running_job.record_execution(rec);
 
-        log::info!(
+        deferred_log!(deferred, log::Level::Info,
             "collect_due_jobs: job_id={job_id} name={} about to advance_to_next, current next_fire_utc={:?}",
             running_job.name,
             running_job.next_fire_utc,
         );
         running_job.advance_to_next(now);
-        log::info!(
+        deferred_log!(deferred, log::Level::Info,
             "collect_due_jobs: job_id={job_id} name={} after advance_to_next, new next_fire_utc={:?}",
             running_job.name,
             running_job.next_fire_utc,
         );
     }
 
-    log::info!("collect_due_jobs: returning {} jobs to fire", batch.len());
+    deferred_log!(deferred, log::Level::Info, "collect_due_jobs: returning {} jobs to fire", batch.len());
     batch
 }
 
@@ -440,7 +454,7 @@ fn dispatch_jobs(batch: &[FireBatch], run_cb: &PyObject, spawn_fn: &PyObject, on
 }
 
 /// Checks all in-flight jobs for execution-time timeouts and marks them accordingly.
-pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
+pub fn check_in_flight_timeouts(state: &mut SchedulerState, deferred: &mut DeferredLog) {
     let now_instant = Instant::now();
 
     for running_job in state.jobs.values_mut() {
@@ -451,7 +465,7 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
         let elapsed_ms = u64::try_from(now_instant.duration_since(since).as_millis()).unwrap_or(u64::MAX);
         if elapsed_ms > running_job.max_execution_time_ms {
             let timed_out_run = running_job.in_flight_run.unwrap_or(0);
-            log::warn!(
+            deferred_log!(deferred, log::Level::Warn,
                 "check_in_flight_timeouts: job={} run={timed_out_run} timed out after {elapsed_ms}ms (max={})",
                 running_job.name,
                 running_job.max_execution_time_ms,
@@ -471,7 +485,7 @@ pub fn check_in_flight_timeouts(state: &mut SchedulerState) {
 /// Processes any due synthetic log drips, appending entries and optionally finalizing records.
 ///
 /// This is a no-op when `with_test_data` is false.
-pub fn drain_synthetic_drips(state: &mut SchedulerState) {
+pub fn drain_synthetic_drips(state: &mut SchedulerState, deferred: &mut DeferredLog) {
     if !state.with_test_data {
         return;
     }
@@ -497,23 +511,23 @@ pub fn drain_synthetic_drips(state: &mut SchedulerState) {
         drained += 1;
     }
     if drained > 0 {
-        log::info!("Drained {drained} synthetic drips, remaining={}", state.synthetic_drips.len());
+        deferred_log!(deferred, log::Level::Info, "Drained {drained} synthetic drips, remaining={}", state.synthetic_drips.len());
     }
 }
 
 /// Recomputes `next_fire_utc` for every active job after a clock jump.
-pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
-    log::info!("reanchor_all_jobs: now={now} job_count={}", state.jobs.len());
+pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>, deferred: &mut DeferredLog) {
+    deferred_log!(deferred, log::Level::Info, "reanchor_all_jobs: now={now} job_count={}", state.jobs.len());
     for running_job in state.jobs.values_mut() {
         if running_job.is_active {
-            log::info!(
+            deferred_log!(deferred, log::Level::Info,
                 "reanchor_all_jobs: job={} old_next_fire={:?} current_run={}",
                 running_job.name,
                 running_job.next_fire_utc,
                 running_job.current_run,
             );
             running_job.compute_next_fire(now);
-            log::info!(
+            deferred_log!(deferred, log::Level::Info,
                 "reanchor_all_jobs: job={} new_next_fire={:?}",
                 running_job.name,
                 running_job.next_fire_utc,

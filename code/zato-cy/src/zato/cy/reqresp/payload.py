@@ -215,6 +215,11 @@ class SimpleIOPayload:
 
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
 
+        if self.output_repeated and value:
+            sample = value[0]
+            logger.info('SEC-GETVALUE serialize=%s, output_repeated=%s, list_len=%d, sample_type=%s, sample=%r',
+                serialize, self.output_repeated, len(value), type(sample).__name__, sample)
+
         # Special-case internal services that return metadata (e.g GetList-like ones)
         if self.zato_meta:
 
@@ -238,7 +243,31 @@ class SimpleIOPayload:
             return out
 
     def append(self, value):
-        self.user_attrs_list.append(self._extract_payload_attrs(value))
+
+        value_type = type(value).__name__
+        value_mro = [c.__name__ for c in type(value).__mro__]
+        has_asdict = hasattr(value, '_asdict')
+        has_keys = hasattr(value, 'keys')
+        has_mapping = hasattr(value, '_mapping')
+        logger.info('SEC-APPEND value_type=%s, mro=%s, has_asdict=%s, has_keys=%s, has_mapping=%s, value=%r',
+            value_type, value_mro, has_asdict, has_keys, has_mapping, value)
+
+        if isinstance(value, dict):
+            to_append = value
+            logger.info('SEC-APPEND branch=dict')
+        elif hasattr(value, '_asdict'):
+            to_append = value._asdict()
+            logger.info('SEC-APPEND branch=_asdict, result=%r', to_append)
+        elif hasattr(value, 'keys'):
+            keys = value.keys()
+            to_append = dict(zip(keys, value))
+            logger.info('SEC-APPEND branch=keys, result=%r', to_append)
+        else:
+            to_append = self._extract_payload_attrs(value)
+            logger.info('SEC-APPEND branch=_extract_payload_attrs, result=%r', to_append)
+
+        logger.info('SEC-APPEND final to_append type=%s, value=%r', type(to_append).__name__, to_append)
+        self.user_attrs_list.append(to_append)
         self.output_repeated = True
 
 # ################################################################################################################################

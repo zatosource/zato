@@ -2009,8 +2009,6 @@ class CySimpleIO:
             # This is the dictionary that we return.
             out_data_dict = {}
 
-            logger.warning('SEC-DEBUG-6 _yield_data_dicts item type=%s is_dict=%s has_asdict=%s has__asdict=%s is_SQLRow=%s is_SQLAlchemyRow=%s value=%r', type(_input_data_dict).__name__, isinstance(_input_data_dict, dict), hasattr(_input_data_dict, 'asdict'), hasattr(_input_data_dict, '_asdict'), isinstance(_input_data_dict, SQLRow), isinstance(_input_data_dict, SQLAlchemyRow), _input_data_dict)
-
             if isinstance(_input_data_dict, dict):
                 input_data_dict = _input_data_dict
 
@@ -2091,7 +2089,7 @@ class CySimpleIO:
     @cy.returns(object)
     def _convert_to_dicts(self, data:object, data_format:object) -> object:
 
-        logger.warning('SEC-DEBUG-7 _convert_to_dicts data_format=%r data_type=%s is_list=%s len=%s', data_format, type(data).__name__, isinstance(data, (list, tuple)), len(data) if isinstance(data, (list, tuple)) else 'N/A')
+
 
         # No reason to continue if no SimpleIO output is declared
         if not (self.definition.has_output_required or self.definition.has_output_optional):
