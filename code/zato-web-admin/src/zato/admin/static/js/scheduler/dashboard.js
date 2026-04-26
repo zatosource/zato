@@ -794,7 +794,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
                 (dash.config.show_live_status ? '' : ' style="display:none"') + '>' + status.html + '</td>';
             row += '<td><a href="' + detail_url + '">' + job.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
-            row += '<td data-countdown-target="' + (job.next_fire_utc || '') + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;min-width:7em" title="' + next_run_tooltip + '">' + next_run_text + '</td>';
+            row += '<td data-countdown-target="' + (job.next_fire_utc || '') + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73" title="' + next_run_tooltip + '">' + next_run_text + '</td>';
             row += '<td>' + dash.outcome_squares(job.recent_outcomes) + '</td>';
             row += '</tr>';
             table_body.append(row);
@@ -824,7 +824,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     // Render recent runs table (capped to 100 rows, with Run number column)
     // ////////////////////////////////////////////////////////////////////////
 
-    dash.render_recent = function(timeline) {
+    dash.render_recent = function(timeline, jobs) {
         var container = $('#dashboard-recent-body');
         container.find('.dashboard-outcome-badge').each(function() {
             if (this._tippy) {
@@ -841,6 +841,13 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         var cluster_id = dash.config.cluster_id;
 
+        var job_service = {};
+        if (jobs) {
+            for (var ji = 0; ji < jobs.length; ji++) {
+                job_service[jobs[ji].id] = jobs[ji].service;
+            }
+        }
+
         var exec_count = 0;
         for (var idx = 0; idx < timeline.length; idx++) {
             var outcome = timeline[idx].outcome;
@@ -851,7 +858,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         kit.set_number($('#dashboard-recent-count'), exec_count);
 
         var html = '<table class="zato-table"><thead><tr>';
-        html += '<th>Run</th><th>Time</th><th>Job name</th><th>Outcome</th>';
+        html += '<th>Run</th><th>Time</th><th>Job name</th><th>Service</th><th>Outcome</th>';
         html += '</tr></thead><tbody>';
 
         var max_rows = Math.min(100, timeline.length);
@@ -866,7 +873,9 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var run_href = '/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/run/' + encodeURIComponent(entry.current_run) + '/?cluster=' + cluster_id;
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on"><a href="' + run_href + '">' + run_number + '</a></td>';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
+            var service_cell = $.fn.zato.data_table.service_text(job_service[entry.job_id], cluster_id);
             html += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All + '">' + entry.job_name + '</a></td>';
+            html += '<td>' + service_cell + '</td>';
             html += '<td>' + dash.outcome_badge(entry.outcome, entry) + '</td>';
             html += '</tr>';
         }
@@ -874,7 +883,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         html += '</tbody></table>';
         container.html(html);
 
-        kit.sortable_headers(container.find('table'), {'Job name': 2});
+        kit.sortable_headers(container.find('table'), {'Job name': 2, 'Service': 3});
 
         container.find('.dashboard-outcome-badge[data-tippy-content]').each(function() {
             if (!this._tippy) {
@@ -946,7 +955,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var service_cell = entry.service ? $.fn.zato.data_table.service_text(entry.service, cluster_id) : '';
 
             var row = '<tr>';
-            row += '<td data-countdown-target="' + entry.time + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap;min-width:7em" title="' + time_tooltip + '">' + time_text + '</td>';
+            row += '<td data-countdown-target="' + entry.time + '" style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
             row += '<td><a href="/zato/scheduler/dashboard/job/' + encodeURIComponent(entry.job_id) + '/?cluster=' + cluster_id + '&outcomes=' + dash.Outcome_All + '">' + entry.name + '</a></td>';
             row += '<td>' + service_cell + '</td>';
             row += '</tr>';
@@ -1038,8 +1047,12 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         dash.render_bar_chart(data.history_timeline);
         dash.render_job_table(data.jobs);
-        dash.render_recent(data.history_timeline);
+        dash.render_recent(data.history_timeline, data.jobs);
         dash.render_upcoming_table(data.jobs);
+
+        kit.lock_table_widths('#dashboard-job-table');
+        kit.lock_table_widths('#dashboard-upcoming-table');
+        kit.lock_table_widths('#dashboard-recent-body table');
 
         if (dash._tabs_handle && !dash._tab_locked) {
             var recent_total = 0;
