@@ -1246,7 +1246,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         // Tabs - delegated to kit, synced to URL
         dash._tab_locked = false;
         dash._tabs_handle = kit.tabs.init({
-            tab_selector: '.dashboard-tab',
+            tab_selector: '.dashboard-card-activity .dashboard-tab',
             panel_prefix: 'dashboard-tab-panel-',
             default_tab: 'recent',
             on_change: function(tab_name) {

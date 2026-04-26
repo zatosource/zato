@@ -82,23 +82,36 @@ $(document).ready(function() {
 {% block dashboard_grid %}
 
         <div class="dashboard-card dashboard-card-jobs">
-            <div class="dashboard-card-header">
-                <h3>Jobs</h3>
-                <span class="dashboard-pill" id="dashboard-jobs-count"></span>
+            <div class="dashboard-card-header dashboard-card-header-tabs">
+                <div class="dashboard-tabs" role="tablist" aria-label="Jobs">
+                    <button type="button"
+                            class="dashboard-tab dashboard-tab-active"
+                            data-tab="jobs"
+                            role="tab"
+                            aria-selected="true">
+                        <span class="dashboard-tab-label">Jobs</span>
+                        <span class="dashboard-pill" id="dashboard-jobs-count"></span>
+                    </button>
+                </div>
             </div>
-            <div class="dashboard-card-scroll">
-                <table class="zato-table" id="dashboard-job-table">
-                    <thead>
-                        <tr>
-                            <th class="dashboard-th-dot"></th>
-                            <th>Job name</th>
-                            <th>Service</th>
-                            <th style="width:9em">Next run</th>
-                            <th>Recent</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dashboard-job-table-body"></tbody>
-                </table>
+            <div class="dashboard-tab-panel"
+                 id="dashboard-tab-panel-jobs"
+                 role="tabpanel"
+                 aria-labelledby="dashboard-tab-jobs">
+                <div class="dashboard-card-scroll">
+                    <table class="zato-table" id="dashboard-job-table">
+                        <thead>
+                            <tr>
+                                <th class="dashboard-th-dot"></th>
+                                <th>Job name</th>
+                                <th>Service</th>
+                                <th style="width:9em">Next run</th>
+                                <th>Recent</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-job-table-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
