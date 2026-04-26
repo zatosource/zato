@@ -25,15 +25,12 @@ $.fn.zato.scheduler.job_detail.config = {
           dark_color: '#bbb', dark_bg: 'rgba(187, 187, 187, 0.18)' }
     ],
     detail_panel: {
-        bg: '#232336',
-        border: '1px solid #3a3a52',
         row_border: '#3a3a52',
         mirror_accent: 'rgb(246, 166, 5)',
         owner_bg: '#232336',
         owner_color: '#d0d0d8',
         owner_border: '#3a3a52',
         shadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
-        font_size: '12px',
         level_colors: {
             'ERROR':  { stripe: '#e05252', badge_bg: 'rgba(224, 82, 82, 0.18)', badge_fg: '#f06060' },
             'WARN':   { stripe: '#d4a017', badge_bg: 'rgba(212, 160, 23, 0.18)', badge_fg: '#e8b830' },
@@ -795,7 +792,7 @@ $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
     html += '<td colspan="6">';
     html += '<div class="detail-panel-grid">';
     html += '<div class="detail-panel-inner">';
-    html += '<div class="detail-panel-log" data-since-idx="0" style="background:' + cfg.bg + ';border:' + cfg.border + ';font-size:' + cfg.font_size + '">';
+    html += '<div class="detail-panel-log" data-since-idx="0">';
     html += '</div>';
     html += '</div></div></td></tr>';
     return html;

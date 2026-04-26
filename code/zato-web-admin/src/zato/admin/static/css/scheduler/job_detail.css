@@ -169,6 +169,14 @@ tbody tr[data-run]:not(.detail-panel-row) {
     font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
     padding: 2px 0;
     border-radius: 0 0 4px 4px;
+    background: #232336;
+    border: 1px solid #3a3a52;
+    font-size: 12px;
+}
+
+.detail-page-run .detail-panel-log {
+    border-radius: 4px;
+    min-height: 100px;
 }
 
 .detail-log-line {

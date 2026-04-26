@@ -40,7 +40,7 @@ default_output_optional_name = 'output_optional'
 default_value = 'default_value'
 default_input_value = 'default_input_value'
 default_output_value = 'default_output_value'
-default_response_elem = 'response'
+default_response_elem = ''
 default_skip_empty_keys = False
 default_skip_empty_request_keys = False
 default_skip_empty_response_keys = False
@@ -81,7 +81,7 @@ encoding={{bytes_to_str_encoding}}
 default_value=
 default_input_value=
 default_output_value=
-response_elem=response
+response_elem=
 
 skip_empty_keys = False
 skip_empty_request_keys = False
