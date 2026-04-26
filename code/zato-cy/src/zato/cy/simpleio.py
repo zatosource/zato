@@ -2151,9 +2151,6 @@ class CySimpleIO:
     def get_output(self, data:object, data_format:object, serialise:cy.int=True) -> object: # noqa: E252
         """ Returns input converted to the output format, possibly including serialisation to a string representation.
         """
-        logger.info('CySimpleIO.get_output called -> data_format:%r, type(data_format):%s, serialise:%s, data:%s, type(data):%s',
-            data_format, type(data_format), serialise, data, type(data))
-
         if data_format == DATA_FORMAT_JSON:
             return self._get_output_json(data, serialise)
 
@@ -2164,9 +2161,6 @@ class CySimpleIO:
         elif data_format in (DATA_FORMAT_DICT, DATA_FORMAT_FORM):
             out = self._convert_to_dicts(data, DATA_FORMAT_DICT)
             return out
-
-        #elif data_format == '':
-        #    return self._get_output_json(data, serialise)
 
         else:
             raise ValueError('Unrecognised output data format `{}`'.format(data_format))

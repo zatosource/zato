@@ -207,17 +207,17 @@ class SimpleIOPayload:
     def getvalue(self, serialize:bool=True, force_dict_serialisation:bool=True): # noqa: E252
         """ Returns a service's payload, either serialised or not.
         """
-        logger.info('SimpleIOPayload.getvalue called -> cid:%s, data_format:%r, serialize:%s, output_repeated:%s',
-            self.cid, self.data_format, serialize, self.output_repeated)
-
         # If data format is DICT, we force serialisation to that format
         # unless overridden on input.
         if self.data_format == DATA_FORMAT_DICT:
             if force_dict_serialisation:
                 serialize = True
 
+        # No data format means no serialization is possible
+        if not self.data_format:
+            serialize = False
+
         value = self.user_attrs_list if self.output_repeated else self.user_attrs_dict
-        logger.info('SimpleIOPayload.getvalue -> cid:%s, value:%s, type(value):%s', self.cid, value, type(value))
 
         # Special-case internal services that return metadata (e.g GetList-like ones)
         if self.zato_meta:

@@ -793,6 +793,8 @@ class RequestHandler:
                         else:
                             if hasattr(response.payload, 'getvalue'):
                                 value = response.payload.getvalue() # type: ignore
+                                if isinstance(value, dict):
+                                    value = dumps(value)
                             else:
                                 # Check if it's a list of models ..
                                 is_model_list = isinstance(response.payload, list) and isinstance(response.payload[0], Model)
