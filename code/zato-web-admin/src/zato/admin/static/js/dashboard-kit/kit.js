@@ -419,6 +419,31 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     kit.countdown._interval_id = null;
     kit.countdown._on_now = null;
     kit.countdown._fired_targets = {};
+    kit.countdown._scheduled_targets = {};
+
+    kit.countdown._fire_now = function(iso) {
+        $('[data-countdown-target="' + iso + '"]').each(function() {
+            $(this).text('Now').addClass('countdown-now');
+        });
+        if (kit.countdown._on_now && !kit.countdown._fired_targets[iso]) {
+            kit.countdown._fired_targets[iso] = true;
+            kit.countdown._on_now();
+        }
+    };
+
+    kit.countdown._schedule_target = function(iso) {
+        if (kit.countdown._scheduled_targets[iso]) return;
+        var target = new Date(iso).getTime();
+        var delay = target - Date.now();
+        if (delay <= 0) {
+            kit.countdown._fire_now(iso);
+            return;
+        }
+        kit.countdown._scheduled_targets[iso] = setTimeout(function() {
+            delete kit.countdown._scheduled_targets[iso];
+            kit.countdown._fire_now(iso);
+        }, delay);
+    };
 
     kit.countdown._tick = function() {
         $('[data-countdown-target]').each(function() {
@@ -435,12 +460,9 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $cell.text(text);
             if (text === 'Now') {
                 $cell.addClass('countdown-now');
-                if (kit.countdown._on_now && !kit.countdown._fired_targets[iso]) {
-                    kit.countdown._fired_targets[iso] = true;
-                    kit.countdown._on_now();
-                }
             } else {
                 $cell.removeClass('countdown-now');
+                kit.countdown._schedule_target(iso);
             }
         });
     };
@@ -448,6 +470,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     kit.countdown.start = function() {
         if (kit.countdown._interval_id) return;
         kit.countdown._interval_id = setInterval(kit.countdown._tick, 1000);
+        kit.countdown._tick();
     };
 
     kit.countdown.stop = function() {
