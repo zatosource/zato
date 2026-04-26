@@ -11,7 +11,7 @@
 {% block section_title %}
 <div class="detail-header-row-1">
     <span id="detail-section-title">
-        <a href="/zato/scheduler/dashboard/?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
+        <a href="{{ dashboard_base_url }}?cluster={{ cluster_id }}" class="detail-component-pill menu-link">Scheduler</a>
         Job detail
     </span>
     <span class="detail-header-right">
@@ -66,6 +66,7 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/job_detail.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
+    $.fn.zato.scheduler.dashboard.config.base_url = '{{ dashboard_base_url }}';
     $.fn.zato.scheduler.job_detail.init(
         {{ job_data|safe }},
         '{{ job_id }}',

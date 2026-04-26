@@ -68,6 +68,9 @@
 
     {% comment %} Scheduler JS {% endcomment %}
     <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler.js"></script>
+    <script nonce="{{ CSP_NONCE }}">
+    $.fn.zato.scheduler.dashboard_base_url = '{{ dashboard_base_url }}';
+    </script>
 
 {% endblock %}
 

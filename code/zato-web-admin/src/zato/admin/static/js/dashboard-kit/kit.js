@@ -908,4 +908,35 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $(this).css('min-width', w + 'px');
         });
     };
+
+    kit.urls = {};
+
+    kit.urls.init = function(base_url, cluster_id) {
+        kit.urls._base = base_url;
+        kit.urls._cluster_id = cluster_id;
+    };
+
+    kit.urls.dashboard = function() {
+        return kit.urls._base + '?cluster=' + kit.urls._cluster_id;
+    };
+
+    kit.urls.object_detail = function(object_id, params) {
+        var url = kit.urls._base + 'job/' + encodeURIComponent(object_id) + '/?cluster=' + kit.urls._cluster_id;
+        if (params) {
+            for (var key in params) {
+                url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+            }
+        }
+        return url;
+    };
+
+    kit.urls.run_detail = function(object_id, run_id, params) {
+        var url = kit.urls._base + 'job/' + encodeURIComponent(object_id) + '/run/' + encodeURIComponent(run_id) + '/?cluster=' + kit.urls._cluster_id;
+        if (params) {
+            for (var key in params) {
+                url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+            }
+        }
+        return url;
+    };
 })();

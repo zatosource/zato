@@ -1,6 +1,8 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.scheduler.dashboard_base_url = '/zato/scheduler/dashboard/';
+
 $.fn.zato.data_table.Job = new Class({
     toString: function() {
         var s = '<Job id:{0} name:{1} is_active:{2} job_type:{3} service:{4}>';
@@ -265,7 +267,7 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     row += String.format('<td style="text-align:center">{0}</td>', friendly_names[job.job_type]);
     row += String.format('<td style="text-align:center">{0}</td>', data.definition_text);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service, cluster_id));
-    row += String.format('<td><a href="/zato/scheduler/dashboard/job/{0}/?cluster={1}&outcomes=all">Statistics</a></td>', job.id, cluster_id);
+    row += String.format('<td><a href="' + $.fn.zato.scheduler.dashboard_base_url + 'job/{0}/?cluster={1}&outcomes=all">Statistics</a></td>', job.id, cluster_id);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:void(0)\" onclick=\"$.fn.zato.scheduler.execute('{0}', this)\">Execute</a>", job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job.job_type, job.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.delete_('{0}');\">Delete</a>", job.id));

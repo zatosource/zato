@@ -153,7 +153,8 @@ $.fn.zato.scheduler.job_detail._filter_by_range = function(history) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.render_header = function(job) {
-    var title = '<a href="/zato/scheduler/dashboard/?cluster=1" class="detail-component-pill menu-link">Scheduler</a> ' +
+    var kit = $.fn.zato.dashboard_kit;
+    var title = '<a href="' + kit.urls.dashboard() + '" class="detail-component-pill menu-link">Scheduler</a> ' +
         job.name;
     $('#detail-section-title').html(title);
 };
@@ -818,7 +819,7 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
     var accent = cfg.mirror_accent;
     var html = '<div class="detail-log-line detail-log-mirror" style="border-bottom:1px solid ' + cfg.row_border + '">';
     html += '<div class="detail-log-stripe" style="background:' + accent + '"></div>';
-    var mirror_run_href = '/zato/scheduler/dashboard/job/' + encodeURIComponent(detail._object_id) + '/run/' + encodeURIComponent(record.current_run) + '/?cluster=' + detail.config.cluster_id;
+    var mirror_run_href = kit.urls.run_detail(detail._object_id, record.current_run);
     html += '<div class="detail-log-ts"><a href="' + mirror_run_href + '" class="detail-run-link" style="text-decoration:none"><span class="detail-log-level" style="color:' + accent + ';background:rgba(255,255,255,0.08)">Run #' + run_number + '</span></a></div>';
     html += '<div class="detail-log-level-col">' + outcome_html + '</div>';
     var action_style = 'color:#aaa;background:rgba(255,255,255,0.08)';
@@ -925,7 +926,7 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     var is_skipped = record.outcome.indexOf('skipped') === 0;
     var tag_html = is_skipped ? '-' : detail._render_tag_badges(record);
 
-    var run_href = '/zato/scheduler/dashboard/job/' + encodeURIComponent(detail._object_id) + '/run/' + encodeURIComponent(record.current_run) + '/?cluster=' + detail.config.cluster_id;
+    var run_href = kit.urls.run_detail(detail._object_id, record.current_run);
     var row = '<tr' + cls + ' data-ts="' + row_ts + '" data-run="' + run_attr + '">';
     row += '<td class="dashboard-cell-mono-wrap dashboard-cell-center"><a href="' + run_href + '" class="detail-run-link">' + run_number + '</a></td>';
     row += '<td class="dashboard-cell-center">' + outcome + '</td>';
@@ -1626,7 +1627,7 @@ $.fn.zato.scheduler.job_detail.poll = function() {
     // The server is single-threaded, so concurrent requests queue up and
     // can starve page navigations.
     $.ajax({
-        url: '/zato/scheduler/dashboard/poll/',
+        url: $.fn.zato.scheduler.dashboard.config.base_url + 'poll/',
         type: 'POST',
         data: {},
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
@@ -1836,9 +1837,12 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
 // ////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, poll_config) {
+    var kit = $.fn.zato.dashboard_kit;
+    var dash = $.fn.zato.scheduler.dashboard;
     if (typeof job_data === 'string') {
         try { job_data = JSON.parse(job_data); } catch(parse_error) { job_data = {}; }
     }
+    kit.urls.init(dash.config.base_url, cluster_id);
     $.fn.zato.scheduler.job_detail._job_data = job_data;
     $.fn.zato.scheduler.job_detail._object_id = Number(job_id);
     $.fn.zato.scheduler.job_detail._poll_config = poll_config;

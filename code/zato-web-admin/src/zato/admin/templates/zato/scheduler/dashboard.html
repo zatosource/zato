@@ -7,6 +7,7 @@
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
 <script nonce="{{ CSP_NONCE }}">
 $(document).ready(function() {
+    $.fn.zato.scheduler.dashboard.config.base_url = '{{ dashboard_base_url }}';
     $.fn.zato.scheduler.dashboard.init({{ dashboard_data|safe }});
 });
 </script>
