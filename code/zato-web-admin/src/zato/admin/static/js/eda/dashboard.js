@@ -447,7 +447,7 @@ $.fn.zato.eda.dashboard = {};
         main_chart_handle = kit.main_chart.init({
             container: '#dashboard-bar-chart',
             legend: '#dashboard-chart-legend',
-            count_pill: '#dashboard-exec-count',
+            count_pill: '#dashboard-data-count',
             chart_type_toggle: '#dashboard-chart-type-toggle',
             tooltip_id: 'dashboard-chart-tooltip',
             series_keys: ['publishes', 'deliveries'],
@@ -468,7 +468,7 @@ $.fn.zato.eda.dashboard = {};
 
         kit.time_range.init({
             menu: '#dashboard-time-range-menu',
-            pill: '#dashboard-exec-count',
+            pill: '#dashboard-data-count',
             active_cls: 'dashboard-time-range-active',
             storage_key: 'eda.dashboard.time_range_minutes',
             on_change: function(minutes) {

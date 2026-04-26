@@ -401,10 +401,10 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             }
             overlay.css({position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 'pointer-events': 'none'});
 
-            var tooltip_id = config.tooltip_id || 'dashboard-chart-tooltip';
+            var tooltip_id = config.tooltip_id || 'kit-tooltip';
             var $tooltip = $('#' + tooltip_id);
             if ($tooltip.length === 0) {
-                $('body').append('<div id="' + tooltip_id + '" class="dashboard-chart-tooltip"></div>');
+                $('body').append('<div id="' + tooltip_id + '" class="kit-tooltip"></div>');
                 $tooltip = $('#' + tooltip_id);
             }
 

@@ -36,7 +36,6 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                                Defaults to kit.format_number_full. */
     ns.stat_tile.init = function(config) {
         var state = {
-            config: config,
             ready: false,
             clear_timer: null
         };

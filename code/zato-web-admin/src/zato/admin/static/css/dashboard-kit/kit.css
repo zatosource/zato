@@ -258,12 +258,6 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     .dashboard-grid-section .dashboard-card {
         max-height: none;
     }
-    .dashboard-config-grid {
-        grid-template-columns: 1fr;
-    }
-    .dashboard-stat-row {
-        flex-wrap: wrap;
-    }
 }
 
 .dashboard-panel-action-badge {

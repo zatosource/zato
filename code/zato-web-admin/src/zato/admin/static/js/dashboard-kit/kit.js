@@ -183,7 +183,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
        slots ending at `now`, counting only records for which
        `predicate(record)` returns true. `ts_accessor(record)` must
        return the record's timestamp in milliseconds; a common accessor
-       is `function(r){return new Date(r.actual_fire_time_iso).getTime();}`.
+       is `function(r){return new Date(r.timestamp_iso).getTime();}`.
        Returns {series: [{ts, value} * bucket_count], total: N}. */
     kit.bucket_events_per_minute = function(timeline, predicate, ts_accessor, window_ms, bucket_count) {
         window_ms = window_ms || (60 * 60 * 1000);
@@ -422,42 +422,37 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     kit.countdown = {};
     kit.countdown._interval_id = null;
     kit.countdown._on_now = null;
-    kit.countdown._fired_targets = {};
+    kit.countdown._triggered_targets = {};
     kit.countdown._scheduled_targets = {};
 
     kit.countdown._now_locked = false;
 
-    kit.countdown._fire_now = function(iso) {
-        console.log('[fire_now] iso=' + iso + ', locked=' + kit.countdown._now_locked + ', already_fired=' + !!kit.countdown._fired_targets[iso]);
+    kit.countdown._trigger = function(iso) {
         var $cells = $('[data-countdown-target="' + iso + '"]');
-        console.log('[fire_now] matched_cells=' + $cells.length);
         $cells.text(kit.labels.ready);
-        if (kit.countdown._on_now && !kit.countdown._fired_targets[iso]) {
-            kit.countdown._fired_targets[iso] = true;
+        if (kit.countdown._on_now && !kit.countdown._triggered_targets[iso]) {
+            kit.countdown._triggered_targets[iso] = true;
             $cells.addClass('countdown-now');
             kit.countdown._now_locked = true;
             setTimeout(function() {
-                console.log('[fire_now_unlock] unlocking after 900ms');
                 kit.countdown._now_locked = false;
                 $('.countdown-now').removeClass('countdown-now');
             }, 900);
-            console.log('[fire_now] calling on_now callback');
             kit.countdown._on_now();
         }
     };
 
-    kit.countdown._schedule_target = function(iso) {
+    kit.countdown._register_target = function(iso) {
         if (kit.countdown._scheduled_targets[iso]) return;
         var target = new Date(iso).getTime();
         var delay = target - Date.now();
-        console.log('[schedule] iso=' + iso + ', delay_ms=' + delay);
         if (delay <= 0) {
-            kit.countdown._fire_now(iso);
+            kit.countdown._trigger(iso);
             return;
         }
         kit.countdown._scheduled_targets[iso] = setTimeout(function() {
             delete kit.countdown._scheduled_targets[iso];
-            kit.countdown._fire_now(iso);
+            kit.countdown._trigger(iso);
         }, delay);
     };
 
@@ -477,7 +472,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $cell.text(text);
             if (text !== kit.labels.ready) {
                 $cell.removeClass('countdown-now');
-                kit.countdown._schedule_target(iso);
+                kit.countdown._register_target(iso);
             }
         });
     };
@@ -541,7 +536,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     /* Create a new spark buffer set.
        Returns a handle with push, values, seed, and data accessors.
        config:
-         keys:       array of buffer names, e.g. ['total_jobs', 'active', ...]
+         keys:       array of buffer names, e.g. ['total_items', 'active', ...]
          window_ms:  rolling window in ms (default 60 * 60 * 1000)
          bucket_count: number of time buckets for downsampling (default 60) */
     kit.spark.create = function(config) {
@@ -911,9 +906,16 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
     kit.urls = {};
 
-    kit.urls.init = function(base_url, cluster_id) {
-        kit.urls._base = base_url;
-        kit.urls._cluster_id = cluster_id;
+    /* config:
+         base_url:     e.g. '/zato/scheduler/dashboard/'
+         cluster_id:   numeric cluster id
+         object_path:  template with {id}, e.g. 'job/{id}/'
+         run_path:     template with {id} and {run_id}, e.g. 'job/{id}/run/{run_id}/' */
+    kit.urls.init = function(config) {
+        kit.urls._base = config.base_url;
+        kit.urls._cluster_id = config.cluster_id;
+        kit.urls._object_path = config.object_path || '';
+        kit.urls._run_path = config.run_path || '';
     };
 
     kit.urls.dashboard = function() {
@@ -921,7 +923,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     };
 
     kit.urls.object_detail = function(object_id, params) {
-        var url = kit.urls._base + 'job/' + encodeURIComponent(object_id) + '/?cluster=' + kit.urls._cluster_id;
+        var path = kit.urls._object_path.replace('{id}', encodeURIComponent(object_id));
+        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
@@ -931,7 +934,10 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     };
 
     kit.urls.run_detail = function(object_id, run_id, params) {
-        var url = kit.urls._base + 'job/' + encodeURIComponent(object_id) + '/run/' + encodeURIComponent(run_id) + '/?cluster=' + kit.urls._cluster_id;
+        var path = kit.urls._run_path
+            .replace('{id}', encodeURIComponent(object_id))
+            .replace('{run_id}', encodeURIComponent(run_id));
+        var url = kit.urls._base + path + '?cluster=' + kit.urls._cluster_id;
         if (params) {
             for (var key in params) {
                 url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);

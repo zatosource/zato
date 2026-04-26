@@ -101,19 +101,20 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
     /* Fetch and append log entries into the panel container.
        $panel_log: jQuery element for the log container
-       params: {job_id, current_run, since_idx, cluster_id} */
+       params: {object_id, run_id, since_idx} */
     kit.record_detail._fetch_logs = function($panel_log, params) {
+        var body = {
+            action: _cfg.log_action,
+            since_idx: params.since_idx,
+            cluster_id: _cfg.cluster_id
+        };
+        body[_cfg.object_id_field || 'object_id'] = params.object_id;
+        body[_cfg.run_id_field || 'run_id'] = params.run_id;
         $.ajax({
             type: 'POST',
             url: _cfg.poll_url,
             headers: {'X-CSRFToken': $.cookie('csrftoken')},
-            data: JSON.stringify({
-                action: _cfg.log_action,
-                job_id: params.job_id,
-                current_run: params.current_run,
-                since_idx: params.since_idx,
-                cluster_id: _cfg.cluster_id
-            }),
+            data: JSON.stringify(body),
             contentType: 'application/json',
             error: function(xhr, status, err) {
                 console.error('Log fetch error: status=' + xhr.status + ' err=' + err);
@@ -160,6 +161,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
        config: {
            cluster_id, record_id, run_number, record_name,
            poll_url, history_action, log_action,
+           object_id_field, run_id_field,
            panel: {bg, border, row_border, mirror_accent, owner_color,
                    font_size, ts_color, msg_color,
                    level_colors: {ERROR: {stripe, badge_bg, badge_fg}, ...},
@@ -241,8 +243,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
             // .. initial log fetch
             var fetch_params = {
-                job_id: _cfg.record_id,
-                current_run: _cfg.run_number,
+                object_id: _cfg.record_id,
+                run_id: _cfg.run_number,
                 since_idx: 0
             };
             kit.record_detail._fetch_logs($panel_log, fetch_params);
@@ -252,8 +254,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                 _poll_timer = setInterval(function() {
                     var since_idx = parseInt($panel_log.attr('data-since-idx'), 10);
                     kit.record_detail._fetch_logs($panel_log, {
-                        job_id: _cfg.record_id,
-                        current_run: _cfg.run_number,
+                        object_id: _cfg.record_id,
+                        run_id: _cfg.run_number,
                         since_idx: since_idx
                     });
                 }, _cfg.poll_interval_ms);

@@ -4,7 +4,7 @@
 {% block page_title %}Run detail{% endblock %}
 
 {% block detail_css %}
-<link rel="stylesheet" type="text/css" href="/static/css/dashboard-kit/job_detail.css">
+<link rel="stylesheet" type="text/css" href="/static/css/scheduler/job_detail.css">
 <style nonce="{{ CSP_NONCE }}">img.help-icon[id=""] { display: none; }</style>
 {% endblock %}
 
@@ -33,7 +33,12 @@ $(document).ready(function() {
     var detail = $.fn.zato.scheduler.job_detail;
     var dash = $.fn.zato.scheduler.dashboard;
     dash.config.base_url = '{{ dashboard_base_url }}';
-    kit.urls.init(dash.config.base_url, '{{ cluster_id }}');
+    kit.urls.init({
+        base_url: dash.config.base_url,
+        cluster_id: '{{ cluster_id }}',
+        object_path: 'job/{id}/',
+        run_path: 'job/{id}/run/{run_id}/'
+    });
     var panel_cfg = detail.config.detail_panel;
     var tag_defs = detail.config.detail_tags;
     var job_data = {{ job_data|safe }};
@@ -49,6 +54,8 @@ $(document).ready(function() {
         poll_url: '{{ poll_url }}',
         history_action: 'get-history',
         log_action: 'get-log-entries',
+        object_id_field: 'job_id',
+        run_id_field: 'current_run',
         poll_interval_ms: 5000,
         panel: panel_cfg,
         tag_defs: tag_defs,

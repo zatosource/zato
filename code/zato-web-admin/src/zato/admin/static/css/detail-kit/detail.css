@@ -835,13 +835,13 @@ a.detail-component-pill:visited {
     color: var(--primary-dark);
 }
 
-.detail-run-extras td {
+.detail-record-extras td {
     background: var(--background-light, #f8f9fa);
     color: var(--text-muted, #888);
     font-size: 12px;
 }
 
-.detail-run-extras-toggle {
+.detail-record-extras-toggle {
     cursor: pointer;
     font-size: 11px;
     font-weight: 600;

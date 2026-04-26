@@ -329,7 +329,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         if (!filtered || filtered.length === 0) {
             container.html('<div class="dashboard-no-data">No run history yet</div>');
             $('#dashboard-chart-legend').empty();
-            $('#dashboard-exec-count').text('');
+            $('#dashboard-data-count').text('');
             return;
         }
 
@@ -354,7 +354,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         } else {
             range_label = 'All \u00b7 ' + filtered_count_label;
         }
-        $('#dashboard-exec-count').text(range_label).attr(
+        $('#dashboard-data-count').text(range_label).attr(
             'title',
             (range_minutes > 0 && range_names[range_minutes] ? range_names[range_minutes] : 'All') +
             ' \u00b7 ' + filtered_count_full
@@ -383,7 +383,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         if (timestamps.length === 0) {
             container.html('<div class="dashboard-no-data">No run history yet</div>');
             $('#dashboard-chart-legend').empty();
-            $('#dashboard-exec-count').text('');
+            $('#dashboard-data-count').text('');
             return;
         }
 
@@ -654,7 +654,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
 
         var tooltip = $('#dashboard-chart-tooltip');
         if (tooltip.length === 0) {
-            $('body').append('<div id="dashboard-chart-tooltip" class="dashboard-chart-tooltip"></div>');
+            $('body').append('<div id="dashboard-chart-tooltip" class="kit-tooltip"></div>');
             tooltip = $('#dashboard-chart-tooltip');
         }
 
@@ -1133,7 +1133,12 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             try { initial_data = JSON.parse(initial_data); } catch(parse_error) { initial_data = {}; }
         }
 
-        kit.urls.init(dash.config.base_url, dash.config.cluster_id);
+        kit.urls.init({
+            base_url: dash.config.base_url,
+            cluster_id: dash.config.cluster_id,
+            object_path: 'job/{id}/',
+            run_path: 'job/{id}/run/{run_id}/'
+        });
 
         $('#dashboard-hero-pill-group').hide();
 
@@ -1182,7 +1187,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         dash._time_range_minutes = isNaN(_stored_range) ? dash.config.default_time_range : _stored_range;
 
         var menu = $('#dashboard-time-range-menu');
-        var pill = $('#dashboard-exec-count');
+        var pill = $('#dashboard-data-count');
         menu.find('.dashboard-time-range-option').removeClass('dashboard-time-range-active');
         menu.find('.dashboard-time-range-option[data-minutes="' + dash._time_range_minutes + '"]').addClass('dashboard-time-range-active');
 

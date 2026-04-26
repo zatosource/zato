@@ -1,7 +1,7 @@
-@import url("kit.css");
-@import url("outcome.css");
-@import url("time_range.css");
-@import url("main_chart.css");
+@import url("../dashboard-kit/kit.css");
+@import url("../dashboard-kit/outcome.css");
+@import url("../dashboard-kit/time_range.css");
+@import url("../dashboard-kit/main_chart.css");
 
 .detail-page-scheduler {
     --component-accent: var(--zato-seablue);
@@ -16,11 +16,6 @@
 
 #btn-execute-now {
     cursor: pointer;
-}
-
-#detail-history-count {
-    background: var(--component-accent-light);
-    color: var(--component-accent);
 }
 
 .detail-config-row {
@@ -43,7 +38,7 @@
     margin-bottom: 24px;
 }
 
-.detail-config-cards-3col {
+.detail-config-cards-2col {
     grid-template-columns: repeat(2, 1fr);
 }
 
@@ -149,10 +144,6 @@ tbody tr[data-run]:not(.detail-panel-row) {
 
 .detail-panel-row > td {
     padding: 0;
-    border-bottom: none;
-}
-
-.detail-panel-row > td {
     border-bottom: 1px dashed #ddd;
 }
 
@@ -186,6 +177,8 @@ tbody tr[data-run]:not(.detail-panel-row) {
     gap: 8px;
     padding: 3px 10px 3px 0;
     transition: background 0.1s;
+    cursor: pointer;
+    user-select: none;
 }
 
 .detail-log-line:hover {
@@ -243,11 +236,6 @@ tbody tr[data-run]:not(.detail-panel-row) {
     overflow: visible;
     text-overflow: unset;
     word-break: break-all;
-}
-
-.detail-log-line {
-    cursor: pointer;
-    user-select: none;
 }
 
 #detail-history-table-head.detail-dimmed {

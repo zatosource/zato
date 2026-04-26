@@ -28,7 +28,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var active_cls = config.active_cls || 'dashboard-tab-active';
         var tab_selector = config.tab_selector;
         var panel_prefix = config.panel_prefix;
-        var stored = ns.storage_get(config.storage_key);
+        var stored = config.storage_key ? ns.storage_get(config.storage_key) : null;
         var current_tab = stored || config.default_tab;
         var user_chose = false;
 
@@ -66,7 +66,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             var tab = $(this).data('tab');
             current_tab = tab;
             user_chose = true;
-            ns.storage_set(config.storage_key, tab);
+            if (config.storage_key) { ns.storage_set(config.storage_key, tab); }
 
             /* Capture scroll, swap panels, then keep pinning the viewport
                back for SCROLL_LOCK_MS. Firefox commits its scroll-anchor

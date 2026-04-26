@@ -1,12 +1,6 @@
 /* Dashboard-specific tab layout overrides
    (shared/tabs.css is loaded by the parent dashboard.css umbrella) */
 
-.dashboard-card-activity {
-    display: flex;
-    flex-direction: column;
-    overflow-anchor: none;
-}
-
 .dashboard-grid-section,
 .dashboard-tab-panel {
     overflow-anchor: none;

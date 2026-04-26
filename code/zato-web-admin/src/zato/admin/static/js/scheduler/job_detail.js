@@ -177,7 +177,7 @@ $.fn.zato.scheduler.job_detail.render_stats = function(job) {
         $stat.attr('data-countdown-target', next_run);
         $stat.text(kit.relative_time_future(next_run));
         $ts.text(kit.format_local_time(next_run));
-        kit.countdown._schedule_target(next_run);
+        kit.countdown._register_target(next_run);
     } else {
         console.log('[render_stats] clearing countdown, past timestamp');
         $stat.attr('data-countdown-target', '');
@@ -347,7 +347,7 @@ $.fn.zato.scheduler.job_detail.render_config = function(job, cluster_id) {
     };
 
     var has_extra = job.extra && job.extra.trim();
-    var cards_class = has_extra ? 'detail-config-cards detail-metadata detail-config-cards-3col' : 'detail-config-cards detail-metadata';
+    var cards_class = has_extra ? 'detail-config-cards detail-metadata detail-config-cards-2col' : 'detail-config-cards detail-metadata';
 
     var html = has_extra ? '<div class="detail-config-row">' : '';
     html += '<div class="' + cards_class + '">';
@@ -1259,7 +1259,7 @@ $.fn.zato.scheduler.job_detail._apply_recency_gradient = function($body) {
     var max_a = kit.recency.MAX_ALPHA;
     var steps = kit.recency.STEPS;
     var limit = Math.min(detail._new_row_count, steps);
-    var primaries = $body.children('tr').not('.detail-run-extras').not('.detail-panel-row').filter(function() {
+    var primaries = $body.children('tr').not('.detail-record-extras').not('.detail-panel-row').filter(function() {
         return !$(this).find('.dashboard-inline-empty').length;
     });
     primaries.each(function(idx) {
@@ -1290,7 +1290,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
         page_size: 50,
         filters: {outcomes: initial_outcomes},
         ts_field: 'actual_fire_time_iso',
-        get_running_runs: function() {
+        get_active_items: function() {
             var runs = [];
             $('#detail-history-table-body').find('tr[data-run]').not('.detail-panel-row').each(function() {
                 if ($(this).find('.badge-running-spinner').length > 0) {
@@ -1299,6 +1299,7 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
             });
             return runs;
         },
+        active_items_field: 'running_runs',
         on_new_rows: function(rows, filtered_total) {
             if (detail._polling_paused_by_panel) {
                 if (!detail._buffered_chart_rows) detail._buffered_chart_rows = [];
@@ -1661,7 +1662,7 @@ $.fn.zato.scheduler.job_detail.poll = function() {
                 var prev = $stat.attr('data-countdown-target');
                 if (prev !== next_run) {
                     console.log('[poll_cb] new target, prev=' + prev + ', new=' + next_run);
-                    delete kit.countdown._fired_targets[prev];
+                    delete kit.countdown._triggered_targets[prev];
                 }
                 $stat.attr('data-countdown-target', next_run);
                 if (!kit.countdown._now_locked) {
@@ -1842,7 +1843,12 @@ $.fn.zato.scheduler.job_detail.init = function(job_data, job_id, cluster_id, pol
     if (typeof job_data === 'string') {
         try { job_data = JSON.parse(job_data); } catch(parse_error) { job_data = {}; }
     }
-    kit.urls.init(dash.config.base_url, cluster_id);
+    kit.urls.init({
+        base_url: dash.config.base_url,
+        cluster_id: cluster_id,
+        object_path: 'job/{id}/',
+        run_path: 'job/{id}/run/{run_id}/'
+    });
     $.fn.zato.scheduler.job_detail._job_data = job_data;
     $.fn.zato.scheduler.job_detail._object_id = Number(job_id);
     $.fn.zato.scheduler.job_detail._poll_config = poll_config;

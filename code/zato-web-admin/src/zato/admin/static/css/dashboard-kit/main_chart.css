@@ -98,13 +98,13 @@
     display: block;
 }
 
-.dashboard-pill-clickable#dashboard-exec-count {
+.dashboard-pill-clickable#dashboard-data-count {
     box-sizing: border-box;
 }
 
 /* Chart tooltip */
 
-.dashboard-chart-tooltip {
+.kit-tooltip {
     position: fixed;
     background: #262630;
     color: #fff;

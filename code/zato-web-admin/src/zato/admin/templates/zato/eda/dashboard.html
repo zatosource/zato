@@ -3,6 +3,16 @@
 
 {% block html_title %}Pub/sub dashboard{% endblock %}
 
+{% block dashboard_extra_css %}
+<style>
+.dashboard-card-activity {
+    display: flex;
+    flex-direction: column;
+    overflow-anchor: none;
+}
+</style>
+{% endblock %}
+
 {% block dashboard_domain_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/utils.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/eda/dashboard.js"></script>

@@ -9,7 +9,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
     kit.tooltip.show = function(event, html) {
         var $tt = $('#detail-kit-tooltip');
         if ($tt.length === 0) {
-            $('body').append('<div id="detail-kit-tooltip" class="dashboard-chart-tooltip"></div>');
+            $('body').append('<div id="detail-kit-tooltip" class="kit-tooltip"></div>');
             $tt = $('#detail-kit-tooltip');
         }
         $tt.html(html).css({display: 'block', left: '0px', top: '0px'});
