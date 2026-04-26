@@ -1652,7 +1652,9 @@ $.fn.zato.scheduler.job_detail.poll = function() {
                     delete kit.countdown._fired_targets[prev];
                 }
                 $stat.attr('data-countdown-target', next_run);
-                $stat.text(kit.relative_time_future(next_run));
+                if (!kit.countdown._now_locked) {
+                    $stat.text(kit.relative_time_future(next_run));
+                }
                 $ts.text(kit.format_local_time(next_run));
             } else {
                 $stat.attr('data-countdown-target', '');
