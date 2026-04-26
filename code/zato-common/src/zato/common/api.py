@@ -409,7 +409,6 @@ class SCHEDULER:
         RUNNING = 'running'
         SKIPPED_ALREADY_IN_FLIGHT = 'skipped_already_in_flight'
         SKIPPED_HOLIDAY = 'skipped_holiday'
-        MISSED_CATCHUP = 'missed_catchup'
         All = 'all'
 
     InitialSleepTime = 0.1

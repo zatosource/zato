@@ -29,7 +29,6 @@ fuzz_target!(|data: &[u8]| {
         jitter_ms: None,
         timezone: None,
         calendar: None,
-        on_missed: None,
         max_execution_time_ms: None,
     };
 

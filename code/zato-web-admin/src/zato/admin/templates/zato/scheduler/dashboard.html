@@ -51,13 +51,13 @@ $(document).ready(function() {
                     <div class="dashboard-tile-sublabel" id="stat-runs-sublabel"></div>
                 </div>
 
-                <div class="dashboard-tile dashboard-tile-failures">
+                <div class="dashboard-tile dashboard-tile-recent-runs">
                     <div class="dashboard-tile-label">Failures in last hour</div>
                     <div class="dashboard-tile-row">
-                        <div class="dashboard-tile-value" id="stat-failures">-</div>
-                        <div class="dashboard-tile-spark" id="spark-failures"></div>
+                        <div class="dashboard-tile-value" id="stat-recent-runs">-</div>
+                        <div class="dashboard-tile-spark" id="spark-recent-runs"></div>
                     </div>
-                    <div class="dashboard-tile-sublabel" id="stat-failures-sublabel"></div>
+                    <div class="dashboard-tile-sublabel" id="stat-recent-runs-sublabel"></div>
                 </div>
 
 {% endblock %}
@@ -106,11 +106,11 @@ $(document).ready(function() {
                 <div class="dashboard-tabs" role="tablist" aria-label="Activity">
                     <button type="button"
                             class="dashboard-tab dashboard-tab-active"
-                            data-tab="failures"
+                            data-tab="recent_runs"
                             role="tab"
                             aria-selected="true">
                         <span class="dashboard-tab-label">Recent runs</span>
-                        <span class="dashboard-pill dashboard-pill-failures" id="dashboard-failures-count"></span>
+                        <span class="dashboard-pill dashboard-pill-recent-runs" id="dashboard-recent-runs-count"></span>
                     </button>
                     <button type="button"
                             class="dashboard-tab"
@@ -124,10 +124,10 @@ $(document).ready(function() {
             </div>
 
             <div class="dashboard-tab-panel dashboard-tab-panel-active"
-                 id="dashboard-tab-panel-failures"
+                 id="dashboard-tab-panel-recent_runs"
                  role="tabpanel"
-                 aria-labelledby="dashboard-tab-failures">
-                <div class="dashboard-card-scroll" id="dashboard-failures-body"></div>
+                 aria-labelledby="dashboard-tab-recent_runs">
+                <div class="dashboard-card-scroll" id="dashboard-recent-runs-body"></div>
             </div>
 
             <div class="dashboard-tab-panel"

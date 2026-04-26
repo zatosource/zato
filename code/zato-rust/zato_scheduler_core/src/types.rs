@@ -72,35 +72,6 @@ impl fmt::Display for JobType {
     }
 }
 
-/// Policy for handling missed job firings.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum OnMissedPolicy {
-    /// Skip the missed firing entirely.
-    Skip,
-    /// Run the missed firing once to catch up.
-    RunOnce,
-}
-
-impl OnMissedPolicy {
-    /// Returns the string representation of this policy.
-    #[must_use]
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Skip => "skip",
-            Self::RunOnce => "run_once",
-        }
-    }
-}
-
-impl From<&str> for OnMissedPolicy {
-    fn from(value: &str) -> Self {
-        match value {
-            "skip" => Self::Skip,
-            _ => Self::RunOnce,
-        }
-    }
-}
-
 /// String constants for job execution outcome labels.
 pub mod outcome {
     /// Matches all outcomes (used in filters).
@@ -117,8 +88,6 @@ pub mod outcome {
     pub const SKIPPED_HOLIDAY: &str = "skipped_holiday";
     /// The job timed out.
     pub const TIMEOUT: &str = "timeout";
-    /// The job was missed and caught up.
-    pub const MISSED_CATCHUP: &str = "missed_catchup";
 
     /// All countable outcome labels, in the order used for summary dicts.
     pub const COUNTABLE: &[&str] = &[
@@ -128,7 +97,6 @@ pub mod outcome {
         RUNNING,
         SKIPPED_ALREADY_IN_FLIGHT,
         SKIPPED_HOLIDAY,
-        MISSED_CATCHUP,
     ];
 }
 

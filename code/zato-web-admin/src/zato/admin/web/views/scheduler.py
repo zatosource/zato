@@ -47,7 +47,6 @@ logger = logging.getLogger(__name__)
 
 default_jitter_ms = ''
 default_timezone = ''
-default_on_missed = 'run_once'
 default_max_execution_time_ms = ''
 
 # ################################################################################################################################
@@ -185,7 +184,7 @@ def _get_create_edit_interval_based_message(user_profile, cluster, params, form_
     input_dict['minutes'] = params.get(form_prefix + 'minutes', '')
     input_dict['repeats'] = params.get(form_prefix + 'repeats', '')
 
-    for param in ('jitter_ms', 'timezone', 'on_missed', 'max_execution_time_ms'):
+    for param in ('jitter_ms', 'timezone', 'max_execution_time_ms'):
         val = params.get(form_prefix + param, '')
         if val:
             input_dict[param] = val
@@ -346,7 +345,6 @@ def index(req):
 
                     job.jitter_ms = getattr(job_elem, 'jitter_ms', default_jitter_ms)
                     job.timezone = getattr(job_elem, 'timezone', default_timezone)
-                    job.on_missed = getattr(job_elem, 'on_missed', default_on_missed)
                     job.max_execution_time_ms = getattr(job_elem, 'max_execution_time_ms', default_max_execution_time_ms)
 
                 else:

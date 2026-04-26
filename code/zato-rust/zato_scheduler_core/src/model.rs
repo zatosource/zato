@@ -35,8 +35,6 @@ pub struct SchedulerJob {
     pub timezone: Option<String>,
     /// Name of the holiday calendar to skip.
     pub calendar: Option<String>,
-    /// Policy when a firing is missed (`run_once`, `skip`, `run_all`).
-    pub on_missed: Option<String>,
     /// Kill threshold for long-running invocations (ms).
     pub max_execution_time_ms: Option<u64>,
 }

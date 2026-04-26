@@ -25,13 +25,6 @@ doc = false
 bench = false
 
 [[bin]]
-name = "fuzz_on_missed_policy_from_str"
-path = "fuzz_targets/fuzz_on_missed_policy_from_str.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
 name = "fuzz_is_excluded"
 path = "fuzz_targets/fuzz_is_excluded.rs"
 test = false

@@ -24,7 +24,6 @@ fn make_active_job() -> SchedulerJob {
         jitter_ms: None,
         timezone: None,
         calendar: None,
-        on_missed: None,
         max_execution_time_ms: Some(1_000),
     }
 }

@@ -11,16 +11,13 @@ use rand::{RngExt, SeedableRng};
 
 use crate::model::SchedulerJob;
 
-use crate::types::{JobId, JobType, OnMissedPolicy, ServiceName};
+use crate::types::{JobId, JobType, ServiceName};
 
 /// Default maximum execution time for a job (1 hour in ms).
 pub const DEFAULT_MAX_EXECUTION_TIME_MS: u64 = 3_600_000;
 
 /// Default maximum number of history records kept per job.
 pub const DEFAULT_MAX_HISTORY: usize = 10_000;
-
-/// Default `on_missed` policy string.
-pub const DEFAULT_ON_MISSED: &str = "run_once";
 
 /// Minimum allowed `max_execution_time_ms` (1 second).
 pub const MIN_MAX_EXECUTION_TIME_MS: u64 = 1_000;
@@ -137,8 +134,6 @@ pub struct RunningJob {
     pub timezone_str: Option<String>,
     /// Name of the holiday calendar to honour.
     pub calendar: Option<String>,
-    /// Policy when a firing is missed.
-    pub on_missed: OnMissedPolicy,
     /// Kill threshold for long-running invocations (ms).
     pub max_execution_time_ms: u64,
 
@@ -213,7 +208,6 @@ impl RunningJob {
         let (timezone, tz_str, start_date) = resolve_tz_and_start(job.timezone.as_deref(), &job.start_date, &job.name);
         let seed = job.id.unsigned_abs();
         let jitter_rng = SmallRng::seed_from_u64(seed);
-        let on_missed = OnMissedPolicy::from(job.on_missed.as_deref().unwrap_or(DEFAULT_ON_MISSED));
         let max_exec = clamp_max_execution_time(job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS), &job.name);
 
         let mut running_job = Self {
@@ -230,7 +224,6 @@ impl RunningJob {
             timezone,
             timezone_str: tz_str,
             calendar: job.calendar.clone(),
-            on_missed,
             max_execution_time_ms: max_exec,
             next_fire_utc: None,
             next_fire_instant: None,
@@ -265,7 +258,6 @@ impl RunningJob {
         self.extra.clone_from(&job.extra);
         self.job_type = JobType::from(job.job_type.as_str());
         self.calendar.clone_from(&job.calendar);
-        self.on_missed = OnMissedPolicy::from(job.on_missed.as_deref().unwrap_or(DEFAULT_ON_MISSED));
         self.max_execution_time_ms =
             clamp_max_execution_time(job.max_execution_time_ms.unwrap_or(DEFAULT_MAX_EXECUTION_TIME_MS), &job.name);
         self.repeats = job.repeats;
@@ -511,7 +503,6 @@ mod tests {
             jitter_ms: None,
             timezone: None,
             calendar: None,
-            on_missed: None,
             max_execution_time_ms: None,
         };
         let interval = RunningJob::compute_interval_ms(&job);

@@ -866,7 +866,6 @@ pub fn dict_to_scheduler_job(job_id: i64, dict: &Bound<'_, PyDict>) -> PyResult<
         jitter_ms: get_opt_u32(dict, "jitter_ms"),
         timezone: get_opt_str(dict, "timezone"),
         calendar: get_opt_str(dict, "calendar"),
-        on_missed: get_opt_str(dict, "on_missed"),
         max_execution_time_ms: get_opt_u64(dict, "max_execution_time_ms"),
     })
 }

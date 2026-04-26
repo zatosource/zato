@@ -13,7 +13,7 @@ use pyo3::types::PyDict;
 
 use crate::calendar::CalendarData;
 use crate::job::{ExecutionRecord, LogEntry, RunningJob};
-use crate::types::{FireBatch, JobType, OnMissedPolicy, outcome};
+use crate::types::{FireBatch, outcome};
 
 /// Re-export of `Py<PyAny>` for brevity.
 type PyObject = Py<PyAny>;
@@ -149,12 +149,6 @@ pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callb
     }
 
     load_initial_jobs(&shared, &odb_adapter);
-
-    {
-        let mut state = shared.state.lock();
-        let now = Utc::now();
-        apply_missed_catchup(&mut state, now);
-    }
 
     let mut last_wall = Utc::now();
     let mut last_mono = Instant::now();
@@ -520,79 +514,6 @@ pub fn reanchor_all_jobs(state: &mut SchedulerState, now: chrono::DateTime<Utc>)
                 "reanchor_all_jobs: job={} new_next_fire={:?}",
                 running_job.name, running_job.next_fire_utc,
             );
-        }
-    }
-    apply_missed_catchup(state, now);
-}
-
-/// Applies catchup logic for jobs that missed their fire time.
-pub fn apply_missed_catchup(state: &mut SchedulerState, now: chrono::DateTime<Utc>) {
-    let job_ids: Vec<i64> = state.jobs.keys().copied().collect();
-
-    log::info!("apply_missed_catchup: now={now} job_count={}", job_ids.len());
-
-    for job_id in job_ids {
-        let Some(running_job) = state.jobs.get_mut(&job_id) else { continue };
-
-        if !running_job.is_active || running_job.job_type == JobType::OneTime {
-            log::info!(
-                "apply_missed_catchup: job_id={job_id} name={} skipped (active={} type={:?})",
-                running_job.name, running_job.is_active, running_job.job_type,
-            );
-            continue;
-        }
-
-        let Some(start_date) = running_job.start_date else {
-            log::info!("apply_missed_catchup: job_id={job_id} name={} skipped (no start_date)", running_job.name);
-            continue;
-        };
-        if start_date > now {
-            log::info!(
-                "apply_missed_catchup: job_id={job_id} name={} skipped (start_date={start_date} > now={now})",
-                running_job.name,
-            );
-            continue;
-        }
-
-        log::info!(
-            "apply_missed_catchup: job_id={job_id} name={} on_missed={:?} next_fire_utc={:?} current_run={}",
-            running_job.name, running_job.on_missed, running_job.next_fire_utc, running_job.current_run,
-        );
-
-        match running_job.on_missed {
-            OnMissedPolicy::Skip => {
-                log::info!("apply_missed_catchup: job_id={job_id} name={} policy=Skip, recomputing next_fire", running_job.name);
-                running_job.compute_next_fire(now);
-                log::info!(
-                    "apply_missed_catchup: job_id={job_id} name={} after recompute, next_fire_utc={:?}",
-                    running_job.name, running_job.next_fire_utc,
-                );
-            }
-            OnMissedPolicy::RunOnce => {
-                if let Some(fire) = running_job.next_fire_utc
-                    && fire < now
-                {
-                    let prev_run = running_job.current_run;
-                    running_job.current_run += 1;
-                    log::info!(
-                        "apply_missed_catchup: job_id={job_id} name={} policy=RunOnce FIRING prev_run={prev_run} new_run={} missed_fire={fire} now={now} delay_ms={}",
-                        running_job.name, running_job.current_run, (now - fire).num_milliseconds(),
-                    );
-                    running_job.record_execution(ExecutionRecord::new(
-                        &fire.to_rfc3339(),
-                        &now.to_rfc3339(),
-                        outcome::MISSED_CATCHUP,
-                        running_job.current_run,
-                    ));
-                    running_job.next_fire_utc = Some(now);
-                    running_job.sync_instant_from_utc_pub(now);
-                } else {
-                    log::info!(
-                        "apply_missed_catchup: job_id={job_id} name={} policy=RunOnce, no missed fire (next_fire_utc={:?} >= now={now})",
-                        running_job.name, running_job.next_fire_utc,
-                    );
-                }
-            }
         }
     }
 }

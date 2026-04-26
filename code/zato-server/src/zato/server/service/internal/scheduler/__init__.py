@@ -31,7 +31,7 @@ from zato.server.service.internal import AdminService
 _service_name_prefix = 'zato.scheduler.job.'
 _entity_type = 'scheduler'
 _ib_params = ('weeks', 'days', 'hours', 'minutes', 'seconds')
-_new_params = ('jitter_ms', 'timezone', 'calendar', 'on_missed', 'max_execution_time_ms')
+_new_params = ('jitter_ms', 'timezone', 'calendar', 'max_execution_time_ms')
 default_page = 1
 default_page_size = 50
 
@@ -244,7 +244,7 @@ class _CreateEdit(_SchedulerAdmin):
     input = 'cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', \
         '-id', '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', \
         '-cron_definition', '-should_ignore_existing', \
-        '-jitter_ms', '-timezone', '-calendar', '-on_missed', '-max_execution_time_ms'
+        '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms'
     output = '-id', '-name', '-cron_definition'
 
     def handle(self):
@@ -258,7 +258,7 @@ class _Get(_SchedulerAdmin):
     """
     output = 'id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name', \
         '-extra', '-weeks', '-days', '-hours', '-minutes', '-seconds', '-repeats', '-cron_definition', \
-        '-jitter_ms', '-timezone', '-calendar', '-on_missed', '-max_execution_time_ms'
+        '-jitter_ms', '-timezone', '-calendar', '-max_execution_time_ms'
 
 # ################################################################################################################################
 # ################################################################################################################################
@@ -721,7 +721,6 @@ class GetCurrentState(_SchedulerAdmin):
                 'running': 0,
                 'skipped_already_in_flight': 0,
                 'skipped_holiday': 0,
-                'missed_catchup': 0,
             }
             execution_outcomes = {'ok', 'error', 'timeout'}
             total_executions = 0

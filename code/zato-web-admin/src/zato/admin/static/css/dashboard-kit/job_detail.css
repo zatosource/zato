@@ -112,25 +112,6 @@
 .detail-config-extra .hl-tag { color: #116329; }
 .detail-config-extra .hl-comment { color: #6e7781; font-style: italic; }
 
-.badge-running-spinner {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    padding: 0.2px;
-    background: conic-gradient(#0000 10%, #888) content-box;
-    -webkit-mask: repeating-conic-gradient(#0000 0deg, #000 1deg 20deg, #0000 21deg 36deg),
-        radial-gradient(farthest-side, #0000 calc(100% - 2px), #000 calc(100% - 2px));
-    -webkit-mask-composite: destination-in;
-    mask-composite: intersect;
-    animation: badge-running-spin 0.5s infinite steps(10);
-    margin-right: 4px;
-    vertical-align: -1px;
-}
-
-@keyframes badge-running-spin {
-    to { transform: rotate(1turn); }
-}
 
 @keyframes kit-puff {
     0%   { transform: scale(1); background: rgba(218, 165, 32, 0.5); color: #7a5c00; }

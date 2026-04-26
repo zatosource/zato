@@ -20,7 +20,6 @@ fn make_job(weeks: u32, days: u32, hours: u32, minutes: u32, seconds: u32) -> Sc
         jitter_ms: None,
         timezone: None,
         calendar: None,
-        on_missed: None,
         max_execution_time_ms: None,
     }
 }

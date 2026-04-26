@@ -22,7 +22,6 @@ fn make_jitter_job(jitter_ms: u32) -> SchedulerJob {
         jitter_ms: Some(jitter_ms),
         timezone: None,
         calendar: None,
-        on_missed: None,
         max_execution_time_ms: None,
     }
 }

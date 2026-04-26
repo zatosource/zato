@@ -61,7 +61,6 @@
             'cron_definition',
             'jitter_ms',
             'timezone',
-            'on_missed',
             'max_execution_time_ms'
         ]
     }
@@ -90,9 +89,7 @@
 
 
     <div class='page_prompt' style="clear:left">
-        Create a new job:
-            <a href="javascript:$.fn.zato.scheduler.create('one_time')">one-time</a> |
-            <a href="javascript:$.fn.zato.scheduler.create('interval_based')">interval-based</a> |
+            <a href="javascript:$.fn.zato.scheduler.create('interval_based')">Create a new job</a> |
             <a href="javascript:$.fn.zato.scheduler.import_demo_config()" class="common">Import demo config</a> |
             <a href="{% url "scheduler-dashboard" %}?cluster={{ cluster_id }}" class="common">Go to dashboard</a>
     </div>
@@ -153,7 +150,6 @@
                         <td class='ignore'></td>
                         <td class='ignore'>{{ job.jitter_ms|default:"" }}</td>
                         <td class='ignore'>{{ job.timezone|default:"" }}</td>
-                        <td class='ignore'>{{ job.on_missed|default:"" }}</td>
                         <td class='ignore'>{{ job.max_execution_time_ms|default:"" }}</td>
                     </tr>
                 {% endfor %}
@@ -430,11 +426,6 @@
                                 {{ create_interval_based_form.jitter_ms }}
                                 |
                                 <label>
-                                On missed
-                                {{ create_interval_based_form.on_missed }}
-                                </label>
-                                |
-                                <label>
                                 Max exec. time (ms)
                                 {{ create_interval_based_form.max_execution_time_ms }}
                                 </label>
@@ -581,11 +572,6 @@
                             <td style="vertical-align:middle">Jitter (ms)</td>
                             <td>
                                 {{ edit_interval_based_form.jitter_ms }}
-                                |
-                                <label>
-                                On missed
-                                {{ edit_interval_based_form.on_missed }}
-                                </label>
                                 |
                                 <label>
                                 Max exec. time (ms)

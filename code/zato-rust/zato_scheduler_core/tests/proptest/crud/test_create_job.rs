@@ -27,7 +27,6 @@ fn make_job(id: i64, job_type: &str, is_active: bool, minutes: u32, future_start
         jitter_ms: None,
         timezone: None,
         calendar: None,
-        on_missed: None,
         max_execution_time_ms: None,
     }
 }

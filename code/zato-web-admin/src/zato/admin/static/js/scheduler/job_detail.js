@@ -46,8 +46,7 @@ $.fn.zato.scheduler.job_detail.config = {
             'error':   { color: '#f06060', bg: 'rgba(224, 82, 82, 0.22)' },
             'timeout': { color: '#e8b830', bg: 'rgba(212, 160, 23, 0.22)' },
             'running': { color: '#bbb',    bg: 'rgba(187, 187, 187, 0.15)' },
-            'skipped_already_in_flight': { color: '#c4a8e8', bg: 'rgba(167, 134, 213, 0.22)' },
-            'missed_catchup':            { color: '#d4b88a', bg: 'rgba(180, 150, 110, 0.22)' }
+            'skipped_already_in_flight': { color: '#c4a8e8', bg: 'rgba(167, 134, 213, 0.22)' }
         }
     }
 };
@@ -91,7 +90,7 @@ $.fn.zato.scheduler.job_detail._get_hidden_series = function() {
     return hidden;
 };
 
-$.fn.zato.scheduler.job_detail._outcome_keys = ['ok', 'skipped_already_in_flight', 'missed_catchup', 'timeout', 'error'];
+$.fn.zato.scheduler.job_detail._outcome_keys = ['ok', 'skipped_already_in_flight', 'timeout', 'error'];
 
 $.fn.zato.scheduler.job_detail._visible_outcomes_from_hidden = function(hidden) {
     var keys = $.fn.zato.scheduler.job_detail._outcome_keys;
@@ -429,7 +428,7 @@ $.fn.zato.scheduler.job_detail.render_timeline = function(history) {
     var dashboard = detail._dashboard();
     var bar_colors = dashboard.outcome_bar_colors;
     var outcome_labels = dashboard.outcome_labels;
-    var outcome_keys = ['ok', 'skipped_already_in_flight', 'missed_catchup', 'timeout', 'error'];
+    var outcome_keys = ['ok', 'skipped_already_in_flight', 'timeout', 'error'];
     var hidden = detail._get_hidden_series();
 
     detail._build_legend();

@@ -159,7 +159,7 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-.dashboard-pill-failures {
+.dashboard-pill-recent-runs {
     background: rgba(224, 34, 110, 0.12);
     color: #e0226e;
 }
@@ -282,4 +282,24 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     text-align: center;
     box-sizing: border-box;
     user-select: none;
+}
+
+.badge-running-spinner {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    padding: 0.2px;
+    background: conic-gradient(#0000 10%, #888) content-box;
+    -webkit-mask: repeating-conic-gradient(#0000 0deg, #000 1deg 20deg, #0000 21deg 36deg),
+        radial-gradient(farthest-side, #0000 calc(100% - 2px), #000 calc(100% - 2px));
+    -webkit-mask-composite: destination-in;
+    mask-composite: intersect;
+    animation: badge-running-spin 0.5s infinite steps(10);
+    margin-right: 4px;
+    vertical-align: -1px;
+}
+
+@keyframes badge-running-spin {
+    to { transform: rotate(1turn); }
 }

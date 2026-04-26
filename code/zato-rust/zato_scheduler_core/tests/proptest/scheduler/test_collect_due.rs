@@ -25,7 +25,6 @@ fn make_due_job(id: i64, minutes_ago: u32) -> SchedulerJob {
         jitter_ms: None,
         timezone: None,
         calendar: None,
-        on_missed: None,
         max_execution_time_ms: None,
     }
 }
