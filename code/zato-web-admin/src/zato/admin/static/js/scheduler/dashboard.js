@@ -1111,7 +1111,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         $('#dashboard-hero-pill-group').hide();
 
         if (!dash.config.show_tab_counts) {
-            $('.dashboard-pill').hide();
+            $('.dashboard-tabs .dashboard-pill').hide();
         }
 
         // Chart type toggle
