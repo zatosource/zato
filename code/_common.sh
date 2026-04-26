@@ -41,7 +41,6 @@ function pip_install() {
     $uv_bin pip install \
         -e $CURDIR/zato-common      \
         -e $CURDIR/zato-agent       \
-        -e $CURDIR/zato-broker      \
         -e $CURDIR/zato-cli         \
         -e $CURDIR/zato-client      \
         -e $CURDIR/zato-cy          \

@@ -182,7 +182,7 @@ class Edit(AdminService):
                     pubsub_msg.new_topic_name = input.name
                     pubsub_msg.old_topic_name = old_name
 
-                    self.broker_client.publish(pubsub_msg)
+                    self.config_dispatcher.publish(pubsub_msg)
 
                 self.response.payload.id = topic.id
                 self.response.payload.name = topic.name
@@ -219,7 +219,7 @@ class Delete(AdminService):
                 pubsub_msg.action = PUBSUB.TOPIC_DELETE.value
                 pubsub_msg.topic_name = topic.name
 
-                self.broker_client.publish(pubsub_msg)
+                self.config_dispatcher.publish(pubsub_msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

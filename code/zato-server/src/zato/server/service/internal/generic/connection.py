@@ -276,7 +276,7 @@ class _CreateEdit(_BaseService):
         data['old_name'] = old_name
         data['action'] = GENERIC.CONNECTION_EDIT.value if self.is_edit else GENERIC.CONNECTION_CREATE.value
         data['id'] = instance.id
-        self.broker_client.publish(data)
+        self.config_dispatcher.publish(data)
 
 # ################################################################################################################################
 # ################################################################################################################################

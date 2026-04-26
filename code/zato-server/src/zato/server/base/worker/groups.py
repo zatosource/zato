@@ -42,20 +42,20 @@ class SecurityGroups(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_Groups_Edit(
+    def on_config_event_Groups_Edit(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
-        logger_groups.info('on_broker_msg_Groups_Edit: msg=%s', msg)
+        logger_groups.info('on_config_event_Groups_Edit: msg=%s', msg)
 
 # ################################################################################################################################
 
-    def on_broker_msg_Groups_Edit_Member_List(
+    def on_config_event_Groups_Edit_Member_List(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':
 
-        logger_groups.info('on_broker_msg_Groups_Edit_Member_List: msg=%s', msg)
+        logger_groups.info('on_config_event_Groups_Edit_Member_List: msg=%s', msg)
 
         member_id_list = msg.member_id_list
         member_id_list = [elem.split('-') for elem in member_id_list]
@@ -74,7 +74,7 @@ class SecurityGroups(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_Groups_Delete(
+    def on_config_event_Groups_Delete(
         self:'WorkerStore', # type: ignore
         msg, # type: Bunch
     ) -> 'None':

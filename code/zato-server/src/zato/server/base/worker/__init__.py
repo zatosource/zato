@@ -75,7 +75,7 @@ logger = logging.getLogger(__name__)
 if 0:
     from bunch import Bunch as bunch_
     from kombu.transport.pyamqp import Message as KombuMessage
-    from zato.broker.client import BrokerClient
+    from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.typing_ import any_, anylist, anytuple, callable_, dictnone, strdict, tupnone
     from zato.server.base.parallel import ParallelServer
     from zato.server.config import ConfigDict
@@ -154,7 +154,7 @@ _WorkerStoreBase = type(_base_type, _get_base_classes(), {})
 class WorkerStore(_WorkerStoreBase):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
-    broker_client: 'BrokerClient | None' = None
+    config_dispatcher: 'ConfigDispatcher | None' = None
 
     def __init__(self, worker_config:'ConfigStore', server:'ParallelServer') -> 'None':
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -261,7 +261,7 @@ class WorkerStore(_WorkerStoreBase):
             self.worker_config.ntlm,
             self.worker_config.oauth,
             self.worker_config.apikey,
-            self.broker_client,
+            self.config_dispatcher,
             self.server.odb,
         )
 
@@ -331,12 +331,12 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def set_broker_client(self, broker_client:'BrokerClient') -> 'None':
-        self.broker_client = broker_client
+    def set_config_dispatcher(self, config_dispatcher:'ConfigDispatcher') -> 'None':
+        self.config_dispatcher = config_dispatcher
 
 # ################################################################################################################################
 
-    def after_broker_client_set(self) -> 'None':
+    def after_config_dispatcher_set(self) -> 'None':
 
         # Pub/sub
         self.init_pubsub()
@@ -648,7 +648,7 @@ class WorkerStore(_WorkerStoreBase):
         """
         with self.update_lock:
 
-            handler = getattr(self.request_dispatcher.url_data, 'on_broker_msg_' + action_name)
+            handler = getattr(self.request_dispatcher.url_data, 'on_config_event_' + action_name)
             handler(msg)
 
             for transport in ['plain_http', 'soap']:
@@ -945,14 +945,14 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_BASIC_AUTH_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates a new HTTP Basic Auth security definition
         """
         dispatcher.notify(broker_message.SECURITY.BASIC_AUTH_CREATE.value, msg)
 
 # ################################################################################################################################
 
-    def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_BASIC_AUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing HTTP Basic Auth security definition.
         """
         # Update channels and outgoing connections ..
@@ -968,7 +968,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_BASIC_AUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an HTTP Basic Auth security definition.
         """
         # Update channels and outgoing connections ..
@@ -980,7 +980,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Changes password of an HTTP Basic Auth security definition.
         """
         # Update channels and outgoing connections ..
@@ -1016,14 +1016,14 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_APIKEY_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates a new API key security definition.
         """
         dispatcher.notify(broker_message.SECURITY.APIKEY_CREATE.value, msg)
 
 # ################################################################################################################################
 
-    def on_broker_msg_SECURITY_APIKEY_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_APIKEY_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing API key security definition.
         """
         # Update channels and outgoing connections.
@@ -1031,7 +1031,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_APIKEY_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an API key security definition.
         """
         # Update channels and outgoing connections ..
@@ -1043,7 +1043,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Changes password of an API key security definition.
         """
         # Update channels and outgoing connections ..
@@ -1064,24 +1064,24 @@ class WorkerStore(_WorkerStoreBase):
         """
         return self.request_dispatcher.url_data.ntlm_get(name)
 
-    def on_broker_msg_SECURITY_NTLM_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_NTLM_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates a new NTLM security definition
         """
         dispatcher.notify(broker_message.SECURITY.NTLM_CREATE.value, msg)
 
-    def on_broker_msg_SECURITY_NTLM_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_NTLM_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing NTLM security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.NTLM,
                 self._visit_wrapper_edit, keys=('username', 'name'))
 
-    def on_broker_msg_SECURITY_NTLM_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_NTLM_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an NTLM security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.NTLM,
                 self._visit_wrapper_delete)
 
-    def on_broker_msg_SECURITY_NTLM_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_NTLM_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Changes password of an NTLM security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.NTLM,
@@ -1110,24 +1110,24 @@ class WorkerStore(_WorkerStoreBase):
             config = item.config
             yield config['id']
 
-    def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_OAUTH_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates a new OAuth security definition
         """
         dispatcher.notify(broker_message.SECURITY.OAUTH_CREATE.value, msg)
 
-    def on_broker_msg_SECURITY_OAUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_OAUTH_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Updates an existing OAuth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_edit, keys=('username', 'name'))
 
-    def on_broker_msg_SECURITY_OAUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_OAUTH_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an OAuth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
                 self._visit_wrapper_delete)
 
-    def on_broker_msg_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Changes password of an OAuth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.OAUTH,
@@ -1196,7 +1196,7 @@ class WorkerStore(_WorkerStoreBase):
         skip_response_elem=kwargs.get('skip_response_elem')
 
         response = service.update_handle(service.set_response_data, service, payload,
-            channel, data_format, transport, self.server, self.broker_client, self, cid,
+            channel, data_format, transport, self.server, self.config_dispatcher, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
 
@@ -1218,7 +1218,7 @@ class WorkerStore(_WorkerStoreBase):
             cb_msg['is_async'] = True
             cb_msg['in_reply_to'] = cid
 
-            self.broker_client.invoke_async(cb_msg) # type: ignore
+            self.config_dispatcher.invoke_async(cb_msg) # type: ignore
 
         if kwargs.get('needs_response'):
             if skip_response_elem:
@@ -1236,12 +1236,12 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg:'bunch_', args:'any_'=None) -> 'any_':
+    def on_config_event_SCHEDULER_JOB_EXECUTED(self, msg:'bunch_', args:'any_'=None) -> 'any_':
         return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
 
 # ################################################################################################################################
 
-    def on_broker_msg_OUTGOING_SQL_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_SQL_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an SQL connection, including changing its
         password.
         """
@@ -1255,7 +1255,7 @@ class WorkerStore(_WorkerStoreBase):
         msg['fs_sql_config'] = self.server.fs_sql_config
         self.sql_pool_store[msg['name']] = msg
 
-    def on_broker_msg_OUTGOING_SQL_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_SQL_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an outgoing SQL connection pool and recreates it using the
         new password.
         """
@@ -1274,7 +1274,7 @@ class WorkerStore(_WorkerStoreBase):
         else:
             self.logger.warning('SQL connection not found -> `%s` (change-password)', msg['name'])
 
-    def on_broker_msg_OUTGOING_SQL_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_SQL_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an outgoing SQL connection pool.
         """
         del self.sql_pool_store[msg['name']]
@@ -1327,7 +1327,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an HTTP/SOAP channel.
         """
         channel_id = msg['id']
@@ -1337,9 +1337,9 @@ class WorkerStore(_WorkerStoreBase):
         with self.server.gateway_services_allowed_lock:
             self.server.gateway_services_allowed[channel_id] = allowed
 
-        self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
+        self.request_dispatcher.url_data.on_config_event_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
 
-    def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_CHANNEL_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an HTTP/SOAP channel.
         """
         # First, check if there was a cache for this channel. If so, make sure of all entries pointing
@@ -1354,7 +1354,7 @@ class WorkerStore(_WorkerStoreBase):
             _ = self.server.gateway_services_allowed.pop(channel_id, None)
 
         # Delete the channel object now
-        self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
+        self.request_dispatcher.url_data.on_config_event_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
 
 # ################################################################################################################################
 
@@ -1391,7 +1391,7 @@ class WorkerStore(_WorkerStoreBase):
 
         self._delete_config_close_wrapper(name, config_dict, 'an outgoing HTTP/SOAP connection', log_func)
 
-    def on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an outgoing HTTP/SOAP connection.
         """
 
@@ -1413,7 +1413,7 @@ class WorkerStore(_WorkerStoreBase):
         # Store mapping of ID -> name
         config_dict.set_key_id_data(msg)
 
-    def on_broker_msg_OUTGOING_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_HTTP_SOAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes an outgoing HTTP/SOAP connection (actually delegates the
         task to self._delete_config_close_wrapper_http_soap.
         """
@@ -1421,7 +1421,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_OUTGOING_REST_WRAPPER_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_REST_WRAPPER_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
 
         # Reusable
         password = msg.password
@@ -1441,7 +1441,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SERVICE_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SERVICE_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
         """
@@ -1486,13 +1486,13 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SERVICE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_SERVICE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         del msg['action']
         self.server.service_store.edit_service_data(msg)
 
 # ################################################################################################################################
 
-    def on_broker_msg_SERVICE_INVOKE(self, msg:'bunch_', *args:'any_') -> 'strdict | None':
+    def on_config_event_SERVICE_INVOKE(self, msg:'bunch_', *args:'any_') -> 'strdict | None':
         try:
             response = self.on_message_invoke_service(msg, CHANNEL.PUBLISH, 'SERVICE_INVOKE', args, needs_response=True)
         except Exception as e:
@@ -1504,21 +1504,21 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_OUTGOING_FTP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_FTP_CREATE_EDIT(self, msg:'bunch_', *args:'any_') -> 'None':
         out_ftp = cast_('FTPStore', self.worker_config.out_ftp)
         out_ftp.create_edit(msg, msg.get('old_name'))
 
-    def on_broker_msg_OUTGOING_FTP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_FTP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         out_ftp = cast_('FTPStore', self.worker_config.out_ftp)
         out_ftp.delete(msg.name)
 
-    def on_broker_msg_OUTGOING_FTP_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_FTP_CHANGE_PASSWORD(self, msg:'bunch_', *args:'any_') -> 'None':
         out_ftp = cast_('FTPStore', self.worker_config.out_ftp)
         out_ftp.change_password(msg.name, msg.password)
 
 # ################################################################################################################################
 
-    def on_broker_msg_hot_deploy(
+    def on_config_event_hot_deploy(
         self,
         msg,     # type: Bunch
         service, # type: str
@@ -1534,25 +1534,25 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_HOT_DEPLOY_CREATE_SERVICE(self, msg:'bunch_', *args:'any_') -> 'None':
 
         # Uploads the service
-        _ = self.on_broker_msg_hot_deploy(
+        _ = self.on_config_event_hot_deploy(
             msg, 'zato.hot-deploy.create', {'payload_name': msg.payload_name, 'payload':msg.payload}, 'CREATE_SERVICE', *args,
             serialize=False, needs_response=True)
 
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_UPDATE_ENMASSE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_HOT_DEPLOY_UPDATE_ENMASSE(self, msg:'bunch_', *args:'any_') -> 'None':
 
         # Uploads the service
         _ = self.server.invoke('zato.pickup.update-enmasse', msg)
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg:'bunch_', *args:'any_') -> 'None':
-        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static', {
+    def on_config_event_HOT_DEPLOY_CREATE_STATIC(self, msg:'bunch_', *args:'any_') -> 'None':
+        return self.on_config_event_hot_deploy(msg, 'zato.pickup.on-update-static', {
             'data': msg.data,
             'file_name': msg.file_name,
             'full_path': msg.full_path,
@@ -1561,8 +1561,8 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_CREATE_USER_CONF(self, msg:'bunch_', *args:'any_') -> 'None':
-        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-user-conf', {
+    def on_config_event_HOT_DEPLOY_CREATE_USER_CONF(self, msg:'bunch_', *args:'any_') -> 'None':
+        return self.on_config_event_hot_deploy(msg, 'zato.pickup.on-update-user-conf', {
             'data': msg.data,
             'file_name': msg.file_name,
             'full_path': msg.full_path,
@@ -1571,7 +1571,7 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_HOT_DEPLOY_AFTER_DEPLOY(self, msg:'bunch_', *args:'any_') -> 'None':
 
         # Redeploy services that depended on the service just deployed.
         if self.server.fs_server_config.hot_deploy.redeploy_on_parent_change:
@@ -1579,12 +1579,12 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_SERVICE_PUBLISH(self, msg:'bunch_', args:'any_'=None) -> 'None':
+    def on_config_event_SERVICE_PUBLISH(self, msg:'bunch_', args:'any_'=None) -> 'None':
         return self.on_message_invoke_service(msg, msg.get('channel') or CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
 
 # ################################################################################################################################
 
-    def _on_broker_msg_cloud_create_edit(
+    def _on_config_event_cloud_create_edit(
         self,
         msg,          # type: Bunch
         conn_type,    # type: str
@@ -1614,110 +1614,110 @@ class WorkerStore(_WorkerStoreBase):
 
 # ################################################################################################################################
 
-    def on_broker_msg_OUTGOING_ODOO_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_ODOO_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an Odoo connection.
         """
-        _ = self._on_broker_msg_cloud_create_edit(msg, 'Odoo', self.worker_config.out_odoo, OdooWrapper)
+        _ = self._on_config_event_cloud_create_edit(msg, 'Odoo', self.worker_config.out_odoo, OdooWrapper)
 
-    on_broker_msg_OUTGOING_ODOO_CHANGE_PASSWORD = on_broker_msg_OUTGOING_ODOO_EDIT = on_broker_msg_OUTGOING_ODOO_CREATE
+    on_config_event_OUTGOING_ODOO_CHANGE_PASSWORD = on_config_event_OUTGOING_ODOO_EDIT = on_config_event_OUTGOING_ODOO_CREATE
 
-    def on_broker_msg_OUTGOING_ODOO_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_ODOO_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Closes and deletes an Odoo connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.worker_config.out_odoo, 'Odoo', logger.debug)
 
 # ################################################################################################################################
 
-    def on_broker_msg_OUTGOING_SAP_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_SAP_CREATE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Creates or updates an SAP RFC connection.
         """
-        _ = self._on_broker_msg_cloud_create_edit(msg, 'SAP', self.worker_config.out_sap, SAPWrapper)
+        _ = self._on_config_event_cloud_create_edit(msg, 'SAP', self.worker_config.out_sap, SAPWrapper)
 
-    on_broker_msg_OUTGOING_SAP_CHANGE_PASSWORD = on_broker_msg_OUTGOING_SAP_EDIT = on_broker_msg_OUTGOING_SAP_CREATE
+    on_config_event_OUTGOING_SAP_CHANGE_PASSWORD = on_config_event_OUTGOING_SAP_EDIT = on_config_event_OUTGOING_SAP_CREATE
 
-    def on_broker_msg_OUTGOING_SAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
+    def on_config_event_OUTGOING_SAP_DELETE(self, msg:'bunch_', *args:'any_') -> 'None':
         """ Closes and deletes an SAP RFC connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.worker_config.out_sap, 'SAP', logger.debug)
 
 # ################################################################################################################################
 
-    def on_broker_msg_SEARCH_ES_CREATE(self, msg:'bunch_') -> 'None':
+    def on_config_event_SEARCH_ES_CREATE(self, msg:'bunch_') -> 'None':
         self.search_es_api.create(msg.name, msg)
 
-    def on_broker_msg_SEARCH_ES_EDIT(self, msg:'bunch_') -> 'None':
+    def on_config_event_SEARCH_ES_EDIT(self, msg:'bunch_') -> 'None':
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
         self.search_es_api.edit(del_name, msg)
 
-    def on_broker_msg_SEARCH_ES_DELETE(self, msg:'bunch_') -> 'None':
+    def on_config_event_SEARCH_ES_DELETE(self, msg:'bunch_') -> 'None':
         self.search_es_api.delete(msg.name)
 
 # ################################################################################################################################
 
-    def on_broker_msg_EMAIL_SMTP_CREATE(self, msg:'bunch_') -> 'None':
+    def on_config_event_EMAIL_SMTP_CREATE(self, msg:'bunch_') -> 'None':
         self.email_smtp_api.create(msg.name, msg)
 
-    def on_broker_msg_EMAIL_SMTP_EDIT(self, msg:'bunch_') -> 'None':
+    def on_config_event_EMAIL_SMTP_EDIT(self, msg:'bunch_') -> 'None':
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
         msg.password = self.email_smtp_api.get(del_name, True).config.password
         self.email_smtp_api.edit(del_name, msg)
 
-    def on_broker_msg_EMAIL_SMTP_DELETE(self, msg:'bunch_') -> 'None':
+    def on_config_event_EMAIL_SMTP_DELETE(self, msg:'bunch_') -> 'None':
         self.email_smtp_api.delete(msg.name)
 
-    def on_broker_msg_EMAIL_SMTP_CHANGE_PASSWORD(self, msg:'bunch_') -> 'None':
+    def on_config_event_EMAIL_SMTP_CHANGE_PASSWORD(self, msg:'bunch_') -> 'None':
         self.email_smtp_api.change_password(msg)
 
 # ################################################################################################################################
 
-    def on_broker_msg_EMAIL_IMAP_CREATE(self, msg:'bunch_') -> 'None':
+    def on_config_event_EMAIL_IMAP_CREATE(self, msg:'bunch_') -> 'None':
         self.email_imap_api.create(msg.name, msg)
 
-    def on_broker_msg_EMAIL_IMAP_EDIT(self, msg:'bunch_') -> 'None':
+    def on_config_event_EMAIL_IMAP_EDIT(self, msg:'bunch_') -> 'None':
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
         msg.password = self.email_imap_api.get(del_name, True).config.password
         self.email_imap_api.edit(del_name, msg)
 
-    def on_broker_msg_EMAIL_IMAP_DELETE(self, msg:'bunch_') -> 'None':
+    def on_config_event_EMAIL_IMAP_DELETE(self, msg:'bunch_') -> 'None':
         self.email_imap_api.delete(msg.name)
 
-    def on_broker_msg_EMAIL_IMAP_CHANGE_PASSWORD(self, msg:'bunch_') -> 'None':
+    def on_config_event_EMAIL_IMAP_CHANGE_PASSWORD(self, msg:'bunch_') -> 'None':
         self.email_imap_api.change_password(msg)
 
 # ################################################################################################################################
 
-    def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'bunch_') -> 'None':
+    def on_config_event_PUBSUB_SUBSCRIPTION_CREATE(self, msg:'bunch_') -> 'None':
         pass
 
-    def on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
+    def on_config_event_PUBSUB_SUBSCRIPTION_EDIT(self, msg:'bunch_') -> 'None':
         pass
 
-    def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
-        pass
-
-# ################################################################################################################################
-
-    def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
-        pass
-
-    def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
+    def on_config_event_PUBSUB_SUBSCRIPTION_DELETE(self, msg:'bunch_') -> 'None':
         pass
 
 # ################################################################################################################################
 
-    def on_broker_msg_PUBSUB_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
+    def on_config_event_PUBSUB_TOPIC_EDIT(self, msg:'bunch_') -> 'None':
         pass
 
-    def on_broker_msg_PUBSUB_PERMISSION_EDIT(self, msg:'bunch_') -> 'None':
+    def on_config_event_PUBSUB_TOPIC_DELETE(self, msg:'bunch_') -> 'None':
         pass
 
-    def on_broker_msg_PUBSUB_PERMISSION_DELETE(self, msg:'bunch_') -> 'None':
+# ################################################################################################################################
+
+    def on_config_event_PUBSUB_PERMISSION_CREATE(self, msg:'bunch_') -> 'None':
+        pass
+
+    def on_config_event_PUBSUB_PERMISSION_EDIT(self, msg:'bunch_') -> 'None':
+        pass
+
+    def on_config_event_PUBSUB_PERMISSION_DELETE(self, msg:'bunch_') -> 'None':
         pass
 
 # ################################################################################################################################

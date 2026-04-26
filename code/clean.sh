@@ -53,7 +53,6 @@ rm -rf ./share
 rm -rf ./tests
 rm -rf ./zato_extra_paths
 
-rm -rf ./zato-broker/build
 rm -rf ./zato-cli/build
 rm -rf ./zato-client/build
 rm -rf ./zato-common/build

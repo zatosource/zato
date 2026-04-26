@@ -232,11 +232,11 @@ class Generic(WorkerImpl):
             else:
                 edit_msg[k] = v
 
-        self.on_broker_msg_GENERIC_CONNECTION_EDIT(edit_msg, ['conn', 'parent'])
+        self.on_config_event_GENERIC_CONNECTION_EDIT(edit_msg, ['conn', 'parent'])
 
 # ################################################################################################################################
 
-    def _on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(
+    def _on_config_event_GENERIC_CONNECTION_COMMON_ACTION(
         self,
         msg:'stranydict',
         *args: 'any_',
@@ -249,12 +249,12 @@ class Generic(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_CREATE(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
+    def on_config_event_GENERIC_CONNECTION_CREATE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_config_event_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_EDIT(
+    def on_config_event_GENERIC_CONNECTION_EDIT(
         self,
         msg:'stranydict',
         *args: 'any_',
@@ -262,16 +262,16 @@ class Generic(WorkerImpl):
     ) -> 'None':
 
         # Update the connection now.
-        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
+        return self._on_config_event_GENERIC_CONNECTION_COMMON_ACTION(msg, *args, **kwargs)
 
 # ################################################################################################################################
 
-    def on_broker_msg_GENERIC_CONNECTION_DELETE(self, *args:'any_', **kwargs:'any_') -> 'any_':
-        return self._on_broker_msg_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
+    def on_config_event_GENERIC_CONNECTION_DELETE(self, *args:'any_', **kwargs:'any_') -> 'any_':
+        return self._on_config_event_GENERIC_CONNECTION_COMMON_ACTION(*args, **kwargs)
 
 # ################################################################################################################################
 
-    on_broker_msg_GENERIC_CONNECTION_CHANGE_PASSWORD = _change_password_generic_connection
+    on_config_event_GENERIC_CONNECTION_CHANGE_PASSWORD = _change_password_generic_connection
 
 # ################################################################################################################################
 

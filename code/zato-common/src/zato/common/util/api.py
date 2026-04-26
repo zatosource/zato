@@ -355,13 +355,6 @@ def new_cid_scheduler() -> 'str':
 
 # ################################################################################################################################
 
-def new_cid_broker_client() -> 'str':
-    """ Returns a new correlation identifier for broker client components.
-    """
-    return _new_cid('e')
-
-# ################################################################################################################################
-
 def new_msg_id() -> 'str':
     cid = _new_cid('f')
     sub_key = f'zpsm.{cid}'
@@ -1464,7 +1457,7 @@ def startup_service_payload_from_path(name, value, repo_location):
 
 # ################################################################################################################################
 
-def invoke_startup_services(source, key, fs_server_config, repo_location, broker_client=None, service_name=None,
+def invoke_startup_services(source, key, fs_server_config, repo_location, config_dispatcher=None, service_name=None,
     skip_include=True, worker_store=None):
     """ Invoked when we are the first worker and we know we have a broker client and all the other config is ready
     so we can publish the request to execute startup services. In the worst case the requests will get back to us but it's
@@ -1499,8 +1492,8 @@ def invoke_startup_services(source, key, fs_server_config, repo_location, broker
         msg['cid'] = cid
         msg['channel'] = CHANNEL.STARTUP_SERVICE
 
-        if broker_client:
-            broker_client.invoke_async(msg)
+        if config_dispatcher:
+            config_dispatcher.invoke_async(msg)
         else:
             worker_store.on_message_invoke_service(msg, msg['channel'], msg['action'])
 
@@ -2078,7 +2071,7 @@ def find_internal_modules(root:'ModuleType') -> 'strlist':
 
 # ################################################################################################################################
 
-def publish_file(broker_client, cid:'str', file_path:'str') -> 'dict':
+def publish_file(config_dispatcher, cid:'str', file_path:'str') -> 'dict':
     """ Publish a file's content to the broker for hot-deployment.
     """
 
@@ -2094,12 +2087,12 @@ def publish_file(broker_client, cid:'str', file_path:'str') -> 'dict':
         'timestamp': utcnow().isoformat(),
     }
 
-    broker_client.publish(msg)
+    config_dispatcher.publish(msg)
     return msg
 
 # ################################################################################################################################
 
-def publish_enmasse(broker_client, cid:'str', file_path:'str') -> 'dict':
+def publish_enmasse(config_dispatcher, cid:'str', file_path:'str') -> 'dict':
     """ Publish an enmasse file's content to the broker for deployment.
     """
     msg = {
@@ -2108,12 +2101,12 @@ def publish_enmasse(broker_client, cid:'str', file_path:'str') -> 'dict':
         'action': HOT_DEPLOY.UPDATE_ENMASSE.value,
     }
 
-    broker_client.publish(msg)
+    config_dispatcher.publish(msg)
     return msg
 
 # ################################################################################################################################
 
-def publish_user_conf(broker_client, cid:'str', file_path:'str') -> 'dict':
+def publish_user_conf(config_dispatcher, cid:'str', file_path:'str') -> 'dict':
     """ Publish a static file's content to the broker for hot-deployment.
     """
 
@@ -2132,7 +2125,7 @@ def publish_user_conf(broker_client, cid:'str', file_path:'str') -> 'dict':
         'timestamp': utcnow().isoformat(),
     }
 
-    broker_client.publish(msg)
+    config_dispatcher.publish(msg)
     return msg
 
 # ################################################################################################################################

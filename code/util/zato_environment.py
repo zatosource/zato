@@ -468,7 +468,6 @@ class EnvironmentManager:
             # Note that zato-common must come first.
             editable_packages.extend([
                 'zato-common',
-                'zato-broker',
                 'zato-cli',
                 'zato-client',
                 'zato-distlock',

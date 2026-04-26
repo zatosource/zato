@@ -120,7 +120,7 @@ class Create(AdminService):
                 pubsub_msg.username = input.username
                 pubsub_msg.password = input.password
 
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
             self.response.payload.id = auth.id
             self.response.payload.name = auth.name
@@ -195,7 +195,7 @@ class Edit(AdminService):
                 input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
 
                 # .. publish it ..
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 # .. build a message for pub/sub only if something has actually changed ..
                 has_sec_name_changed = input.name != old_name
@@ -274,7 +274,7 @@ class Delete(AdminService):
 
                 self.request.input.username = auth.username
 
-                self.broker_client.publish(self.request.input)
+                self.config_dispatcher.publish(self.request.input)
 
 # ################################################################################################################################
 # ################################################################################################################################

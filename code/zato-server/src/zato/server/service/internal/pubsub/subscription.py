@@ -367,7 +367,7 @@ class Create(AdminService):
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_CREATE.value
 
                 # .. our own process we invoke directly ..
-                self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(pubsub_msg)
+                self.server.worker_store.on_config_event_PUBSUB_SUBSCRIPTION_CREATE(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -545,7 +545,7 @@ class Edit(AdminService):
                 pubsub_msg.action = PUBSUB.SUBSCRIPTION_EDIT.value
 
                 # .. our own process we invoke directly ..
-                self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_EDIT(pubsub_msg)
+                self.server.worker_store.on_config_event_PUBSUB_SUBSCRIPTION_EDIT(pubsub_msg)
 
                 self.response.payload.id = sub.id
                 self.response.payload.sub_key = sub.sub_key
@@ -620,7 +620,7 @@ class Delete(AdminService):
 
         # .. our own consumer task (from the same process) we want to stop synchronously so we call the handler directly ..
         #if should_call_pubsub_consumer_backend:
-        self.server.worker_store.on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
+        self.server.worker_store.on_config_event_PUBSUB_SUBSCRIPTION_DELETE(pubsub_msg)
 
         # .. and now we can notify the pub/sub server, knowing that the consumer is already stopped.
 

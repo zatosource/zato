@@ -42,7 +42,7 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_OUTGOING_AMQP_CREATE(
+    def on_config_event_OUTGOING_AMQP_CREATE(
         self:'WorkerStore', # type: ignore
         msg:'Bunch',
     ) -> 'None':
@@ -53,7 +53,7 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_OUTGOING_AMQP_EDIT(
+    def on_config_event_OUTGOING_AMQP_EDIT(
         self:'WorkerStore', # type: ignore
         msg:'Bunch',
     ) -> 'None':
@@ -64,7 +64,7 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_OUTGOING_AMQP_DELETE(
+    def on_config_event_OUTGOING_AMQP_DELETE(
         self:'WorkerStore', # type: ignore
         msg:'Bunch',
     ) -> 'None':
@@ -74,7 +74,7 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CHANNEL_AMQP_CREATE(
+    def on_config_event_CHANNEL_AMQP_CREATE(
         self:'WorkerStore', # type: ignore
         msg:'Bunch',
     ) -> 'None':
@@ -84,7 +84,7 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CHANNEL_AMQP_EDIT(
+    def on_config_event_CHANNEL_AMQP_EDIT(
         self:'WorkerStore', # type: ignore
         msg:'Bunch',
     ) -> 'None':
@@ -93,7 +93,7 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CHANNEL_AMQP_DELETE(
+    def on_config_event_CHANNEL_AMQP_DELETE(
         self:'WorkerStore', # type: ignore
         msg:'Bunch',
     ) -> 'None':

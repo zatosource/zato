@@ -48,7 +48,7 @@ class _HTTPSOAPService:
         """ Notify worker threads of new or updated parameters.
         """
         params['action'] = action
-        self.broker_client.publish(params)
+        self.config_dispatcher.publish(params)
 
     def _handle_security_info(self, session, security_id, connection, transport):
         """ First checks whether the security type is correct for the given

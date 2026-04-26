@@ -236,7 +236,7 @@ class Edit(AdminService):
                 input.action = SERVICE.EDIT.value
                 input.impl_name = service.impl_name
                 input.name = service.name
-                self.broker_client.publish(input)
+                self.config_dispatcher.publish(input)
 
                 self.response.payload = service
                 internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
@@ -284,7 +284,7 @@ class Delete(AdminService):
                     'impl_name':service.impl_name,
                     'is_internal':service.is_internal,
                 }
-                self.broker_client.publish(msg)
+                self.config_dispatcher.publish(msg)
 
             except Exception:
                 session.rollback()

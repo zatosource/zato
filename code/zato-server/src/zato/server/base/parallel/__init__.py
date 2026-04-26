@@ -34,8 +34,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 # Zato
-from zato.broker import BrokerMessageReceiver
-from zato.broker.redis_client import BrokerClient
+from zato.common.config_dispatcher import ConfigDispatchReceiver, ConfigDispatcher
 from zato.bunch import Bunch
 from zato.common.api import API_Key, DATA_FORMAT, EnvFile, EnvVariable,  HotDeploy, SERVER_STARTUP, \
     SEC_DEF_TYPE, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
@@ -125,7 +124,7 @@ _needs_details = as_bool(os.environ.get('Zato_Needs_Details', False))
 # ################################################################################################################################
 # ################################################################################################################################
 
-class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
+class ParallelServer(ConfigDispatchReceiver, ConfigLoader, HTTPHandler):
     """ Main server process.
     """
     odb: 'ODBManager'
@@ -139,7 +138,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
     service_store: 'ServiceStore'
 
     rpc: 'ServerRPC'
-    broker_client: 'BrokerClient'
+    config_dispatcher: 'ConfigDispatcher'
     zato_lock_manager: 'LockManager'
     startup_callable_tool: 'StartupCallableTool'
     bearer_token_manager: 'BearerTokenManager'
@@ -921,7 +920,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
         # Set up the broker client
-        self.broker_client = BrokerClient(server=self)
+        self.config_dispatcher = ConfigDispatcher(server=self)
 
         self.pubsub_pattern_matcher = PatternMatcher()
         self.pubsub_subscriptions = SubscriptionsStore()
@@ -930,8 +929,8 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         self._load_pubsub_permissions()
 
         # Let the worker know the broker client is ready
-        self.worker_store.set_broker_client(self.broker_client)
-        self.worker_store.after_broker_client_set()
+        self.worker_store.set_config_dispatcher(self.config_dispatcher)
+        self.worker_store.after_config_dispatcher_set()
 
         self._after_init_accepted(locally_deployed)
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host, self.port, self.preferred_address, use_tls)
@@ -1090,11 +1089,11 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             is_static = event_path.endswith('.ini') or event_path.endswith('.zrules')
 
             if is_enmasse:
-                publish_enmasse(self.broker_client, cid, event_path)
+                publish_enmasse(self.config_dispatcher, cid, event_path)
             elif is_static:
-                publish_user_conf(self.broker_client, cid, event_path)
+                publish_user_conf(self.config_dispatcher, cid, event_path)
             else:
-                publish_file(self.broker_client, cid, event_path)
+                publish_file(self.config_dispatcher, cid, event_path)
 
         def _on_file_ready(event_path:'str') -> 'None':
             """ Called from the watchdog thread - bounces work to the gevent loop.
@@ -1465,7 +1464,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
     def invoke_startup_services(self) -> 'None':
         stanza = 'startup_services'
-        _invoke_startup_services('Parallel', stanza, self.fs_server_config, self.repo_location, self.broker_client, None)
+        _invoke_startup_services('Parallel', stanza, self.fs_server_config, self.repo_location, self.config_dispatcher, None)
 
 # ################################################################################################################################
 
@@ -1763,7 +1762,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
         can deploy a new package).
         """
         msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id} # type: ignore
-        self.broker_client.publish(msg)
+        self.config_dispatcher.publish(msg)
 
 # ################################################################################################################################
 # ################################################################################################################################

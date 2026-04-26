@@ -91,7 +91,7 @@ UUID = UUID # type: ignore
 if 0:
     from ddtrace._trace.context import Context as DatadogContext
     from logging import Logger
-    from zato.broker.client import BrokerClient
+    from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.audit import AuditPII
     from zato.common.crypto.api import ServerCryptoManager
     from zato.common.odb.api import ODBManager
@@ -112,7 +112,7 @@ if 0:
     modelnone = modelnone
     strdictnone = strdictnone
     AuditPII = AuditPII
-    BrokerClient = BrokerClient
+    ConfigDispatcher = ConfigDispatcher
     callable_ = callable_
     ConfigDict = ConfigDict
     ConfigStore = ConfigStore
@@ -393,7 +393,7 @@ class Service:
     keysight: 'KeysightContainer'
 
     server: 'ParallelServer'
-    broker_client: 'BrokerClient'
+    config_dispatcher: 'ConfigDispatcher'
     time: 'TimeUtil'
 
     # These two are the same
@@ -664,7 +664,7 @@ class Service:
         data_format,   # type: str
         transport,     # type: str
         server,        # type: ParallelServer
-        broker_client, # type: BrokerClient | None
+        config_dispatcher, # type: ConfigDispatcher | None
         worker_store,  # type: WorkerStore
         cid,           # type: str
         simple_io_config, # type: anydict
@@ -702,7 +702,7 @@ class Service:
         merge_channel_params = kwargs.get('merge_channel_params', True)
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
-        service.update(service, channel, server, broker_client, # type: ignore
+        service.update(service, channel, server, config_dispatcher, # type: ignore
             worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
             job_type=job_type, channel_params=channel_params,
             merge_channel_params=merge_channel_params, params_priority=params_priority,
@@ -955,7 +955,7 @@ class Service:
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-            self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), {})
+            self.config_dispatcher, self._worker_store, kwargs.pop('cid', self.cid), {})
 
         kwargs.update({
             'serialize':serialize,
@@ -1083,7 +1083,7 @@ class Service:
         if not isinstance(msg, dict):
             msg = {'msg': msg}
 
-        self.broker_client.publish(
+        self.config_dispatcher.publish(
             msg,
             exchange='pubsubapi',
             routing_key=topic,
@@ -1217,7 +1217,7 @@ class Service:
         service,               # type: Service
         channel_type,          # type: str
         server,                # type: ParallelServer
-        broker_client,         # type: BrokerClient
+        config_dispatcher,         # type: ConfigDispatcher
         _ignored,              # type: any_
         cid,                   # type: str
         payload,               # type: any_
@@ -1242,7 +1242,7 @@ class Service:
         wsgi_environ = wsgi_environ or {}
 
         service.server = server
-        service.broker_client = broker_client
+        service.config_dispatcher = config_dispatcher
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
@@ -1302,7 +1302,7 @@ class Service:
         service, _ = \
             self.server.service_store.new_instance_by_name(service_name, *args, **kwargs)
 
-        _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, broker_client=self.broker_client, _ignored=None,
+        _ = service.update(service, CHANNEL.NEW_INSTANCE, self.server, config_dispatcher=self.config_dispatcher, _ignored=None,
             cid=self.cid, payload=self.request.payload, raw_request=self.request.raw_request, wsgi_environ=self.wsgi_environ)
 
         return service

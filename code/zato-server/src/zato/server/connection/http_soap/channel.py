@@ -40,13 +40,13 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 if 0:
-    from zato.broker.client import BrokerClient
+    from zato.common.config_dispatcher import ConfigDispatcher
     from zato.common.typing_ import any_, anydict, anytuple, callable_, dictnone, stranydict, strlist, strstrdict
     from zato.server.service import Service
     from zato.server.base.parallel import ParallelServer
     from zato.server.base.worker import WorkerStore
     from zato.server.connection.http_soap.url_data import URLData
-    BrokerClient = BrokerClient
+    ConfigDispatcher = ConfigDispatcher
     ParallelServer = ParallelServer
     Service = Service
     URLData = URLData
@@ -731,7 +731,7 @@ class RequestHandler:
         # No cache for this channel or no cached response, invoke the service then.
         response = service.update_handle(self._set_response_data, service, raw_request,
             CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server,
-            cast_('BrokerClient', worker_store.broker_client),
+            cast_('ConfigDispatcher', worker_store.config_dispatcher),
             worker_store, cid, simple_io_config, wsgi_environ=wsgi_environ,
             url_match=url_match, channel_item=channel_item, channel_params=channel_params,
             merge_channel_params=channel_item.merge_url_params_req,
