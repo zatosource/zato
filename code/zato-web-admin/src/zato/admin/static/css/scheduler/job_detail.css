@@ -282,3 +282,15 @@ tbody.detail-dimmed > tr.detail-panel-row.expanded {
     display: block;
     flex-shrink: 0;
 }
+
+.detail-page-run img.help-icon[id=""] {
+    display: none;
+}
+
+.detail-page-run .dashboard-tabs {
+    display: none;
+}
+
+.progress-panel:has(.detail-page-run) {
+    padding-bottom: 24px;
+}
