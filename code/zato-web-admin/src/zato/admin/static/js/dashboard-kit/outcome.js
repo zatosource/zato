@@ -63,7 +63,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             }
         }
 
-        return '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + color + ';background:' + bg + '">' + label + '</span>';
+        var prefix = outcome === 'running' ? '<span class="badge-running-spinner"></span>' : '';
+        return '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + color + ';background:' + bg + '">' + prefix + label + '</span>';
     };
 
     /* Render a small status dot. `state` is one of 'running', 'paused',

@@ -61,6 +61,7 @@
 
 {% block detail_js %}
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/outcome.js"></script>
+<script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/record_detail.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/dashboard-kit/time_range.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/dashboard.js"></script>
 <script nonce="{{ CSP_NONCE }}" type="text/javascript" src="/static/js/scheduler/job_detail.js"></script>
@@ -72,8 +73,7 @@ $(document).ready(function() {
         '{{ job_id }}',
         '{{ cluster_id }}',
         {
-            poll_url: '{{ poll_url }}',
-            object_type: '{{ object_type }}'
+            poll_url: '{{ poll_url }}'
         }
     );
 });

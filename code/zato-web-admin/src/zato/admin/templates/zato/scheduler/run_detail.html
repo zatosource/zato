@@ -43,41 +43,32 @@ $(document).ready(function() {
     var tag_defs = detail.config.detail_tags;
     var job_data = {{ job_data|safe }};
 
-    var job_name = job_data.name || 'Job {{ job_id }}';
+    var job_name = job_data.name;
     $('#run-detail-job-link').text(job_name);
     $('#record-detail-title').text('Run ' + kit.format_number_full({{ run_number }}));
 
     kit.record_detail.init({
+        container: '#record-detail-log',
         cluster_id: '{{ cluster_id }}',
-        record_id: '{{ job_id }}',
+        record_id: {{ job_id }},
         run_number: {{ run_number }},
         poll_url: '{{ poll_url }}',
-        history_action: 'get-history',
+        run_action: 'get-run-detail',
         log_action: 'get-log-entries',
         object_id_field: 'job_id',
         run_id_field: 'current_run',
         poll_interval_ms: 5000,
         panel: panel_cfg,
         tag_defs: tag_defs,
+        nav_container_top: '#run-nav-top',
+        nav_container_bottom: '#run-nav-bottom',
+        build_run_url: function(run_number) {
+            return kit.urls.run_detail({{ job_id }}, run_number);
+        },
 
         render_mirror: function(record) {
             var run_number = kit.format_number_full(record.current_run);
-            var oc = panel_cfg.outcome_colors[record.outcome];
-            var outcome_label = record.outcome.replace(/_/g, ' ').toUpperCase();
-            var short_labels = dash.outcome_short_labels;
-            if (short_labels[record.outcome]) {
-                outcome_label = short_labels[record.outcome].toUpperCase();
-            }
-            var tooltip_attr = '';
-            if (record.outcome_ctx !== null) {
-                var tooltips = dash.outcome_tooltips;
-                if (tooltips[record.outcome]) {
-                    tooltip_attr = ' data-tippy-content="' + tooltips[record.outcome].replace('{ctx}', record.outcome_ctx) + '"';
-                }
-            }
-            var outcome_prefix = (record.outcome === 'running') ? '<span class="badge-running-spinner"></span>' : '';
-            var outcome_html = '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + oc.color + ';background:' + oc.bg + '">' + outcome_prefix + outcome_label + '</span>';
-
+            var outcome_html = kit.outcome.badge(record.outcome, panel_cfg.outcome_palette, record);
             var tag_html = kit.record_detail.render_dark_tags(record, tag_defs);
             var accent = panel_cfg.mirror_accent;
 
@@ -93,17 +84,6 @@ $(document).ready(function() {
             html += '</div>';
             html += '</div>';
             return html;
-        },
-
-        find_record: function(data, run_number) {
-            var rows = data.rows;
-            if (!rows) return null;
-            for (var idx = 0; idx < rows.length; idx++) {
-                if (rows[idx].current_run === run_number) {
-                    return rows[idx];
-                }
-            }
-            return null;
         }
     });
 
@@ -111,13 +91,11 @@ $(document).ready(function() {
 </script>
 {% endblock %}
 
-{% block stat_cards %}{% endblock %}
-{% block actions %}{% endblock %}
-{% block tabs %}{% endblock %}
-
 {% block tab_panels %}
+<div class="detail-pagination-controls" id="run-nav-top"></div>
 <div id="record-detail-log">
     <div class="detail-panel-log" data-since-idx="0" style="background:{{ '#232336' }};border:1px solid {{ '#3a3a52' }};font-size:12px;border-radius:4px;min-height:100px">
     </div>
 </div>
+<div class="detail-pagination-controls" id="run-nav-bottom"></div>
 {% endblock %}

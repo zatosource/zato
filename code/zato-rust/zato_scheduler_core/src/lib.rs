@@ -523,12 +523,13 @@ impl Scheduler {
     ) -> PyResult<Py<PyDict>> {
         let filter = parse_outcome_filter(&outcomes)?;
 
-        let (records, total) = py.detach(|| {
+        let (records, total, job_name) = py.detach(|| {
             let state = self.shared.state.lock();
             state.jobs.get(&job_id).map_or_else(
-                || (Vec::new(), 0),
+                || (Vec::new(), 0, String::new()),
                 |running_job| {
-                    filter.as_ref().map_or_else(
+                    let name = running_job.name.clone();
+                    let (page, total) = filter.as_ref().map_or_else(
                         || {
                             let total = running_job
                                 .history
@@ -563,12 +564,13 @@ impl Scheduler {
                             }
                             (page, total)
                         },
-                    )
+                    );
+                    (page, total, name)
                 },
             )
         });
 
-        history::records_page_to_py_dict(py, &records, total)
+        history::records_page_to_py_dict(py, &records, total, job_id, &job_name)
     }
 
     /// Returns records added since a given ISO timestamp, optionally filtered by outcome.
@@ -588,11 +590,12 @@ impl Scheduler {
         let filter = parse_outcome_filter(&outcomes)?;
         let since_owned = since_iso.to_string();
 
-        let (records, total) = py.detach(|| {
+        let (records, total, job_name) = py.detach(|| {
             let state = self.shared.state.lock();
             state.jobs.get(&job_id).map_or_else(
-                || (Vec::new(), 0),
+                || (Vec::new(), 0, String::new()),
                 |running_job| {
+                    let name = running_job.name.clone();
                     let mut records: Vec<ExecutionRecord> = Vec::new();
                     let mut total: usize = 0;
 
@@ -613,7 +616,7 @@ impl Scheduler {
                     }
 
                     records.reverse();
-                    (records, total)
+                    (records, total, name)
                 },
             )
         });
@@ -622,9 +625,58 @@ impl Scheduler {
         if records.is_empty() {
             out.set_item("rows", PyList::empty(py))?;
         } else {
-            out.set_item("rows", history::records_to_py_list(py, &records)?)?;
+            out.set_item("rows", history::records_to_py_list(py, &records, job_id, &job_name)?)?;
         }
         out.set_item("total", total)?;
+        Ok(out.unbind())
+    }
+
+    /// Returns a single execution record by run number, plus adjacent run numbers for navigation.
+    ///
+    /// Uses the two-phase `py.detach` pattern: the state mutex is locked and the
+    /// record is cloned into plain Rust data with the GIL released, then the
+    /// Python dict is built after the mutex is dropped and the GIL is reacquired.
+    #[pyo3(signature = (job_id, current_run))]
+    fn get_run_detail(&self, py: Python<'_>, job_id: i64, current_run: u32) -> PyResult<Py<PyDict>> {
+        let result = py.detach(|| {
+            let state = self.shared.state.lock();
+            state.jobs.get(&job_id).and_then(|running_job| {
+                let mut prev_run: Option<u32> = None;
+                let mut found: Option<ExecutionRecord> = None;
+                let mut next_run: Option<u32> = None;
+
+                for rec in &running_job.history {
+                    if found.is_some() {
+                        next_run = Some(rec.current_run);
+                        break;
+                    }
+                    if rec.current_run == current_run {
+                        found = Some(rec.clone());
+                    } else {
+                        prev_run = Some(rec.current_run);
+                    }
+                }
+
+                found.map(|rec| (rec, running_job.name.clone(), prev_run, next_run))
+            })
+        });
+
+        let out = PyDict::new(py);
+        if let Some((rec, job_name, prev_run, next_run)) = result {
+            out.set_item("record", history::record_to_py_dict(py, &rec, job_id, &job_name)?)?;
+            match prev_run {
+                Some(run) => out.set_item("prev_run", run)?,
+                None => out.set_item("prev_run", py.None())?,
+            }
+            match next_run {
+                Some(run) => out.set_item("next_run", run)?,
+                None => out.set_item("next_run", py.None())?,
+            }
+        } else {
+            out.set_item("record", py.None())?;
+            out.set_item("prev_run", py.None())?;
+            out.set_item("next_run", py.None())?;
+        }
         Ok(out.unbind())
     }
 

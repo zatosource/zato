@@ -433,10 +433,13 @@ class Invoke(AdminService):
 
     def _build_response(self, response:'any_') -> 'any_':
 
+        self.logger.warning('SEC-DEBUG-5 _build_response type=%s is_str=%s is_bytes=%s first_200=%r', type(response).__name__, isinstance(response, str), isinstance(response, bytes), str(response)[:200])
+
         if not isinstance(response, str):
             if not isinstance(response, bytes):
                 if hasattr(response, 'to_dict'):
                     response = response.to_dict() # type: ignore
+                self.logger.warning('SEC-DEBUG-5b about_to_json_dumps type=%s first_200=%r', type(response).__name__, str(response)[:200])
                 response = json_dumps(response)
 
         # Make sure what we return is a string ..

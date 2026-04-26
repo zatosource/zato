@@ -97,8 +97,17 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
     'interval_based': 'Interval-based'
 };
 
+$.fn.zato.scheduler.dashboard.outcome_palette = {
+    colors: $.fn.zato.scheduler.dashboard.outcome_colors,
+    bg_colors: $.fn.zato.scheduler.dashboard.outcome_bg_colors,
+    bar_colors: $.fn.zato.scheduler.dashboard.outcome_bar_colors,
+    labels: $.fn.zato.scheduler.dashboard.outcome_labels,
+    short_labels: $.fn.zato.scheduler.dashboard.outcome_short_labels,
+    tooltips: $.fn.zato.scheduler.dashboard.outcome_tooltips
+};
+
 // ////////////////////////////////////////////////////////////////////////////
-// Kit aliases — keep short references for code that used the old local names
+// Kit aliases - keep short references for code that used the old local names
 // ////////////////////////////////////////////////////////////////////////////
 
 (function() {
@@ -268,37 +277,6 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         }
         html += '</span>';
         return html;
-    };
-
-    // ////////////////////////////////////////////////////////////////////////
-    // Outcome badge (tinted background)
-    // ////////////////////////////////////////////////////////////////////////
-
-    dash.outcome_badge = function(outcome, record) {
-        var colors = dash.outcome_colors;
-        var bg_colors = dash.outcome_bg_colors;
-        var labels = dash.outcome_labels;
-        var color = colors[outcome];
-        var bg = bg_colors[outcome];
-        var label = labels[outcome];
-        var prefix = outcome === 'running' ? '<span class="badge-running-spinner"></span>' : '';
-        var tooltip_attr = '';
-
-        if (record) {
-            var short_labels = dash.outcome_short_labels;
-            if (short_labels[outcome]) {
-                label = short_labels[outcome];
-            }
-            if (record.outcome_ctx !== null) {
-                var tooltips = dash.outcome_tooltips;
-                if (tooltips[outcome]) {
-                    var tooltip_text = tooltips[outcome].replace('{ctx}', record.outcome_ctx);
-                    tooltip_attr = ' data-tippy-content="' + tooltip_text + '"';
-                }
-            }
-        }
-
-        return '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + color + ';background:' + bg + '">' + prefix + label + '</span>';
     };
 
     // ////////////////////////////////////////////////////////////////////////
@@ -877,7 +855,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var service_cell = $.fn.zato.data_table.service_text(job_service[entry.job_id], cluster_id);
             html += '<td><a href="' + kit.urls.object_detail(entry.job_id, {outcomes: dash.Outcome_All}) + '">' + entry.job_name + '</a></td>';
             html += '<td>' + service_cell + '</td>';
-            html += '<td>' + dash.outcome_badge(entry.outcome, entry) + '</td>';
+            html += '<td>' + kit.outcome.badge(entry.outcome, dash.outcome_palette, entry) + '</td>';
             html += '</tr>';
         }
 

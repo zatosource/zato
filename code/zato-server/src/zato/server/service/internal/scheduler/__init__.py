@@ -7,7 +7,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json
+
 from traceback import format_exc
 
 # ciso8601
@@ -22,7 +22,7 @@ from zato.common.defaults import default_cluster_id
 from zato.common.exception import ServiceMissingException, ZatoException
 from zato.common.odb.model import Cluster, IntervalBasedJob, Job, Service as ServiceModel
 from zato.common.util.sql import elems_with_opaque, parse_instance_opaque_attr, set_instance_opaque_attrs
-from zato.server.service import Int, Bool
+from zato.server.service import Int, Bool, List
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -466,64 +466,37 @@ class GetHistory(_SchedulerAdmin):
     """
     name = _service_name_prefix + 'get-history'
 
-    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', '-outcomes', '-running_runs'
+    input = Int('id'), Int('-page'), Int('-page_size'), '-since_ts', List('-outcomes'), List('-running_runs')
 
     def handle(self) -> 'None':
         try:
             job_id = self.request.input.id
             since_ts = self.request.input.get('since_ts')
-            outcomes_raw = self.request.input.get('outcomes')
-            if not outcomes_raw:
+            outcomes = self.request.input.get('outcomes')
+            if not outcomes:
                 outcomes = SCHEDULER.OUTCOME.All
-            else:
-                outcomes = json.loads(outcomes_raw)
-
-            from contextlib import closing
-            with closing(self.odb.session()) as session:
-                job_row = session.query(Job).filter_by(id=job_id).first()
-            if not job_row:
-                self.logger.info('Job %s not found in ODB, returning empty response', job_id)
-                self.response.payload = {'rows': [], 'total': 0}
-                return
-            job_name = job_row.name
 
             scheduler = self.server._scheduler
 
             if since_ts:
-                running_runs_raw = self.request.input.get('running_runs')
-                running_runs = json.loads(running_runs_raw) if running_runs_raw else []
-
-                # .. get_history_since now returns both rows and total in a single call ..
+                running_runs = self.request.input.get('running_runs') or []
                 result = scheduler.get_history_since(job_id, since_ts, outcomes, running_runs)
-                rows = []
-                for rec in result['rows']:
-                    rec['job_id'] = job_id
-                    rec['job_name'] = job_name
-                    rows.append(rec)
-                self.response.payload = {'rows': rows, 'total': result['total']}
+                self.response.payload = {'rows': result['rows'], 'total': result['total']}
             else:
                 page = self.request.input.get('page')
                 if not page:
                     page = default_page
-                else:
-                    page = int(page)
 
                 page_size = self.request.input.get('page_size')
                 if not page_size:
                     page_size = default_page_size
-                else:
-                    page_size = int(page_size)
+
                 offset = (page - 1) * page_size
 
                 result = scheduler.get_history_page(job_id, offset, page_size, outcomes)
-                rows = []
-                for rec in result['records']:
-                    rec['job_id'] = job_id
-                    rec['job_name'] = job_name
-                    rows.append(rec)
 
                 self.response.payload = {
-                    'rows': rows,
+                    'rows': result['records'],
                     'total': result['total'],
                     'page': page,
                     'page_size': page_size,
@@ -532,6 +505,23 @@ class GetHistory(_SchedulerAdmin):
         except Exception:
             self.logger.error('Could not get job history, e:`%s`', format_exc())
             raise
+
+# ################################################################################################################################
+# ################################################################################################################################
+
+class GetRunDetail(_SchedulerAdmin):
+    """ Returns a single execution record by run number with prev/next navigation metadata.
+    """
+    name = _service_name_prefix + 'get-run-detail'
+
+    input = Int('job_id'), Int('current_run')
+
+    def handle(self) -> 'None':
+        result = self.server._scheduler.get_run_detail(
+            self.request.input.job_id,
+            self.request.input.current_run,
+        )
+        self.response.payload = result
 
 # ################################################################################################################################
 # ################################################################################################################################

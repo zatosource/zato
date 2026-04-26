@@ -10,15 +10,18 @@ use pyo3::types::{PyDict, PyList};
 
 /// Converts a single execution record into a Python dictionary.
 ///
-/// Includes a `log_summary` dict with per-level counts (cheap, no message bodies).
+/// Includes `job_id` and `job_name` from the owning `RunningJob`, plus a
+/// `log_summary` dict with per-level counts (cheap, no message bodies).
 ///
 /// # Errors
 ///
 /// Returns a `PyErr` if any dict key/value insertion fails.
-fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bound<'py, PyDict>> {
+pub fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord, job_id: i64, job_name: &str) -> PyResult<Bound<'py, PyDict>> {
     const LOG_KEYS: [&str; 4] = ["system", "info", "warn", "error"];
 
     let out = PyDict::new(py);
+    out.set_item("job_id", job_id)?;
+    out.set_item("job_name", job_name)?;
     out.set_item("planned_fire_time_iso", &rec.planned_fire_time_iso)?;
     out.set_item("actual_fire_time_iso", &rec.actual_fire_time_iso)?;
     out.set_item("delay_ms", rec.delay_ms)?;
@@ -60,13 +63,15 @@ fn record_to_py_dict<'py>(py: Python<'py>, rec: &ExecutionRecord) -> PyResult<Bo
 
 /// Converts a slice of execution records into a Python list of dictionaries.
 ///
+/// Each dict includes `job_id` and `job_name` from the owning `RunningJob`.
+///
 /// # Errors
 ///
 /// Returns a `PyErr` if record conversion or list insertion fails.
-pub fn records_to_py_list(py: Python<'_>, records: &[ExecutionRecord]) -> PyResult<Py<PyList>> {
+pub fn records_to_py_list(py: Python<'_>, records: &[ExecutionRecord], job_id: i64, job_name: &str) -> PyResult<Py<PyList>> {
     let list = PyList::empty(py);
     for rec in records {
-        list.append(record_to_py_dict(py, rec)?)?;
+        list.append(record_to_py_dict(py, rec, job_id, job_name)?)?;
     }
     Ok(list.unbind())
 }
@@ -74,14 +79,22 @@ pub fn records_to_py_list(py: Python<'_>, records: &[ExecutionRecord]) -> PyResu
 /// Converts a page of execution records and total count into a Python dictionary
 /// with `records` and `total` keys.
 ///
+/// Each record dict includes `job_id` and `job_name` from the owning `RunningJob`.
+///
 /// # Errors
 ///
 /// Returns a `PyErr` if record conversion or dict insertion fails.
-pub fn records_page_to_py_dict(py: Python<'_>, records: &[ExecutionRecord], total: usize) -> PyResult<Py<PyDict>> {
+pub fn records_page_to_py_dict(
+    py: Python<'_>,
+    records: &[ExecutionRecord],
+    total: usize,
+    job_id: i64,
+    job_name: &str,
+) -> PyResult<Py<PyDict>> {
     let out = PyDict::new(py);
     let list = PyList::empty(py);
     for rec in records {
-        list.append(record_to_py_dict(py, rec)?)?;
+        list.append(record_to_py_dict(py, rec, job_id, job_name)?)?;
     }
     out.set_item("records", list)?;
     out.set_item("total", total)?;

@@ -42,12 +42,24 @@ $.fn.zato.scheduler.job_detail.config = {
         },
         ts_color: '#9e9eaf',
         msg_color: '#e0e0ea',
-        outcome_colors: {
-            'ok':      { color: '#7ab8f0', bg: 'rgba(91, 155, 213, 0.22)' },
-            'error':   { color: '#f06060', bg: 'rgba(224, 82, 82, 0.22)' },
-            'timeout': { color: '#e8b830', bg: 'rgba(212, 160, 23, 0.22)' },
-            'running': { color: '#bbb',    bg: 'rgba(187, 187, 187, 0.15)' },
-            'skipped_already_in_flight': { color: '#c4a8e8', bg: 'rgba(167, 134, 213, 0.22)' }
+        outcome_palette: {
+            colors: {
+                'ok': '#7ab8f0',
+                'error': '#f06060',
+                'timeout': '#e8b830',
+                'running': '#bbb',
+                'skipped_already_in_flight': '#c4a8e8'
+            },
+            bg_colors: {
+                'ok': 'rgba(91, 155, 213, 0.22)',
+                'error': 'rgba(224, 82, 82, 0.22)',
+                'timeout': 'rgba(212, 160, 23, 0.22)',
+                'running': 'rgba(187, 187, 187, 0.15)',
+                'skipped_already_in_flight': 'rgba(167, 134, 213, 0.22)'
+            },
+            labels: $.fn.zato.scheduler.dashboard.outcome_labels,
+            short_labels: $.fn.zato.scheduler.dashboard.outcome_short_labels,
+            tooltips: $.fn.zato.scheduler.dashboard.outcome_tooltips
         }
     }
 };
@@ -121,7 +133,7 @@ $.fn.zato.scheduler.job_detail._apply_outcome_filter = function(hidden) {
     }
 
     if (detail._pagination) {
-        detail._pagination.set_filters({outcomes: JSON.stringify(visible)});
+        detail._pagination.set_filters({outcomes: visible});
     }
     detail._redraw();
 };
@@ -749,72 +761,14 @@ $.fn.zato.scheduler.job_detail._generate_fake_tags = function(run) {
 // Render history table (grouped, paginated)
 // ////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.scheduler.job_detail._render_tag_badges = function(record) {
-    var detail = $.fn.zato.scheduler.job_detail;
-    var tag_defs = detail.config.detail_tags;
-    var tags = record.log_summary;
-    var html = '';
-    for (var t = 0; t < tag_defs.length; t++) {
-        var def = tag_defs[t];
-        var count = tags[def.key];
-        if (count > 0) {
-            var style = 'color:' + def.color + ';background:' + def.bg;
-            if (def.dimmed) style += ';opacity:0.75';
-            html += '<span class="detail-tag" data-key="' + def.key + '" style="' + style + '">' +
-                def.label + ' x' + count + '</span>';
-        }
-    }
-    return html;
-};
-
-$.fn.zato.scheduler.job_detail._render_dark_tag_badges = function(record) {
-    var detail = $.fn.zato.scheduler.job_detail;
-    var tag_defs = detail.config.detail_tags;
-    var tags = record.log_summary;
-    var html = '';
-    for (var t = 0; t < tag_defs.length; t++) {
-        var def = tag_defs[t];
-        var count = tags[def.key];
-        if (count > 0) {
-            var style = 'color:' + def.dark_color + ';background:' + def.dark_bg;
-            if (def.dimmed) style += ';opacity:0.75';
-            html += '<span class="detail-tag" data-key="' + def.key + '" style="' + style + '">' +
-                def.label + ' x' + count + '</span>';
-        }
-    }
-    return html;
-};
-
 $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
     var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
     var cfg = detail.config.detail_panel;
 
     var run_number = kit.format_number_full(record.current_run);
-
-    // .. build outcome badge from brighter config colors
-    var dashboard = detail._dashboard();
-    var oc = cfg.outcome_colors[record.outcome];
-    var outcome_label = record.outcome.replace(/_/g, ' ').toUpperCase();
-    var tooltip_attr = '';
-    var short_labels = dashboard.outcome_short_labels;
-
-    if (short_labels[record.outcome]) {
-        outcome_label = short_labels[record.outcome].toUpperCase();
-    }
-
-    if (record.outcome_ctx !== null) {
-        var tooltips = dashboard.outcome_tooltips;
-        if (tooltips[record.outcome]) {
-            var tooltip_text = tooltips[record.outcome].replace('{ctx}', record.outcome_ctx);
-            tooltip_attr = ' data-tippy-content="' + tooltip_text + '"';
-        }
-    }
-
-    var outcome_prefix = (record.outcome === 'running') ? '<span class="badge-running-spinner"></span>' : '';
-    var outcome_html = '<span class="dashboard-outcome-badge"' + tooltip_attr + ' style="color:' + oc.color + ';background:' + oc.bg + '">' + outcome_prefix + outcome_label + '</span>';
-
-    var tag_html = detail._render_dark_tag_badges(record);
+    var outcome_html = kit.outcome.badge(record.outcome, cfg.outcome_palette, record);
+    var tag_html = kit.record_detail.render_tags(record, detail.config.detail_tags, 'dark');
 
     var accent = cfg.mirror_accent;
     var html = '<div class="detail-log-line detail-log-mirror" style="border-bottom:1px solid ' + cfg.row_border + '">';
@@ -847,65 +801,6 @@ $.fn.zato.scheduler.job_detail._render_panel_row = function(run) {
     return html;
 };
 
-$.fn.zato.scheduler.job_detail._render_log_entry = function(entry, is_last) {
-    var detail = $.fn.zato.scheduler.job_detail;
-    var kit = $.fn.zato.dashboard_kit;
-    var cfg = detail.config.detail_panel;
-    var level_key = entry.level.toUpperCase();
-    if (level_key === 'WARNING') level_key = 'WARN';
-    if (level_key === 'CRITICAL') level_key = 'ERROR';
-    var lc = cfg.level_colors[level_key];
-    var border_style = is_last ? '' : 'border-bottom:1px solid ' + cfg.row_border + ';';
-
-    var escaped_msg = entry.message.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    var highlighted_msg = kit.syntax_highlight(entry.message);
-    var html = '<div class="detail-log-line" style="' + border_style + '">';
-    html += '<div class="detail-log-stripe" style="background:' + lc.stripe + '"></div>';
-    html += '<div class="detail-log-ts" style="color:' + cfg.ts_color + '">' + kit.format_local_time(entry.timestamp_iso) + '</div>';
-    html += '<div class="detail-log-level-col"><span class="detail-log-level" style="color:' + lc.badge_fg + ';background:' + lc.badge_bg + '">' + entry.level + '</span></div>';
-    html += '<div class="detail-log-msg" data-raw="' + escaped_msg + '" style="color:' + cfg.msg_color + '">' + highlighted_msg + '</div>';
-    html += '<div class="detail-log-actions"><span class="dashboard-panel-action-badge detail-action-copy-row" style="color:#aaa;background:rgba(255,255,255,0.08)">Copy</span></div>';
-    html += '</div>';
-    return html;
-};
-
-$.fn.zato.scheduler.job_detail._fetch_and_render_log_entries = function($panel_log, job_id, current_run) {
-    var detail = $.fn.zato.scheduler.job_detail;
-    var since_idx = parseInt($panel_log.attr('data-since-idx'), 10);
-
-    $.ajax({
-        type: 'POST',
-        url: detail._poll_config.poll_url,
-        headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        data: JSON.stringify({
-            action: 'get-log-entries',
-            job_id: job_id,
-            current_run: current_run,
-            since_idx: since_idx,
-            cluster_id: detail.config.cluster_id
-        }),
-        contentType: 'application/json',
-        error: function(xhr, status, err) {
-            console.error('Log fetch error: status=' + xhr.status + ' err=' + err);
-        },
-        success: function(data) {
-            var entries = data.entries;
-            if (entries.length === 0) return;
-            for (var idx = 0; idx < entries.length; idx++) {
-                var is_last = (idx === entries.length - 1) && ($panel_log.children().length === 0 || idx === entries.length - 1);
-                var entry_html = detail._render_log_entry(entries[idx], false);
-                var $entry = $(entry_html).addClass('kit-fade-in');
-                $panel_log.append($entry);
-                $entry.one('animationend', function() { $(this).removeClass('kit-fade-in'); });
-            }
-
-            // .. remove border from last child ..
-            $panel_log.children('.detail-log-line').last().css('border-bottom', '');
-            $panel_log.attr('data-since-idx', since_idx + entries.length);
-        }
-    });
-};
-
 $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class) {
     var kit = $.fn.zato.dashboard_kit;
     var detail = $.fn.zato.scheduler.job_detail;
@@ -917,14 +812,14 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
         duration_raw = duration_raw - (duration_raw % 1000);
     }
     var duration = dashboard.format_duration(duration_raw);
-    var outcome = dashboard.outcome_badge(record.outcome, record);
+    var outcome = kit.outcome.badge(record.outcome, dashboard.outcome_palette, record);
     var run_number = kit.format_number_full(record.current_run);
 
     var row_ts = record.actual_fire_time_iso;
     var run_attr = record.current_run;
     var cls = extra_class ? ' class="' + extra_class + '"' : '';
     var is_skipped = record.outcome.indexOf('skipped') === 0;
-    var tag_html = is_skipped ? '-' : detail._render_tag_badges(record);
+    var tag_html = is_skipped ? '-' : kit.record_detail.render_tags(record, detail.config.detail_tags, 'light');
 
     var run_href = kit.urls.run_detail(detail._object_id, record.current_run);
     var row = '<tr' + cls + ' data-ts="' + row_ts + '" data-run="' + run_attr + '">';
@@ -1017,43 +912,6 @@ $.fn.zato.scheduler.job_detail._flush_buffered_rows = function($body) {
     detail._buffered_chart_rows = null;
 };
 
-$.fn.zato.scheduler.job_detail._build_enabled_levels = function() {
-    var levels = {};
-    var tag_defs = $.fn.zato.scheduler.job_detail.config.detail_tags;
-    for (var t = 0; t < tag_defs.length; t++) {
-        levels[tag_defs[t].key] = true;
-    }
-    return levels;
-};
-
-$.fn.zato.scheduler.job_detail._apply_level_filter = function($panel) {
-    var levels = $panel.data('enabled-levels');
-    var tag_defs = $.fn.zato.scheduler.job_detail.config.detail_tags;
-    $panel.find('.detail-log-line').not('.detail-log-mirror').each(function() {
-        var $line = $(this);
-        var level_text = $line.find('.detail-log-level').text().trim().toLowerCase();
-        $line.css('opacity', levels[level_text] ? '' : '0.15');
-    });
-
-    // .. update badge appearance
-    $panel.find('.detail-log-mirror .detail-tag').each(function() {
-        var $tag = $(this);
-        var key = $tag.attr('data-key');
-        if (levels[key]) {
-            var base_opacity = '';
-            for (var t = 0; t < tag_defs.length; t++) {
-                if (tag_defs[t].key === key && tag_defs[t].dimmed) {
-                    base_opacity = '0.75';
-                    break;
-                }
-            }
-            $tag.css({'opacity': base_opacity, 'text-decoration': ''});
-        } else {
-            $tag.css({'opacity': '0.3', 'text-decoration': 'line-through'});
-        }
-    });
-};
-
 $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
     var detail = $.fn.zato.scheduler.job_detail;
     var cfg = detail.config.detail_panel;
@@ -1077,18 +935,36 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
                 $panel_log.children('.detail-log-line').remove();
                 $panel_log.prepend(mirror_html);
                 detail._init_outcome_tooltips($panel);
-                $panel.data('enabled-levels', detail._build_enabled_levels());
+                var panel_config = {
+                    poll_url: detail._poll_config.poll_url,
+                    log_action: 'get-log-entries',
+                    cluster_id: detail.config.cluster_id,
+                    object_id_field: 'job_id',
+                    run_id_field: 'current_run',
+                    record_id: detail._object_id,
+                    panel: cfg,
+                    poll_interval_ms: 1000
+                };
+                $panel.data('enabled-levels', kit.record_detail.build_enabled_levels(detail.config.detail_tags));
                 $data_row.css('display', 'none');
                 $panel.css('box-shadow', cfg.shadow);
-                detail._fetch_and_render_log_entries($panel_log, detail._object_id, record.current_run);
+                kit.record_detail._fetch_logs($panel_log, {
+                    object_id: detail._object_id,
+                    run_id: record.current_run,
+                    since_idx: 0
+                }, panel_config);
 
-                // .. poll for new log entries while panel is open
                 var log_poll_id = setInterval(function() {
                     if (!$panel.hasClass('expanded')) {
                         clearInterval(log_poll_id);
                         return;
                     }
-                    detail._fetch_and_render_log_entries($panel_log, detail._object_id, record.current_run);
+                    var since_idx = parseInt($panel_log.attr('data-since-idx'), 10);
+                    kit.record_detail._fetch_logs($panel_log, {
+                        object_id: detail._object_id,
+                        run_id: record.current_run,
+                        since_idx: since_idx
+                    }, panel_config);
                 }, 1000);
                 $panel.data('log-poll-id', log_poll_id);
             } else {
@@ -1130,7 +1006,7 @@ $.fn.zato.scheduler.job_detail._bind_panel_toggles = function($body) {
         var $panel = $tag.closest('tr.detail-panel-row');
         var levels = $panel.data('enabled-levels');
         levels[key] = !levels[key];
-        detail._apply_level_filter($panel);
+        kit.record_detail.apply_level_filter($panel, levels, detail.config.detail_tags);
     });
 
     // .. close button (delegated)
@@ -1281,14 +1157,13 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
     var poll_config = detail._poll_config;
 
     var initial_visible = detail._get_visible_outcomes();
-    var initial_outcomes = JSON.stringify(initial_visible);
 
     detail._pagination = kit.pagination.init({
         poll_url: poll_config.poll_url,
-        object_type: poll_config.object_type,
+        action: 'get-history',
         object_id: detail._object_id,
         page_size: 50,
-        filters: {outcomes: initial_outcomes},
+        filters: {outcomes: initial_visible},
         ts_field: 'actual_fire_time_iso',
         get_active_items: function() {
             var runs = [];
@@ -1484,9 +1359,21 @@ $.fn.zato.scheduler.job_detail.render_history_table = function() {
                             detail._init_outcome_tooltips($panel);
                             $panel.css('box-shadow', cfg.shadow);
 
-                            // .. fetch new log entries for the open panel ..
                             var $panel_log = $panel.find('.detail-panel-log');
-                            detail._fetch_and_render_log_entries($panel_log, detail._object_id, rec.current_run);
+                            var since_idx = parseInt($panel_log.attr('data-since-idx'), 10);
+                            kit.record_detail._fetch_logs($panel_log, {
+                                object_id: detail._object_id,
+                                run_id: rec.current_run,
+                                since_idx: since_idx
+                            }, {
+                                poll_url: detail._poll_config.poll_url,
+                                log_action: 'get-log-entries',
+                                cluster_id: detail.config.cluster_id,
+                                object_id_field: 'job_id',
+                                run_id_field: 'current_run',
+                                record_id: detail._object_id,
+                                panel: cfg
+                            });
                         }
                     }
                 } else if (detail._polling_paused_by_panel) {
@@ -1803,7 +1690,7 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
 
         var pop_visible = detail._get_visible_outcomes();
         if (detail._pagination) {
-            detail._pagination.set_filters({outcomes: JSON.stringify(pop_visible)});
+            detail._pagination.set_filters({outcomes: pop_visible});
         }
         detail._build_legend();
         detail._redraw();

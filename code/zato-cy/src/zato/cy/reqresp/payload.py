@@ -238,7 +238,7 @@ class SimpleIOPayload:
             return out
 
     def append(self, value):
-        self.user_attrs_list.append(value)
+        self.user_attrs_list.append(self._extract_payload_attrs(value))
         self.output_repeated = True
 
 # ################################################################################################################################

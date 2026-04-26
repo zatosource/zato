@@ -8,10 +8,10 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
     kit.pagination.init = function(config) {
         var poll_url = config.poll_url;
-        var object_type = config.object_type;
+        var action = config.action;
         var object_id = config.object_id;
         var page_size = config.page_size;
-        var filters = config.filters || {};
+        var filters = config.filters;
         var $body = $(config.table_body);
         var csrf_token = $.cookie('csrftoken');
         var render_page = config.render_page;
@@ -20,7 +20,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var ts_field = config.ts_field;
         var on_new_rows = config.on_new_rows;
         var get_active_items = config.get_active_items;
-        var active_items_field = config.active_items_field || 'active_items';
+        var active_items_field = config.active_items_field;
 
         var current_page = 1;
         var total_count = 0;
@@ -28,7 +28,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         var show_all = false;
 
         function build_request(extra) {
-            var data = {object_type: object_type, id: object_id};
+            var data = {action: action, id: object_id};
             for (var fk in filters) {
                 data[fk] = filters[fk];
             }
@@ -118,7 +118,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
         function update_last_ts(rows) {
             for (var i = 0; i < rows.length; i++) {
-                var ts = rows[i][ts_field] || '';
+                var ts = rows[i][ts_field];
                 if (ts > last_ts) {
                     last_ts = ts;
                 }
@@ -133,15 +133,16 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $.ajax({
                 url: poll_url,
                 type: 'POST',
-                data: build_request({page: page, page_size: page_size}),
+                data: JSON.stringify(build_request({page: page, page_size: page_size})),
+                contentType: 'application/json',
                 headers: {'X-CSRFToken': csrf_token},
                 success: function(data) {
                     if (typeof data === 'string') {
                         data = JSON.parse(data);
                     }
-                    var rows = data.rows || [];
-                    total_count = data.total || 0;
-                    current_page = data.page || page;
+                    var rows = data.rows;
+                    total_count = data.total;
+                    current_page = data.page;
 
                     render_page($body, rows, total_count);
 
@@ -159,14 +160,15 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $.ajax({
                 url: poll_url,
                 type: 'POST',
-                data: build_request({page: 1, page_size: 100000}),
+                data: JSON.stringify(build_request({page: 1, page_size: 100000})),
+                contentType: 'application/json',
                 headers: {'X-CSRFToken': csrf_token},
                 success: function(data) {
                     if (typeof data === 'string') {
                         data = JSON.parse(data);
                     }
                     var rows = data.rows;
-                    total_count = data.total || 0;
+                    total_count = data.total;
                     render_page($body, rows);
                     update_last_ts(rows);
                     update_controls();
@@ -185,13 +187,14 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             if (get_active_items) {
                 var active = get_active_items();
                 if (active.length > 0) {
-                    poll_extra[active_items_field] = JSON.stringify(active);
+                    poll_extra[active_items_field] = active;
                 }
             }
             $.ajax({
                 url: poll_url,
                 type: 'POST',
-                data: build_request(poll_extra),
+                data: JSON.stringify(build_request(poll_extra)),
+                contentType: 'application/json',
                 headers: {'X-CSRFToken': csrf_token},
                 success: function(data) {
                     if (typeof data === 'string') {
@@ -201,9 +204,7 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
                     if (rows.length === 0) return;
 
                     update_last_ts(rows);
-                    if (data.total !== undefined) {
-                        total_count = data.total;
-                    }
+                    total_count = data.total;
 
                     render_new($body, rows, show_all ? Infinity : page_size);
 

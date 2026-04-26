@@ -122,7 +122,6 @@ def job_detail(req, job_id:'int'):
         'job_data': json.dumps(job_data),
         'dashboard_base_url': dashboard_base_url,
         'poll_url': '/zato/dashboard/detail-poll/',
-        'object_type': 'scheduler-job',
         'zato_clusters': True,
         'zato_template_name': 'zato/scheduler/job_detail.html',
     })
@@ -154,7 +153,6 @@ def run_detail(req, job_id:'int', run_number:'int'):
         'job_data': json.dumps(job_data),
         'dashboard_base_url': dashboard_base_url,
         'poll_url': '/zato/dashboard/detail-poll/',
-        'object_type': 'scheduler-job',
         'zato_clusters': True,
         'zato_template_name': 'zato/scheduler/run_detail.html',
     })
