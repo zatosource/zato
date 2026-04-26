@@ -776,8 +776,10 @@ $.fn.zato.scheduler.job_detail._render_mirror_row = function(record) {
     var action_style = 'color:#aaa;background:rgba(255,255,255,0.08)';
     html += '<div class="detail-log-msg" style="color:' + cfg.owner_color + '">' + tag_html + '</div>';
     html += '<div class="detail-log-actions">';
-    html += '<span class="dashboard-panel-action-badge detail-action-toggle-all" style="' + action_style + '">Toggle all</span>';
-    html += '<span class="dashboard-panel-action-badge detail-action-copy-all" style="' + action_style + '">Copy</span>';
+    if (record.outcome.indexOf('skipped') !== 0) {
+        html += '<span class="dashboard-panel-action-badge detail-action-toggle-all" style="' + action_style + '">Toggle all</span>';
+        html += '<span class="dashboard-panel-action-badge detail-action-copy-all" style="' + action_style + '">Copy</span>';
+    }
     html += '<span class="dashboard-panel-action-badge detail-action-close" style="' + action_style + '">Close</span>';
     html += '</div>';
     html += '</div>';

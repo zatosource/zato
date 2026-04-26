@@ -328,7 +328,7 @@ pub fn collect_due_jobs(
         deferred_log!(
             deferred,
             log::Level::Info,
-            "Executing name={} run={} service={} delay_ms={delay_ms} job_id={job_id}",
+            "Job executing: name={} run={} service={} delay_ms={delay_ms} job_id={job_id}",
             running_job.name,
             running_job.current_run,
             running_job.service,

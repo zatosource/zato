@@ -377,7 +377,7 @@ impl Scheduler {
                 deferred_log!(
                     deferred,
                     log::Level::Info,
-                    "Completed name={} run={current_run} outcome={outcome} duration_ms={duration_ms} job_id={job_id}",
+                    "Job completed: name={} run={current_run} outcome={outcome} duration_ms={duration_ms} job_id={job_id}",
                     running_job.name,
                 );
                 running_job.in_flight = false;

@@ -177,15 +177,13 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         });
 
         $container.on('click', '.detail-action-toggle-all', function() {
-            var any_off = false;
-            for (var key in enabled_levels) {
-                if (!enabled_levels[key]) { any_off = true; break; }
+            var $lines = $container.find('.detail-log-line').not('.detail-log-mirror');
+            var any_expanded = $lines.filter('.detail-log-line-expanded').length > 0;
+            if (any_expanded) {
+                $lines.removeClass('detail-log-line-expanded');
+            } else {
+                $lines.addClass('detail-log-line-expanded');
             }
-            var new_val = any_off;
-            for (var key2 in enabled_levels) {
-                enabled_levels[key2] = new_val;
-            }
-            kit.record_detail.apply_level_filter($container, enabled_levels, tag_defs);
         });
 
         $container.on('click', '.detail-action-copy-row', function(e) {
