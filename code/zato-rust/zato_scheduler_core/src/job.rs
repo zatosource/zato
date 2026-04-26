@@ -357,7 +357,14 @@ impl RunningJob {
             log::info!("advance_to_next: job={} reached max repeats={max}, cleared next_fire", self.name);
             return;
         }
-        self.compute_next_fire(now);
+        // Use whichever is later - the current fire time or wall-clock now.
+        // When the coalesce window fires a job slightly early (now < fire_utc),
+        // searching from `now` would land on the same fire time again.
+        let reference = match self.next_fire_utc {
+            Some(fire) if fire > now => fire,
+            _ => now,
+        };
+        self.compute_next_fire(reference);
         log::info!(
             "advance_to_next: job={} after compute_next_fire, new next_fire={:?}",
             self.name, self.next_fire_utc,

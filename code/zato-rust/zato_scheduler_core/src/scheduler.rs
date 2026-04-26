@@ -266,18 +266,34 @@ fn load_initial_jobs(shared: &SchedulerShared, odb_adapter: &PyObject) {
 #[must_use]
 pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
     let now = Utc::now();
+    let now_instant = Instant::now();
     let mut min_ms: i64 = 60_000;
-    let mut closest_job_name: Option<&str> = None;
+    let mut closest_reason: Option<&str> = None;
 
     for running_job in state.jobs.values() {
         if !running_job.is_active {
             continue;
         }
+
+        if running_job.in_flight {
+            if let Some(since) = running_job.in_flight_since {
+                let elapsed_ms =
+                    i64::try_from(now_instant.saturating_duration_since(since).as_millis()).unwrap_or(i64::MAX);
+                let limit_ms = i64::try_from(running_job.max_execution_time_ms).unwrap_or(i64::MAX);
+                let until_timeout_ms = (limit_ms - elapsed_ms).max(1);
+                if until_timeout_ms < min_ms {
+                    min_ms = until_timeout_ms;
+                    closest_reason = Some("in_flight_timeout");
+                }
+            }
+            continue;
+        }
+
         if let Some(fire_utc) = running_job.next_fire_utc {
             let diff = (fire_utc - now).num_milliseconds();
             if diff < min_ms {
                 min_ms = diff;
-                closest_job_name = Some(&running_job.name);
+                closest_reason = Some(&running_job.name);
             }
         }
     }
@@ -287,13 +303,13 @@ pub fn compute_sleep_duration(state: &SchedulerState) -> Duration {
         if drip_ms < min_ms {
             log::info!("compute_sleep: drip shortens sleep from {min_ms}ms to {drip_ms}ms");
             min_ms = drip_ms;
+            closest_reason = Some("synthetic_drip");
         }
     }
 
     let clamped = min_ms.max(1);
     log::info!(
-        "compute_sleep: now={now} min_ms={min_ms} clamped={clamped} closest_job={:?}",
-        closest_job_name,
+        "compute_sleep: now={now} min_ms={min_ms} clamped={clamped} closest={closest_reason:?}",
     );
     Duration::from_millis(u64::try_from(clamped).unwrap_or(1))
 }

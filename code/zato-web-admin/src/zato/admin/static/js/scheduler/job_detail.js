@@ -895,7 +895,11 @@ $.fn.zato.scheduler.job_detail._render_single_row = function(record, extra_class
     var dashboard = detail._dashboard();
     var actual_time = kit.format_local_time(record.actual_fire_time_iso);
     var delay = record.delay_ms >= detail.config.min_visible_delay_ms ? kit.format_number_full(record.delay_ms) + ' ms' : '-';
-    var duration = dashboard.format_duration(record.duration_ms);
+    var duration_raw = record.duration_ms;
+    if (duration_raw !== null && duration_raw < 60000 && duration_raw % 1000 < 50) {
+        duration_raw = duration_raw - (duration_raw % 1000);
+    }
+    var duration = dashboard.format_duration(duration_raw);
     var outcome = dashboard.outcome_badge(record.outcome, record);
     var run_number = kit.format_number_full(record.current_run);
 
@@ -1587,15 +1591,22 @@ $.fn.zato.scheduler.job_detail.init_tabs = function() {
 // Poll - incremental new rows via pagination handle + metadata via dashboard
 // ////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.scheduler.job_detail._poll_in_flight = false;
+
 $.fn.zato.scheduler.job_detail.poll = function() {
     var detail = $.fn.zato.scheduler.job_detail;
+
+    if (detail._poll_in_flight) {
+        return;
+    }
+    detail._poll_in_flight = true;
+
     var job_id = detail._object_id;
     var job_name = detail._job_data.name;
 
-    if (detail._pagination) {
-        detail._pagination.poll_new();
-    }
-
+    // Serialize: first fetch the dashboard state, then poll for new rows.
+    // The server is single-threaded, so concurrent requests queue up and
+    // can starve page navigations.
     $.ajax({
         url: '/zato/scheduler/dashboard/poll/',
         type: 'POST',
@@ -1622,7 +1633,12 @@ $.fn.zato.scheduler.job_detail.poll = function() {
             var next_fire = detail._job_data.next_fire_utc;
             $('#header-next-fire').text(next_fire ? $.fn.zato.dashboard_kit.format_local_time(next_fire) : '-');
         },
-        error: function() {}
+        complete: function() {
+            if (detail._pagination) {
+                detail._pagination.poll_new();
+            }
+            detail._poll_in_flight = false;
+        }
     });
 };
 

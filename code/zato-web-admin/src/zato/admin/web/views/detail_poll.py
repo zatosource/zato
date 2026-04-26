@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import time
 
 # Django
 from django.http import HttpResponse
@@ -50,11 +51,19 @@ def detail_poll(req):
 
             # .. forward all body fields except 'action' itself
             service_payload = {key: value for key, value in body.items() if key != 'action'}
+            t0 = time.monotonic()
             response = req.zato.client.invoke(service_name, service_payload)
+            elapsed = time.monotonic() - t0
+            if elapsed > 2.0:
+                logger.warning('detail_poll invoke %s took %.1fs', service_name, elapsed)
             return HttpResponse(json.dumps(response.data), content_type='application/json')
 
     service_name = _service_registry[req.POST['object_type']]
+    t0 = time.monotonic()
     response = req.zato.client.invoke(service_name, req.POST.dict())
+    elapsed = time.monotonic() - t0
+    if elapsed > 2.0:
+        logger.warning('detail_poll invoke %s took %.1fs', service_name, elapsed)
     return HttpResponse(json.dumps(response.data), content_type='application/json')
 
 # ################################################################################################################################

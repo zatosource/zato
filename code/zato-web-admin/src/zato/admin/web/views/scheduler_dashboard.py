@@ -9,6 +9,7 @@ Licensed under AGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import json
 import logging
+import time
 
 # Django
 from django.http import HttpResponse
@@ -53,7 +54,11 @@ def index(req):
 def poll(req):
 
     try:
+        t0 = time.monotonic()
         response = req.zato.client.invoke('zato.scheduler.job.get-current-state', {})
+        elapsed = time.monotonic() - t0
+        if elapsed > 2.0:
+            logger.warning('Scheduler dashboard poll invoke took %.1fs', elapsed)
         if response.ok:
             return HttpResponse(json.dumps(response.data), content_type='application/json')
         else:

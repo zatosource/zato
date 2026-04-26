@@ -102,13 +102,33 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         if (ms === 0) {
             return '< 1 ms';
         }
-        if (ms < 1000) {
-            return ms + ' ms';
-        }
+
+        var parts = [];
+        var remainder = ms;
+
+        var days = Math.floor(remainder / 86400000);
+        if (days > 0) { parts.push(days + 'd'); remainder %= 86400000; }
+
+        var hours = Math.floor(remainder / 3600000);
+        if (hours > 0) { parts.push(hours + 'h'); remainder %= 3600000; }
+
+        var minutes = Math.floor(remainder / 60000);
+        if (minutes > 0) { parts.push(minutes + 'm'); remainder %= 60000; }
+
+        var seconds = Math.floor(remainder / 1000);
+        remainder %= 1000;
+
         if (ms < 60000) {
-            return (ms / 1000).toFixed(1) + ' s';
+            if (remainder > 0) {
+                parts.push(seconds + '.' + ('00' + remainder).slice(-3) + 's');
+            } else {
+                parts.push(seconds + 's');
+            }
+        } else {
+            if (seconds > 0) { parts.push(seconds + 's'); }
         }
-        return (ms / 60000).toFixed(1) + ' min';
+
+        return parts.join(' ');
     };
 
     kit.relative_time_future = function(iso_string) {
