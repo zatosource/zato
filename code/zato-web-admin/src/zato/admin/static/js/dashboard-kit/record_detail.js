@@ -293,65 +293,67 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             }, FADE_MS);
         }
 
+        function populate_run(data, run_number) {
+            var record = data.record;
+            if (record === null) {
+                $container.html('<div style="padding:16px;color:#aaa">No data for this run.</div>');
+                return;
+            }
+
+            var $panel_log = $container.find('.detail-panel-log');
+            var mirror_html = config.render_mirror(record);
+            $panel_log.prepend(mirror_html);
+
+            if (!actions_bound) {
+                kit.record_detail.bind_panel_actions($container, config.tag_defs);
+                actions_bound = true;
+            }
+
+            kit.record_detail._fetch_logs($panel_log, {
+                object_id: config.record_id,
+                run_id: run_number,
+                since_idx: 0
+            }, config);
+
+            if (config.poll_interval_ms > 0) {
+                log_poll_timer = setInterval(function() {
+                    var since_idx = parseInt($panel_log.attr('data-since-idx'), 10);
+                    kit.record_detail._fetch_logs($panel_log, {
+                        object_id: config.record_id,
+                        run_id: run_number,
+                        since_idx: since_idx
+                    }, config);
+                }, config.poll_interval_ms);
+            }
+
+            update_all_nav($nav_top, $nav_bottom, data.prev_run, data.next_run, navigate_to);
+
+            if (record.outcome === 'running') {
+                record_poll_timer = setInterval(function() {
+                    kit.record_detail._fetch_run(config, run_number, function(fresh_data) {
+                        var fresh = fresh_data.record;
+                        if (fresh === null) return;
+                        if (fresh.outcome !== 'running') {
+                            clearInterval(record_poll_timer);
+                            record_poll_timer = null;
+                            var $badge = $container.find('.dashboard-outcome-badge').first();
+                            var new_badge_html = kit.outcome.badge(fresh.outcome, config.panel.outcome_palette, fresh);
+                            $badge.replaceWith($(new_badge_html).addClass('kit-puff').one('animationend', function() {
+                                $(this).removeClass('kit-puff');
+                            }));
+                            var new_tags = kit.record_detail.render_dark_tags(fresh, config.tag_defs);
+                            $container.find('.detail-log-mirror .detail-log-msg').html(new_tags);
+                        }
+                        update_all_nav($nav_top, $nav_bottom, fresh_data.prev_run, fresh_data.next_run, navigate_to);
+                    });
+                }, config.poll_interval_ms);
+            }
+        }
+
         function load_run(run_number) {
             kit.record_detail._fetch_run(config, run_number, function(data) {
-                var record = data.record;
-                if (record === null) {
-                    $container.html('<div style="padding:16px;color:#aaa">No data for this run.</div>');
-                    $container.css({opacity: 1});
-                    return;
-                }
-
-                var $panel_log = $container.find('.detail-panel-log');
-                var mirror_html = config.render_mirror(record);
-                $panel_log.prepend(mirror_html);
-
-                if (!actions_bound) {
-                    kit.record_detail.bind_panel_actions($container, config.tag_defs);
-                    actions_bound = true;
-                }
-
-                kit.record_detail._fetch_logs($panel_log, {
-                    object_id: config.record_id,
-                    run_id: run_number,
-                    since_idx: 0
-                }, config);
-
-                if (config.poll_interval_ms > 0) {
-                    log_poll_timer = setInterval(function() {
-                        var since_idx = parseInt($panel_log.attr('data-since-idx'), 10);
-                        kit.record_detail._fetch_logs($panel_log, {
-                            object_id: config.record_id,
-                            run_id: run_number,
-                            since_idx: since_idx
-                        }, config);
-                    }, config.poll_interval_ms);
-                }
-
-                update_all_nav($nav_top, $nav_bottom, data.prev_run, data.next_run, navigate_to);
-
+                populate_run(data, run_number);
                 $container.css({opacity: 1});
-
-                if (record.outcome === 'running') {
-                    record_poll_timer = setInterval(function() {
-                        kit.record_detail._fetch_run(config, run_number, function(fresh_data) {
-                            var fresh = fresh_data.record;
-                            if (fresh === null) return;
-                            if (fresh.outcome !== 'running') {
-                                clearInterval(record_poll_timer);
-                                record_poll_timer = null;
-                                var $badge = $container.find('.dashboard-outcome-badge').first();
-                                var new_badge_html = kit.outcome.badge(fresh.outcome, config.panel.outcome_palette, fresh);
-                                $badge.replaceWith($(new_badge_html).addClass('kit-puff').one('animationend', function() {
-                                    $(this).removeClass('kit-puff');
-                                }));
-                                var new_tags = kit.record_detail.render_dark_tags(fresh, config.tag_defs);
-                                $container.find('.detail-log-mirror .detail-log-msg').html(new_tags);
-                            }
-                            update_all_nav($nav_top, $nav_bottom, fresh_data.prev_run, fresh_data.next_run, navigate_to);
-                        });
-                    }, config.poll_interval_ms);
-                }
             });
         }
 

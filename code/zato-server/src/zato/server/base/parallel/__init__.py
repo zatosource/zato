@@ -1012,8 +1012,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
             job_name = ctx['name']
             current_run = ctx['current_run']
 
-            logger.info('_on_job_executed: job_id=%s name=%s current_run=%s ctx=%s', job_id, job_name, current_run, ctx)
-
             extra = ctx['extra']
             if extra and isinstance(extra, str):
                 try:
@@ -1049,7 +1047,6 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
 
             try:
                 self._scheduler.mark_complete(job_id, outcome, duration_ms, current_run)
-                logger.info('Scheduler job_id=%s; name=%s; outcome=%s; duration=%sms', job_id, job_name, outcome, duration_ms)
             except Exception:
                 logger.warning('Scheduler mark_complete failed; job_id=%s; name=%s; traceback=%s', job_id, job_name, format_exc())
 
