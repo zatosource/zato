@@ -13,12 +13,12 @@
 }
 
 .dashboard-card-header-tabs {
-    margin-bottom: 12px;
+    display: inline-flex;
+    margin-bottom: 0;
     gap: 0;
 }
 
 .dashboard-tabs {
-    width: 100%;
     align-items: center;
 }
 
