@@ -596,10 +596,16 @@ th.header a:hover {
 
 a.top,
 a.top:hover {
-    color: #fff;
+    color: #fff !important;
     text-decoration: none;
     background-image: none;
+    background-color: rgb(1, 40, 69) !important;
     padding-bottom: 0;
+}
+
+a:not(.menu-link):not(.chosen-single):not(.status-badge):is(.top):hover {
+    color: #fff !important;
+    background-color: rgb(1, 40, 69) !important;
 }
 
 .header-link-styled {

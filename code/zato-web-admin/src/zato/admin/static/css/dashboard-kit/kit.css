@@ -116,8 +116,10 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
 .dashboard-card {
     background: #fff;
     border-radius: 3px;
-    padding: 24px;
-    border: 2px solid rgba(1, 40, 69, 0.3);
+    padding: 1.9rem;
+    padding-top: 1.3rem;
+    padding-left: 1.3rem;
+    border: 2px solid rgb(69, 84, 96);
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
@@ -125,8 +127,7 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 8px;
-    margin-bottom: 16px;
+    padding-bottom: 1.3rem;
 }
 
 

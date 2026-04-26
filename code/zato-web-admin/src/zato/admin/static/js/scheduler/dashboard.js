@@ -872,7 +872,7 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
             var row_ts = entry.actual_fire_time_iso;
             html += '<tr data-ts="' + row_ts + '">';
             var run_href = kit.urls.run_detail(entry.job_id, entry.current_run, {outcomes: dash.Outcome_All});
-            html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on"><a href="' + run_href + '">' + run_number + '</a></td>';
+            html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;text-align:left"><a href="' + run_href + '">' + run_number + '</a></td>';
             html += '<td style="font-family:monospace;font-feature-settings:\'tnum\' on;color:#6e6e73;white-space:nowrap" title="' + time_tooltip + '">' + time_text + '</td>';
             var service_cell = $.fn.zato.data_table.service_text(job_service[entry.job_id], cluster_id);
             html += '<td><a href="' + kit.urls.object_detail(entry.job_id, {outcomes: dash.Outcome_All}) + '">' + entry.job_name + '</a></td>';
@@ -885,6 +885,17 @@ $.fn.zato.scheduler.dashboard.job_type_labels = {
         container.html(html);
 
         kit.sortable_headers(container.find('table'), {'Job name': 2, 'Service': 3});
+
+        kit.stabilize_badge_column({
+            palette: {
+                colors: dash.outcome_colors,
+                bg_colors: dash.outcome_bg_colors,
+                labels: dash.outcome_labels,
+                short_labels: dash.outcome_short_labels
+            },
+            spinner_key: 'running',
+            th_selector: '#dashboard-recent-body thead th:last-child'
+        });
 
         container.find('.dashboard-outcome-badge[data-tippy-content]').each(function() {
             if (!this._tippy) {

@@ -8,9 +8,10 @@
 
 .dashboard-card-header-tabs {
     margin-bottom: 0;
+    font-size: 1.2rem;
 }
 
-.dashboard-chart-section .dashboard-tabs {
+.dashboard-card-header-tabs .dashboard-tabs {
     margin-bottom: 0;
 }
 

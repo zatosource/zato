@@ -880,6 +880,51 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         return '<span class="syntax-monokai">' + html + '</span>';
     };
 
+    /* Pre-measure every outcome badge from a palette and set min-width
+       on a table header cell so the column never resizes when transient
+       outcomes (e.g. "Running" with spinner) appear and disappear.
+       config:
+         palette:        outcome palette with .colors, .bg_colors, .labels
+         spinner_key:    outcome key that gets a spinner prefix (e.g. 'running')
+         th_selector:    jQuery selector for the <th> to stabilize */
+    kit.stabilize_badge_column = function(config) {
+        var palette = config.palette;
+        var spinner_key = config.spinner_key;
+        var $th = $(config.th_selector);
+        if (!$th.length) return;
+
+        var probe = $('<div></div>').css({
+            position: 'absolute',
+            visibility: 'hidden',
+            left: '-9999px',
+            top: '-9999px',
+            'white-space': 'nowrap'
+        });
+        $('body').append(probe);
+
+        var max_w = 0;
+        var labels = palette.labels;
+        var short_labels = palette.short_labels;
+
+        for (var key in labels) {
+            if (!labels.hasOwnProperty(key)) continue;
+            var label = (short_labels && short_labels[key]) ? short_labels[key] : labels[key];
+            var prefix = (key === spinner_key) ? '<span class="badge-running-spinner"></span>' : '';
+            var badge = $('<span class="dashboard-outcome-badge" style="color:' +
+                palette.colors[key] + ';background:' + palette.bg_colors[key] + '">' +
+                prefix + label + '</span>');
+            probe.empty().append(badge);
+            var w = badge.outerWidth();
+            if (w > max_w) max_w = w;
+        }
+
+        probe.remove();
+
+        if (max_w > 0) {
+            $th.css('min-width', max_w + 'px');
+        }
+    };
+
     kit._locked_widths = {};
 
     kit.lock_table_widths = function(table_selector) {
