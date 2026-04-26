@@ -3,7 +3,7 @@
 .dashboard-tabs {
     display: inline-flex;
     gap: 6px;
-    margin-bottom: 24px;
+    margin-bottom: 0.7rem;
     padding: 3px;
     background: linear-gradient(
         135deg,
@@ -11,7 +11,7 @@
         rgba(0, 0, 0, 0.015) 100%
     );
     border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 8px;
+    border-radius: 6px;
 }
 
 .dashboard-tabs:empty {
@@ -25,7 +25,7 @@
     background-image: none;
     border: 1px solid transparent;
     border-bottom: 2px solid transparent;
-    border-radius: 0;
+    border-radius: 6px 6px 3px 3px;
     box-shadow: none;
     text-shadow: none;
     outline: 0;
@@ -47,7 +47,6 @@
     background-image: none;
     border: 1px solid transparent;
     border-bottom: 2px solid transparent;
-    border-radius: 0;
     box-shadow: none;
     text-shadow: none;
     outline: 0;
@@ -71,7 +70,6 @@
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-bottom: 2px solid var(--primary-dark);
-    border-radius: 0;
     box-shadow:
         0 1px 3px rgba(0, 0, 0, 0.04),
         0 1px 1px rgba(0, 0, 0, 0.03);
