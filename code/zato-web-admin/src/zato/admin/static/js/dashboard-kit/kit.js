@@ -417,6 +417,8 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
 
     kit.countdown = {};
     kit.countdown._interval_id = null;
+    kit.countdown._on_now = null;
+    kit.countdown._fired_targets = {};
 
     kit.countdown._tick = function() {
         $('[data-countdown-target]').each(function() {
@@ -433,6 +435,10 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
             $cell.text(text);
             if (text === 'Now') {
                 $cell.addClass('countdown-now');
+                if (kit.countdown._on_now && !kit.countdown._fired_targets[iso]) {
+                    kit.countdown._fired_targets[iso] = true;
+                    kit.countdown._on_now();
+                }
             } else {
                 $cell.removeClass('countdown-now');
             }

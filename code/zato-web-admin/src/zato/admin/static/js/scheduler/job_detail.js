@@ -1647,6 +1647,10 @@ $.fn.zato.scheduler.job_detail.poll = function() {
             var $stat = $('#stat-next-run');
             var $ts = $('#stat-next-run-ts');
             if (next_run) {
+                var prev = $stat.attr('data-countdown-target');
+                if (prev !== next_run) {
+                    delete kit.countdown._fired_targets[prev];
+                }
                 $stat.attr('data-countdown-target', next_run);
                 $stat.text(kit.relative_time_future(next_run));
                 $ts.text(kit.format_local_time(next_run));
@@ -1698,6 +1702,7 @@ $.fn.zato.scheduler.job_detail.render = function(job, job_id, cluster_id) {
     detail._build_legend();
     $('#detail-timeline').html('<div class="dashboard-inline-empty">' + detail.config.empty_history_text + '</div>');
     detail.render_stats(job);
+    kit.countdown._on_now = function() { detail.poll(); };
     kit.countdown.start();
     detail.render_config(job, cluster_id);
     detail.render_actions(job_id);
