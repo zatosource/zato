@@ -117,9 +117,9 @@ a.dashboard-hero-pill-link:not(.menu-link):not(.chosen-single):hover {
     background: #fff;
     border-radius: 3px;
     padding: 24px;
-    border: 1px solid var(--primary-dark, #012845);
+    border: 1px solid rgba(1, 40, 69, 0.3);
     box-shadow:
-        1px 1px 0px var(--shadow-dark, #063c65),
+        1px 1px 0px rgba(1, 40, 69, 0.2),
         0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
