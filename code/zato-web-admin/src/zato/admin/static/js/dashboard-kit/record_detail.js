@@ -283,10 +283,13 @@ if (typeof $.fn.zato.dashboard_kit === 'undefined') { $.fn.zato.dashboard_kit = 
         function crossfade_load(run_number) {
             $container.css({transition: 'opacity ' + FADE_MS + 'ms', opacity: 0});
             setTimeout(function() {
-                var $panel_log = $container.find('.detail-panel-log');
-                $panel_log.children().remove();
-                $panel_log.attr('data-since-idx', '0');
-                load_run(run_number);
+                kit.record_detail._fetch_run(config, run_number, function(data) {
+                    var $panel_log = $container.find('.detail-panel-log');
+                    $panel_log.children().remove();
+                    $panel_log.attr('data-since-idx', '0');
+                    populate_run(data, run_number);
+                    $container.css({opacity: 1});
+                });
             }, FADE_MS);
         }
 
