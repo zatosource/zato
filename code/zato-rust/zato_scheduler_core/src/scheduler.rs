@@ -139,7 +139,12 @@ pub struct SchedulerCallbacks {
 
 /// Main scheduler loop, meant to run on a dedicated thread.
 #[expect(clippy::needless_pass_by_value, reason = "thread entry point owns these values")]
-pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callbacks: SchedulerCallbacks, initial_sleep_time: f64) {
+pub fn scheduler_loop(
+    shared: Arc<SchedulerShared>,
+    callbacks: SchedulerCallbacks,
+    initial_sleep_time: f64,
+    heartbeat: Option<crate::watchdog::HeartbeatHandle>,
+) {
     if initial_sleep_time > 0.0 {
         std::thread::sleep(Duration::from_secs_f64(initial_sleep_time));
     }
@@ -148,12 +153,14 @@ pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callb
         return;
     }
 
-    load_initial_jobs(&shared, &odb_adapter);
-
     let mut last_wall = Utc::now();
     let mut last_mono = Instant::now();
 
     loop {
+        if let Some(hb) = &heartbeat {
+            hb.beat();
+        }
+
         if shared.stop_flag.load(Ordering::Relaxed) {
             break;
         }
@@ -161,7 +168,14 @@ pub fn scheduler_loop(shared: Arc<SchedulerShared>, odb_adapter: PyObject, callb
         {
             let mut state = shared.state.lock();
             let sleep_duration = compute_sleep_duration(&state);
+            if let Some(hb) = &heartbeat {
+                hb.set_expected_sleep(sleep_duration);
+            }
             let _timed_out = shared.condvar.wait_for(&mut state, sleep_duration);
+        }
+
+        if let Some(hb) = &heartbeat {
+            hb.beat();
         }
 
         if shared.stop_flag.load(Ordering::Relaxed) {
@@ -231,36 +245,6 @@ pub fn load_jobs(
 
     let cals = HashMap::new();
     Ok((jobs, cals))
-}
-
-/// Loads jobs from the ODB adapter into the shared state at startup.
-fn load_initial_jobs(shared: &SchedulerShared, odb_adapter: &PyObject) {
-    log::info!("load_initial_jobs: starting");
-    let _attached = Python::try_attach(|py| {
-        let adapter = odb_adapter.bind(py);
-        match load_jobs(adapter) {
-            Ok((jobs, _cals)) => {
-                log::info!("load_initial_jobs: loaded {} jobs from ODB", jobs.len());
-                let mut state = shared.state.lock();
-                for job in &jobs {
-                    let running_job = RunningJob::from_scheduler_job(job);
-                    log::info!(
-                        "load_initial_jobs: job_id={} name={} interval_ms={} start_date={:?} next_fire_utc={:?} is_active={}",
-                        job.id,
-                        running_job.name,
-                        running_job.interval_ms,
-                        running_job.start_date,
-                        running_job.next_fire_utc,
-                        running_job.is_active,
-                    );
-                    state.jobs.insert(job.id, running_job);
-                }
-            }
-            Err(err) => {
-                log::error!("Failed to load jobs: {err}");
-            }
-        }
-    });
 }
 
 /// Computes how long the scheduler loop should sleep before the next tick.

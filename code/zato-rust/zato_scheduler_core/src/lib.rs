@@ -26,6 +26,9 @@ pub mod scheduler;
 /// Shared type definitions (job-id wrappers, outcome constants, etc.).
 pub mod types;
 
+/// Watchdog thread for detecting hung threads.
+pub mod watchdog;
+
 /// Re-exports used exclusively by the test harness.
 #[doc(hidden)]
 pub mod test_support {
@@ -41,17 +44,23 @@ use scheduler::{SchedulerShared, SyntheticDrip};
 /// Convenience alias so the rest of the module can say `PyObject`.
 type PyObject = Py<PyAny>;
 
-/// Acquires the state lock, applies `func`, marks the state dirty and wakes the condvar.
-fn with_state_mut<F, R>(shared: &SchedulerShared, func: F) -> R
+/// Releases the GIL, acquires the state lock, applies `func`, marks the state dirty and wakes the condvar.
+///
+/// The GIL is released before locking the mutex so that the two locks are never
+/// held at the same time, preventing deadlocks with the scheduler thread.
+fn with_state_mut<F, R>(py: Python<'_>, shared: &SchedulerShared, func: F) -> R
 where
-    F: FnOnce(&mut scheduler::SchedulerState) -> R,
+    F: FnOnce(&mut scheduler::SchedulerState) -> R + Send,
+    R: Send,
 {
-    let mut state = shared.state.lock();
-    let result = func(&mut state);
-    state.dirty = true;
-    drop(state);
-    shared.condvar.notify_one();
-    result
+    py.detach(|| {
+        let mut state = shared.state.lock();
+        let result = func(&mut state);
+        state.dirty = true;
+        drop(state);
+        shared.condvar.notify_one();
+        result
+    })
 }
 
 /// Formats a duration in milliseconds into a human-readable string.
@@ -163,6 +172,8 @@ pub struct Scheduler {
     odb_adapter: PyObject,
     /// Handle for the background scheduler thread.
     thread_handle: parking_lot::Mutex<Option<std::thread::JoinHandle<()>>>,
+    /// Watchdog registry for monitoring thread liveness.
+    watchdog_registry: Arc<watchdog::WatchdogRegistry>,
 }
 
 #[pymethods]
@@ -170,10 +181,13 @@ impl Scheduler {
     /// Creates a new scheduler instance with no background thread running.
     #[new]
     fn new(py: Python<'_>) -> Self {
+        let shared = Arc::new(SchedulerShared::new());
+        let watchdog_registry = Arc::new(watchdog::WatchdogRegistry::new(Arc::clone(&shared)));
         Self {
-            shared: Arc::new(SchedulerShared::new()),
+            shared,
             odb_adapter: py.None(),
             thread_handle: parking_lot::Mutex::new(None),
+            watchdog_registry,
         }
     }
 
@@ -207,14 +221,14 @@ impl Scheduler {
             .ok_or_else(|| pyo3::exceptions::PyKeyError::new_err("missing with_test_data"))?
             .extract()?;
 
-        {
+        py.detach(|| {
             let mut state = self.shared.state.lock();
             state.with_test_data = with_test_data;
-        }
+        });
 
         self.odb_adapter = odb_adapter.clone_ref(py);
-        let adapter = odb_adapter.clone_ref(py);
         let shared = Arc::clone(&self.shared);
+        let heartbeat = self.watchdog_registry.register("zato-scheduler");
 
         let handle = std::thread::Builder::new()
             .name("zato-scheduler".into())
@@ -224,11 +238,13 @@ impl Scheduler {
                     spawn_fn,
                     on_job_executed_cb,
                 };
-                scheduler::scheduler_loop(shared, adapter, callbacks, initial_sleep_time);
+                scheduler::scheduler_loop(shared, callbacks, initial_sleep_time, Some(heartbeat));
             })
             .map_err(|err| pyo3::exceptions::PyException::new_err(format!("spawn failed: {err}")))?;
 
         *self.thread_handle.lock() = Some(handle);
+
+        watchdog::start_watchdog(Arc::clone(&self.watchdog_registry));
 
         Ok(())
     }
@@ -256,7 +272,7 @@ impl Scheduler {
 
     /// Creates a new job from a Python dict and inserts it into the scheduler state.
     #[pyo3(signature = (job_id, job_data))]
-    fn create_job(&self, _py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
+    fn create_job(&self, py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
         let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
         log::info!(
             "create_job: job_id={job_id} seconds={:?} is_active={} repeats={:?} service={}",
@@ -266,7 +282,7 @@ impl Scheduler {
             scheduler_job.service,
         );
         let running_job = RunningJob::from_scheduler_job(&scheduler_job);
-        with_state_mut(&self.shared, |state| {
+        with_state_mut(py, &self.shared, |state| {
             state.jobs.insert(job_id, running_job);
         });
         Ok(())
@@ -274,7 +290,7 @@ impl Scheduler {
 
     /// Edits an existing job or inserts a new one if not found.
     #[pyo3(signature = (job_id, job_data))]
-    fn edit_job(&self, _py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
+    fn edit_job(&self, py: Python<'_>, job_id: i64, job_data: &Bound<'_, PyDict>) -> PyResult<()> {
         let scheduler_job = dict_to_scheduler_job(job_id, job_data)?;
         log::info!(
             "edit_job: job_id={job_id} seconds={:?} is_active={} repeats={:?} service={}",
@@ -283,7 +299,7 @@ impl Scheduler {
             scheduler_job.repeats,
             scheduler_job.service,
         );
-        with_state_mut(&self.shared, |state| {
+        with_state_mut(py, &self.shared, |state| {
             if let Some(existing) = state.jobs.get_mut(&job_id) {
                 log::info!(
                     "edit_job: updating existing job_id={job_id} old_interval_ms={} old_current_run={} old_next_fire={:?}",
@@ -310,8 +326,8 @@ impl Scheduler {
     /// Removes a job from the scheduler state.
     #[pyo3(signature = (job_id,))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
-    fn delete_job(&self, job_id: i64) -> PyResult<()> {
-        with_state_mut(&self.shared, |state| {
+    fn delete_job(&self, py: Python<'_>, job_id: i64) -> PyResult<()> {
+        with_state_mut(py, &self.shared, |state| {
             state.jobs.remove(&job_id);
         });
         Ok(())
@@ -320,8 +336,8 @@ impl Scheduler {
     /// Forces immediate execution of the given job.
     #[pyo3(signature = (job_id,))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
-    fn execute_job(&self, job_id: i64) -> PyResult<()> {
-        with_state_mut(&self.shared, |state| {
+    fn execute_job(&self, py: Python<'_>, job_id: i64) -> PyResult<()> {
+        with_state_mut(py, &self.shared, |state| {
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
                 let now = Utc::now();
                 running_job.next_fire_utc = Some(now);
@@ -336,9 +352,11 @@ impl Scheduler {
     /// When test data is enabled, also injects synthetic history records and drip-fed log entries.
     #[pyo3(signature = (job_id, outcome, duration_ms, current_run))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
-    fn mark_complete(&self, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
-        log::info!("mark_complete called: job_id={job_id} outcome={outcome} current_run={current_run} duration_ms={duration_ms}");
-        with_state_mut(&self.shared, |state| {
+    fn mark_complete(&self, py: Python<'_>, job_id: i64, outcome: &str, duration_ms: u64, current_run: u32) -> PyResult<()> {
+        let outcome_owned = outcome.to_string();
+        log::info!("mark_complete called: job_id={job_id} outcome={outcome_owned} current_run={current_run} duration_ms={duration_ms}");
+        with_state_mut(py, &self.shared, |state| {
+            let outcome = outcome_owned.as_str();
             if let Some(running_job) = state.jobs.get_mut(&job_id) {
                 log::info!(
                     "mark_complete: job_id={job_id} name={} job.current_run={} in_flight={} in_flight_run={:?} next_fire_utc={:?} interval_ms={} with_test_data={}",
@@ -486,7 +504,7 @@ impl Scheduler {
     fn reload(&self, py: Python<'_>) -> PyResult<()> {
         let adapter_bound = self.odb_adapter.bind(py);
         let (new_jobs, _cals) = scheduler::load_jobs(adapter_bound)?;
-        with_state_mut(&self.shared, |state| {
+        with_state_mut(py, &self.shared, |state| {
             reload_jobs(state, &new_jobs);
         });
         Ok(())
@@ -505,7 +523,7 @@ impl Scheduler {
     ) -> PyResult<Py<PyDict>> {
         let filter = parse_outcome_filter(&outcomes)?;
 
-        let (records, total) = {
+        let (records, total) = py.detach(|| {
             let state = self.shared.state.lock();
             state.jobs.get(&job_id).map_or_else(
                 || (Vec::new(), 0),
@@ -548,7 +566,7 @@ impl Scheduler {
                     )
                 },
             )
-        };
+        });
 
         history::records_page_to_py_dict(py, &records, total)
     }
@@ -568,8 +586,9 @@ impl Scheduler {
         running_runs: Vec<u32>,
     ) -> PyResult<Py<PyDict>> {
         let filter = parse_outcome_filter(&outcomes)?;
+        let since_owned = since_iso.to_string();
 
-        let (records, total) = {
+        let (records, total) = py.detach(|| {
             let state = self.shared.state.lock();
             state.jobs.get(&job_id).map_or_else(
                 || (Vec::new(), 0),
@@ -587,7 +606,7 @@ impl Scheduler {
                         }
 
                         let run_override = running_runs.contains(&rec.current_run);
-                        let is_since = rec.actual_fire_time_iso.as_str() >= since_iso || run_override;
+                        let is_since = rec.actual_fire_time_iso.as_str() >= since_owned.as_str() || run_override;
                         if is_since && (outcome_allowed || run_override) {
                             records.push(rec.clone());
                         }
@@ -597,7 +616,7 @@ impl Scheduler {
                     (records, total)
                 },
             )
-        };
+        });
 
         let out = PyDict::new(py);
         if records.is_empty() {
@@ -616,10 +635,10 @@ impl Scheduler {
     /// `recent_outcomes` (last 10), and per-job `outcome_counts`.
     #[pyo3(signature = ())]
     fn get_job_summaries(&self, py: Python<'_>) -> PyResult<Py<PyList>> {
-        let summaries: Vec<job::JobSummary> = {
+        let summaries: Vec<job::JobSummary> = py.detach(|| {
             let state = self.shared.state.lock();
             state.jobs.values().map(job::RunningJob::summary).collect()
-        };
+        });
 
         let countable = types::outcome::COUNTABLE;
         let list = PyList::empty(py);
@@ -670,7 +689,7 @@ impl Scheduler {
     /// (most recent first) so the Python side does not need to re-sort.
     #[pyo3(signature = (max_events=1000))]
     fn get_timeline_events(&self, py: Python<'_>, max_events: usize) -> PyResult<Py<PyList>> {
-        let events: Vec<job::TimelineEvent> = {
+        let events: Vec<job::TimelineEvent> = py.detach(|| {
             let state = self.shared.state.lock();
             let mut events: Vec<job::TimelineEvent> = Vec::new();
             for (job_id, running_job) in &state.jobs {
@@ -686,7 +705,7 @@ impl Scheduler {
             events.sort_unstable_by(|lhs, rhs| rhs.record.actual_fire_time_iso.cmp(&lhs.record.actual_fire_time_iso));
             events.truncate(max_events);
             events
-        };
+        });
 
         let list = PyList::empty(py);
         for event in &events {
@@ -716,23 +735,28 @@ impl Scheduler {
     }
 
     /// Appends a log entry to the execution record for a given job and run number.
+    ///
+    /// The `LogEntry` is built from the `&str` params before releasing the GIL,
+    /// since those borrows are tied to the GIL lifetime.
     #[pyo3(signature = (job_id, current_run, timestamp_iso, level, message))]
     #[expect(clippy::unnecessary_wraps, reason = "PyO3 method protocol requires PyResult return")]
-    fn append_log_entry(&self, job_id: i64, current_run: u32, timestamp_iso: &str, level: &str, message: &str) -> PyResult<()> {
-        let mut state = self.shared.state.lock();
-        if let Some(running_job) = state.jobs.get_mut(&job_id) {
-            for rec in running_job.history.iter_mut().rev() {
-                if rec.current_run == current_run {
-                    rec.log_entries.push(LogEntry {
-                        timestamp_iso: timestamp_iso.to_string(),
-                        level: level.to_string(),
-                        message: message.to_string(),
-                    });
-                    break;
+    fn append_log_entry(&self, py: Python<'_>, job_id: i64, current_run: u32, timestamp_iso: &str, level: &str, message: &str) -> PyResult<()> {
+        let entry = LogEntry {
+            timestamp_iso: timestamp_iso.to_string(),
+            level: level.to_string(),
+            message: message.to_string(),
+        };
+        py.detach(|| {
+            let mut state = self.shared.state.lock();
+            if let Some(running_job) = state.jobs.get_mut(&job_id) {
+                for rec in running_job.history.iter_mut().rev() {
+                    if rec.current_run == current_run {
+                        rec.log_entries.push(entry);
+                        break;
+                    }
                 }
             }
-        }
-        drop(state);
+        });
         Ok(())
     }
 
@@ -745,7 +769,7 @@ impl Scheduler {
     fn get_log_entries(&self, py: Python<'_>, job_id: i64, current_run: u32, since_idx: usize) -> PyResult<Py<PyList>> {
         log::info!("get_log_entries: job_id={job_id} current_run={current_run} since_idx={since_idx}");
 
-        let entries: Vec<LogEntry> = {
+        let entries: Vec<LogEntry> = py.detach(|| {
             let state = self.shared.state.lock();
             state.jobs.get(&job_id).map_or_else(Vec::new, |running_job| {
                 let mut found = Vec::new();
@@ -757,7 +781,7 @@ impl Scheduler {
                 }
                 found
             })
-        };
+        });
 
         let list = PyList::empty(py);
         for entry in &entries {

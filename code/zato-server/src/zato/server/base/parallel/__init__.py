@@ -1066,6 +1066,7 @@ class ParallelServer(BrokerMessageReceiver, ConfigLoader, HTTPHandler):
                 'initial_sleep_time': 0.5,
                 'with_test_data': self.with_test_data,
             })
+            self._scheduler.reload()
             self._scheduler_started = True
             logger.info('Scheduler started, with_test_data=%s', self.with_test_data)
         except Exception:
